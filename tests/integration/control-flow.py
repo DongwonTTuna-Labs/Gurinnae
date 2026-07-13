@@ -569,6 +569,52 @@ expect_command_error(
     },
     400,
 )
+expect_command_error(
+    "rejectSchemaMapping",
+    {
+        "schemaDriftId": str(
+            uuid.uuid5(uuid.NAMESPACE_URL, "gurine:fixture:schema-digest-negative")
+        ),
+        "mappingVersion": 1,
+        "mappingDigest": "0" * 64,
+        "reason": "mistyped exact mapping digest negative test",
+        "expectedVersion": 1,
+    },
+    409,
+)
+approve_mapping = [
+    {
+        "upstreamPath": "approveSchemaMapping-upstreamPath",
+        "canonicalField": "approveSchemaMapping-canonicalField",
+        "transform": "approveSchemaMapping-transform",
+        "required": True,
+    }
+]
+expect_command_error(
+    "approveSchemaMapping",
+    {
+        "schemaDriftId": str(uuid.uuid5(uuid.NAMESPACE_URL, "gurine:fixture:schema-approve")),
+        "mappingVersion": 1,
+        "mappingDigest": sha256(
+            json.dumps(approve_mapping, sort_keys=True, separators=(",", ":")).encode()
+        ),
+        "fieldMappings": approve_mapping,
+        "reason": "terminal resolved drift redecision negative test",
+        "expectedVersion": 2,
+    },
+    409,
+)
+expect_command_error(
+    "rejectSchemaMapping",
+    {
+        "schemaDriftId": str(uuid.uuid5(uuid.NAMESPACE_URL, "gurine:fixture:schema-reject")),
+        "mappingVersion": 1,
+        "mappingDigest": sha256(b"rejectSchemaMapping:mappingDigest"),
+        "reason": "terminal rejected drift redecision negative test",
+        "expectedVersion": 2,
+    },
+    409,
+)
 mismatched_body = json.loads(replay_case["body"])
 mismatched_body["reason"] = "same idempotency key with different bytes"
 expect_command_error(

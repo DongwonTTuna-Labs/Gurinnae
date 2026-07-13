@@ -3,7 +3,7 @@ use gurine_auth::{
     assertion::canonical::sha256_hex,
     envelope::{EnvelopeKey, EnvelopeKeyRing, decrypt},
 };
-use gurine_email::port::EmailMessage;
+use gurine_email::{port::EmailMessage, templates::escape_html};
 use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
 use hmac::{Hmac, Mac};
@@ -514,6 +514,7 @@ async fn prepare(state: &State, event: &ClaimedEvent) -> Result<(Uuid, EmailMess
                     .await
                     .map_err(|_| WorkerError::Database)?
                     .ok_or(WorkerError::Database)?;
+            let html_subject = escape_html(&subject);
             (
                 state.reply_to.clone(),
                 "구린네 새 문의 접수".to_owned(),
@@ -522,8 +523,8 @@ async fn prepare(state: &State, event: &ClaimedEvent) -> Result<(Uuid, EmailMess
                     event.aggregate_id
                 ),
                 format!(
-                    "<p>새 문의가 접수되었습니다.</p><p>ID: {}</p><p>제목: {subject}</p>",
-                    event.aggregate_id
+                    "<p>새 문의가 접수되었습니다.</p><p>ID: {}</p><p>제목: {html_subject}</p>",
+                    event.aggregate_id,
                 ),
             )
         }

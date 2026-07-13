@@ -81,7 +81,9 @@ BEGIN
   END IF;
   IF (SELECT version FROM ops.schema_drifts WHERE id='7dc6b03d-d98b-53a8-828b-e0db50d7cfde') <> 1 OR
      (SELECT status FROM ops.schema_drifts WHERE id='7dc6b03d-d98b-53a8-828b-e0db50d7cfde') <> 'OPEN' OR
-     EXISTS(SELECT 1 FROM ops.schema_mappings WHERE schema_drift_id='7dc6b03d-d98b-53a8-828b-e0db50d7cfde') THEN
+     (SELECT status FROM ops.schema_mappings
+       WHERE schema_drift_id='7dc6b03d-d98b-53a8-828b-e0db50d7cfde'
+         AND mapping_version=1 AND mapping_digest=repeat('f',64)) IS DISTINCT FROM 'DRAFT' THEN
     RAISE EXCEPTION 'mismatched schema mapping digest changed canonical state';
   END IF;
   IF (SELECT status FROM ops.source_incidents WHERE source_id='control-fixture-source') <> 'ACKNOWLEDGED' THEN
@@ -187,11 +189,19 @@ BEGIN
   IF actual <> 4 THEN RAISE EXCEPTION 'rule evaluation rows %, expected 4', actual; END IF;
 
   SELECT count(*) INTO actual FROM ops.schema_mappings
-   WHERE (schema_drift_id='b085a8f4-6a10-508b-b5af-932cc2e4302a' AND status='APPROVED')
-      OR (schema_drift_id='a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474' AND status='REJECTED');
+   WHERE (schema_drift_id='b085a8f4-6a10-508b-b5af-932cc2e4302a' AND mapping_version=1
+          AND mapping_digest='ec5ff780a16c3555796ea902ba229f8702b16b7152d186fb12466c673f2b7684'
+          AND status='APPROVED' AND decided_by='11111111-1111-4111-8111-111111111111'
+          AND field_mappings='[{"upstreamPath":"approveSchemaMapping-upstreamPath","canonicalField":"approveSchemaMapping-canonicalField","transform":"approveSchemaMapping-transform","required":true}]'::jsonb)
+      OR (schema_drift_id='a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474' AND mapping_version=1
+          AND mapping_digest='9cd29fd04064fd955a0c98afc80f02676d6072c89e0fa93c6ca4a78a2bb75994'
+          AND status='REJECTED' AND decided_by='11111111-1111-4111-8111-111111111111'
+          AND field_mappings='[{"upstreamPath":"legacy.supplier","canonicalField":"supplierName","transform":"trim","required":true}]'::jsonb);
   IF actual <> 2 THEN RAISE EXCEPTION 'schema mapping decisions %, expected 2', actual; END IF;
-  IF (SELECT status FROM ops.schema_drifts WHERE id='b085a8f4-6a10-508b-b5af-932cc2e4302a') <> 'APPROVED'
-     OR (SELECT status FROM ops.schema_drifts WHERE id='a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474') <> 'REJECTED' THEN
+  IF (SELECT status FROM ops.schema_drifts WHERE id='b085a8f4-6a10-508b-b5af-932cc2e4302a') <> 'RESOLVED'
+     OR (SELECT version FROM ops.schema_drifts WHERE id='b085a8f4-6a10-508b-b5af-932cc2e4302a') <> 2
+     OR (SELECT status FROM ops.schema_drifts WHERE id='a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474') <> 'REJECTED'
+     OR (SELECT version FROM ops.schema_drifts WHERE id='a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474') <> 2 THEN
     RAISE EXCEPTION 'schema drift terminal decisions were not persisted';
   END IF;
 

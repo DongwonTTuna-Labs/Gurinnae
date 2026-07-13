@@ -8,7 +8,7 @@ use gurine_auth::assertion::{
 };
 use gurine_persistence_postgres::{
     assertions::{AssertionConsumption, consume},
-    idempotency::{Claim, StoredResponse, claim, complete},
+    idempotency::{Claim, StoredResponse, claim, complete, release},
 };
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -70,7 +70,21 @@ async fn handle(
     }
     let value = match dispatch(operation.id, &body, &state).await {
         Ok(value) => value,
-        Err(error) => return service_problem(error, &request_id),
+        Err(error) => {
+            if !matches!(
+                release(
+                    &state.pool,
+                    &idempotency.scope,
+                    &idempotency.key_hash,
+                    &idempotency.request_hash,
+                )
+                .await,
+                Ok(true)
+            ) {
+                return problem("DEPENDENCY_UNAVAILABLE", 503, &request_id);
+            }
+            return service_problem(error, &request_id);
+        }
     };
     let stored = StoredResponse {
         status: i32::from(operation.success_status),

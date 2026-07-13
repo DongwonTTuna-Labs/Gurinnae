@@ -197,6 +197,7 @@ async fn claim_step_up(
         .ok_or(ServiceError::AssuranceInsufficient)?;
     if digest != supplied_digest
         || context.operation_id != request.operation_id
+        || context.business_payload_sha256 != request.downstream_request.body_sha256
         || request.downstream_request.idempotency_key_sha256.as_deref()
             != Some(context.idempotency_key_sha256.as_str())
     {

@@ -154,6 +154,13 @@ VALUES
  ('7dc6b03d-d98b-53a8-828b-e0db50d7cfde','control-fixture-source',clock_timestamp(),repeat('c',64),'OPEN','LOW',1)
 ON CONFLICT DO NOTHING;
 
+INSERT INTO ops.schema_mappings(schema_drift_id,mapping_version,mapping_digest,field_mappings,status)
+VALUES
+ ('b085a8f4-6a10-508b-b5af-932cc2e4302a',1,'ec5ff780a16c3555796ea902ba229f8702b16b7152d186fb12466c673f2b7684','[{"upstreamPath":"approveSchemaMapping-upstreamPath","canonicalField":"approveSchemaMapping-canonicalField","transform":"approveSchemaMapping-transform","required":true}]','DRAFT'),
+ ('a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474',1,'9cd29fd04064fd955a0c98afc80f02676d6072c89e0fa93c6ca4a78a2bb75994','[{"upstreamPath":"legacy.supplier","canonicalField":"supplierName","transform":"trim","required":true}]','DRAFT'),
+ ('7dc6b03d-d98b-53a8-828b-e0db50d7cfde',1,repeat('f',64),'[{"upstreamPath":"negative.fixture","canonicalField":"supplierName","transform":"trim","required":true}]','DRAFT')
+ON CONFLICT DO NOTHING;
+
 INSERT INTO ops.jobs(id,job_type,queue,status,payload,version)
 VALUES('4db87cda-721c-551a-be08-3825a88c949d','CONTROL_FIXTURE','control-fixture-queue','FAILED','{}',1)
 ON CONFLICT DO NOTHING;

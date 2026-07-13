@@ -452,6 +452,7 @@ fn canonical_status_guard(operation: &str) -> Option<&'static str> {
     match operation {
         "acknowledgeSourceIncident" => Some("OPEN"),
         "acceptAgentSuggestion" | "rejectAgentSuggestion" => Some("PENDING"),
+        "approveSchemaMapping" | "rejectSchemaMapping" => Some("OPEN"),
         "pauseBackfill" => Some("RUNNING"),
         "resolveCorrectionRequest" => Some("REVIEW"),
         "saveResponseRequestDraft" => Some("DRAFT"),
@@ -1869,51 +1870,7 @@ async fn apply_specialized(
             .map_err(db)?;
         }
         "approveSchemaMapping" | "rejectSchemaMapping" => {
-            let drift =
-                uuid_value(payload, &["schemaDriftId"]).ok_or(ServiceError::InvalidRequest)?;
-            let mapping_version = payload
-                .get("mappingVersion")
-                .and_then(Value::as_i64)
-                .and_then(|value| i32::try_from(value).ok())
-                .filter(|value| *value > 0)
-                .ok_or(ServiceError::InvalidRequest)?;
-            let digest = string_value(payload, "mappingDigest")
-                .filter(|value| is_sha256(value))
-                .ok_or(ServiceError::InvalidRequest)?;
-            let approved = operation == "approveSchemaMapping";
-            let mappings = if approved {
-                payload
-                    .get("fieldMappings")
-                    .filter(|value| value.is_array())
-                    .cloned()
-                    .ok_or(ServiceError::InvalidRequest)?
-            } else {
-                json!([])
-            };
-            if approved && !mapping_digest_matches(&mappings, digest)? {
-                return Err(ServiceError::InvalidRequest);
-            }
-            sqlx::query(
-                "INSERT INTO ops.schema_mappings(schema_drift_id,mapping_version,mapping_digest, \
-                 field_mappings,status,proposed_by,decided_by,decision_reason,decided_at) \
-                 VALUES($1,$2,$3,$4,$5,$6,$6,$7,clock_timestamp())",
-            )
-            .bind(drift)
-            .bind(mapping_version)
-            .bind(digest)
-            .bind(mappings)
-            .bind(if approved { "APPROVED" } else { "REJECTED" })
-            .bind(actor)
-            .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-            .execute(&mut **tx)
-            .await
-            .map_err(db)?;
-            sqlx::query("UPDATE ops.schema_drifts SET status=$2 WHERE id=$1")
-                .bind(drift)
-                .bind(if approved { "APPROVED" } else { "REJECTED" })
-                .execute(&mut **tx)
-                .await
-                .map_err(db)?;
+            decide_schema_mapping(operation, payload, actor, tx).await?;
         }
         "assignCase" => {
             let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
@@ -3513,6 +3470,232 @@ async fn apply_specialized(
         _ => {}
     }
     Ok(())
+}
+
+async fn decide_schema_mapping(
+    operation: &str,
+    payload: &Map<String, Value>,
+    actor: Uuid,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    let decision = parse_schema_mapping_decision(operation, payload)?;
+    let current_status = lock_schema_mapping(&decision, tx).await?;
+    let drift_status = match operation {
+        "approveSchemaMapping" => {
+            approve_schema_mapping(&decision, current_status.as_deref(), actor, tx).await?;
+            "RESOLVED"
+        }
+        "rejectSchemaMapping" => {
+            reject_schema_mapping(&decision, current_status.as_deref(), actor, tx).await?;
+            "REJECTED"
+        }
+        _ => return Err(ServiceError::InvalidRequest),
+    };
+    finish_schema_drift_decision(decision.drift, drift_status, tx).await
+}
+
+struct SchemaMappingDecision {
+    drift: Uuid,
+    mapping_version: i32,
+    digest: String,
+    reason: String,
+    field_mappings: Option<Value>,
+}
+
+fn parse_schema_mapping_decision(
+    operation: &str,
+    payload: &Map<String, Value>,
+) -> Result<SchemaMappingDecision, ServiceError> {
+    let drift = uuid_value(payload, &["schemaDriftId"]).ok_or(ServiceError::InvalidRequest)?;
+    let mapping_version = payload
+        .get("mappingVersion")
+        .and_then(Value::as_i64)
+        .and_then(|value| i32::try_from(value).ok())
+        .filter(|value| *value > 0)
+        .ok_or(ServiceError::InvalidRequest)?;
+    let digest = string_value(payload, "mappingDigest")
+        .filter(|value| is_sha256(value))
+        .ok_or(ServiceError::InvalidRequest)?
+        .to_owned();
+    let reason = string_value(payload, "reason")
+        .ok_or(ServiceError::InvalidRequest)?
+        .to_owned();
+    let field_mappings = if operation == "approveSchemaMapping" {
+        let value = payload
+            .get("fieldMappings")
+            .filter(|value| value.is_array())
+            .cloned()
+            .ok_or(ServiceError::InvalidRequest)?;
+        if !mapping_digest_matches(&value, &digest)? {
+            return Err(ServiceError::InvalidRequest);
+        }
+        Some(value)
+    } else if operation == "rejectSchemaMapping" {
+        None
+    } else {
+        return Err(ServiceError::InvalidRequest);
+    };
+    Ok(SchemaMappingDecision {
+        drift,
+        mapping_version,
+        digest,
+        reason,
+        field_mappings,
+    })
+}
+
+async fn lock_schema_mapping(
+    decision: &SchemaMappingDecision,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<Option<String>, ServiceError> {
+    let candidates = sqlx::query(
+        "SELECT mapping_version,mapping_digest,status FROM ops.schema_mappings \
+         WHERE schema_drift_id=$1 AND (mapping_version=$2 OR mapping_digest=$3) FOR UPDATE",
+    )
+    .bind(decision.drift)
+    .bind(decision.mapping_version)
+    .bind(&decision.digest)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(db)?;
+    if candidates.len() > 1 {
+        return Err(ServiceError::VersionConflict);
+    }
+    let Some(row) = candidates.first() else {
+        return Ok(None);
+    };
+    let version = row.try_get::<i32, _>("mapping_version").map_err(db)?;
+    let digest = row
+        .try_get::<String, _>("mapping_digest")
+        .map_err(db)?
+        .trim()
+        .to_owned();
+    if version != decision.mapping_version || digest != decision.digest {
+        return Err(ServiceError::VersionConflict);
+    }
+    row.try_get::<String, _>("status").map(Some).map_err(db)
+}
+
+async fn approve_schema_mapping(
+    decision: &SchemaMappingDecision,
+    current_status: Option<&str>,
+    actor: Uuid,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    match current_status {
+        None => insert_approved_schema_mapping(decision, actor, tx).await,
+        Some("DRAFT") => update_approved_schema_mapping(decision, actor, tx).await,
+        Some(_) => Err(ServiceError::VersionConflict),
+    }
+}
+
+async fn insert_approved_schema_mapping(
+    decision: &SchemaMappingDecision,
+    actor: Uuid,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    let field_mappings = decision
+        .field_mappings
+        .as_ref()
+        .ok_or(ServiceError::InvalidRequest)?;
+    sqlx::query(
+        "INSERT INTO ops.schema_mappings(schema_drift_id,mapping_version,mapping_digest, \
+         field_mappings,status,proposed_by,decided_by,decision_reason,decided_at) \
+         VALUES($1,$2,$3,$4,'APPROVED',$5,$5,$6,clock_timestamp())",
+    )
+    .bind(decision.drift)
+    .bind(decision.mapping_version)
+    .bind(&decision.digest)
+    .bind(field_mappings)
+    .bind(actor)
+    .bind(&decision.reason)
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?;
+    Ok(())
+}
+
+async fn update_approved_schema_mapping(
+    decision: &SchemaMappingDecision,
+    actor: Uuid,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    let field_mappings = decision
+        .field_mappings
+        .as_ref()
+        .ok_or(ServiceError::InvalidRequest)?;
+    let changed = sqlx::query(
+        "UPDATE ops.schema_mappings SET field_mappings=$4,status='APPROVED',decided_by=$5, \
+         decision_reason=$6,decided_at=clock_timestamp() WHERE schema_drift_id=$1 \
+         AND mapping_version=$2 AND mapping_digest=$3 AND status='DRAFT'",
+    )
+    .bind(decision.drift)
+    .bind(decision.mapping_version)
+    .bind(&decision.digest)
+    .bind(field_mappings)
+    .bind(actor)
+    .bind(&decision.reason)
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
+    if changed == 1 {
+        Ok(())
+    } else {
+        Err(ServiceError::VersionConflict)
+    }
+}
+
+async fn reject_schema_mapping(
+    decision: &SchemaMappingDecision,
+    current_status: Option<&str>,
+    actor: Uuid,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    match current_status {
+        None => return Err(ServiceError::NotFound),
+        Some("DRAFT") => {}
+        Some(_) => return Err(ServiceError::VersionConflict),
+    }
+    let changed = sqlx::query(
+        "UPDATE ops.schema_mappings SET status='REJECTED',decided_by=$4, \
+         decision_reason=$5,decided_at=clock_timestamp() WHERE schema_drift_id=$1 \
+         AND mapping_version=$2 AND mapping_digest=$3 AND status='DRAFT'",
+    )
+    .bind(decision.drift)
+    .bind(decision.mapping_version)
+    .bind(&decision.digest)
+    .bind(actor)
+    .bind(&decision.reason)
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
+    if changed == 1 {
+        Ok(())
+    } else {
+        Err(ServiceError::VersionConflict)
+    }
+}
+
+async fn finish_schema_drift_decision(
+    drift: Uuid,
+    status: &str,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    let changed =
+        sqlx::query("UPDATE ops.schema_drifts SET status=$2 WHERE id=$1 AND status='OPEN'")
+            .bind(drift)
+            .bind(status)
+            .execute(&mut **tx)
+            .await
+            .map_err(db)?
+            .rows_affected();
+    if changed == 1 {
+        Ok(())
+    } else {
+        Err(ServiceError::VersionConflict)
+    }
 }
 
 async fn replace_claim_relations(

@@ -103,7 +103,7 @@ VALUES('31000000-0000-4000-8000-000000000033',NULL,'[]',clock_timestamp()+interv
 INSERT INTO intake.correction_draft_attachments(id,draft_id,original_filename_encrypted,media_type,size_bytes,sha256,object_key,upload_status,scan_status)
 VALUES('31000000-0000-4000-8000-000000000031','31000000-0000-4000-8000-000000000033',decode('00','hex'),'text/plain',:'correction_size',:'correction_sha','uploads/correction.txt','FINALIZED','PENDING');
 INSERT INTO intake.contact_requests(id,category,name_encrypted,email_hash,email_encrypted,subject,message_encrypted,status,receipt_token_hash)
-VALUES('31000000-0000-4000-8000-000000000040','GENERAL',decode('00','hex'),repeat('8',64),decode('00','hex'),'Event contact',decode('00','hex'),'RECEIVED',repeat('9',64));
+VALUES('31000000-0000-4000-8000-000000000040','GENERAL',decode('00','hex'),repeat('8',64),decode('00','hex'),'<strong>Event & contact</strong>',decode('00','hex'),'RECEIVED',repeat('9',64));
 INSERT INTO intake.subscriptions(id,email_hash,email_encrypted,topics,frequency,locale,status,management_token_hash) VALUES
  ('31000000-0000-4000-8000-000000000020',repeat('a',64),:'pending_email','["ALL"]','IMMEDIATE','ko-KR','PENDING',repeat('b',64)),
  ('31000000-0000-4000-8000-000000000021',repeat('c',64),:'active_email','["ALL"]','IMMEDIATE','ko-KR','ACTIVE',repeat('d',64));
@@ -264,4 +264,20 @@ test -n "$parquet_file"
 test "$(head -c 4 "$parquet_file")" = "PAR1"
 test "$(tail -c 4 "$parquet_file")" = "PAR1"
 test "$(wc -l <"$work/smtp.jsonl")" -eq 11
+SMTP_CAPTURE="$work/smtp.jsonl" PYTHONDONTWRITEBYTECODE=1 python3 - <<'PY'
+import json
+import os
+
+with open(os.environ["SMTP_CAPTURE"], encoding="utf-8") as stream:
+    messages = [json.loads(line) for line in stream]
+contact = next(message for message in messages if message["subject"] == "구린네 새 문의 접수")
+expected_subject = "<strong>Event & contact</strong>"
+assert contact["text_body"].endswith(f"제목: {expected_subject}"), contact["text_body"]
+assert contact["html_body"] == (
+    "<p>새 문의가 접수되었습니다.</p>"
+    "<p>ID: 31000000-0000-4000-8000-000000000040</p>"
+    "<p>제목: &lt;strong&gt;Event &amp; contact&lt;/strong&gt;</p>"
+), contact["html_body"]
+assert expected_subject not in contact["html_body"], contact["html_body"]
+PY
 echo "workflow 8-event and notification 11-type fenced PostgreSQL/object-store/ClamAV/SMTP runtime: PASS"

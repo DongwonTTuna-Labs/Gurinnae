@@ -10,7 +10,7 @@ use gurine_auth::assertion::{
 };
 use gurine_persistence_postgres::{
     assertions::{AssertionConsumption, consume},
-    idempotency::{Claim, StoredResponse, claim, complete},
+    idempotency::{Claim, StoredResponse, claim, complete, release},
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -176,15 +176,6 @@ async fn handle(
             return response;
         }
     }
-    let idempotency = if operation.idempotency_required {
-        match prepare_idempotency(&operation, &request, &body, &state, &request_id).await {
-            Ok(Prepared::Replay(response)) => return stored_response(response, &request_id),
-            Ok(Prepared::Execute(value)) => Some(value),
-            Err(response) => return response,
-        }
-    } else {
-        None
-    };
     let attachment_id = request
         .match_info()
         .get("attachmentId")
@@ -193,6 +184,15 @@ async fn handle(
     let attachment_id = match attachment_id {
         Ok(value) => value,
         Err(_) => return problem("INVALID_PARAMETER", 400, &request_id),
+    };
+    let idempotency = if operation.idempotency_required {
+        match prepare_idempotency(&operation, &request, &body, &state, &request_id).await {
+            Ok(Prepared::Replay(response)) => return stored_response(response, &request_id),
+            Ok(Prepared::Execute(value)) => Some(value),
+            Err(response) => return response,
+        }
+    } else {
+        None
     };
     let output = match crate::service::execute(crate::service::RequestContext {
         operation: operation.id,
@@ -206,7 +206,23 @@ async fn handle(
     .await
     {
         Ok(value) => value,
-        Err(error) => return service_problem(error, &request_id),
+        Err(error) => {
+            if let Some(prepared) = idempotency.as_ref()
+                && !matches!(
+                    release(
+                        &state.pool,
+                        &prepared.scope,
+                        &prepared.key_hash,
+                        &prepared.request_hash,
+                    )
+                    .await,
+                    Ok(true)
+                )
+            {
+                return problem("DEPENDENCY_UNAVAILABLE", 503, &request_id);
+            }
+            return service_problem(error, &request_id);
+        }
     };
     if let Some(prepared) = idempotency {
         let stored = StoredResponse {

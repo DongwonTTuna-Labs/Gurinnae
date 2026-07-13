@@ -414,11 +414,18 @@ const correctionExchanged = await invoke(
 await invoke("GET", "/v1/correction-receipt", undefined, {
   session: sessionToken(correctionExchanged.body, "session"),
 });
+const correctionFailureKey = randomUUID();
 await invoke(
   "POST",
   "/v1/submission-session/correction-receipt:exchange",
   { oneTimeToken: correctionReceiptToken },
-  { expected: 401 },
+  { expected: 401, idempotencyKey: correctionFailureKey },
+);
+await invoke(
+  "POST",
+  "/v1/submission-session/correction-receipt:exchange",
+  { oneTimeToken: correctionReceiptToken },
+  { expected: 401, idempotencyKey: correctionFailureKey },
 );
 
 const disposableCorrection = await invoke(

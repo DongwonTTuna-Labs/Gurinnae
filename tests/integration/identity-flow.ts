@@ -272,6 +272,27 @@ const issueRequest = {
   context,
   requiredAssuranceLevel: "STEP_UP",
 };
+const mismatchedBodySha256 = sha256(`${downstreamBody}\n`);
+const mismatchedDownstreamRequest = {
+  ...downstreamRequest,
+  bodySha256: mismatchedBodySha256,
+  requestDigest: sha256(
+    `POST\n${normalizedPath}\n${querySha256}\n${mismatchedBodySha256}\napplication/json\n${idempotencyKeySha256}`,
+  ),
+};
+const mismatchedIssueRequest = {
+  ...issueRequest,
+  downstreamRequest: mismatchedDownstreamRequest,
+};
+const mismatchedIssueKey = randomUUID();
+await invoke("/internal/v1/actor-assertions", mismatchedIssueRequest, {
+  expected: 401,
+  idempotencyKey: mismatchedIssueKey,
+});
+await invoke("/internal/v1/actor-assertions", mismatchedIssueRequest, {
+  expected: 401,
+  idempotencyKey: mismatchedIssueKey,
+});
 const remaining: number[] = [];
 for (let index = 0; index < 3; index += 1) {
   const issued = await invoke("/internal/v1/actor-assertions", issueRequest);
