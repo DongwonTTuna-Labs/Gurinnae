@@ -32,7 +32,7 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: `HOST=127.0.0.1 PORT=29101 GURINE_ENV=test ORIGIN=http://127.0.0.1:29101 PUBLIC_BASE_URL=http://127.0.0.1:29101 PUBLIC_API_INTERNAL_URL=${mock} SUBMISSION_API_INTERNAL_URL=${mock} PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE= SUBMISSION_COOKIE_KEY_CURRENT=GQBTWs9nf7Kq81QWQ95fHNnlF9jwS7ZS8SH92g968+g= bun apps/public-web/build/index.js`,
+      command: `HOST=127.0.0.1 PORT=29101 GURINE_ENV=test ORIGIN=http://127.0.0.1:29101 PUBLIC_BASE_URL=http://127.0.0.1:29101 PUBLIC_API_INTERNAL_URL=${mock} SUBMISSION_API_INTERNAL_URL=${mock} BOT_CHALLENGE_SITE_KEY=synthetic-test PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE= SUBMISSION_COOKIE_KEY_CURRENT=GQBTWs9nf7Kq81QWQ95fHNnlF9jwS7ZS8SH92g968+g= bun apps/public-web/build/index.js`,
       url: "http://127.0.0.1:29101/",
       reuseExistingServer: false,
       timeout: 30_000,
@@ -44,8 +44,7 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command:
-        "HOST=127.0.0.1 PORT=29103 GURINE_ENV=test ORIGIN=http://127.0.0.1:29103 RESPONSE_BASE_URL=http://127.0.0.1:29103 SUBMISSION_COOKIE_KEY_CURRENT=GQBTWs9nf7Kq81QWQ95fHNnlF9jwS7ZS8SH92g968+g= bun apps/response-portal/build/index.js",
+      command: `HOST=127.0.0.1 PORT=29103 GURINE_ENV=test ORIGIN=http://127.0.0.1:29103 RESPONSE_BASE_URL=http://127.0.0.1:29103 SUBMISSION_API_INTERNAL_URL=${mock} RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE= SUBMISSION_COOKIE_KEY_CURRENT=GQBTWs9nf7Kq81QWQ95fHNnlF9jwS7ZS8SH92g968+g= bun apps/response-portal/build/index.js`,
       url: "http://127.0.0.1:29103/respond/unavailable",
       reuseExistingServer: false,
       timeout: 30_000,

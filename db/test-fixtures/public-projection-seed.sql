@@ -30,6 +30,16 @@ INSERT INTO public.contracts(
   '2026-07-12T00:00:00Z'
 );
 
+INSERT INTO public.contracts(
+  id,contract_number,title,agency_id,supplier_id,status,signed_at,amount,detail,updated_at
+) VALUES (
+  'c2222222-2222-4222-8222-222222222222','CT-2025-EXCLUDED','필터 제외 계약',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  'COMPLETED','2025-01-02','{"amount":"500000","currency":"KRW"}',
+  '{"contractMethod":"DIRECT","currency":"KRW","originalAmount":{"amount":"500000","currency":"KRW"},"currentAmount":{"amount":"500000","currency":"KRW"},"lineItems":[],"changes":[],"sourceDocuments":[],"normalizationWarnings":[],"relatedCases":[]}',
+  '2026-07-13T00:00:00Z'
+);
+
 INSERT INTO public.cases(
   id,slug,title,public_state,latest_revision,summary,published_at,updated_at,source_freshness
 ) VALUES (
@@ -56,11 +66,32 @@ INSERT INTO public.case_revisions(
   '2026-07-12T00:00:00Z'
 );
 
+INSERT INTO public.cases(
+  id,slug,title,public_state,latest_revision,summary,published_at,updated_at,source_freshness
+) VALUES (
+  'd2222222-2222-4222-8222-222222222222','filter-control-case','필터 대조 공개 사례',
+  'PUBLISHED_EXPLAINED',1,'필터가 SQL pagination 전에 적용되는지 검증합니다.',
+  '2025-01-02T00:00:00Z','2026-07-13T00:00:00Z',
+  '{"asOf":"2026-07-13T00:00:00Z","status":"STALE"}'
+);
+
+INSERT INTO public.case_revisions(
+  case_id,revision,state,payload,payload_sha256,published_at
+) VALUES (
+  'd2222222-2222-4222-8222-222222222222',1,'PUBLISHED_EXPLAINED',
+  '{"agencyId":"22222222-2222-4222-8222-222222222222","supplierId":"33333333-3333-4333-8333-333333333333","ruleId":"different-rule","responses":[{"id":"response-filter"}],"partyResponses":[],"claims":[],"evidence":[],"sourceFreshness":{}}',
+  '4444444444444444444444444444444444444444444444444444444444444444',
+  '2025-01-02T00:00:00Z'
+);
+
 INSERT INTO public.corrections(id,case_id,source_revision,target_revision,summary,reason,published_at)
 VALUES('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','dddddddd-dddd-4ddd-8ddd-dddddddddddd',1,2,'표기 정정','원자료 표기 확인','2026-07-12T01:00:00Z');
 
 INSERT INTO public.source_status(source_id,display_name,status,last_success_at,expected_frequency,lag_seconds,affected_scope,public_message,updated_at)
 VALUES('koneps','나라장터','CURRENT','2026-07-12T00:00:00Z','1 day',0,'{"scope":"contracts"}',NULL,'2026-07-12T00:00:00Z');
+
+INSERT INTO public.source_status(source_id,display_name,status,last_success_at,expected_frequency,lag_seconds,affected_scope,public_message,updated_at)
+VALUES('a-degraded','AAA degraded source','DEGRADED','2026-07-01T00:00:00Z','1 day',86400,'{"scope":"contracts"}','필터 pagination 대조 source','2026-07-13T00:00:00Z');
 
 INSERT INTO public.rules(rule_id,name,active_version,public_description,requirements,exclusions,limitations,updated_at)
 VALUES('unit-price-ratio','단가 비율','1.0.0','동일 단위 비교군의 중앙값 대비 비율','["unitPrice","unit"]','[]','[]','2026-07-12T00:00:00Z');

@@ -140,7 +140,7 @@ SQL
 smtp_port="$(free_port)"
 : >"$work/smtp.jsonl"
 FAKE_SMTP_PORT="$smtp_port" FAKE_SMTP_OUTPUT="$work/smtp.jsonl" \
-  python3 scripts/test-support/fake-smtp-gateway.py &
+  PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-support/fake-smtp-gateway.py &
 smtp_pid=$!
 sleep 0.2
 

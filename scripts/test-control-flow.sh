@@ -35,5 +35,5 @@ control_pid=$!
 for _ in $(seq 1 60); do if curl --fail --silent --show-error "http://127.0.0.1:${control_port}/health/ready" >/dev/null 2>&1; then break; fi; sleep 0.5; done
 curl --fail --silent --show-error "http://127.0.0.1:${control_port}/health/ready" >/dev/null
 kill -0 "$control_pid"
-CONTROL_TEST_BASE_URL="http://127.0.0.1:${control_port}" CONTROL_ASSERTION_KEY="$test_key" python3 tests/integration/control-flow.py
+PYTHONDONTWRITEBYTECODE=1 CONTROL_TEST_BASE_URL="http://127.0.0.1:${control_port}" CONTROL_ASSERTION_KEY="$test_key" python3 tests/integration/control-flow.py
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-runtime-assertions.sql >/dev/null

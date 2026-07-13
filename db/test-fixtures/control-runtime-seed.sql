@@ -182,6 +182,12 @@ INSERT INTO ops.saved_views(id,user_id,name,surface,query,version)
 VALUES('a7b751a7-3606-5259-92b7-92347a03d7b7','a2583e82-06ed-558f-86e7-8ed3b439637c','Foreign Fixture View','CASES','{}',1)
 ON CONFLICT DO NOTHING;
 
+INSERT INTO ops.saved_views(id,user_id,name,surface,query,version)
+VALUES
+ ('b6f0d74e-9b29-5e44-9738-761e6edfbe6b','11111111-1111-4111-8111-111111111111','Path Binding View A','CASES','{}',1),
+ ('eac8ecc9-9dfe-5160-963c-f8ac1af1f4be','11111111-1111-4111-8111-111111111111','Path Binding View B','CASES','{}',1)
+ON CONFLICT DO NOTHING;
+
 INSERT INTO ops.notifications(id,user_id,notification_type,title,body,version)
 VALUES('bcd5bb90-fbee-5d59-bcec-7a08c29c31c6','11111111-1111-4111-8111-111111111111','CONTROL_FIXTURE','Control fixture notification','Canonical integration notification',1)
 ON CONFLICT DO NOTHING;

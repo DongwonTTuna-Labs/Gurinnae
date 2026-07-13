@@ -178,6 +178,7 @@ services:
       HTTP_BIND: 0.0.0.0:8082
       CLAMAV_HOST: clamav
       AUDIT_CHAIN_HMAC_KEY: ${AUDIT_CHAIN_HMAC_KEY:-}
+      ABUSE_EGRESS_URL: http://egress-gateway:8090/challenge
       BOT_CHALLENGE_SECRET_KEY: ${BOT_CHALLENGE_SECRET_KEY:-}
       DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
       EGRESS_OBJECT_STORE_CHANNEL_URL: ${EGRESS_OBJECT_STORE_CHANNEL_URL:-}
@@ -205,6 +206,8 @@ services:
         condition: service_completed_successfully
       clamav:
         condition: service_started
+      egress-gateway:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "/app/gurine-submission-api", "healthcheck", "--url", "http://127.0.0.1:8082/health/ready"]
       interval: 10s
@@ -552,6 +555,7 @@ services:
       PUBLIC_API_INTERNAL_URL: http://public-api:8080
       SUBMISSION_API_INTERNAL_URL: http://submission-api:8082
       BOT_CHALLENGE_SITE_KEY: ${BOT_CHALLENGE_SITE_KEY:-}
+      BODY_SIZE_LIMIT: 55000000
       GURINE_ENV: ${GURINE_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       ORIGIN: ${ORIGIN:-}
@@ -630,6 +634,7 @@ services:
       target: response-portal
     environment:
       PORT: 3002
+      BODY_SIZE_LIMIT: 55000000
       SUBMISSION_API_INTERNAL_URL: http://submission-api:8082
       BOT_CHALLENGE_SITE_KEY: ${BOT_CHALLENGE_SITE_KEY:-}
       GURINE_ENV: ${GURINE_ENV:-development}

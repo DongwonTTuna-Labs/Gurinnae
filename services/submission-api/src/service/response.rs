@@ -48,6 +48,9 @@ pub async fn verify(context: &RequestContext<'_>) -> Result<Value, ServiceError>
             .await
             .map_err(common::database_error)?;
     let scoped_request = uuid(&status, "scope_id")?;
+    let pending_expires_at =
+        OffsetDateTime::parse(common::string(&status, "expires_at")?, &Rfc3339)
+            .map_err(|_| ServiceError::Persistence)?;
     let access_token_hash: String = sqlx::query_scalar(
         "SELECT token_hash::text FROM intake.response_access_tokens WHERE response_request_id=$1",
     )
@@ -90,7 +93,7 @@ pub async fn verify(context: &RequestContext<'_>) -> Result<Value, ServiceError>
                 common::session(context)?.to_owned(),
                 "RESPONSE_PENDING",
                 request_id,
-                OffsetDateTime::now_utc()+Duration::minutes(15),
+                pending_expires_at,
                 1
             )?,
         }))

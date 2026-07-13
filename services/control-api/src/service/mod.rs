@@ -6,7 +6,7 @@ use gurine_api_contracts::{
     event::{producer_events, project_payload, requires_outbox},
 };
 use gurine_auth::{
-    assertion::actor::ActorClaims,
+    assertion::{BoundRequest, actor::ActorClaims, canonical::canonical_request_digest},
     envelope::{EnvelopeKeyRing, encrypt},
 };
 use serde::Deserialize;
@@ -104,7 +104,18 @@ async fn command(
         .ok_or(ServiceError::InvalidRequest)?;
     let scope = format!("control:{}:{}", claims.sub, operation.id);
     let key_hash = sha256(idempotency_key.as_bytes());
-    let request_hash = sha256(body);
+    let request_hash = canonical_request_digest(&BoundRequest {
+        method: request.method().as_str(),
+        path: request.path(),
+        raw_query: request.query_string(),
+        body,
+        content_type: request
+            .headers()
+            .get("content-type")
+            .and_then(|value| value.to_str().ok()),
+        idempotency_key: Some(idempotency_key),
+    })
+    .map_err(|_| ServiceError::InvalidRequest)?;
     let mut transaction = pool.begin().await.map_err(db)?;
     let inserted = sqlx::query(
         "INSERT INTO ops.idempotency_keys(scope,key_hash,request_hash,expires_at) VALUES($1,$2,$3,clock_timestamp()+interval '24 hours') ON CONFLICT DO NOTHING",
@@ -2375,7 +2386,12 @@ async fn apply_specialized(
                 return Err(ServiceError::InvalidRequest);
             }
             let row = sqlx::query(
-                "SELECT c.publication_state::text publication_state, \
+                "SELECT CASE \
+                   WHEN c.publication_state='NEVER_PUBLISHED' AND c.resolution_code='EXPLAINED' \
+                     THEN 'PUBLISHED_EXPLAINED' \
+                   WHEN c.publication_state='NEVER_PUBLISHED' THEN 'PUBLISHED_ANOMALY' \
+                   ELSE c.publication_state::text \
+                 END publication_state, \
                  GREATEST(COALESCE(c.current_publication_revision,0), \
                    COALESCE((SELECT max(r.revision) FROM editorial.publication_revisions r \
                              WHERE r.case_id=c.id),0))+1 revision, \
@@ -2412,11 +2428,13 @@ async fn apply_specialized(
             .map_err(db)?;
             sqlx::query(
                 "UPDATE editorial.cases SET current_review_snapshot_id=$2, \
-                 current_publication_revision=$3 WHERE id=$1",
+                 current_publication_revision=$3, \
+                 publication_state=$4::editorial.publication_state WHERE id=$1",
             )
             .bind(case_id)
             .bind(snapshot)
             .bind(revision)
+            .bind(&state)
             .execute(&mut **tx)
             .await
             .map_err(db)?;

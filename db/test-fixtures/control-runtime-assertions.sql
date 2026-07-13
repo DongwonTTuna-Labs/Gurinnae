@@ -46,6 +46,17 @@ BEGIN
   IF actual <> 2 THEN RAISE EXCEPTION 'role canonical version %, expected 2', actual; END IF;
   SELECT count(*) INTO actual FROM ops.saved_views WHERE id='b6f53b1e-6d09-541a-a87a-1c7aee5bb3b0';
   IF actual <> 0 THEN RAISE EXCEPTION 'deleted saved view rows %, expected 0', actual; END IF;
+  SELECT version INTO actual FROM ops.saved_views WHERE id='b6f0d74e-9b29-5e44-9738-761e6edfbe6b';
+  IF actual <> 2 THEN RAISE EXCEPTION 'path-bound saved view A version %, expected 2', actual; END IF;
+  SELECT version INTO actual FROM ops.saved_views WHERE id='eac8ecc9-9dfe-5160-963c-f8ac1af1f4be';
+  IF actual <> 1 THEN RAISE EXCEPTION 'path-bound saved view B version %, expected 1', actual; END IF;
+  IF (SELECT publication_state FROM editorial.cases WHERE id='148b09d5-aa28-5351-b471-9ef333a3e410') <> 'PUBLISHED_ANOMALY' THEN
+    RAISE EXCEPTION 'first publication did not advance the case publication state';
+  END IF;
+  IF (SELECT state FROM editorial.publication_revisions
+      WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410' ORDER BY revision DESC LIMIT 1) <> 'PUBLISHED_ANOMALY' THEN
+    RAISE EXCEPTION 'first publication revision did not persist the published state';
+  END IF;
 
   IF (SELECT state FROM ops.kill_switches WHERE id='2cd3a1db-f58f-501c-a08c-02b3760c4dbc') <> 'INACTIVE' THEN
     RAISE EXCEPTION 'kill switch did not complete activation-extension-deactivation lifecycle';
@@ -223,7 +234,7 @@ BEGIN
   SELECT count(*) INTO actual FROM editorial.legal_holds WHERE active;
   IF actual <> 1 THEN RAISE EXCEPTION 'active legal hold rows %, expected 1', actual; END IF;
   SELECT count(*) INTO actual FROM ops.audit_events WHERE action LIKE 'command.%';
-  IF actual <> 76 THEN RAISE EXCEPTION 'command audit rows %, expected 76', actual; END IF;
+  IF actual <> 77 THEN RAISE EXCEPTION 'command audit rows %, expected 77', actual; END IF;
   SELECT count(*) INTO actual FROM ops.outbox;
   IF actual <> 9 THEN RAISE EXCEPTION 'control outbox rows %, expected 9', actual; END IF;
 

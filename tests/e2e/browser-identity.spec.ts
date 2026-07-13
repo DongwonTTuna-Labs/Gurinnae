@@ -67,6 +67,9 @@ test.describe
       const initialCsrf = await form
         .locator('input[name="csrfToken"]')
         .inputValue();
+      const initialIdempotencyKey = await form
+        .locator('input[name="idempotencyKey"]')
+        .inputValue();
       expect(initialCsrf.length).toBeGreaterThanOrEqual(43);
       expect(sessionCookie?.value).not.toContain(initialCsrf);
 
@@ -101,6 +104,7 @@ test.describe
           headers: { origin: review },
           form: {
             csrfToken: initialCsrf,
+            idempotencyKey: initialIdempotencyKey,
             caseId,
             reviewSnapshotId: snapshotId,
             previewHash: "b".repeat(64),
@@ -174,6 +178,28 @@ test.describe
           (cookie) => cookie.name === "gurine_step_up_authorization",
         ),
       ).toBe(false);
+
+      await page.goto(`${review}/internal/sources/koneps/backfill`);
+      await expect(page.locator(".error-summary")).toHaveCount(0);
+      const estimate = page.locator('form[data-action-id="estimate"]');
+      await expect(estimate).toBeVisible();
+      await expect(estimate.locator('input[name="sourceId"]')).toHaveValue(
+        "koneps",
+      );
+      await expect(estimate.locator('input[name="sourceId"]')).toHaveAttribute(
+        "readonly",
+        "",
+      );
+      await estimate.locator('input[name="from"]').fill("2026-01-01");
+      await estimate.locator('input[name="to"]').fill("2026-01-31");
+      await estimate.locator('button[type="submit"]').click();
+      await page.waitForURL(/estimateBackfill|from=2026-01-01/);
+      await expect(page.getByText("영향 계산 완료")).toBeVisible();
+      expect(
+        (await stateOf(request)).assertionOperations.some(
+          (item) => item.operationId === "estimateBackfill",
+        ),
+      ).toBe(true);
 
       await page.request.post(`${review}/auth/logout`, {
         headers: {

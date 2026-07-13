@@ -10,7 +10,7 @@
     "build": "bun run --filter '*' build",
     "check": "bun run --filter '*' check",
     "test": "bun run --filter '*' test",
-    "test:e2e": "playwright test tests/e2e/routes.spec.ts tests/e2e/browser-identity.spec.ts",
+    "test:e2e": "playwright test tests/e2e/routes.spec.ts tests/e2e/browser-identity.spec.ts tests/e2e/submission-routing.spec.ts",
     "test:visual": "playwright test tests/e2e/visual-routes.spec.ts",
     "codegen": "bun run scripts/generate-clients.ts"
   },

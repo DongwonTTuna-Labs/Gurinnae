@@ -59,4 +59,12 @@ done
 curl --fail --silent --show-error "http://127.0.0.1:${public_port}/health/ready" >/dev/null
 kill -0 "$public_pid"
 
-PUBLIC_TEST_BASE_URL="http://127.0.0.1:${public_port}" python3 tests/integration/public-flow.py
+PYTHONDONTWRITEBYTECODE=1 PUBLIC_TEST_BASE_URL="http://127.0.0.1:${public_port}" python3 tests/integration/public-flow.py
+
+docker stop -t 0 "$container" >/dev/null
+ready_status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 \
+  "http://127.0.0.1:${public_port}/health/ready")"
+if [[ "$ready_status" != "503" ]]; then
+  echo "public-api readiness returned $ready_status after PostgreSQL shutdown; expected 503" >&2
+  exit 1
+fi

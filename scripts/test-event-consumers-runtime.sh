@@ -169,7 +169,7 @@ RESET ROLE;
 SQL
 
 clamav_port="$(free_port)"
-FAKE_CLAMAV_PORT="$clamav_port" python3 scripts/test-support/fake-clamav.py &
+PYTHONDONTWRITEBYTECODE=1 FAKE_CLAMAV_PORT="$clamav_port" python3 scripts/test-support/fake-clamav.py &
 clamav_pid=$!
 sleep 0.2
 GURINE_ENV=development WORKFLOW_DATABASE_URL="postgresql://gurine_workflow_worker:workflow_test@127.0.0.1:${postgres_port}/${database}" \
@@ -220,7 +220,7 @@ SCHEDULER_INSTANCE_ID="event-test" SCHEDULER_ONCE=true target/debug/gurine-sched
 smtp_port="$(free_port)"
 : >"$work/smtp.jsonl"
 FAKE_SMTP_PORT="$smtp_port" FAKE_SMTP_OUTPUT="$work/smtp.jsonl" \
-  python3 scripts/test-support/fake-smtp-gateway.py &
+  PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-support/fake-smtp-gateway.py &
 smtp_pid=$!
 sleep 0.2
 NOTIFICATION_DATABASE_URL="postgresql://gurine_notification_worker:notification_test@127.0.0.1:${postgres_port}/${database}" \

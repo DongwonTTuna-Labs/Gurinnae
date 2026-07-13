@@ -10,6 +10,7 @@ import {
   indexOperations,
   type OpenApiDocument,
   operationFields,
+  optimisticVersion,
   requiredServerValue,
 } from "@gurine/config";
 import type { ScreenRuntime, ScreenViewModel } from "@gurine/ui";
@@ -112,6 +113,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         indexed.operation.parameters ?? [],
         event.url.searchParams,
       );
+      if (rawQuery === null) continue;
       const result = await controlRequest(
         event,
         indexed,
@@ -137,7 +139,8 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     pathname: event.url.pathname,
     data,
     errors,
-    forms: formsFor(screen, event, new Set(allowedActionIds)),
+    forms: formsFor(screen, event, data, new Set(allowedActionIds)),
+    idempotencyKeys: actionIdempotencyKeys(screen, new Set(allowedActionIds)),
     allowedActionIds,
     ...(typeof actor.displayName === "string"
       ? { actorDisplayName: actor.displayName }
@@ -183,36 +186,50 @@ async function runAction(
     const form = await event.request.formData();
     if (form.get("csrfToken") !== csrfToken)
       return fail(403, { message: "CSRF_TOKEN_STALE" });
+    const idempotencyKey = formIdempotencyKey(form);
     const fields = operationFields(
       indexed,
       event.params,
       recordProperty(action, "preset"),
     );
-    const body = normalize(
-      formPayload(form, fields, recordProperty(action, "preset")),
+    const input = bindRouteValues(
+      normalize(formPayload(form, fields, recordProperty(action, "preset"))),
+      event.params,
     );
     const path = bindPath(indexed.path, event.params);
     const assurance =
       stringExtension(indexed, "x-assurance-level") ?? "ACTIVE_SESSION";
+    const operationKind = stringExtension(indexed, "x-operation-kind");
     if (assurance === "STEP_UP") {
-      return beginStepUp(event, indexed, path, body, event.url.pathname);
+      return beginStepUp(
+        event,
+        indexed,
+        path,
+        input,
+        idempotencyKey,
+        event.url.pathname,
+      );
     }
-    const result = await controlRequest(
-      event,
-      indexed,
-      path,
-      "",
-      body,
-      randomUUID(),
-    );
+    const queryOperation =
+      indexed.method === "GET" || operationKind === "QUERY";
+    const rawQuery = queryOperation ? queryString(input) : "";
+    const result = queryOperation
+      ? await controlRequest(event, indexed, path, rawQuery)
+      : await controlRequest(event, indexed, path, "", input, idempotencyKey);
     if (!result.response.ok)
       return fail(result.response.status, {
         message: problemTitle(result.value, result.response.status),
       });
-    throw redirect(
-      303,
-      `${renderRoute(screen.route, event.params)}?notice=${encodeURIComponent(`${action.label} 완료`)}`,
+    const destination = new URL(
+      renderRoute(screen.route, event.params),
+      event.url,
     );
+    if (queryOperation) {
+      for (const [name, value] of new URLSearchParams(rawQuery))
+        destination.searchParams.append(name, value);
+    }
+    destination.searchParams.set("notice", `${action.label} 완료`);
+    throw redirect(303, `${destination.pathname}${destination.search}`);
   } catch (error) {
     if (isRedirect(error)) throw error;
     return fail(400, {
@@ -227,13 +244,13 @@ async function beginStepUp(
   indexed: IndexedOperation,
   path: string,
   body: Record<string, unknown>,
+  idempotencyKey: string,
   returnTo: string,
 ) {
   const session = sessionToken(event);
   const csrfToken = csrf(event);
   if (!session || !csrfToken) throw redirect(303, "/auth/login");
   const bodyBytes = JSON.stringify(body);
-  const idempotencyKey = randomUUID();
   const aggregateId = findAggregateId(body, event.params);
   const actionContext = {
     operationId: indexed.operation.operationId,
@@ -444,6 +461,7 @@ const identityOperations: Readonly<Record<string, string>> = {
 function formsFor(
   screen: ScreenViewModel,
   event: RequestEvent,
+  data: Record<string, unknown>,
   allowed?: ReadonlySet<string>,
 ) {
   return Object.fromEntries(
@@ -452,15 +470,15 @@ function formsFor(
       .map((action) => {
         const operationId = stringProperty(action, "operation_id");
         const indexed = operationId ? operations.get(operationId) : undefined;
+        const explicit = recordProperty(action, "preset");
+        const expectedVersion = optimisticVersion(data);
+        const preset = {
+          ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+          ...explicit,
+        };
         return [
           action.id,
-          indexed
-            ? operationFields(
-                indexed,
-                event.params,
-                recordProperty(action, "preset"),
-              )
-            : [],
+          indexed ? operationFields(indexed, event.params, preset) : [],
         ];
       }),
   );
@@ -469,6 +487,30 @@ function localActionIds(screen: ScreenViewModel): string[] {
   return screen.actions
     .filter((action) => action.local_only === true)
     .map((action) => action.id);
+}
+function actionIdempotencyKeys(
+  screen: ScreenViewModel,
+  allowed: ReadonlySet<string>,
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    screen.actions
+      .filter(
+        (action) =>
+          allowed.has(action.id) && stringProperty(action, "operation_id"),
+      )
+      .map((action) => [action.id, randomUUID()]),
+  );
+}
+function formIdempotencyKey(form: FormData): string {
+  const value = form.get("idempotencyKey");
+  if (
+    typeof value !== "string" ||
+    value.length < 8 ||
+    value.length > 200 ||
+    !/^[\x20-\x7e]+$/.test(value)
+  )
+    throw new Error("멱등성 키가 없거나 올바르지 않습니다.");
+  return value;
 }
 function actionAllowed(
   action: ScreenViewModel["actions"][number],
@@ -497,11 +539,12 @@ function stringArray(value: unknown): string[] {
 function operationQuery(
   parameters: Array<{ name: string; in: string; required?: boolean }>,
   current: URLSearchParams,
-): string {
+): string | null {
   const query = new URLSearchParams();
   for (const parameter of parameters.filter((item) => item.in === "query")) {
-    for (const value of current.getAll(parameter.name))
-      query.append(parameter.name, value);
+    const values = current.getAll(parameter.name);
+    if (parameter.required && values.length === 0) return null;
+    for (const value of values) query.append(parameter.name, value);
   }
   return query.toString();
 }
@@ -511,6 +554,30 @@ function queryRecord(rawQuery: string): Record<string, unknown> {
   for (const key of new Set(query.keys())) {
     const values = query.getAll(key);
     output[key] = values.length === 1 ? values[0] : values;
+  }
+  return output;
+}
+function queryString(value: Record<string, unknown>): string {
+  const query = new URLSearchParams();
+  for (const [name, item] of Object.entries(value)) {
+    if (Array.isArray(item)) {
+      for (const entry of item) query.append(name, String(entry));
+    } else if (item !== undefined && item !== null) {
+      query.append(
+        name,
+        typeof item === "object" ? JSON.stringify(item) : String(item),
+      );
+    }
+  }
+  return query.toString();
+}
+function bindRouteValues(
+  value: Record<string, unknown>,
+  params: Record<string, string | undefined>,
+): Record<string, unknown> {
+  const output = { ...value };
+  for (const [name, item] of Object.entries(params)) {
+    if (item !== undefined && name in output) output[name] = item;
   }
   return output;
 }

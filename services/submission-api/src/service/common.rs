@@ -313,6 +313,7 @@ pub async fn require_abuse_proof(
                 "https://challenges.cloudflare.com/turnstile/v0/siteverify",
                 token,
                 action,
+                true,
             )
             .await
         }
@@ -322,6 +323,7 @@ pub async fn require_abuse_proof(
                 "https://api.hcaptcha.com/siteverify",
                 token,
                 action,
+                false,
             )
             .await
         }
@@ -359,6 +361,7 @@ async fn verify_remote(
     endpoint: &str,
     token: &str,
     action: &str,
+    action_required: bool,
 ) -> Result<(), ServiceError> {
     let target = match context.state.abuse_egress_url.clone() {
         Some(value) => value,
@@ -394,12 +397,17 @@ async fn verify_remote(
     if result.get("success").and_then(Value::as_bool) != Some(true) {
         return Err(ServiceError::AbuseProofInvalid);
     }
-    if let Some(provider_action) = result.get("action").and_then(Value::as_str)
-        && provider_action != action
-    {
+    if !provider_action_matches(&result, action, action_required) {
         return Err(ServiceError::AbuseProofInvalid);
     }
     Ok(())
+}
+
+fn provider_action_matches(result: &Value, expected: &str, required: bool) -> bool {
+    match result.get("action").and_then(Value::as_str) {
+        Some(action) => action == expected,
+        None => !required,
+    }
 }
 
 fn decode_hex(value: &str) -> Option<Vec<u8>> {
@@ -436,5 +444,45 @@ pub fn database_error(error: sqlx::Error) -> ServiceError {
         Some("28000") => ServiceError::InvalidSession,
         Some("55000") => ServiceError::Closed,
         _ => ServiceError::Persistence,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::provider_action_matches;
+
+    #[test]
+    fn turnstile_action_is_required_and_request_bound() {
+        assert!(provider_action_matches(
+            &json!({"action":"createSubscription"}),
+            "createSubscription",
+            true,
+        ));
+        assert!(!provider_action_matches(
+            &json!({"action":"createContactRequest"}),
+            "createSubscription",
+            true,
+        ));
+        assert!(!provider_action_matches(
+            &json!({}),
+            "createSubscription",
+            true,
+        ));
+    }
+
+    #[test]
+    fn adapters_without_action_support_still_reject_a_conflicting_action() {
+        assert!(provider_action_matches(
+            &json!({}),
+            "createSubscription",
+            false,
+        ));
+        assert!(!provider_action_matches(
+            &json!({"action":"other"}),
+            "createSubscription",
+            false,
+        ));
     }
 }

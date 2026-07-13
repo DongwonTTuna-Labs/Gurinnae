@@ -56,6 +56,7 @@ env -i PATH="$PATH" \
   IDENTITY_SERVICE_HMAC_KEY_CURRENT="$key" IDENTITY_ASSERTION_HMAC_KEY_CURRENT="$key" \
   PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT="$key" RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT="$key" \
   SESSION_COOKIE_KEY_CURRENT="$key" SUBMISSION_COOKIE_KEY_CURRENT="$key" BOT_CHALLENGE_SECRET_KEY="$key" \
+  BOT_CHALLENGE_SITE_KEY=turnstile-production-test-site-key \
   bash infra/scripts/production-preflight.sh >/dev/null
 
 "${compose[@]}" up --detach --wait --wait-timeout 300

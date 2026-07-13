@@ -2019,6 +2019,7 @@ dependencies = [
  "gurine-api-contracts",
  "gurine-observability",
  "gurine-persistence-postgres",
+ "rust_decimal",
  "serde",
  "serde_json",
  "sha2 0.10.9",

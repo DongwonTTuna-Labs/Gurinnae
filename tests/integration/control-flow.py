@@ -448,6 +448,32 @@ def expect_command_error(operation_id, request_value, expected_status, path_valu
         raise AssertionError((operation_id, "unexpected success", expected_status))
 
 
+def execute_command(operation_id, request_value, path_values=None, idempotency_key=None):
+    path_values = path_values or {}
+    path_template, _, method, operation = next(
+        item for item in operations if item[3]["operationId"] == operation_id
+    )
+    path = path_template
+    for name, value in path_values.items():
+        path = path.replace("{" + name + "}", urllib.parse.quote(str(value), safe=""))
+    body = json.dumps(request_value, ensure_ascii=False, separators=(",", ":")).encode()
+    key = idempotency_key or str(uuid.uuid4())
+    token = assertion(operation, method, path, "", body, "application/json", key)
+    request = urllib.request.Request(
+        BASE + path,
+        data=body,
+        headers={
+            "X-Gurine-Actor-Assertion": token,
+            "X-Request-ID": str(uuid.uuid4()),
+            "Content-Type": "application/json",
+            "Idempotency-Key": key,
+        },
+        method=method,
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return response.status, response.read()
+
+
 expect_command_error(
     "assignCase",
     {"caseId": FIXTURE_UUIDS["caseId"], "assigneeUserId": FIXTURE_UUIDS["userId"], "expectedVersion": 1},
@@ -518,6 +544,25 @@ expect_command_error(
     mismatched_body,
     409,
     idempotency_key=replay_case["idempotency_key"],
+)
+
+path_binding_key = str(uuid.uuid4())
+path_binding_body = {"name": "Path-bound update", "expectedVersion": 1}
+path_view_a = str(uuid.uuid5(uuid.NAMESPACE_URL, "gurine:fixture:idempotency-path-view-a"))
+path_view_b = str(uuid.uuid5(uuid.NAMESPACE_URL, "gurine:fixture:idempotency-path-view-b"))
+status, _ = execute_command(
+    "updateSavedView",
+    path_binding_body,
+    {"savedViewId": path_view_a},
+    path_binding_key,
+)
+assert status == 200, status
+expect_command_error(
+    "updateSavedView",
+    path_binding_body,
+    409,
+    {"savedViewId": path_view_b},
+    path_binding_key,
 )
 
 print("control API 131-operation assertion/idempotency/PostgreSQL/audit/outbox integration: PASS")

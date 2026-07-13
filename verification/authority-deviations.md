@@ -166,3 +166,49 @@ verification suite.
 - Resolution: the application OpenAPI documents carry
   x-capability review.legal, matching the actor-assertion enforcement used
   by the Control API.
+
+## RSP-004 has no dedicated attachment-list operation
+
+- Authority intent: RSP-004 shows the current draft attachment list and lets
+  the owning response session remove or replace a selected attachment.
+- Current evidence: the screen-specific RSP-004 data-contract table declares
+  create, finalize, and delete operations but no list operation. The integrated
+  screen catalog nevertheless declares `getResponseDraft` as a blocking
+  RSP-004 query, and `ResponseDraftResponse` contains the server-owned
+  attachment metadata.
+- Resolution: the response-portal BFF invokes the generated
+  `getResponseDraft` client server-side under the same service assertion and
+  scoped response session, and derives the attachment list from that response.
+  Delete remains bound to the selected attachment UUID, CSRF token,
+  idempotency key, and opaque session; the raw session token never reaches the
+  browser. Delete followed by replacement upload is covered end to end. No new
+  public operation or authority-spec edit is introduced.
+
+## PUB-034 status navigation has no separate frontend route
+
+- Current evidence: PUB-034 declares local-only `view-status`, while the route
+  catalog defines the status/error surface only as `/{systemPath}` and does not
+  define `/status`. The same screen already loads `getPublicSystemStatus` and
+  orders its `impact` section above the action panel.
+- Resolution: `view-status` navigates to the current screen's `#impact`
+  landmark, exposing the live status and impact data without inventing a route
+  outside the authority route map.
+
+## Record navigation is undefined when a result set is empty
+
+- Authority intent: local-only record actions open the concrete result selected
+  or represented by server-projected data.
+- Current evidence: several screen contracts declare such actions but do not
+  specify a destination when the relevant query returns no record. Scrolling to
+  an unrelated section would present an enabled action with no real target.
+- Resolution: a record action is rendered only when a safe explicit,
+  contextual, or server-projected destination can be derived. Empty collections
+  hide the action; existing empty-state content remains visible. Unit and E2E
+  coverage lock the destination mapping and protocol allowlist.
+
+## Pinned authority tree remains unchanged
+
+- All corrections above are implemented in source, generated application
+  artifacts, runtime configuration, tests, or this deviation ledger. The
+  hash-pinned authority package and the repository `specs/**` authority files
+  are not modified.

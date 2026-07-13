@@ -26,6 +26,10 @@ for (const contract of routeCatalog()) {
       contract.screenId,
     );
     await expect(page.locator("h1")).toHaveCount(1);
+    await expect(
+      page.locator('a.local-action[href*="?action="]'),
+      `${contract.screenId} has no inert local action links`,
+    ).toHaveCount(0);
     const sections = await page
       .locator("main section[data-component]:not(#page-actions)")
       .evaluateAll((elements) =>
@@ -57,6 +61,25 @@ for (const contract of routeCatalog()) {
     expect(consoleErrors, `${contract.screenId} console errors`).toEqual([]);
   });
 }
+
+test("local download action produces a file", async ({ page }) => {
+  await page.goto("http://127.0.0.1:29101/contracts", {
+    waitUntil: "networkidle",
+  });
+  const download = page.waitForEvent("download");
+  await page.locator('[data-action-id="download"]').click();
+  const artifact = await download;
+  expect(artifact.suggestedFilename()).toBe("pub-011-download.json");
+});
+
+test("OpenAPI download is proxied as an attachment", async ({ request }) => {
+  const response = await request.get("http://127.0.0.1:29101/api/openapi.json");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-disposition"]).toBe(
+    'attachment; filename="gurine-public-api.openapi.json"',
+  );
+  expect(response.headers()["content-type"]).toContain("application/json");
+});
 
 async function auditDocument(
   page: import("@playwright/test").Page,

@@ -36,6 +36,7 @@ export type RuntimeField = {
   required: boolean;
   options?: readonly string[];
   value?: string | number | boolean;
+  readonly?: boolean;
 };
 
 export type IndexedOperation = {
@@ -93,43 +94,79 @@ export function operationFields(
   params: RouteParams,
   preset: Record<string, unknown> = {},
 ): RuntimeField[] {
+  const fields: RuntimeField[] = [];
+  for (const parameter of indexed.operation.parameters ?? []) {
+    if (parameter.in !== "query") continue;
+    fields.push(
+      runtimeField(
+        indexed.document,
+        parameter.name,
+        parameter.schema,
+        parameter.required === true,
+        params,
+        preset,
+      ),
+    );
+  }
   const schema =
     indexed.operation.requestBody?.content?.["application/json"]?.schema;
-  if (schema === undefined) return [];
+  if (schema === undefined) return fields;
   const resolved = resolveSchema(indexed.document, schema);
   const object = chooseObject(indexed.document, resolved);
   const required = new Set(object.required ?? []);
-  return Object.entries(object.properties ?? {}).map(
-    ([name, propertySchema]) => {
-      const field = resolveSchema(
+  for (const [name, propertySchema] of Object.entries(
+    object.properties ?? {},
+  )) {
+    if (fields.some((field) => field.name === name)) continue;
+    fields.push(
+      runtimeField(
         indexed.document,
-        choose(indexed.document, propertySchema),
-      );
-      const routeValue = params[name] ?? params[camelToRouteParam(name)];
-      const presetValue = preset[name] ?? preset[snakeCase(name)];
-      const candidate = routeValue ?? presetValue ?? defaultValue(name, field);
-      const value =
-        typeof candidate === "string" ||
-        typeof candidate === "number" ||
-        typeof candidate === "boolean"
-          ? candidate
-          : candidate !== undefined
-            ? JSON.stringify(candidate)
-            : undefined;
-      const options = field.enum?.filter(
-        (item): item is string => typeof item === "string",
-      );
-      const base = {
         name,
-        label: humanize(name),
-        type: inputType(field),
-        required: required.has(name),
-        ...(options && options.length > 0 ? { options } : {}),
-        ...(value !== undefined ? { value } : {}),
-      };
-      return base satisfies RuntimeField;
-    },
+        propertySchema,
+        required.has(name),
+        params,
+        preset,
+      ),
+    );
+  }
+  return fields;
+}
+
+function runtimeField(
+  document: OpenApiDocument,
+  name: string,
+  schema: JsonSchema,
+  required: boolean,
+  params: RouteParams,
+  preset: Record<string, unknown>,
+): RuntimeField {
+  const field = resolveSchema(document, choose(document, schema));
+  const routeValue = params[name] ?? params[camelToRouteParam(name)];
+  const presetValue = preset[name] ?? preset[snakeCase(name)];
+  const candidate =
+    routeValue ?? presetValue ?? defaultValue(name, field, required);
+  const value =
+    typeof candidate === "string" ||
+    typeof candidate === "number" ||
+    typeof candidate === "boolean"
+      ? candidate
+      : candidate !== undefined
+        ? JSON.stringify(candidate)
+        : undefined;
+  const options = field.enum?.filter(
+    (item): item is string => typeof item === "string",
   );
+  return {
+    name,
+    label: humanize(name),
+    type: inputType(field),
+    required,
+    ...(options && options.length > 0 ? { options } : {}),
+    ...(value !== undefined ? { value } : {}),
+    ...(routeValue !== undefined || presetValue !== undefined
+      ? { readonly: true }
+      : {}),
+  };
 }
 
 export function formPayload(
@@ -141,7 +178,13 @@ export function formPayload(
   for (const field of fields) {
     const raw = form.get(field.name);
     if (field.type === "boolean") {
-      value[field.name] = raw === "true" || raw === "on";
+      if (raw === null || String(raw).trim() === "") {
+        if (field.required) value[field.name] = false;
+        continue;
+      }
+      if (raw === "true" || raw === "on") value[field.name] = true;
+      else if (raw === "false" || raw === "off") value[field.name] = false;
+      else throw new Error(`${field.label} 값이 올바르지 않습니다.`);
     } else if (raw !== null && String(raw).trim() !== "") {
       const text = String(raw);
       if (field.type === "number") value[field.name] = Number(text);
@@ -163,6 +206,52 @@ export function bindPath(path: string, params: RouteParams): string {
       throw new Error(`route parameter ${name} is missing`);
     return encodeURIComponent(value);
   });
+}
+
+export function optimisticVersion(value: unknown): number | undefined {
+  const selectors = [
+    (key: string) => key === "expectedVersion",
+    (key: string) =>
+      key === "currentVersion" || /^current[A-Z].*Version$/.test(key),
+    (key: string) => key === "resourceVersion",
+    (key: string) => key === "version",
+  ];
+  for (const selector of selectors) {
+    const found = findNumber(value, selector, new WeakSet<object>());
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+function findNumber(
+  value: unknown,
+  matches: (key: string) => boolean,
+  seen: WeakSet<object>,
+): number | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  if (seen.has(value)) return undefined;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findNumber(item, matches, seen);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  for (const [key, item] of Object.entries(value)) {
+    if (
+      matches(key) &&
+      typeof item === "number" &&
+      Number.isSafeInteger(item) &&
+      item >= 0
+    )
+      return item;
+  }
+  for (const item of Object.values(value)) {
+    const found = findNumber(item, matches, seen);
+    if (found !== undefined) return found;
+  }
+  return undefined;
 }
 
 function chooseObject(
@@ -216,8 +305,10 @@ function inputType(schema: JsonSchema): RuntimeField["type"] {
 function defaultValue(
   name: string,
   schema: JsonSchema,
+  required: boolean,
 ): string | number | boolean | undefined {
   if (name === "expectedVersion") return 1;
+  if (!required) return undefined;
   if (schema.type === "boolean") return false;
   if (schema.type === "object") return "{}";
   if (schema.type === "array") return "[]";

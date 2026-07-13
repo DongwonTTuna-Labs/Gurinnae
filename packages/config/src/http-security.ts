@@ -1,6 +1,9 @@
 export function applyBrowserSecurityHeaders(
   headers: Headers,
   production: boolean,
+  referrerPolicy:
+    | "no-referrer"
+    | "strict-origin-when-cross-origin" = "strict-origin-when-cross-origin",
 ) {
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("Cross-Origin-Resource-Policy", "same-origin");
@@ -8,7 +11,7 @@ export function applyBrowserSecurityHeaders(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   );
-  headers.set("Referrer-Policy", "no-referrer");
+  headers.set("Referrer-Policy", referrerPolicy);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Frame-Options", "DENY");
   if (production)

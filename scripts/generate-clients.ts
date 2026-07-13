@@ -108,10 +108,7 @@ async function normalizeGeneratedTypes(directory: string): Promise<void> {
         "          body: options.serializedBody,",
         "          ...(options.serializedBody !== undefined ? { body: options.serializedBody } : {}),",
       )
-      .replace(
-        "      // TODO: we probably want to return error and improve types\n",
-        "",
-      );
+      .replace(/^ {6}\/\/ [^\n]*return error and improve types\n/m, "");
     if (normalized !== source) await writeFile(path, normalized);
   }
 }

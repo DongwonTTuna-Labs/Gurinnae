@@ -14,6 +14,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   applyBrowserSecurityHeaders(
     response.headers,
     isProductionEnvironment(env.GURINE_ENV),
+    event.url.searchParams.has("token")
+      ? "no-referrer"
+      : "strict-origin-when-cross-origin",
   );
   response.headers.set("Cache-Control", "no-store");
   return response;

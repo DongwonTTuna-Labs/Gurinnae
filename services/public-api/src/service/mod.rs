@@ -2,11 +2,12 @@ use std::collections::BTreeMap;
 
 use actix_web::HttpRequest;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use rust_decimal::Decimal;
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Row, postgres::PgRow};
 use thiserror::Error;
-use time::{OffsetDateTime, format_description::well_known::Rfc3339};
+use time::{Date, OffsetDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;
 
 use crate::state::AppState;
@@ -252,6 +253,75 @@ impl Query {
     }
 }
 
+fn optional_uuid(query: &Query, name: &str) -> Result<Option<Uuid>, ServiceError> {
+    query
+        .first(name)
+        .map(|value| Uuid::parse_str(value).map_err(|_| ServiceError::InvalidRequest))
+        .transpose()
+}
+
+fn optional_date(query: &Query, name: &str) -> Result<Option<Date>, ServiceError> {
+    let format = time::format_description::parse("[year]-[month]-[day]")
+        .map_err(|_| ServiceError::Persistence)?;
+    query
+        .first(name)
+        .map(|value| Date::parse(value, &format).map_err(|_| ServiceError::InvalidRequest))
+        .transpose()
+}
+
+fn optional_decimal(query: &Query, name: &str) -> Result<Option<Decimal>, ServiceError> {
+    query
+        .first(name)
+        .map(|value| {
+            if !decimal_syntax(value) {
+                return Err(ServiceError::InvalidRequest);
+            }
+            value.parse().map_err(|_| ServiceError::InvalidRequest)
+        })
+        .transpose()
+}
+
+fn decimal_syntax(value: &str) -> bool {
+    let unsigned = value.strip_prefix('-').unwrap_or(value);
+    let mut parts = unsigned.split('.');
+    let integer = parts.next().unwrap_or_default();
+    let fraction = parts.next();
+    !integer.is_empty()
+        && integer.bytes().all(|byte| byte.is_ascii_digit())
+        && fraction.is_none_or(|digits| {
+            !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
+        })
+        && parts.next().is_none()
+}
+
+fn optional_bool(query: &Query, name: &str) -> Result<Option<bool>, ServiceError> {
+    query
+        .first(name)
+        .map(|value| value.parse().map_err(|_| ServiceError::InvalidRequest))
+        .transpose()
+}
+
+fn requested_sort<'a>(
+    query: &'a Query,
+    allowed: &[&str],
+    default: &'static str,
+) -> Result<&'a str, ServiceError> {
+    let value = query.first("sort").unwrap_or(default);
+    if allowed.contains(&value) {
+        Ok(value)
+    } else {
+        Err(ServiceError::InvalidRequest)
+    }
+}
+
+fn validate_range<T: PartialOrd>(lower: Option<&T>, upper: Option<&T>) -> Result<(), ServiceError> {
+    if lower.zip(upper).is_some_and(|(lower, upper)| lower > upper) {
+        Err(ServiceError::InvalidRequest)
+    } else {
+        Ok(())
+    }
+}
+
 fn path<'a>(request: &'a HttpRequest, name: &str) -> Result<&'a str, ServiceError> {
     request
         .match_info()
@@ -265,7 +335,9 @@ fn path_uuid(request: &HttpRequest, name: &str) -> Result<Uuid, ServiceError> {
 }
 
 fn now() -> Result<String, ServiceError> {
-    OffsetDateTime::now_utc()
+    let unix_minute = OffsetDateTime::now_utc().unix_timestamp() / 60 * 60;
+    OffsetDateTime::from_unix_timestamp(unix_minute)
+        .map_err(|_| ServiceError::Persistence)?
         .format(&Rfc3339)
         .map_err(|_| ServiceError::Persistence)
 }
@@ -387,17 +459,23 @@ async fn list_agencies(pool: &PgPool, query: &Query) -> Result<Value, ServiceErr
     let q = query.first("q").unwrap_or("");
     let types = query.many("agencyType");
     let jurisdiction = query.first("jurisdiction").unwrap_or("");
+    let sort = requested_sort(
+        query,
+        &["name_asc", "updated_desc", "contract_count_desc"],
+        "name_asc",
+    )?;
     let rows = sqlx::query(
-        "SELECT id,name,agency_type,jurisdiction,coverage,case_counts,updated_at FROM public.agencies WHERE ($1='' OR name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR agency_type=ANY($2)) AND ($3='' OR jurisdiction=$3) ORDER BY name,id LIMIT $4 OFFSET $5",
+        "SELECT a.id,a.name,a.agency_type,a.jurisdiction,a.coverage,a.case_counts,a.updated_at FROM public.agencies a WHERE ($1='' OR a.name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR a.agency_type=ANY($2)) AND ($3='' OR a.jurisdiction=$3) ORDER BY CASE WHEN $4='name_asc' THEN a.name END ASC,CASE WHEN $4='updated_desc' THEN a.updated_at END DESC,CASE WHEN $4='contract_count_desc' THEN (SELECT count(*) FROM public.contracts c WHERE c.agency_id=a.id) END DESC,a.id LIMIT $5 OFFSET $6",
     )
-    .bind(q)
-    .bind(&types)
-    .bind(jurisdiction)
-    .bind(query.limit + 1)
-    .bind(query.offset)
-    .fetch_all(pool)
-    .await
-    .map_err(db)?;
+        .bind(q)
+        .bind(&types)
+        .bind(jurisdiction)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut items = Vec::with_capacity(rows.len());
     for row in rows {
         let id: Uuid = row.try_get("id").map_err(db)?;
@@ -442,9 +520,24 @@ async fn get_agency(pool: &PgPool, id: Uuid) -> Result<Value, ServiceError> {
 async fn list_suppliers(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
     let q = query.first("q").unwrap_or("");
     let statuses = query.many("businessStatus");
+    let identity_statuses = query.many("identityStatus");
+    let sort = requested_sort(
+        query,
+        &["name_asc", "updated_desc", "contract_count_desc"],
+        "name_asc",
+    )?;
     let rows = sqlx::query(
-        "SELECT id,name,business_status,coverage,case_counts,identity_warnings FROM public.suppliers WHERE ($1='' OR name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR business_status=ANY($2)) ORDER BY name,id LIMIT $3 OFFSET $4",
-    ).bind(q).bind(&statuses).bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+        "SELECT s.id,s.name,s.business_status,s.coverage,s.case_counts,s.identity_warnings FROM public.suppliers s WHERE ($1='' OR s.name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR s.business_status=ANY($2)) AND (cardinality($3::text[])=0 OR CASE WHEN jsonb_array_length(s.identity_warnings)=0 THEN 'VERIFIED' ELSE 'AMBIGUOUS' END=ANY($3)) ORDER BY CASE WHEN $4='name_asc' THEN s.name END ASC,CASE WHEN $4='updated_desc' THEN s.updated_at END DESC,CASE WHEN $4='contract_count_desc' THEN (SELECT count(*) FROM public.contracts c WHERE c.supplier_id=s.id) END DESC,s.id LIMIT $5 OFFSET $6",
+    )
+        .bind(q)
+        .bind(&statuses)
+        .bind(&identity_statuses)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut items = Vec::with_capacity(rows.len());
     for row in rows {
         let id: Uuid = row.try_get("id").map_err(db)?;
@@ -460,7 +553,7 @@ async fn list_suppliers(pool: &PgPool, query: &Query) -> Result<Value, ServiceEr
     page(
         items,
         query,
-        json!({"q":q,"businessStatus":statuses,"identityStatus":query.many("identityStatus")}),
+        json!({"q":q,"businessStatus":statuses,"identityStatus":identity_statuses}),
     )
 }
 
@@ -514,8 +607,18 @@ async fn list_related_cases(
     } else {
         "supplierId"
     };
-    let rows=sqlx::query("SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE r.payload->>$1=$2 ORDER BY c.updated_at DESC,c.id LIMIT $3 OFFSET $4")
-        .bind(key).bind(id.to_string()).bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let sort = requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?;
+    let rows = sqlx::query(
+        "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE r.payload->>$1=$2 ORDER BY CASE WHEN $3='updated_desc' THEN c.updated_at END DESC,CASE WHEN $3='created_asc' THEN c.published_at END ASC,c.id LIMIT $4 OFFSET $5",
+    )
+        .bind(key)
+        .bind(id.to_string())
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     page(
         rows.iter().map(case_card).collect::<Result<_, _>>()?,
         query,
@@ -530,34 +633,58 @@ async fn list_contracts(
 ) -> Result<Value, ServiceError> {
     let q = query.first("q").unwrap_or("");
     let agency = relation
-        .filter(|v| v.0 == "agency")
-        .map(|v| v.1)
-        .or_else(|| {
-            query
-                .first("agencyId")
-                .and_then(|v| Uuid::parse_str(v).ok())
-        });
+        .filter(|value| value.0 == "agency")
+        .map(|value| value.1)
+        .map_or_else(|| optional_uuid(query, "agencyId"), |value| Ok(Some(value)))?;
     let supplier = relation
-        .filter(|v| v.0 == "supplier")
-        .map(|v| v.1)
-        .or_else(|| {
-            query
-                .first("supplierId")
-                .and_then(|v| Uuid::parse_str(v).ok())
-        });
+        .filter(|value| value.0 == "supplier")
+        .map(|value| value.1)
+        .map_or_else(
+            || optional_uuid(query, "supplierId"),
+            |value| Ok(Some(value)),
+        )?;
     let statuses = query.many("contractStatus");
-    let rows=sqlx::query("SELECT c.id,c.contract_number,c.title,c.agency_id,c.supplier_id,c.status,c.signed_at,c.amount,a.name agency_name,s.name supplier_name FROM public.contracts c LEFT JOIN public.agencies a ON a.id=c.agency_id LEFT JOIN public.suppliers s ON s.id=c.supplier_id WHERE ($1='' OR c.title ILIKE '%'||$1||'%' OR c.contract_number ILIKE '%'||$1||'%') AND ($2::uuid IS NULL OR c.agency_id=$2) AND ($3::uuid IS NULL OR c.supplier_id=$3) AND (cardinality($4::text[])=0 OR c.status=ANY($4)) ORDER BY c.updated_at DESC,c.id LIMIT $5 OFFSET $6")
-        .bind(q).bind(agency).bind(supplier).bind(&statuses).bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let procurement_methods = query.many("procurementMethod");
+    let signed_from = optional_date(query, "signedFrom")?;
+    let signed_to = optional_date(query, "signedTo")?;
+    let amount_min = optional_decimal(query, "amountMin")?;
+    let amount_max = optional_decimal(query, "amountMax")?;
+    validate_range(signed_from.as_ref(), signed_to.as_ref())?;
+    validate_range(amount_min.as_ref(), amount_max.as_ref())?;
+    let sort = if relation.is_some() {
+        requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?
+    } else {
+        requested_sort(
+            query,
+            &["signed_desc", "amount_desc", "amount_asc", "title_asc"],
+            "signed_desc",
+        )?
+    };
+    let rows = sqlx::query(
+        "SELECT c.id,c.contract_number,c.title,c.agency_id,c.supplier_id,c.status,c.signed_at,c.amount,a.name agency_name,s.name supplier_name FROM public.contracts c LEFT JOIN public.agencies a ON a.id=c.agency_id LEFT JOIN public.suppliers s ON s.id=c.supplier_id WHERE ($1='' OR c.title ILIKE '%'||$1||'%' OR c.contract_number ILIKE '%'||$1||'%') AND ($2::uuid IS NULL OR c.agency_id=$2) AND ($3::uuid IS NULL OR c.supplier_id=$3) AND (cardinality($4::text[])=0 OR c.status=ANY($4)) AND (cardinality($5::text[])=0 OR COALESCE(c.detail->>'procurementMethod',c.detail->>'contractMethod')=ANY($5)) AND ($6::date IS NULL OR c.signed_at >= $6) AND ($7::date IS NULL OR c.signed_at <= $7) AND ($8::numeric IS NULL OR (c.amount->>'amount')::numeric >= $8) AND ($9::numeric IS NULL OR (c.amount->>'amount')::numeric <= $9) ORDER BY CASE WHEN $10='updated_desc' THEN c.updated_at END DESC,CASE WHEN $10='created_asc' THEN c.signed_at END ASC NULLS LAST,CASE WHEN $10='signed_desc' THEN c.signed_at END DESC NULLS LAST,CASE WHEN $10='amount_desc' THEN (c.amount->>'amount')::numeric END DESC NULLS LAST,CASE WHEN $10='amount_asc' THEN (c.amount->>'amount')::numeric END ASC NULLS LAST,CASE WHEN $10='title_asc' THEN c.title END ASC,c.id LIMIT $11 OFFSET $12",
+    )
+        .bind(q)
+        .bind(agency)
+        .bind(supplier)
+        .bind(&statuses)
+        .bind(&procurement_methods)
+        .bind(signed_from)
+        .bind(signed_to)
+        .bind(amount_min)
+        .bind(amount_max)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let applied_filters = if relation.is_some() {
         json!({})
     } else {
         let mut filters = Map::new();
         filters.insert("q".into(), json!(q));
         filters.insert("contractStatus".into(), json!(statuses));
-        filters.insert(
-            "procurementMethod".into(),
-            json!(query.many("procurementMethod")),
-        );
+        filters.insert("procurementMethod".into(), json!(procurement_methods));
         if let Some(value) = agency {
             filters.insert("agencyId".into(), json!(value));
         }
@@ -640,11 +767,20 @@ async fn list_contract_changes(
         .await
         .map_err(db)?
         .ok_or(ServiceError::NotFound)?;
-    let all = detail
+    let mut all = detail
         .get("changes")
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
+    match requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")? {
+        "updated_desc" => {
+            all.sort_by(|left, right| contract_change_key(right).cmp(&contract_change_key(left)))
+        }
+        "created_asc" => {
+            all.sort_by(|left, right| contract_change_key(left).cmp(&contract_change_key(right)))
+        }
+        _ => return Err(ServiceError::InvalidRequest),
+    }
     let items = all
         .into_iter()
         .skip(query.offset as usize)
@@ -653,8 +789,30 @@ async fn list_contract_changes(
     page(items, query, json!({}))
 }
 
+fn contract_change_key(value: &Value) -> (&str, i64) {
+    (
+        value.get("changedAt").and_then(Value::as_str).unwrap_or(""),
+        value.get("sequence").and_then(Value::as_i64).unwrap_or(0),
+    )
+}
+
 async fn download_contracts(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
-    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM public.contracts")
+    let format = query.first("format").ok_or(ServiceError::InvalidRequest)?;
+    if !matches!(format, "CSV" | "JSONL") {
+        return Err(ServiceError::InvalidRequest);
+    }
+    let agency = optional_uuid(query, "agencyId")?;
+    let supplier = optional_uuid(query, "supplierId")?;
+    let signed_from = optional_date(query, "signedFrom")?;
+    let signed_to = optional_date(query, "signedTo")?;
+    validate_range(signed_from.as_ref(), signed_to.as_ref())?;
+    let count: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM public.contracts c WHERE ($1::uuid IS NULL OR c.agency_id=$1) AND ($2::uuid IS NULL OR c.supplier_id=$2) AND ($3::date IS NULL OR c.signed_at >= $3) AND ($4::date IS NULL OR c.signed_at <= $4)",
+    )
+        .bind(agency)
+        .bind(supplier)
+        .bind(signed_from)
+        .bind(signed_to)
         .fetch_one(pool)
         .await
         .map_err(db)?;
@@ -668,12 +826,55 @@ async fn list_cases(
     relation: Option<(&str, &str)>,
 ) -> Result<Value, ServiceError> {
     let states = query.many("publicationState");
-    let relation_key = relation
-        .map(|v| if v.0 == "rule" { "ruleId" } else { v.0 })
-        .unwrap_or("");
-    let relation_value = relation.map(|v| v.1).unwrap_or("");
-    let rows=sqlx::query("SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2='' OR r.payload->>$2=$3) ORDER BY c.updated_at DESC,c.id LIMIT $4 OFFSET $5")
-        .bind(&states).bind(relation_key).bind(relation_value).bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let agency = relation
+        .filter(|value| value.0 == "agency")
+        .map(|value| value.1.to_owned())
+        .map_or_else(
+            || optional_uuid(query, "agencyId").map(|value| value.map(|id| id.to_string())),
+            |value| Ok(Some(value)),
+        )?;
+    let supplier = relation
+        .filter(|value| value.0 == "supplier")
+        .map(|value| value.1.to_owned())
+        .map_or_else(
+            || optional_uuid(query, "supplierId").map(|value| value.map(|id| id.to_string())),
+            |value| Ok(Some(value)),
+        )?;
+    let rule = relation
+        .filter(|value| value.0 == "rule")
+        .map(|value| value.1.to_owned())
+        .or_else(|| query.first("ruleId").map(str::to_owned));
+    let published_from = optional_date(query, "publishedFrom")?;
+    let published_to = optional_date(query, "publishedTo")?;
+    let has_response = optional_bool(query, "hasResponse")?;
+    let has_correction = optional_bool(query, "hasCorrection")?;
+    validate_range(published_from.as_ref(), published_to.as_ref())?;
+    let sort = if relation.is_some() {
+        requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?
+    } else {
+        requested_sort(
+            query,
+            &["updated_desc", "published_desc", "title_asc"],
+            "updated_desc",
+        )?
+    };
+    let rows = sqlx::query(
+        "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2::text IS NULL OR r.payload->>'agencyId'=$2) AND ($3::text IS NULL OR r.payload->>'supplierId'=$3) AND ($4::text IS NULL OR r.payload->>'ruleId'=$4) AND ($5::date IS NULL OR c.published_at::date >= $5) AND ($6::date IS NULL OR c.published_at::date <= $6) AND ($7::boolean IS NULL OR (jsonb_path_exists(r.payload,'$.responses[*]') OR jsonb_path_exists(r.payload,'$.partyResponses[*]'))=$7) AND ($8::boolean IS NULL OR EXISTS(SELECT 1 FROM public.corrections x WHERE x.case_id=c.id)=$8) ORDER BY CASE WHEN $9='updated_desc' THEN c.updated_at END DESC,CASE WHEN $9='created_asc' THEN c.published_at END ASC,CASE WHEN $9='published_desc' THEN c.published_at END DESC,CASE WHEN $9='title_asc' THEN c.title END ASC,c.id LIMIT $10 OFFSET $11",
+    )
+        .bind(&states)
+        .bind(&agency)
+        .bind(&supplier)
+        .bind(&rule)
+        .bind(published_from)
+        .bind(published_to)
+        .bind(has_response)
+        .bind(has_correction)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let applied_filters = if relation.is_some() {
         json!({})
     } else {
@@ -767,8 +968,17 @@ async fn get_case(pool: &PgPool, slug: &str) -> Result<Value, ServiceError> {
 }
 
 async fn list_revisions(pool: &PgPool, query: &Query, slug: &str) -> Result<Value, ServiceError> {
-    let rows=sqlx::query("SELECT r.revision,r.state::text state,r.published_at,r.payload FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id WHERE c.slug=$1 ORDER BY r.revision DESC LIMIT $2 OFFSET $3")
-        .bind(slug).bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let sort = requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?;
+    let rows = sqlx::query(
+        "SELECT r.revision,r.state::text state,r.published_at,r.payload FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id WHERE c.slug=$1 ORDER BY CASE WHEN $2='updated_desc' THEN r.revision END DESC,CASE WHEN $2='created_asc' THEN r.revision END ASC LIMIT $3 OFFSET $4",
+    )
+        .bind(slug)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     if rows.is_empty() && query.offset == 0 {
         return Err(ServiceError::NotFound);
     }
@@ -804,7 +1014,7 @@ async fn download_reproducibility(
     query: &Query,
 ) -> Result<Value, ServiceError> {
     let format = query.first("format").ok_or(ServiceError::InvalidRequest)?;
-    if !matches!(format, "json" | "csv" | "JSON" | "CSV") {
+    if !matches!(format, "JSON" | "CSV") {
         return Err(ServiceError::InvalidRequest);
     }
     let value = reproducibility(pool, slug).await?;
@@ -813,17 +1023,30 @@ async fn download_reproducibility(
 }
 
 async fn list_corrections(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
-    let rows=sqlx::query("SELECT x.id,x.source_revision,x.target_revision,x.summary,x.reason,x.published_at,c.slug FROM public.corrections x JOIN public.cases c ON c.id=x.case_id ORDER BY x.published_at DESC,x.id LIMIT $1 OFFSET $2").bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let states = query.many("publicationState");
+    let published_from = optional_date(query, "publishedFrom")?;
+    let published_to = optional_date(query, "publishedTo")?;
+    validate_range(published_from.as_ref(), published_to.as_ref())?;
+    let sort = requested_sort(query, &["published_desc", "title_asc"], "published_desc")?;
+    let rows = sqlx::query(
+        "SELECT x.id,x.source_revision,x.target_revision,x.summary,x.reason,x.published_at,c.slug FROM public.corrections x JOIN public.cases c ON c.id=x.case_id WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2::date IS NULL OR x.published_at::date >= $2) AND ($3::date IS NULL OR x.published_at::date <= $3) ORDER BY CASE WHEN $4='published_desc' THEN x.published_at END DESC,CASE WHEN $4='title_asc' THEN x.summary END ASC,x.id LIMIT $5 OFFSET $6",
+    )
+        .bind(&states)
+        .bind(published_from)
+        .bind(published_to)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut items = Vec::new();
     for row in rows {
         let id: Uuid = row.try_get("id").map_err(db)?;
         items.push(json!({"id":id,"sourceRevision":row.try_get::<i32,_>("source_revision").map_err(db)?,"targetRevision":row.try_get::<Option<i32>,_>("target_revision").map_err(db)?,"summary":row.try_get::<String,_>("summary").map_err(db)?,"reason":row.try_get::<String,_>("reason").map_err(db)?,"publishedAt":timestamp(row.try_get("published_at").map_err(db)?)?,"href":format!("/corrections/{id}")}));
     }
     let mut filters = Map::new();
-    filters.insert(
-        "publicationState".into(),
-        json!(query.many("publicationState")),
-    );
+    filters.insert("publicationState".into(), json!(states));
     for name in ["publishedFrom", "publishedTo"] {
         if let Some(value) = query.first(name) {
             filters.insert(name.into(), json!(value));
@@ -841,7 +1064,7 @@ async fn get_correction(pool: &PgPool, id: Uuid) -> Result<Value, ServiceError> 
 
 async fn coverage(pool: &PgPool) -> Result<Value, ServiceError> {
     let counts=sqlx::query("SELECT (SELECT count(*) FROM public.contracts) contracts,(SELECT count(*) FROM public.agencies) agencies,(SELECT count(*) FROM public.suppliers) suppliers,(SELECT count(*) FROM public.cases) cases").fetch_one(pool).await.map_err(db)?;
-    let source_status = list_source_values(pool, 200, 0).await?;
+    let source_status = list_source_values(pool, &[], 200, 0, "name_asc").await?;
     let coverage_as_of = now()?;
     let sources = source_status
         .into_iter()
@@ -869,7 +1092,17 @@ async fn coverage(pool: &PgPool) -> Result<Value, ServiceError> {
 
 async fn list_datasets(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
     let formats = query.many("format");
-    let rows=sqlx::query("SELECT id,title,description,format,coverage,license,download_url,updated_at FROM public.datasets WHERE cardinality($1::text[])=0 OR format=ANY($1) ORDER BY updated_at DESC,id LIMIT $2 OFFSET $3").bind(&formats).bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let sort = requested_sort(query, &["updated_desc", "title_asc"], "updated_desc")?;
+    let rows = sqlx::query(
+        "SELECT id,title,description,format,coverage,license,download_url,updated_at FROM public.datasets WHERE cardinality($1::text[])=0 OR format=ANY($1) ORDER BY CASE WHEN $2='updated_desc' THEN updated_at END DESC,CASE WHEN $2='title_asc' THEN title END ASC,id LIMIT $3 OFFSET $4",
+    )
+        .bind(&formats)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut items = Vec::new();
     for r in rows {
         items.push(json!({"id":r.try_get::<String,_>("id").map_err(db)?,"title":r.try_get::<String,_>("title").map_err(db)?,"description":r.try_get::<String,_>("description").map_err(db)?,"format":r.try_get::<String,_>("format").map_err(db)?,"coverage":r.try_get::<Value,_>("coverage").map_err(db)?,"license":r.try_get::<String,_>("license").map_err(db)?,"downloadUrl":r.try_get::<Option<String>,_>("download_url").map_err(db)?,"updatedAt":timestamp(r.try_get("updated_at").map_err(db)?)?}));
@@ -878,12 +1111,23 @@ async fn list_datasets(pool: &PgPool, query: &Query) -> Result<Value, ServiceErr
 }
 
 async fn list_rules(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
-    let rows=sqlx::query("SELECT rule_id,name,active_version,public_description,requirements,exclusions,limitations,updated_at FROM public.rules ORDER BY name,rule_id LIMIT $1 OFFSET $2").bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let statuses = query.many("status");
+    let sort = requested_sort(query, &["name_asc", "updated_desc"], "name_asc")?;
+    let rows = sqlx::query(
+        "SELECT rule_id,name,active_version,public_description,requirements,exclusions,limitations,updated_at FROM public.rules WHERE cardinality($1::text[])=0 OR 'ACTIVE'::text=ANY($1) ORDER BY CASE WHEN $2='name_asc' THEN name END ASC,CASE WHEN $2='updated_desc' THEN updated_at END DESC,rule_id LIMIT $3 OFFSET $4",
+    )
+        .bind(&statuses)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut items = Vec::new();
     for r in rows {
         items.push(rule_value(&r)?)
     }
-    page(items, query, json!({"status":query.many("status")}))
+    page(items, query, json!({"status":statuses}))
 }
 fn rule_value(r: &PgRow) -> Result<Value, ServiceError> {
     Ok(
@@ -899,10 +1143,24 @@ async fn get_rule(pool: &PgPool, id: &str) -> Result<Value, ServiceError> {
 
 async fn list_source_values(
     pool: &PgPool,
+    statuses: &[String],
     limit: i64,
     offset: i64,
+    sort: &str,
 ) -> Result<Vec<Value>, ServiceError> {
-    let rows=sqlx::query("SELECT source_id,display_name,status,last_success_at,lag_seconds,affected_scope,public_message,updated_at FROM public.source_status ORDER BY display_name,source_id LIMIT $1 OFFSET $2").bind(limit).bind(offset).fetch_all(pool).await.map_err(db)?;
+    if !matches!(sort, "status_asc" | "last_success_desc" | "name_asc") {
+        return Err(ServiceError::InvalidRequest);
+    }
+    let rows = sqlx::query(
+        "SELECT source_id,display_name,status,last_success_at,lag_seconds,affected_scope,public_message,updated_at FROM public.source_status WHERE cardinality($1::text[])=0 OR status=ANY($1) ORDER BY CASE WHEN $2='status_asc' THEN status END ASC,CASE WHEN $2='last_success_desc' THEN last_success_at END DESC NULLS LAST,CASE WHEN $2='name_asc' THEN display_name END ASC,source_id LIMIT $3 OFFSET $4",
+    )
+        .bind(statuses)
+        .bind(sort)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut values = Vec::new();
     for r in rows {
         values.push(json!({"sourceId":r.try_get::<String,_>("source_id").map_err(db)?,"displayName":r.try_get::<String,_>("display_name").map_err(db)?,"status":r.try_get::<String,_>("status").map_err(db)?,"lastSuccessAt":r.try_get::<Option<OffsetDateTime>,_>("last_success_at").map_err(db)?.map(timestamp).transpose()?,"lagSeconds":r.try_get::<Option<i64>,_>("lag_seconds").map_err(db)?,"publicMessage":r.try_get::<Option<String>,_>("public_message").map_err(db)?}));
@@ -910,15 +1168,13 @@ async fn list_source_values(
     Ok(values)
 }
 async fn list_sources(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
-    let mut items = list_source_values(pool, query.limit + 1, query.offset).await?;
     let statuses = query.many("status");
-    if !statuses.is_empty() {
-        items.retain(|v| {
-            v.get("status")
-                .and_then(Value::as_str)
-                .is_some_and(|s| statuses.iter().any(|x| x == s))
-        });
-    }
+    let sort = requested_sort(
+        query,
+        &["status_asc", "last_success_desc", "name_asc"],
+        "name_asc",
+    )?;
+    let items = list_source_values(pool, &statuses, query.limit + 1, query.offset, sort).await?;
     page(items, query, json!({"status":statuses}))
 }
 async fn get_source(pool: &PgPool, id: &str) -> Result<Value, ServiceError> {
@@ -935,7 +1191,43 @@ async fn search(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
         .filter(|v| v.trim().len() >= 2)
         .ok_or(ServiceError::InvalidRequest)?;
     let pattern = format!("%{q}%");
-    let rows=sqlx::query("SELECT result_type,id,title,subtitle,status,summary,updated_at,href FROM (SELECT 'CASE'::text result_type,id::text, title,slug subtitle,public_state status,summary,updated_at,'/cases/'||slug href FROM public.cases WHERE title ILIKE $1 OR summary ILIKE $1 UNION ALL SELECT 'AGENCY',id::text,name,jurisdiction,agency_type,NULL,updated_at,'/agencies/'||id::text FROM public.agencies WHERE name ILIKE $1 UNION ALL SELECT 'SUPPLIER',id::text,name,business_status,business_status,NULL,updated_at,'/suppliers/'||id::text FROM public.suppliers WHERE name ILIKE $1 UNION ALL SELECT 'CONTRACT',id::text,title,contract_number,status,NULL,updated_at,'/contracts/'||id::text FROM public.contracts WHERE title ILIKE $1 OR contract_number ILIKE $1) x ORDER BY updated_at DESC NULLS LAST,id LIMIT $2 OFFSET $3").bind(pattern).bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let types = query
+        .many("types")
+        .into_iter()
+        .map(|value| value.to_ascii_uppercase())
+        .collect::<Vec<_>>();
+    let states = query.many("publicationState");
+    let date_from = optional_date(query, "dateFrom")?;
+    let date_to = optional_date(query, "dateTo")?;
+    validate_range(date_from.as_ref(), date_to.as_ref())?;
+    let sort = requested_sort(
+        query,
+        &["relevance", "updated_desc", "title_asc"],
+        "relevance",
+    )?;
+    let rows = sqlx::query(
+        "SELECT result_type,id,title,subtitle,status,summary,updated_at,href FROM (\
+         SELECT 'CASE'::text result_type,id::text,title,slug subtitle,public_state status,summary,updated_at,'/cases/'||slug href FROM public.cases WHERE (title ILIKE $1 OR summary ILIKE $1) AND (cardinality($2::text[])=0 OR 'CASE'=ANY($2)) AND (cardinality($3::text[])=0 OR public_state=ANY($3)) AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'AGENCY',id::text,name,jurisdiction,agency_type,NULL,updated_at,'/agencies/'||id::text FROM public.agencies WHERE name ILIKE $1 AND (cardinality($2::text[])=0 OR 'AGENCY'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'SUPPLIER',id::text,name,business_status,business_status,NULL,updated_at,'/suppliers/'||id::text FROM public.suppliers WHERE name ILIKE $1 AND (cardinality($2::text[])=0 OR 'SUPPLIER'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'CONTRACT',id::text,title,contract_number,status,NULL,updated_at,'/contracts/'||id::text FROM public.contracts WHERE (title ILIKE $1 OR contract_number ILIKE $1) AND (cardinality($2::text[])=0 OR 'CONTRACT'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'RULE',rule_id,name,active_version,'ACTIVE',public_description,updated_at,'/methodology/rules/'||rule_id FROM public.rules WHERE (name ILIKE $1 OR public_description ILIKE $1) AND (cardinality($2::text[])=0 OR 'RULE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'CORRECTION',x.id::text,x.summary,c.slug,c.public_state,x.reason,x.published_at,'/corrections/'||x.id::text FROM public.corrections x JOIN public.cases c ON c.id=x.case_id WHERE (x.summary ILIKE $1 OR x.reason ILIKE $1) AND (cardinality($2::text[])=0 OR 'CORRECTION'=ANY($2)) AND (cardinality($3::text[])=0 OR c.public_state=ANY($3)) AND ($4::date IS NULL OR x.published_at::date >= $4) AND ($5::date IS NULL OR x.published_at::date <= $5) \
+         UNION ALL SELECT 'DATASET',id,title,format,'PUBLISHED',description,updated_at,'/data' FROM public.datasets WHERE (title ILIKE $1 OR description ILIKE $1) AND (cardinality($2::text[])=0 OR 'DATASET'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'SOURCE',source_id,display_name,status,status,public_message,updated_at,'/sources/'||source_id FROM public.source_status WHERE (display_name ILIKE $1 OR source_id ILIKE $1 OR public_message ILIKE $1) AND (cardinality($2::text[])=0 OR 'SOURCE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5)\
+         ) x ORDER BY CASE WHEN $6='relevance' THEN (title ILIKE $1) END DESC,CASE WHEN $6 IN ('relevance','updated_desc') THEN updated_at END DESC NULLS LAST,CASE WHEN $6='title_asc' THEN title END ASC,id LIMIT $7 OFFSET $8",
+    )
+        .bind(&pattern)
+        .bind(&types)
+        .bind(&states)
+        .bind(date_from)
+        .bind(date_to)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut items = Vec::new();
     for r in rows {
         let mut v = Map::new();
@@ -966,11 +1258,8 @@ async fn search(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
     }
     let mut filters = Map::new();
     filters.insert("q".into(), json!(q));
-    filters.insert("types".into(), json!(query.many("types")));
-    filters.insert(
-        "publicationState".into(),
-        json!(query.many("publicationState")),
-    );
+    filters.insert("types".into(), json!(types));
+    filters.insert("publicationState".into(), json!(states));
     for name in ["dateFrom", "dateTo"] {
         if let Some(value) = query.first(name) {
             filters.insert(name.into(), json!(value));
@@ -980,7 +1269,7 @@ async fn search(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
 }
 
 async fn system_status(pool: &PgPool) -> Result<Value, ServiceError> {
-    let sources = list_source_values(pool, 200, 0).await?;
+    let sources = list_source_values(pool, &[], 200, 0, "name_asc").await?;
     let incident = sources.iter().any(|v| {
         v.get("status")
             .and_then(Value::as_str)
@@ -997,7 +1286,21 @@ async fn system_status(pool: &PgPool) -> Result<Value, ServiceError> {
 }
 
 async fn list_reports(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
-    let rows=sqlx::query("SELECT id,period_start,period_end,title,summary,published_at FROM public.transparency_reports ORDER BY period_end DESC,id LIMIT $1 OFFSET $2").bind(query.limit+1).bind(query.offset).fetch_all(pool).await.map_err(db)?;
+    let period_from = optional_date(query, "periodFrom")?;
+    let period_to = optional_date(query, "periodTo")?;
+    validate_range(period_from.as_ref(), period_to.as_ref())?;
+    let sort = requested_sort(query, &["published_desc", "period_desc"], "published_desc")?;
+    let rows = sqlx::query(
+        "SELECT id,period_start,period_end,title,summary,published_at FROM public.transparency_reports WHERE ($1::date IS NULL OR period_end >= $1) AND ($2::date IS NULL OR period_start <= $2) ORDER BY CASE WHEN $3='published_desc' THEN published_at END DESC,CASE WHEN $3='period_desc' THEN period_end END DESC,CASE WHEN $3='period_desc' THEN period_start END DESC,id LIMIT $4 OFFSET $5",
+    )
+        .bind(period_from)
+        .bind(period_to)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
     let mut items = Vec::new();
     for r in rows {
         let id: Uuid = r.try_get("id").map_err(db)?;

@@ -71,7 +71,7 @@ done
 source_port="$(free_port)"
 : >"$work/source-requests.jsonl"
 FAKE_SOURCE_PORT="$source_port" FAKE_SOURCE_OUTPUT="$work/source-requests.jsonl" \
-  python3 scripts/test-support/fake-source-egress.py &
+  PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-support/fake-source-egress.py &
 source_pid=$!
 sleep 0.2
 postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"

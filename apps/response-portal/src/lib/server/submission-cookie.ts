@@ -4,6 +4,7 @@ import {
   isSubmissionSessionDescriptor,
   isSubmissionSessionPayload,
   openCookieEnvelope,
+  type SubmissionSessionKind,
   type SubmissionSessionPayload,
   sealCookieEnvelope,
   submissionCookieForKind,
@@ -41,13 +42,16 @@ export function readSubmissionSession(
 export function persistSubmissionSession(
   event: RequestEvent,
   response: Record<string, unknown>,
+  expectedKinds: readonly SubmissionSessionKind[],
 ): boolean {
-  const descriptor = [response.session, response.receiptSession].find(
-    isSubmissionSessionDescriptor,
-  );
-  if (!descriptor) return false;
+  const descriptor = [
+    response.session,
+    response.pendingSession,
+    response.receiptSession,
+  ].find(isSubmissionSessionDescriptor);
+  if (!descriptor || !expectedKinds.includes(descriptor.sessionKind))
+    return false;
   clearSubmissionSessions(event);
-  const spec = submissionCookieForKind(descriptor.sessionKind);
   const issuedAt = now();
   const value: SubmissionSessionPayload = {
     v: 1,
@@ -59,6 +63,27 @@ export function persistSubmissionSession(
     absoluteExpiresAt: Math.floor(Date.parse(descriptor.expiresAt) / 1000),
     csrfRotatedAt: issuedAt,
   };
+  writeSubmissionSession(event, value);
+  return true;
+}
+
+export function rotateSubmissionCsrf(event: RequestEvent): boolean {
+  const current = readSubmissionSession(event);
+  if (!current) return false;
+  writeSubmissionSession(event, {
+    ...current,
+    csrfToken: randomBytes(32).toString("base64url"),
+    csrfRotatedAt: now(),
+  });
+  return true;
+}
+
+function writeSubmissionSession(
+  event: RequestEvent,
+  value: SubmissionSessionPayload,
+) {
+  const spec = submissionCookieForKind(value.sessionKind);
+  const issuedAt = now();
   event.cookies.set(
     spec.name,
     sealCookieEnvelope(
@@ -74,7 +99,6 @@ export function persistSubmissionSession(
     ),
     options(event, spec.path, Math.max(0, value.absoluteExpiresAt - issuedAt)),
   );
-  return true;
 }
 
 export function clearSubmissionSessions(event: RequestEvent) {

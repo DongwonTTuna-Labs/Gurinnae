@@ -1,4 +1,5 @@
 export { default as ScreenPage } from "./components/ScreenPage.svelte";
+export * from "./local-actions";
 export * from "./tokens";
 
 export type ScreenSection = ScreenViewModel["sections"][number];
@@ -16,6 +17,35 @@ export type ScreenField = {
   required: boolean;
   options?: readonly string[];
   value?: string | number | boolean;
+  readonly?: boolean;
+  challengeAction?: string;
+};
+
+export type BotChallengeRuntime = {
+  provider: "TURNSTILE" | "SYNTHETIC_TEST";
+  siteKey: string;
+};
+
+export type AttachmentUploadRuntime = {
+  actionId: string;
+  label: string;
+  accept: string;
+  maxBytes: number;
+};
+
+export type AttachmentRemovalItem = {
+  id: string;
+  filename: string;
+  mediaType?: string;
+  sizeBytes?: number;
+  uploadStatus?: string;
+  scanStatus?: string;
+};
+
+export type AttachmentRemovalRuntime = {
+  actionId: string;
+  label: string;
+  items: readonly AttachmentRemovalItem[];
 };
 
 export type ScreenRuntime = {
@@ -30,6 +60,11 @@ export type ScreenRuntime = {
   data: Record<string, unknown>;
   errors: readonly string[];
   forms: Record<string, readonly ScreenField[]>;
+  formOperationIds?: Readonly<Record<string, string>>;
+  idempotencyKeys?: Readonly<Record<string, string>>;
+  botChallenge?: BotChallengeRuntime;
+  attachmentUpload?: AttachmentUploadRuntime;
+  attachmentRemoval?: AttachmentRemovalRuntime;
   csrfToken?: string;
   notice?: string;
   pathname?: string;

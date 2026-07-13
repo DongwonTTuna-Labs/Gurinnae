@@ -14,9 +14,10 @@ pub async fn run() -> io::Result<()> {
     })
     .await
     .map_err(|error| io::Error::other(error.to_string()))?;
+    let state = web::Data::new(AppState::new(pool));
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState { pool: pool.clone() }))
+            .app_data(state.clone())
             .route("/health/live", web::get().to(health::live))
             .route("/health/ready", web::get().to(health::ready))
             .configure(routes::configure)
