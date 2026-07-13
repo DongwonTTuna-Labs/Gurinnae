@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1634ceea73d27597364c9af683
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Build every first-party image
         run: bash scripts/build-first-party-images.sh
       - name: Verify production topology and runtime properties
