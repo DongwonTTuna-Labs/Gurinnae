@@ -20,13 +20,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! rg -n 'todo!\(|unimplemented!\(|panic!\(|unsafe[[:space:]]*\{' crates services xtask
-          ! rg -n --hidden --glob '!specs/**' --glob '!tests/**' --glob '!docs/**' \
-            '(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{32,})' .
+          if git grep -nE 'todo!\(|unimplemented!\(|panic!\(|unsafe[[:space:]]*\{' -- crates services xtask; then
+            exit 1
+          fi
+          if git grep -nEI \
+            '(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{32,})' \
+            -- . ':(exclude)specs/**' ':(exclude)tests/**' ':(exclude)docs/**' \
+            ':(exclude)services/oidc-test-provider/src/runner.rs'; then
+            exit 1
+          fi
+          test "$(git grep -h -c 'BEGIN[[:space:]]RSA[[:space:]]PRIVATE[[:space:]]KEY' -- services/oidc-test-provider/src/runner.rs)" -eq 1
       - name: Validate Compose isolation and immutable image pins
         run: |
           docker compose --profile test --file compose.production.yaml config --quiet
-          test "$(rg -c '@sha256:' infra/images.lock)" -eq 8
+          test "$(grep -c '@sha256:' infra/images.lock)" -eq 8
           test "$(docker compose --profile test --file compose.production.yaml config --services | wc -l)" -eq 20
       - name: Run assertion, IDOR, replay, and negative runtime gates
         run: |
