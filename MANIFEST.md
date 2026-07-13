@@ -2,7 +2,7 @@
 
 - Archive root: `source/`
 - Manifested files: **2424**
-- Manifested bytes: **59529153**
+- Manifested bytes: **59529270**
 - Hash algorithm: **SHA-256**
 - Manifest excludes its two circular digest files and generated build/cache output.
 
