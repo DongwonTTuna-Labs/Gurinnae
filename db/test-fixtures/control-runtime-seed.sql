@@ -5,7 +5,9 @@ VALUES('11111111-1111-4111-8111-111111111111','control-integration','control@exa
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.sessions(id,user_id,session_token_hash,auth_time,step_up_at,expires_at,csrf_token_hash)
-VALUES('22222222-2222-4222-8222-222222222222','11111111-1111-4111-8111-111111111111',repeat('a',64),clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour',repeat('b',64))
+VALUES
+ ('22222222-2222-4222-8222-222222222222','11111111-1111-4111-8111-111111111111',repeat('a',64),clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour',repeat('b',64)),
+ ('33333333-3333-4333-8333-333333333333','11111111-1111-4111-8111-111111111111',repeat('c',64),clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour',repeat('d',64))
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.users(id,oidc_subject,email,display_name,status)
@@ -148,7 +150,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO ops.schema_drifts(id,source_id,detected_at,fingerprint_after,status,impact,version)
 VALUES
  ('b085a8f4-6a10-508b-b5af-932cc2e4302a','control-fixture-source',clock_timestamp(),repeat('a',64),'OPEN','LOW',1),
- ('a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474','control-fixture-source',clock_timestamp(),repeat('b',64),'OPEN','LOW',1)
+ ('a8dd0f25-7ce3-5ca9-84a4-317e1e0ef474','control-fixture-source',clock_timestamp(),repeat('b',64),'OPEN','LOW',1),
+ ('7dc6b03d-d98b-53a8-828b-e0db50d7cfde','control-fixture-source',clock_timestamp(),repeat('c',64),'OPEN','LOW',1)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.jobs(id,job_type,queue,status,payload,version)
@@ -204,8 +207,8 @@ INSERT INTO ops.agent_suggestions(id,agent_run_id,case_id,suggestion_type,payloa
 VALUES('08af47bb-5a21-5128-b016-8d6a550b099b','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','CONTROL_FIXTURE','{}','[]','[]','PENDING',1)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO ops.audit_exports(id,requested_by,from_at,to_at,format,scope,reason,watermark_policy,status,expires_at)
-VALUES('c26f54c7-022f-54aa-80d3-dbc9cf339881','11111111-1111-4111-8111-111111111111',clock_timestamp()-interval '1 day',clock_timestamp(),'JSONL','GLOBAL','Canonical audit export query fixture','ACTOR_AND_TIME','QUEUED',clock_timestamp()+interval '1 day')
+INSERT INTO ops.audit_exports(id,requested_by,from_at,to_at,format,scope,reason,watermark_policy,status,expires_at,started_at,completed_at,row_count,content_sha256,object_key)
+VALUES('c26f54c7-022f-54aa-80d3-dbc9cf339881','11111111-1111-4111-8111-111111111111',clock_timestamp()-interval '1 day',clock_timestamp(),'JSONL','GLOBAL','Canonical audit export query fixture','ACTOR_AND_TIME','READY',clock_timestamp()+interval '1 day',clock_timestamp(),clock_timestamp(),1,repeat('c',64),'audit-exports/control-query.jsonl')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.agent_suggestions(id,agent_run_id,case_id,suggestion_type,payload,evidence_ids,citation_checks,status,version)

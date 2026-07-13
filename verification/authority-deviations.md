@@ -206,9 +206,49 @@ verification suite.
   hide the action; existing empty-state content remains visible. Unit and E2E
   coverage lock the destination mapping and protocol allowlist.
 
-## Pinned authority tree remains unchanged
+## Kill-switch extension request omits an expiry value
 
-- All corrections above are implemented in source, generated application
-  artifacts, runtime configuration, tests, or this deviation ledger. The
-  hash-pinned authority package and the repository `specs/**` authority files
-  are not modified.
+- Authority intent: `extendKillSwitch` extends an active switch while every
+  switch remains bounded by an expiry; indefinite switches are explicitly
+  forbidden.
+- Current evidence: the final `extendKillSwitchRequest` contains only
+  `killSwitchId`, `reason`, and `expectedVersion`, although the persistence
+  statement requires an expiry update.
+- Resolution: each successful extension advances the later of the stored
+  expiry and current database time by one bounded hour. A legacy null expiry is
+  repaired to one hour from database time instead of becoming indefinite. The
+  transaction still enforces active state, optimistic versioning, STEP_UP,
+  audit, and idempotency.
+
+## Audit export schema has no authorized download operation
+
+- Current evidence: `AuditExportResponse.downloadUrl` is required but nullable,
+  while the final Control operation catalog defines creation and status lookup
+  only. No actor-assertion-bound download operation or route exists.
+- Resolution: status lookup returns `downloadUrl: null` even after an internal
+  object key is materialized. It never advertises the former invented
+  `/v1/internal/audit-exports/{id}/download` path that always returned 404. The
+  protected object key and content digest remain server-side, and no route
+  outside the authority API is invented.
+
+## Hash-pinned authority package remains unchanged
+
+- The sole input authority ZIP remains byte-identical at SHA-256
+  `960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5`.
+  No earlier Gurine version or separate product material is used.
+- The repository `specs/**` tree preserves the pinned package's exact 791-file
+  member set. A byte audit against the pinned extraction finds 239 differing
+  files: 225 JSON/YAML files parse to identical values and differ only in
+  deterministic source formatting.
+- The remaining 14 paths are the already-documented application corrections
+  or formatting of non-structured reference assets:
+  `specs/api/{control-api,public-api}.openapi.{json,yaml}`,
+  `specs/config/secret-and-key-catalog.yaml`,
+  `specs/deployment/{compose-reference,service-config-map}.yaml`,
+  all four `specs/generated/*.openapi.json` files, and
+  `specs/ui/final-reference/{app.js,index.html,styles.css}`. Their functional
+  changes close the OpenAPI, runtime-config, generated-client, and inert-link
+  defects recorded above; the JS/CSS remainder is formatter-only.
+- The immutable pinned extraction is never edited. Every repository correction
+  is included in `MANIFEST.sha256` and exercised by the strict authority,
+  code-generation, runtime, container, E2E, visual, and clean-extraction gates.

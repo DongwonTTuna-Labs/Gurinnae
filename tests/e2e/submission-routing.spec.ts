@@ -9,6 +9,8 @@ type MockState = {
     path: string;
     tokenSha256: string;
     sessionKind: string;
+    idempotencyKeySha256: string;
+    accepted: boolean;
   }>;
   submissionReads: Array<{ path: string; sessionTokenSha256: string }>;
   submissionWrites: Array<{
@@ -130,6 +132,49 @@ test("failed token exchange removes the bearer token from the URL", async ({
   expect(page.url()).not.toContain(encodeURIComponent(oneTimeToken));
   await expect(page.locator(".notice")).toContainText("ONE_TIME_TOKEN_INVALID");
 });
+
+for (const retryContract of [
+  {
+    name: "response portal",
+    url: "http://127.0.0.1:29103/respond/access",
+  },
+  {
+    name: "public web",
+    url: "http://127.0.0.1:29101/correction-request/receipt",
+  },
+]) {
+  test(`${retryContract.name} one-time token retries use a fresh idempotency scope`, async ({
+    page,
+    request,
+    browser,
+  }) => {
+    const oneTimeToken = `${retryContract.name}-one-time-${randomUUID()}`;
+    const target = `${retryContract.url}?token=${encodeURIComponent(oneTimeToken)}`;
+    await page.goto(target, { waitUntil: "networkidle" });
+    expect(page.url()).toBe(retryContract.url);
+
+    const secondContext = await browser.newContext();
+    try {
+      const secondPage = await secondContext.newPage();
+      await secondPage.goto(target, { waitUntil: "networkidle" });
+      expect(secondPage.url()).not.toContain("token=");
+      await expect(secondPage.locator(".notice")).toContainText(
+        "ONE_TIME_TOKEN_INVALID",
+      );
+    } finally {
+      await secondContext.close();
+    }
+
+    const attempts = (await state(request)).submissionExchanges.filter(
+      (exchange) => exchange.tokenSha256 === sha256(oneTimeToken),
+    );
+    expect(attempts).toHaveLength(2);
+    expect(attempts.map((attempt) => attempt.accepted)).toEqual([true, false]);
+    expect(
+      new Set(attempts.map((attempt) => attempt.idempotencyKeySha256)).size,
+    ).toBe(2);
+  });
+}
 
 test("failed scoped form actions expose the server error to the user", async ({
   page,

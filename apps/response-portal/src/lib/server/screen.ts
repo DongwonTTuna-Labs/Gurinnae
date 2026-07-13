@@ -84,10 +84,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
           }),
           body: { oneTimeToken },
           headers: {
-            "Idempotency-Key": stableIdempotencyKey(
-              exchangeContract.operation_id,
-              { oneTimeToken },
-            ),
+            "Idempotency-Key": randomUUID(),
           },
         });
         const response = result.response ?? new Response(null, { status: 503 });
@@ -633,14 +630,6 @@ function formIdempotencyKey(form: FormData): string {
   )
     throw new Error("멱등성 키가 없거나 올바르지 않습니다.");
   return value;
-}
-function stableIdempotencyKey(
-  operationId: string,
-  body: Record<string, unknown>,
-): string {
-  return createHash("sha256")
-    .update(JSON.stringify([operationId, body]))
-    .digest("hex");
 }
 function sessionKindsForOperation(
   operationId: string,

@@ -82,6 +82,8 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         event,
         tokenContract.operation_id,
         tokenBody(tokenContract.operation_id, oneTimeToken),
+        undefined,
+        randomUUID(),
       );
       if (!response.ok) throw new Error(problemTitle(value, response.status));
       const expectedKinds = sessionKindsForOperation(

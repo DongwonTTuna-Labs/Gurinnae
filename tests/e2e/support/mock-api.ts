@@ -52,7 +52,14 @@ const submissionExchanges: Array<{
   path: string;
   tokenSha256: string;
   sessionKind: string;
+  idempotencyKeySha256: string;
+  accepted: boolean;
 }> = [];
+const consumedOneTimeTokens = new Set<string>();
+const exchangeReplays = new Map<
+  string,
+  { bodySha256: string; response: Record<string, unknown> }
+>();
 const submissionReads: Array<{ path: string; sessionTokenSha256: string }> = [];
 const submissionWrites: Array<{
   method: string;
@@ -70,6 +77,8 @@ function resetAll() {
   activeSession = token(`internal-session-${randomUUID()}`);
   currentCsrf = token(`csrf-${randomUUID()}`);
   sessionRevoked = false;
+  consumedOneTimeTokens.clear();
+  exchangeReplays.clear();
   clearObservations();
 }
 
@@ -944,20 +953,39 @@ Bun.serve({
     if (exchangeKind && request.method === "POST") {
       if (!asserted(request)) return problem(401, "SERVICE_ASSERTION_REQUIRED");
       const input = await body(request);
+      const idempotencyKey = request.headers.get("idempotency-key") ?? "";
+      if (!idempotencyKey) return problem(400, "IDEMPOTENCY_KEY_REQUIRED");
+      const replayKey = `${url.pathname}\0${idempotencyKey}`;
+      const bodySha256 = canonicalJsonSha256(input);
+      const replay = exchangeReplays.get(replayKey);
+      if (replay) {
+        if (replay.bodySha256 !== bodySha256)
+          return problem(409, "IDEMPOTENCY_REQUEST_CONFLICT");
+        return Response.json(replay.response, {
+          headers: { "idempotent-replay": "true" },
+        });
+      }
       const oneTimeToken =
         typeof input.oneTimeToken === "string" ? input.oneTimeToken : "";
       if (!oneTimeToken) return problem(400, "ONE_TIME_TOKEN_REQUIRED");
       if (oneTimeToken.startsWith("invalid-"))
         return problem(401, "ONE_TIME_TOKEN_INVALID");
-      const opaqueSessionToken = token(
-        `submission-${exchangeKind}-${oneTimeToken}`,
-      );
-      submissionExchanges.push({
+      const observation = {
         path: url.pathname,
         tokenSha256: sha256(oneTimeToken),
         sessionKind: exchangeKind,
-      });
-      return Response.json({
+        idempotencyKeySha256: sha256(idempotencyKey),
+      };
+      if (consumedOneTimeTokens.has(oneTimeToken)) {
+        submissionExchanges.push({ ...observation, accepted: false });
+        return problem(401, "ONE_TIME_TOKEN_INVALID");
+      }
+      consumedOneTimeTokens.add(oneTimeToken);
+      const opaqueSessionToken = token(
+        `submission-${exchangeKind}-${oneTimeToken}`,
+      );
+      submissionExchanges.push({ ...observation, accepted: true });
+      const response = {
         status: "exchanged",
         session: {
           opaqueSessionToken,
@@ -966,7 +994,9 @@ Bun.serve({
           expiresAt: expiresAt(),
           version: 1,
         },
-      });
+      };
+      exchangeReplays.set(replayKey, { bodySha256, response });
+      return Response.json(response);
     }
 
     const submissionReadPaths = new Set([

@@ -35,7 +35,8 @@ pub struct ActionAuthorizationContext {
 
 impl ActionAuthorizationContext {
     pub fn digest(&self) -> Result<String, OidcError> {
-        let bytes = crate::assertion::canonical::canonical_json(self)
+        let value = serde_json::to_value(self).map_err(|_| OidcError::InvalidActionContext)?;
+        let bytes = crate::assertion::canonical::canonical_json(&value)
             .map_err(|_| OidcError::InvalidActionContext)?;
         Ok(sha256_hex(&bytes))
     }
@@ -422,6 +423,25 @@ mod tests {
             idempotency_key_sha256: transaction.idempotency_key_sha256.as_deref(),
         };
         transaction.validate_callback(input)
+    }
+
+    #[test]
+    fn action_digest_uses_the_cross_language_key_sorted_contract() -> Result<(), OidcError> {
+        let context = ActionAuthorizationContext {
+            operation_id: "activateRuleVersion".to_owned(),
+            aggregate_type: "core.rule_version".to_owned(),
+            aggregate_id: "11111111-1111-4111-8111-111111111111".to_owned(),
+            expected_version: Some(7),
+            business_payload_sha256: "1".repeat(64),
+            idempotency_key_sha256: "2".repeat(64),
+        };
+        let canonical = format!(
+            "{{\"aggregateId\":\"11111111-1111-4111-8111-111111111111\",\"aggregateType\":\"core.rule_version\",\"businessPayloadSha256\":\"{}\",\"expectedVersion\":7,\"idempotencyKeySha256\":\"{}\",\"operationId\":\"activateRuleVersion\"}}",
+            "1".repeat(64),
+            "2".repeat(64),
+        );
+        assert_eq!(context.digest()?, sha256_hex(canonical.as_bytes()));
+        Ok(())
     }
 
     #[test]

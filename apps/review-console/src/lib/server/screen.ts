@@ -3,6 +3,7 @@ import { invokeControlOperation } from "@gurine/api-client-control";
 import { invokeIdentityOperation } from "@gurine/api-client-identity-internal";
 import {
   bindPath,
+  canonicalizeRequestQuery,
   canonicalJsonSha256,
   downstreamRequestBinding,
   formPayload,
@@ -359,8 +360,10 @@ async function controlRequest(
     resource,
     init,
   ) => {
-    const request =
+    const original =
       resource instanceof Request ? resource : new Request(resource, init);
+    const { request, rawQuery: canonicalRawQuery } =
+      canonicalizeRequestQuery(original);
     const url = new URL(request.url);
     if (url.pathname !== path)
       throw new Error(
@@ -372,7 +375,7 @@ async function controlRequest(
     const binding = downstreamRequestBinding({
       method: request.method,
       path: url.pathname,
-      ...(url.search.length > 1 ? { rawQuery: url.search.slice(1) } : {}),
+      ...(canonicalRawQuery ? { rawQuery: canonicalRawQuery } : {}),
       body: bodyBytes,
       contentType: request.headers.get("content-type") ?? "",
       ...(requestIdempotency ? { idempotencyKey: requestIdempotency } : {}),

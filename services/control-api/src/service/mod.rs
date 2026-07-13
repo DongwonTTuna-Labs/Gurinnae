@@ -185,12 +185,7 @@ async fn command(
     } else {
         None
     };
-    let mut canonical_payload = payload_object.clone();
-    for (name, value) in request.match_info().iter() {
-        canonical_payload
-            .entry(name.to_owned())
-            .or_insert_with(|| Value::String(value.to_owned()));
-    }
+    let canonical_payload = command_parameters(request, payload_object);
     let canonical_version =
         canonical_guard(operation.id, &canonical_payload, actor_id, &mut transaction).await?;
 
@@ -219,9 +214,10 @@ async fn command(
 
     apply_specialized(
         operation.id,
-        payload_object,
+        &canonical_payload,
         persisted_id,
         actor_id,
+        session_id,
         field_keys,
         &mut transaction,
     )
@@ -541,8 +537,7 @@ async fn canonical_query(
                  'from',from_at,'to',to_at,'objectType',object_type,'objectId',object_id, \
                  'watermarkPolicy',watermark_policy,'createdAt',created_at,'startedAt',started_at, \
                  'completedAt',completed_at,'expiresAt',expires_at,'rowCount',row_count, \
-                 'contentSha256',content_sha256,'downloadUrl',CASE WHEN object_key IS NULL THEN NULL \
-                   ELSE '/v1/internal/audit-exports/'||id::text||'/download' END, \
+                 'contentSha256',content_sha256,'downloadUrl',NULL::text, \
                  'failureCode',failure_code,'links','[]'::jsonb) \
                  FROM ops.audit_exports WHERE id=$1",
             )
@@ -1334,6 +1329,7 @@ async fn apply_specialized(
     payload: &Map<String, Value>,
     id: Uuid,
     actor: Uuid,
+    session_id: Uuid,
     field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
@@ -1888,11 +1884,15 @@ async fn apply_specialized(
             let mappings = if approved {
                 payload
                     .get("fieldMappings")
+                    .filter(|value| value.is_array())
                     .cloned()
                     .ok_or(ServiceError::InvalidRequest)?
             } else {
                 json!([])
             };
+            if approved && !mapping_digest_matches(&mappings, digest)? {
+                return Err(ServiceError::InvalidRequest);
+            }
             sqlx::query(
                 "INSERT INTO ops.schema_mappings(schema_drift_id,mapping_version,mapping_digest, \
                  field_mappings,status,proposed_by,decided_by,decision_reason,decided_at) \
@@ -3459,11 +3459,20 @@ async fn apply_specialized(
             }
         }
         "extendKillSwitch" => {
-            if let Some(target) = uuid_value(payload, &["killSwitchId", "id"]) {
-                let changed=sqlx::query("UPDATE ops.kill_switches SET expires_at=$2,updated_at=clock_timestamp() WHERE id=$1 AND state='ACTIVE'").bind(target).bind(timestamp_value(payload,"expiresAt")?).execute(&mut **tx).await.map_err(db)?.rows_affected();
-                if changed == 0 {
-                    return Err(ServiceError::NotFound);
-                }
+            let target =
+                uuid_value(payload, &["killSwitchId", "id"]).ok_or(ServiceError::InvalidRequest)?;
+            let changed = sqlx::query(
+                "UPDATE ops.kill_switches SET expires_at= \
+                 GREATEST(COALESCE(expires_at,clock_timestamp()),clock_timestamp())+interval '1 hour', \
+                 updated_at=clock_timestamp() WHERE id=$1 AND state='ACTIVE'",
+            )
+            .bind(target)
+            .execute(&mut **tx)
+            .await
+            .map_err(db)?
+            .rows_affected();
+            if changed == 0 {
+                return Err(ServiceError::NotFound);
             }
         }
         "markNotificationRead" => {
@@ -3472,7 +3481,19 @@ async fn apply_specialized(
             }
         }
         "revokeOwnSession" => {
-            sqlx::query("UPDATE ops.sessions SET revoked_at=COALESCE(revoked_at,clock_timestamp()) WHERE user_id=$1 AND revoked_at IS NULL").bind(actor).execute(&mut **tx).await.map_err(db)?;
+            let changed = sqlx::query(
+                "UPDATE ops.sessions SET revoked_at=clock_timestamp() \
+                 WHERE id=$1 AND user_id=$2 AND revoked_at IS NULL",
+            )
+            .bind(session_id)
+            .bind(actor)
+            .execute(&mut **tx)
+            .await
+            .map_err(db)?
+            .rows_affected();
+            if changed != 1 {
+                return Err(ServiceError::NotFound);
+            }
         }
         "revokeUserSessions" => {
             if let Some(user) = uuid_value(payload, &["userId"]) {
@@ -4314,10 +4335,22 @@ fn merge(target: &mut Value, source: &Value) {
         }
     }
 }
+fn command_parameters(request: &HttpRequest, payload: &Map<String, Value>) -> Map<String, Value> {
+    let mut parameters = payload.clone();
+    for (name, value) in request.match_info().iter() {
+        parameters.insert(name.to_owned(), Value::String(value.to_owned()));
+    }
+    parameters
+}
 fn query_parameters(request: &HttpRequest) -> BTreeMap<String, String> {
-    url::form_urlencoded::parse(request.query_string().as_bytes())
-        .map(|(k, v)| (k.into_owned(), v.into_owned()))
-        .collect()
+    let mut parameters: BTreeMap<String, String> =
+        url::form_urlencoded::parse(request.query_string().as_bytes())
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+    for (name, value) in request.match_info().iter() {
+        parameters.insert(name.to_owned(), value.to_owned());
+    }
+    parameters
 }
 fn uuid_value(payload: &Map<String, Value>, keys: &[&str]) -> Option<Uuid> {
     keys.iter().find_map(|key| {
@@ -4443,6 +4476,10 @@ fn sha256(bytes: &[u8]) -> String {
         .map(|byte| format!("{byte:02x}"))
         .collect()
 }
+fn mapping_digest_matches(value: &Value, expected: &str) -> Result<bool, ServiceError> {
+    let canonical = serde_json::to_vec(value).map_err(|_| ServiceError::InvalidRequest)?;
+    Ok(sha256(&canonical) == expected)
+}
 fn format_time(value: OffsetDateTime) -> Result<String, ServiceError> {
     value
         .format(&Rfc3339)
@@ -4451,4 +4488,63 @@ fn format_time(value: OffsetDateTime) -> Result<String, ServiceError> {
 fn db(error: sqlx::Error) -> ServiceError {
     tracing::error!(error = %error, "control persistence operation failed");
     ServiceError::Persistence
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::test::TestRequest;
+
+    use super::*;
+
+    #[test]
+    fn path_parameters_override_spoofed_query_values() {
+        let request =
+            TestRequest::with_uri("/v1/internal/cases/path-case?caseId=query-case&locale=ko")
+                .param("caseId", "path-case")
+                .to_http_request();
+        let parameters = query_parameters(&request);
+        assert_eq!(
+            parameters.get("caseId").map(String::as_str),
+            Some("path-case")
+        );
+        assert_eq!(parameters.get("locale").map(String::as_str), Some("ko"));
+    }
+
+    #[test]
+    fn path_parameters_override_spoofed_command_values() {
+        let request = TestRequest::with_uri("/v1/internal/saved-views/path-view")
+            .param("savedViewId", "path-view")
+            .to_http_request();
+        let payload = json!({
+            "savedViewId": "body-view",
+            "expectedVersion": 1
+        });
+        let parameters = command_parameters(
+            &request,
+            payload
+                .as_object()
+                .expect("command payload must be an object"),
+        );
+        assert_eq!(
+            parameters.get("savedViewId").and_then(Value::as_str),
+            Some("path-view")
+        );
+        assert_eq!(parameters.get("expectedVersion"), Some(&json!(1)));
+    }
+
+    #[test]
+    fn schema_mapping_digest_binds_key_sorted_compact_json() -> Result<(), ServiceError> {
+        let mappings = json!([{
+            "upstreamPath": "supplier.name",
+            "canonicalField": "supplierName",
+            "transform": "trim",
+            "required": true
+        }]);
+        let expected = sha256(
+            br#"[{"canonicalField":"supplierName","required":true,"transform":"trim","upstreamPath":"supplier.name"}]"#,
+        );
+        assert!(mapping_digest_matches(&mappings, &expected)?);
+        assert!(!mapping_digest_matches(&mappings, &"0".repeat(64))?);
+        Ok(())
+    }
 }

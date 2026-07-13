@@ -254,7 +254,7 @@ def canonical_query(raw):
 def assertion(operation, method, path, raw_query, body, content_type, idempotency_key):
     now = int(time.time())
     capability = operation["x-capability"]
-    capabilities = [capability]
+    capabilities = [] if capability == "none" else [capability]
     assurance = operation["x-assurance-level"]
     claims = {
         "actionDigest": sha256(f"action:{operation['operationId']}".encode()) if assurance == "STEP_UP" else None,
@@ -338,6 +338,15 @@ for path_template, path_item, method, operation in operations:
         if operation["operationId"] == "saveResponseRequestDraft":
             request_value["recipientEmail"] = "updated-response-recipient@example.test"
             request_value["questions"] = ["Updated canonical response question"]
+        if operation["operationId"] == "approveSchemaMapping":
+            request_value["mappingDigest"] = sha256(
+                json.dumps(
+                    request_value["fieldMappings"],
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            )
         concurrency = CONCURRENCY.get(operation["operationId"])
         if concurrency is not None:
             if concurrency["guardRelation"] == "editorial.cases":
@@ -377,6 +386,8 @@ for path_template, path_item, method, operation in operations:
     parsed = json.loads(response_body)
     response_schema = operation["responses"][str(response.status)]["content"]["application/json"]["schema"]
     Draft202012Validator(response_schema, resolver=resolver).validate(parsed)
+    if operation["operationId"] == "getAuditExport":
+        assert parsed["downloadUrl"] is None, parsed["downloadUrl"]
     if operation["operationId"] == "createAccessRequest":
         replay_case = {
             "operation": operation,
@@ -534,6 +545,27 @@ expect_command_error(
         "previewHash": sha256(json.dumps(published_payload, sort_keys=True, separators=(",", ":")).encode()),
         "reason": "stale snapshot negative test",
         "expectedVersion": 14,
+    },
+    400,
+)
+expect_command_error(
+    "approveSchemaMapping",
+    {
+        "schemaDriftId": str(
+            uuid.uuid5(uuid.NAMESPACE_URL, "gurine:fixture:schema-digest-negative")
+        ),
+        "mappingVersion": 1,
+        "mappingDigest": "0" * 64,
+        "fieldMappings": [
+            {
+                "upstreamPath": "supplier.name",
+                "canonicalField": "supplierName",
+                "transform": "trim",
+                "required": True,
+            }
+        ],
+        "reason": "mismatched schema mapping digest negative test",
+        "expectedVersion": 1,
     },
     400,
 )

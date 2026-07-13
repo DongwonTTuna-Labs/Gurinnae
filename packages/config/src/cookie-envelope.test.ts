@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { openCookieEnvelope, sealCookieEnvelope } from "./cookie-envelope";
+import {
+  canonicalJsonSha256,
+  openCookieEnvelope,
+  sealCookieEnvelope,
+} from "./cookie-envelope";
 
 const key = Buffer.from(
   "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
@@ -64,6 +68,19 @@ describe("authority cookie envelope vectors", () => {
         isRecord,
       ),
     ).toBeUndefined();
+  });
+
+  test("step-up action digest matches the Rust key-sorted contract", () => {
+    expect(
+      canonicalJsonSha256({
+        operationId: "activateRuleVersion",
+        aggregateType: "core.rule_version",
+        aggregateId: "11111111-1111-4111-8111-111111111111",
+        expectedVersion: 7,
+        businessPayloadSha256: "1".repeat(64),
+        idempotencyKeySha256: "2".repeat(64),
+      }),
+    ).toBe("d1015e3f8759b26cdc1446a5b042155099f8bfe98d68141523feee543efc5d6a");
   });
 });
 

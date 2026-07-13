@@ -133,11 +133,7 @@ pub fn verify_claims(
     {
         return Err(AssertionError::RequestMismatch);
     }
-    if !claims
-        .capabilities
-        .iter()
-        .any(|value| value == expectation.capability)
-    {
+    if !capability_allows(expectation.capability, &claims.capabilities) {
         return Err(AssertionError::CapabilityDenied);
     }
     Ok(claims)
@@ -182,4 +178,23 @@ fn validate_time(claims: &ActorClaims, now: i64) -> Result<(), AssertionError> {
 
 pub fn action_digest(canonical_context: &[u8]) -> String {
     sha256_hex(canonical_context)
+}
+
+fn capability_allows(required: &str, capabilities: &[String]) -> bool {
+    required == "none" || capabilities.iter().any(|value| value == required)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::capability_allows;
+
+    #[test]
+    fn capability_free_operations_require_authentication_but_no_role_grant() {
+        assert!(capability_allows("none", &[]));
+        assert!(!capability_allows("audit.export", &[]));
+        assert!(capability_allows(
+            "audit.export",
+            &["audit.export".to_owned()],
+        ));
+    }
 }

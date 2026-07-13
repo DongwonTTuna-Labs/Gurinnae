@@ -153,6 +153,51 @@ await invoke("/internal/v1/oidc/login-callbacks", loginRequest, {
 
 const opaqueSessionToken = stringField(loggedIn.body, "opaqueSessionToken");
 const originalCsrf = stringField(loggedIn.body, "csrfToken");
+const capabilityFreeBody = "{}";
+const capabilityFreeIdempotency = randomUUID();
+const capabilityFreePath = "/v1/internal/commands/revoke-own-session";
+const capabilityFreeQuerySha256 = sha256("");
+const capabilityFreeBodySha256 = sha256(capabilityFreeBody);
+const capabilityFreeIdempotencySha256 = sha256(capabilityFreeIdempotency);
+const capabilityFreeIssued = await invoke("/internal/v1/actor-assertions", {
+  opaqueSessionToken,
+  downstreamRequest: {
+    method: "POST",
+    normalizedPath: capabilityFreePath,
+    querySha256: capabilityFreeQuerySha256,
+    bodySha256: capabilityFreeBodySha256,
+    contentType: "application/json",
+    requestDigest: sha256(
+      `POST\n${capabilityFreePath}\n${capabilityFreeQuerySha256}\n${capabilityFreeBodySha256}\napplication/json\n${capabilityFreeIdempotencySha256}`,
+    ),
+    idempotencyKeySha256: capabilityFreeIdempotencySha256,
+  },
+  operationId: "revokeOwnSession",
+  requiredCapability: "none",
+  context,
+  requiredAssuranceLevel: "ACTIVE_SESSION",
+});
+const capabilityFreeAssertion = stringField(
+  capabilityFreeIssued.body,
+  "actorAssertion",
+);
+const capabilityFreeClaims = parseRecord(
+  Buffer.from(
+    capabilityFreeAssertion.split(".")[2] ?? "",
+    "base64url",
+  ).toString("utf8"),
+);
+equal(
+  capabilityFreeClaims.requiredCapability,
+  "none",
+  "capability-free assertion contract",
+);
+if (
+  !Array.isArray(capabilityFreeClaims.capabilities) ||
+  capabilityFreeClaims.capabilities.includes("none")
+) {
+  throw new Error("capability-free assertion invented a role capability");
+}
 const downstreamIdempotency = randomUUID();
 const downstreamBody = JSON.stringify({
   killSwitchId: randomUUID(),

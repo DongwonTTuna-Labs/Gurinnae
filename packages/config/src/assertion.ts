@@ -97,19 +97,20 @@ export async function assertedRequest(input: {
 }): Promise<{ response: Response; value: Record<string, unknown> }> {
   const bytes = input.body === undefined ? "" : JSON.stringify(input.body);
   const idempotencyKey = input.idempotency ? randomUUID() : undefined;
+  const rawQuery = canonicalQuery(input.rawQuery ?? "");
   const assertion = serviceAssertion({
     keyBase64: input.keyBase64,
     issuer: input.issuer,
     audience: input.audience,
     method: input.method,
     path: input.path,
-    ...(input.rawQuery !== undefined ? { rawQuery: input.rawQuery } : {}),
+    ...(rawQuery ? { rawQuery } : {}),
     body: bytes,
     contentType: "application/json",
     ...(idempotencyKey ? { idempotencyKey } : {}),
   });
   const response = await input.fetch(
-    `${input.baseUrl.replace(/\/$/, "")}${input.path}${input.rawQuery ? `?${input.rawQuery}` : ""}`,
+    `${input.baseUrl.replace(/\/$/, "")}${input.path}${rawQuery ? `?${rawQuery}` : ""}`,
     {
       method: input.method,
       headers: {
@@ -129,6 +130,18 @@ export async function assertedRequest(input: {
   return { response, value: value as Record<string, unknown> };
 }
 
+export function canonicalizeRequestQuery(request: Request): {
+  request: Request;
+  rawQuery: string;
+} {
+  const url = new URL(request.url);
+  const rawQuery = canonicalQuery(
+    url.search.length > 1 ? url.search.slice(1) : "",
+  );
+  url.search = rawQuery ? `?${rawQuery}` : "";
+  return { request: new Request(url, request), rawQuery };
+}
+
 export function serviceAssertionFetch(input: {
   fetch: typeof globalThis.fetch;
   keyBase64: string;
@@ -137,8 +150,9 @@ export function serviceAssertionFetch(input: {
   additionalHeaders?: Record<string, string>;
 }): typeof globalThis.fetch {
   return async (resource, init) => {
-    const request =
+    const original =
       resource instanceof Request ? resource : new Request(resource, init);
+    const { request, rawQuery } = canonicalizeRequestQuery(original);
     const url = new URL(request.url);
     const body = new Uint8Array(await request.clone().arrayBuffer());
     const idempotencyKey = request.headers.get("idempotency-key") ?? undefined;
@@ -148,7 +162,7 @@ export function serviceAssertionFetch(input: {
       audience: input.audience,
       method: request.method,
       path: url.pathname,
-      ...(url.search.length > 1 ? { rawQuery: url.search.slice(1) } : {}),
+      ...(rawQuery ? { rawQuery } : {}),
       body,
       contentType: request.headers.get("content-type") ?? "",
       ...(idempotencyKey ? { idempotencyKey } : {}),
@@ -166,16 +180,23 @@ function canonicalQuery(raw: string): string {
   if (raw === "") return "";
   const pairs = raw.split("&").map((part) => {
     const [key = "", value = ""] = part.split("=", 2);
-    return [decodeURIComponent(key), decodeURIComponent(value)] as const;
+    return [decodeFormComponent(key), decodeFormComponent(value)] as const;
   });
-  pairs.sort(([leftKey, leftValue], [rightKey, rightValue]) =>
-    leftKey === rightKey
-      ? leftValue.localeCompare(rightValue)
-      : leftKey.localeCompare(rightKey),
-  );
+  pairs.sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+    const keyOrder = compareUtf8(leftKey, rightKey);
+    return keyOrder === 0 ? compareUtf8(leftValue, rightValue) : keyOrder;
+  });
   return pairs
     .map(([key, value]) => `${strictEncode(key)}=${strictEncode(value)}`)
     .join("&");
+}
+
+function decodeFormComponent(value: string): string {
+  return decodeURIComponent(value.replaceAll("+", "%20"));
+}
+
+function compareUtf8(left: string, right: string): number {
+  return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
 }
 
 function strictEncode(value: string): string {

@@ -299,4 +299,31 @@ mod tests {
         });
         assert!(matches!(result, Err(AssertionError::RequestMismatch)));
     }
+
+    #[test]
+    fn query_spaces_require_rfc3986_encoding() {
+        let accepted = request_hashes(&BoundRequest {
+            method: "GET",
+            path: "/search",
+            raw_query: "term=two%20words&literal=a%2Bb",
+            body: b"",
+            content_type: None,
+            idempotency_key: None,
+        })
+        .expect("RFC3986 query must be accepted");
+        assert_eq!(
+            accepted.query_sha256,
+            sha256_hex(b"literal=a%2Bb&term=two%20words")
+        );
+
+        let rejected = request_hashes(&BoundRequest {
+            method: "GET",
+            path: "/search",
+            raw_query: "term=two+words",
+            body: b"",
+            content_type: None,
+            idempotency_key: None,
+        });
+        assert!(matches!(rejected, Err(AssertionError::RequestMismatch)));
+    }
 }

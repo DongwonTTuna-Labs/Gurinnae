@@ -23,10 +23,11 @@ pub async fn issue_actor_assertion(
 ) -> Result<dto::IssueActorAssertionResponse, ServiceError> {
     validate_issue_request(&request)?;
     let session = bound_session(state, &request.opaque_session_token, &request.context).await?;
-    if !session
-        .capabilities
-        .iter()
-        .any(|capability| capability == &request.required_capability)
+    if request.required_capability != "none"
+        && !session
+            .capabilities
+            .iter()
+            .any(|capability| capability == &request.required_capability)
     {
         return Err(ServiceError::CapabilityDenied);
     }

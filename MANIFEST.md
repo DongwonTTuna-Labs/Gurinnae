@@ -1,8 +1,8 @@
 # Package Manifest — Gurine Source Tree v13.0.0
 
 - Archive root: `source/`
-- Manifested files: **2435**
-- Manifested bytes: **59488651**
+- Manifested files: **2436**
+- Manifested bytes: **59507258**
 - Hash algorithm: **SHA-256**
 - Manifest excludes its two circular digest files and generated build/cache output.
 

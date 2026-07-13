@@ -61,6 +61,10 @@ BEGIN
   IF (SELECT state FROM ops.kill_switches WHERE id='2cd3a1db-f58f-501c-a08c-02b3760c4dbc') <> 'INACTIVE' THEN
     RAISE EXCEPTION 'kill switch did not complete activation-extension-deactivation lifecycle';
   END IF;
+  IF (SELECT expires_at FROM ops.kill_switches WHERE id='2cd3a1db-f58f-501c-a08c-02b3760c4dbc') <>
+     '2027-07-12T21:00:00Z'::timestamptz THEN
+    RAISE EXCEPTION 'kill switch extension did not add the bounded one-hour window';
+  END IF;
   IF (SELECT status FROM ops.jobs WHERE id='3bc978f3-d0e0-5558-a790-978d83c3cd38') <> 'CANCELLED'
      OR (SELECT status FROM ops.jobs WHERE id='58e7aa4e-c694-5a6b-bdba-98ce4d572f48') <> 'QUARANTINED'
      OR (SELECT status FROM ops.jobs WHERE id='c200238e-882e-5485-8fc9-a4283a112ccc') <> 'QUEUED' THEN
@@ -71,6 +75,14 @@ BEGIN
   END IF;
   IF (SELECT revoked_at FROM ops.sessions WHERE id='22222222-2222-4222-8222-222222222222') IS NULL THEN
     RAISE EXCEPTION 'session was not revoked';
+  END IF;
+  IF (SELECT revoked_at FROM ops.sessions WHERE id='33333333-3333-4333-8333-333333333333') IS NOT NULL THEN
+    RAISE EXCEPTION 'revokeOwnSession revoked a different active session for the same actor';
+  END IF;
+  IF (SELECT version FROM ops.schema_drifts WHERE id='7dc6b03d-d98b-53a8-828b-e0db50d7cfde') <> 1 OR
+     (SELECT status FROM ops.schema_drifts WHERE id='7dc6b03d-d98b-53a8-828b-e0db50d7cfde') <> 'OPEN' OR
+     EXISTS(SELECT 1 FROM ops.schema_mappings WHERE schema_drift_id='7dc6b03d-d98b-53a8-828b-e0db50d7cfde') THEN
+    RAISE EXCEPTION 'mismatched schema mapping digest changed canonical state';
   END IF;
   IF (SELECT status FROM ops.source_incidents WHERE source_id='control-fixture-source') <> 'ACKNOWLEDGED' THEN
     RAISE EXCEPTION 'source incident was not acknowledged';
