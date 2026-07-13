@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/publication.access_restricted.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actor_id",
+    "occurred_at",
+    "operation_id",
+    "publication_id",
+    "request_id"
+  ],
+  "properties": {
+    "actor_id": {
+      "type": "string"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "operation_id": {
+      "type": "string"
+    },
+    "publication_id": {
+      "type": "string"
+    },
+    "request_id": {
+      "type": "string"
+    }
+  }
+}

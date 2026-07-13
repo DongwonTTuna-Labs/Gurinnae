@@ -1,0 +1,7 @@
+{
+  "fixture_origin": "synthetic-manifest-contract-not-live-evidence",
+  "connector_id": "audit-results",
+  "kind": "rate-limited",
+  "http_status": 429,
+  "retry_after_seconds": 60
+}

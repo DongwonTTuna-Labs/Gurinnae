@@ -1,0 +1,35 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  boundaries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1634ceea73d27597364c9af683
+      - name: Reject forbidden production constructs and leaked credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! rg -n 'todo!\(|unimplemented!\(|panic!\(|unsafe[[:space:]]*\{' crates services xtask
+          ! rg -n --hidden --glob '!specs/**' --glob '!tests/**' --glob '!docs/**' \
+            '(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{32,})' .
+      - name: Validate Compose isolation and immutable image pins
+        run: |
+          docker compose --profile test --file compose.production.yaml config --quiet
+          test "$(rg -c '@sha256:' infra/images.lock)" -eq 8
+          test "$(docker compose --profile test --file compose.production.yaml config --services | wc -l)" -eq 20
+      - name: Run assertion, IDOR, replay, and negative runtime gates
+        run: |
+          bash scripts/test-submission-flow.sh
+          bash scripts/test-analysis-negative-runtime.sh
+          bash scripts/test-worker-failure-runtime.sh

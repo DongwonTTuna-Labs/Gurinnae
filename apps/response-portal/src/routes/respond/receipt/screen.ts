@@ -1,0 +1,83 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "RSP-006",
+  title: "소명 접수 영수증",
+  route: "/respond/receipt",
+  archetype: "GUIDED_FORM",
+  sections: [
+    {
+      order: 1,
+      id: "receipt",
+      title: "접수 결과",
+      component: "DataCollection",
+      purpose: "receipt·timestamp.",
+      test_id: "rsp_006__section__receipt",
+    },
+    {
+      order: 2,
+      id: "summary",
+      title: "제출 요약",
+      component: "GuidedFormSection",
+      purpose: "질문·파일 수·consent.",
+      test_id: "rsp_006__section__summary",
+    },
+    {
+      order: 3,
+      id: "next",
+      title: "다음 절차",
+      component: "DecisionReviewPanel",
+      purpose: "검토·연락.",
+      test_id: "rsp_006__section__next",
+    },
+    {
+      order: 4,
+      id: "download",
+      title: "영수증",
+      component: "StructuredContentSection",
+      purpose: "보관.",
+      test_id: "rsp_006__section__download",
+    },
+  ],
+  actions: [
+    {
+      id: "download-receipt",
+      label: "영수증 다운로드",
+      capability: "none",
+      interaction_kind: "DOWNLOAD",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "submit-supplement",
+      label: "추가자료 안내",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "exchangeResponseReceiptToken",
+      api: "submission-api",
+      method: "POST",
+      path: "/v1/submission-session/response-receipt:exchange",
+      blocking: true,
+      response_schema: "ExchangeSubmissionSessionResult",
+    },
+    {
+      operation_id: "getResponseReceipt",
+      api: "submission-api",
+      method: "GET",
+      path: "/v1/response-receipt",
+      blocking: true,
+      response_schema: "ResponseReceiptResponse",
+    },
+  ],
+} as const satisfies ScreenViewModel;

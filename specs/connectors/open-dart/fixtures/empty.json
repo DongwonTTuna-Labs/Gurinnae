@@ -1,0 +1,10 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "open-dart",
+  "operation_id": "dart-disclosures",
+  "kind": "empty",
+  "response": {
+    "status": "013",
+    "message": "조회된 데이타가 없습니다."
+  }
+}

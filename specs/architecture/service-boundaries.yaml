@@ -1,0 +1,221 @@
+version: 3
+specification_version: 13.0.0
+status: FINAL
+services:
+- id: public-api
+  kind: actix-http
+  db_role: gurine_public_api
+  writes: false
+  schemas:
+  - public
+  network:
+  - public
+  - data
+  external_egress: []
+- id: control-api
+  kind: actix-http
+  db_role: gurine_control_api
+  writes: true
+  schemas:
+  - core
+  - editorial
+  - ops
+  network:
+  - internal
+  - data
+  external_egress: []
+  internal_dependencies:
+  - identity-api actor assertion public-key-equivalent HMAC contract and replay store
+  authentication:
+    accepted_credential: X-Gurine-Actor-Assertion only
+    issuer: identity-api
+    audience: control-api
+    browser_cookie_access: false
+    csrf_responsibility: Review Console BFF before Identity API resolution
+    replay_guard: ops.assertion_replay_guard via ops.consume_assertion_jti
+    raw_step_up_proof_access: false
+    step_up_enforcement: non-null actionDigest and stepUpAuthorizationId claims only for operations whose assurance level is STEP_UP
+- id: identity-api
+  kind: actix-http-private
+  db_role: gurine_identity_api
+  writes: true
+  schemas:
+  - ops-identity
+  network:
+  - internal
+  - data
+  egress_via: egress-gateway:oidc
+  responsibilities:
+  - OIDC state/nonce/PKCE transactions
+  - opaque session lifecycle
+  - action-bound step-up proofs
+  - signed actor assertions
+  public_ingress: false
+  authentication:
+    accepted_credential: X-Gurine-Service-Assertion only on private routes
+    issuer: review-console
+    audience: identity-api
+    replay_guard: ops.assertion_replay_guard via ops.consume_assertion_jti
+    actor_assertion_issuer: issueActorAssertion
+    step_up_authorization_owner: true
+    session_resolution_issues_assertion: false
+- id: submission-api
+  kind: actix-http
+  db_role: gurine_submission_api
+  writes: true
+  schemas:
+  - intake
+  - ops-limited
+  network:
+  - internal
+  - data
+  external_egress: []
+  public_ingress: false
+  authentication:
+    accepted_credentials:
+    - X-Gurine-Service-Assertion from public-web or response-portal
+    - X-Gurine-Submission-Session for scoped operations
+    browser_cookie_access: false
+    browser_direct_access: false
+    service_assertion_replay_guard: ops.assertion_replay_guard via ops.consume_assertion_jti
+    session_scope_owner: intake.submission_sessions
+- id: ingest-worker
+  kind: tokio-worker
+  db_role: gurine_ingest_worker
+  schemas:
+  - raw
+  - core
+  - ops
+  network:
+  - internal
+  - data
+  egress_via: egress-gateway:source
+- id: analysis-worker
+  kind: tokio-worker
+  db_role: gurine_analysis_worker
+  schemas:
+  - raw-read
+  - core
+  - editorial-limited
+  - ops
+  network:
+  - internal
+  - data
+  egress_via: egress-gateway:ai
+- id: projection-worker
+  kind: tokio-worker
+  db_role: gurine_public_projector
+  schemas:
+  - editorial-read
+  - public
+  - ops-inbox
+  network:
+  - internal
+  - data
+  external_egress: []
+- id: notification-worker
+  kind: tokio-worker
+  db_role: gurine_notification_worker
+  schemas:
+  - intake-read
+  - editorial-read
+  - ops
+  network:
+  - internal
+  - data
+  egress_via: egress-gateway:smtp
+- id: workflow-worker
+  kind: tokio-worker
+  db_role: gurine_workflow_worker
+  schemas:
+  - intake
+  - editorial-limited
+  - ops
+  network:
+  - internal
+  - data
+  egress_via: egress-gateway:object-store
+- id: document-extractor
+  kind: tokio-worker-sandbox-controller
+  db_role: gurine_document_extractor
+  schemas:
+  - raw-read
+  - core-parser
+  - ops-jobs
+  network:
+  - internal
+  - data
+  egress_via: egress-gateway:object-store
+- id: scheduler
+  kind: tokio-scheduler
+  db_role: gurine_scheduler
+  schemas:
+  - ops
+  network:
+  - internal
+  - data
+  external_egress: []
+- id: migrator
+  kind: one-shot
+  db_role: gurine_migrator
+  schemas:
+  - all-owner
+  network:
+  - data
+  external_egress: []
+- id: egress-gateway
+  kind: rust-policy-proxy
+  db_role: null
+  schemas: []
+  network:
+  - internal
+  - egress
+  external_egress:
+  - allowlist-only
+- id: oidc-test-provider
+  kind: rust-development-only
+  db_role: null
+  schemas: []
+  network:
+  - internal
+  external_egress: []
+- id: public-web
+  kind: sveltekit-ssr
+  api_clients:
+  - public
+  - submission
+  network:
+  - public
+  - internal
+  external_egress: []
+- id: review-console
+  kind: sveltekit-ssr-bff
+  api_clients:
+  - control
+  - identity-internal
+  network:
+  - internal
+  external_egress: []
+- id: response-portal
+  kind: sveltekit-ssr-bff
+  api_clients:
+  - submission
+  network:
+  - public
+  - internal
+  external_egress: []
+network_rules:
+- Only egress-gateway has direct external network access.
+- Review Console OIDC discovery and token exchange use the OIDC egress channel.
+- Workers use distinct database login roles; a single WORKER_DATABASE_URL is forbidden.
+- Submission API and ClamAV share an internal network; uploaded objects remain quarantined until a clean scan result.
+- Public API cannot reach Control API, private schemas, object storage or external providers.
+- Review Console BFF owns browser session cookies and synchronizer CSRF; Control API never parses them.
+- Identity API issues a request-bound actor assertion after resolving the opaque session and consuming any required step-up proof.
+- Control API accepts only X-Gurine-Actor-Assertion and verifies audience, request binding, capability, expiry and JTI replay.
+- Submission API has no public ingress; public-web and response-portal call it only over the internal network with request-bound
+  service assertions.
+- Raw response, receipt, draft, verification and management tokens are accepted only by one-time BFF exchange operations in request
+  bodies and never in Submission API paths or queries.
+- Scoped Submission sessions are opaque tokens forwarded in X-Gurine-Submission-Session; browsers hold them only inside authenticated-encrypted
+  host-only BFF cookies.

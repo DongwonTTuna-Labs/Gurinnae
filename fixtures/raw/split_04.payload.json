@@ -1,0 +1,31 @@
+{
+  "fixture": true,
+  "fixture_notice": "합성 데이터이며 실제 기관·업체·계약과 무관합니다.",
+  "contractNumber": "SYN-SPLIT-04",
+  "agencyName": "가상별빛구청",
+  "supplierName": "가상오메가용역",
+  "contractType": "SERVICE",
+  "method": "SOLE_SOURCE",
+  "signedDate": "2025-08-11",
+  "amount": 49500000,
+  "items": [
+    {
+      "description": "합성 청사 데이터 정비 용역 4구간",
+      "category": "SYNTH-DATA-CLEANING-SERVICE",
+      "quantity": "1",
+      "unit": "LOT",
+      "unitPrice": 49500000,
+      "totalPrice": 49500000,
+      "vatBasis": "INCLUDED",
+      "bundleStatus": "SINGLE_ITEM",
+      "includedServices": [],
+      "specification": {
+        "scope_family": "DATA-CLEANING",
+        "district_segment": 4,
+        "synthetic": true
+      }
+    }
+  ],
+  "processing_status": "ACTIVE",
+  "record_status": "CURRENT"
+}

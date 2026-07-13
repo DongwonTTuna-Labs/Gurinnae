@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /correction-request/receipt
+Disallow: /subscription/manage

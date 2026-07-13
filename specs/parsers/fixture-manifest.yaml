@@ -1,0 +1,74 @@
+schema_version: 2
+specification_version: 13.0.0
+status: FINAL
+golden_output_directory: expected
+fixtures:
+- file: truncated.pdf
+  sha256: 8cc28ba81e11bb769a0cf53b89c40711b628d033db1d230c01ca6ed859774d9a
+  expected: REJECTED
+  rejectionCode: PDF_TRUNCATED_OR_INVALID
+  expectedOutput: truncated.pdf.extraction.json
+- file: valid-contract.csv
+  sha256: 06588b979292b5f824ad5373ad5a540b688ca8fd2acf2f1f501c6ca6117906f4
+  expected: EXTRACTED
+  expectedOutput: valid-contract.csv.extraction.json
+- file: valid-contract.docx
+  sha256: 8702ecd24e8e97b669b87e6fe7c40ad9802d2d438c0fb4fb1da75b1534fb2005
+  expected: EXTRACTED
+  expectedOutput: valid-contract.docx.extraction.json
+- file: valid-contract.hwpx
+  sha256: 76b236ef658b531567918cf44685fc316d091227e8a8c30a2e00c896d8080eee
+  expected: EXTRACTED
+  expectedOutput: valid-contract.hwpx.extraction.json
+- file: valid-contract.xlsx
+  sha256: 9be232be5a1657b9de5cf5c9cd4009aa8d01f96aea51269b15aad53c9245d537
+  expected: EXTRACTED
+  expectedOutput: valid-contract.xlsx.extraction.json
+- file: valid-contract.xml
+  sha256: 8dac77b84d93709c020222003c90f8f6274ecbae4478579ce2463dd2a82625b4
+  expected: EXTRACTED
+  expectedOutput: valid-contract.xml.extraction.json
+- file: valid-digital.pdf
+  sha256: 6c783782406df25449e43f24918dd28de081405d524659f156331632fc6c96b8
+  expected: EXTRACTED
+  expectedOutput: valid-digital.pdf.extraction.json
+- file: valid-scanned.pdf
+  sha256: 659aafa5548918abd1473221e698669fc54179dde6cfe411ba319b7c6a1d3623
+  expected: EXTRACTED
+  expectedOutput: valid-scanned.pdf.extraction.json
+- file: xxe.xml
+  sha256: be12c8d6048875f33aedff0f77ae8669d3f4b1baba784eb71bbadb9c04023bf3
+  expected: REJECTED
+  rejectionCode: XML_DTD_OR_ENTITY
+  expectedOutput: xxe.xml.extraction.json
+- file: zip-high-ratio.docx
+  sha256: 3eff995410fcfb547223d905037a31ed0104e160e276b7a354c30b725e99a6d5
+  expected: REJECTED
+  rejectionCode: ZIP_BOMB
+  expectedOutput: zip-high-ratio.docx.extraction.json
+- file: zip-path-traversal.docx
+  sha256: dea1ccdabe2120598b184465f5315a42a8a987b3929c9f84686e6ff3544cb960
+  expected: REJECTED
+  rejectionCode: ZIP_PATH_TRAVERSAL
+  expectedOutput: zip-path-traversal.docx.extraction.json
+- file: docx-external-relationship.docx
+  sha256: f6a56f86fc76e28c644ccd9b52c61cb51148c3eafee80114748cc3f167362bbc
+  expected: REJECTED
+  rejectionCode: OOXML_EXTERNAL_RELATIONSHIP
+  expectedOutput: docx-external-relationship.docx.extraction.json
+- file: zip-duplicate-entry.docx
+  sha256: ed20ae131abd660621e03adbc4b7d30bbc5b4f4a0da1cf17e3aa884bbea1af6c
+  expected: REJECTED
+  rejectionCode: ZIP_DUPLICATE_ENTRY
+  expectedOutput: zip-duplicate-entry.docx.extraction.json
+- file: zip-symlink-entry.docx
+  sha256: f2c8424ce1a2b98298171d60cbb974ada708ff6f4c79499db64b61b207dc8a33
+  expected: REJECTED
+  rejectionCode: ZIP_SYMLINK_ENTRY
+  expectedOutput: zip-symlink-entry.docx.extraction.json
+- file: legacy-binary.hwp
+  sha256: 1cc615e683801dc48a377bf4942817133f71948f6a53cf5fefe64a663f2f7fca
+  expected: REJECTED
+  rejectionCode: BINARY_HWP_UNSUPPORTED_REQUIRES_TRUSTED_CONVERSION
+  expectedOutput: legacy-binary.hwp.extraction.json
+fixture_count: 15

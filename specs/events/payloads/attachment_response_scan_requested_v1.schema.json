@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/attachment.response_scan_requested.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actor_id",
+    "attachmentId",
+    "occurred_at",
+    "operation_id",
+    "requestToken",
+    "request_id"
+  ],
+  "properties": {
+    "actor_id": {
+      "type": "string"
+    },
+    "attachmentId": {
+      "type": "string"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "operation_id": {
+      "type": "string"
+    },
+    "requestToken": {
+      "type": "string"
+    },
+    "request_id": {
+      "type": "string"
+    }
+  }
+}

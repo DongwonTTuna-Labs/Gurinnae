@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/attachment.scan_completed.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attachment_id", "scan_status", "sha256"],
+  "properties": {
+    "attachment_id": {
+      "type": "string"
+    },
+    "scan_status": {
+      "type": "string"
+    },
+    "sha256": {
+      "type": "string"
+    }
+  }
+}

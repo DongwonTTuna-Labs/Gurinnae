@@ -1,0 +1,37 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: NEW_SUPPLIER_DEPENDENCE
+name: 신생 업체 의존
+version: 1.0.0
+required:
+- supplier.id
+- supplier.age_days
+- supplier.agency_contract_count
+- supplier.agency_spend
+- supplier.total_public_spend
+- supplier.identity_verified
+thresholds:
+  maximum_age_days: 365
+  minimum_contracts: 3
+  agency_share_gte: '0.5000'
+  minimum_agency_spend: 50000000
+formula: young supplier and agency_spend / total_public_spend >= threshold
+blockers:
+- REQUIRED_FIELD_MISSING
+- IDENTITY_AMBIGUOUS
+- TOTAL_SPEND_ZERO
+metamorphic:
+- contract order irrelevant
+- older supplier does not signal
+- identity ambiguity blocks
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/new_supplier_dependence.rs
+reference_evaluator: specs/detection/reference_evaluator.py

@@ -1,0 +1,29 @@
+{
+  "documentSha256": "6c783782406df25449e43f24918dd28de081405d524659f156331632fc6c96b8",
+  "mediaType": "application/pdf",
+  "pages": [
+    {
+      "blocks": [
+        {
+          "confidence": null,
+          "id": "blk-c2cd377a16baf9459ad2",
+          "kind": "PARAGRAPH",
+          "locator": {
+            "kind": "PAGE_BBOX",
+            "value": "page=1;bbox=0,0,595.276,841.890;unit=pt"
+          },
+          "text": "Contract SYN-1 Safety equipment price 480000 KRW"
+        }
+      ],
+      "height": 841.89,
+      "index": 0,
+      "tables": [],
+      "width": 595.276
+    }
+  ],
+  "parserId": "pdf-digital",
+  "parserVersion": "pdftotext-25.06.0",
+  "rejectionCode": null,
+  "status": "EXTRACTED",
+  "warnings": []
+}

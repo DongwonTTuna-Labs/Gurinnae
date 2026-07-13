@@ -1,0 +1,8 @@
+{
+  "fixture_origin": "synthetic-manifest-contract-not-live-evidence",
+  "connector_id": "audit-results",
+  "kind": "error",
+  "error": {
+    "code": "MANIFEST_SCHEMA_INVALID"
+  }
+}

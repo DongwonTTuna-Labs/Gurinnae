@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "signal_id": "signal_fixture_vat_unknown",
+  "rule": {
+    "rule_key": "PRICE_OUTLIER",
+    "version": "1.0.0",
+    "rule_run_id": "rule_run_fixture_vat_unknown"
+  },
+  "subject": {
+    "type": "LINE_ITEM",
+    "id": "line_fixture_vat_unknown_1"
+  },
+  "signal_type": "PRICE_OUTLIER",
+  "metrics": {
+    "target_unit_price_krw": 2150000,
+    "vat_basis": "UNKNOWN"
+  },
+  "input_ids": [
+    "line_fixture_vat_unknown_1",
+    "line_fixture_price_cmp_01_1",
+    "line_fixture_price_cmp_02_1",
+    "line_fixture_price_cmp_03_1",
+    "line_fixture_price_cmp_04_1",
+    "line_fixture_price_cmp_05_1",
+    "line_fixture_price_cmp_06_1",
+    "line_fixture_price_cmp_07_1",
+    "line_fixture_price_cmp_08_1",
+    "line_fixture_price_cmp_09_1",
+    "line_fixture_price_cmp_10_1",
+    "line_fixture_price_cmp_11_1",
+    "line_fixture_price_cmp_12_1"
+  ],
+  "input_hash": "bb88794e71987d9bae57ce3e7a2b50aa7bea4a223432dc8eec2f4717d8f1cb55",
+  "cohort_id": "cohort_fixture_vat_unknown",
+  "data_quality": {
+    "score": 65,
+    "provenance_complete": true,
+    "identity_status": "VERIFIED",
+    "warnings": ["VAT basis unresolved"]
+  },
+  "blocking_conditions": ["VAT_UNKNOWN"],
+  "publishability": "BLOCKED",
+  "internal_priority": 0,
+  "status": "NEW",
+  "dismissal_reason": null,
+  "created_at": "2026-01-16T00:00:00Z"
+}

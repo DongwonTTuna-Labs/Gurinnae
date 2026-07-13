@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.gurine.invalid/response-submission.schema.json",
+  "title": "ResponseSubmission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "response_submission_id",
+    "response_request_id",
+    "party_type",
+    "submitted_at",
+    "body",
+    "attachments",
+    "verification_status"
+  ],
+  "properties": {
+    "response_submission_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "response_request_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "party_type": {
+      "enum": ["AGENCY", "SUPPLIER", "AUTHORIZED_REPRESENTATIVE"]
+    },
+    "submitted_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "body": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50000
+    },
+    "attachments": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attachment_id",
+          "filename",
+          "byte_size",
+          "mime_detected",
+          "sha256",
+          "scan_status"
+        ],
+        "properties": {
+          "attachment_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "byte_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 26214400
+          },
+          "mime_detected": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "sha256": {
+            "$ref": "common.schema.json#/$defs/sha256"
+          },
+          "scan_status": {
+            "enum": ["PENDING", "CLEAN", "INFECTED", "ERROR", "REJECTED_TYPE"]
+          }
+        }
+      }
+    },
+    "verification_status": {
+      "enum": [
+        "TOKEN_VERIFIED",
+        "SECOND_FACTOR_VERIFIED",
+        "UNVERIFIED",
+        "REJECTED"
+      ]
+    },
+    "public_use_consent": {
+      "enum": [
+        "FULL",
+        "REDACTED",
+        "SUMMARY_ONLY",
+        "NO_CONSENT_REVIEW_LEGAL_BASIS"
+      ]
+    }
+  }
+}

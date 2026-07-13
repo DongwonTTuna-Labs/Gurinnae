@@ -1,0 +1,25 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-contracts",
+  "kind": "success",
+  "operation_id": "contract-goods-list",
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "SUCCESS"
+    },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 1,
+      "items": [
+        {
+          "untyCntrctNo": "SYN-2026-0001",
+          "cntrctNm": "합성 계약",
+          "cntrctInsttNm": "가상기관",
+          "thtmCntrctAmt": "480000"
+        }
+      ]
+    }
+  }
+}

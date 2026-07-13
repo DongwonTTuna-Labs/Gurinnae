@@ -1,0 +1,18 @@
+[package]
+name = "gurine-persistence-postgres"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+gurine-auth = { path = "../auth" }
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

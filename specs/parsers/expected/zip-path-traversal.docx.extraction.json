@@ -1,0 +1,10 @@
+{
+  "documentSha256": "dea1ccdabe2120598b184465f5315a42a8a987b3929c9f84686e6ff3544cb960",
+  "mediaType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "pages": [],
+  "parserId": "docx",
+  "parserVersion": "zip-8.6.0+quick-xml-0.41.0-reference-v1",
+  "rejectionCode": "ZIP_PATH_TRAVERSAL",
+  "status": "REJECTED",
+  "warnings": []
+}

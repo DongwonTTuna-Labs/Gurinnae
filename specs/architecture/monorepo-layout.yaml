@@ -1,0 +1,49 @@
+version: 3
+specification_version: 13.0.0
+status: FINAL
+cargo_members:
+- crates/agent-orchestration
+- crates/api-contracts
+- crates/application
+- crates/auth
+- crates/detection
+- crates/domain
+- crates/email
+- crates/identity-resolution
+- crates/ingestion
+- crates/jobs
+- crates/normalization
+- crates/object-store
+- crates/observability
+- crates/persistence-postgres
+- crates/publication-policy
+- crates/source-connectors
+- crates/test-support
+- services/analysis-worker
+- services/control-api
+- services/document-extractor
+- services/egress-gateway
+- services/ingest-worker
+- services/migrator
+- services/notification-worker
+- services/oidc-test-provider
+- services/projection-worker
+- services/public-api
+- services/scheduler
+- services/submission-api
+- services/workflow-worker
+- xtask
+bun_workspaces:
+- apps/public-web
+- apps/response-portal
+- apps/review-console
+- packages/api-client-control
+- packages/api-client-public
+- packages/api-client-submission
+- packages/config
+- packages/ui
+rules:
+- Cargo resolver 3 and edition 2024.
+- No Nx, Turbo or additional monorepo orchestrator.
+- Root Makefile and xtask are the only orchestration entry points.
+- Every listed member contains real implementation and tests; scaffold-only members are forbidden.

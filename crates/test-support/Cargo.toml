@@ -1,0 +1,17 @@
+[package]
+name = "gurine-test-support"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+base64.workspace = true
+gurine-application = { path = "../application" }
+gurine-auth = { path = "../auth" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

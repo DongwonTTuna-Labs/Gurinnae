@@ -1,0 +1,32 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: CONTRACT_SPLITTING_PATTERN
+name: 계약 쪼개기
+version: 1.0.0
+required:
+- contracts
+- single_source_threshold
+- window_days
+thresholds:
+  minimum_contracts: 3
+  aggregate_gte_threshold_multiplier: '1.0000'
+formula: same agency+supplier+category single-source contracts, each below threshold, within window; aggregate >= threshold
+blockers:
+- REQUIRED_FIELD_MISSING
+- INSUFFICIENT_CONTRACTS
+- DATE_UNKNOWN
+metamorphic:
+- input order does not change result
+- duplicate contract id ignored
+- contracts outside window do not contribute
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/contract_splitting_pattern.rs
+reference_evaluator: specs/detection/reference_evaluator.py

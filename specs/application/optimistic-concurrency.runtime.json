@@ -1,0 +1,647 @@
+{
+  "schemaVersion": 1,
+  "specificationVersion": "13.0.0",
+  "contractCount": 64,
+  "contracts": [
+    {
+      "operationId": "acceptAgentSuggestion",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.agent_suggestions",
+      "mutationRelation": "ops.agent_suggestions",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "suggestionId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "acknowledgeSourceIncident",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.source_incidents",
+      "mutationRelation": "ops.source_incidents",
+      "guardColumns": ["source_id", "status", "version"],
+      "mutationColumns": ["source_id", "version"],
+      "requestPlaceholders": ["expectedVersion", "sourceId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "activateKillSwitch",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.kill_switches",
+      "mutationRelation": "ops.kill_switches",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "killSwitchId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "activateRuleVersion",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.rule_versions",
+      "mutationRelation": "core.rule_versions",
+      "guardColumns": ["id", "row_version"],
+      "mutationColumns": ["id", "row_version"],
+      "requestPlaceholders": ["expectedVersion", "ruleVersionId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "addClaim",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "addEvidence",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "approveResponseExcerpt",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.responses",
+      "mutationRelation": "editorial.responses",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "responseId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "approveSchemaMapping",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.schema_drifts",
+      "mutationRelation": "ops.schema_drifts",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "schemaDriftId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "assignCase",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "assignCorrection",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.corrections",
+      "mutationRelation": "editorial.corrections",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["correctionId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "assignReview",
+      "versionField": "expectedCaseVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedCaseVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "assignSignal",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.anomaly_signals",
+      "mutationRelation": "core.anomaly_signals",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "signalId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "cancelJob",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.jobs",
+      "mutationRelation": "ops.jobs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "jobId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "createCorrection",
+      "versionField": "expectedCaseVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedCaseVersion", "publicationId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "createCorrectionRequest",
+      "versionField": "expectedVersion",
+      "guardRelation": "intake.correction_request_drafts",
+      "mutationRelation": "intake.correction_requests",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id"],
+      "requestPlaceholders": ["expectedVersion"],
+      "contextPlaceholders": ["sessionScopeId"]
+    },
+    {
+      "operationId": "createEvidenceRedaction",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.evidence",
+      "mutationRelation": "editorial.evidence",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["evidenceId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "createHypothesis",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "createResponseRequest",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "createRetractionDraft",
+      "versionField": "expectedCaseVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedCaseVersion", "publicationId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "createReviewSnapshot",
+      "versionField": "expectedCaseVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedCaseVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "deactivateKillSwitch",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.kill_switches",
+      "mutationRelation": "ops.kill_switches",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "killSwitchId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "deleteCorrectionRequestDraft",
+      "versionField": "expectedVersion",
+      "guardRelation": "intake.correction_request_drafts",
+      "mutationRelation": "intake.correction_request_drafts",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id"],
+      "requestPlaceholders": ["expectedVersion"],
+      "contextPlaceholders": ["sessionScopeId"]
+    },
+    {
+      "operationId": "deleteSavedView",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.saved_views",
+      "mutationRelation": "ops.saved_views",
+      "guardColumns": ["id", "user_id", "version"],
+      "mutationColumns": ["id", "user_id", "version"],
+      "requestPlaceholders": ["expectedVersion", "savedViewId"],
+      "contextPlaceholders": ["actorUserId"]
+    },
+    {
+      "operationId": "disableProviderRouting",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.provider_configs",
+      "mutationRelation": "ops.provider_configs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "providerId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "disableUser",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.users",
+      "mutationRelation": "ops.users",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "userId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "extendKillSwitch",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.kill_switches",
+      "mutationRelation": "ops.kill_switches",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "killSwitchId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "grantRole",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.users",
+      "mutationRelation": "ops.users",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "userId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "linkEvidence",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.evidence",
+      "mutationRelation": "editorial.evidence",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["evidenceId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "linkSignalToCase",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.anomaly_signals",
+      "mutationRelation": "core.anomaly_signals",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "signalId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "markNotificationRead",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.notifications",
+      "mutationRelation": "ops.notifications",
+      "guardColumns": ["id", "user_id", "version"],
+      "mutationColumns": ["id", "user_id", "version"],
+      "requestPlaceholders": ["expectedVersion", "notificationId"],
+      "contextPlaceholders": ["actorUserId"]
+    },
+    {
+      "operationId": "pauseBackfill",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.source_runs",
+      "mutationRelation": "ops.source_runs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["backfillRunId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "pauseJobQueue",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.queue_controls",
+      "mutationRelation": "ops.queue_controls",
+      "guardColumns": ["queue_name", "version"],
+      "mutationColumns": ["queue_name", "version"],
+      "requestPlaceholders": ["expectedVersion", "queueName"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "pauseSource",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.source_registry",
+      "mutationRelation": "ops.source_registry",
+      "guardColumns": ["source_id", "version"],
+      "mutationColumns": ["source_id", "version"],
+      "requestPlaceholders": ["expectedVersion", "sourceId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "placeLegalHold",
+      "versionField": "expectedCaseVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedCaseVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "placeTemporaryRestriction",
+      "versionField": "expectedCaseVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedCaseVersion", "publicationId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "proposeRoleDefinitionChange",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.roles",
+      "mutationRelation": "ops.roles",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "roleId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "publishCase",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "quarantineJob",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.jobs",
+      "mutationRelation": "ops.jobs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "jobId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "reassignTask",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.tasks",
+      "mutationRelation": "ops.tasks",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "taskId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "rejectAgentSuggestion",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.agent_suggestions",
+      "mutationRelation": "ops.agent_suggestions",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "suggestionId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "rejectSchemaMapping",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.schema_drifts",
+      "mutationRelation": "ops.schema_drifts",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "schemaDriftId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "resolveCorrectionRequest",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.corrections",
+      "mutationRelation": "editorial.corrections",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["correctionId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "retryJob",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.jobs",
+      "mutationRelation": "ops.jobs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "jobId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "retrySourceRun",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.source_runs",
+      "mutationRelation": "ops.source_runs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "sourceRunId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "revokeRole",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.users",
+      "mutationRelation": "ops.users",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "userId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "rollbackRuleVersion",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.rule_versions",
+      "mutationRelation": "core.rule_versions",
+      "guardColumns": ["id", "row_version"],
+      "mutationColumns": ["id", "row_version"],
+      "requestPlaceholders": ["expectedVersion", "ruleVersionId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "saveCorrectionRequestDraft",
+      "versionField": "expectedVersion",
+      "guardRelation": "intake.correction_request_drafts",
+      "mutationRelation": "intake.correction_request_drafts",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion"],
+      "contextPlaceholders": ["sessionScopeId"]
+    },
+    {
+      "operationId": "saveResponseDraft",
+      "versionField": "expectedVersion",
+      "guardRelation": "intake.response_drafts",
+      "mutationRelation": "intake.response_drafts",
+      "guardColumns": ["response_request_id", "version"],
+      "mutationColumns": ["response_request_id", "version"],
+      "requestPlaceholders": ["expectedVersion"],
+      "contextPlaceholders": ["sessionScopeId"]
+    },
+    {
+      "operationId": "saveResponseRequestDraft",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.response_requests",
+      "mutationRelation": "editorial.response_requests",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "responseRequestId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "scheduleRuleActivation",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.rule_versions",
+      "mutationRelation": "core.rule_versions",
+      "guardColumns": ["id", "row_version"],
+      "mutationColumns": ["id", "row_version"],
+      "requestPlaceholders": ["expectedVersion", "ruleVersionId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "startRuleShadow",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.rule_versions",
+      "mutationRelation": "core.rule_versions",
+      "guardColumns": ["id", "row_version"],
+      "mutationColumns": ["id", "row_version"],
+      "requestPlaceholders": ["expectedVersion", "ruleVersionId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "submitResponse",
+      "versionField": "expectedVersion",
+      "guardRelation": "intake.response_drafts",
+      "mutationRelation": "intake.response_submissions",
+      "guardColumns": ["response_request_id", "version"],
+      "mutationColumns": ["response_request_id"],
+      "requestPlaceholders": ["expectedVersion"],
+      "contextPlaceholders": ["sessionScopeId"]
+    },
+    {
+      "operationId": "transitionCase",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.cases",
+      "mutationRelation": "editorial.cases",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["caseId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "triageCorrection",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.corrections",
+      "mutationRelation": "editorial.corrections",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["correctionId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "triageSignal",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.anomaly_signals",
+      "mutationRelation": "core.anomaly_signals",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "signalId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "unlinkSignalFromCase",
+      "versionField": "expectedVersion",
+      "guardRelation": "core.anomaly_signals",
+      "mutationRelation": "core.anomaly_signals",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "signalId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "updateBudgetLimit",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.budget_limits",
+      "mutationRelation": "ops.budget_limits",
+      "guardColumns": ["scope", "version"],
+      "mutationColumns": ["scope", "version"],
+      "requestPlaceholders": ["expectedVersion", "scope"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "updateClaim",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.claims",
+      "mutationRelation": "editorial.claims",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["claimId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "updateCorrectionDraft",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.corrections",
+      "mutationRelation": "editorial.corrections",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["correctionId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "updateEvidence",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.evidence",
+      "mutationRelation": "editorial.evidence",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["evidenceId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "updateHypothesis",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.hypotheses",
+      "mutationRelation": "editorial.hypotheses",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "hypothesisId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "updateSavedView",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.saved_views",
+      "mutationRelation": "ops.saved_views",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["expectedVersion", "savedViewId"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "validateClaims",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.claims",
+      "mutationRelation": "editorial.claims",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["claimId", "expectedVersion"],
+      "contextPlaceholders": []
+    },
+    {
+      "operationId": "verifyEvidence",
+      "versionField": "expectedVersion",
+      "guardRelation": "editorial.evidence",
+      "mutationRelation": "editorial.evidence",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "version"],
+      "requestPlaceholders": ["evidenceId", "expectedVersion"],
+      "contextPlaceholders": []
+    }
+  ]
+}

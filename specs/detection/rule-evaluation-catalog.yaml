@@ -1,0 +1,102 @@
+schema_version: 2
+specification_version: 13.0.0
+status: FINAL
+rules:
+- id: PRICE_OUTLIER
+  name: 가격 이상치
+  version: 1.0.0
+  implementation: crates/detection/src/rules/price_outlier.rs
+  contract: specs/detection/rules/price_outlier.yaml
+  oracle: specs/detection/oracles/price_outlier.md
+  eval_file: specs/detection/evals/price_outlier.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: CONTRACT_SPLITTING_PATTERN
+  name: 계약 쪼개기
+  version: 1.0.0
+  implementation: crates/detection/src/rules/contract_splitting_pattern.rs
+  contract: specs/detection/rules/contract_splitting_pattern.yaml
+  oracle: specs/detection/oracles/contract_splitting_pattern.md
+  eval_file: specs/detection/evals/contract_splitting_pattern.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: REPEATED_SINGLE_SOURCE
+  name: 반복 수의계약
+  version: 1.0.0
+  implementation: crates/detection/src/rules/repeated_single_source.rs
+  contract: specs/detection/rules/repeated_single_source.yaml
+  oracle: specs/detection/oracles/repeated_single_source.md
+  eval_file: specs/detection/evals/repeated_single_source.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: SUPPLIER_CONCENTRATION
+  name: 업체 집중도
+  version: 1.0.0
+  implementation: crates/detection/src/rules/supplier_concentration.rs
+  contract: specs/detection/rules/supplier_concentration.yaml
+  oracle: specs/detection/oracles/supplier_concentration.md
+  eval_file: specs/detection/evals/supplier_concentration.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: LOW_BID_COMPETITION
+  name: 낮은 경쟁
+  version: 1.0.0
+  implementation: crates/detection/src/rules/low_bid_competition.rs
+  contract: specs/detection/rules/low_bid_competition.yaml
+  oracle: specs/detection/oracles/low_bid_competition.md
+  eval_file: specs/detection/evals/low_bid_competition.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: CONTRACT_AMENDMENT_ESCALATION
+  name: 변경계약 증가
+  version: 1.0.0
+  implementation: crates/detection/src/rules/contract_amendment_escalation.rs
+  contract: specs/detection/rules/contract_amendment_escalation.yaml
+  oracle: specs/detection/oracles/contract_amendment_escalation.md
+  eval_file: specs/detection/evals/contract_amendment_escalation.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: YEAR_END_SPENDING_SPIKE
+  name: 연말 집행 집중
+  version: 1.0.0
+  implementation: crates/detection/src/rules/year_end_spending_spike.rs
+  contract: specs/detection/rules/year_end_spending_spike.yaml
+  oracle: specs/detection/oracles/year_end_spending_spike.md
+  eval_file: specs/detection/evals/year_end_spending_spike.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: NEW_SUPPLIER_DEPENDENCE
+  name: 신생 업체 의존
+  version: 1.0.0
+  implementation: crates/detection/src/rules/new_supplier_dependence.rs
+  contract: specs/detection/rules/new_supplier_dependence.yaml
+  oracle: specs/detection/oracles/new_supplier_dependence.md
+  eval_file: specs/detection/evals/new_supplier_dependence.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: SHARED_SUPPLIER_IDENTITY
+  name: 업체 식별정보 공유
+  version: 1.0.0
+  implementation: crates/detection/src/rules/shared_supplier_identity.rs
+  contract: specs/detection/rules/shared_supplier_identity.yaml
+  oracle: specs/detection/oracles/shared_supplier_identity.md
+  eval_file: specs/detection/evals/shared_supplier_identity.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: RESTRICTIVE_SPECIFICATION
+  name: 제한적 규격
+  version: 1.0.0
+  implementation: crates/detection/src/rules/restrictive_specification.rs
+  contract: specs/detection/rules/restrictive_specification.yaml
+  oracle: specs/detection/oracles/restrictive_specification.md
+  eval_file: specs/detection/evals/restrictive_specification.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+evaluation:
+  cases_per_rule: 30
+  total_cases: 300
+  concrete_inputs: true
+  seed_only_inputs_forbidden: true
+  reference_evaluator: specs/detection/reference_evaluator.py
+  manifest: specs/detection/eval-manifest.yaml
+  comparison: full expected object equality plus metamorphic/property tests

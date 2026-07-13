@@ -1,0 +1,312 @@
+schema_version: 2
+specification_version: 13.0.0
+status: FINAL
+source_of_truth: This catalog is the only authority for error layer, HTTP status, retryability and public exposure.
+layers:
+- TRANSPORT
+- AUTHORIZATION
+- CONCURRENCY
+- DOMAIN
+- PROVIDER
+- INTERNAL
+errors:
+- code: INVALID_REQUEST
+  layer: TRANSPORT
+  http_status: 400
+  title: 요청 본문이 유효하지 않습니다
+  retryable: false
+  exposure: safe
+- code: INVALID_PARAMETER
+  layer: TRANSPORT
+  http_status: 400
+  title: 요청 인자가 유효하지 않습니다
+  retryable: false
+  exposure: safe
+- code: INVALID_CURSOR
+  layer: TRANSPORT
+  http_status: 400
+  title: 페이지 커서가 유효하지 않습니다
+  retryable: false
+  exposure: safe
+- code: UNSUPPORTED_MEDIA_TYPE
+  layer: TRANSPORT
+  http_status: 415
+  title: 지원하지 않는 미디어 형식입니다
+  retryable: false
+  exposure: safe
+- code: PAYLOAD_TOO_LARGE
+  layer: TRANSPORT
+  http_status: 413
+  title: 요청 크기 제한을 초과했습니다
+  retryable: false
+  exposure: safe
+- code: RATE_LIMITED
+  layer: TRANSPORT
+  http_status: 429
+  title: 요청 한도를 초과했습니다
+  retryable: true
+  exposure: safe
+- code: AUTHENTICATION_REQUIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 인증이 필요합니다
+  retryable: false
+  exposure: safe
+- code: SESSION_EXPIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 세션이 만료되었습니다
+  retryable: false
+  exposure: safe
+- code: TOKEN_INVALID
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 접근 토큰이 유효하지 않습니다
+  retryable: false
+  exposure: safe
+- code: TOKEN_EXPIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 접근 토큰이 만료되었습니다
+  retryable: false
+  exposure: safe
+- code: CAPABILITY_DENIED
+  layer: AUTHORIZATION
+  http_status: 403
+  title: 필요한 권한이 없습니다
+  retryable: false
+  exposure: safe
+- code: RECENT_AUTH_REQUIRED
+  layer: AUTHORIZATION
+  http_status: 403
+  title: 최근 로그인 세션이 필요합니다
+  retryable: false
+  exposure: safe
+- code: STEP_UP_REQUIRED
+  layer: AUTHORIZATION
+  http_status: 403
+  title: 최근 재인증이 필요합니다
+  retryable: false
+  exposure: safe
+- code: SCOPE_DENIED
+  layer: AUTHORIZATION
+  http_status: 403
+  title: 이 토큰의 접근 범위를 벗어났습니다
+  retryable: false
+  exposure: safe
+- code: CSRF_FAILED
+  layer: AUTHORIZATION
+  http_status: 403
+  title: 요청 출처 검증에 실패했습니다
+  retryable: false
+  exposure: safe
+- code: VERSION_CONFLICT
+  layer: CONCURRENCY
+  http_status: 409
+  title: 대상 버전이 변경되었습니다
+  retryable: true
+  exposure: safe
+- code: IDEMPOTENCY_CONFLICT
+  layer: CONCURRENCY
+  http_status: 409
+  title: 동일 멱등 키의 요청 내용이 다릅니다
+  retryable: false
+  exposure: safe
+- code: SNAPSHOT_STALE
+  layer: CONCURRENCY
+  http_status: 409
+  title: 검토 스냅샷이 현재 상태와 다릅니다
+  retryable: true
+  exposure: safe
+- code: RESOURCE_NOT_FOUND
+  layer: DOMAIN
+  http_status: 404
+  title: 요청한 기록을 찾을 수 없습니다
+  retryable: false
+  exposure: safe
+- code: INVALID_STATE_TRANSITION
+  layer: DOMAIN
+  http_status: 409
+  title: 현재 상태에서 허용되지 않는 전이입니다
+  retryable: false
+  exposure: safe
+- code: PRECONDITION_FAILED
+  layer: DOMAIN
+  http_status: 422
+  title: 작업 선행 조건을 충족하지 못했습니다
+  retryable: false
+  exposure: safe
+- code: EVIDENCE_INVALID
+  layer: DOMAIN
+  http_status: 422
+  title: 근거 검증 조건을 충족하지 못했습니다
+  retryable: false
+  exposure: safe
+- code: PUBLICATION_GATE_BLOCKED
+  layer: DOMAIN
+  http_status: 422
+  title: 공개 게이트가 작업을 차단했습니다
+  retryable: false
+  exposure: safe
+- code: RESPONSE_REQUEST_CLOSED
+  layer: DOMAIN
+  http_status: 422
+  title: 소명 요청이 종료되어 작업할 수 없습니다
+  retryable: false
+  exposure: safe
+- code: RULE_EVALUATION_REQUIRED
+  layer: DOMAIN
+  http_status: 422
+  title: 규칙 평가가 완료되지 않았습니다
+  retryable: false
+  exposure: safe
+- code: VALIDATION_FAILED
+  layer: DOMAIN
+  http_status: 422
+  title: 도메인 유효성 검증에 실패했습니다
+  retryable: false
+  exposure: safe
+- code: DEPENDENCY_UNAVAILABLE
+  layer: PROVIDER
+  http_status: 503
+  title: 외부 의존 서비스를 사용할 수 없습니다
+  retryable: true
+  exposure: redacted
+- code: DEPENDENCY_RATE_LIMITED
+  layer: PROVIDER
+  http_status: 503
+  title: 외부 의존 서비스의 한도에 도달했습니다
+  retryable: true
+  exposure: redacted
+- code: UPSTREAM_SCHEMA_CHANGED
+  layer: PROVIDER
+  http_status: 503
+  title: 외부 데이터 형식 변경이 감지되었습니다
+  retryable: false
+  exposure: safe
+- code: STORAGE_FAILURE
+  layer: PROVIDER
+  http_status: 503
+  title: 저장소 작업에 실패했습니다
+  retryable: true
+  exposure: redacted
+- code: INTERNAL_ERROR
+  layer: INTERNAL
+  http_status: 500
+  title: 내부 오류가 발생했습니다
+  retryable: true
+  exposure: request-id-only
+- code: SERVICE_ASSERTION_REQUIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 서비스 인증서가 필요합니다
+  retryable: false
+  exposure: safe
+- code: SERVICE_ASSERTION_INVALID
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 서비스 인증서가 유효하지 않습니다
+  retryable: false
+  exposure: safe
+- code: SERVICE_ASSERTION_EXPIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 서비스 인증서가 만료되었습니다
+  retryable: false
+  exposure: safe
+- code: SERVICE_ASSERTION_AUDIENCE_MISMATCH
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 서비스 인증 대상이 일치하지 않습니다
+  retryable: false
+  exposure: safe
+- code: SERVICE_ASSERTION_REQUEST_MISMATCH
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 서비스 인증 요청 바인딩이 일치하지 않습니다
+  retryable: false
+  exposure: safe
+- code: SERVICE_ASSERTION_REPLAYED
+  layer: AUTHORIZATION
+  http_status: 409
+  title: 내부 서비스 인증서가 이미 사용되었습니다
+  retryable: false
+  exposure: safe
+- code: ACTOR_ASSERTION_REQUIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 사용자 인증서가 필요합니다
+  retryable: false
+  exposure: safe
+- code: ACTOR_ASSERTION_INVALID
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 사용자 인증서가 유효하지 않습니다
+  retryable: false
+  exposure: safe
+- code: ACTOR_ASSERTION_EXPIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 사용자 인증서가 만료되었습니다
+  retryable: false
+  exposure: safe
+- code: ACTOR_ASSERTION_AUDIENCE_MISMATCH
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 사용자 인증 대상이 일치하지 않습니다
+  retryable: false
+  exposure: safe
+- code: ACTOR_ASSERTION_REQUEST_MISMATCH
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 내부 사용자 인증 요청 바인딩이 일치하지 않습니다
+  retryable: false
+  exposure: safe
+- code: ACTOR_ASSERTION_REPLAYED
+  layer: AUTHORIZATION
+  http_status: 409
+  title: 내부 사용자 인증서가 이미 사용되었습니다
+  retryable: false
+  exposure: safe
+- code: SUBMISSION_SESSION_REQUIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 제출 세션이 필요합니다
+  retryable: false
+  exposure: safe
+- code: SUBMISSION_SESSION_INVALID
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 제출 세션이 유효하지 않습니다
+  retryable: false
+  exposure: safe
+- code: SUBMISSION_SESSION_EXPIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 제출 세션이 만료되었습니다
+  retryable: false
+  exposure: safe
+- code: SUBMISSION_SESSION_REVOKED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 제출 세션이 종료되었습니다
+  retryable: false
+  exposure: safe
+- code: SUBMISSION_SESSION_SCOPE_MISMATCH
+  layer: AUTHORIZATION
+  http_status: 403
+  title: 제출 세션 범위를 벗어났습니다
+  retryable: false
+  exposure: safe
+- code: ABUSE_PROOF_REQUIRED
+  layer: AUTHORIZATION
+  http_status: 401
+  title: 자동화 방지 검증이 필요합니다
+  retryable: false
+  exposure: safe
+- code: ABUSE_PROOF_INVALID
+  layer: AUTHORIZATION
+  http_status: 403
+  title: 자동화 방지 검증에 실패했습니다
+  retryable: false
+  exposure: safe

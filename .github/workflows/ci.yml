@@ -1,0 +1,34 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  static-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1634ceea73d27597364c9af683
+      - name: Verify Rust workspace and parser toolchain
+        run: |
+          docker build --target rust-workspace-test \
+            --output type=cacheonly \
+            --file infra/docker/rust-service/Dockerfile \
+            .
+      - name: Verify Bun workspaces
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/workspace" --workdir /workspace \
+            oven/bun:1.3.14-debian@sha256:9dba1a1b43ce28c9d7931bfc4eb00feb63b0114720a0277a8f939ae4dfc9db6f \
+            sh -euc 'bun install --frozen-lockfile && bun run check && bun run test && bun run build'
+      - name: Verify generated contracts are deterministic
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --volume "$PWD:/workspace" --workdir /workspace \
+            oven/bun:1.3.14-debian@sha256:9dba1a1b43ce28c9d7931bfc4eb00feb63b0114720a0277a8f939ae4dfc9db6f \
+            sh -euc 'bun install --frozen-lockfile && bun run codegen && git diff --exit-code -- specs/generated packages/api-client-*'

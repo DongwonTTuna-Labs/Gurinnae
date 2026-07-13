@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Internal Session Cookie Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "typ",
+    "opaqueIdentitySessionToken",
+    "csrfToken",
+    "issuedAt",
+    "absoluteExpiresAt",
+    "csrfRotatedAt"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "typ": {
+      "const": "internal-session"
+    },
+    "opaqueIdentitySessionToken": {
+      "type": "string",
+      "minLength": 43,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "csrfToken": {
+      "type": "string",
+      "minLength": 43,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "issuedAt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "absoluteExpiresAt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "csrfRotatedAt": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

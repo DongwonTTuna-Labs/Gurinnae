@@ -1,0 +1,83 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "PUB-033",
+  title: "접근성 안내",
+  route: "/accessibility",
+  archetype: "POLICY",
+  sections: [
+    {
+      order: 1,
+      id: "commitment",
+      title: "접근성 약속",
+      component: "StructuredContentSection",
+      purpose: "WCAG/KWCAG.",
+      test_id: "pub_033__section__commitment",
+    },
+    {
+      order: 2,
+      id: "conformance",
+      title: "준수 상태",
+      component: "StatusAndRevisionHeader",
+      purpose: "검토일·범위.",
+      test_id: "pub_033__section__conformance",
+    },
+    {
+      order: 3,
+      id: "limitations",
+      title: "알려진 제한",
+      component: "StructuredContentSection",
+      purpose: "제3자 PDF 포함.",
+      test_id: "pub_033__section__limitations",
+    },
+    {
+      order: 4,
+      id: "contact",
+      title: "피드백",
+      component: "StructuredContentSection",
+      purpose: "지원·대체자료.",
+      test_id: "pub_033__section__contact",
+    },
+    {
+      order: 5,
+      id: "roadmap",
+      title: "개선",
+      component: "StructuredContentSection",
+      purpose: "owner·target.",
+      test_id: "pub_033__section__roadmap",
+    },
+  ],
+  actions: [
+    {
+      id: "report-accessibility",
+      label: "접근성 문제 신고",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "request-alternative",
+      label: "대체자료 요청",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "getAccessibilityStatement",
+      api: "public-api",
+      method: "GET",
+      path: "/v1/content/accessibility",
+      blocking: false,
+      response_schema: "AccessibilityStatementResponse",
+    },
+  ],
+} as const satisfies ScreenViewModel;

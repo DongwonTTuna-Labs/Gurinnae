@@ -1,0 +1,81 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "PUB-029",
+  title: "업데이트 구독",
+  route: "/subscribe",
+  archetype: "GUIDED_FORM",
+  sections: [
+    {
+      order: 1,
+      id: "topic",
+      title: "구독 대상",
+      component: "RevisionAndCorrectionPanel",
+      purpose: "case/agency/supplier/corrections.",
+      test_id: "pub_029__section__topic",
+    },
+    {
+      order: 2,
+      id: "events",
+      title: "event",
+      component: "KnownUnknownResponse",
+      purpose: "공개·소명·정정·공식확인.",
+      test_id: "pub_029__section__events",
+    },
+    {
+      order: 3,
+      id: "frequency",
+      title: "빈도",
+      component: "StructuredContentSection",
+      purpose: "즉시/일간/주간.",
+      test_id: "pub_029__section__frequency",
+    },
+    {
+      order: 4,
+      id: "email",
+      title: "이메일",
+      component: "AgentSuggestionPanel",
+      purpose: "verification.",
+      test_id: "pub_029__section__email",
+    },
+    {
+      order: 5,
+      id: "privacy",
+      title: "개인정보",
+      component: "StructuredContentSection",
+      purpose: "retention·해지.",
+      test_id: "pub_029__section__privacy",
+    },
+  ],
+  actions: [
+    {
+      id: "request-verification",
+      label: "검증 이메일 보내기",
+      capability: "none",
+      operation_id: "createSubscription",
+      interaction_kind: "COMMAND",
+      assurance_level: "ANONYMOUS_PROOF",
+      step_up_required: false,
+      confirmation_required: false,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "createSubscription",
+      api: "submission-api",
+      method: "POST",
+      path: "/v1/subscription-session",
+      blocking: true,
+      response_schema: "createSubscriptionReceipt",
+    },
+    {
+      operation_id: "verifySubscription",
+      api: "submission-api",
+      method: "POST",
+      path: "/v1/submission-session/subscription:verify",
+      blocking: true,
+      response_schema: "verifySubscriptionResult",
+    },
+  ],
+} as const satisfies ScreenViewModel;

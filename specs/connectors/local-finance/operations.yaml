@@ -1,0 +1,65 @@
+schema_version: 2
+specification_version: 13.0.0
+connector_id: local-finance
+operations:
+- id: local-finance-disclosures
+  kind: official-link-entry
+  method: GET
+  fixed_official_url: https://www.lofin365.go.kr/portal/LF3110000.do
+  request_parameters: []
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: fixed-id
+    value: local-finance-disclosures
+  remote_revision:
+    strategy: HTTP-etag-last-modified-or-content-hash
+    fields: []
+  response_contract: HTML/link metadata fetched only through approved egress; documents require explicit manifest entries
+  checkpoint:
+    strategy: etag-and-content-hash
+    partition: local-finance-disclosures
+  deletion_semantics: link unavailability opens incident; no automatic tombstone
+  retry: &id001
+    quota_or_429: honor Retry-After; otherwise bounded exponential backoff with jitter
+    transient_5xx: bounded exponential backoff then source incident
+    auth_or_permission: disable connector and open incident
+    malformed_payload: store raw bytes, quarantine record, open schema-drift incident
+- id: local-finance-subsidies
+  kind: official-link-entry
+  method: GET
+  fixed_official_url: https://www.lofin365.go.kr/portal/LF5110000.do
+  request_parameters: []
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: fixed-id
+    value: local-finance-subsidies
+  remote_revision:
+    strategy: HTTP-etag-last-modified-or-content-hash
+    fields: []
+  response_contract: HTML/link metadata fetched only through approved egress; documents require explicit manifest entries
+  checkpoint:
+    strategy: etag-and-content-hash
+    partition: local-finance-subsidies
+  deletion_semantics: link unavailability opens incident; no automatic tombstone
+  retry: *id001
+- id: local-finance-statistics
+  kind: official-link-entry
+  method: GET
+  fixed_official_url: https://www.lofin365.go.kr/portal/LF2110000.do
+  request_parameters: []
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: fixed-id
+    value: local-finance-statistics
+  remote_revision:
+    strategy: HTTP-etag-last-modified-or-content-hash
+    fields: []
+  response_contract: HTML/link metadata fetched only through approved egress; documents require explicit manifest entries
+  checkpoint:
+    strategy: etag-and-content-hash
+    partition: local-finance-statistics
+  deletion_semantics: link unavailability opens incident; no automatic tombstone
+  retry: *id001

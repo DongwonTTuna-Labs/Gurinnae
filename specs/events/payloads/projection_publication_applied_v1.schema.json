@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/projection.publication_applied.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["public_payload_sha256", "publication_revision_id"],
+  "properties": {
+    "public_payload_sha256": {
+      "type": "string"
+    },
+    "publication_revision_id": {
+      "type": "string"
+    }
+  }
+}

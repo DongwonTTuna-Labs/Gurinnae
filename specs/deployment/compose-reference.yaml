@@ -1,0 +1,600 @@
+name: gurine
+services:
+  postgres:
+    image: postgres:18.4-bookworm
+    environment:
+      POSTGRES_DB: gurine
+      POSTGRES_USER: gurine_dev
+      POSTGRES_PASSWORD: gurine_dev_only
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes:
+    - gurine-postgres:/var/lib/postgresql
+    networks:
+    - data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U gurine_dev -d gurine
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrator:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: migrator
+    environment:
+      DATABASE_URL: ${MIGRATOR_DATABASE_URL}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MIGRATOR_DATABASE_URL: ${MIGRATOR_DATABASE_URL:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+    - data
+    restart: 'no'
+  public-api:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: public-api
+    environment:
+      DATABASE_URL: ${PUBLIC_DATABASE_URL}
+      HTTP_BIND: 0.0.0.0:8080
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      PUBLIC_CACHE_MAX_AGE_SECONDS: ${PUBLIC_CACHE_MAX_AGE_SECONDS:-}
+      PUBLIC_DATABASE_URL: ${PUBLIC_DATABASE_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    networks:
+    - public
+    - data
+    ports:
+    - 127.0.0.1:8080:8080
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  control-api:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: control-api
+    environment:
+      DATABASE_URL: ${CONTROL_DATABASE_URL}
+      HTTP_BIND: 0.0.0.0:8081
+      AI_CASE_BUDGET_KRW: ${AI_CASE_BUDGET_KRW:-}
+      AI_DAILY_BUDGET_KRW: ${AI_DAILY_BUDGET_KRW:-}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AUDIT_CHAIN_HMAC_KEY: ${AUDIT_CHAIN_HMAC_KEY:-}
+      CONTROL_DATABASE_URL: ${CONTROL_DATABASE_URL:-}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      FIELD_ENCRYPTION_KEY_CURRENT: ${FIELD_ENCRYPTION_KEY_CURRENT:-}
+      FIELD_ENCRYPTION_KEY_PREVIOUS: ${FIELD_ENCRYPTION_KEY_PREVIOUS:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      REVIEW_BASE_URL: ${REVIEW_BASE_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      IDENTITY_ASSERTION_HMAC_KEY_CURRENT: ${IDENTITY_ASSERTION_HMAC_KEY_CURRENT:-}
+      IDENTITY_ASSERTION_HMAC_KEY_PREVIOUS: ${IDENTITY_ASSERTION_HMAC_KEY_PREVIOUS:-}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  identity-api:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: identity-api
+    environment:
+      DATABASE_URL: ${IDENTITY_DATABASE_URL}
+      IDENTITY_DATABASE_URL: ${IDENTITY_DATABASE_URL:-}
+      HTTP_BIND: 0.0.0.0:8083
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      AUDIT_CHAIN_HMAC_KEY: ${AUDIT_CHAIN_HMAC_KEY:-}
+      FIELD_ENCRYPTION_KEY_CURRENT: ${FIELD_ENCRYPTION_KEY_CURRENT:-}
+      FIELD_ENCRYPTION_KEY_PREVIOUS: ${FIELD_ENCRYPTION_KEY_PREVIOUS:-}
+      IDENTITY_SERVICE_HMAC_KEY_CURRENT: ${IDENTITY_SERVICE_HMAC_KEY_CURRENT:-}
+      IDENTITY_SERVICE_HMAC_KEY_PREVIOUS: ${IDENTITY_SERVICE_HMAC_KEY_PREVIOUS:-}
+      IDENTITY_ASSERTION_HMAC_KEY_CURRENT: ${IDENTITY_ASSERTION_HMAC_KEY_CURRENT:-}
+      IDENTITY_ASSERTION_HMAC_KEY_PREVIOUS: ${IDENTITY_ASSERTION_HMAC_KEY_PREVIOUS:-}
+      OIDC_EGRESS_URL: ${OIDC_EGRESS_URL:-http://egress-gateway:8090/oidc}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-http://oidc-test-provider:8085}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-gurine-review}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-development-only-secret}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-http://127.0.0.1:3001/auth/callback}
+      OIDC_STEP_UP_REDIRECT_URI: ${OIDC_STEP_UP_REDIRECT_URI:-http://127.0.0.1:3001/auth/step-up/callback}
+      OIDC_SCOPES: ${OIDC_SCOPES:-openid profile email}
+      OIDC_ACR_VALUES: ${OIDC_ACR_VALUES:-}
+      OIDC_STEP_UP_MAX_AGE_SECONDS: ${OIDC_STEP_UP_MAX_AGE_SECONDS:-600}
+      OIDC_TRANSACTION_TTL_SECONDS: ${OIDC_TRANSACTION_TTL_SECONDS:-600}
+      INTERNAL_SESSION_IDLE_TTL_SECONDS: ${INTERNAL_SESSION_IDLE_TTL_SECONDS:-1800}
+      INTERNAL_SESSION_ABSOLUTE_TTL_SECONDS: ${INTERNAL_SESSION_ABSOLUTE_TTL_SECONDS:-43200}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      EGRESS_OIDC_CHANNEL_URL: ${EGRESS_OIDC_CHANNEL_URL:-}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      egress-gateway:
+        condition: service_started
+    healthcheck:
+      test:
+      - CMD
+      - /app/gurine-identity-api
+      - healthcheck
+      - --url
+      - http://127.0.0.1:8083/health/live
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  submission-api:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: submission-api
+    environment:
+      DATABASE_URL: ${SUBMISSION_DATABASE_URL}
+      HTTP_BIND: 0.0.0.0:8082
+      CLAMAV_HOST: clamav
+      AUDIT_CHAIN_HMAC_KEY: ${AUDIT_CHAIN_HMAC_KEY:-}
+      BOT_CHALLENGE_SECRET_KEY: ${BOT_CHALLENGE_SECRET_KEY:-}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      EGRESS_OBJECT_STORE_CHANNEL_URL: ${EGRESS_OBJECT_STORE_CHANNEL_URL:-}
+      FIELD_ENCRYPTION_KEY_CURRENT: ${FIELD_ENCRYPTION_KEY_CURRENT:-}
+      FIELD_ENCRYPTION_KEY_PREVIOUS: ${FIELD_ENCRYPTION_KEY_PREVIOUS:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-52428800}
+      OBJECT_STORE_ADAPTER: ${OBJECT_STORE_ADAPTER:-filesystem}
+      OBJECT_STORE_ATTACHMENT_BUCKET: ${OBJECT_STORE_ATTACHMENT_BUCKET:-}
+      OBJECT_STORE_FILESYSTEM_ROOT: ${OBJECT_STORE_FILESYSTEM_ROOT:-/var/lib/gurine-objects}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      RESPONSE_BASE_URL: ${RESPONSE_BASE_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SUBMISSION_DATABASE_URL: ${SUBMISSION_DATABASE_URL:-}
+      TOKEN_HMAC_KEY: ${TOKEN_HMAC_KEY:-}
+      PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT: ${PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT}
+      PUBLIC_WEB_SUBMISSION_HMAC_KEY_PREVIOUS: ${PUBLIC_WEB_SUBMISSION_HMAC_KEY_PREVIOUS:-}
+      RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT: ${RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT}
+      RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_PREVIOUS: ${RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_PREVIOUS:-}
+    networks:
+    - public
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+    volumes:
+    - gurine-objects:/var/lib/gurine-objects
+  ingest-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: ingest-worker
+    environment:
+      DATABASE_URL: ${INGEST_DATABASE_URL}
+      EGRESS_GATEWAY_URL: http://egress-gateway:8090/source
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      EGRESS_OBJECT_STORE_CHANNEL_URL: ${EGRESS_OBJECT_STORE_CHANNEL_URL:-}
+      EGRESS_SOURCE_CHANNEL_URL: ${EGRESS_SOURCE_CHANNEL_URL:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      INGEST_DATABASE_URL: ${INGEST_DATABASE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OBJECT_STORE_ADAPTER: ${OBJECT_STORE_ADAPTER:-filesystem}
+      OBJECT_STORE_FILESYSTEM_ROOT: ${OBJECT_STORE_FILESYSTEM_ROOT:-/var/lib/gurine-objects}
+      OBJECT_STORE_RAW_BUCKET: ${OBJECT_STORE_RAW_BUCKET:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SOURCE_ALIO_ENABLED: ${SOURCE_ALIO_ENABLED:-false}
+      SOURCE_AUDIT_RESULTS_ENABLED: ${SOURCE_AUDIT_RESULTS_ENABLED:-false}
+      SOURCE_KONEPS_CONTRACTS_ENABLED: ${SOURCE_KONEPS_CONTRACTS_ENABLED:-false}
+      SOURCE_KONEPS_NOTICES_ENABLED: ${SOURCE_KONEPS_NOTICES_ENABLED:-false}
+      SOURCE_LOCAL_FINANCE_ENABLED: ${SOURCE_LOCAL_FINANCE_ENABLED:-false}
+      SOURCE_OPEN_DART_ENABLED: ${SOURCE_OPEN_DART_ENABLED:-false}
+      SOURCE_SYNTHETIC_ENABLED: ${SOURCE_SYNTHETIC_ENABLED:-true}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+    volumes:
+    - gurine-objects:/var/lib/gurine-objects
+  analysis-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: analysis-worker
+    environment:
+      DATABASE_URL: ${ANALYSIS_DATABASE_URL}
+      EGRESS_GATEWAY_URL: http://egress-gateway:8090/ai
+      AI_CASE_BUDGET_KRW: ${AI_CASE_BUDGET_KRW:-}
+      AI_DAILY_BUDGET_KRW: ${AI_DAILY_BUDGET_KRW:-}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_PROVIDER_ORDER: ${AI_PROVIDER_ORDER:-}
+      ANALYSIS_DATABASE_URL: ${ANALYSIS_DATABASE_URL:-}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      EGRESS_AI_CHANNEL_URL: ${EGRESS_AI_CHANNEL_URL:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  projection-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: projection-worker
+    environment:
+      DATABASE_URL: ${PROJECTOR_DATABASE_URL}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      EGRESS_GATEWAY_URL: ${EGRESS_GATEWAY_URL:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      PROJECTOR_DATABASE_URL: ${PROJECTOR_DATABASE_URL:-}
+      PUBLICATION_SIGNING_KEY_CURRENT: ${PUBLICATION_SIGNING_KEY_CURRENT:-}
+      PUBLICATION_SIGNING_KEY_PREVIOUS: ${PUBLICATION_SIGNING_KEY_PREVIOUS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  notification-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: notification-worker
+    environment:
+      DATABASE_URL: ${NOTIFICATION_DATABASE_URL}
+      EGRESS_GATEWAY_URL: http://egress-gateway:8090/smtp
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      EGRESS_SMTP_CHANNEL_URL: ${EGRESS_SMTP_CHANNEL_URL:-}
+      EMAIL_ADAPTER: ${EMAIL_ADAPTER:-file}
+      EMAIL_FILE_OUTBOX: ${EMAIL_FILE_OUTBOX:-/var/lib/gurine-mail}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      FIELD_ENCRYPTION_KEY_CURRENT: ${FIELD_ENCRYPTION_KEY_CURRENT:-}
+      FIELD_ENCRYPTION_KEY_PREVIOUS: ${FIELD_ENCRYPTION_KEY_PREVIOUS:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NOTIFICATION_DATABASE_URL: ${NOTIFICATION_DATABASE_URL:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      RESPONSE_BASE_URL: ${RESPONSE_BASE_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      TOKEN_HMAC_KEY: ${TOKEN_HMAC_KEY:-}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+    volumes:
+    - gurine-mail:/var/lib/gurine-mail
+  workflow-worker:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: workflow-worker
+    environment:
+      DATABASE_URL: ${WORKFLOW_DATABASE_URL}
+      EGRESS_GATEWAY_URL: http://egress-gateway:8090/object-store
+      ATTACHMENT_SCANNER_ADAPTER: ${ATTACHMENT_SCANNER_ADAPTER:-synthetic}
+      AUDIT_CHAIN_HMAC_KEY: ${AUDIT_CHAIN_HMAC_KEY:-}
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      EGRESS_OBJECT_STORE_CHANNEL_URL: ${EGRESS_OBJECT_STORE_CHANNEL_URL:-}
+      FIELD_ENCRYPTION_KEY_CURRENT: ${FIELD_ENCRYPTION_KEY_CURRENT:-}
+      FIELD_ENCRYPTION_KEY_PREVIOUS: ${FIELD_ENCRYPTION_KEY_PREVIOUS:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-52428800}
+      OBJECT_STORE_ADAPTER: ${OBJECT_STORE_ADAPTER:-filesystem}
+      OBJECT_STORE_ATTACHMENT_BUCKET: ${OBJECT_STORE_ATTACHMENT_BUCKET:-}
+      OBJECT_STORE_FILESYSTEM_ROOT: ${OBJECT_STORE_FILESYSTEM_ROOT:-/var/lib/gurine-objects}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      TOKEN_HMAC_KEY: ${TOKEN_HMAC_KEY:-}
+      WORKFLOW_DATABASE_URL: ${WORKFLOW_DATABASE_URL:-}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+    volumes:
+    - gurine-objects:/var/lib/gurine-objects
+  document-extractor:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: document-extractor
+    environment:
+      DATABASE_URL: ${DOCUMENT_EXTRACTOR_DATABASE_URL}
+      EGRESS_GATEWAY_URL: http://egress-gateway:8090/object-store
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      DOCUMENT_EXTRACTOR_DATABASE_URL: ${DOCUMENT_EXTRACTOR_DATABASE_URL:-}
+      EGRESS_OBJECT_STORE_CHANNEL_URL: ${EGRESS_OBJECT_STORE_CHANNEL_URL:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OBJECT_STORE_ADAPTER: ${OBJECT_STORE_ADAPTER:-filesystem}
+      OBJECT_STORE_ATTACHMENT_BUCKET: ${OBJECT_STORE_ATTACHMENT_BUCKET:-}
+      OBJECT_STORE_FILESYSTEM_ROOT: ${OBJECT_STORE_FILESYSTEM_ROOT:-/var/lib/gurine-objects}
+      OBJECT_STORE_RAW_BUCKET: ${OBJECT_STORE_RAW_BUCKET:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp:rw,noexec,nosuid,size=1g
+    restart: unless-stopped
+    volumes:
+    - gurine-objects:/var/lib/gurine-objects
+  scheduler:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: scheduler
+    environment:
+      DATABASE_URL: ${SCHEDULER_DATABASE_URL}
+      SCHEDULER_INSTANCE_ID: ${HOSTNAME}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      HOSTNAME: ${HOSTNAME:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SCHEDULER_DATABASE_URL: ${SCHEDULER_DATABASE_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  egress-gateway:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: egress-gateway
+    environment:
+      EGRESS_ALLOWLIST_PATH: /app/config/egress-allowlist.yaml
+      AI_PROVIDER_HOSTS: ${AI_PROVIDER_HOSTS:-}
+      ALIO_HOST: ${ALIO_HOST:-}
+      ALIO_OFFICIAL_MANIFEST_URL: ${ALIO_OFFICIAL_MANIFEST_URL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AUDIT_RESULTS_HOST: ${AUDIT_RESULTS_HOST:-}
+      AUDIT_RESULTS_OFFICIAL_MANIFEST_URL: ${AUDIT_RESULTS_OFFICIAL_MANIFEST_URL:-}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY:-}
+      GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      KONEPS_CONTRACT_API_BASE_URL: ${KONEPS_CONTRACT_API_BASE_URL:-}
+      KONEPS_NOTICE_API_BASE_URL: ${KONEPS_NOTICE_API_BASE_URL:-}
+      LOCAL_FINANCE_HOST: ${LOCAL_FINANCE_HOST:-}
+      LOCAL_FINANCE_OFFICIAL_MANIFEST_URL: ${LOCAL_FINANCE_OFFICIAL_MANIFEST_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OBJECT_STORE_ACCESS_KEY_ID: ${OBJECT_STORE_ACCESS_KEY_ID:-}
+      OBJECT_STORE_ADAPTER: ${OBJECT_STORE_ADAPTER:-filesystem}
+      OBJECT_STORE_ENDPOINT: ${OBJECT_STORE_ENDPOINT:-}
+      OBJECT_STORE_FILESYSTEM_ROOT: ${OBJECT_STORE_FILESYSTEM_ROOT:-/var/lib/gurine-objects}
+      OBJECT_STORE_FORCE_PATH_STYLE: ${OBJECT_STORE_FORCE_PATH_STYLE:-}
+      OBJECT_STORE_HOST: ${OBJECT_STORE_HOST:-}
+      OBJECT_STORE_REGION: ${OBJECT_STORE_REGION:-}
+      OBJECT_STORE_SECRET_ACCESS_KEY: ${OBJECT_STORE_SECRET_ACCESS_KEY:-}
+      OIDC_ISSUER_HOST: ${OIDC_ISSUER_HOST:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPEN_DART_API_BASE_URL: ${OPEN_DART_API_BASE_URL:-}
+      OPEN_DART_API_KEY: ${OPEN_DART_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_URL: ${SMTP_URL:-}
+    networks:
+    - internal
+    - egress
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+    volumes:
+    - ./specs/deployment/egress-allowlist.yaml:/app/config/egress-allowlist.yaml:ro
+    - gurine-objects:/var/lib/gurine-objects
+  clamav:
+    image: clamav/clamav:1.4.3
+    networks:
+    - internal
+    volumes:
+    - clamav-db:/var/lib/clamav
+  oidc-test-provider:
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: oidc-test-provider
+    profiles:
+    - development
+    - test
+    networks:
+    - internal
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+    environment:
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      HTTP_BIND: 0.0.0.0:8085
+      OIDC_TEST_ISSUER: http://oidc-test-provider:8085
+      OIDC_TEST_CLIENT_ID: gurine-review
+      OIDC_TEST_CLIENT_SECRET: development-only-secret
+  public-web:
+    build:
+      context: .
+      dockerfile: infra/docker/svelte-bun/Dockerfile
+      target: public-web
+    environment:
+      PUBLIC_API_INTERNAL_URL: http://public-api:8080
+      SUBMISSION_API_INTERNAL_URL: http://submission-api:8082
+      BOT_CHALLENGE_SITE_KEY: ${BOT_CHALLENGE_SITE_KEY:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ORIGIN: ${ORIGIN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      PUBLIC_CACHE_MAX_AGE_SECONDS: ${PUBLIC_CACHE_MAX_AGE_SECONDS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SUBMISSION_COOKIE_KEY_CURRENT: ${SUBMISSION_COOKIE_KEY_CURRENT}
+      SUBMISSION_COOKIE_KEY_PREVIOUS: ${SUBMISSION_COOKIE_KEY_PREVIOUS:-}
+      PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT: ${PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT}
+      PUBLIC_WEB_SUBMISSION_HMAC_KEY_PREVIOUS: ${PUBLIC_WEB_SUBMISSION_HMAC_KEY_PREVIOUS:-}
+    ports:
+    - 0.0.0.0:3000:3000
+    networks:
+    - public
+    - internal
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  review-console:
+    build:
+      context: .
+      dockerfile: infra/docker/svelte-bun/Dockerfile
+      target: review-console
+    environment:
+      CONTROL_API_INTERNAL_URL: http://control-api:8081
+      IDENTITY_API_INTERNAL_URL: http://identity-api:8083
+      IDENTITY_SERVICE_HMAC_KEY_CURRENT: ${IDENTITY_SERVICE_HMAC_KEY_CURRENT:-}
+      IDENTITY_SERVICE_HMAC_KEY_PREVIOUS: ${IDENTITY_SERVICE_HMAC_KEY_PREVIOUS:-}
+      SESSION_COOKIE_KEY_CURRENT: ${SESSION_COOKIE_KEY_CURRENT:-}
+      SESSION_COOKIE_KEY_PREVIOUS: ${SESSION_COOKIE_KEY_PREVIOUS:-}
+      DEV_AUTH_MODE: ${DEV_AUTH_MODE:-oidc}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ORIGIN: ${REVIEW_BASE_URL:-http://127.0.0.1:3001}
+      REVIEW_BASE_URL: ${REVIEW_BASE_URL:-http://127.0.0.1:3001}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      EGRESS_GATEWAY_URL: ${EGRESS_GATEWAY_URL:-}
+    ports:
+    - 127.0.0.1:3001:3001
+    networks:
+    - internal
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+    depends_on:
+      control-api:
+        condition: service_started
+      identity-api:
+        condition: service_healthy
+  response-portal:
+    build:
+      context: .
+      dockerfile: infra/docker/svelte-bun/Dockerfile
+      target: response-portal
+    environment:
+      SUBMISSION_API_INTERNAL_URL: http://submission-api:8082
+      BOT_CHALLENGE_SITE_KEY: ${BOT_CHALLENGE_SITE_KEY:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ORIGIN: ${ORIGIN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      RESPONSE_BASE_URL: ${RESPONSE_BASE_URL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SESSION_COOKIE_KEY_CURRENT: ${SESSION_COOKIE_KEY_CURRENT:-}
+      SESSION_COOKIE_KEY_PREVIOUS: ${SESSION_COOKIE_KEY_PREVIOUS:-}
+      SUBMISSION_COOKIE_KEY_CURRENT: ${SUBMISSION_COOKIE_KEY_CURRENT}
+      SUBMISSION_COOKIE_KEY_PREVIOUS: ${SUBMISSION_COOKIE_KEY_PREVIOUS:-}
+      RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT: ${RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT}
+      RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_PREVIOUS: ${RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_PREVIOUS:-}
+    ports:
+    - 0.0.0.0:3002:3002
+    networks:
+    - public
+    - internal
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.131.1
+    networks:
+    - internal
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+volumes:
+  gurine-postgres: {}
+  gurine-objects: {}
+  gurine-mail: {}
+  clamav-db: {}
+networks:
+  public: {}
+  internal:
+    internal: true
+  data:
+    internal: true
+  egress: {}
+specification_version: 13.0.0

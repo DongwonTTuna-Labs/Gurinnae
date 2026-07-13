@@ -1,0 +1,159 @@
+{
+  "schema_version": "1.0.0",
+  "contract_id": "contract_fixture_unit_mismatch",
+  "source_document_ids": ["srcdoc_fixture_unit_mismatch"],
+  "contract_number": "SYN-UNIT-MISMATCH",
+  "notice_id": "notice_fixture_unit_mismatch",
+  "award_id": "award_fixture_unit_mismatch",
+  "agency": {
+    "agency_id": "agency_fixture_noeul",
+    "name": "가상노을시청",
+    "identity_status": "VERIFIED"
+  },
+  "supplier": {
+    "supplier_id": "supplier_fixture_delta",
+    "name": "가상델타산업",
+    "entity_type": "CORPORATION",
+    "identity_status": "VERIFIED",
+    "business_number_last4": "0001"
+  },
+  "contract_type": "GOODS",
+  "method": "OPEN_COMPETITION",
+  "method_basis": "합성 fixture의 계약 방법 설명",
+  "signed_at": "2025-07-08",
+  "starts_at": "2025-07-08",
+  "ends_at": "2026-05-31",
+  "status": "ACTIVE",
+  "amounts": {
+    "original": {
+      "currency": "KRW",
+      "amount_minor": 22000000,
+      "vat_basis": "INCLUDED"
+    },
+    "current": {
+      "currency": "KRW",
+      "amount_minor": 22000000,
+      "vat_basis": "INCLUDED"
+    }
+  },
+  "line_items": [
+    {
+      "line_item_id": "line_fixture_unit_mismatch_1",
+      "line_number": 1,
+      "raw_description": "합성 안전 단말기 세트",
+      "category_code": "SYNTH-SAFETY-DEVICE",
+      "manufacturer": "가상제조사",
+      "model": "S1",
+      "variant": null,
+      "quantity": "10",
+      "unit_code": "SET",
+      "unit_price": {
+        "currency": "KRW",
+        "amount_minor": 2200000,
+        "vat_basis": "INCLUDED"
+      },
+      "total_price": {
+        "currency": "KRW",
+        "amount_minor": 22000000,
+        "vat_basis": "INCLUDED"
+      },
+      "vat_basis": "INCLUDED",
+      "bundle_status": "SINGLE_ITEM",
+      "specification": {
+        "grade": "S1",
+        "items_per_set": "UNKNOWN",
+        "synthetic": true
+      },
+      "included_services": [],
+      "normalization_confidence": 0.99
+    }
+  ],
+  "field_provenance": {
+    "contract_number": {
+      "source_document_id": "srcdoc_fixture_unit_mismatch",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.contractNumber"
+      },
+      "raw_value_hash": "c8bf2fc13161a31de0faafd4c44be8fd7a2341d74b9b354ffcbd99d7e11f9207",
+      "raw_value_preview": "SYN-UNIT-MISMATCH",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "agency.name": {
+      "source_document_id": "srcdoc_fixture_unit_mismatch",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.agencyName"
+      },
+      "raw_value_hash": "e169f47b0120d2a5bd7c3334492272c52511a2c05cb05f17e35184bc51a311a2",
+      "raw_value_preview": "가상노을시청",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "supplier.name": {
+      "source_document_id": "srcdoc_fixture_unit_mismatch",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.supplierName"
+      },
+      "raw_value_hash": "9ab5bed8d70a6b934345774ab3f12718fdbc9b039a15d1dfb59c04327f30d438",
+      "raw_value_preview": "가상델타산업",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "amounts.current": {
+      "source_document_id": "srcdoc_fixture_unit_mismatch",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.amount"
+      },
+      "raw_value_hash": "6cb3c93b80feb73b7f4198c952fdcf81e3aedcae2cf90ae1e2b3756d81039442",
+      "raw_value_preview": "22000000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].quantity": {
+      "source_document_id": "srcdoc_fixture_unit_mismatch",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].quantity"
+      },
+      "raw_value_hash": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+      "raw_value_preview": "10",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].unit_price": {
+      "source_document_id": "srcdoc_fixture_unit_mismatch",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].unitPrice"
+      },
+      "raw_value_hash": "03d3abf836eb107f89c4dda1d25a8c7e6fd47a1c46074d25b5eb0b83ec209505",
+      "raw_value_preview": "2200000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].vat_basis": {
+      "source_document_id": "srcdoc_fixture_unit_mismatch",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].vatBasis"
+      },
+      "raw_value_hash": "c77a4910d506fabde27cc281a5a48ed9e9a8f75f721eac77918ab30a3181b2be",
+      "raw_value_preview": "INCLUDED",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    }
+  },
+  "normalization_version": "1.0.0",
+  "normalized_at": "2026-01-15T04:00:00Z"
+}

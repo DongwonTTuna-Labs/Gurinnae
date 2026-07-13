@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0.0",
+  "contract_id": "contract_fixture_vat_unknown",
+  "source_document_ids": ["srcdoc_fixture_vat_unknown"],
+  "contract_number": "SYN-VAT-UNKNOWN",
+  "notice_id": "notice_fixture_vat_unknown",
+  "award_id": "award_fixture_vat_unknown",
+  "agency": {
+    "agency_id": "agency_fixture_saemmul",
+    "name": "가상샘물구청",
+    "identity_status": "VERIFIED"
+  },
+  "supplier": {
+    "supplier_id": "supplier_fixture_epsilon",
+    "name": "가상엡실론",
+    "entity_type": "CORPORATION",
+    "identity_status": "VERIFIED",
+    "business_number_last4": "0001"
+  },
+  "contract_type": "GOODS",
+  "method": "OPEN_COMPETITION",
+  "method_basis": "합성 fixture의 계약 방법 설명",
+  "signed_at": "2025-07-12",
+  "starts_at": "2025-07-12",
+  "ends_at": "2026-05-31",
+  "status": "ACTIVE",
+  "amounts": {
+    "original": {
+      "currency": "KRW",
+      "amount_minor": 21500000,
+      "vat_basis": "UNKNOWN"
+    },
+    "current": {
+      "currency": "KRW",
+      "amount_minor": 21500000,
+      "vat_basis": "UNKNOWN"
+    }
+  },
+  "line_items": [
+    {
+      "line_item_id": "line_fixture_vat_unknown_1",
+      "line_number": 1,
+      "raw_description": "합성 안전 단말기 S1",
+      "category_code": "SYNTH-SAFETY-DEVICE",
+      "manufacturer": "가상제조사",
+      "model": "S1",
+      "variant": null,
+      "quantity": "10",
+      "unit_code": "EA",
+      "unit_price": {
+        "currency": "KRW",
+        "amount_minor": 2150000,
+        "vat_basis": "UNKNOWN"
+      },
+      "total_price": {
+        "currency": "KRW",
+        "amount_minor": 21500000,
+        "vat_basis": "UNKNOWN"
+      },
+      "vat_basis": "UNKNOWN",
+      "bundle_status": "SINGLE_ITEM",
+      "specification": {
+        "grade": "S1",
+        "synthetic": true
+      },
+      "included_services": [],
+      "normalization_confidence": 0.99
+    }
+  ],
+  "field_provenance": {
+    "contract_number": {
+      "source_document_id": "srcdoc_fixture_vat_unknown",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.contractNumber"
+      },
+      "raw_value_hash": "08411c7597e4e01a077bf5717223f109ae0a100dd3d8733869f62b365db9e86c",
+      "raw_value_preview": "SYN-VAT-UNKNOWN",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "agency.name": {
+      "source_document_id": "srcdoc_fixture_vat_unknown",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.agencyName"
+      },
+      "raw_value_hash": "9724bc91357786852093c03d706ebb3d3adf9424130f242a1865fee8095faefb",
+      "raw_value_preview": "가상샘물구청",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "supplier.name": {
+      "source_document_id": "srcdoc_fixture_vat_unknown",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.supplierName"
+      },
+      "raw_value_hash": "0fd5d20e849d1c88ee4fd77a0427ed2d17edb74f972d9d37c13e35aa2785713d",
+      "raw_value_preview": "가상엡실론",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "amounts.current": {
+      "source_document_id": "srcdoc_fixture_vat_unknown",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.amount"
+      },
+      "raw_value_hash": "5a72afb3ab55e6b2d286f356ee56005b9cce52148a3b1175615ad42ec7ce3d9e",
+      "raw_value_preview": "21500000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].quantity": {
+      "source_document_id": "srcdoc_fixture_vat_unknown",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].quantity"
+      },
+      "raw_value_hash": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+      "raw_value_preview": "10",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].unit_price": {
+      "source_document_id": "srcdoc_fixture_vat_unknown",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].unitPrice"
+      },
+      "raw_value_hash": "972bfe1bcf34b593a9422c9697174871f0a65dcdbeaf7e832d6f4f1e4a95b970",
+      "raw_value_preview": "2150000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].vat_basis": {
+      "source_document_id": "srcdoc_fixture_vat_unknown",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].vatBasis"
+      },
+      "raw_value_hash": "23759997b3c59884dc4c0ff5320d6301b0e7f63bf0f6483a7b54d7d43bc5ccd1",
+      "raw_value_preview": "UNKNOWN",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    }
+  },
+  "normalization_version": "1.0.0",
+  "normalized_at": "2026-01-15T04:00:00Z"
+}

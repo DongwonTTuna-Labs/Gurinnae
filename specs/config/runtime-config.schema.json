@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/schemas/runtime-config.schema.json",
+  "title": "Gurine Runtime Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "environment": {
+      "enum": ["development", "test", "staging", "production"]
+    },
+    "publicBaseUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "reviewBaseUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "responseBaseUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "maxConnections"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maxConnections": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sessionKeyCurrent",
+        "fieldKeyCurrent",
+        "tokenHmacKey",
+        "auditChainHmacKey"
+      ],
+      "properties": {
+        "sessionKeyCurrent": {
+          "type": "string",
+          "minLength": 43
+        },
+        "sessionKeyPrevious": {
+          "type": "string",
+          "minLength": 43
+        },
+        "fieldKeyCurrent": {
+          "type": "string",
+          "minLength": 43
+        },
+        "fieldKeyPrevious": {
+          "type": "string",
+          "minLength": 43
+        },
+        "tokenHmacKey": {
+          "type": "string",
+          "minLength": 43
+        },
+        "auditChainHmacKey": {
+          "type": "string",
+          "minLength": 43
+        }
+      }
+    },
+    "oidc": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "issuerUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "clientSecret": {
+          "type": "string"
+        },
+        "redirectUri": {
+          "type": "string",
+          "format": "uri"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "email": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "smtpUrl": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "replyTo": {
+          "type": "string",
+          "format": "email"
+        }
+      }
+    },
+    "objectStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "region": {
+          "type": "string"
+        },
+        "accessKeyId": {
+          "type": "string"
+        },
+        "secretAccessKey": {
+          "type": "string"
+        },
+        "rawBucket": {
+          "type": "string"
+        },
+        "attachmentBucket": {
+          "type": "string"
+        },
+        "forcePathStyle": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dataGoKrServiceKey": {
+          "type": "string"
+        },
+        "openDartApiKey": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "providerOrder": {
+          "type": "array",
+          "items": {
+            "enum": ["openai", "anthropic", "google"]
+          }
+        },
+        "dailyBudgetKrw": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "caseBudgetKrw": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "otlpEndpoint": {
+          "type": "string",
+          "format": "uri"
+        },
+        "otlpHeaders": {
+          "type": "string"
+        },
+        "sentryDsn": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "required": ["environment", "database", "security", "ai"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "environment": {
+            "enum": ["staging", "production"]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "publicBaseUrl",
+          "reviewBaseUrl",
+          "responseBaseUrl",
+          "oidc",
+          "email",
+          "objectStore",
+          "observability"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ai": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": ["enabled"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "ai": {
+            "required": ["providerOrder", "dailyBudgetKrw", "caseBudgetKrw"]
+          }
+        }
+      }
+    }
+  ]
+}

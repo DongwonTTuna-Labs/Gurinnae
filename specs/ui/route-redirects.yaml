@@ -1,0 +1,36 @@
+schema_version: 1
+specification_version: 13.0.0
+rules:
+- Public slug changes use permanent redirects and preserve previous slug audit.
+- Retracted publications remain at their canonical URL with a retraction notice.
+- Token routes never redirect to another origin with the token in query or fragment.
+- Internal unauthorized routes do not reveal object existence.
+- Legacy v2 response routes are not served by Control API; issued links must be migrated or revoked.
+redirects:
+- from: /methodology/{ruleId}
+  to: /methodology/rules/{ruleId}
+  status: 308
+  reason: canonical rule path
+- from: /cases/{caseSlug}/history
+  to: /cases/{caseSlug}#revision-history
+  status: 308
+  reason: single canonical case detail
+- from: /about/transparency
+  to: /about/funding
+  status: 308
+  reason: funding and transparency canonical page
+- from: /internal/review-queue
+  to: /internal/review
+  status: 308
+  reason: task-oriented review route
+- from: /internal/cases/{caseId}
+  to: /internal/cases/{caseId}/overview
+  status: 308
+  reason: workspace landing
+legacy_api_migration:
+- from_surface: control-api
+  operation_ids:
+  - getResponseRequest
+  - submitResponse
+  to_surface: submission-api
+  behavior: No HTTP redirect for API clients. Remove from control spec, issue submission client, and migrate callers explicitly.

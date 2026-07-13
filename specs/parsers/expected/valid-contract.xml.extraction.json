@@ -1,0 +1,39 @@
+{
+  "documentSha256": "8dac77b84d93709c020222003c90f8f6274ecbae4478579ce2463dd2a82625b4",
+  "mediaType": "application/xml",
+  "pages": [
+    {
+      "blocks": [
+        {
+          "confidence": null,
+          "id": "blk-87f366e29feb0d771b45",
+          "kind": "PARAGRAPH",
+          "locator": {
+            "kind": "XML_XPATH",
+            "value": "/contracts[1]/contract[1]/title[1]"
+          },
+          "text": "안전장비"
+        },
+        {
+          "confidence": null,
+          "id": "blk-5332aba54065dc7ae3f6",
+          "kind": "PARAGRAPH",
+          "locator": {
+            "kind": "XML_XPATH",
+            "value": "/contracts[1]/contract[1]/amount[1]"
+          },
+          "text": "480000"
+        }
+      ],
+      "height": null,
+      "index": 0,
+      "tables": [],
+      "width": null
+    }
+  ],
+  "parserId": "xml",
+  "parserVersion": "0.41.0-reference-v1",
+  "rejectionCode": null,
+  "status": "EXTRACTED",
+  "warnings": []
+}

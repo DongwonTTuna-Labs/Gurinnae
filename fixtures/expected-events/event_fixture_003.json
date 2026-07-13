@@ -1,0 +1,17 @@
+{
+  "event_id": "event_fixture_003",
+  "event_type": "anomaly.signal.created.v1",
+  "event_version": 1,
+  "occurred_at": "2026-01-15T03:00:00Z",
+  "aggregate_type": "ANOMALY_SIGNAL",
+  "aggregate_id": "signal_fixture_price_target",
+  "aggregate_version": 1,
+  "correlation_id": "correlation_fixture_price_flow",
+  "causation_id": "event_fixture_002",
+  "trace_id": "946e1ce9f2e316fbfb83faa6519c271a",
+  "classification": "INTERNAL",
+  "payload": {
+    "signal_type": "PRICE_OUTLIER",
+    "publishability": "ELIGIBLE_FOR_INVESTIGATION"
+  }
+}

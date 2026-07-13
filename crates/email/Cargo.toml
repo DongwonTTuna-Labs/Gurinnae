@@ -1,0 +1,16 @@
+[package]
+name = "gurine-email"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lettre.workspace = true
+serde.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+thiserror.workspace = true
+time.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

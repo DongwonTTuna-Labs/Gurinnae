@@ -1,0 +1,36 @@
+schema_version: 1
+specification_version: 13.0.0
+case_id: market-researcher-03-missing_citation
+agent_id: market-researcher
+kind: missing_citation
+provider_status: OK
+expected_status: ABSTAINED
+input: input.json
+provider_response: provider-response.json
+tool_transcript: tool-transcript.json
+expected_output: expected-output.json
+allowed_evidence_ids:
+- 00000000-0000-0000-0000-0000000003e9
+- 00000000-0000-0000-0000-0000000003ea
+- 00000000-0000-0000-0000-0000000003eb
+expected_locator_map:
+  00000000-0000-0000-0000-0000000003e9:
+  - page:1#line:2
+  00000000-0000-0000-0000-0000000003ea:
+  - page:2#line:4
+  00000000-0000-0000-0000-0000000003eb:
+  - page:3#line:1
+must_not:
+- state_mutation
+- publication
+- external_contact
+- unknown_citation
+deterministic: true
+expected_prompt_sha256: 6442bd4884557562449cd2ca15c0a5c22e55aea6954b203a7abdf3fcd5a5f562
+max_iterations: 4
+current_evidence_snapshot_hash: df1f3177267dc7e23d93c93de07c8ce5f305a5ff53b58c20cc42eec3b04228f4
+expected_support_by_evidence: {}
+provider_attempts:
+- provider: primary
+  status: OK
+  cost_krw: 50

@@ -1,0 +1,77 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "AUTH-003",
+  title: "접근 권한 없음",
+  route: "/auth/access-denied",
+  archetype: "AUTH_SYSTEM",
+  sections: [
+    {
+      order: 1,
+      id: "message",
+      title: "권한 상태",
+      component: "StatusAndRevisionHeader",
+      purpose: "민감 객체 존재를 누출하지 않는 설명.",
+      test_id: "auth_003__section__message",
+    },
+    {
+      order: 2,
+      id: "actions",
+      title: "다음 행동",
+      component: "StructuredContentSection",
+      purpose: "내 작업·access request·지원.",
+      test_id: "auth_003__section__actions",
+    },
+    {
+      order: 3,
+      id: "reference",
+      title: "참조",
+      component: "StructuredContentSection",
+      purpose: "trace/request ID.",
+      test_id: "auth_003__section__reference",
+    },
+  ],
+  actions: [
+    {
+      id: "request-access",
+      label: "접근 권한 요청",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "go-my-work",
+      label: "내 작업으로",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: [
+    "loading",
+    "success",
+    "empty",
+    "partial",
+    "stale",
+    "error",
+    "unauthorized",
+    "forbidden",
+    "conflict",
+  ],
+  dataOperations: [
+    {
+      operation_id: "getCurrentUserCapabilities",
+      api: "control-api",
+      method: "GET",
+      path: "/v1/internal/queries/get-current-user-capabilities",
+      blocking: false,
+      response_schema: "CurrentUserCapabilitiesResponse",
+    },
+  ],
+} as const satisfies ScreenViewModel;

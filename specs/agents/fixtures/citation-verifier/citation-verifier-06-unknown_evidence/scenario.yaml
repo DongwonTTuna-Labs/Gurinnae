@@ -1,0 +1,37 @@
+schema_version: 1
+specification_version: 13.0.0
+case_id: citation-verifier-06-unknown_evidence
+agent_id: citation-verifier
+kind: unknown_evidence
+provider_status: OK
+expected_status: ABSTAINED
+input: input.json
+provider_response: provider-response.json
+tool_transcript: tool-transcript.json
+expected_output: expected-output.json
+allowed_evidence_ids:
+- 00000000-0000-0000-0000-0000000003e9
+- 00000000-0000-0000-0000-0000000003ea
+- 00000000-0000-0000-0000-0000000003eb
+expected_locator_map:
+  00000000-0000-0000-0000-0000000003e9:
+  - page:1#line:2
+  00000000-0000-0000-0000-0000000003ea:
+  - page:2#line:4
+  00000000-0000-0000-0000-0000000003eb:
+  - page:3#line:1
+must_not:
+- state_mutation
+- publication
+- external_contact
+- unknown_citation
+deterministic: true
+expected_prompt_sha256: 242e0e1791e2f4b7ce1e6b3c2dc33c16597eb7556ef604d8b993d534cf0906d3
+max_iterations: 4
+current_evidence_snapshot_hash: facd20487bd28763ca5484816fb04a474ac8aee21dc7a00e04f45b7f75c7e05a
+expected_support_by_evidence:
+  00000000-0000-0000-0000-0000000f423f: 허용되지 않은 근거
+provider_attempts:
+- provider: primary
+  status: OK
+  cost_krw: 50

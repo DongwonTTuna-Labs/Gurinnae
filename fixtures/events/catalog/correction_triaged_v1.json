@@ -1,0 +1,27 @@
+{
+  "event_id": "event:025",
+  "event_type": "correction.triaged.v1",
+  "event_version": 1,
+  "occurred_at": "2026-07-11T00:00:00Z",
+  "aggregate_type": "SYNTHETIC",
+  "aggregate_id": "aggregate:025",
+  "aggregate_version": 1,
+  "trace_id": "synthetic-trace-025",
+  "causation_id": null,
+  "correlation_id": null,
+  "actor": null,
+  "payload": {
+    "actor_id": "synthetic",
+    "correctionId": "synthetic",
+    "occurred_at": "2026-07-11T00:00:00Z",
+    "operation_id": "synthetic",
+    "request_id": "synthetic"
+  },
+  "recorded_at": "2026-07-11T00:00:00Z",
+  "idempotency_key": "synthetic-idempotency-025",
+  "producer": {
+    "service": "synthetic-validator",
+    "instance_id": "spec"
+  },
+  "classification": "INTERNAL"
+}

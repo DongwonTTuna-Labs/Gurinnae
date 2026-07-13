@@ -1,0 +1,47 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!!**/.svelte-kit",
+      "!!**/build",
+      "!!**/node_modules",
+      "!!**/target",
+      "!!**/artifacts",
+      "!!**/playwright-report",
+      "!!**/test-results",
+      "!!**/vendor",
+      "!!**/.sqlx",
+      "!!**/generated",
+      "!!specs/api/control-api.openapi.json"
+    ]
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
+  "linter": { "enabled": true, "rules": { "preset": "recommended" } },
+  "overrides": [
+    {
+      // Biome does not resolve script references made from Svelte templates;
+      // svelte-check remains the authoritative unused-symbol/type gate here.
+      "includes": ["**/*.svelte"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedImports": "off",
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      // Reduced-motion overrides require !important, and the design system's
+      // component-state cascade intentionally crosses selector specificity.
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "complexity": { "noImportantStyles": "off" },
+          "style": { "noDescendingSpecificity": "off" }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/schemas/parser/extraction-result-v1.json",
+  "title": "Document Extraction Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "documentSha256",
+    "mediaType",
+    "parserId",
+    "parserVersion",
+    "status",
+    "pages",
+    "warnings"
+  ],
+  "properties": {
+    "documentSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "mediaType": {
+      "type": "string"
+    },
+    "parserId": {
+      "type": "string"
+    },
+    "parserVersion": {
+      "type": "string"
+    },
+    "status": {
+      "enum": ["EXTRACTED", "OCR_REQUIRED", "REJECTED", "FAILED"]
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "blocks", "tables"],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "width": {
+            "type": ["number", "null"]
+          },
+          "height": {
+            "type": ["number", "null"]
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "kind", "text", "locator"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "PARAGRAPH",
+                    "HEADING",
+                    "OCR_TEXT",
+                    "CELL_TEXT",
+                    "OTHER"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "locator": {
+                  "$ref": "#/$defs/locator"
+                },
+                "confidence": {
+                  "type": ["number", "null"],
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          },
+          "tables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "locator", "rows"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "locator": {
+                  "$ref": "#/$defs/locator"
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["text", "row", "column", "locator"],
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "row": {
+                          "type": "integer"
+                        },
+                        "column": {
+                          "type": "integer"
+                        },
+                        "locator": {
+                          "$ref": "#/$defs/locator"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rejectionCode": {
+      "type": ["string", "null"]
+    }
+  },
+  "$defs": {
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

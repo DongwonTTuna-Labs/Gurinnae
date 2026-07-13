@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+container="gurine-analysis-egress-$BASHPID"
+database="gurine_analysis_egress"
+temp="$(mktemp -d -t gurine-analysis-egress-XXXXXX)"
+provider_pid=""
+gateway_pid=""
+
+cleanup() {
+  status=$?
+  trap - EXIT
+  for pid in "$gateway_pid" "$provider_pid"; do
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      kill -TERM "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+    fi
+  done
+  if [[ $status -ne 0 ]]; then
+    for log in "$temp"/*.log; do
+      [[ -f "$log" ]] && tail -n 160 "$log" >&2
+    done
+  fi
+  docker rm -f "$container" >/dev/null 2>&1 || true
+  rm -rf "$temp"
+  exit "$status"
+}
+trap cleanup EXIT
+
+free_port() {
+  local port
+  while true; do
+    port="$(shuf -i 30000-45000 -n 1)"
+    if ! ss -ltn "sport = :$port" | tail -n +2 | grep -q .; then
+      printf '%s' "$port"
+      return
+    fi
+  done
+}
+
+cd "$root"
+cargo build -p gurine-analysis-worker -p gurine-egress-gateway --bins
+provider_port="$(free_port)"
+gateway_port="$(free_port)"
+provider_key="runtime-openai-key-never-persist"
+
+AI_PROVIDER_TEST_PORT="$provider_port" AI_PROVIDER_EXPECTED_KEY="$provider_key" \
+  bun run tests/integration/ai-provider-upstream.ts >"$temp/provider.log" 2>&1 &
+provider_pid=$!
+GURINE_ENV=test HTTP_BIND="127.0.0.1:$gateway_port" OIDC_ISSUER_HOST=localhost \
+AI_PROVIDER_HOSTS=localhost OPENAI_API_KEY="$provider_key" \
+  target/debug/gurine-egress-gateway >"$temp/gateway.log" 2>&1 &
+gateway_pid=$!
+
+for endpoint in "http://127.0.0.1:$provider_port/health" "http://127.0.0.1:$gateway_port/health/ready"; do
+  for _ in $(seq 1 60); do
+    if curl --fail --silent --show-error "$endpoint" >/dev/null 2>&1; then break; fi
+    sleep 0.25
+  done
+  curl --fail --silent --show-error "$endpoint" >/dev/null
+done
+
+docker run --rm -d --name "$container" \
+  -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
+  -p 127.0.0.1::5432 postgres:18.4-bookworm >/dev/null
+bash scripts/wait-postgres-container.sh "$container" "$database"
+for migration in db/migrations/*.sql; do
+  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
+done
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <<SQL >/dev/null
+ALTER ROLE gurine_analysis_worker LOGIN PASSWORD 'analysis_test';
+INSERT INTO ops.users(id,oidc_subject,email,display_name,status)
+VALUES('71000000-0000-4000-8000-000000000001','production-egress','production-egress@example.test','Production Egress','ACTIVE');
+INSERT INTO editorial.cases(id,title,investigation_state,publication_state,summary)
+VALUES('71000000-0000-4000-8000-000000000002','Production egress case','INVESTIGATING','NEVER_PUBLISHED','Provider gateway gate');
+INSERT INTO raw.source_documents(id,source_id,external_id,retrieved_at,content_type,content_sha256,
+  content_size_bytes,object_key,status,parser_name,parser_version,prompt_injection_flags,updated_at)
+VALUES('71000000-0000-4000-8000-000000000003','production-egress','evidence','2026-07-12T00:00:00Z','application/json',
+  repeat('a',64),128,'raw/provider-evidence.json','PARSED','json','runtime-v1','[]','2026-07-12T00:00:00Z');
+INSERT INTO editorial.evidence(id,case_id,evidence_type,title,source_document_id,source_locator,
+  content_sha256,verification_status,verified_by,verified_at,created_by,updated_at)
+VALUES('71000000-0000-4000-8000-000000000004','71000000-0000-4000-8000-000000000002','DOCUMENT','Provider evidence',
+  '71000000-0000-4000-8000-000000000003','page:7',repeat('a',64),'VERIFIED','71000000-0000-4000-8000-000000000001',
+  '2026-07-12T00:00:00Z','71000000-0000-4000-8000-000000000001','2026-07-12T00:00:00Z');
+INSERT INTO ops.provider_configs(id,provider_type,name,enabled,routing_policy,secret_reference,data_retention_policy)
+VALUES('71000000-0000-4000-8000-000000000005','openai','OpenAI Runtime',true,
+  jsonb_build_object('targetUrl','http://localhost:$provider_port/agent','model','approved-runtime-v1'),
+  'env:OPENAI_API_KEY','NO_RETENTION');
+SQL
+
+snapshot="$(docker exec "$container" psql -At -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
+  "SELECT jsonb_build_object('caseId','71000000-0000-4000-8000-000000000002','evidence',(SELECT jsonb_agg(jsonb_build_object('id',e.id,'contentSha256',btrim(e.content_sha256::text),'locator',e.source_locator,'updatedAt',e.updated_at,'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb)) ORDER BY e.id) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.id='71000000-0000-4000-8000-000000000004'),'objective','production provider runtime')")"
+snapshot_hash="$(printf '%s' "$snapshot" | jq -cSj . | sha256sum | cut -d' ' -f1)"
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
+  -v snapshot_hash="$snapshot_hash" <<'SQL' >/dev/null
+INSERT INTO ops.agent_runs(id,case_id,agent_type,objective,evidence_scope_ids,provider_policy,status,
+  input_snapshot_hash,max_cost,created_by)
+VALUES('71000000-0000-4000-8000-000000000006','71000000-0000-4000-8000-000000000002',
+  'investigator','production provider runtime','["71000000-0000-4000-8000-000000000004"]',
+  'APPROVED_ONLY','QUEUED',:'snapshot_hash',1000,'71000000-0000-4000-8000-000000000001');
+INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key)
+VALUES('AGENT_RUN','analysis-worker',jsonb_build_object('agentRunId','71000000-0000-4000-8000-000000000006'),
+  'production-egress-agent');
+SQL
+
+postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"
+GURINE_ENV=production AI_ENABLED=true AI_PROVIDER_ORDER=openai \
+EGRESS_AI_CHANNEL_URL="http://127.0.0.1:$gateway_port/ai" \
+ANALYSIS_DATABASE_URL="postgresql://gurine_analysis_worker:analysis_test@127.0.0.1:${postgres_port}/${database}" \
+ANALYSIS_ONCE=true HOSTNAME="analysis-production-egress" target/debug/gurine-analysis-worker
+
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <<'SQL' >/dev/null
+DO $$
+BEGIN
+  IF (SELECT status FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'SUCCEEDED'
+     OR (SELECT provider FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'openai'
+     OR (SELECT model FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'approved-runtime-v1'
+     OR (SELECT actual_cost FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>17
+     OR (SELECT output_payload->>'status' FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'COMPLETED' THEN
+    RAISE EXCEPTION 'production provider egress run did not complete';
+  END IF;
+  IF NOT EXISTS(SELECT 1 FROM ops.cost_events WHERE job_id=(
+       SELECT id FROM ops.jobs WHERE dedupe_key='production-egress-agent') AND amount=17)
+     OR NOT EXISTS(SELECT 1 FROM ops.agent_suggestions
+       WHERE agent_run_id='71000000-0000-4000-8000-000000000006'
+         AND citation_checks @> '[{"evidence_id":"71000000-0000-4000-8000-000000000004","locator":"page:7"}]') THEN
+    RAISE EXCEPTION 'provider cost or verified citation was not persisted';
+  END IF;
+  IF EXISTS(SELECT 1 FROM ops.jobs WHERE payload::text LIKE '%runtime-openai-key-never-persist%'
+            OR COALESCE(last_error_detail,'') LIKE '%runtime-openai-key-never-persist%')
+     OR EXISTS(SELECT 1 FROM ops.outbox WHERE payload::text LIKE '%runtime-openai-key-never-persist%')
+     OR EXISTS(SELECT 1 FROM ops.agent_runs WHERE COALESCE(output_payload::text,'') LIKE '%runtime-openai-key-never-persist%') THEN
+    RAISE EXCEPTION 'provider credential leaked into durable runtime records';
+  END IF;
+END $$;
+SQL
+
+echo "production analysis to credential-injecting AI egress gateway runtime: PASS"

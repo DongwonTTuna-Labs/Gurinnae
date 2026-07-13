@@ -1,0 +1,3511 @@
+{
+  "acceptAgentSuggestion": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "acknowledgeSourceIncident": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "activateKillSwitch": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "activateRuleVersion": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "addClaim": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "addEvidence": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "approveResponseExcerpt": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "approveSchemaMapping": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "assignCase": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "assignCorrection": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "assignReview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "assignSignal": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "cancelJob": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "completeOidcCallback": {
+    "api": "identity-provider",
+    "status": 303,
+    "mediaType": "",
+    "body": null
+  },
+  "completeStepUpAuthentication": {
+    "api": "identity-provider",
+    "status": 303,
+    "mediaType": "",
+    "body": null
+  },
+  "createAccessRequest": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createAuditExport": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "createAuditExport",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "aggregateId": "00000000-0000-4000-8000-000000000001",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createContactRequest": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createCorrection": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createCorrectionAttachment": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createCorrectionRequest": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "receiptSession": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "createCorrectionRequestDraft": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "session": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "createDatasetExport": {
+    "api": "submission-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createEvidenceRedaction": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createHypothesis": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createResponseAttachmentUpload": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createResponseRequest": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createRetractionDraft": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createReviewSnapshot": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createRuleVersionDraft": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "createSavedView": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "",
+      "acceptedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "createSubscription": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "verificationDispatched": false,
+      "pendingSession": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "deactivateKillSwitch": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "deleteCorrectionAttachment": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "deleteCorrectionRequestDraft": {
+    "api": "submission-api",
+    "status": 204,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "",
+      "acceptedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "deleteResponseAttachment": {
+    "api": "submission-api",
+    "status": 204,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "deleteSavedView": {
+    "api": "control-api",
+    "status": 204,
+    "mediaType": "",
+    "body": null
+  },
+  "disableProviderRouting": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "disableUser": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "downloadCaseReproducibility": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "version": 0
+    }
+  },
+  "downloadContracts": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "version": 0
+    }
+  },
+  "downloadPublicOpenApi": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "version": 0
+    }
+  },
+  "downloadResponseRequest": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "binary": ""
+    }
+  },
+  "downloadSourceRunReport": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "version": 0
+    }
+  },
+  "estimateBackfill": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "sourceId": "",
+        "from": "2026-07-12",
+        "to": "2026-07-12",
+        "estimatedRecords": 0,
+        "estimatedJobs": 0,
+        "estimatedCostKrw": "0",
+        "estimatedDurationSeconds": 0,
+        "dedupeStrategy": "",
+        "downstreamEffects": []
+      },
+      "links": []
+    }
+  },
+  "exchangeCorrectionReceiptToken": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "status": "",
+      "session": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "exchangeResponseAccessToken": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "status": "",
+      "session": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "exchangeResponseReceiptToken": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "status": "",
+      "session": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "exchangeSubscriptionManagementToken": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "status": "",
+      "session": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "exportCostReport": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "version": 0
+    }
+  },
+  "extendKillSwitch": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "finalizeCorrectionAttachment": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "finalizeResponseAttachment": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "getAboutContent": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getAccessibilityStatement": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getAgency": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "",
+      "agencyType": "",
+      "identifiers": [],
+      "coverage": {
+        "dateRange": {
+          "label": ""
+        },
+        "sourceIds": [],
+        "recordCount": 0,
+        "knownGaps": [],
+        "freshness": {
+          "asOf": "2026-07-12T00:00:00Z",
+          "status": "CURRENT"
+        }
+      },
+      "metrics": [],
+      "caseCountsByState": {
+        "total": 0,
+        "publication": {
+          "neverPublished": 0,
+          "publishedAnomaly": 0,
+          "publishedExplained": 0,
+          "officiallyConfirmed": 0,
+          "corrected": 0,
+          "retracted": 0,
+          "temporarilyRestricted": 0
+        },
+        "investigation": {
+          "signalDetected": 0,
+          "triage": 0,
+          "investigating": 0,
+          "awaitingResponse": 0,
+          "editorialReview": 0,
+          "legalReview": 0,
+          "readyToPublish": 0,
+          "closed": 0
+        },
+        "resolution": {
+          "none": 0,
+          "dataError": 0,
+          "duplicate": 0,
+          "explained": 0,
+          "insufficientEvidence": 0,
+          "referredConfidential": 0,
+          "archived": 0
+        }
+      },
+      "recentCases": [],
+      "recentContracts": [],
+      "identityWarnings": [],
+      "freshness": {
+        "asOf": "2026-07-12T00:00:00Z",
+        "status": "CURRENT"
+      }
+    }
+  },
+  "getAgentRun": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "agentType": "",
+        "objective": "",
+        "status": "QUEUED",
+        "evidenceScopeIds": [],
+        "citations": [],
+        "unknowns": []
+      },
+      "links": []
+    }
+  },
+  "getAuditExport": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "status": "QUEUED",
+      "format": "CSV",
+      "scope": "CASE",
+      "from": "2026-07-12T00:00:00Z",
+      "to": "2026-07-12T00:00:00Z",
+      "objectType": "",
+      "objectId": "",
+      "watermarkPolicy": "ACTOR_AND_TIME",
+      "createdAt": "2026-07-12T00:00:00Z",
+      "startedAt": "2026-07-12T00:00:00Z",
+      "completedAt": "2026-07-12T00:00:00Z",
+      "expiresAt": "2026-07-12T00:00:00Z",
+      "rowCount": 0,
+      "contentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "downloadUrl": "https://gurinnae.example/",
+      "failureCode": "",
+      "links": []
+    }
+  },
+  "getBudgetOverview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "summary": {
+          "currency": "",
+          "dailyLimit": "0",
+          "dailyUsed": "0",
+          "monthlyLimit": "0",
+          "monthlyUsed": "0",
+          "status": ""
+        },
+        "providers": [],
+        "dailySeries": [],
+        "topCases": [],
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getCaseReproducibility": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "caseSlug": "",
+      "ruleId": "",
+      "ruleVersion": "",
+      "inputDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "resultDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "formula": "",
+      "roundingPolicy": "",
+      "target": {
+        "id": "",
+        "agencyName": "",
+        "observedAt": "2026-07-12",
+        "unit": "",
+        "unitPrice": {
+          "amount": "0",
+          "currency": "xxx"
+        },
+        "bundleSummary": [],
+        "compatibility": ""
+      },
+      "includedCohort": [],
+      "excludedCohort": [],
+      "result": {
+        "benchmarkType": "",
+        "benchmarkValue": {
+          "amount": "0",
+          "currency": "xxx"
+        },
+        "targetValue": {
+          "amount": "0",
+          "currency": "xxx"
+        },
+        "ratio": "0",
+        "includedCount": 0,
+        "excludedCount": 0,
+        "formula": "",
+        "roundingPolicy": ""
+      },
+      "limitations": []
+    }
+  },
+  "getCaseWorkspaceOverview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "case": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "title": "",
+        "status": "SIGNAL_DETECTED",
+        "priority": "",
+        "legalReviewRequired": false,
+        "version": 0,
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "confirmedFacts": [],
+      "criticalUnknowns": [],
+      "responseStatus": {
+        "requestCount": 0,
+        "sentCount": 0,
+        "submittedCount": 0,
+        "pendingVerificationCount": 0,
+        "blockers": []
+      },
+      "blockers": [],
+      "nextRequiredActions": [],
+      "assignments": [],
+      "activity": [],
+      "saveVersion": 0
+    }
+  },
+  "getContactContent": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getContract": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "contractNumber": "",
+      "title": "",
+      "agency": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "name": "",
+        "entityType": "AGENCY",
+        "href": ""
+      },
+      "status": "",
+      "currency": "",
+      "lineItems": [],
+      "changes": [],
+      "sourceDocuments": [],
+      "normalizationWarnings": [],
+      "relatedCases": []
+    }
+  },
+  "getCorrection": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "caseSlug": "",
+        "sourceRevision": 0,
+        "summary": "",
+        "reason": "",
+        "publishedAt": "2026-07-12T00:00:00Z",
+        "affectedClaims": []
+      },
+      "links": []
+    }
+  },
+  "getCorrectionReceipt": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "receiptToken": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "submittedAt": "2026-07-12T00:00:00Z",
+        "status": "",
+        "nextUpdateExpectation": ""
+      },
+      "links": []
+    }
+  },
+  "getCorrectionRequestDraft": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "draftToken": "",
+      "version": 0,
+      "requestedChanges": [],
+      "expiresAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "getCorrectionRequestDraftPreview": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "draft": {
+        "draftToken": "",
+        "version": 0,
+        "requestedChanges": [],
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "attachments": [],
+      "warnings": [],
+      "submissionDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "getCorrectionWorkspace": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "correction": {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "caseId": "00000000-0000-4000-8000-000000000001",
+          "caseTitle": "",
+          "status": "",
+          "summary": "",
+          "submittedAt": "2026-07-12T00:00:00Z"
+        },
+        "sourceRevision": {
+          "case": {
+            "slug": "",
+            "title": "",
+            "publicState": "NEVER_PUBLISHED",
+            "summary": "",
+            "revision": 0,
+            "updatedAt": "2026-07-12T00:00:00Z",
+            "href": ""
+          },
+          "confirmedFacts": [],
+          "criticalUnknowns": [],
+          "partyResponses": [],
+          "signals": [],
+          "counterEvidence": [],
+          "claims": [],
+          "evidence": [],
+          "timeline": [],
+          "corrections": [],
+          "freshness": {
+            "asOf": "2026-07-12T00:00:00Z",
+            "status": "CURRENT"
+          },
+          "limitations": []
+        },
+        "affectedClaims": [],
+        "requests": [],
+        "gateResults": [],
+        "version": 0
+      },
+      "links": []
+    }
+  },
+  "getCoverage": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "asOf": "2026-07-12T00:00:00Z",
+      "sources": [],
+      "dateRange": {
+        "label": ""
+      },
+      "recordCounts": {
+        "sourceDocuments": 0,
+        "contracts": 0,
+        "contractLineItems": 0,
+        "agencies": 0,
+        "suppliers": 0,
+        "publicCases": 0
+      },
+      "knownGaps": [],
+      "methodologyVersion": ""
+    }
+  },
+  "getCurrentAccount": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "user": {
+          "actorType": ""
+        },
+        "email": "",
+        "roles": [],
+        "capabilities": [],
+        "sessionExpiresAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getCurrentUserCapabilities": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "userId": "00000000-0000-4000-8000-000000000001",
+        "roles": [],
+        "capabilities": [],
+        "evaluatedAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getEditorialPolicy": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getEvidenceWorkspace": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "evidence": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "evidenceType": "",
+        "title": "",
+        "sourceLocator": "",
+        "contentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "classification": "",
+        "verificationStatus": "PENDING",
+        "version": 0
+      },
+      "sourceContext": {
+        "sourceId": ""
+      },
+      "linkedClaims": [],
+      "verification": {
+        "status": "",
+        "checks": []
+      },
+      "redactions": [],
+      "provenance": {
+        "sourceDocumentId": "00000000-0000-4000-8000-000000000001",
+        "sourceLocator": "",
+        "parserVersion": "",
+        "normalizationVersion": "",
+        "transformations": []
+      },
+      "blockers": []
+    }
+  },
+  "getFundingContent": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getGovernanceContent": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getInternalCase": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "title": "",
+        "status": "SIGNAL_DETECTED",
+        "priority": "",
+        "legalReviewRequired": false,
+        "version": 0,
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getInternalDashboard": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "incidents": [],
+      "myTasks": [],
+      "overdueTasks": [],
+      "reviewQueue": [],
+      "sourceHealth": [],
+      "jobHealth": {
+        "queues": [],
+        "runningWorkers": 0,
+        "failedLastHour": 0,
+        "deadLetterTotal": 0,
+        "leaseExpiryIncidents": 0
+      },
+      "budget": {
+        "currency": "",
+        "dailyLimit": "0",
+        "dailyUsed": "0",
+        "monthlyLimit": "0",
+        "monthlyUsed": "0",
+        "status": ""
+      },
+      "notifications": []
+    }
+  },
+  "getInternalRuleVersion": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "ruleId": "",
+        "version": "",
+        "status": "",
+        "name": "",
+        "description": "",
+        "configuration": {
+          "thresholds": [],
+          "requiredFields": [],
+          "blockingConditions": []
+        },
+        "codeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "createdAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getInternalSource": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "sourceId": "",
+        "displayName": "",
+        "enabled": false,
+        "status": "",
+        "schedule": "",
+        "freshness": {
+          "asOf": "2026-07-12T00:00:00Z",
+          "status": "CURRENT"
+        },
+        "incidents": [],
+        "version": 0
+      },
+      "links": []
+    }
+  },
+  "getJob": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "jobType": "",
+        "queue": "",
+        "status": "QUEUED",
+        "priority": 0,
+        "runAfter": "2026-07-12T00:00:00Z",
+        "fencingToken": 0,
+        "attemptCount": 0,
+        "maxAttempts": 0,
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getMethodologyOverview": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getOperationsOverview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "systemStatus": "",
+      "services": [],
+      "queues": [],
+      "sources": [],
+      "incidents": [],
+      "telemetryGaps": [],
+      "recentActions": []
+    }
+  },
+  "getPrivacyPolicy": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getPublicApiDocumentation": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getPublicCase": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "slug": "",
+      "title": "",
+      "publicState": "",
+      "revision": 0,
+      "publishedAt": "2026-07-12T00:00:00Z",
+      "updatedAt": "2026-07-12T00:00:00Z",
+      "summary": "",
+      "confirmedFacts": [],
+      "criticalUnknowns": [],
+      "partyResponses": [],
+      "signals": [],
+      "counterEvidence": [],
+      "claims": [],
+      "evidence": [],
+      "timeline": [],
+      "corrections": [],
+      "freshness": {
+        "asOf": "2026-07-12T00:00:00Z",
+        "status": "CURRENT"
+      },
+      "limitations": [],
+      "seo": {
+        "title": "",
+        "description": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
+    }
+  },
+  "getPublicCaseRevision": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "slug": "",
+      "revision": 0,
+      "isLatest": false,
+      "snapshotHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "publishedAt": "2026-07-12T00:00:00Z",
+      "content": {
+        "case": {
+          "slug": "",
+          "title": "",
+          "publicState": "NEVER_PUBLISHED",
+          "summary": "",
+          "revision": 0,
+          "updatedAt": "2026-07-12T00:00:00Z",
+          "href": ""
+        },
+        "confirmedFacts": [],
+        "criticalUnknowns": [],
+        "partyResponses": [],
+        "signals": [],
+        "counterEvidence": [],
+        "claims": [],
+        "evidence": [],
+        "timeline": [],
+        "corrections": [],
+        "freshness": {
+          "asOf": "2026-07-12T00:00:00Z",
+          "status": "CURRENT"
+        },
+        "limitations": []
+      },
+      "diffFromPrevious": []
+    }
+  },
+  "getPublicSystemStatus": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "status": "operational",
+      "asOf": "2026-07-12T00:00:00Z",
+      "affectedCapabilities": [],
+      "sourceStatus": []
+    }
+  },
+  "getPublicationPreview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "previewHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "caseId": "00000000-0000-4000-8000-000000000001",
+      "snapshotId": "00000000-0000-4000-8000-000000000001",
+      "publicPayload": {
+        "case": {
+          "slug": "",
+          "title": "",
+          "publicState": "NEVER_PUBLISHED",
+          "summary": "",
+          "revision": 0,
+          "updatedAt": "2026-07-12T00:00:00Z",
+          "href": ""
+        },
+        "confirmedFacts": [],
+        "criticalUnknowns": [],
+        "partyResponses": [],
+        "signals": [],
+        "counterEvidence": [],
+        "claims": [],
+        "evidence": [],
+        "timeline": [],
+        "corrections": [],
+        "freshness": {
+          "asOf": "2026-07-12T00:00:00Z",
+          "status": "CURRENT"
+        },
+        "limitations": []
+      },
+      "validation": [],
+      "renderedRoutes": [],
+      "expiresAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "getPublicationReceipt": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "publicationId": "00000000-0000-4000-8000-000000000001",
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "revision": 0,
+        "state": "",
+        "payloadSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "publishedAt": "2026-07-12T00:00:00Z",
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "publicUrl": ""
+      },
+      "links": []
+    }
+  },
+  "getPublishConfirmation": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "snapshotId": "00000000-0000-4000-8000-000000000001",
+        "previewHash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "currentCaseVersion": 0,
+        "requiredReauth": false,
+        "impactSummary": [],
+        "publicUrls": []
+      },
+      "links": []
+    }
+  },
+  "getResponseAccessStatus": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "status": "",
+        "requiresEmailProof": false
+      },
+      "links": []
+    }
+  },
+  "getResponseDraft": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "version": 0,
+      "answers": [],
+      "attachments": [],
+      "publicationConsent": {
+        "body": false,
+        "attachments": [],
+        "redactionAcknowledged": false,
+        "scopeExplanation": "",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "expiresAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "getResponseReceipt": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "receiptToken": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "submissionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "submittedAt": "2026-07-12T00:00:00Z",
+        "status": "",
+        "retentionNotice": ""
+      },
+      "links": []
+    }
+  },
+  "getResponseRequest": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "requestingOrganization": "",
+      "casePublicTitle": "",
+      "partyName": "",
+      "questions": [],
+      "dueAt": "2026-07-12T00:00:00Z",
+      "publicationScope": {
+        "body": false,
+        "attachments": [],
+        "redactionAcknowledged": false,
+        "scopeExplanation": "",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "attachmentsPolicy": {
+        "maxBytes": 0,
+        "allowedMediaTypes": [],
+        "maxCount": 0,
+        "scanRequired": false,
+        "retentionDays": 0
+      },
+      "status": "",
+      "contact": {
+        "email": "",
+        "officeHours": "",
+        "expectedResponseDays": 0
+      }
+    }
+  },
+  "getResponseRequestComposer": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "eligibleParties": [],
+        "suggestedQuestions": [],
+        "defaultDueAt": "2026-07-12T00:00:00Z",
+        "defaultPublicationScope": {
+          "body": false,
+          "attachments": [],
+          "redactionAcknowledged": false,
+          "scopeExplanation": "",
+          "updatedAt": "2026-07-12T00:00:00Z"
+        },
+        "sendingConstraints": []
+      },
+      "links": []
+    }
+  },
+  "getResponseSubmissionPreview": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "request": {
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "casePublicTitle": "",
+        "partyName": "",
+        "status": "",
+        "dueAt": "2026-07-12T00:00:00Z",
+        "questionCount": 0
+      },
+      "answers": [],
+      "attachments": [],
+      "publicationConsent": {
+        "body": false,
+        "attachments": [],
+        "redactionAcknowledged": false,
+        "scopeExplanation": "",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "warnings": [],
+      "submissionDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "getReviewReadiness": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "caseVersion": 0,
+        "gateResults": [],
+        "blockers": [],
+        "ready": false,
+        "evaluatedAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getReviewSnapshot": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "snapshotId": "00000000-0000-4000-8000-000000000001",
+      "caseId": "00000000-0000-4000-8000-000000000001",
+      "caseVersion": 0,
+      "snapshotHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "createdAt": "2026-07-12T00:00:00Z",
+      "createdBy": {
+        "actorType": ""
+      },
+      "claims": [],
+      "evidence": [],
+      "responses": [],
+      "automatedGates": [],
+      "independence": {
+        "status": "",
+        "authorIds": [],
+        "reviewerId": "00000000-0000-4000-8000-000000000001",
+        "conflicts": [],
+        "checkedAt": "2026-07-12T00:00:00Z"
+      },
+      "unresolvedBlockers": [],
+      "diffFromCurrent": []
+    }
+  },
+  "getRule": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "ruleId": "",
+        "name": "",
+        "activeVersion": "",
+        "description": "",
+        "requiredFields": [],
+        "exclusions": [],
+        "limitations": [],
+        "formula": "",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getRuleActivationReadiness": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "ruleId": "",
+        "version": "",
+        "evaluationDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "gateResults": [],
+        "proposer": {
+          "actorType": ""
+        },
+        "approverConflict": false,
+        "ready": false
+      },
+      "links": []
+    }
+  },
+  "getRuleEvaluation": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "ruleId": "",
+        "version": "",
+        "datasetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "caseCount": 0,
+        "signalCount": 0,
+        "falsePositiveCount": 0,
+        "regressions": [],
+        "costEstimate": {
+          "amount": "0",
+          "currency": "xxx"
+        },
+        "completedAt": "2026-07-12T00:00:00Z"
+      },
+      "links": []
+    }
+  },
+  "getSchemaDrift": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "sourceId": "",
+        "detectedAt": "2026-07-12T00:00:00Z",
+        "status": "",
+        "addedFields": [],
+        "removedFields": [],
+        "changedFields": [],
+        "sampleDocumentIds": [],
+        "impact": ""
+      },
+      "links": []
+    }
+  },
+  "getSecurityManagementRedirect": {
+    "api": "identity-provider",
+    "status": 303,
+    "mediaType": "",
+    "body": null
+  },
+  "getSignalTriageView": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "signal": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "rule": {
+          "ruleId": "",
+          "ruleVersion": "",
+          "name": "",
+          "purpose": "",
+          "formula": "",
+          "thresholds": [],
+          "requiredFields": [],
+          "blockingConditions": []
+        },
+        "targetType": "",
+        "targetId": "00000000-0000-4000-8000-000000000001",
+        "severity": "",
+        "status": "NEW",
+        "explanation": "",
+        "blockers": [],
+        "version": 0,
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "triggerExplanation": {
+        "ruleId": "",
+        "ruleVersion": "",
+        "name": "",
+        "purpose": "",
+        "formula": "",
+        "thresholds": [],
+        "requiredFields": [],
+        "blockingConditions": []
+      },
+      "dataQuality": {
+        "status": "",
+        "completeness": "0",
+        "unitCompatibility": "",
+        "vatBasis": "",
+        "bundleStatus": "",
+        "warnings": [],
+        "blockers": []
+      },
+      "targetRecord": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "title": "",
+        "agency": {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "",
+          "entityType": "AGENCY",
+          "href": ""
+        },
+        "status": "ANNOUNCED",
+        "lineItems": [],
+        "changes": [],
+        "sourceDocuments": [],
+        "qualityWarnings": []
+      },
+      "duplicates": [],
+      "blockers": [],
+      "recommendedActions": [],
+      "auditSummary": []
+    }
+  },
+  "getSource": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "sourceId": "",
+        "displayName": "",
+        "owner": "",
+        "accessType": "",
+        "status": "",
+        "coverage": {
+          "dateRange": {
+            "label": ""
+          },
+          "sourceIds": [],
+          "recordCount": 0,
+          "knownGaps": [],
+          "freshness": {
+            "asOf": "2026-07-12T00:00:00Z",
+            "status": "CURRENT"
+          }
+        },
+        "freshness": {
+          "asOf": "2026-07-12T00:00:00Z",
+          "status": "CURRENT"
+        },
+        "knownIssues": []
+      },
+      "links": []
+    }
+  },
+  "getSourceRun": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "sourceId": "",
+        "mode": "",
+        "status": "QUEUED",
+        "recordsSeen": 0,
+        "recordsChanged": 0
+      },
+      "links": []
+    }
+  },
+  "getSubscription": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "managementToken": "",
+        "emailMasked": "",
+        "topics": [],
+        "frequency": "",
+        "locale": "",
+        "status": ""
+      },
+      "links": []
+    }
+  },
+  "getSupplier": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "",
+      "identifiers": [],
+      "coverage": {
+        "dateRange": {
+          "label": ""
+        },
+        "sourceIds": [],
+        "recordCount": 0,
+        "knownGaps": [],
+        "freshness": {
+          "asOf": "2026-07-12T00:00:00Z",
+          "status": "CURRENT"
+        }
+      },
+      "metrics": [],
+      "caseCountsByState": {
+        "total": 0,
+        "publication": {
+          "neverPublished": 0,
+          "publishedAnomaly": 0,
+          "publishedExplained": 0,
+          "officiallyConfirmed": 0,
+          "corrected": 0,
+          "retracted": 0,
+          "temporarilyRestricted": 0
+        },
+        "investigation": {
+          "signalDetected": 0,
+          "triage": 0,
+          "investigating": 0,
+          "awaitingResponse": 0,
+          "editorialReview": 0,
+          "legalReview": 0,
+          "readyToPublish": 0,
+          "closed": 0
+        },
+        "resolution": {
+          "none": 0,
+          "dataError": 0,
+          "duplicate": 0,
+          "explained": 0,
+          "insufficientEvidence": 0,
+          "referredConfidential": 0,
+          "archived": 0
+        }
+      },
+      "recentCases": [],
+      "recentContracts": [],
+      "identityWarnings": [],
+      "freshness": {
+        "asOf": "2026-07-12T00:00:00Z",
+        "status": "CURRENT"
+      }
+    }
+  },
+  "getTerms": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": {
+        "id": "",
+        "status": "",
+        "version": 0
+      },
+      "status": "",
+      "data": {
+        "version": "",
+        "title": "",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "sections": [],
+        "sourceLinks": []
+      },
+      "links": []
+    }
+  },
+  "getUserAccessDetail": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "",
+      "status": "",
+      "data": {
+        "user": {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "email": "",
+          "displayName": "",
+          "status": "",
+          "roles": [],
+          "updatedAt": "2026-07-12T00:00:00Z"
+        },
+        "roleGrants": [],
+        "effectiveCapabilities": [],
+        "activeSessions": [],
+        "accessReviewFindings": []
+      },
+      "links": []
+    }
+  },
+  "grantRole": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "inviteUser": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "linkEvidence": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "linkSignalToCase": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "listAgencies": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "q": "",
+        "agencyType": [],
+        "jurisdiction": ""
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listAgencyCases": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {},
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listAgencyContracts": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {},
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseAgentRuns": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "status": [],
+        "agentType": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseAuditEvents": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "action": [],
+        "actorId": "00000000-0000-4000-8000-000000000001",
+        "from": "2026-07-12T00:00:00Z",
+        "to": "2026-07-12T00:00:00Z"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseClaims": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "validationStatus": [],
+        "claimType": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseCorrections": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "status": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseEvidence": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "verificationStatus": [],
+        "classification": [],
+        "evidenceType": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseHypotheses": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "status": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseResponses": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "editorialStatus": [],
+        "partyType": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseRevisions": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {},
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseSignals": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "signalStatus": [],
+        "severity": [],
+        "ruleId": ""
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCaseTimeline": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "eventType": [],
+        "actorId": "00000000-0000-4000-8000-000000000001",
+        "from": "2026-07-12T00:00:00Z",
+        "to": "2026-07-12T00:00:00Z"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listContractChanges": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {},
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listContracts": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "q": "",
+        "agencyId": "00000000-0000-4000-8000-000000000001",
+        "supplierId": "00000000-0000-4000-8000-000000000001",
+        "contractStatus": [],
+        "procurementMethod": [],
+        "signedFrom": "2026-07-12",
+        "signedTo": "2026-07-12",
+        "amountMin": "0",
+        "amountMax": "0"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCorrectionQueue": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "status": [],
+        "assigneeUserId": "00000000-0000-4000-8000-000000000001",
+        "overdueOnly": false
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listCorrections": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "publicationState": [],
+        "publishedFrom": "2026-07-12",
+        "publishedTo": "2026-07-12"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listInternalCases": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "investigationState": [],
+        "publicationState": [],
+        "resolutionCode": [],
+        "priority": [],
+        "assigneeUserId": "00000000-0000-4000-8000-000000000001"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listInternalNotifications": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "unreadOnly": false,
+        "notificationType": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listInternalRules": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "status": [],
+        "ruleFamily": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listInternalSources": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "enabled": false,
+        "status": [],
+        "connectorType": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listJobs": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "queue": [],
+        "jobStatus": [],
+        "jobType": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listKillSwitches": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "state": [],
+        "scope": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listMyTasks": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "taskStatus": [],
+        "taskType": [],
+        "overdueOnly": false
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listProviders": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "enabled": false,
+        "providerType": [],
+        "routingStatus": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listPublicCases": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "publicationState": [],
+        "agencyId": "00000000-0000-4000-8000-000000000001",
+        "supplierId": "00000000-0000-4000-8000-000000000001",
+        "ruleId": "",
+        "publishedFrom": "2026-07-12",
+        "publishedTo": "2026-07-12",
+        "hasResponse": false,
+        "hasCorrection": false
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listPublicDatasets": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "format": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listReviewQueue": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "reviewStatus": [],
+        "reviewType": [],
+        "assigneeUserId": "00000000-0000-4000-8000-000000000001",
+        "overdueOnly": false
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listRoleDefinitions": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "riskLevel": [],
+        "systemRole": false
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listRuleCases": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {},
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listRules": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "status": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listSavedViews": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listSignals": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "signalStatus": [],
+        "severity": [],
+        "ruleId": "",
+        "assignedUserId": "00000000-0000-4000-8000-000000000001"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listSourceRuns": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "sourceId": "",
+        "status": [],
+        "mode": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listSourceStatus": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "status": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listSupplierCases": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {},
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listSupplierContracts": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {},
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listSuppliers": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "q": "",
+        "businessStatus": [],
+        "identityStatus": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listTransparencyReports": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "periodFrom": "2026-07-12",
+        "periodTo": "2026-07-12"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listUsers": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "status": [],
+        "roleId": "00000000-0000-4000-8000-000000000001",
+        "q": ""
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "logoutInternalSession": {
+    "api": "identity-provider",
+    "status": 204,
+    "mediaType": "",
+    "body": null
+  },
+  "markNotificationRead": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "pauseBackfill": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "pauseJobQueue": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "pauseSource": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "placeLegalHold": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "placeLegalHold",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "aggregateId": "00000000-0000-4000-8000-000000000001",
+      "aggregateVersion": 1,
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "placeTemporaryRestriction": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "previewPublication": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "proposeRoleDefinitionChange": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "publishCase": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "quarantineJob": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "reassignTask": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "rejectAgentSuggestion": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "rejectSchemaMapping": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "requestResponseExtension": {
+    "api": "submission-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "resolveCorrectionRequest": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "retryJob": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "retryJobs": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "retrySourceRun": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "revokeOwnSession": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "revokeRole": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "revokeUserSessions": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "rollbackRuleVersion": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "runRuleEvaluation": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "saveCorrectionRequestDraft": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "",
+      "acceptedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "saveResponseDraft": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "saveResponseRequestDraft": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "scheduleRuleActivation": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "searchAuditEvents": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "q": "",
+        "action": [],
+        "actorId": "00000000-0000-4000-8000-000000000001",
+        "objectType": [],
+        "outcome": [],
+        "from": "2026-07-12T00:00:00Z",
+        "to": "2026-07-12T00:00:00Z"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "searchInternalRecords": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "q": "",
+        "types": [],
+        "status": []
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "searchPublicRecords": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "q": "",
+        "types": [],
+        "publicationState": [],
+        "dateFrom": "2026-07-12",
+        "dateTo": "2026-07-12"
+      },
+      "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "startAccessReview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "startAgentRun": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "startBackfill": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "startOidcLogin": {
+    "api": "identity-provider",
+    "status": 303,
+    "mediaType": "",
+    "body": null
+  },
+  "startRuleShadow": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "startSourceRun": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "startStepUpAuthentication": {
+    "api": "identity-provider",
+    "status": 303,
+    "mediaType": "",
+    "body": null
+  },
+  "submitResponse": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "receiptSession": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "submitReview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "testProviderConnection": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "transitionCase": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "triageCorrection": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "triageSignal": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "unlinkSignalFromCase": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "unsubscribe": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "updateBudgetLimit": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "updateClaim": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "updateCorrectionDraft": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "updateEvidence": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "updateHypothesis": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "updateSavedView": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "",
+      "acceptedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "updateSubscription": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "validateClaims": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "verifyAuditIntegrity": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "verifyEvidence": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "verifyResponseAccess": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "",
+      "remainingAttempts": 0,
+      "session": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "verifySubscription": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "subscriptionId": "00000000-0000-4000-8000-000000000001",
+      "status": "",
+      "session": {
+        "opaqueSessionToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "sessionKind": "RESPONSE_PENDING",
+        "scopeId": "00000000-0000-4000-8000-000000000001",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "version": 1
+      }
+    }
+  },
+  "createLoginTransaction": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "transactionCookieValue": "",
+      "authorizationUrl": "",
+      "expiresAt": "2026-07-12T00:00:00Z",
+      "sameSite": "Lax",
+      "httpOnly": true,
+      "secure": false,
+      "path": "/auth/callback",
+      "domainMode": "HOST_ONLY"
+    }
+  },
+  "consumeLoginCallback": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "opaqueSessionToken": "",
+      "csrfToken": "",
+      "returnTo": "",
+      "expiresAt": "2026-07-12T00:00:00Z",
+      "actor": {
+        "userId": "00000000-0000-4000-8000-000000000001",
+        "email": "example@gurinnae.example",
+        "displayName": "",
+        "roleCodes": [],
+        "capabilities": []
+      },
+      "sessionCookiePath": "/",
+      "sessionCookieDomainMode": "HOST_ONLY",
+      "sessionCookieSameSite": "Lax",
+      "csrfStorage": "SEALED_BFF_SESSION_SYNCHRONIZER"
+    }
+  },
+  "createStepUpTransaction": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "transactionCookieValue": "",
+      "authorizationUrl": "",
+      "expiresAt": "2026-07-12T00:00:00Z",
+      "sameSite": "Lax",
+      "httpOnly": true,
+      "secure": false,
+      "path": "/auth/step-up/callback",
+      "domainMode": "HOST_ONLY"
+    }
+  },
+  "consumeStepUpCallback": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "stepUpAuthorizationId": "00000000-0000-4000-8000-000000000001",
+      "stepUpAuthorizationToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "actionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "idempotencyKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "returnTo": "",
+      "expiresAt": "2026-07-12T00:00:00Z",
+      "maxAssertionIssues": 3,
+      "csrfToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "authorizationCookiePath": "/internal",
+      "authorizationCookieDomainMode": "HOST_ONLY",
+      "authorizationCookieSameSite": "Strict"
+    }
+  },
+  "resolveInternalSession": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "actor": {
+        "userId": "00000000-0000-4000-8000-000000000001",
+        "email": "example@gurinnae.example",
+        "displayName": "",
+        "roleCodes": [],
+        "capabilities": []
+      },
+      "sessionExpiresAt": "2026-07-12T00:00:00Z",
+      "stepUpAt": "2026-07-12T00:00:00Z",
+      "csrfRotatedAt": "2026-07-12T00:00:00Z",
+      "csrfTokenReturned": false
+    }
+  },
+  "revokeInternalSession": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "revoked": true,
+      "revokedAt": "2026-07-12T00:00:00Z",
+      "auditEventId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "getSecurityManagementRedirectInternal": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "redirectUrl": "",
+      "expiresAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "issueActorAssertion": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "actor": {
+        "userId": "00000000-0000-4000-8000-000000000001",
+        "email": "example@gurinnae.example",
+        "displayName": "",
+        "roleCodes": [],
+        "capabilities": []
+      },
+      "actorAssertion": "gurine-aa-v1.0000000000000000.e30.0000000000000000000000000000000000000000000",
+      "assertionExpiresAt": "2026-07-12T00:00:00Z",
+      "stepUpAuthorizationId": "00000000-0000-4000-8000-000000000001",
+      "remainingAssertionIssues": 0,
+      "assuranceLevel": "ACTIVE_SESSION"
+    }
+  },
+  "closeStepUpAuthorization": {
+    "api": "identity-service-internal",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "closed": false,
+      "closedAt": "2026-07-12T00:00:00Z"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "specificationVersion": "13.0.0",
+  "name": "service-assertion-positive-v1",
+  "testOnlyKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "kid": "630dcd2966c43366",
+  "payload": {
+    "v": 1,
+    "typ": "service",
+    "iss": "review-console",
+    "aud": "identity-api",
+    "jti": "11111111-1111-4111-8111-111111111111",
+    "iat": 1783814400,
+    "exp": 1783814430,
+    "method": "POST",
+    "path": "/internal/v1/sessions/resolve",
+    "querySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bodySha256": "2483d34c15e4c20ed12e4153b81b40a745dc457840aaf634bdbd0f950fd70638",
+    "contentType": "application/json"
+  },
+  "canonicalPayloadAscii": "{\"aud\":\"identity-api\",\"bodySha256\":\"2483d34c15e4c20ed12e4153b81b40a745dc457840aaf634bdbd0f950fd70638\",\"contentType\":\"application/json\",\"exp\":1783814430,\"iat\":1783814400,\"iss\":\"review-console\",\"jti\":\"11111111-1111-4111-8111-111111111111\",\"method\":\"POST\",\"path\":\"/internal/v1/sessions/resolve\",\"querySha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"typ\":\"service\",\"v\":1}",
+  "signingInputAscii": "gurine-sa-v1.630dcd2966c43366.eyJhdWQiOiJpZGVudGl0eS1hcGkiLCJib2R5U2hhMjU2IjoiMjQ4M2QzNGMxNWU0YzIwZWQxMmU0MTUzYjgxYjQwYTc0NWRjNDU3ODQwYWFmNjM0YmRiZDBmOTUwZmQ3MDYzOCIsImNvbnRlbnRUeXBlIjoiYXBwbGljYXRpb24vanNvbiIsImV4cCI6MTc4MzgxNDQzMCwiaWF0IjoxNzgzODE0NDAwLCJpc3MiOiJyZXZpZXctY29uc29sZSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsIm1ldGhvZCI6IlBPU1QiLCJwYXRoIjoiL2ludGVybmFsL3YxL3Nlc3Npb25zL3Jlc29sdmUiLCJxdWVyeVNoYTI1NiI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJ0eXAiOiJzZXJ2aWNlIiwidiI6MX0",
+  "token": "gurine-sa-v1.630dcd2966c43366.eyJhdWQiOiJpZGVudGl0eS1hcGkiLCJib2R5U2hhMjU2IjoiMjQ4M2QzNGMxNWU0YzIwZWQxMmU0MTUzYjgxYjQwYTc0NWRjNDU3ODQwYWFmNjM0YmRiZDBmOTUwZmQ3MDYzOCIsImNvbnRlbnRUeXBlIjoiYXBwbGljYXRpb24vanNvbiIsImV4cCI6MTc4MzgxNDQzMCwiaWF0IjoxNzgzODE0NDAwLCJpc3MiOiJyZXZpZXctY29uc29sZSIsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsIm1ldGhvZCI6IlBPU1QiLCJwYXRoIjoiL2ludGVybmFsL3YxL3Nlc3Npb25zL3Jlc29sdmUiLCJxdWVyeVNoYTI1NiI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJ0eXAiOiJzZXJ2aWNlIiwidiI6MX0.5GjGEa4gNou_yG0qr68vBXgrS1xfiUWJh4rKfUpjp2o",
+  "expected": "PASS"
+}

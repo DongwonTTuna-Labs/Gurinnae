@@ -1,0 +1,22 @@
+name: container
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  production-images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1634ceea73d27597364c9af683
+      - name: Build every first-party image
+        run: bash scripts/build-first-party-images.sh
+      - name: Verify production topology and runtime properties
+        run: bash scripts/test-production-stack.sh
+      - name: Verify backup and clean restore
+        run: bash scripts/test-backup-restore.sh

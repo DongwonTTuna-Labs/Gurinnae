@@ -1,0 +1,25 @@
+{
+  "event_id": "event:090",
+  "event_type": "source.schema_drift_detected.v1",
+  "event_version": 1,
+  "occurred_at": "2026-07-11T00:00:00Z",
+  "aggregate_type": "SYNTHETIC",
+  "aggregate_id": "aggregate:090",
+  "aggregate_version": 1,
+  "trace_id": "synthetic-trace-090",
+  "causation_id": null,
+  "correlation_id": null,
+  "actor": null,
+  "payload": {
+    "fingerprint_after": "synthetic",
+    "schema_drift_id": "synthetic",
+    "source_id": "synthetic"
+  },
+  "recorded_at": "2026-07-11T00:00:00Z",
+  "idempotency_key": "synthetic-idempotency-090",
+  "producer": {
+    "service": "synthetic-validator",
+    "instance_id": "spec"
+  },
+  "classification": "INTERNAL"
+}

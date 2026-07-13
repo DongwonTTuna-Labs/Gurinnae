@@ -1,0 +1,77 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "AUTH-002",
+  title: "MFA·재인증",
+  route: "/auth/verify",
+  archetype: "AUTH_SYSTEM",
+  sections: [
+    {
+      order: 1,
+      id: "reason",
+      title: "재인증 이유",
+      component: "StructuredContentSection",
+      purpose: "대상 action·만료.",
+      test_id: "auth_002__section__reason",
+    },
+    {
+      order: 2,
+      id: "methods",
+      title: "인증 방법",
+      component: "StructuredContentSection",
+      purpose: "WebAuthn/MFA.",
+      test_id: "auth_002__section__methods",
+    },
+    {
+      order: 3,
+      id: "recovery",
+      title: "복구",
+      component: "StructuredContentSection",
+      purpose: "지원·fallback.",
+      test_id: "auth_002__section__recovery",
+    },
+  ],
+  actions: [
+    {
+      id: "verify",
+      label: "추가 인증 시작",
+      capability: "none",
+      operation_id: "startStepUpAuthentication",
+      interaction_kind: "COMMAND",
+      assurance_level: "ACTIVE_SESSION",
+      step_up_required: false,
+      confirmation_required: false,
+    },
+    {
+      id: "cancel",
+      label: "작업으로 돌아가기",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: [
+    "loading",
+    "success",
+    "empty",
+    "partial",
+    "stale",
+    "error",
+    "unauthorized",
+    "forbidden",
+    "conflict",
+  ],
+  dataOperations: [
+    {
+      operation_id: "startStepUpAuthentication",
+      api: "identity-provider",
+      method: "POST",
+      path: "/auth/step-up/start",
+      blocking: true,
+      response_schema: "startStepUpAuthenticationReceipt",
+    },
+  ],
+} as const satisfies ScreenViewModel;

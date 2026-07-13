@@ -1,0 +1,26 @@
+name: release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  source-artifact:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1634ceea73d27597364c9af683
+      - name: Run atomic final gate
+        run: make verify-final
+      - name: Build and independently verify source archive
+        run: make source-archive clean-extraction-verify
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: gurine-source-${{ github.ref_name }}
+          path: artifacts/gurine-source-*.tar.gz
+          if-no-files-found: error
+          retention-days: 30

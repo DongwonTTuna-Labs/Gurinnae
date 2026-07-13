@@ -1,0 +1,75 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "RSP-008",
+  title: "요청에 접근할 수 없음",
+  route: "/respond/unavailable",
+  archetype: "AUTH_SYSTEM",
+  sections: [
+    {
+      order: 1,
+      id: "status",
+      title: "접근 상태",
+      component: "StatusAndRevisionHeader",
+      purpose: "과도한 token 정보 없이.",
+      test_id: "rsp_008__section__status",
+    },
+    {
+      order: 2,
+      id: "impact",
+      title: "영향",
+      component: "StructuredContentSection",
+      purpose: "draft/submit 여부.",
+      test_id: "rsp_008__section__impact",
+    },
+    {
+      order: 3,
+      id: "actions",
+      title: "다음 행동",
+      component: "StructuredContentSection",
+      purpose: "새 링크 요청·담당자.",
+      test_id: "rsp_008__section__actions",
+    },
+    {
+      order: 4,
+      id: "security",
+      title: "보안",
+      component: "StructuredContentSection",
+      purpose: "의심 링크 신고.",
+      test_id: "rsp_008__section__security",
+    },
+  ],
+  actions: [
+    {
+      id: "request-new-link",
+      label: "새 링크 요청 안내",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "contact-owner",
+      label: "담당자 문의",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "getResponseAccessStatus",
+      api: "submission-api",
+      method: "GET",
+      path: "/v1/response-session/access-status",
+      blocking: true,
+      response_schema: "ResponseAccessStatusResponse",
+    },
+  ],
+} as const satisfies ScreenViewModel;

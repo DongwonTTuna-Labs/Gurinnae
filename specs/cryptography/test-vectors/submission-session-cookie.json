@@ -1,0 +1,20 @@
+{
+  "name": "submission-session-cookie-positive",
+  "testOnlyKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "kid": "630dcd2966c43366",
+  "nonceHex": "101112131415161718191a1b",
+  "aadHex": "677572696e652d7373632d763100677572696e655f726573706f6e73655f73657373696f6e0068747470733a2f2f726573706f6e642e677572696e652e696e76616c6964002f726573706f6e64004c6178",
+  "plaintextUtf8": "{\"absoluteExpiresAt\":1783875600,\"csrfRotatedAt\":1783832400,\"csrfToken\":\"test-only-submission-csrf-token-43-characters-0000000\",\"issuedAt\":1783832400,\"opaqueSessionToken\":\"test-only-submission-session-token-43-characters-000000\",\"sessionKind\":\"RESPONSE_ACTIVE\",\"typ\":\"submission-session\",\"v\":1}",
+  "ciphertextAndTagHex": "25e824657576aa1c6fa3761ba9c2c7100927810bbef3e14cb1ab8038da8c93cadee9f30bbfd6d4a814e19e88c4d921e6213f683e8c53165dbba7abffc89840a6072afea47f86e761c1480152d9bccaff4cda7449d53a6af4bf50eed7fdfe6505c48d1525c47bfcd5593ba4f502c81ea693438444c6bd609f212c293dd0c40a068818ffa80c6a5f9407f3b0ea820872cb0eec0ee6986246adf5b18ba50181f8f6759df4c2b7dafd5d0dde93a4b2b8a8a7d9d22b31cfa4a0fb8b406f2e6053446f28303ffa410887ff2397ea14221911f2e3cd6978f37cc1a891102e776b73e54306e167e833a1687c46c68976ba0002bdcefbead8f4d2eec7a6733f3fbba2060771cdb67f0b2fb50200da3567748538a9fe42f41ccbd98941eea30a4d4e15dcc36a06be365142616b1909a8ed4046d9b069d564a48f",
+  "token": "gurine-ssc-v1.630dcd2966c43366.EBESExQVFhcYGRob.JegkZXV2qhxvo3YbqcLHEAkngQu-8-FMsauAONqMk8re6fMLv9bUqBThnojE2SHmIT9oPoxTFl27p6v_yJhApgcq_qR_hudhwUgBUtm8yv9M2nRJ1Tpq9L9Q7tf9_mUFxI0VJcR7_NVZO6T1AsgeppNDhETGvWCfISwpPdDECgaIGP-oDGpflAfzsOqCCHLLDuwO5phiRq31sYulAYH49nWd9MK32v1dDd6TpLK4qKfZ0isxz6Sg-4tAby5gU0RvKDA_-kEIh_8jl-oUIhkR8uPNaXjzfMGokRAud2tz5UMG4WfoM6FofEbGiXa6AAK9zvvq2PTS7semcz8_u6IGB3HNtn8LL7UCANo1Z3SFOKn-QvQcy9mJQe6jCk1OFdzDaga-NlFCYWsZCajtQEbZsGnVZKSP",
+  "payload": {
+    "v": 1,
+    "typ": "submission-session",
+    "sessionKind": "RESPONSE_ACTIVE",
+    "opaqueSessionToken": "test-only-submission-session-token-43-characters-000000",
+    "csrfToken": "test-only-submission-csrf-token-43-characters-0000000",
+    "issuedAt": 1783832400,
+    "absoluteExpiresAt": 1783875600,
+    "csrfRotatedAt": 1783832400
+  }
+}

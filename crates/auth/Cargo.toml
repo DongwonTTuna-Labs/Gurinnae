@@ -1,0 +1,22 @@
+[package]
+name = "gurine-auth"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+base64.workspace = true
+chacha20poly1305.workspace = true
+getrandom.workspace = true
+hmac.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+thiserror.workspace = true
+time.workspace = true
+url.workspace = true
+uuid.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,290 @@
+schema_version: 2
+specification_version: 13.0.0
+status: FINAL
+principles:
+- Case workflow, publication visibility and resolution are orthogonal axes.
+- Every transition declares actor capability, guards, audit action and events.
+- Rust enums, SQL, JSON Schema, OpenAPI and UI filters must match this catalog.
+enums:
+  investigation_state:
+  - SIGNAL_DETECTED
+  - TRIAGE
+  - INVESTIGATING
+  - AWAITING_RESPONSE
+  - EDITORIAL_REVIEW
+  - LEGAL_REVIEW
+  - READY_TO_PUBLISH
+  - CLOSED
+  publication_state:
+  - NEVER_PUBLISHED
+  - PUBLISHED_ANOMALY
+  - PUBLISHED_EXPLAINED
+  - OFFICIALLY_CONFIRMED
+  - CORRECTED
+  - RETRACTED
+  - TEMPORARILY_RESTRICTED
+  resolution_code:
+  - NONE
+  - DATA_ERROR
+  - DUPLICATE
+  - EXPLAINED
+  - INSUFFICIENT_EVIDENCE
+  - REFERRED_CONFIDENTIAL
+  - ARCHIVED
+  signal_status:
+  - NEW
+  - ASSIGNED
+  - NEEDS_DATA
+  - LINKED
+  - DISMISSED
+  - DUPLICATE
+  evidence_verification_status:
+  - PENDING
+  - VERIFIED
+  - REJECTED
+  - NEEDS_WORK
+  claim_validation_status:
+  - DRAFT
+  - VALID
+  - BLOCKED
+  - SUPERSEDED
+  response_request_status:
+  - DRAFT
+  - SENT
+  - VIEWED
+  - SUBMITTED
+  - CLOSED
+  - EXPIRED
+  response_editorial_status:
+  - PENDING
+  - ACCEPTED
+  - PARTIAL
+  - REJECTED
+  - PUBLISHED
+  review_status:
+  - UNASSIGNED
+  - ASSIGNED
+  - IN_PROGRESS
+  - COMPLETED
+  - CANCELLED
+  review_decision:
+  - APPROVE
+  - REJECT
+  - CHANGES_REQUIRED
+  hypothesis_status:
+  - OPEN
+  - SUPPORTED
+  - CONTRADICTED
+  - RESOLVED
+  job_status:
+  - QUEUED
+  - LEASED
+  - RUNNING
+  - SUCCEEDED
+  - FAILED
+  - DEAD_LETTER
+  - CANCELLED
+  - QUARANTINED
+  source_run_status:
+  - QUEUED
+  - RUNNING
+  - SUCCEEDED
+  - FAILED
+  - PAUSED
+  - CANCELLED
+  agent_run_status:
+  - QUEUED
+  - RUNNING
+  - SUCCEEDED
+  - FAILED
+  - CANCELLED
+  - BUDGET_BLOCKED
+  - POLICY_BLOCKED
+  claim_type:
+  - FACT
+  - CALCULATION
+  - INFERENCE
+  - LIMITATION
+  - OFFICIAL_OUTCOME
+  response_summary_status:
+  - NOT_REQUIRED
+  - NOT_SENT
+  - SENT
+  - DELIVERED
+  - RECEIVED
+  - INCORPORATED
+  - CLOSED_NO_RESPONSE
+  contract_status:
+  - ANNOUNCED
+  - AWARDED
+  - ACTIVE
+  - COMPLETED
+  - CANCELLED
+  - SUPERSEDED
+  - UNKNOWN
+  source_document_processing_status:
+  - DISCOVERED
+  - FETCHED
+  - PARSED
+  - QUARANTINED
+  - REJECTED
+  source_record_status:
+  - CURRENT
+  - SUPERSEDED
+  - DELETED_UPSTREAM
+  attachment_scan_status:
+  - PENDING
+  - CLEAN
+  - INFECTED
+  - FAILED
+  subscription_status:
+  - PENDING
+  - ACTIVE
+  - PAUSED
+  - UNSUBSCRIBED
+case_transitions:
+- id: detect-signal
+  from:
+  - SIGNAL_DETECTED
+  to: TRIAGE
+  capability: signals.triage
+  guards:
+  - at_least_one_signal
+  audit_action: case.triage.started
+  domain_events:
+  - case.state_transitioned.v1
+- id: begin-investigation
+  from:
+  - TRIAGE
+  to: INVESTIGATING
+  capability: cases.investigate
+  guards:
+  - triage_decision_investigate
+  - assigned_investigator
+  audit_action: case.investigation.started
+  domain_events:
+  - case.state_transitioned.v1
+- id: request-response
+  from:
+  - INVESTIGATING
+  to: AWAITING_RESPONSE
+  capability: responses.request
+  guards:
+  - validated_response_request
+  - due_at_in_future
+  audit_action: case.response.awaited
+  domain_events:
+  - case.state_transitioned.v1
+- id: resume-investigation
+  from:
+  - AWAITING_RESPONSE
+  to: INVESTIGATING
+  capability: cases.investigate
+  guards:
+  - response_received_or_deadline_handled
+  audit_action: case.investigation.resumed
+  domain_events:
+  - case.state_transitioned.v1
+- id: submit-editorial-review
+  from:
+  - INVESTIGATING
+  - AWAITING_RESPONSE
+  to: EDITORIAL_REVIEW
+  capability: review.editorial
+  guards:
+  - claims_valid
+  - evidence_verified
+  - response_policy_satisfied
+  audit_action: case.editorial_review.started
+  domain_events:
+  - case.state_transitioned.v1
+- id: submit-legal-review
+  from:
+  - EDITORIAL_REVIEW
+  to: LEGAL_REVIEW
+  capability: review.legal
+  guards:
+  - legal_review_required
+  audit_action: case.legal_review.started
+  domain_events:
+  - case.state_transitioned.v1
+- id: ready-from-editorial
+  from:
+  - EDITORIAL_REVIEW
+  to: READY_TO_PUBLISH
+  capability: review.editorial
+  guards:
+  - editorial_approved
+  - legal_review_not_required
+  - snapshot_current
+  audit_action: case.ready_to_publish
+  domain_events:
+  - case.state_transitioned.v1
+- id: ready-from-legal
+  from:
+  - LEGAL_REVIEW
+  to: READY_TO_PUBLISH
+  capability: review.legal
+  guards:
+  - legal_approved
+  - snapshot_current
+  audit_action: case.ready_to_publish
+  domain_events:
+  - case.state_transitioned.v1
+- id: return-to-investigation
+  from:
+  - EDITORIAL_REVIEW
+  - LEGAL_REVIEW
+  - READY_TO_PUBLISH
+  to: INVESTIGATING
+  capability: cases.investigate
+  guards:
+  - changes_required_reason
+  audit_action: case.investigation.reopened
+  domain_events:
+  - case.state_transitioned.v1
+- id: close-case
+  from:
+  - TRIAGE
+  - INVESTIGATING
+  - AWAITING_RESPONSE
+  - EDITORIAL_REVIEW
+  - LEGAL_REVIEW
+  - READY_TO_PUBLISH
+  to: CLOSED
+  capability: cases.investigate
+  guards:
+  - resolution_code_not_none
+  - structured_reason
+  audit_action: case.closed
+  domain_events:
+  - case.state_transitioned.v1
+- id: reopen-case
+  from:
+  - CLOSED
+  to: INVESTIGATING
+  capability: cases.investigate
+  guards:
+  - new_material_evidence
+  - structured_reason
+  - reauth_if_previously_published
+  audit_action: case.reopened
+  domain_events:
+  - case.state_transitioned.v1
+cross_axis_invariants:
+- id: publication-needs-ready-or-closed
+  rule: publication_state != NEVER_PUBLISHED implies investigation_state in [READY_TO_PUBLISH,CLOSED]
+- id: explained-resolution
+  rule: publication_state == PUBLISHED_EXPLAINED implies resolution_code == EXPLAINED
+- id: corrected-needs-history
+  rule: publication_state == CORRECTED implies prior immutable publication revision
+- id: retracted-needs-tombstone
+  rule: publication_state == RETRACTED implies visible tombstone and reason
+- id: closed-needs-resolution
+  rule: investigation_state == CLOSED implies resolution_code != NONE
+derivation_contract:
+  rust: crates/domain enums are generated or tested for exact equality against this catalog
+  sql: specs/database/migrations and runtime pg_catalog tests enforce persisted values
+  json_schema: specs/schemas enum sets are exact projections of this catalog
+  openapi: resource and operation schemas reference the same generated enum components
+  ui: filters and badges consume generated enum labels and never define independent values

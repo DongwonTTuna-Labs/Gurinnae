@@ -1,0 +1,83 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "PUB-022",
+  title: "소개",
+  route: "/about",
+  archetype: "POLICY",
+  sections: [
+    {
+      order: 1,
+      id: "mission",
+      title: "미션",
+      component: "StructuredContentSection",
+      purpose: "제품 정의.",
+      test_id: "pub_022__section__mission",
+    },
+    {
+      order: 2,
+      id: "non-goals",
+      title: "하지 않는 일",
+      component: "StructuredContentSection",
+      purpose: "판정·게시판·ranking 금지.",
+      test_id: "pub_022__section__non-goals",
+    },
+    {
+      order: 3,
+      id: "team",
+      title: "운영 주체",
+      component: "OperationsStatusPanel",
+      purpose: "법인·책임자·이해상충.",
+      test_id: "pub_022__section__team",
+    },
+    {
+      order: 4,
+      id: "process",
+      title: "운영 방식",
+      component: "RevisionAndCorrectionPanel",
+      purpose: "조사·review·정정.",
+      test_id: "pub_022__section__process",
+    },
+    {
+      order: 5,
+      id: "contact",
+      title: "연락",
+      component: "StructuredContentSection",
+      purpose: "문의 유형.",
+      test_id: "pub_022__section__contact",
+    },
+  ],
+  actions: [
+    {
+      id: "view-governance",
+      label: "운영 원칙",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "contact",
+      label: "문의",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "getAboutContent",
+      api: "public-api",
+      method: "GET",
+      path: "/v1/content/about",
+      blocking: false,
+      response_schema: "AboutContentResponse",
+    },
+  ],
+} as const satisfies ScreenViewModel;
