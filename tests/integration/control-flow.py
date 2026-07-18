@@ -209,13 +209,16 @@ def example(schema, name, operation, query):
         if name == "previewHash" and operation == "publishCase":
             payload = {
                 "caseId": FIXTURE_UUIDS["caseId"],
+                "agencyIds": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
                 "claims": [],
                 "evidence": [],
                 "responses": [],
                 "reviewSnapshotId": FIXTURE_UUIDS["reviewSnapshotId"],
+                "ruleIds": ["control-fixture-rule"],
                 "slug": "control-fixture-case",
                 "sourceFreshness": {},
                 "summary": "Canonical integration case",
+                "supplierIds": ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
                 "title": "Control canonical case",
             }
             return sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
@@ -528,13 +531,16 @@ expect_command_error(
 )
 published_payload = {
     "caseId": FIXTURE_UUIDS["caseId"],
+    "agencyIds": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
     "claims": [],
     "evidence": [],
     "responses": [],
     "reviewSnapshotId": FIXTURE_UUIDS["reviewSnapshotId"],
+    "ruleIds": ["control-fixture-rule"],
     "slug": "control-fixture-case",
     "sourceFreshness": {},
     "summary": "Canonical integration case",
+    "supplierIds": ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
     "title": "Control canonical case",
 }
 expect_command_error(

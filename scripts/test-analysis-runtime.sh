@@ -4,17 +4,45 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 container="gurine-analysis-runtime-$BASHPID"
 database="gurine_analysis_runtime"
+temp="$(mktemp -d -t gurine-analysis-runtime-XXXXXX)"
+provider_pid=""
+gateway_pid=""
 
 cleanup() {
   status=$?
   trap - EXIT
+  for pid in "$gateway_pid" "$provider_pid"; do
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      kill -TERM "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+    fi
+  done
+  if [[ $status -ne 0 ]]; then
+    for log in "$temp"/*.log; do
+      [[ -f "$log" ]] && tail -n 120 "$log" >&2
+    done
+  fi
   docker rm -f "$container" >/dev/null 2>&1 || true
+  rm -rf "$temp"
   exit "$status"
 }
 trap cleanup EXIT
 
 cd "$root"
-cargo build -p gurine-analysis-worker --bins
+cargo build -p gurine-analysis-worker -p gurine-egress-gateway --bins
+free_port() {
+  local port
+  while true; do
+    port="$(shuf -i 30000-45000 -n 1)"
+    if ! ss -ltn "sport = :$port" | tail -n +2 | grep -q .; then
+      printf '%s' "$port"
+      return
+    fi
+  done
+}
+provider_port="$(free_port)"
+gateway_port="$(free_port)"
+provider_key="runtime-openai-key-never-persist"
 docker run --rm -d --name "$container" \
   -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
   -p 127.0.0.1::5432 postgres:18.4-bookworm >/dev/null
@@ -32,29 +60,57 @@ evidence_id="41000000-0000-4000-8000-000000000004"
 provider_id="41000000-0000-4000-8000-000000000005"
 provider_test_id="41000000-0000-4000-8000-000000000006"
 
+AI_PROVIDER_TEST_PORT="$provider_port" AI_PROVIDER_EXPECTED_KEY="$provider_key" \
+AI_PROVIDER_EVIDENCE_ID="$evidence_id" AI_PROVIDER_EVIDENCE_LOCATOR="page:7" \
+  bun run tests/integration/ai-provider-upstream.ts >"$temp/provider.log" 2>&1 &
+provider_pid=$!
+GURINE_ENV=test HTTP_BIND="127.0.0.1:$gateway_port" OIDC_ISSUER_HOST=localhost \
+AI_PROVIDER_HOSTS=localhost OPENAI_API_KEY="$provider_key" \
+  target/debug/gurine-egress-gateway >"$temp/gateway.log" 2>&1 &
+gateway_pid=$!
+for endpoint in "http://127.0.0.1:$provider_port/health" "http://127.0.0.1:$gateway_port/health/ready"; do
+  for _ in $(seq 1 60); do
+    if curl --fail --silent --show-error "$endpoint" >/dev/null 2>&1; then break; fi
+    sleep 0.25
+  done
+  curl --fail --silent --show-error "$endpoint" >/dev/null
+done
+
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <<SQL >/dev/null
 INSERT INTO ops.users(id,oidc_subject,email,display_name,status)
 VALUES('$actor','analysis-runtime','analysis@example.test','Analysis Runtime','ACTIVE');
 INSERT INTO editorial.cases(id,title,investigation_state,publication_state,summary)
 VALUES('$case_id','Analysis runtime case','INVESTIGATING','NEVER_PUBLISHED','Runtime evidence case');
 INSERT INTO raw.source_documents(id,source_id,external_id,retrieved_at,content_type,content_sha256,
-  content_size_bytes,object_key,status,parser_name,parser_version,prompt_injection_flags,updated_at)
+  content_size_bytes,object_key,status,parser_name,parser_version,prompt_injection_flags,updated_at,asset_id,asset_revision)
 VALUES('$document_id','analysis-source','analysis-document','2026-07-12T00:00:00Z','application/json',
-  repeat('a',64),128,'raw/analysis-document.json','PARSED','json','runtime-v1','[]','2026-07-12T00:00:00Z');
+  repeat('a',64),128,'raw/analysis-document.json','PARSED','json','runtime-v1','[]','2026-07-12T00:00:00Z','$document_id',1);
 INSERT INTO editorial.evidence(id,case_id,evidence_type,title,source_document_id,source_locator,
   content_sha256,verification_status,verified_by,verified_at,created_by,updated_at)
-VALUES('$evidence_id','$case_id','DOCUMENT','Verified runtime evidence','$document_id','page:1',
+VALUES('$evidence_id','$case_id','DOCUMENT','Verified runtime evidence','$document_id','page:7',
   repeat('a',64),'VERIFIED','$actor','2026-07-12T00:00:00Z','$actor','2026-07-12T00:00:00Z');
 INSERT INTO ops.provider_configs(id,provider_type,name,enabled,routing_policy,secret_reference,
   data_retention_policy)
-VALUES('$provider_id','deterministic','Deterministic Runtime Provider',true,
-  '{"model":"authority-double-v1"}','none','NO_RETENTION');
+VALUES('$provider_id','openai','Runtime Provider',true,
+  jsonb_build_object('targetUrl','http://localhost:$provider_port/agent','model','authority-double-v1',
+    'pricing',jsonb_build_object('currency','KRW','pricingVersion','runtime-v1',
+      'pricingSha256','b8b195a7f9fc71a2adb5dec8f49be073b75db56365fa6939917b3b626024ea20',
+      'inputMicrosKrwPerUnit',8500000,'outputMicrosKrwPerUnit',8500000)),
+  'none','NO_RETENTION');
 INSERT INTO ops.provider_connection_tests(id,provider_id,test_model,status,requested_by,reason)
 VALUES('$provider_test_id','$provider_id','authority-double-v1','QUEUED','$actor','runtime test');
+INSERT INTO ops.budget_limits(scope,daily_limit,monthly_limit,currency,updated_by)
+VALUES ('ENVIRONMENT:PRODUCTION',100000,1000000,'KRW','$actor'),
+       ('PROVIDER:$provider_id',100000,1000000,'KRW','$actor'),
+       ('CASE:$case_id',100000,1000000,'KRW','$actor');
 INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key)
 VALUES('PROVIDER_CONNECTION_TEST','analysis-worker',
   jsonb_build_object('providerConnectionTestId','$provider_test_id'),'provider-test:$provider_test_id');
 SQL
+
+sed -e "s/:'document_id'/'$document_id'/g" -e "s/:'evidence_id'/'$evidence_id'/g" \
+    -e "s/:'actor_id'/'$actor'/g" db/test-fixtures/analysis-source-graph.sql \
+  | docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" >/dev/null
 
 rules=(
   contract_amendment_escalation contract_splitting_pattern low_bid_competition
@@ -95,7 +151,7 @@ for agent in "${agents[@]}"; do
     "SELECT jsonb_build_object('caseId','$case_id','evidence',(SELECT jsonb_agg(jsonb_build_object('id',e.id,'contentSha256',btrim(e.content_sha256::text),'locator',e.source_locator,'updatedAt',e.updated_at,'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb)) ORDER BY e.id) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.case_id='$case_id' AND e.id='$evidence_id' AND e.verification_status='VERIFIED'),'objective','$objective')")"
   snapshot_hash="$(printf '%s' "$snapshot" | jq -cSj . | sha256sum | cut -d' ' -f1)"
   docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
-    -v run_id="$run_id" -v agent="$agent" -v objective="$objective" \
+    -v run_id="$run_id" -v agent="$agent" -v objective="$objective" -v document_id="$document_id" \
     -v snapshot_hash="$snapshot_hash" <<'SQL' >/dev/null
 INSERT INTO ops.agent_runs(id,case_id,agent_type,objective,evidence_scope_ids,provider_policy,status,
   input_snapshot_hash,max_cost,created_by)
@@ -108,7 +164,8 @@ SQL
 done
 
 postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"
-GURINE_ENV=test AI_ENABLED=true AI_PROVIDER_ORDER=deterministic \
+GURINE_ENV=production AI_ENABLED=true AI_PROVIDER_ORDER=openai \
+EGRESS_AI_CHANNEL_URL="http://127.0.0.1:$gateway_port/ai" \
 ANALYSIS_DATABASE_URL="postgresql://gurine_analysis_worker:analysis_test@127.0.0.1:${postgres_port}/${database}" \
 ANALYSIS_ONCE=true HOSTNAME="analysis-runtime-test" target/debug/gurine-analysis-worker
 
@@ -117,7 +174,11 @@ DO $$
 DECLARE actual bigint;
 BEGIN
   SELECT count(*) INTO actual FROM ops.jobs WHERE queue='analysis-worker' AND status='SUCCEEDED';
-  IF actual <> 16 THEN RAISE EXCEPTION 'analysis succeeded jobs %, expected 16',actual; END IF;
+  IF actual <> 16 THEN
+    RAISE NOTICE 'analysis job outcomes: %', (SELECT jsonb_agg(jsonb_build_object('type',job_type,'status',status,'detail',last_error_detail) ORDER BY id) FROM ops.jobs WHERE queue='analysis-worker');
+    RAISE NOTICE 'agent outcomes: %', (SELECT jsonb_agg(jsonb_build_object('agent',agent_type,'status',status,'output',output_payload) ORDER BY agent_type) FROM ops.agent_runs);
+    RAISE EXCEPTION 'analysis succeeded jobs %, expected 16',actual;
+  END IF;
   SELECT count(*) INTO actual FROM core.rule_evaluations WHERE status='SUCCEEDED';
   IF actual <> 10 THEN RAISE EXCEPTION 'rule evaluations %, expected 10',actual; END IF;
   SELECT count(*) INTO actual FROM core.rule_runs WHERE status='SUCCEEDED' AND signal_count=1;

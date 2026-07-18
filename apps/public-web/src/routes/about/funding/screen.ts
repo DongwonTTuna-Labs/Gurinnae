@@ -42,7 +42,7 @@ export const screen = {
       order: 5,
       id: "conflicts",
       title: "이해상충",
-      component: "DecisionReviewPanel",
+      component: "StructuredContentSection",
       purpose: "회피·검토.",
       test_id: "pub_023__section__conflicts",
     },

@@ -16,6 +16,14 @@ export const screen = {
     },
     {
       order: 2,
+      id: "business-health",
+      title: "Business Health",
+      component: "StructuredContentSection",
+      purpose: "qualification·activation·retention·revenue·margin·SLA의 현재 projection.",
+      test_id: "ops_004__section__business-health",
+    },
+    {
+      order: 3,
       id: "spend",
       title: "사용량",
       component: "StructuredContentSection",
@@ -23,7 +31,7 @@ export const screen = {
       test_id: "ops_004__section__spend",
     },
     {
-      order: 3,
+      order: 4,
       id: "forecast",
       title: "forecast",
       component: "StructuredContentSection",
@@ -31,7 +39,7 @@ export const screen = {
       test_id: "ops_004__section__forecast",
     },
     {
-      order: 4,
+      order: 5,
       id: "limits",
       title: "한도",
       component: "StructuredContentSection",
@@ -39,7 +47,7 @@ export const screen = {
       test_id: "ops_004__section__limits",
     },
     {
-      order: 5,
+      order: 6,
       id: "alerts",
       title: "경고",
       component: "StructuredContentSection",
@@ -47,7 +55,7 @@ export const screen = {
       test_id: "ops_004__section__alerts",
     },
     {
-      order: 6,
+      order: 7,
       id: "changes",
       title: "변경 이력",
       component: "RevisionTimeline",
@@ -106,7 +114,7 @@ export const screen = {
       method: "GET",
       path: "/v1/internal/queries/get-budget-overview",
       blocking: true,
-      response_schema: "BudgetOverviewResponse",
+      response_schema: "BusinessHealthResponse",
     },
     {
       operation_id: "updateBudgetLimit",

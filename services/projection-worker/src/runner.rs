@@ -114,11 +114,42 @@ async fn project_revision(
     case_id: Uuid,
     snapshot_id: Uuid,
 ) -> Result<Value, Failure> {
+    let revision = load_revision(pool, case_id, snapshot_id).await?;
+    persist_revision(pool, event_id, case_id, &revision).await?;
+    tracing::info!(
+        publication_revision_id=%revision.id,
+        case_id=%case_id,
+        revision=revision.revision,
+        "publication projected"
+    );
+    Ok(json!({
+        "caseId":case_id,
+        "revision":revision.revision,
+        "publicPayloadSha256":revision.digest
+    }))
+}
+
+struct RevisionProjection {
+    id: Uuid,
+    revision: i32,
+    state: String,
+    payload: Value,
+    digest: String,
+    slug: Option<String>,
+    title: String,
+    summary: Option<String>,
+    published_at: time::OffsetDateTime,
+    supersedes: Option<i32>,
+    source_freshness: Value,
+}
+
+async fn load_revision(
+    pool: &PgPool,
+    case_id: Uuid,
+    snapshot_id: Uuid,
+) -> Result<RevisionProjection, Failure> {
     let row = sqlx::query(
-        "SELECT r.id,r.revision,r.state::text state,r.public_payload,r.public_payload_sha256, \
-         r.preview_sha256,r.published_at,r.supersedes_revision,c.public_slug,c.title,c.summary \
-         FROM editorial.publication_revisions r JOIN editorial.cases c ON c.id=r.case_id \
-         WHERE r.case_id=$1 AND r.review_snapshot_id=$2 ORDER BY r.revision DESC LIMIT 1",
+        "SELECT r.id,r.revision,r.state::text state,r.public_payload,r.public_payload_sha256,          r.preview_sha256,r.published_at,r.supersedes_revision,c.public_slug,c.title,c.summary          FROM editorial.publication_revisions r JOIN editorial.cases c ON c.id=r.case_id          WHERE r.case_id=$1 AND r.review_snapshot_id=$2 ORDER BY r.revision DESC LIMIT 1",
     )
     .bind(case_id)
     .bind(snapshot_id)
@@ -131,9 +162,6 @@ async fn project_revision(
             format!("case={case_id} snapshot={snapshot_id}"),
         )
     })?;
-    let revision_id: Uuid = row.try_get("id").map_err(database)?;
-    let revision: i32 = row.try_get("revision").map_err(database)?;
-    let state: String = row.try_get("state").map_err(database)?;
     let payload: Value = row.try_get("public_payload").map_err(database)?;
     let digest = row
         .try_get::<String, _>("public_payload_sha256")
@@ -142,83 +170,100 @@ async fn project_revision(
         .to_owned();
     let canonical = serde_json::to_vec(&payload)
         .map_err(|error| Failure::Terminal("PUBLIC_PAYLOAD_INVALID", error.to_string()))?;
+    let id: Uuid = row.try_get("id").map_err(database)?;
     if sha256(&canonical) != digest {
         return Err(Failure::Terminal(
             "PUBLIC_PAYLOAD_DIGEST_MISMATCH",
-            revision_id.to_string(),
+            id.to_string(),
         ));
     }
-    let slug: Option<String> = row.try_get("public_slug").map_err(database)?;
-    let title: String = row.try_get("title").map_err(database)?;
-    let summary: Option<String> = row.try_get("summary").map_err(database)?;
-    let published_at: time::OffsetDateTime = row.try_get("published_at").map_err(database)?;
-    let supersedes: Option<i32> = row.try_get("supersedes_revision").map_err(database)?;
-    let source_freshness = payload
-        .get("sourceFreshness")
-        .or_else(|| payload.get("source_freshness"))
-        .cloned()
-        .unwrap_or_else(|| json!({}));
+    Ok(RevisionProjection {
+        id,
+        revision: row.try_get("revision").map_err(database)?,
+        state: row.try_get("state").map_err(database)?,
+        payload: payload.clone(),
+        digest,
+        slug: row.try_get("public_slug").map_err(database)?,
+        title: row.try_get("title").map_err(database)?,
+        summary: row.try_get("summary").map_err(database)?,
+        published_at: row.try_get("published_at").map_err(database)?,
+        supersedes: row.try_get("supersedes_revision").map_err(database)?,
+        source_freshness: payload
+            .get("sourceFreshness")
+            .or_else(|| payload.get("source_freshness"))
+            .cloned()
+            .unwrap_or_else(|| json!({})),
+    })
+}
+
+async fn persist_revision(
+    pool: &PgPool,
+    event_id: Uuid,
+    case_id: Uuid,
+    revision: &RevisionProjection,
+) -> Result<(), Failure> {
     let mut tx = pool.begin().await.map_err(database)?;
     sqlx::query(
-        "INSERT INTO public.cases(id,slug,title,public_state,latest_revision,summary, \
-         published_at,updated_at,source_freshness) \
-         VALUES($1,$2,$3,$4,$5,$6,$7,clock_timestamp(),$8) \
-         ON CONFLICT(id) DO UPDATE SET slug=EXCLUDED.slug,title=EXCLUDED.title, \
-         public_state=EXCLUDED.public_state,latest_revision=EXCLUDED.latest_revision, \
-         summary=EXCLUDED.summary,published_at=LEAST(public.cases.published_at,EXCLUDED.published_at), \
-         updated_at=clock_timestamp(),source_freshness=EXCLUDED.source_freshness",
+        "INSERT INTO public.cases(id,slug,title,public_state,latest_revision,summary,          published_at,updated_at,source_freshness)          VALUES($1,$2,$3,$4::editorial.publication_state,$5,$6,$7,clock_timestamp(),$8)          ON CONFLICT(id) DO UPDATE SET slug=EXCLUDED.slug,title=EXCLUDED.title,          public_state=EXCLUDED.public_state,latest_revision=EXCLUDED.latest_revision,          summary=EXCLUDED.summary,published_at=LEAST(public.cases.published_at,EXCLUDED.published_at),          updated_at=clock_timestamp(),source_freshness=EXCLUDED.source_freshness",
     )
     .bind(case_id)
-    .bind(slug.unwrap_or_else(|| format!("case-{case_id}")))
-    .bind(payload.get("title").and_then(Value::as_str).unwrap_or(&title))
-    .bind(&state)
-    .bind(revision)
     .bind(
-        payload
+        revision
+            .slug
+            .clone()
+            .unwrap_or_else(|| format!("case-{case_id}")),
+    )
+    .bind(
+        revision
+            .payload
+            .get("title")
+            .and_then(Value::as_str)
+            .unwrap_or(&revision.title),
+    )
+    .bind(&revision.state)
+    .bind(revision.revision)
+    .bind(
+        revision
+            .payload
             .get("summary")
             .and_then(Value::as_str)
             .map(str::to_owned)
-            .or(summary)
+            .or_else(|| revision.summary.clone())
             .unwrap_or_default(),
     )
-    .bind(published_at)
-    .bind(source_freshness)
+    .bind(revision.published_at)
+    .bind(&revision.source_freshness)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
     sqlx::query(
-        "INSERT INTO public.case_revisions(case_id,revision,state,payload,payload_sha256, \
-         published_at,supersedes_revision) VALUES($1,$2,$3::editorial.publication_state,$4,$5,$6,$7) \
-         ON CONFLICT(case_id,revision) DO UPDATE SET state=EXCLUDED.state,payload=EXCLUDED.payload, \
-         payload_sha256=EXCLUDED.payload_sha256,published_at=EXCLUDED.published_at, \
-         supersedes_revision=EXCLUDED.supersedes_revision",
+        "INSERT INTO public.case_revisions(case_id,revision,state,payload,payload_sha256,          published_at,supersedes_revision) VALUES($1,$2,$3::editorial.publication_state,$4,$5,$6,$7)          ON CONFLICT(case_id,revision) DO UPDATE SET state=EXCLUDED.state,payload=EXCLUDED.payload,          payload_sha256=EXCLUDED.payload_sha256,published_at=EXCLUDED.published_at,          supersedes_revision=EXCLUDED.supersedes_revision",
     )
     .bind(case_id)
-    .bind(revision)
-    .bind(&state)
-    .bind(&payload)
-    .bind(&digest)
-    .bind(published_at)
-    .bind(supersedes)
+    .bind(revision.revision)
+    .bind(&revision.state)
+    .bind(&revision.payload)
+    .bind(&revision.digest)
+    .bind(revision.published_at)
+    .bind(revision.supersedes)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
     sqlx::query(
-        "SELECT ops.enqueue_outbox('publication_revision',$1,$2, \
-         'projection.publication_applied.v1',$3,clock_timestamp())",
+        "SELECT ops.enqueue_outbox('publication_revision',$1,$2,          'projection.publication_applied.v1',$3,clock_timestamp())",
     )
-    .bind(revision_id.to_string())
-    .bind(i64::from(revision))
-    .bind(json!({"public_payload_sha256":digest,"publication_revision_id":revision_id}))
+    .bind(revision.id.to_string())
+    .bind(i64::from(revision.revision))
+    .bind(json!({
+        "public_payload_sha256":revision.digest,
+        "publication_revision_id":revision.id
+    }))
     .fetch_one(&mut *tx)
     .await
     .map_err(database)?;
     update_inbox(&mut tx, event_id).await?;
-    tx.commit().await.map_err(database)?;
-    tracing::info!(publication_revision_id=%revision_id,case_id=%case_id,revision,"publication projected");
-    Ok(json!({"caseId":case_id,"revision":revision,"publicPayloadSha256":digest}))
+    tx.commit().await.map_err(database)
 }
-
 async fn project_access(
     pool: &PgPool,
     event_id: Uuid,

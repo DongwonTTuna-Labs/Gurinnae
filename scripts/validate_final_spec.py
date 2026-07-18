@@ -10,7 +10,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from validation import acceptance, agents, api, architecture, assertions, assurance, cryptography, parsers, connectors, database, detection, evidence, fixtures, parsing, quality, root, security, semantics, states, stats, traceability, ui, submission
+from validation import acceptance, agents, api, architecture, assertions, assurance, cryptography, parsers, connectors, database, design, detection, evidence, fixtures, parsing, quality, root, security, semantics, states, stats, traceability, ui, submission
 from validation.loaders import duplicate_key_canaries
 from validation.models import Validation
 
@@ -28,6 +28,7 @@ VALIDATORS = {
     'semantics': lambda r: semantics.validate(ROOT, r),
     'states': lambda r: states.validate(ROOT, r),
     'database': lambda r: database.validate(ROOT, r),
+    'design': lambda r: design.validate(ROOT, r),
     'architecture': lambda r: architecture.validate(ROOT, r),
     'traceability': lambda r: traceability.validate(ROOT, r),
     'agents': lambda r: agents.validate(ROOT, r),

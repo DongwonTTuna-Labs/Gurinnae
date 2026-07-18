@@ -128,6 +128,119 @@ export type BudgetOverview = {
     updatedAt: string;
 };
 
+export type BusinessHealthResponse = {
+    id: string;
+    version?: number;
+    status: 'READY' | 'BLOCKED' | 'UNKNOWN';
+    data: BusinessHealthV1;
+    links: Array<Link>;
+};
+
+export type BusinessHealthV1 = {
+    asOf: string;
+    specificationVersion: string;
+    metricCatalogDigest: string;
+    funnel: [
+        BusinessFunnelStageV1,
+        BusinessFunnelStageV1,
+        BusinessFunnelStageV1,
+        BusinessFunnelStageV1,
+        BusinessFunnelStageV1,
+        BusinessFunnelStageV1,
+        BusinessFunnelStageV1,
+        BusinessFunnelStageV1
+    ];
+    metrics: [
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1,
+        BusinessMetricValueV1
+    ];
+    topIssue: BusinessIssueV1;
+    readinessState: 'READY' | 'BLOCKED' | 'UNKNOWN';
+    unknownSourceCount: number;
+    nextReviewAt: string;
+};
+
+export type BusinessFunnelStageV1 = {
+    stage: 'QUALIFIED' | 'CONFIGURED' | 'DATA_READY' | 'FIRST_PAID_VALUE' | 'ACTIVATED' | 'RETAINED' | 'AT_RISK' | 'CHURNED';
+    state: 'NOT_STARTED' | 'COMPLETE' | 'LATE' | 'AT_RISK' | 'CHURNED' | 'BLOCKED' | 'UNKNOWN';
+    organizationCount: number;
+    unknownCount: number;
+    earliestEnteredAt?: string | null;
+    latestEnteredAt?: string | null;
+    evidenceSetDigest: string;
+    primaryIssueCode?: string | null;
+    ownerFunction: string;
+};
+
+export type BusinessMetricValueV1 = {
+    metricId: 'BM-ACQ-QUALIFIED-ORG-COUNT' | 'BM-ACQ-CHANNEL-MIX' | 'BM-FUNNEL-CONFIGURATION-RATE' | 'BM-FUNNEL-DATA-READY-RATE' | 'BM-VALUE-PAID-MVW' | 'BM-ACTIVATION-7D-RATE' | 'BM-ACTIVATION-TTFPV-P90' | 'BM-RETENTION-D29-56-RATE' | 'BM-RETENTION-AT-RISK-ORG-COUNT' | 'BM-RETENTION-CHURN-RATE' | 'BM-REVENUE-RECOGNIZED-KRW' | 'BM-BILLING-RECONCILIATION-COVERAGE' | 'BM-REVENUE-QUALIFIED-ORG-COUNT' | 'BM-VALUE-PAID-MVW-PER-ACTIVE-ORG' | 'BM-MARGIN-VARIABLE-GROSS-RATE' | 'BM-MARGIN-CONTRIBUTION-KRW' | 'BM-COST-PER-PAID-MVW-KRW' | 'BM-CAC-KRW' | 'BM-CAC-PAYBACK-MONTHS' | 'BM-SLA-AVAILABILITY-RATE' | 'BM-SUPPORT-HOURS-PER-ACTIVATED-ORG' | 'BM-TRUST-HARD-STOP-COUNT' | 'BM-FUNNEL-PILOT-TO-PAID-RATE' | 'BM-EXPANSION-ELIGIBILITY-RATE' | 'BM-RENEWAL-ELIGIBILITY-RATE';
+    metricVersion: number;
+    formulaDigest: string;
+    policyDigest: string;
+    inputSetDigest: string;
+    status: 'KNOWN' | 'UNKNOWN' | 'NOT_APPLICABLE';
+    reasonCode: string;
+    resultKind: 'SCALAR' | 'BINOMIAL_RATE' | 'DETERMINISTIC_RATIO' | 'SOURCE_BREAKDOWN' | 'TIME_TO_EVENT_P90';
+    result: {
+        [key: string]: unknown;
+    };
+    eligibleCount: number;
+    pendingCount: number;
+    unknownCount: number;
+    unknownReasons: Array<{
+        [key: string]: unknown;
+    }>;
+    windowStart: string;
+    windowEnd: string;
+    accountingTimezone: string;
+    asOf: string;
+    latestSourceAt?: string | null;
+    freshUntil?: string | null;
+    thresholdState: 'PASS' | 'BREACH' | 'NOT_EVALUATED' | 'UNKNOWN';
+    issueCode: string;
+    breachAction: string;
+    owner: {
+        [key: string]: unknown;
+    };
+};
+
+export type BusinessIssueV1 = {
+    issueCode: string;
+    severity: 'INFO' | 'WARNING' | 'BLOCKING' | 'HARD_STOP';
+    metricId: string | null;
+    observedValue: string | null;
+    thresholdValue: string | null;
+    status: 'KNOWN' | 'UNKNOWN';
+    firstObservedAt: string;
+    ownerFunction: string;
+    nextActionCode: string;
+    nextReviewAt: string;
+    evidenceDigest: string;
+};
+
 export type BudgetOverviewResponse = {
     id: string;
     version?: number;
@@ -2272,7 +2385,17 @@ export type EstimateBackfillReceipt = {
     updatedAt?: string;
     title?: string;
     summary?: string;
-    data: BackfillEstimate;
+    data: {
+        sourceId: string;
+        from: string;
+        to: string;
+        estimatedRecords: number;
+        estimatedJobs: number;
+        estimatedCostKrw: string;
+        estimatedDurationSeconds: number;
+        dedupeStrategy: string;
+        downstreamEffects: Array<string>;
+    };
     links: Array<Link>;
 };
 
@@ -3014,15 +3137,22 @@ export type TriageSignalReceipt = {
     aggregateVersion?: number;
     auditEventId?: string;
     receiptToken?: string;
+    result?: 'DISMISS' | 'NEEDS_DATA' | 'MARK_DUPLICATE' | 'PROMOTE_TO_CASE' | 'LINK_TO_CASE';
+    reasonDigest?: string;
+    duplicateSignalId?: string;
+    duplicateRelationship?: 'SAME_LOGICAL_EVENT' | 'SAME_TARGET' | 'SAME_SOURCE' | 'OTHER';
     acceptedAt: string;
     links: Array<Link>;
 };
 
 export type TriageSignalRequest = {
     signalId: string;
-    decision: 'investigate' | 'dismiss' | 'duplicate' | 'needs_data';
+    decision: 'investigate' | 'dismiss' | 'duplicate' | 'needs_data' | 'link';
     reason: string;
     expectedVersion: number;
+    expectedDuplicateSignalVersion?: number;
+    duplicateSignalId?: string;
+    duplicateRelationship?: 'SAME_LOGICAL_EVENT' | 'SAME_TARGET' | 'SAME_SOURCE' | 'OTHER';
 };
 
 export type UnlinkSignalFromCaseReceipt = {
@@ -3222,16 +3352,1334 @@ export type VerifyEvidenceResult = {
     links: Array<Link>;
 };
 
-export type BackfillEstimate = {
-    sourceId: string;
-    from: string;
-    to: string;
-    estimatedRecords: number;
-    estimatedJobs: number;
-    estimatedCostKrw: string;
-    estimatedDurationSeconds: number;
-    dedupeStrategy: string;
-    downstreamEffects: Array<string>;
+export type ListActionApprovalQueueRequestV1 = {
+    [key: string]: never;
+};
+
+export type ActionApprovalQueuePageV1 = {
+    items: Array<string>;
+    appliedFilters: ActionApprovalQueueFiltersV1;
+    asOf: string;
+    nextCursor: {
+        [key: string]: never;
+    };
+    totalApproximate: number;
+};
+
+export type CreateActionProposalRequestV1 = {
+    actionKind: string;
+    origin: ActionOriginV1;
+    draft: ActionPayloadV1;
+    rationale: ActionRationaleV1;
+    expiresAt: string;
+};
+
+export type ActionProposalReceiptV1 = {
+    command: CommandReceiptV1;
+    proposal: ActionProposalSummaryV1;
+};
+
+export type GetActionProposalRequestV1 = {
+    proposalId: string;
+};
+
+export type ActionProposalDetailV1 = {
+    proposal: ActionProposalSummaryV1;
+    origin: ActionOriginV1;
+    payload: ActionPayloadV1;
+    rationale: ActionRationaleV1;
+    latestPreview: string | null;
+    assignmentHistory: ActionAssignmentHistoryPageV1;
+    decisionHistory: ActionDecisionHistoryPageV1;
+    quorum: QuorumStatusV1;
+    executionAuthorization: string | null;
+    asOf: string;
+    links: Array<string>;
+};
+
+export type UpdateActionDraftRequestV1 = {
+    proposalId: string;
+    expectedVersion: number;
+    expectedContentDigest: string;
+    draft: ActionPayloadV1;
+    rationale: ActionRationaleV1;
+    expiresAt: string;
+};
+
+export type PreviewActionDraftRequestV1 = {
+    proposalId: string;
+    expectedVersion: number;
+    expectedContentDigest: string;
+};
+
+export type ActionPreviewReceiptV1 = {
+    command: CommandReceiptV1;
+    preview: ActionPreviewV1;
+};
+
+export type SubmitActionForReviewRequestV1 = {
+    proposalId: string;
+    expectedVersion: number;
+    expectedContentDigest: string;
+    previewId: string;
+    previewDigest: string;
+};
+
+export type ActionReviewRequestedReceiptV1 = {
+    command: CommandReceiptV1;
+    proposal: ActionProposalSummaryV1;
+    assignments: Array<string>;
+    quorum: QuorumStatusV1;
+};
+
+export type ClaimActionReviewRequestV1 = {
+    proposalId: string;
+    assignmentId: string;
+    expectedProposalVersion: number;
+    expectedAssignmentVersion: number;
+    expectedApprovalDigest: string;
+};
+
+export type ActionReviewClaimedReceiptV1 = {
+    command: CommandReceiptV1;
+    proposalId: string;
+    proposalVersion: number;
+    assignment: ActionAssignmentSummaryV1;
+};
+
+export type SubmitActionDecisionRequestV1 = {
+    proposalId: string;
+    actionKind: string;
+    assignmentId: string;
+    expectedProposalVersion: number;
+    expectedAssignmentVersion: number;
+    expectedApprovalDigest: string;
+    decision: ActionDecisionV1;
+};
+
+export type ActionDecisionReceiptV1 = {
+    command: CommandReceiptV1;
+    proposal: ActionProposalSummaryV1;
+    decision: ActionDecisionSummaryV1;
+    quorum: QuorumStatusV1;
+    executionAuthorization: string | null;
+};
+
+export type GetActionExecutionReceiptRequestV1 = {
+    executionId: string;
+};
+
+export type ActionExecutionReceiptChainV1 = {
+    authorization: ExecutionAuthorizationSummaryV1;
+    binding: ExecutionBindingV1;
+    attempts: Array<string>;
+    receipts: Array<string>;
+    terminal: boolean;
+    reconciliationRequired: boolean;
+    asOf: string;
+    links: Array<string>;
+};
+
+export type CancelActionExecutionRequestV1 = {
+    executionId: string;
+    expectedGeneration: number;
+    expectedStateVersion: number;
+    reasonCode: {
+        [key: string]: never;
+    };
+    reasonNote: string;
+};
+
+export type ActionExecutionMutationReceiptV1 = {
+    command: CommandReceiptV1;
+    authorization: ExecutionAuthorizationSummaryV1;
+    latestReceipt: ExecutionReceiptV1;
+};
+
+export type RetryActionExecutionRequestV1 = {
+    executionId: string;
+    actionKind: string;
+    expectedGeneration: number;
+    expectedStateVersion: number;
+    safeRetryProof: SafeRetryProofV1;
+    reasonCode: {
+        [key: string]: never;
+    };
+    reasonNote: string;
+};
+
+export type ReleaseLegalHoldRequestV1 = {
+    holdId: string;
+    caseId: string;
+    reviewSnapshotId: string;
+    expectedReleaseSequence: number;
+    expectedCaseVersion: number;
+    releaseScopeAtoms: Array<string>;
+    affectedIds: Array<string>;
+    releaseAuthorityReference: string;
+    reasonCode: {
+        [key: string]: never;
+    };
+    reason: string;
+};
+
+export type LegalHoldReleaseReceiptV1 = {
+    command: CommandReceiptV1;
+    coverage: LegalHoldCoverageV1;
+    priorCoverageDigest: string;
+    resultingCoverageDigest: string;
+    authorityReferenceDigest: string;
+};
+
+export type GetCommunicationDeliveryReceiptRequestV1 = {
+    deliveryId: string;
+};
+
+export type CommunicationDeliveryReceiptViewV1 = {
+    delivery: CommunicationDeliverySummaryV1;
+    attempts: Array<string>;
+    receipts: Array<string>;
+    latestProviderEvidenceDigest: string;
+    reconciliationRequired: boolean;
+    asOf: string;
+    links: Array<string>;
+};
+
+export type ReconcileCommunicationDeliveryRequestV1 = {
+    deliveryId: string;
+    expectedVersion: number;
+    evidence: CommunicationReconciliationEvidenceV1;
+    resolution: {
+        [key: string]: never;
+    };
+    safeRetryProof: string | null;
+    reason: string;
+};
+
+export type CommunicationDeliveryMutationReceiptV1 = {
+    command: CommandReceiptV1;
+    delivery: CommunicationDeliverySummaryV1;
+    priorState: string;
+    receiptDigest: string;
+};
+
+export type CancelCommunicationDeliveryRequestV1 = {
+    deliveryId: string;
+    expectedVersion: number;
+    reasonCode: {
+        [key: string]: never;
+    };
+    reason: string;
+};
+
+export type GetIncidentRequestV1 = {
+    incidentId: string;
+};
+
+export type IncidentDetailV1 = {
+    incident: IncidentSummaryV1;
+    evidence: Array<string>;
+    containmentActions: Array<string>;
+    recoveryPlan: string | null;
+    rollbackPlan: string | null;
+    rootCause: string | null;
+    actionItems: Array<string>;
+    timeline: Array<string>;
+    asOf: string;
+    links: Array<string>;
+};
+
+export type TriageIncidentRequestV1 = {
+    incidentId: string;
+    expectedVersion: number;
+    severity: {
+        [key: string]: never;
+    };
+    affectedCapabilities: Array<string>;
+    ownerUserId: string;
+    commanderUserId: string;
+    nextUpdateAt: string;
+    impact: string;
+    evidenceRefs: Array<string>;
+    reasonCode: string;
+    reason: string;
+};
+
+export type IncidentTransitionReceiptV1 = {
+    command: CommandReceiptV1;
+    incident: IncidentSummaryV1;
+    transition: IncidentTimelineEntryV1;
+};
+
+export type ContainIncidentRequestV1 = {
+    incidentId: string;
+    expectedVersion: number;
+    containmentActions: Array<string>;
+    residualImpact: string;
+    reconciliationPlan: string;
+    nextUpdateAt: string;
+    switchReceiptIds: Array<string>;
+    cancellationReceiptIds: Array<string>;
+    evidenceRefs: Array<string>;
+    reasonCode: string;
+    reason: string;
+};
+
+export type StartIncidentRecoveryRequestV1 = {
+    incidentId: string;
+    expectedVersion: number;
+    recoveryPlan: string;
+    rollbackPlan: string;
+    recoveryOwnerUserId: string;
+    validationEvidenceRefs: Array<string>;
+    evidenceRefs: Array<string>;
+    reasonCode: string;
+    reason: string;
+};
+
+export type ResolveIncidentRequestV1 = {
+    incidentId: string;
+    expectedVersion: number;
+    restoredSliReceiptIds: Array<string>;
+    reconciliationReceiptIds: Array<string>;
+    resolutionSummary: string;
+    approverUserId: string;
+    evidenceRefs: Array<string>;
+    reasonCode: string;
+    reason: string;
+};
+
+export type CloseIncidentPostmortemRequestV1 = {
+    incidentId: string;
+    expectedVersion: number;
+    rootCause: string;
+    contributingFactors: Array<string>;
+    actionItems: Array<string>;
+    postmortemDigest: string;
+    reviewerUserId: string;
+    evidenceRefs: Array<string>;
+    reasonCode: string;
+    reason: string;
+};
+
+export type ListResponseAppealsRequestV1 = {
+    [key: string]: never;
+};
+
+export type ResponseAppealQueuePageV1 = {
+    items: Array<string>;
+    appliedFilters: ResponseAppealQueueFiltersV1;
+    asOf: string;
+    nextCursor: {
+        [key: string]: never;
+    };
+    totalApproximate: number;
+};
+
+export type GetResponseAppealWorkspaceRequestV1 = {
+    appealId: string;
+};
+
+export type ResponseAppealWorkspaceV1 = {
+    appeal: ResponseAppealSummaryV1;
+    statement: string;
+    supportingAttachmentIds: Array<string>;
+    responseRequestVersion: number;
+    priorDecisionId: string;
+    priorReceiptDigest: string;
+    deliveryEvidenceReceiptIds: Array<string>;
+    consentEvidenceReceiptIds: Array<string>;
+    publicationExcerptEvidenceIds: Array<string>;
+    tasks: Array<string>;
+    decisionReceipts: Array<string>;
+    asOf: string;
+    links: Array<string>;
+};
+
+export type TransitionResponseAppealRequestV1 = {
+    appealId: string;
+    expectedDecisionSequence: number;
+    transition: {
+        [key: string]: never;
+    };
+    reasonCode: string;
+    reason: string;
+    evidenceReceiptIds: Array<string>;
+    task: string | null;
+};
+
+export type ResponseAppealDecisionReceiptV1 = {
+    command: CommandReceiptV1;
+    appeal: ResponseAppealSummaryV1;
+    transition: string;
+    evidenceSetDigest: string;
+    task: string | null;
+};
+
+export type DecideResponseExtensionRequestV1 = {
+    extensionRequestId: string;
+    expectedVersion: number;
+    decision: {
+        [key: string]: never;
+    };
+    reasonCode: string;
+    reason: string;
+    calendarVersionId: string;
+    newDueAt: string;
+};
+
+export type ResponseExtensionDecisionReceiptV1 = {
+    command: CommandReceiptV1;
+    extension: ResponseExtensionSummaryV1;
+    priorDueAt: string;
+    newDueAt: string;
+    calendarDigest: string;
+};
+
+export type ListRetentionRequestsRequestV1 = {
+    [key: string]: never;
+};
+
+export type RetentionRequestQueuePageV1 = {
+    items: Array<string>;
+    appliedFilters: RetentionRequestQueueFiltersV1;
+    asOf: string;
+    nextCursor: {
+        [key: string]: never;
+    };
+    totalApproximate: number;
+};
+
+export type GetRetentionRequestRequestV1 = {
+    retentionRequestId: string;
+};
+
+export type RetentionRequestWorkspaceV1 = {
+    request: RetentionRequestSummaryV1;
+    identityVerificationReceiptId: string;
+    inventorySnapshotDigest: string;
+    holdCoverageDigest: string;
+    activeHoldIds: Array<string>;
+    affectedRecordClasses: Array<string>;
+    locationReceipts: Array<string>;
+    decisionReceipts: Array<string>;
+    completionReceiptId: string;
+    asOf: string;
+    links: Array<string>;
+};
+
+export type TransitionRetentionRequestRequestV1 = {
+    retentionRequestId: string;
+    expectedDecisionVersion: number;
+    transition: {
+        [key: string]: never;
+    };
+    reasonCode: string;
+    reason: string;
+    inventorySnapshotDigest: string;
+    holdCoverageDigest: string;
+    completionReceiptId: string;
+};
+
+export type RetentionRequestDecisionReceiptV1 = {
+    command: CommandReceiptV1;
+    request: RetentionRequestSummaryV1;
+    inventorySnapshotDigest: string;
+    holdCoverageDigest: string;
+    completionReceiptId: string;
+    locationReceipts: Array<string>;
+};
+
+export type ListRecordClassSchedulesRequestV1 = {
+    [key: string]: never;
+};
+
+export type RecordClassSchedulePageV1 = {
+    items: Array<string>;
+    appliedRecordClasses: Array<string>;
+    appliedStates: Array<string>;
+    asOf: string;
+    nextCursor: {
+        [key: string]: never;
+    };
+};
+
+export type DeclareConflictRequestV1 = {
+    subjectActorId: string;
+    target: ConflictTargetV1;
+    conflictType: {
+        [key: string]: never;
+    };
+    relationState: {
+        [key: string]: never;
+    };
+    materiality: {
+        [key: string]: never;
+    };
+    temporalState: {
+        [key: string]: never;
+    };
+    sourceClass: number;
+    evidenceRefs: Array<string>;
+    expectedPriorSequence: number;
+    policyDigest: string;
+    reason: string;
+    effectiveAt: string;
+    expiresAt: string;
+};
+
+export type ConflictDeclarationReceiptV1 = {
+    command: CommandReceiptV1;
+    declaration: ConflictDeclarationSummaryV1;
+    priorDeclarationDigest: string;
+    receiptDigest: string;
+};
+
+export type WithdrawConflictRequestV1 = {
+    declarationId: string;
+    expectedDeclarationSequence: number;
+    expectedDeclarationDigest: string;
+    expectedPolicyDigest: string;
+    reasonCode: {
+        [key: string]: never;
+    };
+    reason: string;
+    effectiveAt: string;
+    expiresAt: string;
+};
+
+export type WithdrawActionProposalRequestV1 = {
+    proposalId: string;
+    expectedProposalVersion: number;
+    expectedStateVersion: number;
+    expectedContentDigest: string;
+    reasonCode: string;
+    reason: string;
+};
+
+export type WithdrawActionDecisionRequestV1 = {
+    proposalId: string;
+    decisionId: string;
+    expectedProposalVersion: number;
+    expectedProposalStateVersion: number;
+    expectedAssignmentVersion: number;
+    expectedApprovalDigest: string;
+    expectedDecisionReceiptDigest: string;
+    reasonCode: {
+        [key: string]: never;
+    };
+    reason: string;
+};
+
+export type PromoteResearchArtifactRequestV1 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    caseId: string;
+    expectedCaseVersion: number;
+    agentRunId: string;
+    researchArtifact: PromoteResearchArtifactRefV1;
+    rightsDecision: PromotionRightsDecisionRefV1;
+    evidence: PromotionEvidenceDraftV1;
+    selectedSegments: Array<string>;
+    reason: string;
+};
+
+export type PromoteResearchArtifactReceiptV1 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    promotionId: string;
+    caseId: string;
+    caseVersion: number;
+    agentRunId: string;
+    researchArtifactId: string;
+    researchArtifactSha256: string;
+    sourceDocumentId: string;
+    sourceAssetId: string;
+    sourceAssetRevision: number;
+    sourceContentSha256: string;
+    evidenceSegmentBindings: Array<string>;
+    selectedSegmentCount: number;
+    selectedSegmentSetSha256: string;
+    evidenceId: string;
+    evidenceVersion: number;
+    evidenceDigest: string;
+    rightsDecisionId: string;
+    rightsDecisionDigest: string;
+    reviewerUserId: string;
+    auditEventId: string;
+    outboxEventId: string;
+    idempotencyKeySha256: string;
+    promotedAt: string;
+    receiptSha256: string;
+    links: Array<string>;
+};
+
+export type CancelAgentRunRequestV2 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    runId: string;
+    expectedVersion: number;
+    reasonCode: string;
+    reason: string;
+};
+
+export type AgentRunControlReceiptV2 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    receiptId: string;
+    runId: string;
+    aggregateVersion: number;
+    priorStatus: string | null;
+    priorControlState: string | null;
+    nextStatus: string;
+    nextControlState: string;
+    affectedProviderTurnId: string;
+    affectedToolCallId: string;
+    reconciliationEvidenceId: string;
+    reconciliationEvidenceSha256: string;
+    proofKind: number;
+    proofSha256: string;
+    budgetDisposition: string;
+    budgetResolutionSetSha256: string;
+    actorKind: string;
+    actorId: string;
+    reasonCode: string;
+    reasonSha256: string;
+    priorReceiptId: string;
+    priorReceiptSha256: string;
+    commandBinding: string | null;
+    auditEventId: string;
+    occurredAt: string;
+    receiptSha256: string;
+};
+
+export type DecideJourneyHandoffRequestV1 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    handoffId: string;
+    expectedHandoffVersion: number;
+    expectedBindingDigest: string;
+    decision: {
+        [key: string]: never;
+    };
+    reasonCode: number;
+    reason: string | null;
+};
+
+export type JourneyHandoffDecisionReceiptV1 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    command: CommandReceiptV1;
+    decisionReceipt: JourneyHandoffTerminalReceiptV1;
+    replacement: string | null;
+    finalParent: JourneyInstanceHeadReceiptV1;
+    effectDigest: string;
+    decidedAt: string;
+};
+
+export type AddendumProblemDetailsV1 = {
+    code: string;
+    title: string;
+    status: number;
+    requestId: string;
+    detail?: string | null;
+};
+
+export type ActionApprovalQueueItemV1 = {
+    proposal: ActionProposalSummaryV1;
+    assignment: string | null;
+    quorum: QuorumStatusV1;
+    dueAt: string;
+    riskClass: string;
+    href: {
+        [key: string]: never;
+    };
+};
+
+export type ActionProposalSummaryV1 = {
+    proposalId: string;
+    version: number;
+    actionKind: ActionKindV1;
+    state: string;
+    contentDigest: string;
+    approvalDigest: string;
+    target: ActionTargetV1;
+    creator: ActorSummaryV1;
+    lastEditor: ActorSummaryV1;
+    createdAt: string;
+    updatedAt: string;
+    expiresAt: string;
+};
+
+export type ActionKindV1 = {
+    [key: string]: never;
+};
+
+export type ActionTargetV1 = {
+    targetType: number;
+    targetId: string;
+    expectedVersion: number;
+};
+
+export type ActorSummaryV1 = {
+    actorType: string;
+    actorId: string;
+    displayName: string;
+};
+
+export type ActionAssignmentSummaryV1 = {
+    assignmentId: string;
+    version: number;
+    assignmentGeneration: number;
+    slotKind: string;
+    requiredCapability: string;
+    reviewer: string | null;
+    state: string;
+    dueAt: string;
+    approvalDigest: string;
+};
+
+export type QuorumStatusV1 = {
+    planDigest: string;
+    requiredSlots: Array<string>;
+    satisfiedSlots: Array<string>;
+    blockingSlots: Array<string>;
+    conflictSnapshotDigest: string;
+    complete: boolean;
+};
+
+export type ActionApprovalQueueFiltersV1 = {
+    actionKind: Array<string>;
+    proposalState: Array<string>;
+    assignmentState: Array<string>;
+    dueBefore: string;
+    sort: string;
+};
+
+export type CommandReceiptV1 = {
+    operationId: string;
+    requestId: string;
+    status: string;
+    aggregateId: string;
+    aggregateVersion: number;
+    auditEventId: string;
+    acceptedAt: string;
+    receiptDigest: string;
+    emittedEventIds: Array<string>;
+    idempotencyReplay: {
+        [key: string]: never;
+    };
+    links: Array<string>;
+};
+
+export type ActionOriginV1 = {
+    [key: string]: never;
+};
+
+export type ActionPayloadV1 = {
+    [key: string]: never;
+};
+
+export type ActionRationaleV1 = {
+    summary: string;
+    evidenceSegmentIds: Array<string>;
+    unknowns: Array<string>;
+    alternativesConsidered: Array<string>;
+    riskNote: string;
+};
+
+export type ActionPreviewV1 = {
+    previewId: string;
+    proposalId: string;
+    proposalVersion: number;
+    contentDigest: string;
+    approvalDigest: string;
+    approvalBinding: ApprovalBindingV1;
+    approvalSubject: ActionApprovalSubjectViewV1;
+    approvalSubjectDigest: string;
+    policyBlockers: Array<string>;
+    warnings: Array<string>;
+    expiresAt: string;
+    previewDigest: string;
+};
+
+export type ApprovalBindingV1 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    proposalId: string;
+    proposalVersion: number;
+    actionKind: ActionKindV1;
+    originDigest: string;
+    contentDigest: string;
+    rationaleDigest: string;
+    targetType: ActionTargetTypeV1;
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    objectScopeDigest: string;
+    operationId: string;
+    requiredCapability: string;
+    targetRequestDigest: string;
+    previewId: string;
+    approvalSubjectDigest: string;
+    evidenceSetDigest: string;
+    contraryEvidenceSetDigest: string;
+    uncertaintySetDigest: string;
+    riskAssessmentDigest: string;
+    policySnapshotDigest: string;
+    conflictSnapshotDigest: string;
+    expectedEffectDigest: string;
+    reversible: boolean;
+    quorumPlanDigest: string;
+    effectIdempotencyKeySha256: string;
+    notBefore: string;
+    expiresAt: string;
+    actionDetailKind: ActionKindV1;
+    actionDetail: ActionApprovalDetailV1;
+    actionDetailDigest: string;
+};
+
+export type ActionTargetTypeV1 = {
+    [key: string]: never;
+};
+
+export type ActionApprovalDetailV1 = {
+    [key: string]: never;
+};
+
+export type ActionApprovalSubjectViewV1 = {
+    summary: ActionApprovalSummarySectionV1;
+    evidence: ActionApprovalEvidenceSectionV1;
+    effect: ActionApprovalEffectSectionV1;
+    destination: ActionApprovalDestinationSectionV1;
+    exactContent: ActionApprovalExactContentSectionV1;
+    governance: ActionApprovalGovernanceSectionV1;
+    decisionHelp: ActionApprovalDecisionHelpSectionV1;
+    details: ActionApprovalDetailViewV1;
+};
+
+export type ActionApprovalSummarySectionV1 = {
+    plainLanguageChange: string;
+    objectLabel: string;
+    currentState: string;
+    expectedState: string;
+    whyNow: string;
+    freshness: string;
+    materialConsequence: string;
+};
+
+export type ActionApprovalEvidenceSectionV1 = {
+    supporting: Array<string>;
+    contrary: Array<string>;
+    unknowns: Array<string>;
+    investigationSummary: string;
+    evidenceSetDigest: string;
+    contraryEvidenceSetDigest: string;
+    uncertaintySetDigest: string;
+};
+
+export type ApprovalEvidenceItemV1 = {
+    evidenceId: string;
+    label: string;
+    evidenceKind: string;
+    assessment: string;
+    sourceLabel: string;
+    freshness: string;
+    locatorLink: string | null;
+    evidenceDigest: string;
+};
+
+export type ActionApprovalEffectSectionV1 = {
+    before: string;
+    after: string;
+    durableSuccessDefinition: string;
+    partialOrAmbiguousMeaning: string;
+    reversible: boolean;
+    rollbackOrCompensation: string;
+    expectedEffectDigest: string;
+};
+
+export type ActionApprovalDestinationSectionV1 = {
+    [key: string]: never;
+};
+
+export type ActionApprovalExactContentSectionV1 = {
+    [key: string]: never;
+};
+
+export type ActionApprovalGovernanceSectionV1 = {
+    riskClass: string;
+    riskSummary: string;
+    policyStatus: string;
+    policySummary: string;
+    conflictStatus: string;
+    rightsStatus: string;
+    consentAndSuppressionStatus: string;
+    cost: ActionApprovalCostViewV1;
+    expirySummary: string;
+    governanceDigest: string;
+};
+
+export type ActionApprovalCostViewV1 = {
+    [key: string]: never;
+};
+
+export type ActionApprovalDecisionHelpSectionV1 = {
+    question: string;
+    approveLabel: string;
+    approveConsequence: string;
+    rejectLabel: string;
+    rejectConsequence: string;
+    changesRequiredConsequence: string;
+    recuseConsequence: string;
+    requiredAssurance: string;
+    requiredQuorum: Array<string>;
+    defaultDecision: {
+        [key: string]: never;
+    };
+};
+
+export type ActionApprovalDetailViewV1 = {
+    [key: string]: never;
+};
+
+export type ActionAssignmentHistoryPageV1 = {
+    items: Array<string>;
+    order: {
+        [key: string]: never;
+    };
+    asOf: string;
+    pageDigest: string;
+    nextCursor: {
+        [key: string]: never;
+    };
+    complete: boolean;
+};
+
+export type ActionDecisionHistoryPageV1 = {
+    items: Array<string>;
+    order: {
+        [key: string]: never;
+    };
+    asOf: string;
+    pageDigest: string;
+    nextCursor: {
+        [key: string]: never;
+    };
+    complete: boolean;
+};
+
+export type ActionDecisionSummaryV1 = {
+    [key: string]: never;
+};
+
+export type ExecutionAuthorizationSummaryV1 = {
+    executionId: string;
+    generation: number;
+    stateVersion: number;
+    actionKind: ActionKindV1;
+    state: string;
+    executionDigest: string;
+    cancellationGeneration: number;
+    expiresAt: string;
+};
+
+export type ExecutionBindingV1 = {
+    schemaVersion: {
+        [key: string]: never;
+    };
+    executionId: string;
+    generation: number;
+    approvalDigest: string;
+    countedDecisionReceiptDigests: Array<string>;
+    executorId: string;
+    targetRequestSha256: string;
+    providerIdempotencyKeySha256: string;
+    budgetReservationDigest: string;
+    cancellationGeneration: number;
+    expiresAt: string;
+};
+
+export type ExecutionAttemptV1 = {
+    attemptId: string;
+    ordinal: number;
+    generation: number;
+    fencingToken: number;
+    state: string;
+    providerIdempotencyKeySha256: string;
+    providerAcknowledgementSha256: string;
+    startedAt: string;
+    finishedAt: string;
+    actualCost: string | null;
+    failureCode: string | null;
+};
+
+export type MoneyV1 = {
+    amount: number;
+    currency: string;
+};
+
+export type ExecutionReceiptV1 = {
+    receiptId: string;
+    sequence: number;
+    executionId: string;
+    generation: number;
+    stateVersion: number;
+    state: string;
+    providerEvidenceDigest: string;
+    reconciliationEvidenceDigest: string;
+    recordedAt: string;
+    receiptDigest: string;
+};
+
+export type LegalHoldCoverageV1 = {
+    holdId: string;
+    releaseSequence: number;
+    activeScopeAtoms: Array<string>;
+    releasedScopeAtoms: Array<string>;
+    affectedSetDigest: string;
+    coverageDigest: string;
+    state: string;
+};
+
+export type CommunicationDeliverySummaryV1 = {
+    deliveryId: string;
+    version: number;
+    intentId: string;
+    deliveryKeySha256: string;
+    channel: string;
+    endpointId: string;
+    endpointVersion: number;
+    state: string;
+    renderingDigest: string;
+    authorizationSnapshotDigest: string;
+    activationReceiptDigest: string;
+    budgetReservationId: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type CommunicationDeliveryAttemptV1 = {
+    attemptId: string;
+    ordinal: number;
+    provider: string;
+    providerEventIdentityHmac: string;
+    providerAcknowledgementSha256: string;
+    state: string;
+    startedAt: string;
+    observedAt: string;
+    cost: string | null;
+};
+
+export type CommunicationDeliveryEvidenceReceiptV1 = {
+    receiptId: string;
+    sequence: number;
+    deliveryId: string;
+    deliveryVersion: number;
+    attemptId: string;
+    evidenceKind: string;
+    providerEventIdentityHmac: string;
+    priorState: string;
+    state: string;
+    providerEvidenceDigest: string;
+    observedAt: string;
+    receiptDigest: string;
+};
+
+export type IncidentSummaryV1 = {
+    incidentId: string;
+    version: number;
+    state: string;
+    severity: string;
+    affectedCapabilities: Array<string>;
+    ownerUserId: string;
+    commanderUserId: string;
+    impact: string;
+    nextUpdateAt: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type IncidentCapabilityV1 = {
+    [key: string]: never;
+};
+
+export type IncidentEvidenceRefV1 = {
+    kind: string;
+    id: string;
+    version: number;
+    digest: string;
+    label: string;
+};
+
+export type PostmortemActionItemV1 = {
+    ordinal: number;
+    title: string;
+    ownerUserId: string;
+    dueAt: string;
+    priority: string;
+    verificationMethod: string;
+};
+
+export type IncidentTimelineEntryV1 = {
+    eventId: string;
+    priorState: string | null;
+    state: string;
+    reasonCode: string;
+    actor: ActorSummaryV1;
+    evidenceSetDigest: string;
+    occurredAt: string;
+    receiptDigest: string;
+};
+
+export type ResponseAppealSummaryV1 = {
+    appealId: string;
+    responseRequestId: string;
+    caseId: string;
+    decisionSequence: number;
+    state: string;
+    reasonCode: string;
+    requestedOutcome: string;
+    createdAt: string;
+    updatedAt: string;
+    dueAt: string;
+};
+
+export type ResponseAppealQueueFiltersV1 = {
+    state: Array<string>;
+    caseId: string;
+    dueBefore: string;
+    sort: string;
+};
+
+export type ResponseAppealInformationTaskV1 = {
+    title: string;
+    description: string;
+    assigneeUserId: string;
+    dueAt: string;
+    requestedEvidenceKinds: Array<string>;
+};
+
+export type ResponseAppealDecisionSummaryV1 = {
+    decisionId: string;
+    decisionSequence: number;
+    transition: string;
+    priorState: string;
+    state: string;
+    actor: ActorSummaryV1;
+    reasonCode: string;
+    reason: string;
+    evidenceSetDigest: string;
+    decidedAt: string;
+    receiptDigest: string;
+};
+
+export type ResponseExtensionSummaryV1 = {
+    extensionRequestId: string;
+    responseRequestId: string;
+    version: number;
+    state: string;
+    priorDueAt: string;
+    newDueAt: string;
+    calendarVersionId: string;
+    decisionDigest: string;
+    decidedAt: string;
+};
+
+export type RetentionRequestSummaryV1 = {
+    retentionRequestId: string;
+    requestType: string;
+    decisionVersion: number;
+    state: string;
+    jurisdiction: string;
+    scopeDigest: string;
+    legalHoldBlocked: boolean;
+    dueAt: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type RetentionRequestQueueFiltersV1 = {
+    requestType: Array<string>;
+    state: Array<string>;
+    dueBefore: string;
+    legalHoldBlocked: boolean;
+    sort: string;
+};
+
+export type RetentionLocationReceiptV1 = {
+    location: string;
+    objectCount: number;
+    derivativeCount: number;
+    action: string;
+    completedAt: string;
+    receiptDigest: string;
+};
+
+export type RetentionDecisionSummaryV1 = {
+    decisionId: string;
+    decisionVersion: number;
+    transition: string;
+    priorState: string;
+    state: string;
+    actor: ActorSummaryV1;
+    reasonCode: string;
+    reason: string;
+    inventorySnapshotDigest: string;
+    holdCoverageDigest: string;
+    completionReceiptId: string;
+    decidedAt: string;
+    receiptDigest: string;
+};
+
+export type RecordClassScheduleSummaryV1 = {
+    recordClass: string;
+    revision: number;
+    state: string;
+    lawfulBasis: string;
+    activeDuration: string;
+    backupDuration: string;
+    terminalAction: string;
+    effectiveAt: string;
+    reviewExpiresAt: string;
+    scheduleDigest: string;
+};
+
+export type ConflictDeclarationSummaryV1 = {
+    declarationId: string;
+    subjectActorId: string;
+    target: ConflictTargetV1;
+    conflictType: string;
+    relationState: string;
+    materiality: string;
+    temporalState: string;
+    sourceClass: number;
+    nonwaivable: boolean;
+    declarationSequence: number;
+    supersedesDeclarationId: string;
+    evidenceSetDigest: string;
+    policyDigest: string;
+    declarationDigest: string;
+    effectiveAt: string;
+    expiresAt: string;
+    createdAt: string;
+};
+
+export type ConflictTargetV1 = {
+    [key: string]: never;
+};
+
+export type PromotionEvidenceSegmentBindingV1 = {
+    ordinal: number;
+    evidenceSegmentId: string;
+    locatorSha256: string;
+    selectedContentSha256: string;
+};
+
+export type AgentRunControlCommandBindingV2 = {
+    operationId: string;
+    expectedRunVersion: number;
+    idempotencyKeySha256: string;
+    requestSha256: string;
+};
+
+export type JourneyHandoffTerminalReceiptV1 = {
+    receiptId: string;
+    receiptDigest: string;
+    journeyInstanceId: string;
+    journeyInstanceVersion: number;
+    handoffId: string;
+    handoffVersion: number;
+    handoffKind: number;
+    generation: number;
+    decision: string;
+    resultingHandoffState: string;
+    resultingJourneyState: string;
+    currentOwnerBindingDigest: string;
+    nextOwnerBindingDigest: string;
+    auditEventId: string;
+    outboxEventId: string;
+};
+
+export type JourneyHandoffReplacementReceiptV1 = {
+    handoffId: string;
+    handoffVersion: {
+        [key: string]: never;
+    };
+    generation: number;
+    bindingDigest: string;
+    requestReceiptId: string;
+    requestReceiptDigest: string;
+    auditEventId: string;
+    outboxEventId: string;
+    journeyInstanceVersion: number;
+    receiverFunction: string;
+    hardExpiryAt: string;
+    resultingDueAt: string;
+};
+
+export type JourneyInstanceHeadReceiptV1 = {
+    journeyInstanceId: string;
+    version: number;
+    state: string;
+    currentOwnerBindingDigest: string;
+    nextOwnerBindingDigest: string;
+    activeHandoffId: string;
+    activeHandoffGeneration: number;
+    activeHandoffState: string | null;
+    escalationState: string;
+    dueAt: string;
+    headReceiptId: string;
+    headReceiptDigest: string;
+};
+
+export type ActionDecisionV1 = {
+    [key: string]: never;
+};
+
+export type SafeRetryProofV1 = {
+    [key: string]: never;
+};
+
+export type CommunicationReconciliationEvidenceV1 = {
+    [key: string]: never;
+};
+
+export type PromoteResearchArtifactRefV1 = {
+    id: string;
+    assetId: string;
+    assetRevision: {
+        [key: string]: never;
+    };
+    artifactSha256: string;
+    contentSha256: string;
+    sourceFetchId: string;
+    providerTurnId: string;
+    toolCallId: string;
+};
+
+export type PromotionRightsDecisionRefV1 = {
+    id: string;
+    version: number;
+    decisionSha256: string;
+};
+
+export type PromotionEvidenceDraftV1 = {
+    evidenceType: string;
+    title: string;
+    description: string | null;
+    classification: number;
+    verificationStatus: {
+        [key: string]: never;
+    };
+    publicExcerpt: string | null;
 };
 
 export type AcceptAgentSuggestionData = {
@@ -8042,7 +9490,7 @@ export type GetBudgetOverviewResponses = {
     /**
      * Successful response
      */
-    200: BudgetOverviewResponse;
+    200: BusinessHealthResponse;
 };
 
 export type GetBudgetOverviewResponse = GetBudgetOverviewResponses[keyof GetBudgetOverviewResponses];
@@ -10761,3 +12209,1468 @@ export type UpdateSavedViewResponses = {
 };
 
 export type UpdateSavedViewResponse = UpdateSavedViewResponses[keyof UpdateSavedViewResponses];
+
+export type ListActionApprovalQueueData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/internal/action-proposals';
+};
+
+export type ListActionApprovalQueueErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER, INVALID_CURSOR
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ListActionApprovalQueueError = ListActionApprovalQueueErrors[keyof ListActionApprovalQueueErrors];
+
+export type ListActionApprovalQueueResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionApprovalQueuePageV1;
+};
+
+export type ListActionApprovalQueueResponse = ListActionApprovalQueueResponses[keyof ListActionApprovalQueueResponses];
+
+export type CreateActionProposalData = {
+    body: CreateActionProposalRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/action-proposals';
+};
+
+export type CreateActionProposalErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: TARGET_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_KIND_MISMATCH
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type CreateActionProposalError = CreateActionProposalErrors[keyof CreateActionProposalErrors];
+
+export type CreateActionProposalResponses = {
+    /**
+     * Successful response
+     */
+    201: ActionProposalReceiptV1;
+};
+
+export type CreateActionProposalResponse = CreateActionProposalResponses[keyof CreateActionProposalResponses];
+
+export type GetActionProposalData = {
+    body?: never;
+    path: {
+        proposalId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}';
+};
+
+export type GetActionProposalErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTOR_ASSERTION_REQUIRED
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetActionProposalError = GetActionProposalErrors[keyof GetActionProposalErrors];
+
+export type GetActionProposalResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionProposalDetailV1;
+};
+
+export type GetActionProposalResponse = GetActionProposalResponses[keyof GetActionProposalResponses];
+
+export type UpdateActionDraftData = {
+    body: UpdateActionDraftRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        proposalId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}/draft';
+};
+
+export type UpdateActionDraftErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type UpdateActionDraftError = UpdateActionDraftErrors[keyof UpdateActionDraftErrors];
+
+export type UpdateActionDraftResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionProposalReceiptV1;
+};
+
+export type UpdateActionDraftResponse = UpdateActionDraftResponses[keyof UpdateActionDraftResponses];
+
+export type PreviewActionDraftData = {
+    body: PreviewActionDraftRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        proposalId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}:preview';
+};
+
+export type PreviewActionDraftErrors = {
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_POLICY_BLOCKED, CAPABILITY_UNCONFIGURED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type PreviewActionDraftError = PreviewActionDraftErrors[keyof PreviewActionDraftErrors];
+
+export type PreviewActionDraftResponses = {
+    /**
+     * Successful response
+     */
+    201: ActionPreviewReceiptV1;
+};
+
+export type PreviewActionDraftResponse = PreviewActionDraftResponses[keyof PreviewActionDraftResponses];
+
+export type SubmitActionForReviewData = {
+    body: SubmitActionForReviewRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        proposalId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}:submit-review';
+};
+
+export type SubmitActionForReviewErrors = {
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_PREVIEW_STALE, ACTION_POLICY_BLOCKED, ACTION_QUORUM_UNAVAILABLE
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type SubmitActionForReviewError = SubmitActionForReviewErrors[keyof SubmitActionForReviewErrors];
+
+export type SubmitActionForReviewResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionReviewRequestedReceiptV1;
+};
+
+export type SubmitActionForReviewResponse = SubmitActionForReviewResponses[keyof SubmitActionForReviewResponses];
+
+export type ClaimActionReviewData = {
+    body: ClaimActionReviewRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        proposalId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}:claim-review';
+};
+
+export type ClaimActionReviewErrors = {
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_REVIEW_ALREADY_CLAIMED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ClaimActionReviewError = ClaimActionReviewErrors[keyof ClaimActionReviewErrors];
+
+export type ClaimActionReviewResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionReviewClaimedReceiptV1;
+};
+
+export type ClaimActionReviewResponse = ClaimActionReviewResponses[keyof ClaimActionReviewResponses];
+
+export type SubmitActionDecisionData = {
+    body: SubmitActionDecisionRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        proposalId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}:decide';
+};
+
+export type SubmitActionDecisionErrors = {
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_KIND_MISMATCH, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, ACTION_CONFLICT_UNRESOLVED, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type SubmitActionDecisionError = SubmitActionDecisionErrors[keyof SubmitActionDecisionErrors];
+
+export type SubmitActionDecisionResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionDecisionReceiptV1;
+};
+
+export type SubmitActionDecisionResponse = SubmitActionDecisionResponses[keyof SubmitActionDecisionResponses];
+
+export type GetActionExecutionReceiptData = {
+    body?: never;
+    path: {
+        executionId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-executions/{executionId}/receipt';
+};
+
+export type GetActionExecutionReceiptErrors = {
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: EXECUTION_RECEIPT_INCOMPLETE
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetActionExecutionReceiptError = GetActionExecutionReceiptErrors[keyof GetActionExecutionReceiptErrors];
+
+export type GetActionExecutionReceiptResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionExecutionReceiptChainV1;
+};
+
+export type GetActionExecutionReceiptResponse = GetActionExecutionReceiptResponses[keyof GetActionExecutionReceiptResponses];
+
+export type CancelActionExecutionData = {
+    body: CancelActionExecutionRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        executionId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-executions/{executionId}:cancel';
+};
+
+export type CancelActionExecutionErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, EXECUTION_ALREADY_TERMINAL
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type CancelActionExecutionError = CancelActionExecutionErrors[keyof CancelActionExecutionErrors];
+
+export type CancelActionExecutionResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionExecutionMutationReceiptV1;
+};
+
+export type CancelActionExecutionResponse = CancelActionExecutionResponses[keyof CancelActionExecutionResponses];
+
+export type RetryActionExecutionData = {
+    body: RetryActionExecutionRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        executionId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-executions/{executionId}:retry';
+};
+
+export type RetryActionExecutionErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: EXECUTION_FENCE_STALE, EXECUTION_RETRY_UNSAFE, EXECUTION_ATTEMPT_LIMIT, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type RetryActionExecutionError = RetryActionExecutionErrors[keyof RetryActionExecutionErrors];
+
+export type RetryActionExecutionResponses = {
+    /**
+     * Successful response
+     */
+    202: ActionExecutionMutationReceiptV1;
+};
+
+export type RetryActionExecutionResponse = RetryActionExecutionResponses[keyof RetryActionExecutionResponses];
+
+export type ReleaseLegalHoldData = {
+    body: ReleaseLegalHoldRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/release-legal-hold';
+};
+
+export type ReleaseLegalHoldErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: LEGAL_HOLD_NOT_FOUND, LEGAL_HOLD_RELEASE_STALE, LEGAL_HOLD_SCOPE_INVALID, LEGAL_HOLD_ALREADY_RELEASED, CONFLICT_UNRESOLVED, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ReleaseLegalHoldError = ReleaseLegalHoldErrors[keyof ReleaseLegalHoldErrors];
+
+export type ReleaseLegalHoldResponses = {
+    /**
+     * Successful response
+     */
+    200: LegalHoldReleaseReceiptV1;
+};
+
+export type ReleaseLegalHoldResponse = ReleaseLegalHoldResponses[keyof ReleaseLegalHoldResponses];
+
+export type GetCommunicationDeliveryReceiptData = {
+    body?: never;
+    path: {
+        deliveryId: string;
+    };
+    query?: never;
+    url: '/v1/internal/communication-deliveries/{deliveryId}/receipt';
+};
+
+export type GetCommunicationDeliveryReceiptErrors = {
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DELIVERY_RECEIPT_INCOMPLETE
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetCommunicationDeliveryReceiptError = GetCommunicationDeliveryReceiptErrors[keyof GetCommunicationDeliveryReceiptErrors];
+
+export type GetCommunicationDeliveryReceiptResponses = {
+    /**
+     * Successful response
+     */
+    200: CommunicationDeliveryReceiptViewV1;
+};
+
+export type GetCommunicationDeliveryReceiptResponse = GetCommunicationDeliveryReceiptResponses[keyof GetCommunicationDeliveryReceiptResponses];
+
+export type ReconcileCommunicationDeliveryData = {
+    body: ReconcileCommunicationDeliveryRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        deliveryId: string;
+    };
+    query?: never;
+    url: '/v1/internal/communication-deliveries/{deliveryId}:reconcile';
+};
+
+export type ReconcileCommunicationDeliveryErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DELIVERY_VERSION_CONFLICT, DELIVERY_RECONCILIATION_EVIDENCE_INVALID, DELIVERY_STATE_INVALID, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ReconcileCommunicationDeliveryError = ReconcileCommunicationDeliveryErrors[keyof ReconcileCommunicationDeliveryErrors];
+
+export type ReconcileCommunicationDeliveryResponses = {
+    /**
+     * Successful response
+     */
+    200: CommunicationDeliveryMutationReceiptV1;
+};
+
+export type ReconcileCommunicationDeliveryResponse = ReconcileCommunicationDeliveryResponses[keyof ReconcileCommunicationDeliveryResponses];
+
+export type CancelCommunicationDeliveryData = {
+    body: CancelCommunicationDeliveryRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        deliveryId: string;
+    };
+    query?: never;
+    url: '/v1/internal/communication-deliveries/{deliveryId}:cancel';
+};
+
+export type CancelCommunicationDeliveryErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DELIVERY_VERSION_CONFLICT, DELIVERY_STATE_INVALID, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type CancelCommunicationDeliveryError = CancelCommunicationDeliveryErrors[keyof CancelCommunicationDeliveryErrors];
+
+export type CancelCommunicationDeliveryResponses = {
+    /**
+     * Successful response
+     */
+    200: CommunicationDeliveryMutationReceiptV1;
+};
+
+export type CancelCommunicationDeliveryResponse = CancelCommunicationDeliveryResponses[keyof CancelCommunicationDeliveryResponses];
+
+export type GetIncidentData = {
+    body?: never;
+    path: {
+        incidentId: string;
+    };
+    query?: never;
+    url: '/v1/internal/incidents/{incidentId}';
+};
+
+export type GetIncidentErrors = {
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetIncidentError = GetIncidentErrors[keyof GetIncidentErrors];
+
+export type GetIncidentResponses = {
+    /**
+     * Successful response
+     */
+    200: IncidentDetailV1;
+};
+
+export type GetIncidentResponse = GetIncidentResponses[keyof GetIncidentResponses];
+
+export type TriageIncidentData = {
+    body: TriageIncidentRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        incidentId: string;
+    };
+    query?: never;
+    url: '/v1/internal/incidents/{incidentId}:triage';
+};
+
+export type TriageIncidentErrors = {
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_COMMANDER_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type TriageIncidentError = TriageIncidentErrors[keyof TriageIncidentErrors];
+
+export type TriageIncidentResponses = {
+    /**
+     * Successful response
+     */
+    200: IncidentTransitionReceiptV1;
+};
+
+export type TriageIncidentResponse = TriageIncidentResponses[keyof TriageIncidentResponses];
+
+export type ContainIncidentData = {
+    body: ContainIncidentRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        incidentId: string;
+    };
+    query?: never;
+    url: '/v1/internal/incidents/{incidentId}:contain';
+};
+
+export type ContainIncidentErrors = {
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_CONTAINMENT_INCOMPLETE
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ContainIncidentError = ContainIncidentErrors[keyof ContainIncidentErrors];
+
+export type ContainIncidentResponses = {
+    /**
+     * Successful response
+     */
+    200: IncidentTransitionReceiptV1;
+};
+
+export type ContainIncidentResponse = ContainIncidentResponses[keyof ContainIncidentResponses];
+
+export type StartIncidentRecoveryData = {
+    body: StartIncidentRecoveryRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        incidentId: string;
+    };
+    query?: never;
+    url: '/v1/internal/incidents/{incidentId}:start-recovery';
+};
+
+export type StartIncidentRecoveryErrors = {
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type StartIncidentRecoveryError = StartIncidentRecoveryErrors[keyof StartIncidentRecoveryErrors];
+
+export type StartIncidentRecoveryResponses = {
+    /**
+     * Successful response
+     */
+    200: IncidentTransitionReceiptV1;
+};
+
+export type StartIncidentRecoveryResponse = StartIncidentRecoveryResponses[keyof StartIncidentRecoveryResponses];
+
+export type ResolveIncidentData = {
+    body: ResolveIncidentRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        incidentId: string;
+    };
+    query?: never;
+    url: '/v1/internal/incidents/{incidentId}:resolve';
+};
+
+export type ResolveIncidentErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_RESOLUTION_BLOCKED, RECENT_AUTH_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ResolveIncidentError = ResolveIncidentErrors[keyof ResolveIncidentErrors];
+
+export type ResolveIncidentResponses = {
+    /**
+     * Successful response
+     */
+    200: IncidentTransitionReceiptV1;
+};
+
+export type ResolveIncidentResponse = ResolveIncidentResponses[keyof ResolveIncidentResponses];
+
+export type CloseIncidentPostmortemData = {
+    body: CloseIncidentPostmortemRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        incidentId: string;
+    };
+    query?: never;
+    url: '/v1/internal/incidents/{incidentId}:close-postmortem';
+};
+
+export type CloseIncidentPostmortemErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_POSTMORTEM_INCOMPLETE, RECENT_AUTH_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type CloseIncidentPostmortemError = CloseIncidentPostmortemErrors[keyof CloseIncidentPostmortemErrors];
+
+export type CloseIncidentPostmortemResponses = {
+    /**
+     * Successful response
+     */
+    200: IncidentTransitionReceiptV1;
+};
+
+export type CloseIncidentPostmortemResponse = CloseIncidentPostmortemResponses[keyof CloseIncidentPostmortemResponses];
+
+export type ListResponseAppealsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/internal/queries/list-response-appeals';
+};
+
+export type ListResponseAppealsErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER, INVALID_CURSOR
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ListResponseAppealsError = ListResponseAppealsErrors[keyof ListResponseAppealsErrors];
+
+export type ListResponseAppealsResponses = {
+    /**
+     * Successful response
+     */
+    200: ResponseAppealQueuePageV1;
+};
+
+export type ListResponseAppealsResponse = ListResponseAppealsResponses[keyof ListResponseAppealsResponses];
+
+export type GetResponseAppealWorkspaceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/internal/queries/get-response-appeal-workspace';
+};
+
+export type GetResponseAppealWorkspaceErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetResponseAppealWorkspaceError = GetResponseAppealWorkspaceErrors[keyof GetResponseAppealWorkspaceErrors];
+
+export type GetResponseAppealWorkspaceResponses = {
+    /**
+     * Successful response
+     */
+    200: ResponseAppealWorkspaceV1;
+};
+
+export type GetResponseAppealWorkspaceResponse = GetResponseAppealWorkspaceResponses[keyof GetResponseAppealWorkspaceResponses];
+
+export type TransitionResponseAppealData = {
+    body: TransitionResponseAppealRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/transition-response-appeal';
+};
+
+export type TransitionResponseAppealErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: APPEAL_VERSION_CONFLICT, APPEAL_STATE_INVALID, APPEAL_SCOPE_INVALID, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type TransitionResponseAppealError = TransitionResponseAppealErrors[keyof TransitionResponseAppealErrors];
+
+export type TransitionResponseAppealResponses = {
+    /**
+     * Successful response
+     */
+    200: ResponseAppealDecisionReceiptV1;
+};
+
+export type TransitionResponseAppealResponse = TransitionResponseAppealResponses[keyof TransitionResponseAppealResponses];
+
+export type DecideResponseExtensionData = {
+    body: DecideResponseExtensionRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/decide-response-extension';
+};
+
+export type DecideResponseExtensionErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: EXTENSION_VERSION_CONFLICT, EXTENSION_STATE_INVALID, BUSINESS_CALENDAR_STALE, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type DecideResponseExtensionError = DecideResponseExtensionErrors[keyof DecideResponseExtensionErrors];
+
+export type DecideResponseExtensionResponses = {
+    /**
+     * Successful response
+     */
+    200: ResponseExtensionDecisionReceiptV1;
+};
+
+export type DecideResponseExtensionResponse = DecideResponseExtensionResponses[keyof DecideResponseExtensionResponses];
+
+export type ListRetentionRequestsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/internal/queries/list-retention-requests';
+};
+
+export type ListRetentionRequestsErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER, INVALID_CURSOR
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ListRetentionRequestsError = ListRetentionRequestsErrors[keyof ListRetentionRequestsErrors];
+
+export type ListRetentionRequestsResponses = {
+    /**
+     * Successful response
+     */
+    200: RetentionRequestQueuePageV1;
+};
+
+export type ListRetentionRequestsResponse = ListRetentionRequestsResponses[keyof ListRetentionRequestsResponses];
+
+export type GetRetentionRequestData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/internal/queries/get-retention-request';
+};
+
+export type GetRetentionRequestErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetRetentionRequestError = GetRetentionRequestErrors[keyof GetRetentionRequestErrors];
+
+export type GetRetentionRequestResponses = {
+    /**
+     * Successful response
+     */
+    200: RetentionRequestWorkspaceV1;
+};
+
+export type GetRetentionRequestResponse = GetRetentionRequestResponses[keyof GetRetentionRequestResponses];
+
+export type TransitionRetentionRequestData = {
+    body: TransitionRetentionRequestRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/transition-retention-request';
+};
+
+export type TransitionRetentionRequestErrors = {
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, LEGAL_HOLD_ACTIVE, RETENTION_COMPLETION_INCOMPLETE, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type TransitionRetentionRequestError = TransitionRetentionRequestErrors[keyof TransitionRetentionRequestErrors];
+
+export type TransitionRetentionRequestResponses = {
+    /**
+     * Successful response
+     */
+    200: RetentionRequestDecisionReceiptV1;
+};
+
+export type TransitionRetentionRequestResponse = TransitionRetentionRequestResponses[keyof TransitionRetentionRequestResponses];
+
+export type ListRecordClassSchedulesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/internal/queries/list-record-class-schedules';
+};
+
+export type ListRecordClassSchedulesErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER, INVALID_CURSOR
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ListRecordClassSchedulesError = ListRecordClassSchedulesErrors[keyof ListRecordClassSchedulesErrors];
+
+export type ListRecordClassSchedulesResponses = {
+    /**
+     * Successful response
+     */
+    200: RecordClassSchedulePageV1;
+};
+
+export type ListRecordClassSchedulesResponse = ListRecordClassSchedulesResponses[keyof ListRecordClassSchedulesResponses];
+
+export type DeclareConflictData = {
+    body: DeclareConflictRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/conflict-declarations';
+};
+
+export type DeclareConflictErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: TARGET_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type DeclareConflictError = DeclareConflictErrors[keyof DeclareConflictErrors];
+
+export type DeclareConflictResponses = {
+    /**
+     * Successful response
+     */
+    201: ConflictDeclarationReceiptV1;
+};
+
+export type DeclareConflictResponse = DeclareConflictResponses[keyof DeclareConflictResponses];
+
+export type WithdrawConflictData = {
+    body: WithdrawConflictRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        declarationId: string;
+    };
+    query?: never;
+    url: '/v1/internal/conflict-declarations/{declarationId}:withdraw';
+};
+
+export type WithdrawConflictErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, CONFLICT_WITHDRAWAL_FORBIDDEN, CONFLICT_DEPENDENCY_ACTIVE, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type WithdrawConflictError = WithdrawConflictErrors[keyof WithdrawConflictErrors];
+
+export type WithdrawConflictResponses = {
+    /**
+     * Successful response
+     */
+    200: ConflictDeclarationReceiptV1;
+};
+
+export type WithdrawConflictResponse = WithdrawConflictResponses[keyof WithdrawConflictResponses];
+
+export type WithdrawActionProposalData = {
+    body: WithdrawActionProposalRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        proposalId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}:withdraw';
+};
+
+export type WithdrawActionProposalErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type WithdrawActionProposalError = WithdrawActionProposalErrors[keyof WithdrawActionProposalErrors];
+
+export type WithdrawActionProposalResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionProposalReceiptV1;
+};
+
+export type WithdrawActionProposalResponse = WithdrawActionProposalResponses[keyof WithdrawActionProposalResponses];
+
+export type WithdrawActionDecisionData = {
+    body: WithdrawActionDecisionRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        proposalId: string;
+        decisionId: string;
+    };
+    query?: never;
+    url: '/v1/internal/action-proposals/{proposalId}/decisions/{decisionId}:withdraw';
+};
+
+export type WithdrawActionDecisionErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, STEP_UP_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type WithdrawActionDecisionError = WithdrawActionDecisionErrors[keyof WithdrawActionDecisionErrors];
+
+export type WithdrawActionDecisionResponses = {
+    /**
+     * Successful response
+     */
+    200: ActionDecisionReceiptV1;
+};
+
+export type WithdrawActionDecisionResponse = WithdrawActionDecisionResponses[keyof WithdrawActionDecisionResponses];
+
+export type PromoteResearchArtifactToEvidenceData = {
+    body: PromoteResearchArtifactRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/promote-research-artifact-to-evidence';
+};
+
+export type PromoteResearchArtifactToEvidenceErrors = {
+    /**
+     * Problem response: INVALID_REQUEST
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTOR_ASSERTION_INVALID
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ARTIFACT_NOT_CLEAN, RIGHTS_DENIED, LOCATOR_MISMATCH, CONTENT_HASH_MISMATCH, VALIDATION_FAILED, DEPENDENCY_UNAVAILABLE
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type PromoteResearchArtifactToEvidenceError = PromoteResearchArtifactToEvidenceErrors[keyof PromoteResearchArtifactToEvidenceErrors];
+
+export type PromoteResearchArtifactToEvidenceResponses = {
+    /**
+     * Successful response
+     */
+    201: PromoteResearchArtifactReceiptV1;
+};
+
+export type PromoteResearchArtifactToEvidenceResponse = PromoteResearchArtifactToEvidenceResponses[keyof PromoteResearchArtifactToEvidenceResponses];
+
+export type CancelAgentRunData = {
+    body: CancelAgentRunRequestV2;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/v1/internal/agent-runs/{runId}:cancel';
+};
+
+export type CancelAgentRunErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: AGENT_RUN_STATE_INVALID
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type CancelAgentRunError = CancelAgentRunErrors[keyof CancelAgentRunErrors];
+
+export type CancelAgentRunResponses = {
+    /**
+     * Successful response
+     */
+    200: AgentRunControlReceiptV2;
+};
+
+export type CancelAgentRunResponse = CancelAgentRunResponses[keyof CancelAgentRunResponses];
+
+export type DecideJourneyHandoffData = {
+    body: DecideJourneyHandoffRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        handoffId: string;
+    };
+    query?: never;
+    url: '/v1/internal/journey-handoffs/{handoffId}:decide';
+};
+
+export type DecideJourneyHandoffErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTOR_ASSERTION_INVALID
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTOR_ASSERTION_REPLAYED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_REPLAYED, HANDOFF_RECEIVER_MISMATCH, HANDOFF_STATE_INVALID, HANDOFF_BINDING_MISMATCH, HANDOFF_EXPIRED, JOURNEY_TERMINAL
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type DecideJourneyHandoffError = DecideJourneyHandoffErrors[keyof DecideJourneyHandoffErrors];
+
+export type DecideJourneyHandoffResponses = {
+    /**
+     * Successful response
+     */
+    200: JourneyHandoffDecisionReceiptV1;
+};
+
+export type DecideJourneyHandoffResponse = DecideJourneyHandoffResponses[keyof DecideJourneyHandoffResponses];

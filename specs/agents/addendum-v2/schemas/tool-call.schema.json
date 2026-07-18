@@ -1,0 +1,721 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tool-call.json",
+  "title": "ToolCallV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "toolCallId",
+    "agentRunId",
+    "providerTurnId",
+    "callId",
+    "inputSnapshotSha256",
+    "priorTranscriptSha256",
+    "toolId",
+    "toolCatalogVersion",
+    "toolCatalogSha256",
+    "requestSchemaSha256",
+    "responseSchemaSha256",
+    "timeoutMs",
+    "maxResults",
+    "requestSha256",
+    "request",
+    "allowlistDecisionSha256",
+    "scopeDecisionSha256",
+    "rightsDecisionSha256",
+    "classification",
+    "budgetReservationKeySha256",
+    "status",
+    "resultKind",
+    "resultSha256",
+    "result",
+    "responseValidationSha256",
+    "resultTranscriptSha256",
+    "sourceUseBindings",
+    "latencyMs",
+    "costEventId",
+    "terminalCode",
+    "terminalSha256",
+    "claimGeneration",
+    "leaseTokenSha256",
+    "leaseExpiresAt",
+    "version",
+    "startedAt",
+    "terminalAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "tool-call.v2"
+    },
+    "toolCallId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "agentRunId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "providerTurnId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "callId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "inputSnapshotSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "priorTranscriptSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "toolId": {
+      "enum": [
+        "claim.language_check",
+        "contract.find_comparables",
+        "entity.lookup",
+        "evidence.read",
+        "evidence.search",
+        "response.read",
+        "rule.reproduce",
+        "source.fetch",
+        "source.locator_verify"
+      ]
+    },
+    "toolCatalogVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "toolCatalogSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "requestSchemaSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "responseSchemaSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120000
+    },
+    "maxResults": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    },
+    "requestSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "request": {
+      "oneOf": [
+        {
+          "$ref": "../tools/claim-language-check.request.schema.json"
+        },
+        {
+          "$ref": "../tools/contract-find-comparables.request.schema.json"
+        },
+        {
+          "$ref": "../tools/entity-lookup.request.schema.json"
+        },
+        {
+          "$ref": "../tools/evidence-read.request.schema.json"
+        },
+        {
+          "$ref": "../tools/evidence-search.request.schema.json"
+        },
+        {
+          "$ref": "../tools/response-read.request.schema.json"
+        },
+        {
+          "$ref": "../tools/rule-reproduce.request.schema.json"
+        },
+        {
+          "$ref": "../tools/source-fetch.request.schema.json"
+        },
+        {
+          "$ref": "../tools/source-locator-verify.request.schema.json"
+        }
+      ]
+    },
+    "allowlistDecisionSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "scopeDecisionSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "rightsDecisionSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "classification": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "RESTRICTED",
+        "PERSONAL_DATA",
+        "LEGAL_HOLD"
+      ]
+    },
+    "budgetReservationKeySha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "CLAIMED",
+        "SUCCEEDED",
+        "DENIED",
+        "TIMED_OUT",
+        "FAILED",
+        "OUTCOME_UNKNOWN"
+      ]
+    },
+    "resultKind": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        null,
+        "TOOL_RESULT",
+        "DISPATCH_DENIAL",
+        "TOOL_ERROR"
+      ]
+    },
+    "resultSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "../tools/claim-language-check.response.schema.json"
+        },
+        {
+          "$ref": "../tools/contract-find-comparables.response.schema.json"
+        },
+        {
+          "$ref": "../tools/entity-lookup.response.schema.json"
+        },
+        {
+          "$ref": "../tools/evidence-read.response.schema.json"
+        },
+        {
+          "$ref": "../tools/evidence-search.response.schema.json"
+        },
+        {
+          "$ref": "../tools/response-read.response.schema.json"
+        },
+        {
+          "$ref": "../tools/rule-reproduce.response.schema.json"
+        },
+        {
+          "$ref": "../tools/source-fetch.response.schema.json"
+        },
+        {
+          "$ref": "../tools/source-locator-verify.response.schema.json"
+        }
+      ]
+    },
+    "responseValidationSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resultTranscriptSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sourceUseBindings": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceUseId",
+          "sourceUseSha256"
+        ],
+        "properties": {
+          "sourceUseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "latencyMs": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "costEventId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "terminalCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+    },
+    "terminalSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "claimGeneration": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "leaseTokenSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "leaseExpiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "terminalAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "CLAIMED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "resultKind": {
+            "type": "null"
+          },
+          "resultSha256": {
+            "type": "null"
+          },
+          "result": {
+            "type": "null"
+          },
+          "responseValidationSha256": {
+            "type": "null"
+          },
+          "resultTranscriptSha256": {
+            "type": "null"
+          },
+          "terminalCode": {
+            "type": "null"
+          },
+          "terminalSha256": {
+            "type": "null"
+          },
+          "terminalAt": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "SUCCEEDED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "resultKind": {
+            "const": "TOOL_RESULT"
+          },
+          "resultSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "result": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "responseValidationSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "resultTranscriptSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "terminalCode": {
+            "type": "null"
+          },
+          "terminalSha256": {
+            "type": "null"
+          },
+          "terminalAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "DENIED",
+              "TIMED_OUT",
+              "FAILED",
+              "OUTCOME_UNKNOWN"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "resultKind": {
+            "enum": [
+              "DISPATCH_DENIAL",
+              "TOOL_ERROR"
+            ]
+          },
+          "resultSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "result": {
+            "type": "null"
+          },
+          "responseValidationSha256": {
+            "type": "null"
+          },
+          "resultTranscriptSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "terminalCode": {
+            "type": "string"
+          },
+          "terminalSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "terminalAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "claim.language_check"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/claim-language-check.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/claim-language-check.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "contract.find_comparables"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/contract-find-comparables.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/contract-find-comparables.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "entity.lookup"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/entity-lookup.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/entity-lookup.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "evidence.read"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/evidence-read.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/evidence-read.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "evidence.search"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/evidence-search.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/evidence-search.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "response.read"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/response-read.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/response-read.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "rule.reproduce"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/rule-reproduce.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/rule-reproduce.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "source.fetch"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/source-fetch.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/source-fetch.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "source.locator_verify"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/source-locator-verify.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/source-locator-verify.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "DENIED"}}, "required": ["status"]},
+      "then": {"properties": {"resultKind": {"const": "DISPATCH_DENIAL"}}}
+    },
+    {
+      "if": {"properties": {"status": {"enum": ["TIMED_OUT", "FAILED", "OUTCOME_UNKNOWN"]}}, "required": ["status"]},
+      "then": {"properties": {"resultKind": {"const": "TOOL_ERROR"}}}
+    },
+    {
+      "if": {"properties": {"toolId": {"const": "source.fetch"}}, "required": ["toolId"]},
+      "then": {"properties": {"budgetReservationKeySha256": {"$ref": "#/$defs/sha256"}}}
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "x-gurinnae-invariants": [
+    "request.runId and request.inputSnapshotSha256 equal agentRunId and inputSnapshotSha256; inputSnapshotId resolves to the same READY immutable snapshot.",
+    "The toolId selects exactly one request/response schema pair and the persisted requestSchemaSha256/responseSchemaSha256 equal that pair's canonical bytes.",
+    "(agentRunId,callId) is idempotent; claimGeneration and leaseTokenSha256 fence one executor, and an expired lease never proves the external outcome.",
+    "Every sourceUseBinding belongs to this tool call/run/snapshot, is sorted unique, and is atomically committed with result, response validation, transcript, cost, and terminal receipt.",
+    "source.fetch alone uses the egress adapter and mandatory budget reservation; the eight internal tools are read-only snapshot-scoped PostgreSQL adapters."
+  ]
+}

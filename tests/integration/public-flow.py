@@ -139,6 +139,11 @@ case_filters = get_json(
     "&hasResponse=false&hasCorrection=true&limit=10"
 )
 assert [item["slug"] for item in case_filters["items"]] == ["integration-case"]
+case_detail = get_json("/v1/cases/integration-case")
+case_revision = get_json("/v1/cases/integration-case/revisions/1")
+for internal_key in ("agencyId", "supplierId", "ruleId", "agencyIds", "supplierIds", "ruleIds"):
+    assert internal_key not in case_detail, (internal_key, case_detail)
+    assert internal_key not in case_revision["content"], (internal_key, case_revision)
 response_only = get_json("/v1/cases?hasResponse=true&hasCorrection=false&limit=10")
 assert [item["slug"] for item in response_only["items"]] == ["filter-control-case"]
 

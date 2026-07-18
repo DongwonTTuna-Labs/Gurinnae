@@ -1,7 +1,53 @@
 from __future__ import annotations
+import json
+import tomllib
 from pathlib import Path
 from .loaders import load_yaml
 from .models import Validation
+
+
+def _cargo_workspace_members(root: Path) -> list[str]:
+    document = tomllib.loads((root / 'Cargo.toml').read_text(encoding='utf-8'))
+    members = document.get('workspace', {}).get('members')
+    if not isinstance(members, list) or not all(isinstance(member, str) for member in members):
+        raise ValueError('Cargo.toml workspace.members must be a string array')
+    return members
+
+
+def _bun_workspace_members(root: Path) -> list[str]:
+    document = json.loads((root / 'package.json').read_text(encoding='utf-8'))
+    patterns = document.get('workspaces')
+    if not isinstance(patterns, list) or not all(isinstance(pattern, str) for pattern in patterns):
+        raise ValueError('package.json workspaces must be a string array')
+    members: set[str] = set()
+    for pattern in patterns:
+        if not pattern or pattern.startswith('/') or '..' in Path(pattern).parts:
+            raise ValueError(f'unsafe Bun workspace pattern: {pattern!r}')
+        for candidate in root.glob(pattern):
+            if candidate.is_dir() and (candidate / 'package.json').is_file():
+                members.add(candidate.relative_to(root).as_posix())
+    return sorted(members)
+
+
+def _require_exact_members(
+    result: Validation,
+    *,
+    label: str,
+    expected: list[str],
+    actual: list[str],
+) -> None:
+    result.require(
+        len(actual) == len(set(actual)),
+        f'{label} contains duplicate members',
+    )
+    expected_set = set(expected)
+    actual_set = set(actual)
+    result.require(
+        actual_set == expected_set,
+        f'{label} differs from final-tree: missing={sorted(expected_set - actual_set)}, '
+        f'unexpected={sorted(actual_set - expected_set)}',
+    )
+
 
 def validate(root: Path, result: Validation) -> None:
     tree=load_yaml(root/'specs/repository/final-tree.yaml'); services=load_yaml(root/'specs/architecture/service-boundaries.yaml')
@@ -9,11 +55,41 @@ def validate(root: Path, result: Validation) -> None:
     cargo=tree['cargo_workspace']['members']; bun=tree['bun_workspace']['workspaces']; service_ids={s['id'] for s in services['services']}
     result.require(len(cargo)==32,f'expected 32 Cargo members, found {len(cargo)}'); result.require(len(bun)==9,f'expected 9 Bun workspaces, found {len(bun)}')
     result.require(len(compose['services'])==20,f'expected 20 Compose services, found {len(compose["services"])}')
+    try:
+        actual_cargo = _cargo_workspace_members(root)
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as error:
+        result.error(f'cannot read actual Cargo workspace: {error}')
+        actual_cargo = []
+    try:
+        actual_bun = _bun_workspace_members(root)
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        result.error(f'cannot read actual Bun workspace: {error}')
+        actual_bun = []
+    actual_compose = load_yaml(root/'compose.yaml').get('services', {})
+    _require_exact_members(result, label='Cargo.toml workspace.members', expected=cargo, actual=actual_cargo)
+    _require_exact_members(result, label='expanded package.json workspaces', expected=bun, actual=actual_bun)
+    _require_exact_members(
+        result,
+        label='compose.yaml services',
+        expected=list(compose['services']),
+        actual=list(actual_compose),
+    )
     split={'ingest-worker','analysis-worker','projection-worker','notification-worker','workflow-worker'}
     result.require(split<=set(compose['services']) and split<=service_ids,'split worker services incomplete')
     result.require('worker' not in compose['services'] and 'WORKER_DATABASE_URL' not in {e['name'] for e in config['entries']},'monolithic worker is forbidden')
     result.require('egress-gateway' in compose['services'] and 'egress-gateway' in service_ids,'egress gateway missing')
     result.require(compose['networks']['internal'].get('internal') is True,'internal network must deny direct external routing')
+    hardening = {
+        'init': True,
+        'security_opt': ['no-new-privileges:true'],
+        'cap_drop': ['ALL'],
+        'pids_limit': 256,
+    }
+    hardened_services = set(actual_compose) - {'postgres', 'clamav', 'otel-collector'}
+    for service in sorted(hardened_services):
+        service_config = actual_compose[service]
+        for key, expected in hardening.items():
+            result.require(service_config.get(key) == expected, f'{service}: runtime isolation {key} differs')
     result.require(len(egress['channels'])==5,'expected five egress channels')
     names=[e['name'] for e in config['entries']]; result.require(len(names)==len(set(names)),'duplicate runtime variables')
     required=['INGEST_DATABASE_URL','ANALYSIS_DATABASE_URL','PROJECTOR_DATABASE_URL','NOTIFICATION_DATABASE_URL','WORKFLOW_DATABASE_URL','DOCUMENT_EXTRACTOR_DATABASE_URL']
@@ -63,4 +139,4 @@ def validate(root: Path, result: Validation) -> None:
     migrations='\n'.join(x.read_text(encoding='utf-8') for x in sorted((root/'specs/database/migrations').glob('*.sql')))
     result.require('TO gurine_identity_api' in migrations and 'ops.claim_step_up_authorization' in migrations,'Identity API step-up authorization grant missing')
     result.require('GRANT EXECUTE ON FUNCTION ops.claim_step_up_authorization' in migrations and 'TO gurine_control_api' not in migrations[migrations.rfind('GRANT EXECUTE ON FUNCTION ops.claim_step_up_authorization'):migrations.rfind('GRANT EXECUTE ON FUNCTION ops.claim_step_up_authorization')+300],'Control API must not claim raw step-up authorization')
-    result.stats.update({'cargo_members':len(cargo),'bun_workspaces':len(bun),'compose_services':len(compose['services']),'runtime_variables':len(names),'egress_channels':len(egress['channels']),'service_boundaries':len(service_ids)})
+    result.stats.update({'cargo_members':len(actual_cargo),'bun_workspaces':len(actual_bun),'compose_services':len(actual_compose),'runtime_variables':len(names),'egress_channels':len(egress['channels']),'service_boundaries':len(service_ids)})

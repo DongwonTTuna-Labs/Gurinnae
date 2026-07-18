@@ -46,87 +46,12 @@ pub enum ConfigError {
 
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
-        let environment = env::var("GURINE_ENV").map_err(|_| ConfigError::Missing)?;
-        if !matches!(environment.as_str(), "development" | "test" | "production") {
-            return Err(ConfigError::Invalid);
-        }
-        let oidc_issuer_host = env::var("OIDC_ISSUER_HOST").map_err(|_| ConfigError::Missing)?;
-        let bind = env::var("HTTP_BIND").unwrap_or_else(|_| "0.0.0.0:8090".to_owned());
-        if bind.trim().is_empty() || oidc_issuer_host.trim().is_empty() {
-            return Err(ConfigError::Invalid);
-        }
-        let mut source_hosts = ["apis.data.go.kr", "opendart.fss.or.kr"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect::<BTreeSet<_>>();
-        let mut source_host_bindings = BTreeMap::from([
-            ("koneps-contracts".to_owned(), "apis.data.go.kr".to_owned()),
-            ("koneps-notices".to_owned(), "apis.data.go.kr".to_owned()),
-            ("open-dart".to_owned(), "opendart.fss.or.kr".to_owned()),
-        ]);
-        for (name, source_id) in [
-            ("ALIO_HOST", "alio"),
-            ("LOCAL_FINANCE_HOST", "local-finance"),
-            ("AUDIT_RESULTS_HOST", "audit-results"),
-        ] {
-            if let Some(host) = optional(name) {
-                let host = normalize_host(&host)?;
-                source_hosts.insert(host.clone());
-                source_host_bindings.insert(source_id.to_owned(), host);
-            }
-        }
-        let ai_hosts = optional("AI_PROVIDER_HOSTS")
-            .unwrap_or_default()
-            .split(',')
-            .map(str::trim)
-            .filter(|host| !host.is_empty())
-            .map(normalize_host)
-            .collect::<Result<BTreeSet<_>, _>>()?;
-        let mut challenge_hosts = ["challenges.cloudflare.com", "api.hcaptcha.com"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect::<BTreeSet<_>>();
-        if matches!(environment.as_str(), "development" | "test") {
-            for host in optional("CHALLENGE_PROVIDER_HOSTS")
-                .unwrap_or_default()
-                .split(',')
-                .map(str::trim)
-                .filter(|host| !host.is_empty())
-            {
-                challenge_hosts.insert(normalize_host(host)?);
-            }
-        }
-        let object_store = match optional("OBJECT_STORE_ADAPTER").as_deref() {
-            None => None,
-            Some("filesystem") if matches!(environment.as_str(), "development" | "test") => {
-                Some(ObjectStoreConfig::Filesystem(PathBuf::from(
-                    optional("OBJECT_STORE_FILESYSTEM_ROOT")
-                        .unwrap_or_else(|| "/var/lib/gurine-objects".to_owned()),
-                )))
-            }
-            Some("s3" | "egress") => Some(ObjectStoreConfig::S3 {
-                bucket: required("OBJECT_STORE_ATTACHMENT_BUCKET")?,
-                region: required("OBJECT_STORE_REGION")?,
-                endpoint: optional("OBJECT_STORE_ENDPOINT"),
-                access_key_id: required("OBJECT_STORE_ACCESS_KEY_ID")?,
-                secret_access_key: required("OBJECT_STORE_SECRET_ACCESS_KEY")?,
-            }),
-            Some(_) => return Err(ConfigError::Invalid),
-        };
-        let smtp_url = optional("SMTP_URL");
-        if let Some(url) = smtp_url.as_deref() {
-            let parsed = url::Url::parse(url).map_err(|_| ConfigError::Invalid)?;
-            if !matches!(parsed.scheme(), "smtp" | "smtps")
-                || parsed.host_str().is_none()
-                || optional("SMTP_HOST").is_some_and(|host| {
-                    parsed
-                        .host_str()
-                        .is_none_or(|value| !value.eq_ignore_ascii_case(&host))
-                })
-            {
-                return Err(ConfigError::Invalid);
-            }
-        }
+        let (environment, bind, oidc_issuer_host) = base_environment()?;
+        let (source_hosts, source_host_bindings) = source_config()?;
+        let ai_hosts = host_list("AI_PROVIDER_HOSTS")?;
+        let challenge_hosts = challenge_config(&environment)?;
+        let object_store = object_store_config(&environment)?;
+        let smtp_url = smtp_config()?;
         Ok(Self {
             bind,
             environment,
@@ -148,6 +73,102 @@ impl Config {
     pub fn development(&self) -> bool {
         matches!(self.environment.as_str(), "development" | "test")
     }
+}
+
+fn base_environment() -> Result<(String, String, String), ConfigError> {
+    let environment = env::var("GURINE_ENV").map_err(|_| ConfigError::Missing)?;
+    if !matches!(environment.as_str(), "development" | "test" | "production") {
+        return Err(ConfigError::Invalid);
+    }
+    let oidc = env::var("OIDC_ISSUER_HOST").map_err(|_| ConfigError::Missing)?;
+    let bind = env::var("HTTP_BIND").unwrap_or_else(|_| "0.0.0.0:8090".to_owned());
+    if bind.trim().is_empty() || oidc.trim().is_empty() {
+        return Err(ConfigError::Invalid);
+    }
+    Ok((environment, bind, normalize_host(&oidc)?))
+}
+
+fn source_config() -> Result<(BTreeSet<String>, BTreeMap<String, String>), ConfigError> {
+    let mut hosts = BTreeSet::from([
+        "apis.data.go.kr".to_owned(),
+        "opendart.fss.or.kr".to_owned(),
+    ]);
+    let mut bindings = BTreeMap::from([
+        ("koneps-contracts".to_owned(), "apis.data.go.kr".to_owned()),
+        ("koneps-notices".to_owned(), "apis.data.go.kr".to_owned()),
+        ("open-dart".to_owned(), "opendart.fss.or.kr".to_owned()),
+    ]);
+    for (name, source_id) in [
+        ("ALIO_HOST", "alio"),
+        ("LOCAL_FINANCE_HOST", "local-finance"),
+        ("AUDIT_RESULTS_HOST", "audit-results"),
+    ] {
+        if let Some(host) = optional(name) {
+            let host = normalize_host(&host)?;
+            hosts.insert(host.clone());
+            bindings.insert(source_id.to_owned(), host);
+        }
+    }
+    Ok((hosts, bindings))
+}
+
+fn host_list(name: &'static str) -> Result<BTreeSet<String>, ConfigError> {
+    optional(name)
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|host| !host.is_empty())
+        .map(normalize_host)
+        .collect()
+}
+
+fn challenge_config(environment: &str) -> Result<BTreeSet<String>, ConfigError> {
+    let mut hosts = BTreeSet::from([
+        "challenges.cloudflare.com".to_owned(),
+        "api.hcaptcha.com".to_owned(),
+    ]);
+    if matches!(environment, "development" | "test") {
+        hosts.extend(host_list("CHALLENGE_PROVIDER_HOSTS")?);
+    }
+    Ok(hosts)
+}
+
+fn object_store_config(environment: &str) -> Result<Option<ObjectStoreConfig>, ConfigError> {
+    match optional("OBJECT_STORE_ADAPTER").as_deref() {
+        None => Ok(None),
+        Some("filesystem") if matches!(environment, "development" | "test") => {
+            Ok(Some(ObjectStoreConfig::Filesystem(PathBuf::from(
+                optional("OBJECT_STORE_FILESYSTEM_ROOT")
+                    .unwrap_or_else(|| "/var/lib/gurine-objects".to_owned()),
+            ))))
+        }
+        Some("s3" | "egress") => Ok(Some(ObjectStoreConfig::S3 {
+            bucket: required("OBJECT_STORE_ATTACHMENT_BUCKET")?,
+            region: required("OBJECT_STORE_REGION")?,
+            endpoint: optional("OBJECT_STORE_ENDPOINT"),
+            access_key_id: required("OBJECT_STORE_ACCESS_KEY_ID")?,
+            secret_access_key: required("OBJECT_STORE_SECRET_ACCESS_KEY")?,
+        })),
+        Some(_) => Err(ConfigError::Invalid),
+    }
+}
+
+fn smtp_config() -> Result<Option<String>, ConfigError> {
+    let smtp_url = optional("SMTP_URL");
+    if let Some(url) = smtp_url.as_deref() {
+        let parsed = url::Url::parse(url).map_err(|_| ConfigError::Invalid)?;
+        if !matches!(parsed.scheme(), "smtp" | "smtps")
+            || parsed.host_str().is_none()
+            || optional("SMTP_HOST").is_some_and(|host| {
+                parsed
+                    .host_str()
+                    .is_none_or(|value| !value.eq_ignore_ascii_case(&host))
+            })
+        {
+            return Err(ConfigError::Invalid);
+        }
+    }
+    Ok(smtp_url)
 }
 
 fn required(name: &'static str) -> Result<String, ConfigError> {

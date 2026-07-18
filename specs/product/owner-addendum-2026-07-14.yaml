@@ -1,0 +1,1086 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+authority_source: product-owner instruction dated 2026-07-14
+base_authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+rules:
+  - Every original v13 contract remains required; an additive contract cannot replace or satisfy it.
+  - Original migrations 0001 through 0024 are immutable; additive migrations start at 0025.
+  - Original screen and operation counts are compatibility minima, not ceilings for this owner addendum.
+  - Generic JSON payloads, undocumented variants, and semantic reuse of an unrelated operation are forbidden.
+  - Every count change updates the build contract, machine catalogs, generated contracts, traceability, validators, acceptance mapping, and manifest atomically.
+
+surface_resolution:
+  surfaces: 3
+  screens: 94
+  new_routes: 0
+  paid_workspace:
+    surface: review-console
+    deployment_model: one configured organization per deployment
+    no_fourth_surface: true
+    excluded:
+      - cross-organization tenant switcher
+      - self-service billing route
+      - public entitlement UI
+      - customer data reuse across deployments
+
+state_machine_inventory:
+  machine_count: derived as len(addendum-state-machines.machines)
+  edge_count: derived as sum(len(addendum-state-machines.machines[*].edges))
+  count_semantics: source-derived expanded lifecycle registry; machine names and complete edge mappings are unique and unlisted transitions remain invalid; historical numeric totals are not completion targets
+
+operation_counts:
+  count_rule: all values are derived from the immutable base catalogs plus the set-equal registries below; numeric inventory literals are non-normative and forbidden
+  base:
+    public: derived count(specs/api/operation-contracts.yaml operations where api=public-api)
+    submission: derived count(specs/api/operation-contracts.yaml operations where api=submission-api)
+    control: derived count(specs/api/operation-contracts.yaml operations where api=control-api)
+    browser_identity: derived count(specs/api/operation-contracts.yaml operations where api=identity-api and browser-exposed)
+    external_total: derived sum(base.public,base.submission,base.control,base.browser_identity)
+    private_identity: derived operation count(specs/api/identity-service-internal.openapi.yaml paths)
+  additive:
+    public: derived count(additive_operations where api=public-api)
+    submission: derived count(additive_operations where api=submission-api)
+    control: derived count(additive_operations where api=control-api)
+    browser_identity: derived count(additive_operations where api=identity-api)
+  final:
+    public: derived base.public + additive.public
+    submission: derived base.submission + additive.submission
+    control: derived base.control + additive.control
+    browser_identity: derived base.browser_identity + additive.browser_identity
+    external_total: derived sum(final.public,final.submission,final.control,final.browser_identity)
+    private_identity: derived base.private_identity
+    private_communication_gateway: derived len(private_communication_gateway_operations)
+    private_control_service: derived len(private_control_service_operations)
+    private_application_commands: derived len(private_application_commands.commands)
+  kind_counts:
+    base: {query: derived count(base operations where kind=QUERY), command: derived count(base operations where kind=COMMAND)}
+    additive: {query: derived count(additive_operations where kind=QUERY), command: derived count(additive_operations where kind=COMMAND)}
+    external_final: {query: derived base.query + additive.query, command: derived base.command + additive.command}
+    private_identity: {query: derived count(private identity where kind=QUERY), command: derived count(private identity where kind=COMMAND)}
+    private_communication_gateway: {query: derived count(private_communication_gateway_operations where kind=QUERY), command: derived count(private_communication_gateway_operations where kind=COMMAND)}
+    private_control_service: {query: derived count(private_control_service_operations where kind=QUERY), command: derived count(private_control_service_operations where kind=COMMAND)}
+    private_application_commands: {query: derived count(private_application_commands where kind=QUERY), command: derived count(private_application_commands where kind=COMMAND)}
+    complete_http_catalog: {query: derived external_final.query + private_identity.query + private_communication_gateway.query + private_control_service.query, command: derived external_final.command + private_identity.command + private_communication_gateway.command + private_control_service.command, total: derived query + command}
+
+  additive_operations: &additive_operations
+  - operation_id: listActionApprovalQueue
+    api: control-api
+    method: GET
+    path: /v1/internal/action-proposals
+    kind: QUERY
+    owner: action-approval
+  - operation_id: createActionProposal
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals
+    kind: COMMAND
+    owner: action-approval
+  - operation_id: getActionProposal
+    api: control-api
+    method: GET
+    path: /v1/internal/action-proposals/{proposalId}
+    kind: QUERY
+    owner: action-approval
+  - operation_id: updateActionDraft
+    api: control-api
+    method: PATCH
+    path: /v1/internal/action-proposals/{proposalId}/draft
+    kind: COMMAND
+    owner: action-approval
+  - operation_id: previewActionDraft
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:preview
+    kind: COMMAND
+    owner: action-approval
+  - operation_id: submitActionForReview
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:submit-review
+    kind: COMMAND
+    owner: action-approval
+  - operation_id: submitActionDecision
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:decide
+    kind: COMMAND
+    owner: action-approval
+    closed_variants:
+      - APPROVE
+      - REJECT
+      - CHANGES_REQUIRED
+      - RECUSE
+  - operation_id: getActionExecutionReceipt
+    api: control-api
+    method: GET
+    path: /v1/internal/action-executions/{executionId}/receipt
+    kind: QUERY
+    owner: action-execution
+  - operation_id: cancelActionExecution
+    api: control-api
+    method: POST
+    path: /v1/internal/action-executions/{executionId}:cancel
+    kind: COMMAND
+    owner: action-execution
+  - operation_id: retryActionExecution
+    api: control-api
+    method: POST
+    path: /v1/internal/action-executions/{executionId}:retry
+    kind: COMMAND
+    owner: action-execution
+  - operation_id: releaseLegalHold
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/release-legal-hold
+    kind: COMMAND
+    owner: trust-governance
+  - operation_id: createResponseAppeal
+    api: submission-api
+    method: POST
+    path: /v1/response-receipt/appeals
+    kind: COMMAND
+    owner: response-rights
+  - operation_id: getResponseAppeal
+    api: submission-api
+    method: GET
+    path: /v1/response-receipt/appeals/{appealId}
+    kind: QUERY
+    owner: response-rights
+  - operation_id: claimActionReview
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:claim-review
+    kind: COMMAND
+    owner: action-approval
+  - operation_id: getCommunicationDeliveryReceipt
+    api: control-api
+    method: GET
+    path: /v1/internal/communication-deliveries/{deliveryId}/receipt
+    kind: QUERY
+    owner: communication-delivery
+  - operation_id: reconcileCommunicationDelivery
+    api: control-api
+    method: POST
+    path: /v1/internal/communication-deliveries/{deliveryId}:reconcile
+    kind: COMMAND
+    owner: communication-delivery
+  - operation_id: cancelCommunicationDelivery
+    api: control-api
+    method: POST
+    path: /v1/internal/communication-deliveries/{deliveryId}:cancel
+    kind: COMMAND
+    owner: communication-delivery
+  - operation_id: getIncident
+    api: control-api
+    method: GET
+    path: /v1/internal/incidents/{incidentId}
+    kind: QUERY
+    owner: incidents
+  - operation_id: triageIncident
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:triage
+    kind: COMMAND
+    owner: incidents
+  - operation_id: containIncident
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:contain
+    kind: COMMAND
+    owner: incidents
+  - operation_id: startIncidentRecovery
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:start-recovery
+    kind: COMMAND
+    owner: incidents
+  - operation_id: resolveIncident
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:resolve
+    kind: COMMAND
+    owner: incidents
+  - operation_id: closeIncidentPostmortem
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:close-postmortem
+    kind: COMMAND
+    owner: incidents
+  - operation_id: listResponseAppeals
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/list-response-appeals
+    kind: QUERY
+    owner: response-rights
+  - operation_id: getResponseAppealWorkspace
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/get-response-appeal-workspace
+    kind: QUERY
+    owner: response-rights
+  - operation_id: transitionResponseAppeal
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/transition-response-appeal
+    kind: COMMAND
+    owner: response-rights
+  - operation_id: decideResponseExtension
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/decide-response-extension
+    kind: COMMAND
+    owner: response-policy
+  - operation_id: listRetentionRequests
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/list-retention-requests
+    kind: QUERY
+    owner: privacy-retention
+  - operation_id: getRetentionRequest
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/get-retention-request
+    kind: QUERY
+    owner: privacy-retention
+  - operation_id: transitionRetentionRequest
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/transition-retention-request
+    kind: COMMAND
+    owner: privacy-retention
+  - operation_id: listRecordClassSchedules
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/list-record-class-schedules
+    kind: QUERY
+    owner: privacy-retention
+  - operation_id: requestCommunicationEndpointLink
+    api: submission-api
+    method: POST
+    path: /v1/communication-profile-session/endpoints:link
+    kind: COMMAND
+    owner: communication-authorization
+  - operation_id: verifyCommunicationEndpointLink
+    api: submission-api
+    method: POST
+    path: /v1/submission-session/communication-endpoint-link:verify
+    kind: COMMAND
+    owner: communication-authorization
+  - operation_id: unlinkCommunicationEndpoint
+    api: submission-api
+    method: POST
+    path: /v1/communication-profile-session/endpoints/{endpointId}:unlink
+    kind: COMMAND
+    owner: communication-authorization
+  - operation_id: createPrivacyRequest
+    api: submission-api
+    method: POST
+    path: /v1/privacy-requests
+    kind: COMMAND
+    owner: privacy-retention
+  - operation_id: exchangePrivacyRequestReceiptToken
+    api: submission-api
+    method: POST
+    path: /v1/submission-session/privacy-request-receipt:exchange
+    kind: COMMAND
+    owner: privacy-retention
+  - operation_id: getPrivacyRequest
+    api: submission-api
+    method: GET
+    path: /v1/privacy-request-receipt
+    kind: QUERY
+    owner: privacy-retention
+  - operation_id: declareConflict
+    api: control-api
+    method: POST
+    path: /v1/internal/conflict-declarations
+    kind: COMMAND
+    owner: trust-governance
+  - operation_id: withdrawConflict
+    api: control-api
+    method: POST
+    path: /v1/internal/conflict-declarations/{declarationId}:withdraw
+    kind: COMMAND
+    owner: trust-governance
+  - operation_id: withdrawActionProposal
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:withdraw
+    kind: COMMAND
+    owner: action-approval
+  - operation_id: withdrawActionDecision
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}/decisions/{decisionId}:withdraw
+    kind: COMMAND
+    owner: action-approval
+  - operation_id: promoteResearchArtifactToEvidence
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/promote-research-artifact-to-evidence
+    kind: COMMAND
+    owner: agent-research-promotion
+  - operation_id: cancelAgentRun
+    api: control-api
+    method: POST
+    path: /v1/internal/agent-runs/{runId}:cancel
+    kind: COMMAND
+    owner: agent-run-control
+  - operation_id: decideJourneyHandoff
+    api: control-api
+    method: POST
+    path: /v1/internal/journey-handoffs/{handoffId}:decide
+    kind: COMMAND
+    owner: journey-coordination
+  - operation_id: recordSupplierIdentityResolution
+    api: identity-api
+    method: POST
+    path: /v1/internal/supplier-identity/resolutions
+    kind: COMMAND
+    owner: supplier-identity
+  - operation_id: recordSupplierRelationshipAssertion
+    api: identity-api
+    method: POST
+    path: /v1/internal/supplier-relationships/assertions
+    kind: COMMAND
+    owner: supplier-relationship
+  - operation_id: decideSupplierRelationshipAssertion
+    api: identity-api
+    method: POST
+    path: /v1/internal/supplier-relationships/assertions/{assertionId}:decide
+    kind: COMMAND
+    owner: supplier-relationship
+
+additive_operations: *additive_operations
+
+decision_variants:
+  action_kind:
+    - HYPOTHESIS
+    - CLAIM
+    - TASK
+    - COMPARABLE
+    - COMMUNICATION
+    - PUBLICATION
+    - RETRACTION
+    - RULE_ACTIVATION
+    - ROLE_GRANT
+    - KILL_SWITCH
+    - COMMUNICATION_AUTHORIZATION
+    - ASSET_RIGHTS_DECISION
+    - RETENTION_SCHEDULE
+    - FUNDING_DISCLOSURE
+    - CAPABILITY_ACTIVATION
+    - RESPONSE_POLICY_CALENDAR
+    - COMMERCIAL_CONTROL
+  rule: Each action kind has an exact schema and application command; there is no fallback payload.
+
+database_delta:
+  base_migrations: 24
+  additive_migrations: 6
+  final_migrations: 30
+  base_active_tables: 107
+  additive_table_count: 128
+  final_active_tables: 235
+  migrations:
+    - 0025_evidence_snapshots_and_search.sql
+    - 0026_agent_action_approval.sql
+    - 0027_communication_consent_delivery.sql
+    - 0028_governance_operations.sql
+    - 0029_product_economics.sql
+    - 0030_v13_submission_session_hardening.sql
+  additive_tables:
+    - raw.evidence_segments
+    - raw.research_artifacts
+    - raw.asset_rights_decisions
+    - core.normalization_runs
+    - core.procurement_notice_revisions
+    - core.procurement_award_revisions
+    - core.procurement_award_winner_revisions
+    - core.procurement_bidder_participation_revisions
+    - core.procurement_contract_revisions
+    - core.procurement_contract_supplier_revisions
+    - core.procurement_contract_amendment_revisions
+    - core.procurement_contract_line_item_revisions
+    - core.procurement_contract_line_item_components
+    - core.supplier_identity_candidates
+    - core.supplier_identity_resolution_decisions
+    - core.supplier_identity_resolution_decision_members
+    - core.supplier_relationship_assertions
+    - core.supplier_relationship_assertion_evidence
+    - core.procurement_query_snapshots
+    - core.procurement_query_snapshot_members
+    - editorial.response_request_claim_scopes
+    - editorial.response_request_evidence_scopes
+    - core.dataset_snapshots
+    - core.dataset_snapshot_members
+    - ops.agent_tool_calls
+    - ops.agent_reconciliation_evidence
+    - ops.agent_run_control_receipts
+    - ops.agent_source_uses
+    - ops.agent_output_validations
+    - ops.action_proposals
+    - ops.action_proposal_versions
+    - ops.action_approval_hypothesis_details
+    - ops.action_approval_claim_details
+    - ops.action_approval_task_details
+    - ops.action_approval_comparable_details
+    - ops.action_approval_communication_details
+    - ops.action_approval_publication_details
+    - ops.action_approval_retraction_details
+    - ops.action_approval_rule_activation_details
+    - ops.action_approval_role_grant_details
+    - ops.action_approval_kill_switch_details
+    - ops.action_approval_communication_authorization_details
+    - ops.action_approval_asset_rights_details
+    - ops.action_approval_retention_schedule_details
+    - ops.action_approval_funding_disclosure_details
+    - ops.action_approval_capability_activation_details
+    - ops.action_approval_response_policy_calendar_details
+    - ops.action_approval_commercial_control_details
+    - ops.action_review_assignments
+    - ops.action_decisions
+    - ops.execution_authorizations
+    - ops.execution_attempts
+    - ops.execution_receipts
+    - ops.communication_intents
+    - ops.communication_renderings
+    - intake.communication_endpoints
+    - intake.communication_authorization_events
+    - intake.communication_suppressions
+    - ops.legal_hold_target_anchors
+    - editorial.conflict_declarations
+    - editorial.conflict_snapshots
+    - ops.capability_activation_decisions
+    - ops.record_class_schedules
+    - ops.restoration_suppressions
+    - ops.budget_reservations
+    - ops.incident_events
+    - intake.appeals
+    - ops.product_events
+    - ops.outcome_facts
+    - ops.acquisition_source_receipts
+    - ops.cost_allocations
+    - public.search_documents
+    - ops.search_documents
+    - core.dataset_snapshot_member_sources
+    - ops.agent_provider_turns
+    - ops.agent_proposal_citations
+    - raw.research_artifact_promotions
+    - ops.outbound_delivery_receipts
+    - editorial.response_request_sent_receipts
+    - editorial.response_delivery_clock_decisions
+    - editorial.response_extension_decisions
+    - intake.appeal_decisions
+    - ops.business_calendar_versions
+    - editorial.publication_gate_decisions
+    - editorial.publication_gate_claim_evidence
+    - editorial.publication_gate_review_bindings
+    - editorial.publication_gate_blockers
+    - ops.retention_request_decisions
+    - ops.retention_execution_receipts
+    - editorial.legal_hold_releases
+    - ops.capability_activation_evidence
+    - ops.funding_concentration_snapshots
+    - editorial.funding_disclosure_revisions
+    - editorial.funding_disclosure_entries
+    - intake.communication_subjects
+    - intake.communication_endpoint_verifications
+    - intake.communication_endpoint_link_events
+    - intake.communication_preferences
+    - intake.communication_opt_out_receipts
+    - ops.communication_provider_configs
+    - ops.communication_provider_preflight_receipts
+    - ops.outbound_delivery_attempts
+    - ops.communication_callback_events
+    - ops.communication_reconciliation_decisions
+    - raw.source_page_receipts
+    - ops.sli_window_receipts
+    - ops.journey_instances
+    - ops.journey_handoffs
+    - ops.journey_transition_receipts
+    - ops.budget_reservation_ledger_entries
+    - ops.in_flight_effects
+    - ops.fx_rate_facts
+    - ops.accounting_corrections
+    - ops.commercial_contract_periods
+    - ops.tariff_versions
+    - ops.usage_window_receipts
+    - ops.usage_facts
+    - ops.discount_decisions
+    - ops.invoice_facts
+    - ops.invoice_line_facts
+    - ops.invoice_usage_memberships
+    - ops.revenue_facts
+    - ops.sku_readiness_evaluations
+    - ops.sku_readiness_items
+    - ops.commercial_qualification_receipts
+    - ops.offer_profile_capabilities
+    - ops.paid_evidence_packets
+    - ops.paid_evidence_packet_members
+  renamed_tables:
+    - from: ops.email_deliveries
+      to: ops.outbound_deliveries
+    - from: ops.source_incidents
+      to: ops.incidents
+
+event_delta:
+  count_rule: base_events is derived from the immutable base catalog; additive_events is len(event_types); final_events is their sum
+  base_events: derived len(specs/events/event-catalog.yaml events)
+  additive_events: derived len(event_types)
+  final_events: derived base_events + additive_events
+  event_types:
+    - evidence.segment_created.v1
+    - dataset.snapshot_created.v1
+    - agent.tool_call_completed.v1
+    - agent.output_validated.v1
+    - agent.proposal_created.v2
+    - action.proposal_created.v1
+    - action.proposal_updated.v1
+    - action.review_requested.v1
+    - action.decision_recorded.v1
+    - action.execution_authorized.v1
+    - action.execution_cancel_requested.v1
+    - action.execution_retry_requested.v1
+    - action.execution_completed.v1
+    - communication.intent_created.v1
+    - communication.delivery_requested.v1
+    - communication.delivery_receipt_recorded.v1
+    - communication.authorization_changed.v1
+    - rights.asset_decided.v1
+    - governance.conflict_declared.v1
+    - governance.capability_activation_decided.v1
+    - budget.reservation_created.v1
+    - budget.reservation_settled.v1
+    - response.appeal_created.v1
+    - legal.hold_released.v1
+    - incident.state_changed.v1
+    - action.review_claimed.v1
+    - publication.gate_decided.v1
+    - response.delivery_evidence_recorded.v1
+    - response.delivery_clock_started.v1
+    - response.extension_request_submitted.v2
+    - response.extension_decided.v1
+    - response.request_expired.v1
+    - response.appeal_decision_recorded.v1
+    - governance.business_calendar_revised.v1
+    - privacy.request_created.v1
+    - privacy.request_decision_recorded.v1
+    - retention.schedule_revised.v1
+    - retention.execution_completed.v1
+    - retention.restoration_suppression_created.v1
+    - legal.hold_review_due.v1
+    - governance.funding_snapshot_created.v1
+    - governance.funding_disclosure_published.v1
+    - governance.capability_activation_review_requested.v1
+    - response.reminder_due.v1
+    - communication.subscription_update_requested.v1
+    - operations.sli_window_closed.v1
+    - source.page_reconciled.v1
+    - budget.reservation_released.v1
+    - budget.reservation_reconciliation_required.v1
+    - operations.effect_policy_blocked.v1
+    - cost.allocation_period_closed.v1
+    - cost.fx_rate_recorded.v1
+    - accounting.correction_recorded.v1
+    - product.fact_recorded.v1
+    - product.fact_corrected.v1
+    - commercial.contract_period_recorded.v1
+    - commercial.tariff_version_activated.v1
+    - commercial.usage_fact_recorded.v1
+    - commercial.discount_decided.v1
+    - commercial.invoice_reconciled.v1
+    - commercial.revenue_fact_recorded.v1
+    - commercial.sku_readiness_evaluated.v1
+    - response.request_sent.v1
+    - governance.conflict_withdrawn.v1
+    - governance.conflict_expired.v1
+    - action.proposal_withdrawn.v1
+    - action.decision_withdrawn.v1
+    - action.review_vacancy_filled.v1
+    - research.artifact_promoted.v1
+    - agent.run_control_changed.v2
+    - commercial.control_execution_recorded.v1
+    - commercial.control_external_effect_acknowledged.v1
+    - commercial.control_reconciliation_required.v1
+    - product.paid_evidence_packet_subject_persisted.v1
+    - product.paid_terminal_receipt_bound.v1
+    - response.submitted.v2
+    - notification.response_submitted.v2
+    - workflow.response_submitted.v2
+    - editorial.response_materialized.v1
+    - journey.instance_started.v1
+    - journey.handoff_requested.v1
+    - journey.handoff_decided.v1
+    - journey.handoff_escalated.v1
+    - journey.handoff_expired.v1
+    - journey.outcome_recorded.v1
+    - supplier.identity_resolution_recorded.v1
+    - supplier.relationship_assertion_created.v1
+    - supplier.relationship_assertion_decided.v1
+
+authorization_delta:
+  count_rule: base is derived from roles-and-permissions; additive is len(capabilities); final is their disjoint-union cardinality
+  base_capabilities: derived len(specs/ui/roles-and-permissions.yaml capabilities)
+  additive_capabilities: derived len(capabilities)
+  final_capabilities: derived base_capabilities + additive_capabilities
+  capabilities:
+    - {id: actions.read, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, RULE_ANALYST, OPERATIONS, ACCESS_ADMIN, SECURITY_ADMIN, AUDITOR, EXECUTIVE_APPROVER]}
+    - {id: actions.propose, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, RULE_ANALYST, OPERATIONS, ACCESS_ADMIN, SECURITY_ADMIN]}
+    - {id: actions.review, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, OPERATIONS, ACCESS_ADMIN, SECURITY_ADMIN, EXECUTIVE_APPROVER]}
+    - {id: actions.operate, roles: [OPERATIONS, SECURITY_ADMIN]}
+    - {id: cases.evidence.manage, roles: [INVESTIGATOR, EDITOR]}
+    - {id: communications.read, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, OPERATIONS, AUDITOR]}
+    - {id: communications.propose, roles: [INVESTIGATOR, EDITOR]}
+    - {id: communications.approve, roles: [EDITOR, PUBLISHER, EXECUTIVE_APPROVER]}
+    - {id: communications.operate, roles: [OPERATIONS, SECURITY_ADMIN]}
+    - {id: communications.authorization.manage, roles: [EDITOR, LEGAL_REVIEWER]}
+    - {id: providers.manage, roles: [OPERATIONS]}
+    - {id: providers.activate, roles: [LEGAL_REVIEWER, SECURITY_ADMIN, EXECUTIVE_APPROVER]}
+    - {id: rights.decide, roles: [LEGAL_REVIEWER]}
+    - {id: privacy.requests.manage, roles: [LEGAL_REVIEWER]}
+    - {id: retention.policy.manage, roles: [OPERATIONS, LEGAL_REVIEWER]}
+    - {id: responses.policy.manage, roles: [EDITOR, OPERATIONS]}
+    - {id: funding.manage, roles: [OPERATIONS, EXECUTIVE_APPROVER]}
+    - {id: funding.publish, roles: [EXECUTIVE_APPROVER]}
+    - {id: commercial.controls.propose, roles: [OPERATIONS, EXECUTIVE_APPROVER]}
+    - {id: commercial.controls.review, roles: [EDITOR, LEGAL_REVIEWER, OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}
+    - {id: incidents.read, roles: [OPERATIONS, DATA_OPERATOR, SECURITY_ADMIN, AUDITOR, EXECUTIVE_APPROVER]}
+    - {id: incidents.manage, roles: [OPERATIONS]}
+    - {id: conflicts.declare, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, RULE_ANALYST, OPERATIONS, DATA_OPERATOR, ACCESS_ADMIN, SECURITY_ADMIN, AUDITOR, EXECUTIVE_APPROVER]}
+    - {id: conflicts.manage, roles: [LEGAL_REVIEWER, ACCESS_ADMIN]}
+    - {id: journeys.handoff.decide, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, RULE_ANALYST, OPERATIONS, DATA_OPERATOR, ACCESS_ADMIN, SECURITY_ADMIN, AUDITOR, EXECUTIVE_APPROVER]}
+  invariants:
+    - Role membership is necessary but never substitutes for object scope, assurance, conflict, assignment, or separation-of-duty checks.
+    - A human cannot fill two quorum slots for the same decision and service or agent identities fill none.
+
+private_communication_gateway_operations:
+  - {operation_id: acceptSmtpDsn, method: POST, path: /private/v1/callbacks/smtp-dsn, kind: COMMAND}
+  - {operation_id: receiveTelegramWebhook, method: POST, path: '/private/v1/callbacks/telegram/{integrationId}', kind: COMMAND}
+  - {operation_id: verifyWhatsAppWebhook, method: GET, path: '/private/v1/callbacks/whatsapp/{integrationId}', kind: QUERY}
+  - {operation_id: receiveWhatsAppWebhook, method: POST, path: '/private/v1/callbacks/whatsapp/{integrationId}', kind: COMMAND}
+  - {operation_id: receiveLineWebhook, method: POST, path: '/private/v1/callbacks/line/{integrationId}', kind: COMMAND}
+  - {operation_id: receiveSolapiSmsCallback, method: POST, path: '/private/v1/callbacks/solapi/sms/{integrationId}', kind: COMMAND}
+  - {operation_id: receiveSolapiKakaoCallback, method: POST, path: '/private/v1/callbacks/solapi/kakao/{integrationId}', kind: COMMAND}
+  - {operation_id: receiveTwilioVoiceCallback, method: POST, path: '/private/v1/callbacks/twilio/voice/{integrationId}', kind: COMMAND}
+
+private_control_service_operations:
+  - {operation_id: reconcileAgentRun, api: control-api-private, method: POST, path: '/v1/private/agent-runs/{runId}:reconcile', kind: COMMAND, caller: reconciliation-worker}
+
+private_application_commands:
+  count: derived len(commands)
+  commands:
+    - {operation_id: private.RecordOutboundDeliveryObservation, transport: PRIVATE_APPLICATION_COMMAND, owner: notification-worker.communication-gateway, kind: COMMAND}
+    - {operation_id: materializeResponseRequestSent, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.response-request-materializer, kind: COMMAND}
+    - {operation_id: materializeResponseSubmissionIntake, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.response-submission-materializer, kind: COMMAND}
+    - {operation_id: private.PublishRetraction, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.retraction-executor, kind: COMMAND}
+    - {operation_id: private.CreateTaskFromApprovedAction, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.task-executor, kind: COMMAND}
+    - {operation_id: private.MaterializeComparableCandidate, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.comparable-executor, kind: COMMAND}
+    - {operation_id: private.DispatchCommunicationIntent, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.communication-executor, kind: COMMAND}
+    - {operation_id: private.ApplyKillSwitchCommand, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.kill-switch-executor, kind: COMMAND}
+    - {operation_id: private.RecordCommunicationAuthorizationDecision, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.communication-authorization-executor, kind: COMMAND}
+    - {operation_id: private.ReviseAssetRightsDecision, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.asset-rights-executor, kind: COMMAND}
+    - {operation_id: private.CreateRecordClassScheduleRevision, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.retention-schedule-executor, kind: COMMAND}
+    - {operation_id: private.PublishFundingDisclosureRevision, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.funding-disclosure-executor, kind: COMMAND}
+    - {operation_id: private.DecideCapabilityActivation, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.capability-activation-executor, kind: COMMAND}
+    - {operation_id: private.CreateBusinessCalendarVersion, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.business-calendar-executor, kind: COMMAND}
+    - {operation_id: private.ApplyCommercialControl, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.commercial-control-executor, kind: COMMAND}
+    - {operation_id: private.MaterializePaidEvidencePacket, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.paid-evidence-packet-materializer, kind: COMMAND}
+  rule: These commands have no HTTP route. They are invoked only by an authenticated inbox delivery or an immutable ExecutionAuthorization and are set-equal to addendum-command-semantics.private_application_commands.
+
+base_operation_atomic_extensions:
+  source: specs/api/operation-contracts.yaml
+  operations:
+    submitResponse: replace the token-bearing v1 producer set with one token-free persisted submission receipt and atomic response.submitted.v2, notification.response_submitted.v2 and workflow.response_submitted.v2 events; v1 remains historical only and cannot be admitted by a runtime role
+    resolveCorrectionRequest: correction REVIEW to PUBLISHED and publication current state to CORRECTED commit in one SERIALIZABLE group
+    placeTemporaryRestriction: one access decision, preserved prior public state, audit, domain event, projection outbox and receipt commit atomically
+    publishCase: a TEMPORARILY_RESTRICTED restoration branch performs a fresh full publication gate and appends a new immutable revision
+    placeLegalHold: the request uses the closed target union and exact ops.legal_hold_target_anchors binding for case and non-case targets
+  rule: These are additive semantic extensions of existing operation IDs, never new aliases or parallel effect owners.
+
+provider_contracts:
+  fixed_adapters:
+    - SMTP_EMAIL
+    - TELEGRAM_BOT_API
+    - META_WHATSAPP_BUSINESS_CLOUD
+    - LINE_MESSAGING_API
+    - SOLAPI_SMS
+    - SOLAPI_KAKAO_BIZMESSAGE
+    - TWILIO_VOICE
+    - SIGNED_WEBHOOK
+  fixed_adapter_bindings:
+    SMTP_EMAIL:
+      adapter_id: smtp-email-v1
+      user_channel: EMAIL
+      callback_operations: [acceptSmtpDsn]
+      delivery_proof: authenticated DSN or authenticated provider poll
+    TELEGRAM_BOT_API:
+      adapter_id: telegram-bot-api-v1
+      user_channel: TELEGRAM
+      callback_operations: [receiveTelegramWebhook]
+      delivery_proof: authenticated webhook or authenticated provider poll
+    META_WHATSAPP_BUSINESS_CLOUD:
+      adapter_id: meta-whatsapp-business-cloud-v1
+      user_channel: WHATSAPP
+      callback_operations: [verifyWhatsAppWebhook, receiveWhatsAppWebhook]
+      delivery_proof: authenticated webhook or authenticated provider poll
+    LINE_MESSAGING_API:
+      adapter_id: line-messaging-api-v1
+      user_channel: LINE
+      callback_operations: [receiveLineWebhook]
+      delivery_proof: authenticated webhook or authenticated provider poll
+    SOLAPI_SMS:
+      adapter_id: solapi-sms-v1
+      user_channel: SMS
+      callback_operations: [receiveSolapiSmsCallback]
+      delivery_proof: authenticated callback or authenticated provider poll
+    SOLAPI_KAKAO_BIZMESSAGE:
+      adapter_id: solapi-kakao-bizmessage-v1
+      user_channel: KAKAO
+      callback_operations: [receiveSolapiKakaoCallback]
+      delivery_proof: authenticated callback or authenticated provider poll
+    TWILIO_VOICE:
+      adapter_id: twilio-voice-v1
+      user_channel: VOICE
+      callback_operations: [receiveTwilioVoiceCallback]
+      delivery_proof: authenticated callback or authenticated provider poll
+    SIGNED_WEBHOOK:
+      adapter_id: signed-webhook-v1
+      user_channel: WEBHOOK
+      callback_operations: []
+      delivery_proof: synchronous receiver-signed terminal receipt or authenticated status poll
+  binding_rule: fixed_adapters, fixed_adapter_bindings keys and the physical provider
+    channel/adapter_id pairs are set-equal. A channel with another adapter_id is
+    invalid; a provider acceptance response is not delivery proof. SIGNED_WEBHOOK
+    has no Gurinnae callback operation because its pinned receiver contract must
+    return a verified terminal receipt synchronously or expose an authenticated
+    status-poll resource. If neither capability is present it cannot become ACTIVE.
+  activation_states:
+    - DISABLED
+    - UNCONFIGURED
+    - PENDING_PROVIDER_APPROVAL
+    - ACTIVE
+    - SUSPENDED
+  rule: Source completeness requires each concrete adapter and synthetic contract path; production effect additionally requires an exact activation receipt and deployment inputs.
+
+search_and_provenance_contract:
+  filter_contracts:
+    common:
+      q:
+        type: string
+        required: true
+        min_length: 1
+        max_length: 512
+      cursor:
+        type: string
+        required: false
+      limit:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        required: false
+      sort:
+        type: enum
+        values: [relevance, updated_desc, title_asc]
+        default: relevance
+        required: false
+    searchPublicRecords:
+      only_fields: [q, types, publicationState, dateFrom, dateTo, cursor, limit, sort]
+      types: [CASE, CONTRACT, AGENCY, SUPPLIER, METHODOLOGY, CORRECTION]
+      publication_states:
+        - NEVER_PUBLISHED
+        - PUBLISHED_ANOMALY
+        - PUBLISHED_EXPLAINED
+        - OFFICIALLY_CONFIRMED
+        - CORRECTED
+        - RETRACTED
+        - TEMPORARILY_RESTRICTED
+      date_semantics: ISO-8601 calendar dates in Asia/Seoul; dateFrom is inclusive and dateTo includes the whole date; dateFrom after dateTo is INVALID_PARAMETER.
+    searchInternalRecords:
+      only_fields: [q, types, status, cursor, limit, sort]
+      types: [CASE, SIGNAL, EVIDENCE, AGENT_RUN, AUDIT_EVENT]
+      type_qualified_statuses:
+        - CASE:SIGNAL_DETECTED
+        - CASE:TRIAGE
+        - CASE:INVESTIGATING
+        - CASE:AWAITING_RESPONSE
+        - CASE:EDITORIAL_REVIEW
+        - CASE:LEGAL_REVIEW
+        - CASE:READY_TO_PUBLISH
+        - CASE:CLOSED
+        - SIGNAL:NEW
+        - SIGNAL:ASSIGNED
+        - SIGNAL:NEEDS_DATA
+        - SIGNAL:LINKED
+        - SIGNAL:DISMISSED
+        - SIGNAL:DUPLICATE
+        - EVIDENCE:PENDING
+        - EVIDENCE:VERIFIED
+        - EVIDENCE:REJECTED
+        - EVIDENCE:NEEDS_WORK
+        - AGENT_RUN:QUEUED
+        - AGENT_RUN:RUNNING
+        - AGENT_RUN:SUCCEEDED
+        - AGENT_RUN:FAILED
+        - AGENT_RUN:CANCELLED
+        - AGENT_RUN:BUDGET_BLOCKED
+        - AGENT_RUN:POLICY_BLOCKED
+        - AUDIT_EVENT:SUCCESS
+        - AUDIT_EVENT:DENIED
+        - AUDIT_EVENT:FAILED
+    collection_rules:
+      - Omitted type/status/publication-state arrays mean all values authorized for that operation.
+      - Present arrays are non-empty mathematical sets; duplicates or values outside the closed enum are INVALID_PARAMETER.
+      - A type-qualified internal status whose type is absent from an explicit types set is INVALID_PARAMETER.
+      - Filter array order does not affect the filter digest; values are canonicalized in the declared type order.
+      - No search operation exposes source filters, facet counts, or undeclared fields.
+  ranking_policy:
+    version: search-rank-v1
+    non_statistical_tier_score: '1.000000'
+    postgres_config: simple
+    vector_weights_d_c_b_a: ['0.05', '0.20', '0.50', '1.00']
+    vector_fields:
+      A: [identifier_tokens, canonical_title_tokens, canonical_name_tokens]
+      B: [verified_alias_tokens]
+      C: [authorized_summary_tokens]
+      D: [authorized_body_tokens, locator_tokens]
+    ts_rank_cd_normalization: 32
+    full_text_expression: ts_rank_cd(ARRAY[0.05,0.20,0.50,1.00]::real[], search_vector, plainto_tsquery('simple', conjunctive_terms), 32)
+    trigram_expression: similarity(normalized_query, normalized_title)
+    trigram_minimum: '0.45'
+    quantization: round(raw_score::numeric, 6)
+    tier_reason_field_contract:
+      '1': {reason: EXACT_IDENTIFIER, fields: [IDENTIFIER]}
+      '2': {reason: EXACT_CANONICAL_TITLE, fields: [TITLE, CANONICAL_NAME]}
+      '3': {reason: EXACT_QUOTED_PHRASE, fields: [IDENTIFIER, TITLE, CANONICAL_NAME, VERIFIED_ALIAS, SUMMARY, BODY, LOCATOR]}
+      '4': {reason: VERIFIED_ALIAS, fields: [VERIFIED_ALIAS]}
+      '5': {reason: CANONICAL_PREFIX, fields: [TITLE, CANONICAL_NAME, VERIFIED_ALIAS]}
+      '6': {reason: FULL_TEXT, fields: [IDENTIFIER, TITLE, CANONICAL_NAME, VERIFIED_ALIAS, SUMMARY, BODY, LOCATOR]}
+      '7': {reason: TRIGRAM_FALLBACK, fields: [TITLE, CANONICAL_NAME]}
+  schema_deltas:
+    SearchMatchRangeV1:
+      additional_properties: false
+      fields:
+        startUtf16: {type: integer, format: int32, minimum: 0, required: true}
+        endUtf16: {type: integer, format: int32, minimum: 1, required: true}
+      invariants:
+        - endUtf16 is strictly greater than startUtf16.
+    SearchMatchV1:
+      additional_properties: false
+      fields:
+        tier: {type: integer, format: int32, minimum: 1, maximum: 7, required: true}
+        score: {type: string, pattern: '^(0|1)\.[0-9]{6}$', required: true}
+        reason:
+          type: enum
+          values: [EXACT_IDENTIFIER, EXACT_CANONICAL_TITLE, EXACT_QUOTED_PHRASE, VERIFIED_ALIAS, CANONICAL_PREFIX, FULL_TEXT, TRIGRAM_FALLBACK]
+          required: true
+        field:
+          type: enum
+          values: [IDENTIFIER, TITLE, CANONICAL_NAME, VERIFIED_ALIAS, SUMMARY, BODY, LOCATOR]
+          required: true
+        text: {type: string, min_length: 1, required: true}
+        ranges: {type: array, items: SearchMatchRangeV1, min_items: 1, required: true}
+      invariants:
+        - ranges are sorted, non-overlapping, half-open UTF-16 offsets inside text.
+        - tier, reason, and field obey ranking_policy.tier_reason_field_contract.
+        - text is authorized plain text and is never interpreted as markup.
+    PublicSearchStateOverlayV1:
+      additional_properties: false
+      fields:
+        currentRevision: {type: integer, format: int64, minimum: 1, required: true}
+        noticeKind: {type: enum, values: [NONE, CORRECTED, RETRACTED], required: true}
+        noticeHref: {type: uri-reference, nullable: true, required: true}
+        changedAfterPageWatermark: {type: boolean, required: true}
+        matchedConclusionInvalidated: {type: boolean, required: true}
+      invariants:
+        - NONE requires null noticeHref and false matchedConclusionInvalidated.
+        - CORRECTED and RETRACTED require a non-null current noticeHref.
+        - RETRACTED requires true matchedConclusionInvalidated.
+    PublicRecordsSearchResultItem:
+      additive_fields:
+        objectRevision: {type: integer, format: int64, minimum: 1, required: true}
+        freshness: {type: FreshnessModel, required: true}
+        match: {type: SearchMatchV1, required: true}
+        stateOverlay: {type: PublicSearchStateOverlayV1, required: true}
+    InternalRecordsSearchResultItem:
+      additive_fields:
+        objectRevision: {type: integer, format: int64, minimum: 1, required: true}
+        freshness: {type: FreshnessModel, required: true}
+        match: {type: SearchMatchV1, required: true}
+    PublicRecordsSearchResultPage:
+      additive_fields:
+        projectionGeneration: {type: string, format: uuid, required: true}
+        projectionWatermark: {type: integer, format: int64, minimum: 0, required: true}
+        rankingPolicyVersion: {type: enum, values: [search-rank-v1], required: true}
+        visibilityAsOf: {type: string, format: date-time, required: true}
+        partialDueToVisibilityChange: {type: boolean, required: true}
+    InternalRecordsSearchResultPage:
+      additive_fields:
+        projectionGeneration: {type: string, format: uuid, required: true}
+        projectionWatermark: {type: integer, format: int64, minimum: 0, required: true}
+        rankingPolicyVersion: {type: enum, values: [search-rank-v1], required: true}
+        partialDueToVisibilityChange: {type: boolean, required: true}
+    EvidenceProvenanceV1:
+      additional_properties: false
+      fields:
+        sourceDocumentId: {type: string, format: uuid, required: true}
+        sourceAssetId: {type: string, format: uuid, required: true}
+        sourceAssetRevision: {type: integer, format: int64, minimum: 1, required: true}
+        sourceContentSha256: {type: string, pattern: '^[a-f0-9]{64}$', required: true}
+        sourceAuthority: {type: string, min_length: 1, required: true}
+        retrievedAt: {type: string, format: date-time, required: true}
+        locatorKind:
+          type: enum
+          values: [PAGE_BBOX, XLSX_CELL, CSV_ROW_COLUMN, XML_XPATH, DOCX_PARAGRAPH, HWPX_XPATH, JSON_POINTER, HTML_CSS_SELECTOR, API_FIELD, TEXT_RANGE]
+          required: true
+        locatorValue: {type: string, min_length: 1, required: true}
+        locatorDigest: {type: string, pattern: '^[a-f0-9]{64}$', required: true}
+        rawValueSha256: {type: string, pattern: '^[a-f0-9]{64}$', required: true}
+        selectedContentSha256: {type: string, pattern: '^[a-f0-9]{64}$', required: true}
+        parserVersion: {type: string, min_length: 1, required: true}
+        transformationVersion: {type: string, nullable: true, required: true}
+      invariants:
+        - PublicEvidence.contentSha256 or EvidenceDetail.contentSha256 equals sourceContentSha256.
+        - locatorDigest is canonical JSON SHA-256 over locatorKind, locatorValue, sourceAssetId, sourceAssetRevision, and sourceContentSha256.
+    PublicEvidence:
+      additive_fields:
+        provenance: {type: EvidenceProvenanceV1, required: true}
+    EvidenceDetail:
+      additive_fields:
+        provenance: {type: EvidenceProvenanceV1, required: true}
+  current_overlay_rules:
+    - Candidate rank and cursor tuple come only from the pinned projection generation and watermark.
+    - Current authorization and visibility are read after candidate selection on every page.
+    - A no-longer-visible object is omitted and partialDueToVisibilityChange is true.
+    - Every remaining public hit has one overlay read from the current authoritative publication revision.
+    - A correction or retraction newer than projectionWatermark cannot be returned with noticeKind NONE.
+    - The overlay never changes rank, score, or the encoded cursor tuple.
+  screen_typed_slices:
+    PUB-002:
+      query: [PublicRecordsSearchResultPage.appliedFilters.q]
+      types: [PublicRecordsSearchResultPage.appliedFilters.types, PublicRecordsSearchResultPage.appliedFilters.publicationState, PublicRecordsSearchResultPage.appliedFilters.dateFrom, PublicRecordsSearchResultPage.appliedFilters.dateTo]
+      results: ['PublicRecordsSearchResultPage.items[].resultType', 'PublicRecordsSearchResultPage.items[].id', 'PublicRecordsSearchResultPage.items[].title', 'PublicRecordsSearchResultPage.items[].status', 'PublicRecordsSearchResultPage.items[].objectRevision', 'PublicRecordsSearchResultPage.items[].freshness', 'PublicRecordsSearchResultPage.items[].match', 'PublicRecordsSearchResultPage.items[].stateOverlay', 'PublicRecordsSearchResultPage.items[].href']
+      coverage: [PublicRecordsSearchResultPage.asOf, PublicRecordsSearchResultPage.projectionGeneration, PublicRecordsSearchResultPage.projectionWatermark, PublicRecordsSearchResultPage.rankingPolicyVersion, PublicRecordsSearchResultPage.visibilityAsOf, PublicRecordsSearchResultPage.partialDueToVisibilityChange, PublicRecordsSearchResultPage.totalApproximate]
+    INT-003:
+      query: [InternalRecordsSearchResultPage.appliedFilters.q]
+      types: [InternalRecordsSearchResultPage.appliedFilters.types, InternalRecordsSearchResultPage.appliedFilters.status]
+      results: ['InternalRecordsSearchResultPage.items[].objectType', 'InternalRecordsSearchResultPage.items[].objectId', 'InternalRecordsSearchResultPage.items[].title', 'InternalRecordsSearchResultPage.items[].status', 'InternalRecordsSearchResultPage.items[].objectRevision', 'InternalRecordsSearchResultPage.items[].freshness', 'InternalRecordsSearchResultPage.items[].match', 'InternalRecordsSearchResultPage.items[].href']
+      recent: [InternalRecordsSearchResultPage.asOf, InternalRecordsSearchResultPage.projectionGeneration, InternalRecordsSearchResultPage.projectionWatermark, InternalRecordsSearchResultPage.rankingPolicyVersion, InternalRecordsSearchResultPage.partialDueToVisibilityChange, InternalRecordsSearchResultPage.totalApproximate]
+    PUB-004:
+      status: [PublicCaseResponse.publicState, PublicCaseResponse.revision, PublicCaseResponse.freshness, PublicCaseResponse.updatedAt, 'PublicCaseResponse.corrections[]']
+      known: ['PublicCaseResponse.confirmedFacts[]', 'PublicCaseResponse.claims[]', 'PublicCaseResponse.evidence[].provenance']
+      unknown: ['PublicCaseResponse.criticalUnknowns[]', 'PublicCaseResponse.limitations[]']
+      response: ['PublicCaseResponse.partyResponses[]']
+      comparison: [PublicCaseResponse.comparison]
+      counter: ['PublicCaseResponse.counterEvidence[]']
+      evidence: ['PublicCaseResponse.evidence[].id', 'PublicCaseResponse.evidence[].title', 'PublicCaseResponse.evidence[].sourceLocator', 'PublicCaseResponse.evidence[].contentSha256', 'PublicCaseResponse.evidence[].provenance']
+      timeline: ['PublicCaseResponse.timeline[]']
+      revision: [PublicCaseResponse.revision, 'PublicCaseResponse.corrections[]']
+    CAS-004:
+      matrix: ['CaseEvidencePage.items[].id', 'CaseEvidencePage.items[].verificationStatus', 'CaseEvidencePage.items[].version']
+      filters: [CaseEvidencePage.appliedFilters.caseId, CaseEvidencePage.appliedFilters.verificationStatus, CaseEvidencePage.appliedFilters.classification, CaseEvidencePage.appliedFilters.evidenceType]
+      list: ['CaseEvidencePage.items[].id', 'CaseEvidencePage.items[].title', 'CaseEvidencePage.items[].sourceLocator', 'CaseEvidencePage.items[].contentSha256', 'CaseEvidencePage.items[].provenance', 'CaseEvidencePage.items[].verificationStatus']
+      gaps: ['CaseEvidencePage.items[].verificationStatus', CaseEvidencePage.totalApproximate, CaseEvidencePage.asOf]
+  screen_ten_second_sections:
+    PUB-002: {location: query, state: coverage, matters_now: results, evidence: results, unknown_or_disputed: coverage, next_action: results}
+    INT-003: {location: query, state: results, matters_now: results, evidence: results, unknown_or_disputed: results, next_action: results}
+    PUB-004: {location: status, state: status, matters_now: known, evidence: evidence, unknown_or_disputed: unknown, next_action: evidence}
+    CAS-004: {location: matrix, state: list, matters_now: matrix, evidence: list, unknown_or_disputed: gaps, next_action: matrix}
+
+route_contract:
+  canonical_overrides:
+    PUB-028: /correction-request/receipt
+    PUB-030: /subscription/manage
+    RSP-001: /respond/access
+    RSP-002: /respond/overview
+    RSP-003: /respond/answer
+    RSP-004: /respond/attachments
+    RSP-005: /respond/review
+    RSP-006: /respond/receipt
+    RSP-007: /respond/extension
+  legacy_token_exchange:
+    status: 303
+    session_cookie: authority-declared HttpOnly Secure SameSite=Strict scoped cookie
+    response_headers:
+      Referrer-Policy: no-referrer
+      Cache-Control: no-store
+    rules:
+      - Token is validated once and never copied to query, fragment, analytics, logs, DOM, client storage, or another origin.
+      - Valid exchange redirects to the corresponding token-free canonical route.
+      - Invalid, expired, revoked, or already-consumed exchange redirects to RSP-008 without object-existence detail.
+  parameter_aliases:
+    PUB-008:
+      agencySlug:
+        operation_parameter: agencyId
+        type: string
+        resolver: verified canonical public agency slug or retained immutable alias to core agency UUID
+    PUB-010:
+      supplierSlug:
+        operation_parameter: supplierId
+        type: string
+        resolver: verified canonical public supplier slug or retained immutable alias to core supplier UUID
+    CAS-011:
+      runId:
+        operation_parameter: agentRunId
+        type: uuid
+        resolver: direct route identity rename; no lookup or coercion
+    SRC-004:
+      runId:
+        operation_parameter: sourceRunId
+        type: uuid
+        resolver: direct route identity rename; no lookup or coercion
+  direct_binding_rule: Every other route parameter binds only to an exact same-name typed operation request field; local systemPath is consumed by the system route resolver.
+  corrected_redirect:
+    from: /cases/{caseSlug}/history
+    to: /cases/{caseSlug}#revision
+    status: 308
+
+fixed_screen_assignments:
+  - capability: paid-evidence-workspace
+    entry: INT-001
+    work: [INT-003, SIG-002, CAS-002, CAS-011]
+    approval: [REV-002, REV-003]
+    receipt_history: [AUD-001, OPS-004]
+  - capability: response-status-and-appeal
+    entry: RSP-006
+    work: [RSP-006, PUB-027]
+    approval: [COR-002]
+    receipt_history: [RSP-006, PUB-028]
+  - capability: response-request-delivery
+    entry: CAS-009
+    work: [CAS-009]
+    approval: [REV-002, REV-003]
+    receipt_history: [CAS-009, AUD-001]
+  - capability: subscription-delivery
+    entry: PUB-029
+    work: [PUB-029, PUB-030]
+    approval: []
+    receipt_history: [PUB-030, OPS-003]
+  - capability: discretionary-external-action
+    entry: [CAS-011, INT-004]
+    work: [CAS-011]
+    approval: [REV-002, REV-003]
+    receipt_history: [AUD-001, OPS-003]
+  - capability: provider-channel-configuration
+    entry: OPS-005
+    work: [OPS-005]
+    approval: [OPS-006]
+    receipt_history: [OPS-005, AUD-001]
+
+commercial_boundary:
+  first_payer: Korean investigative newsroom or public-interest research organization
+  economic_buyer: investigation editor or research director
+  organization_size: 3-20 recurring procurement investigators
+  first_sku: single-organization Evidence Workspace deployment
+  deferred:
+    - multi-tenant SaaS
+    - self-service checkout
+    - public-agency internal audit product
+    - general corporate compliance product
+  free_forever:
+    - public facts and evidence locators
+    - revisions corrections and retractions
+    - right of reply and rights requests
+    - methodology coverage funding and governance disclosures
+    - basic verified subscriptions

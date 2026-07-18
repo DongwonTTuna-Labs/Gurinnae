@@ -26,6 +26,33 @@
     },
     {
       "name": "subscription"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
+    },
+    {
+      "name": "addendum"
     }
   ],
   "paths": {
@@ -33,7 +60,9 @@
       "post": {
         "operationId": "createContactRequest",
         "summary": "일반 문의 접수",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -88,7 +117,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -117,7 +149,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["ABUSE_PROOF_INVALID"],
+            "x-error-codes": [
+              "ABUSE_PROOF_INVALID"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -142,7 +176,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -153,7 +189,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -164,7 +202,10 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"],
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -175,7 +216,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -186,7 +229,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -217,7 +262,9 @@
       "get": {
         "operationId": "getCorrectionReceipt",
         "summary": "정정 요청 영수증",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -262,7 +309,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -294,7 +343,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -305,7 +356,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -316,7 +369,10 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED", "SNAPSHOT_STALE"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED",
+              "SNAPSHOT_STALE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -327,7 +383,9 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PUBLICATION_GATE_BLOCKED"],
+            "x-error-codes": [
+              "PUBLICATION_GATE_BLOCKED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -338,7 +396,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -349,7 +409,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -371,7 +433,9 @@
       "post": {
         "operationId": "createCorrectionRequestDraft",
         "summary": "createCorrectionRequestDraft",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -429,7 +493,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -458,7 +525,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["ABUSE_PROOF_INVALID"],
+            "x-error-codes": [
+              "ABUSE_PROOF_INVALID"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -469,7 +538,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -495,7 +566,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -506,7 +579,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -532,7 +607,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -543,7 +620,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -572,7 +651,9 @@
       "delete": {
         "operationId": "deleteCorrectionRequestDraft",
         "summary": "deleteCorrectionRequestDraft",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -631,7 +712,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -663,7 +747,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -674,7 +760,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -715,7 +803,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -726,7 +816,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -756,7 +848,9 @@
       "get": {
         "operationId": "getCorrectionRequestDraft",
         "summary": "getCorrectionRequestDraft",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -801,7 +895,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -833,7 +929,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -844,7 +942,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -855,7 +955,10 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED", "SNAPSHOT_STALE"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED",
+              "SNAPSHOT_STALE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -866,7 +969,9 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PUBLICATION_GATE_BLOCKED"],
+            "x-error-codes": [
+              "PUBLICATION_GATE_BLOCKED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -877,7 +982,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -888,7 +995,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -908,7 +1017,9 @@
       "put": {
         "operationId": "saveCorrectionRequestDraft",
         "summary": "saveCorrectionRequestDraft",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -970,7 +1081,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1002,7 +1116,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1013,7 +1129,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1040,7 +1158,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1051,7 +1171,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1077,7 +1199,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1088,7 +1212,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1120,7 +1246,9 @@
       "post": {
         "operationId": "createCorrectionAttachment",
         "summary": "근거 첨부",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -1183,7 +1311,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1215,7 +1346,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1226,7 +1359,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1252,7 +1387,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1263,7 +1400,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1289,7 +1428,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1300,7 +1441,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1311,7 +1454,10 @@
           },
           "503": {
             "description": "Problem response",
-            "x-error-codes": ["DEPENDENCY_UNAVAILABLE", "STORAGE_FAILURE"],
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE",
+              "STORAGE_FAILURE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1343,7 +1489,9 @@
       "delete": {
         "operationId": "deleteCorrectionAttachment",
         "summary": "deleteCorrectionAttachment",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -1414,7 +1562,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1446,7 +1597,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1457,7 +1610,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1482,7 +1637,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1493,7 +1650,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1519,7 +1678,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1530,7 +1691,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1541,7 +1704,10 @@
           },
           "503": {
             "description": "Problem response",
-            "x-error-codes": ["DEPENDENCY_UNAVAILABLE", "STORAGE_FAILURE"],
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE",
+              "STORAGE_FAILURE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1573,7 +1739,9 @@
       "post": {
         "operationId": "finalizeCorrectionAttachment",
         "summary": "finalizeCorrectionAttachment",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -1645,7 +1813,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1677,7 +1848,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1688,7 +1861,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1714,7 +1889,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1725,7 +1902,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1751,7 +1930,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1762,7 +1943,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1773,7 +1956,10 @@
           },
           "503": {
             "description": "Problem response",
-            "x-error-codes": ["DEPENDENCY_UNAVAILABLE", "STORAGE_FAILURE"],
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE",
+              "STORAGE_FAILURE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1805,7 +1991,9 @@
       "get": {
         "operationId": "getCorrectionRequestDraftPreview",
         "summary": "getCorrectionRequestDraftPreview",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -1849,7 +2037,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1881,7 +2071,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1892,7 +2084,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1903,7 +2097,10 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED", "SNAPSHOT_STALE"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED",
+              "SNAPSHOT_STALE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1914,7 +2111,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1925,7 +2124,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1947,7 +2148,9 @@
       "post": {
         "operationId": "createCorrectionRequest",
         "summary": "정정 요청 시작 / 정정 요청 제출",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -2008,7 +2211,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2040,7 +2246,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2051,7 +2259,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2077,7 +2287,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2088,7 +2300,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2114,7 +2328,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2125,7 +2341,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2157,7 +2375,9 @@
       "post": {
         "operationId": "createDatasetExport",
         "summary": "bulk export 또는 signed download",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -2216,7 +2436,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2245,7 +2468,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["ABUSE_PROOF_INVALID"],
+            "x-error-codes": [
+              "ABUSE_PROOF_INVALID"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2256,7 +2481,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2281,7 +2508,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2292,7 +2521,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2303,7 +2534,10 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"],
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2314,7 +2548,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2325,7 +2561,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2371,7 +2609,9 @@
       "get": {
         "operationId": "getResponseReceipt",
         "summary": "접수 영수증",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -2414,7 +2654,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2446,7 +2688,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2457,7 +2701,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2468,7 +2714,9 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2479,7 +2727,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2490,7 +2740,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2512,7 +2764,9 @@
       "get": {
         "operationId": "getResponseRequest",
         "summary": "token-scoped request / 요청 overview",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -2555,7 +2809,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2587,7 +2843,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2598,7 +2856,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2609,7 +2869,9 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2620,7 +2882,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2631,7 +2895,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2653,7 +2919,9 @@
       "get": {
         "operationId": "getResponseAccessStatus",
         "summary": "safe unavailable reason",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -2696,7 +2964,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2728,7 +2998,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2739,7 +3011,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2750,7 +3024,9 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2761,7 +3037,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2772,7 +3050,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2794,7 +3074,9 @@
       "post": {
         "operationId": "createResponseAttachmentUpload",
         "summary": "upload session",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -2856,7 +3138,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2888,7 +3173,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2899,7 +3186,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2924,7 +3213,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2935,7 +3226,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2961,7 +3254,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2972,7 +3267,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2983,7 +3280,10 @@
           },
           "503": {
             "description": "Problem response",
-            "x-error-codes": ["DEPENDENCY_UNAVAILABLE", "STORAGE_FAILURE"],
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE",
+              "STORAGE_FAILURE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3015,7 +3315,9 @@
       "delete": {
         "operationId": "deleteResponseAttachment",
         "summary": "draft attachment 제거",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -3086,7 +3388,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3118,7 +3423,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3129,7 +3436,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3154,7 +3463,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3165,7 +3476,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3191,7 +3504,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3202,7 +3517,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3213,7 +3530,10 @@
           },
           "503": {
             "description": "Problem response",
-            "x-error-codes": ["DEPENDENCY_UNAVAILABLE", "STORAGE_FAILURE"],
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE",
+              "STORAGE_FAILURE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3245,7 +3565,9 @@
       "post": {
         "operationId": "finalizeResponseAttachment",
         "summary": "checksum/scan finalize",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -3317,7 +3639,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3349,7 +3674,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3360,7 +3687,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3386,7 +3715,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3397,7 +3728,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3423,7 +3756,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3434,7 +3769,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3445,7 +3782,10 @@
           },
           "503": {
             "description": "Problem response",
-            "x-error-codes": ["DEPENDENCY_UNAVAILABLE", "STORAGE_FAILURE"],
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE",
+              "STORAGE_FAILURE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3477,7 +3817,9 @@
       "get": {
         "operationId": "downloadResponseRequest",
         "summary": "안전한 요청서 PDF/HTML",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -3521,7 +3863,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3553,7 +3897,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3564,7 +3910,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3575,7 +3923,9 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3586,7 +3936,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3597,7 +3949,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3608,7 +3962,9 @@
           },
           "503": {
             "description": "Problem response",
-            "x-error-codes": ["STORAGE_FAILURE"],
+            "x-error-codes": [
+              "STORAGE_FAILURE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3630,7 +3986,9 @@
       "get": {
         "operationId": "getResponseDraft",
         "summary": "draft 조회",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -3673,7 +4031,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3705,7 +4065,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3716,7 +4078,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3727,7 +4091,9 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3738,7 +4104,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3749,7 +4117,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3769,7 +4139,9 @@
       "put": {
         "operationId": "saveResponseDraft",
         "summary": "idempotent draft 저장",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -3830,7 +4202,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3862,7 +4237,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3873,7 +4250,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3899,7 +4278,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3910,7 +4291,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3936,7 +4319,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3947,7 +4332,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3979,7 +4366,9 @@
       "get": {
         "operationId": "getResponseSubmissionPreview",
         "summary": "server-side check answers",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -4023,7 +4412,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4055,7 +4446,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4066,7 +4459,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4077,7 +4472,10 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED", "SNAPSHOT_STALE"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED",
+              "SNAPSHOT_STALE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4088,7 +4486,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4099,7 +4499,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4121,7 +4523,9 @@
       "post": {
         "operationId": "requestResponseExtension",
         "summary": "연장 요청",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -4181,7 +4585,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4213,7 +4620,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4224,7 +4633,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4249,7 +4660,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4260,7 +4673,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4286,7 +4701,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4297,7 +4714,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4329,7 +4748,9 @@
       "post": {
         "operationId": "submitResponse",
         "summary": "immutable response 제출",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -4391,7 +4812,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4423,7 +4847,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4434,7 +4860,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4461,7 +4889,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4472,7 +4902,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4498,7 +4930,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4509,7 +4943,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4541,7 +4977,9 @@
       "post": {
         "operationId": "verifyResponseAccess",
         "summary": "추가 검증",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -4602,7 +5040,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4634,7 +5075,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4645,7 +5088,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4671,7 +5116,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4682,7 +5129,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4708,7 +5157,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4719,7 +5170,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4751,7 +5204,9 @@
       "post": {
         "operationId": "exchangeCorrectionReceiptToken",
         "summary": "exchangeCorrectionReceiptToken",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -4809,7 +5264,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4839,7 +5297,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4865,7 +5325,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4876,7 +5338,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4902,7 +5366,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4913,7 +5379,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4944,7 +5412,9 @@
       "post": {
         "operationId": "exchangeResponseReceiptToken",
         "summary": "exchangeResponseReceiptToken",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -5002,7 +5472,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5032,7 +5505,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5058,7 +5533,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5069,7 +5546,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5095,7 +5574,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5106,7 +5587,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5137,7 +5620,9 @@
       "post": {
         "operationId": "exchangeResponseAccessToken",
         "summary": "exchangeResponseAccessToken",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -5195,7 +5680,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5225,7 +5713,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5251,7 +5741,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5262,7 +5754,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5288,7 +5782,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5299,7 +5795,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5330,7 +5828,9 @@
       "post": {
         "operationId": "exchangeSubscriptionManagementToken",
         "summary": "exchangeSubscriptionManagementToken",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -5385,7 +5885,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5415,7 +5918,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5441,7 +5946,10 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"],
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5452,7 +5960,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5463,7 +5973,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5494,7 +6006,9 @@
       "post": {
         "operationId": "verifySubscription",
         "summary": "이메일 검증",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -5549,7 +6063,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5579,7 +6096,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5605,7 +6124,10 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"],
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5616,7 +6138,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5627,7 +6151,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5658,7 +6184,9 @@
       "post": {
         "operationId": "createSubscription",
         "summary": "필터 기반 구독 / 사건 구독 / 기관 구독 / 업체 구독 / 정정 feed 구독 / 구독 생성",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -5713,7 +6241,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5742,7 +6273,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["ABUSE_PROOF_INVALID"],
+            "x-error-codes": [
+              "ABUSE_PROOF_INVALID"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5767,7 +6300,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5778,7 +6313,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5789,7 +6326,10 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"],
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5800,7 +6340,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5811,7 +6353,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5840,7 +6384,9 @@
       "get": {
         "operationId": "getSubscription",
         "summary": "구독 관리 projection",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "QUERY",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -5883,7 +6429,9 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER"],
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5915,7 +6463,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5926,7 +6476,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5937,7 +6489,9 @@
           },
           "409": {
             "description": "Problem response",
-            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"],
+            "x-error-codes": [
+              "SERVICE_ASSERTION_REPLAYED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5948,7 +6502,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5959,7 +6515,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5979,7 +6537,9 @@
       "patch": {
         "operationId": "updateSubscription",
         "summary": "설정 변경",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -6038,7 +6598,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6070,7 +6633,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6081,7 +6646,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6106,7 +6673,9 @@
           },
           "413": {
             "description": "Problem response",
-            "x-error-codes": ["PAYLOAD_TOO_LARGE"],
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6117,7 +6686,9 @@
           },
           "415": {
             "description": "Problem response",
-            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"],
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6128,7 +6699,10 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"],
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6139,7 +6713,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6150,7 +6726,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6182,7 +6760,9 @@
       "post": {
         "operationId": "unsubscribe",
         "summary": "해지",
-        "tags": ["submission"],
+        "tags": [
+          "submission"
+        ],
         "x-operation-kind": "COMMAND",
         "x-error-codes": [
           "INVALID_PARAMETER",
@@ -6239,7 +6819,10 @@
           },
           "400": {
             "description": "Problem response",
-            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"],
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6271,7 +6854,9 @@
           },
           "403": {
             "description": "Problem response",
-            "x-error-codes": ["SUBMISSION_SESSION_SCOPE_MISMATCH"],
+            "x-error-codes": [
+              "SUBMISSION_SESSION_SCOPE_MISMATCH"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6282,7 +6867,9 @@
           },
           "404": {
             "description": "Problem response",
-            "x-error-codes": ["RESOURCE_NOT_FOUND"],
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6307,7 +6894,10 @@
           },
           "422": {
             "description": "Problem response",
-            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"],
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6318,7 +6908,9 @@
           },
           "429": {
             "description": "Problem response",
-            "x-error-codes": ["RATE_LIMITED"],
+            "x-error-codes": [
+              "RATE_LIMITED"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6329,7 +6921,9 @@
           },
           "500": {
             "description": "Problem response",
-            "x-error-codes": ["INTERNAL_ERROR"],
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ],
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6356,6 +6950,778 @@
           }
         ]
       }
+    },
+    "/v1/response-receipt/appeals": {
+      "post": {
+        "operationId": "createResponseAppeal",
+        "summary": "createResponseAppeal",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "COMMAND",
+        "x-error-codes": [
+          "SCOPED_SESSION_REQUIRED",
+          "APPEAL_SCOPE_INVALID",
+          "APPEAL_WINDOW_CLOSED",
+          "VERSION_CONFLICT",
+          "IDEMPOTENCY_CONFLICT",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": [],
+            "ScopedSubmissionSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseAppealReceiptV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID, APPEAL_WINDOW_CLOSED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "SCOPED_SESSION_REQUIRED",
+              "APPEAL_SCOPE_INVALID",
+              "APPEAL_WINDOW_CLOSED"
+            ]
+          },
+          "409": {
+            "description": "Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VERSION_CONFLICT",
+              "IDEMPOTENCY_CONFLICT"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateResponseAppealRequestV1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/response-receipt/appeals/{appealId}": {
+      "get": {
+        "operationId": "getResponseAppeal",
+        "summary": "getResponseAppeal",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "QUERY",
+        "x-error-codes": [
+          "SCOPED_SESSION_REQUIRED",
+          "RESOURCE_NOT_FOUND",
+          "APPEAL_SCOPE_INVALID",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": [],
+            "ScopedSubmissionSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseAppealPublicStatusV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "SCOPED_SESSION_REQUIRED",
+              "APPEAL_SCOPE_INVALID"
+            ]
+          },
+          "404": {
+            "description": "Problem response: RESOURCE_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "appealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/communication-profile-session/endpoints:link": {
+      "post": {
+        "operationId": "requestCommunicationEndpointLink",
+        "summary": "requestCommunicationEndpointLink",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "COMMAND",
+        "x-error-codes": [
+          "SCOPED_SESSION_REQUIRED",
+          "ENDPOINT_TYPE_UNSUPPORTED",
+          "ENDPOINT_ALREADY_LINKED",
+          "CONSENT_INVALID",
+          "ABUSE_PROOF_INVALID",
+          "VERSION_CONFLICT",
+          "IDEMPOTENCY_CONFLICT",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": [],
+            "ScopedSubmissionSession": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationEndpointLinkRequestedReceiptV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_TYPE_UNSUPPORTED, ENDPOINT_ALREADY_LINKED, CONSENT_INVALID, ABUSE_PROOF_INVALID",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "SCOPED_SESSION_REQUIRED",
+              "ENDPOINT_TYPE_UNSUPPORTED",
+              "ENDPOINT_ALREADY_LINKED",
+              "CONSENT_INVALID",
+              "ABUSE_PROOF_INVALID"
+            ]
+          },
+          "409": {
+            "description": "Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VERSION_CONFLICT",
+              "IDEMPOTENCY_CONFLICT"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestCommunicationEndpointLinkRequestV1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/submission-session/communication-endpoint-link:verify": {
+      "post": {
+        "operationId": "verifyCommunicationEndpointLink",
+        "summary": "verifyCommunicationEndpointLink",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "COMMAND",
+        "x-error-codes": [
+          "SCOPED_SESSION_REQUIRED",
+          "ENDPOINT_CHALLENGE_INVALID",
+          "ENDPOINT_CHALLENGE_EXPIRED",
+          "ENDPOINT_PROOF_INVALID",
+          "VERSION_CONFLICT",
+          "IDEMPOTENCY_CONFLICT",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": [],
+            "ScopedSubmissionSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationEndpointVerifiedReceiptV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_CHALLENGE_INVALID, ENDPOINT_CHALLENGE_EXPIRED, ENDPOINT_PROOF_INVALID",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "SCOPED_SESSION_REQUIRED",
+              "ENDPOINT_CHALLENGE_INVALID",
+              "ENDPOINT_CHALLENGE_EXPIRED",
+              "ENDPOINT_PROOF_INVALID"
+            ]
+          },
+          "409": {
+            "description": "Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VERSION_CONFLICT",
+              "IDEMPOTENCY_CONFLICT"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCommunicationEndpointLinkRequestV1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/communication-profile-session/endpoints/{endpointId}:unlink": {
+      "post": {
+        "operationId": "unlinkCommunicationEndpoint",
+        "summary": "unlinkCommunicationEndpoint",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "COMMAND",
+        "x-error-codes": [
+          "SCOPED_SESSION_REQUIRED",
+          "ENDPOINT_NOT_FOUND",
+          "ENDPOINT_VERSION_CONFLICT",
+          "VERSION_CONFLICT",
+          "IDEMPOTENCY_CONFLICT",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": [],
+            "ScopedSubmissionSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationEndpointUnlinkedReceiptV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_NOT_FOUND, ENDPOINT_VERSION_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "SCOPED_SESSION_REQUIRED",
+              "ENDPOINT_NOT_FOUND",
+              "ENDPOINT_VERSION_CONFLICT"
+            ]
+          },
+          "409": {
+            "description": "Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VERSION_CONFLICT",
+              "IDEMPOTENCY_CONFLICT"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlinkCommunicationEndpointRequestV1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/privacy-requests": {
+      "post": {
+        "operationId": "createPrivacyRequest",
+        "summary": "createPrivacyRequest",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "COMMAND",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "IDENTITY_PROOF_INVALID",
+          "PRIVACY_SCOPE_INVALID",
+          "ABUSE_PROOF_INVALID",
+          "RATE_LIMITED",
+          "IDEMPOTENCY_CONFLICT",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyRequestReceiptV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ]
+          },
+          "422": {
+            "description": "Problem response: IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, ABUSE_PROOF_INVALID, RATE_LIMITED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "IDENTITY_PROOF_INVALID",
+              "PRIVACY_SCOPE_INVALID",
+              "ABUSE_PROOF_INVALID",
+              "RATE_LIMITED"
+            ]
+          },
+          "409": {
+            "description": "Problem response: IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "IDEMPOTENCY_CONFLICT"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePrivacyRequestRequestV1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/submission-session/privacy-request-receipt:exchange": {
+      "post": {
+        "operationId": "exchangePrivacyRequestReceiptToken",
+        "summary": "exchangePrivacyRequestReceiptToken",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "COMMAND",
+        "x-error-codes": [
+          "TOKEN_INVALID",
+          "TOKEN_EXPIRED",
+          "TOKEN_REPLAYED",
+          "ABUSE_PROOF_INVALID",
+          "RATE_LIMITED",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyRequestSessionReceiptV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem response: TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REPLAYED, ABUSE_PROOF_INVALID, RATE_LIMITED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "TOKEN_INVALID",
+              "TOKEN_EXPIRED",
+              "TOKEN_REPLAYED",
+              "ABUSE_PROOF_INVALID",
+              "RATE_LIMITED"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangePrivacyRequestReceiptTokenRequestV1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/privacy-request-receipt": {
+      "get": {
+        "operationId": "getPrivacyRequest",
+        "summary": "getPrivacyRequest",
+        "tags": [
+          "addendum"
+        ],
+        "x-operation-kind": "QUERY",
+        "x-error-codes": [
+          "SCOPED_SESSION_REQUIRED",
+          "RESOURCE_NOT_FOUND",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "BffServiceAssertion": [],
+            "ScopedSubmissionSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyRequestPublicStatusV1"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem response: SCOPED_SESSION_REQUIRED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "SCOPED_SESSION_REQUIRED"
+            ]
+          },
+          "404": {
+            "description": "Problem response: RESOURCE_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6377,11 +7743,19 @@
       "AbuseProof": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["provider", "token", "action"],
+        "required": [
+          "provider",
+          "token",
+          "action"
+        ],
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["TURNSTILE", "HCAPTCHA", "SYNTHETIC_TEST"]
+            "enum": [
+              "TURNSTILE",
+              "HCAPTCHA",
+              "SYNTHETIC_TEST"
+            ]
           },
           "token": {
             "type": "string",
@@ -6394,7 +7768,10 @@
             "maxLength": 80
           },
           "issuedAt": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0
           }
         }
@@ -6414,7 +7791,11 @@
             "type": "boolean"
           }
         },
-        "required": ["attachmentId", "mayPublish", "redactionAllowed"]
+        "required": [
+          "attachmentId",
+          "mayPublish",
+          "redactionAllowed"
+        ]
       },
       "AttachmentPolicy": {
         "type": "object",
@@ -6502,7 +7883,9 @@
             "format": "binary"
           }
         },
-        "required": ["binary"]
+        "required": [
+          "binary"
+        ]
       },
       "ContactChannel": {
         "type": "object",
@@ -6519,12 +7902,21 @@
             "format": "int64"
           }
         },
-        "required": ["email", "officeHours", "expectedResponseDays"]
+        "required": [
+          "email",
+          "officeHours",
+          "expectedResponseDays"
+        ]
       },
       "CorrectionDraftPreview": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["draft", "attachments", "warnings", "submissionDigest"],
+        "required": [
+          "draft",
+          "attachments",
+          "warnings",
+          "submissionDigest"
+        ],
         "properties": {
           "draft": {
             "$ref": "#/components/schemas/CorrectionRequestDraft"
@@ -6550,7 +7942,12 @@
       "CorrectionDraftPreviewResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["draft", "attachments", "warnings", "submissionDigest"],
+        "required": [
+          "draft",
+          "attachments",
+          "warnings",
+          "submissionDigest"
+        ],
         "properties": {
           "draft": {
             "$ref": "#/components/schemas/CorrectionRequestDraft"
@@ -6641,7 +8038,12 @@
             }
           }
         },
-        "required": ["id", "status", "data", "links"]
+        "required": [
+          "id",
+          "status",
+          "data",
+          "links"
+        ]
       },
       "CorrectionRequestDraft": {
         "type": "object",
@@ -6665,7 +8067,12 @@
             "format": "date-time"
           }
         },
-        "required": ["draftToken", "version", "requestedChanges", "expiresAt"]
+        "required": [
+          "draftToken",
+          "version",
+          "requestedChanges",
+          "expiresAt"
+        ]
       },
       "CoverageRecordCounts": {
         "type": "object",
@@ -6756,12 +8163,18 @@
             "$ref": "#/components/schemas/SubmissionSessionDescriptor"
           }
         },
-        "required": ["status", "session"]
+        "required": [
+          "status",
+          "session"
+        ]
       },
       "FieldError": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["field", "message"],
+        "required": [
+          "field",
+          "message"
+        ],
         "properties": {
           "field": {
             "type": "string"
@@ -6777,7 +8190,10 @@
       "Link": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["rel", "href"],
+        "required": [
+          "rel",
+          "href"
+        ],
         "properties": {
           "rel": {
             "type": "string"
@@ -6805,12 +8221,20 @@
             }
           }
         },
-        "required": ["name", "values"]
+        "required": [
+          "name",
+          "values"
+        ]
       },
       "ProblemDetails": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "title", "status", "requestId"],
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
         "properties": {
           "type": {
             "type": "string",
@@ -6863,7 +8287,11 @@
           },
           "identityDisplay": {
             "type": "string",
-            "enum": ["ORGANIZATION_NAME", "ROLE_ONLY", "ANONYMOUS"]
+            "enum": [
+              "ORGANIZATION_NAME",
+              "ROLE_ONLY",
+              "ANONYMOUS"
+            ]
           },
           "redactionAcknowledged": {
             "type": "boolean"
@@ -6961,7 +8389,10 @@
             ]
           }
         },
-        "required": ["status", "requiresEmailProof"]
+        "required": [
+          "status",
+          "requiresEmailProof"
+        ]
       },
       "ResponseAccessStatusResponse": {
         "type": "object",
@@ -7001,7 +8432,12 @@
             }
           }
         },
-        "required": ["id", "status", "data", "links"]
+        "required": [
+          "id",
+          "status",
+          "data",
+          "links"
+        ]
       },
       "ResponseAnswer": {
         "type": "object",
@@ -7025,7 +8461,12 @@
             "format": "date-time"
           }
         },
-        "required": ["questionId", "text", "attachmentIds", "updatedAt"]
+        "required": [
+          "questionId",
+          "text",
+          "attachmentIds",
+          "updatedAt"
+        ]
       },
       "ResponseDraftResponse": {
         "type": "object",
@@ -7104,7 +8545,13 @@
             "format": "int64"
           }
         },
-        "required": ["id", "order", "text", "required", "maxLength"]
+        "required": [
+          "id",
+          "order",
+          "text",
+          "required",
+          "maxLength"
+        ]
       },
       "ResponseReceipt": {
         "type": "object",
@@ -7179,7 +8626,12 @@
             }
           }
         },
-        "required": ["id", "status", "data", "links"]
+        "required": [
+          "id",
+          "status",
+          "data",
+          "links"
+        ]
       },
       "ResponseRequestResponse": {
         "type": "object",
@@ -7420,7 +8872,11 @@
             "type": "string"
           }
         },
-        "required": ["route", "filters", "sort"]
+        "required": [
+          "route",
+          "filters",
+          "sort"
+        ]
       },
       "SubscriptionResponse": {
         "type": "object",
@@ -7460,7 +8916,12 @@
             }
           }
         },
-        "required": ["id", "status", "data", "links"]
+        "required": [
+          "id",
+          "status",
+          "data",
+          "links"
+        ]
       },
       "SubscriptionScope": {
         "type": "object",
@@ -7484,7 +8945,9 @@
             "$ref": "#/components/schemas/SubscriptionQuery"
           }
         },
-        "required": ["scopeType"]
+        "required": [
+          "scopeType"
+        ]
       },
       "createContactRequestReceipt": {
         "type": "object",
@@ -7499,7 +8962,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -7584,7 +9051,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -7638,7 +9109,12 @@
             "pattern": "^[a-f0-9]{64}$"
           }
         },
-        "required": ["filename", "mediaType", "sizeBytes", "sha256"]
+        "required": [
+          "filename",
+          "mediaType",
+          "sizeBytes",
+          "sha256"
+        ]
       },
       "createCorrectionRequestDraftReceipt": {
         "type": "object",
@@ -7653,7 +9129,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -7707,7 +9187,10 @@
             "$ref": "#/components/schemas/AbuseProof"
           }
         },
-        "required": ["locale", "abuseProof"]
+        "required": [
+          "locale",
+          "abuseProof"
+        ]
       },
       "createCorrectionRequestReceipt": {
         "type": "object",
@@ -7722,7 +9205,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -7773,7 +9260,11 @@
             "type": "boolean"
           }
         },
-        "required": ["expectedVersion", "attestation", "privacyConsent"]
+        "required": [
+          "expectedVersion",
+          "attestation",
+          "privacyConsent"
+        ]
       },
       "createDatasetExportReceipt": {
         "type": "object",
@@ -7788,7 +9279,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -7832,7 +9327,11 @@
           },
           "format": {
             "type": "string",
-            "enum": ["CSV", "JSONL", "PARQUET"]
+            "enum": [
+              "CSV",
+              "JSONL",
+              "PARQUET"
+            ]
           },
           "filters": {
             "$ref": "#/components/schemas/DatasetExportFilters"
@@ -7870,7 +9369,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -7924,7 +9427,12 @@
             "pattern": "^[a-f0-9]{64}$"
           }
         },
-        "required": ["filename", "mediaType", "sizeBytes", "sha256"]
+        "required": [
+          "filename",
+          "mediaType",
+          "sizeBytes",
+          "sha256"
+        ]
       },
       "createSubscriptionReceipt": {
         "type": "object",
@@ -7939,7 +9447,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8006,7 +9518,11 @@
           },
           "frequency": {
             "type": "string",
-            "enum": ["IMMEDIATE", "DAILY", "WEEKLY"]
+            "enum": [
+              "IMMEDIATE",
+              "DAILY",
+              "WEEKLY"
+            ]
           },
           "locale": {
             "type": "string"
@@ -8040,7 +9556,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8100,7 +9620,11 @@
             "format": "date-time"
           }
         },
-        "required": ["requestId", "status", "acceptedAt"]
+        "required": [
+          "requestId",
+          "status",
+          "acceptedAt"
+        ]
       },
       "deleteCorrectionRequestDraftRequest": {
         "type": "object",
@@ -8111,7 +9635,9 @@
             "format": "int64"
           }
         },
-        "required": ["expectedVersion"]
+        "required": [
+          "expectedVersion"
+        ]
       },
       "deleteResponseAttachmentReceipt": {
         "type": "object",
@@ -8126,7 +9652,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8174,7 +9704,9 @@
             "type": "string"
           }
         },
-        "required": ["oneTimeToken"]
+        "required": [
+          "oneTimeToken"
+        ]
       },
       "exchangeResponseAccessTokenRequest": {
         "type": "object",
@@ -8184,7 +9716,9 @@
             "type": "string"
           }
         },
-        "required": ["oneTimeToken"]
+        "required": [
+          "oneTimeToken"
+        ]
       },
       "exchangeResponseReceiptTokenRequest": {
         "type": "object",
@@ -8194,7 +9728,9 @@
             "type": "string"
           }
         },
-        "required": ["oneTimeToken"]
+        "required": [
+          "oneTimeToken"
+        ]
       },
       "exchangeSubscriptionManagementTokenRequest": {
         "type": "object",
@@ -8204,7 +9740,9 @@
             "type": "string"
           }
         },
-        "required": ["oneTimeToken"]
+        "required": [
+          "oneTimeToken"
+        ]
       },
       "finalizeCorrectionAttachmentReceipt": {
         "type": "object",
@@ -8219,7 +9757,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8267,7 +9809,11 @@
             "pattern": "^[a-f0-9]{64}$"
           }
         },
-        "required": ["objectEtag", "uploadedSizeBytes", "uploadedSha256"]
+        "required": [
+          "objectEtag",
+          "uploadedSizeBytes",
+          "uploadedSha256"
+        ]
       },
       "finalizeResponseAttachmentReceipt": {
         "type": "object",
@@ -8282,7 +9828,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8333,7 +9883,11 @@
             "pattern": "^[a-f0-9]{64}$"
           }
         },
-        "required": ["objectEtag", "uploadedSizeBytes", "uploadedSha256"]
+        "required": [
+          "objectEtag",
+          "uploadedSizeBytes",
+          "uploadedSha256"
+        ]
       },
       "requestResponseExtensionReceipt": {
         "type": "object",
@@ -8348,7 +9902,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8395,7 +9953,10 @@
             "type": "string"
           }
         },
-        "required": ["requestedDueAt", "reason"]
+        "required": [
+          "requestedDueAt",
+          "reason"
+        ]
       },
       "saveCorrectionRequestDraftReceipt": {
         "type": "object",
@@ -8420,7 +9981,11 @@
             "format": "date-time"
           }
         },
-        "required": ["requestId", "status", "acceptedAt"]
+        "required": [
+          "requestId",
+          "status",
+          "acceptedAt"
+        ]
       },
       "saveCorrectionRequestDraftRequest": {
         "type": "object",
@@ -8471,7 +10036,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8524,7 +10093,11 @@
             "format": "int64"
           }
         },
-        "required": ["answers", "publicationConsent", "expectedVersion"]
+        "required": [
+          "answers",
+          "publicationConsent",
+          "expectedVersion"
+        ]
       },
       "submitResponseReceipt": {
         "type": "object",
@@ -8539,7 +10112,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8590,7 +10167,11 @@
             "$ref": "#/components/schemas/PublicationConsent"
           }
         },
-        "required": ["expectedVersion", "attestation", "publicationConsent"]
+        "required": [
+          "expectedVersion",
+          "attestation",
+          "publicationConsent"
+        ]
       },
       "unsubscribeReceipt": {
         "type": "object",
@@ -8605,7 +10186,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8658,7 +10243,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["accepted", "completed", "rejected"]
+            "enum": [
+              "accepted",
+              "completed",
+              "rejected"
+            ]
           },
           "aggregateId": {
             "type": "string"
@@ -8699,7 +10288,11 @@
         "properties": {
           "frequency": {
             "type": "string",
-            "enum": ["IMMEDIATE", "DAILY", "WEEKLY"]
+            "enum": [
+              "IMMEDIATE",
+              "DAILY",
+              "WEEKLY"
+            ]
           },
           "paused": {
             "type": "boolean"
@@ -8717,7 +10310,9 @@
             "type": "string"
           }
         },
-        "required": ["emailOtp"]
+        "required": [
+          "emailOtp"
+        ]
       },
       "verifyResponseAccessResult": {
         "type": "object",
@@ -8738,7 +10333,12 @@
             "$ref": "#/components/schemas/SubmissionSessionDescriptor"
           }
         },
-        "required": ["requestId", "status", "remainingAttempts", "session"]
+        "required": [
+          "requestId",
+          "status",
+          "remainingAttempts",
+          "session"
+        ]
       },
       "verifySubscriptionRequest": {
         "type": "object",
@@ -8748,7 +10348,9 @@
             "type": "string"
           }
         },
-        "required": ["verificationToken"]
+        "required": [
+          "verificationToken"
+        ]
       },
       "verifySubscriptionResult": {
         "type": "object",
@@ -8765,7 +10367,881 @@
             "$ref": "#/components/schemas/SubmissionSessionDescriptor"
           }
         },
-        "required": ["subscriptionId", "status", "session"]
+        "required": [
+          "subscriptionId",
+          "status",
+          "session"
+        ]
+      },
+      "CreateResponseAppealRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedReceiptVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reasonCode": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "requestedOutcome": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "statement": {
+            "type": "string"
+          },
+          "supportingAttachmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attestation": {
+            "type": "boolean"
+          },
+          "privacyConsent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedReceiptVersion",
+          "reasonCode",
+          "requestedOutcome",
+          "statement",
+          "supportingAttachmentIds",
+          "attestation",
+          "privacyConsent"
+        ]
+      },
+      "ResponseAppealReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/CommandReceiptV1"
+          },
+          "appeal": {
+            "$ref": "#/components/schemas/ResponseAppealSummaryV1"
+          }
+        },
+        "required": [
+          "command",
+          "appeal"
+        ]
+      },
+      "GetResponseAppealRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "appealId"
+        ]
+      },
+      "ResponseAppealPublicStatusV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "requestedOutcome": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decisionReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "appealId",
+          "state",
+          "requestedOutcome",
+          "submittedAt",
+          "updatedAt",
+          "dueAt",
+          "decisionReason",
+          "nextActions",
+          "links"
+        ]
+      },
+      "RequestCommunicationEndpointLinkRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contractVersion": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "endpoint": {
+            "$ref": "#/components/schemas/EndpointEnrollmentV1"
+          },
+          "linkingConsent": {
+            "$ref": "#/components/schemas/EndpointLinkingConsentV1"
+          },
+          "expectedProfileVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "abuseProof": {
+            "$ref": "#/components/schemas/AbuseProofV1"
+          }
+        },
+        "required": [
+          "contractVersion",
+          "endpoint",
+          "linkingConsent",
+          "expectedProfileVersion",
+          "abuseProof"
+        ]
+      },
+      "CommunicationEndpointLinkRequestedReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/CommandReceiptV1"
+          },
+          "endpoint": {
+            "$ref": "#/components/schemas/CommunicationEndpointSummaryV1"
+          },
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "challengeKind": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "command",
+          "endpoint",
+          "challengeId",
+          "challengeKind",
+          "expiresAt"
+        ]
+      },
+      "VerifyCommunicationEndpointLinkRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proof": {
+            "$ref": "#/components/schemas/EndpointVerificationProofV1"
+          },
+          "expectedProfileVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "challengeId",
+          "proof",
+          "expectedProfileVersion"
+        ]
+      },
+      "CommunicationEndpointVerifiedReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/CommandReceiptV1"
+          },
+          "endpoint": {
+            "$ref": "#/components/schemas/CommunicationEndpointSummaryV1"
+          },
+          "profileVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "authorizationEventId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "command",
+          "endpoint",
+          "profileVersion",
+          "authorizationEventId"
+        ]
+      },
+      "UnlinkCommunicationEndpointRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "endpointId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedEndpointVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expectedProfileVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reasonCode": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "endpointId",
+          "expectedEndpointVersion",
+          "expectedProfileVersion",
+          "reasonCode"
+        ]
+      },
+      "CommunicationEndpointUnlinkedReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/CommandReceiptV1"
+          },
+          "endpoint": {
+            "$ref": "#/components/schemas/CommunicationEndpointSummaryV1"
+          },
+          "profileVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "optOutReceiptId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "command",
+          "endpoint",
+          "profileVersion",
+          "optOutReceiptId"
+        ]
+      },
+      "CreatePrivacyRequestRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requestType": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "subjectIdentityProof": {
+            "$ref": "#/components/schemas/PrivacyIdentityProofV1"
+          },
+          "jurisdiction": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/PrivacyRequestScopeV1"
+          },
+          "contactEndpoint": {
+            "$ref": "#/components/schemas/EndpointEnrollmentV1"
+          },
+          "statement": {
+            "type": "string"
+          },
+          "attestation": {
+            "type": "boolean"
+          },
+          "privacyConsent": {
+            "type": "boolean"
+          },
+          "abuseProof": {
+            "$ref": "#/components/schemas/AbuseProofV1"
+          }
+        },
+        "required": [
+          "requestType",
+          "subjectIdentityProof",
+          "jurisdiction",
+          "scope",
+          "contactEndpoint",
+          "statement",
+          "attestation",
+          "privacyConsent",
+          "abuseProof"
+        ]
+      },
+      "PrivacyRequestReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/CommandReceiptV1"
+          },
+          "request": {
+            "$ref": "#/components/schemas/PrivacyRequestSummaryV1"
+          },
+          "receiptToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "request",
+          "receiptToken"
+        ]
+      },
+      "ExchangePrivacyRequestReceiptTokenRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "proof": {
+            "$ref": "#/components/schemas/BrowserProofV1"
+          }
+        },
+        "required": [
+          "token",
+          "proof"
+        ]
+      },
+      "PrivacyRequestSessionReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cookieName": {
+            "type": "string"
+          },
+          "tokenConsumedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "requestId",
+          "sessionId",
+          "state",
+          "expiresAt",
+          "cookieName",
+          "tokenConsumedAt"
+        ]
+      },
+      "GetPrivacyRequestRequestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "PrivacyRequestPublicStatusV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/PrivacyRequestSummaryV1"
+          },
+          "decisionReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completionSummary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "request",
+          "decisionReason",
+          "completionSummary",
+          "nextActions",
+          "asOf",
+          "links"
+        ]
+      },
+      "AddendumProblemDetailsV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "status",
+          "requestId"
+        ]
+      },
+      "CommandReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "aggregateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "aggregateVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "auditEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "receiptDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "emittedEventIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "idempotencyReplay": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "operationId",
+          "requestId",
+          "status",
+          "aggregateId",
+          "aggregateVersion",
+          "auditEventId",
+          "acceptedAt",
+          "receiptDigest",
+          "emittedEventIds",
+          "idempotencyReplay",
+          "links"
+        ]
+      },
+      "ResponseAppealSummaryV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responseRequestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decisionSequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "state": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "requestedOutcome": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "appealId",
+          "responseRequestId",
+          "caseId",
+          "decisionSequence",
+          "state",
+          "reasonCode",
+          "requestedOutcome",
+          "createdAt",
+          "updatedAt",
+          "dueAt"
+        ]
+      },
+      "CommunicationEndpointSummaryV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "endpointId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "maskedDestination": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "endpointId",
+          "version",
+          "channel",
+          "maskedDestination",
+          "state",
+          "locale",
+          "verifiedAt",
+          "updatedAt"
+        ]
+      },
+      "PrivacyRequestSummaryV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "privacyRequestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestType": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "jurisdiction": {
+            "type": "string"
+          },
+          "scopeDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "privacyRequestId",
+          "requestType",
+          "state",
+          "jurisdiction",
+          "scopeDigest",
+          "dueAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "EndpointEnrollmentV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "EndpointLinkingConsentV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "purposes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "jurisdiction": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "consentTextDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "decision",
+          "purposes",
+          "policyVersion",
+          "jurisdiction",
+          "locale",
+          "consentTextDigest",
+          "acceptedAt"
+        ]
+      },
+      "AbuseProofV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "issuedAtEpochSeconds": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "provider",
+          "token",
+          "action",
+          "issuedAtEpochSeconds"
+        ]
+      },
+      "EndpointVerificationProofV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "PrivacyIdentityProofV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "PrivacyRequestScopeV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scopeKind": {
+            "type": "string",
+            "format": "date"
+          },
+          "objectRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dateFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "dateTo": {
+            "type": "string",
+            "format": "date"
+          },
+          "includeDerivatives": {
+            "type": "boolean"
+          },
+          "includeBackups": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scopeKind",
+          "objectRefs",
+          "dateFrom",
+          "dateTo",
+          "includeDerivatives",
+          "includeBackups"
+        ]
+      },
+      "PrivacyObjectRefV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objectType": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "objectId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "objectType",
+          "objectId"
+        ]
+      },
+      "BrowserProofV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "action": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "clientNonce": {
+            "type": "string"
+          },
+          "issuedAtEpochSeconds": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "provider",
+          "token",
+          "action",
+          "clientNonce",
+          "issuedAtEpochSeconds"
+        ]
       }
     }
   }

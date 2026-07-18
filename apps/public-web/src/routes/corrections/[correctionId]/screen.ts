@@ -50,7 +50,7 @@ export const screen = {
       order: 6,
       id: "review",
       title: "검토 절차",
-      component: "DecisionReviewPanel",
+      component: "RevisionTimeline",
       purpose: "공개 가능한 승인 정보.",
       test_id: "pub_019__section__review",
     },

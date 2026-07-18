@@ -1,0 +1,105 @@
+schema_version: 1
+specification_version: 13.0.0+agent-multimodal.1
+status: REVIEW_REQUIRED
+
+canonical_json:
+  algorithm: RFC8785_JCS_UTF8
+  digest: SHA-256 lowercase hexadecimal over the exact canonical bytes
+  integer_rule: Monetary values use integer micro-KRW; floating point is forbidden in identity, budget, cost, or receipt fields.
+  array_rule: Arrays that participate in a digest declare their order; set-like arrays are sorted by the keys named in the owning contract and reject duplicates.
+  timestamp_rule: RFC 3339 UTC with Z and microsecond precision; database values round-trip without synthesis.
+
+runtime_schemas:
+  - {type: AgentRunV2, path: schemas/agent-run.schema.json}
+  - {type: ProviderTurnV2, path: schemas/provider-turn.schema.json}
+  - {type: ToolCallV2, path: schemas/tool-call.schema.json}
+  - {type: AgentRunControlReceiptV2, path: schemas/agent-run-control-receipt.schema.json}
+  - {type: AgentReconciliationEvidenceV1, path: schemas/agent-reconciliation-evidence.schema.json}
+  - {type: OutputValidationV2, path: schemas/output-validation.schema.json}
+  - {type: MarketResearchOutputV2, path: schemas/market-research-output.schema.json}
+  - {type: InvestigatorOutputV2, path: schemas/investigator-output.schema.json}
+  - {type: SkepticOutputV2, path: schemas/skeptic-output.schema.json}
+  - {type: ClaimDraftOutputV2, path: schemas/claim-draft-output.schema.json}
+  - {type: CitationVerificationOutputV2, path: schemas/citation-verification-output.schema.json}
+  - {type: CommunicationProposalPayloadV1, path: schemas/communication-proposal-payload.schema.json}
+  - {type: AgentProposalV2, path: schemas/agent-proposal.schema.json}
+  - {type: SourceUseV2, path: schemas/source-use.schema.json}
+  - {type: CitationV2, path: schemas/citation.schema.json}
+  - {type: ResearchArtifactV2, path: schemas/research-artifact.schema.json}
+  - {type: ProviderReceiptV2, path: schemas/provider-receipt.schema.json}
+  - {type: PromoteResearchArtifactRequestV1, path: schemas/promote-research-artifact.request.schema.json}
+  - {type: PromoteResearchArtifactReceiptV1, path: schemas/promote-research-artifact.receipt.schema.json}
+
+view_model_schemas:
+  - {type: AnalysisVmV2, path: schemas/analysis-vm.schema.json, screens: [CAS-010, CAS-011]}
+  - {type: VisualizationVmV2, path: schemas/visualization-vm.schema.json, screens: [CAS-010, CAS-011]}
+  - {type: ProvenanceGraphV2, path: schemas/provenance-graph.schema.json, screens: [CAS-011]}
+
+tool_schemas:
+  - id: claim.language_check
+    request: tools/claim-language-check.request.schema.json
+    response: tools/claim-language-check.response.schema.json
+    unique_request_field: draftText
+    unique_response_field: findings
+  - id: contract.find_comparables
+    request: tools/contract-find-comparables.request.schema.json
+    response: tools/contract-find-comparables.response.schema.json
+    unique_request_field: subjectContractId
+    unique_response_field: comparables
+  - id: entity.lookup
+    request: tools/entity-lookup.request.schema.json
+    response: tools/entity-lookup.response.schema.json
+    unique_request_field: identifiers
+    unique_response_field: matches
+  - id: evidence.read
+    request: tools/evidence-read.request.schema.json
+    response: tools/evidence-read.response.schema.json
+    unique_request_field: evidenceId
+    unique_response_field: evidence
+  - id: evidence.search
+    request: tools/evidence-search.request.schema.json
+    response: tools/evidence-search.response.schema.json
+    unique_request_field: query
+    unique_response_field: hits
+  - id: response.read
+    request: tools/response-read.request.schema.json
+    response: tools/response-read.response.schema.json
+    unique_request_field: responseId
+    unique_response_field: response
+  - id: rule.reproduce
+    request: tools/rule-reproduce.request.schema.json
+    response: tools/rule-reproduce.response.schema.json
+    unique_request_field: ruleVersionId
+    unique_response_field: reproduction
+  - id: source.fetch
+    request: tools/source-fetch.request.schema.json
+    response: tools/source-fetch.response.schema.json
+    unique_request_field: requestKind
+    unique_response_field: artifacts
+  - id: source.locator_verify
+    request: tools/source-locator-verify.request.schema.json
+    response: tools/source-locator-verify.response.schema.json
+    unique_request_field: expectedSelectedContentSha256
+    unique_response_field: verification
+
+schema_rules:
+  - Every listed JSON document uses JSON Schema draft 2020-12, has a stable $id, and closes every object with additionalProperties false.
+  - Tool schemas are not aliases, copies with only a title change, or generic key/value envelopes.
+  - Each tool request and response has a tool-specific schemaVersion const and its declared unique field.
+  - Local $ref paths must resolve inside addendum-v2; references to the base v1 generic tool schemas are forbidden.
+  - Runtime DTO validation is performed before persistence, after persistence round-trip, before provider/tool dispatch, and before CAS rendering.
+
+identity_digest_projections:
+  algorithm: RFC8785_JCS_UTF8_SHA256
+  rule: Each identity digest is calculated from the exact root object after removing only the named root identity field. Nested digests remain. Canonical bytea stores this projection, never a payload containing its own digest.
+  projections:
+    ProviderReceiptV2: receiptSha256
+    ResearchArtifactV2: artifactSha256
+    SourceUseV2: sourceUseSha256
+    CitationV2: citationSha256
+    OutputValidationV2: validationSha256
+    PromoteResearchArtifactReceiptV1: receiptSha256
+    AgentRunControlReceiptV2: receiptSha256
+    AgentReconciliationEvidenceV1: evidenceSha256
+    ProvenanceGraphV2: graphSha256
+  cross_runtime_oracle: Rust, PostgreSQL 18.4, and TypeScript must produce byte-identical canonical projections and SHA-256 for the shared golden corpus; including the identity field or mutating one projected byte is a hard failure.

@@ -93,9 +93,38 @@ verification suite.
 - Resolution: the Submission API derives the expected OTP from the stored
   one-time access-token hash with `TOKEN_HMAC_KEY`, compares it in constant
   time, and is the only role allowed to invoke the locked promotion routine.
+  Both the API lookup and migration 0024 select the access-token row by the
+  pending session's exact `exchange_session_id`, never by the request alone.
   Migration 0024 atomically increments attempts, applies lockout, consumes the
   pending session, and rotates to a new active opaque session. Integration
-  coverage includes wrong OTP, lockout, success, rotation, and replay denial.
+  coverage includes multiple tokens for one request, wrong OTP, lockout,
+  success, rotation, and replay denial.
+
+## Synthetic browser challenge cannot hold the verifier secret
+
+- Authority intent: anonymous browser submissions carry a short-lived abuse
+  proof, while `BOT_CHALLENGE_SECRET_KEY` belongs only to `submission-api` and
+  must never be exposed to the browser or `public-web` runtime.
+- Resolution: in non-production synthetic mode the browser creates only a
+  random nonce. The public BFF validates its action and age, then signs the
+  nonce with its existing request-bound service HMAC key using a dedicated
+  domain. Submission API verifies the current or previous issuer key and still
+  accepts the authority-compatible direct synthetic verifier signature for
+  integration callers. Production rejects the synthetic provider before
+  either path.
+
+## Public case relation filters require multi-valued projection metadata
+
+- Authority intent: case lists and agency, supplier, and rule case routes
+  filter published cases by their real linked relations.
+- Current evidence: a case can link multiple anomaly signals, while the
+  publication payload had no relation metadata and fixture-only singular keys
+  concealed the missing production path.
+- Resolution: publication derives sorted unique `agencyIds`, `supplierIds`,
+  and `ruleIds` from linked signals, their rule versions, and contract targets.
+  Public SQL filters these arrays before pagination while retaining singular
+  key compatibility for older projected rows. Relation metadata is stripped
+  from public case and revision responses.
 
 ## Response extension routine uses an impossible status
 

@@ -45,7 +45,7 @@ function syntheticProof() {
   publish(
     JSON.stringify({
       provider: "SYNTHETIC_TEST",
-      token: "browser-e2e-proof",
+      token: globalThis.crypto.randomUUID(),
       action,
       issuedAt: Math.floor(Date.now() / 1000),
     }),

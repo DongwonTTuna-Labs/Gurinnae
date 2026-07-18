@@ -50,7 +50,7 @@ export const screen = {
       order: 6,
       id: "related",
       title: "관련 공개 사건",
-      component: "SignalTriagePanel",
+      component: "DataCollection",
       purpose: "내부 signal count는 숨김.",
       test_id: "pub_012__section__related",
     },

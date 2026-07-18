@@ -127,7 +127,7 @@ def sample_for_schema(schema: Any, document: dict[str, Any], depth: int = 0) -> 
             return "gurine-aa-v1." + "0" * 16 + ".e30." + "0" * 43
         if pattern.startswith("^gurine-sa-v1"):
             return "gurine-sa-v1." + "0" * 16 + ".e30." + "0" * 43
-        if pattern == "^[a-f0-9]{{64}}$" or "[a-f0-9]{64}" in pattern:
+        if pattern == "^[a-f0-9]{{64}}$" or "[a-f0-9]{64}" in pattern or "[0-9a-f]{64}" in pattern:
             return "0" * 64
         if "\\d+" in pattern:
             return "0"
@@ -270,6 +270,7 @@ workspace = true
             )
         write(
             f"{path}/src/{module}.rs",
+            "// Generated from the v13 operation catalog; do not edit by hand.\n"
             "use crate::OperationSpec;\n\npub const OPERATIONS: &[OperationSpec] = &[\n"
             + "\n".join(entries)
             + "\n];",

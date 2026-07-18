@@ -378,25 +378,7 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
         tx.commit().await.map_err(SchedulerError::Database)?;
         return Ok(false);
     };
-    let event = Event {
-        id: row.try_get("id").map_err(SchedulerError::Database)?,
-        aggregate_type: row
-            .try_get("aggregate_type")
-            .map_err(SchedulerError::Database)?,
-        aggregate_id: row
-            .try_get("aggregate_id")
-            .map_err(SchedulerError::Database)?,
-        aggregate_version: row
-            .try_get("aggregate_version")
-            .map_err(SchedulerError::Database)?,
-        event_type: row
-            .try_get("event_type")
-            .map_err(SchedulerError::Database)?,
-        payload: row.try_get("payload").map_err(SchedulerError::Database)?,
-        occurred_at: row
-            .try_get("occurred_at")
-            .map_err(SchedulerError::Database)?,
-    };
+    let event = event_from_row(&row)?;
     for consumer in consumers_for(&event.event_type) {
         let job_id = Uuid::new_v4();
         let inserted = sqlx::query(
@@ -447,6 +429,28 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
     tx.commit().await.map_err(SchedulerError::Database)?;
     tracing::info!(event_id=%event.id,event_type=%event.event_type,"outbox event dispatched");
     Ok(true)
+}
+
+fn event_from_row(row: &sqlx::postgres::PgRow) -> Result<Event, SchedulerError> {
+    Ok(Event {
+        id: row.try_get("id").map_err(SchedulerError::Database)?,
+        aggregate_type: row
+            .try_get("aggregate_type")
+            .map_err(SchedulerError::Database)?,
+        aggregate_id: row
+            .try_get("aggregate_id")
+            .map_err(SchedulerError::Database)?,
+        aggregate_version: row
+            .try_get("aggregate_version")
+            .map_err(SchedulerError::Database)?,
+        event_type: row
+            .try_get("event_type")
+            .map_err(SchedulerError::Database)?,
+        payload: row.try_get("payload").map_err(SchedulerError::Database)?,
+        occurred_at: row
+            .try_get("occurred_at")
+            .map_err(SchedulerError::Database)?,
+    })
 }
 
 fn consumers_for(event_type: &str) -> &'static [&'static str] {

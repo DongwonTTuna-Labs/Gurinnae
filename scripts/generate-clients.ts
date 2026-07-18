@@ -26,6 +26,10 @@ const targets: readonly ClientTarget[] = [
     input: "specs/generated/identity-service-internal.openapi.json",
     output: "packages/api-client-identity-internal/src/generated",
   },
+  {
+    input: "specs/generated/identity-api.openapi.json",
+    output: "packages/api-client-identity-internal/src/generated-procurement",
+  },
 ];
 
 async function filesBelow(directory: string): Promise<readonly string[]> {

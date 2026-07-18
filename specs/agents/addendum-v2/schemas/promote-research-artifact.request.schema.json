@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/promote-research-artifact-request.json",
+  "title": "PromoteResearchArtifactRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "caseId",
+    "expectedCaseVersion",
+    "agentRunId",
+    "researchArtifact",
+    "rightsDecision",
+    "evidence",
+    "selectedSegments",
+    "reason"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "promote-research-artifact.request.v1"
+    },
+    "caseId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "expectedCaseVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "agentRunId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "researchArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "assetId",
+        "assetRevision",
+        "artifactSha256",
+        "contentSha256",
+        "sourceFetchId",
+        "providerTurnId",
+        "toolCallId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "assetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "assetRevision": {
+          "const": 1
+        },
+        "artifactSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sourceFetchId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "providerTurnId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "toolCallId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "rightsDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "decisionSha256"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decisionSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidenceType",
+        "title",
+        "description",
+        "classification",
+        "verificationStatus",
+        "publicExcerpt"
+      ],
+      "properties": {
+        "evidenceType": {
+          "enum": [
+            "SOURCE_DOCUMENT",
+            "OFFICIAL_RECORD",
+            "CONTRACT",
+            "COMMUNICATION",
+            "MEDIA",
+            "OTHER"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4000
+        },
+        "classification": {
+          "enum": [
+            "PUBLIC",
+            "INTERNAL",
+            "RESTRICTED"
+          ]
+        },
+        "verificationStatus": {
+          "const": "PENDING"
+        },
+        "publicExcerpt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4000
+        }
+      }
+    },
+    "selectedSegments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ordinal",
+          "locator",
+          "selectedContentSha256",
+          "selectionPurpose"
+        ],
+        "properties": {
+          "ordinal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "locator": {
+            "$ref": "#/$defs/locator"
+          },
+          "selectedContentSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "selectionPurpose": {
+            "enum": [
+              "PRIMARY_EVIDENCE",
+              "SUPPORTING_CONTEXT",
+              "COUNTER_EVIDENCE",
+              "LIMITATION"
+            ]
+          }
+        }
+      }
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value",
+        "locatorSha256"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH",
+            "JSON_POINTER",
+            "HTML_CSS_SELECTOR",
+            "API_FIELD",
+            "TEXT_RANGE",
+            "IMAGE_BBOX",
+            "AUDIO_TIME_RANGE",
+            "VIDEO_TIME_RANGE",
+            "VIDEO_REGION_TIME"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "locatorSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  },
+  "x-gurinnae-invariants": [
+    "The artifact/run/turn/tool/fetch/asset tuple identifies one immutable CLEAN STORED ResearchArtifact owned by this run; client-supplied bytes or extraction text are never authoritative.",
+    "selectedSegments ordinals are contiguous unique, every locator is in bounds for the pinned bytes/parser version, and selectedContentSha256 equals deterministic re-extraction.",
+    "The rights decision is current GRANT for promotion/use/classification, expectedCaseVersion is locked, and the request-bound Idempotency-Key header binds the complete canonical request."
+  ]
+}

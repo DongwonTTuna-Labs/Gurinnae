@@ -1,0 +1,675 @@
+schema_version: 2
+owner_addendum: specs/product/owner-addendum-2026-07-14.yaml
+status: REVIEW_REQUIRED
+binding_count: derived as len(bindings)
+aggregate_alias_count: 18
+rules:
+  - Each noun has one canonical type and owner; prose cannot create runtime state.
+  - Existing v13 state machines and guards are imported without reinterpretation.
+  - Every persisted mutation uses expected version, idempotency scope, audit and declared events.
+  - No serde_json::Value, string dispatch or response materializer substitutes for a typed contract.
+
+aggregate_aliases:
+  - {aggregate: ActionReviewAssignment, canonical_noun: ActionProposal, rust_type: gurine_domain::action::ActionReviewAssignment, repository: crates/persistence-postgres::action_approval, identity: assignment_id+assignment_version, concurrency: expected-assignment-version+unique-quorum-slot}
+  - {aggregate: BusinessCalendarVersion, canonical_noun: ResponseDeliveryClockDecision, rust_type: gurine_domain::response::BusinessCalendarVersion, repository: crates/persistence-postgres::response_clock, identity: calendar_id+version, concurrency: append-only-version+effective-range-exclusion}
+  - {aggregate: ConflictDeclaration, canonical_noun: ConflictSnapshot, rust_type: gurine_domain::governance::ConflictDeclaration, repository: crates/persistence-postgres::conflicts, identity: declaration_id, concurrency: append-only-effective-period}
+  - {aggregate: CostAllocationPeriod, canonical_noun: ProductOutcome, rust_type: gurine_domain::economics::CostAllocationPeriod, repository: crates/persistence-postgres::product_economics, identity: period_start+period_end+currency+version, concurrency: immutable-period-close+superseding-correction}
+  - {aggregate: FundingConcentrationSnapshot, canonical_noun: FundingDisclosure, rust_type: gurine_domain::funding::FundingConcentrationSnapshot, repository: crates/persistence-postgres::funding, identity: snapshot_batch_id+snapshot_digest, concurrency: immutable-signed-import}
+  - {aggregate: FundingDisclosureRevision, canonical_noun: FundingDisclosure, rust_type: gurine_domain::funding::FundingDisclosureRevision, repository: crates/persistence-postgres::funding, identity: disclosure_id+revision, concurrency: prior-revision-cas+append-only}
+  - {aggregate: InFlightEffect, canonical_noun: BudgetReservation, rust_type: gurine_domain::budget::InFlightEffect, repository: crates/persistence-postgres::budget_reservations, identity: effect_id+generation, concurrency: monotonic-generation+policy-fence}
+  - {aggregate: CommercialControlExecution, canonical_noun: ExecutionAuthorization, rust_type: gurine_domain::commercial::CommercialControlExecution, repository: crates/persistence-postgres::commercial_control, identity: control_execution_id+version+receipt_digest, concurrency: product-fence-first+distinct-import-and-acknowledgement-receipts}
+  - {aggregate: LegalHoldCoverage, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::LegalHoldCoverage, repository: crates/persistence-postgres::retention, identity: hold_id+release_sequence+coverage_digest, concurrency: append-only-nonoverlapping-coverage-cells}
+  - {aggregate: OutboundDelivery, canonical_noun: CommunicationIntent, rust_type: gurine_domain::communication::OutboundDelivery, repository: crates/persistence-postgres::communication, identity: delivery_id+delivery_version, concurrency: expected-version+monotonic-provider-evidence}
+  - {aggregate: PrivacyRequest, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::PrivacyRequest, repository: crates/persistence-postgres::retention, identity: retention_request_id+decision_version, concurrency: immutable-request+expected-decision-version}
+  - {aggregate: ProductFact, canonical_noun: ProductOutcome, rust_type: gurine_observability::product::ProductFact, repository: crates/persistence-postgres::product_economics, identity: fact_id+fact_digest, concurrency: immutable-terminal-fact+superseding-correction}
+  - {aggregate: PaidEvidencePacket, canonical_noun: ProductOutcome, rust_type: gurine_observability::product::PaidEvidencePacket, repository: crates/persistence-postgres::paid_evidence_packets, identity: packet_id+packet_version+packet_subject_digest, concurrency: immutable-ten-member-subject+one-terminal-binding}
+  - {aggregate: RecordClassSchedule, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RecordClassSchedule, repository: crates/persistence-postgres::retention, identity: record_class+revision, concurrency: append-only-revision+effective-range-exclusion}
+  - {aggregate: ResponseExtensionDecision, canonical_noun: ResponseDeliveryClockDecision, rust_type: gurine_domain::response::ResponseExtensionDecision, repository: crates/persistence-postgres::response_clock, identity: extension_request_id+decision_version, concurrency: expected-version+append-only-decision}
+  - {aggregate: ResponseRequest, canonical_noun: ResponseDeliveryClockDecision, rust_type: gurine_domain::response::ResponseRequest, repository: crates/persistence-postgres::response_clock, identity: response_request_id+request_version, concurrency: expected-version+clock-decision-fence}
+  - {aggregate: RestorationSuppression, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RestorationSuppression, repository: crates/persistence-postgres::retention, identity: suppression_id, concurrency: immutable-effective-period}
+  - {aggregate: SubscriptionUpdate, canonical_noun: CommunicationIntent, rust_type: gurine_domain::communication::SubscriptionUpdate, repository: crates/persistence-postgres::communication, identity: source_object_type+source_object_id+source_object_version+update_kind, concurrency: immutable-source-decision-digest}
+
+bindings:
+  - noun: EvidenceSegment
+    rust_type: gurine_ingestion::evidence::EvidenceSegment
+    owner: crates/ingestion
+    application: crates/application::evidence
+    repository: crates/persistence-postgres::evidence_segments
+    relations: [raw.evidence_segments]
+    identity: evidence_segment_id
+    concurrency: immutable-content-digest
+    operations: [getEvidenceWorkspace, submitActionDecision, getActionExecutionReceipt]
+    events: [evidence.segment_created.v1]
+    errors: [SOURCE_ASSET_NOT_FOUND, LOCATOR_INVALID, CONTENT_DIGEST_MISMATCH]
+  - noun: ResearchArtifact
+    rust_type: gurine_agent_orchestration::research::ResearchArtifact
+    owner: crates/agent-orchestration
+    application: services/analysis-worker::research
+    repository: crates/persistence-postgres::research_artifacts
+    relations: [raw.research_artifacts]
+    identity: research_artifact_id
+    concurrency: immutable-content-digest
+    operations: []
+    events: [agent.tool_call_completed.v1]
+    errors: [RESEARCH_FETCH_BLOCKED, RESEARCH_RENDER_REQUIRED, RESEARCH_ARTIFACT_STALE]
+  - noun: ResearchArtifactPromotion
+    rust_type: gurine_agent_orchestration::promotion::ResearchArtifactPromotion
+    owner: crates/agent-orchestration
+    application: crates/application::evidence_promotion
+    repository: crates/persistence-postgres::research_artifact_promotions
+    relations: [raw.research_artifact_promotions]
+    identity: promotion_id+receipt_sha256
+    concurrency: artifact_id+artifact_sha256+idempotency_key_sha256 immutable-human-decision replay
+    operations: [promoteResearchArtifactToEvidence]
+    events: [research.artifact_promoted.v1]
+    errors: [ARTIFACT_NOT_CLEAN, RIGHTS_DENIED, LOCATOR_MISMATCH, CONTENT_HASH_MISMATCH]
+  - noun: AssetRightsDecision
+    rust_type: gurine_domain::rights::AssetRightsDecision
+    owner: crates/domain
+    application: crates/application::rights
+    repository: crates/persistence-postgres::asset_rights
+    relations: [raw.asset_rights_decisions]
+    identity: asset_id+asset_sha256+decision_version
+    concurrency: expected-decision-version
+    operations: []
+    events: [rights.asset_decided.v1]
+    errors: [RIGHTS_NOT_AUTHORIZED, RIGHTS_DECISION_STALE]
+  - noun: DatasetSnapshot
+    rust_type: gurine_detection::snapshot::DatasetSnapshot
+    owner: crates/detection
+    application: crates/application::detection
+    repository: crates/persistence-postgres::dataset_snapshots
+    relations: [core.dataset_snapshots, core.dataset_snapshot_members, core.dataset_snapshot_member_sources, core.normalization_runs]
+    identity: dataset_snapshot_id+snapshot_sha256
+    concurrency: immutable-repeatable-read-snapshot
+    operations: [startAgentRun, runRuleEvaluation, startRuleShadow]
+    events: [dataset.snapshot_created.v1]
+    errors: [DATASET_SNAPSHOT_NOT_READY, DATASET_SNAPSHOT_STALE, DATASET_MEMBER_DIGEST_MISMATCH]
+  - noun: AgentToolCall
+    rust_type: gurine_agent_orchestration::tool::AgentToolCall
+    owner: crates/agent-orchestration
+    application: services/analysis-worker::tools
+    repository: crates/persistence-postgres::agent_tool_calls
+    relations: [ops.agent_tool_calls]
+    identity: agent_run_id+call_id
+    concurrency: compare-and-return-stored-result
+    operations: [startAgentRun]
+    events: [agent.tool_call_completed.v1]
+    errors: [AGENT_TOOL_NOT_ALLOWED, AGENT_TOOL_INPUT_INVALID, AGENT_TOOL_LIMIT_REACHED]
+  - noun: AgentRunControlReceipt
+    rust_type: gurine_agent_orchestration::runtime::AgentRunControlReceipt
+    owner: crates/agent-orchestration
+    application: services/analysis-worker::run_control
+    repository: crates/persistence-postgres::agent_run_control_receipts
+    relations: [ops.agent_run_control_receipts]
+    identity: agent_run_id+aggregate_version+receipt_sha256
+    concurrency: append-only-aggregate-version+expected-run-version
+    operations: [startAgentRun, getAgentRun, cancelAgentRun, reconcileAgentRun]
+    events: [agent.run_control_changed.v2]
+    errors: [AGENT_RUN_STATE_INVALID, VERSION_CONFLICT, VALIDATION_FAILED]
+  - noun: AgentReconciliationEvidence
+    rust_type: gurine_agent_orchestration::runtime::AgentReconciliationEvidence
+    owner: crates/agent-orchestration
+    application: services/reconciliation-worker::agent_runs
+    repository: crates/persistence-postgres::agent_reconciliation_evidence
+    relations: [ops.agent_reconciliation_evidence]
+    identity: agent_run_id+evidence_id+evidence_sha256
+    concurrency: immutable-idempotency-lookup+run-bound-proof
+    operations: [getAgentRun]
+    events: []
+    errors: [AGENT_RUN_NOT_FOUND, AGENT_RECONCILIATION_EVIDENCE_INVALID, AGENT_RECONCILIATION_EVIDENCE_STALE]
+  - noun: AgentSourceUse
+    rust_type: gurine_agent_orchestration::provenance::AgentSourceUse
+    owner: crates/agent-orchestration
+    application: services/analysis-worker::provenance
+    repository: crates/persistence-postgres::agent_source_uses
+    relations: [ops.agent_source_uses]
+    identity: agent_run_id+source_kind+source_id+source_revision+use_ordinal
+    concurrency: immutable-ordered-use+snapshot-membership
+    operations: [getAgentRun]
+    events: [agent.tool_call_completed.v1]
+    errors: [EVIDENCE_OUTSIDE_SNAPSHOT, CITATION_LOCATOR_MISMATCH, CONTENT_DIGEST_MISMATCH]
+  - noun: AgentOutputValidation
+    rust_type: gurine_agent_orchestration::validation::AgentOutputValidation
+    owner: crates/agent-orchestration
+    application: services/analysis-worker::validation
+    repository: crates/persistence-postgres::agent_output_validations
+    relations: [ops.agent_output_validations]
+    identity: agent_run_id+output_sha256+schema_version
+    concurrency: immutable-validation-receipt
+    operations: [getAgentRun]
+    events: [agent.output_validated.v1]
+    errors: [AGENT_OUTPUT_SCHEMA_INVALID, EVIDENCE_OUTSIDE_SNAPSHOT, CITATION_LOCATOR_MISMATCH]
+  - noun: AgentProposal
+    rust_type: gurine_domain::agent::AgentProposal
+    owner: crates/domain
+    application: crates/application::agent_proposals
+    repository: crates/persistence-postgres::agent_proposals
+    relations: [ops.agent_suggestions, ops.agent_proposal_citations]
+    identity: proposal_id+version+payload_sha256
+    concurrency: expected-version+expected-payload-digest
+    operations: [acceptAgentSuggestion, rejectAgentSuggestion, createActionProposal]
+    events: [agent.proposal_created.v2, agent.suggestion_accepted.v1, agent.suggestion_rejected.v1]
+    errors: [AGENT_PROPOSAL_STALE, AGENT_PROPOSAL_EXPIRED, CITATION_VALIDATION_REQUIRED]
+  - noun: ActionProposal
+    rust_type: gurine_domain::action::ActionProposal
+    owner: crates/domain
+    application: crates/application::action_approval
+    repository: crates/persistence-postgres::action_approval
+    relations: [ops.action_proposals, ops.action_proposal_versions, ops.action_approval_hypothesis_details, ops.action_approval_claim_details, ops.action_approval_task_details, ops.action_approval_comparable_details, ops.action_approval_communication_details, ops.action_approval_publication_details, ops.action_approval_retraction_details, ops.action_approval_rule_activation_details, ops.action_approval_role_grant_details, ops.action_approval_kill_switch_details, ops.action_approval_communication_authorization_details, ops.action_approval_asset_rights_details, ops.action_approval_retention_schedule_details, ops.action_approval_funding_disclosure_details, ops.action_approval_capability_activation_details, ops.action_approval_response_policy_calendar_details, ops.action_approval_commercial_control_details, ops.action_review_assignments, ops.action_decisions]
+    identity: action_proposal_id+version+approval_digest
+    concurrency: expected-version+idempotency-key
+    operations: [listActionApprovalQueue, createActionProposal, getActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision, withdrawActionProposal, withdrawActionDecision]
+    events: [action.proposal_created.v1, action.proposal_updated.v1, action.review_requested.v1, action.review_claimed.v1, action.decision_recorded.v1, action.proposal_withdrawn.v1, action.decision_withdrawn.v1, action.review_vacancy_filled.v1]
+    errors: [ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_QUORUM_INSUFFICIENT, ACTION_CONFLICT_UNRESOLVED]
+  - noun: ExecutionAuthorization
+    rust_type: gurine_domain::action::ExecutionAuthorization
+    owner: crates/domain
+    application: crates/application::action_execution
+    repository: crates/persistence-postgres::action_execution
+    relations: [ops.execution_authorizations, ops.execution_attempts, ops.execution_receipts]
+    identity: execution_id+generation+fencing_token
+    concurrency: monotonic-generation+lease-token
+    operations: [getActionExecutionReceipt, cancelActionExecution, retryActionExecution]
+    events: [action.execution_authorized.v1, action.execution_cancel_requested.v1, action.execution_retry_requested.v1, action.execution_completed.v1, commercial.control_execution_recorded.v1, commercial.control_external_effect_acknowledged.v1, commercial.control_reconciliation_required.v1]
+    errors: [EXECUTION_NOT_AUTHORIZED, EXECUTION_FENCE_STALE, EXECUTION_RECONCILIATION_REQUIRED]
+  - noun: CommunicationIntent
+    rust_type: gurine_domain::communication::CommunicationIntent
+    owner: crates/domain
+    application: crates/application::communication
+    repository: crates/persistence-postgres::communication
+    relations: [ops.communication_intents, ops.communication_renderings, ops.outbound_deliveries, ops.outbound_delivery_attempts, ops.outbound_delivery_receipts, ops.communication_callback_events, ops.communication_reconciliation_decisions]
+    identity: logical-intent-dedupe-digest
+    concurrency: purpose+material-event-version+recipient-subject
+    operations: [createActionProposal, submitActionDecision, getActionExecutionReceipt, getCommunicationDeliveryReceipt, reconcileCommunicationDelivery, cancelCommunicationDelivery]
+    events: [communication.intent_created.v1, communication.delivery_requested.v1, communication.delivery_receipt_recorded.v1, communication.subscription_update_requested.v1]
+    errors: [COMMUNICATION_POLICY_BLOCKED, CHANNEL_UNCONFIGURED, DELIVERY_RECONCILIATION_REQUIRED]
+  - noun: CommunicationAuthorizationDecision
+    rust_type: gurine_domain::communication::CommunicationAuthorizationDecision
+    owner: crates/domain
+    application: crates/application::communication_authorization
+    repository: crates/persistence-postgres::communication_authorization
+    relations: [intake.communication_subjects, intake.communication_endpoints, intake.communication_endpoint_verifications, intake.communication_endpoint_link_events, intake.communication_authorization_events, intake.communication_preferences, intake.communication_suppressions, intake.communication_opt_out_receipts]
+    identity: endpoint_hash+purpose+topic+policy_version+event_id
+    concurrency: append-only-ledger
+    operations: [createSubscription, updateSubscription, unsubscribe, verifySubscription, requestCommunicationEndpointLink, verifyCommunicationEndpointLink, unlinkCommunicationEndpoint, submitActionDecision]
+    events: [communication.authorization_changed.v1]
+    errors: [ENDPOINT_NOT_VERIFIED, COMMUNICATION_NOT_AUTHORIZED, RECIPIENT_SUPPRESSED]
+  - noun: ConflictSnapshot
+    rust_type: gurine_domain::governance::ConflictSnapshot
+    owner: crates/domain
+    application: crates/application::governance
+    repository: crates/persistence-postgres::conflicts
+    relations: [editorial.conflict_declarations, editorial.conflict_snapshots]
+    identity: subject_actor_id+target_id+policy_digest+snapshot_sha256
+    concurrency: immutable-snapshot
+    operations: [declareConflict, withdrawConflict, submitReview, submitActionDecision, publishCase]
+    events: [governance.conflict_declared.v1, governance.conflict_withdrawn.v1, governance.conflict_expired.v1]
+    errors: [CONFLICT_UNRESOLVED, REVIEWER_RECUSAL_REQUIRED]
+  - noun: CapabilityActivationDecision
+    rust_type: gurine_domain::governance::CapabilityActivationDecision
+    owner: crates/domain
+    application: crates/application::capability_activation
+    repository: crates/persistence-postgres::capability_activation
+    relations: [ops.capability_activation_decisions, ops.capability_activation_evidence, ops.communication_provider_configs, ops.communication_provider_preflight_receipts]
+    identity: capability+environment+configuration_digest+decision_version
+    concurrency: expected-decision-version
+    operations: [listProviders, testProviderConnection, disableProviderRouting, createActionProposal, submitActionDecision]
+    events: [governance.capability_activation_review_requested.v1, governance.capability_activation_decided.v1]
+    errors: [CAPABILITY_UNCONFIGURED, CAPABILITY_ACTIVATION_STALE]
+  - noun: BudgetReservation
+    rust_type: gurine_domain::budget::BudgetReservation
+    owner: crates/domain
+    application: crates/application::budget
+    repository: crates/persistence-postgres::budget_reservations
+    relations: [ops.budget_reservations, ops.budget_reservation_ledger_entries, ops.budget_limits, ops.cost_events, ops.in_flight_effects]
+    identity: job_id+attempt+provider_candidate+pricing_version
+    concurrency: locked-ledger+idempotent-reservation
+    operations: [startAgentRun, updateBudgetLimit]
+    events: [budget.reservation_created.v1, budget.reservation_settled.v1, budget.reservation_released.v1, budget.reservation_reconciliation_required.v1, operations.effect_policy_blocked.v1]
+    errors: [BUDGET_BLOCKED, COST_RECONCILIATION_REQUIRED]
+  - noun: RetentionDecision
+    rust_type: gurine_domain::retention::RetentionDecision
+    owner: crates/domain
+    application: crates/application::retention
+    repository: crates/persistence-postgres::retention
+    relations: [ops.retention_requests, ops.retention_request_decisions, ops.retention_execution_receipts, ops.record_class_schedules, ops.restoration_suppressions, ops.legal_hold_target_anchors, editorial.legal_holds, editorial.legal_hold_releases]
+    identity: retention_request_id+decision_version
+    concurrency: expected-status+active-hold-set
+    operations: [placeLegalHold, releaseLegalHold, createPrivacyRequest, exchangePrivacyRequestReceiptToken, getPrivacyRequest, listRetentionRequests, getRetentionRequest, transitionRetentionRequest, listRecordClassSchedules, submitActionDecision]
+    events: [privacy.request_created.v1, privacy.request_decision_recorded.v1, retention.schedule_revised.v1, retention.execution_completed.v1, retention.restoration_suppression_created.v1, legal.hold_released.v1, legal.hold_review_due.v1]
+    errors: [LEGAL_HOLD_ACTIVE, RETENTION_POLICY_STALE]
+  - noun: ResponseAppeal
+    rust_type: gurine_domain::response::ResponseAppeal
+    owner: crates/domain
+    application: crates/application::response_appeal
+    repository: crates/persistence-postgres::response_appeals
+    relations: [intake.appeals, intake.appeal_decisions]
+    identity: appeal_id+prior-decision-id
+    concurrency: immutable-request+status-version
+    operations: [createResponseAppeal, getResponseAppeal, listResponseAppeals, getResponseAppealWorkspace, transitionResponseAppeal]
+    events: [response.appeal_created.v1, response.appeal_decision_recorded.v1]
+    errors: [APPEAL_SCOPE_INVALID, APPEAL_WINDOW_CLOSED]
+  - noun: ProductOutcome
+    rust_type: gurine_observability::product::ProductOutcome
+    owner: crates/observability
+    application: crates/application::product_measurement
+    repository: crates/persistence-postgres::product_economics
+    relations: [ops.product_events, ops.outcome_facts, ops.acquisition_source_receipts, ops.cost_allocations, ops.paid_evidence_packets, ops.paid_evidence_packet_members]
+    identity: outcome_type+terminal_receipt_id
+    concurrency: immutable-terminal-fact
+    operations: [getBudgetOverview]
+    events: [product.fact_recorded.v1, product.fact_corrected.v1, cost.allocation_period_closed.v1, product.paid_evidence_packet_subject_persisted.v1, product.paid_terminal_receipt_bound.v1]
+    errors: [COST_ATTRIBUTION_INCOMPLETE]
+  - noun: SearchDocument
+    rust_type: gurine_application::search::SearchDocument
+    owner: crates/application
+    application: crates/application::search
+    repository: crates/persistence-postgres::search
+    relations: [public.search_documents, ops.search_documents]
+    identity: surface+object_type+object_id+object_revision+projection_generation
+    concurrency: source-version+projection-generation+monotonic-watermark
+    operations: [searchPublicRecords, searchInternalRecords]
+    events: []
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, CAPABILITY_DENIED]
+  - noun: Incident
+    rust_type: gurine_domain::incident::Incident
+    owner: crates/domain
+    application: crates/application::incidents
+    repository: crates/persistence-postgres::incidents
+    relations: [ops.incidents, ops.incident_events]
+    identity: incident_id+version
+    concurrency: expected-version+append-only-event-sequence
+    operations: [getOperationsOverview, getIncident, triageIncident, containIncident, startIncidentRecovery, resolveIncident, closeIncidentPostmortem]
+    events: [incident.state_changed.v1]
+    errors: [INCIDENT_STATE_INVALID, INCIDENT_VERSION_CONFLICT]
+  - noun: AgentProviderTurn
+    rust_type: gurine_agent_orchestration::provider::AgentProviderTurn
+    owner: crates/agent-orchestration
+    application: services/analysis-worker::provider_turns
+    repository: crates/persistence-postgres::agent_provider_turns
+    relations: [ops.agent_provider_turns]
+    identity: agent_run_id+logical_turn_index+provider_attempt
+    concurrency: requested-then-single-terminal-transition
+    operations: [startAgentRun, getAgentRun]
+    events: [agent.tool_call_completed.v1, agent.output_validated.v1]
+    errors: [AGENT_PROVIDER_TURN_INVALID, AGENT_PROVIDER_TURN_TERMINAL, MODEL_EGRESS_DENIED]
+  - noun: PublicationGateDecision
+    rust_type: gurine_domain::publication::PublicationGateDecision
+    owner: crates/domain
+    application: crates/application::publication_gate
+    repository: crates/persistence-postgres::publication_gate
+    relations: [editorial.publication_gate_decisions, editorial.publication_gate_claim_evidence, editorial.publication_gate_review_bindings, editorial.publication_gate_blockers]
+    identity: case_id+expected_case_version+decision_digest
+    concurrency: serializable-case-lock+immutable-decision
+    operations: [getPublishConfirmation, publishCase, getPublicationReceipt, submitActionDecision]
+    events: [publication.gate_decided.v1]
+    errors: [PUBLICATION_GATE_BLOCKED, PUBLICATION_GATE_STALE, PUBLICATION_GATE_DIVERGED]
+  - noun: ResponseDeliveryClockDecision
+    rust_type: gurine_domain::response::ResponseDeliveryClockDecision
+    owner: crates/domain
+    application: crates/application::response_clock
+    repository: crates/persistence-postgres::response_clock
+    relations: [editorial.response_delivery_clock_decisions, editorial.response_extension_decisions, editorial.response_request_claim_scopes, editorial.response_request_evidence_scopes, editorial.response_request_sent_receipts, ops.business_calendar_versions]
+    identity: response_request_id+clock_revision+decision_digest
+    concurrency: expected-request-version+append-only-clock-revision
+    operations: [getCommunicationDeliveryReceipt, reconcileCommunicationDelivery, decideResponseExtension, submitActionDecision]
+    events: [response.request_sent.v1, response.delivery_evidence_recorded.v1, response.delivery_clock_started.v1, response.extension_request_submitted.v2, response.extension_decided.v1, response.request_expired.v1, response.reminder_due.v1, governance.business_calendar_revised.v1]
+    errors: [DELIVERY_EVIDENCE_INVALID, BUSINESS_CALENDAR_STALE, RESPONSE_CLOCK_STALE]
+  - noun: ProcurementNoticeRevision
+    rust_type: gurine_domain::procurement::ProcurementNoticeRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_revisions
+    repository: crates/persistence-postgres::procurement_revisions
+    relations: [core.procurement_notice_revisions]
+    identity: revision_id+root_id+revision+record_digest
+    concurrency: serializable-immutable-predecessor-and-source-binding
+    operations: []
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementAwardRevision
+    rust_type: gurine_domain::procurement::AwardRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_revisions
+    repository: crates/persistence-postgres::procurement_revisions
+    relations: [core.procurement_award_revisions]
+    identity: revision_id+root_id+revision+record_digest
+    concurrency: serializable-immutable-predecessor-and-source-binding
+    operations: []
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementAwardWinnerRevision
+    rust_type: gurine_domain::procurement::AwardWinnerRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_members
+    repository: crates/persistence-postgres::procurement_members
+    relations: [core.procurement_award_winner_revisions]
+    identity: award_revision_id+winner_ordinal+winner_digest
+    concurrency: serializable-parent-locked-ordered-membership
+    operations: []
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementBidderParticipationRevision
+    rust_type: gurine_domain::procurement::BidderParticipationRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_revisions
+    repository: crates/persistence-postgres::procurement_revisions
+    relations: [core.procurement_bidder_participation_revisions]
+    identity: revision_id+root_id+revision+record_digest
+    concurrency: serializable-immutable-predecessor-and-source-binding
+    operations: []
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementContractRevision
+    rust_type: gurine_domain::procurement::ProcurementContractRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_revisions
+    repository: crates/persistence-postgres::procurement_revisions
+    relations: [core.procurement_contract_revisions]
+    identity: revision_id+root_id+revision+record_digest
+    concurrency: serializable-immutable-predecessor-and-source-binding
+    operations: [getContract]
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementContractSupplierRevision
+    rust_type: gurine_domain::procurement::ContractSupplierRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_members
+    repository: crates/persistence-postgres::procurement_members
+    relations: [core.procurement_contract_supplier_revisions]
+    identity: contract_revision_id+supplier_ordinal+supplier_digest
+    concurrency: serializable-parent-locked-ordered-membership
+    operations: [getContract]
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementContractAmendmentRevision
+    rust_type: gurine_domain::procurement::ContractAmendmentRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_revisions
+    repository: crates/persistence-postgres::procurement_revisions
+    relations: [core.procurement_contract_amendment_revisions]
+    identity: revision_id+root_id+revision+record_digest
+    concurrency: serializable-immutable-predecessor-and-source-binding
+    operations: [getContract]
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementContractLineItemRevision
+    rust_type: gurine_domain::procurement::ProcurementContractLineItemRevision
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_line_items
+    repository: crates/persistence-postgres::procurement_line_items
+    relations: [core.procurement_contract_line_item_revisions]
+    identity: line_item_id+line_item_revision+line_item_digest
+    concurrency: serializable-immutable-predecessor-and-ordered-components
+    operations: [getContract]
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementContractLineItemComponent
+    rust_type: gurine_domain::procurement::ProcurementContractLineItemComponent
+    owner: crates/domain::procurement
+    application: services/ingest-worker::procurement_line_items
+    repository: crates/persistence-postgres::procurement_line_items
+    relations: [core.procurement_contract_line_item_components]
+    identity: line_item_id+line_item_revision+component_ordinal+component_digest
+    concurrency: serializable-parent-locked-ordered-membership
+    operations: [getContract]
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: SupplierIdentityCandidate
+    rust_type: gurine_domain::procurement::SupplierIdentityCandidate
+    owner: crates/domain::supplier_identity
+    application: services/ingest-worker::supplier_identity
+    repository: crates/persistence-postgres::supplier_identity
+    relations: [core.supplier_identity_candidates]
+    identity: candidate_id+candidate_revision+candidate_digest
+    concurrency: serializable-immutable-candidate-revision
+    operations: []
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: SupplierIdentityResolutionDecision
+    rust_type: gurine_domain::procurement::SupplierIdentityResolutionDecision
+    owner: crates/domain::supplier_identity
+    application: services/identity-api::supplier_identity_resolution
+    repository: crates/persistence-postgres::supplier_identity
+    relations: [core.supplier_identity_resolution_decisions]
+    identity: decision_id+decision_digest
+    concurrency: serializable-expected-candidate-set-and-prior-decision
+    operations: [recordSupplierIdentityResolution]
+    events: [supplier.identity_resolution_recorded.v1]
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: SupplierIdentityResolutionDecisionMember
+    rust_type: gurine_domain::procurement::SupplierIdentityResolutionDecisionMember
+    owner: crates/domain::supplier_identity
+    application: services/identity-api::supplier_identity_resolution
+    repository: crates/persistence-postgres::supplier_identity
+    relations: [core.supplier_identity_resolution_decision_members]
+    identity: decision_id+member_ordinal+candidate_id+candidate_revision+candidate_digest
+    concurrency: serializable-parent-locked-ordered-membership
+    operations: []
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: SupplierRelationshipAssertion
+    rust_type: gurine_domain::procurement::SupplierRelationshipAssertion
+    owner: crates/domain::supplier_relationship
+    application: services/identity-api::supplier_relationships
+    repository: crates/persistence-postgres::supplier_relationships
+    relations: [core.supplier_relationship_assertions]
+    identity: assertion_id+assertion_revision+assertion_digest
+    concurrency: serializable-expected-assertion-and-evidence-digest
+    operations: [recordSupplierRelationshipAssertion, decideSupplierRelationshipAssertion]
+    events: [supplier.relationship_assertion_created.v1, supplier.relationship_assertion_decided.v1]
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: SupplierRelationshipAssertionEvidence
+    rust_type: gurine_domain::procurement::SupplierRelationshipAssertionEvidence
+    owner: crates/domain::supplier_relationship
+    application: services/identity-api::supplier_relationships
+    repository: crates/persistence-postgres::supplier_relationships
+    relations: [core.supplier_relationship_assertion_evidence]
+    identity: assertion_id+assertion_revision+evidence_ordinal+evidence_digest
+    concurrency: serializable-parent-locked-ordered-membership
+    operations: []
+    events: []
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - noun: ProcurementQuerySnapshot
+    rust_type: gurine_domain::procurement::ProcurementQuerySnapshot
+    owner: crates/domain::procurement_query
+    application: services/public-api::procurement_query
+    repository: crates/persistence-postgres::procurement_queries
+    relations: [core.procurement_query_snapshots]
+    identity: snapshot_id+filter_digest+member_set_digest
+    concurrency: repeatable-read-immutable-membership-and-expiry
+    operations: [listContracts, downloadContracts, createDatasetExport]
+    events: []
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, RESOURCE_NOT_FOUND, PRECONDITION_FAILED, INTERNAL_ERROR]
+  - noun: ProcurementQuerySnapshotMember
+    rust_type: gurine_domain::procurement::ProcurementQuerySnapshotMember
+    owner: crates/domain::procurement_query
+    application: services/public-api::procurement_query
+    repository: crates/persistence-postgres::procurement_queries
+    relations: [core.procurement_query_snapshot_members]
+    identity: snapshot_id+member_ordinal+member_digest
+    concurrency: repeatable-read-parent-locked-ordered-membership
+    operations: [listContracts, downloadContracts, createDatasetExport]
+    events: []
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, RESOURCE_NOT_FOUND, PRECONDITION_FAILED, INTERNAL_ERROR]
+  - noun: ResponseSubmission
+    rust_type: gurine_domain::response::ResponseSubmission
+    owner: crates/domain
+    application: crates/application::response_submission
+    repository: crates/persistence-postgres::response_submission
+    relations: [intake.response_submissions, editorial.responses, ops.inbox, ops.audit_events, ops.outbox]
+    identity: response_submission_id+receipt_version+receipt_digest
+    concurrency: serializable-request-version+immutable-submission-receipt+reciprocal-owned-intake-binding
+    operations: [submitResponse]
+    events: [response.submitted.v2, notification.response_submitted.v2, workflow.response_submitted.v2, editorial.response_materialized.v1]
+    errors: [RESPONSE_SUBMISSION_BINDING_INVALID, EVENT_REPLAY_CONFLICT, EVENT_EFFECT_CONFLICT]
+  - noun: SourcePageReceipt
+    rust_type: gurine_ingestion::connector::SourcePageReceipt
+    owner: crates/ingestion
+    application: services/ingest-worker::completion
+    repository: crates/persistence-postgres::source_page_receipts
+    relations: [raw.source_page_receipts]
+    identity: source_run_id+connector_id+operation_id+partition_key+ordinal
+    concurrency: immutable-request-digest+checkpoint-cas
+    operations: [getInternalSource, listSourceRuns, getSourceRun, downloadSourceRunReport]
+    events: [source.page_reconciled.v1]
+    errors: [SOURCE_PAGE_DUPLICATE, SOURCE_TOTAL_DRIFT, SOURCE_COMPLETION_INCOMPLETE]
+  - noun: SliWindowReceipt
+    rust_type: gurine_observability::sli::SliWindowReceipt
+    owner: crates/observability
+    application: crates/application::operational_status
+    repository: crates/persistence-postgres::sli_windows
+    relations: [ops.sli_window_receipts]
+    identity: sli_id+window_start+window_end+evidence_sha256
+    concurrency: immutable-closed-window
+    operations: [getOperationsOverview]
+    events: [operations.sli_window_closed.v1]
+    errors: [SLI_EVIDENCE_UNKNOWN, SLI_DENOMINATOR_INVALID]
+  - noun: JourneyCoordination
+    rust_type: gurine_domain::journey::JourneyCoordination
+    owner: crates/domain
+    application: crates/application::journeys
+    repository: crates/persistence-postgres::journeys
+    relations: [ops.journey_instances, ops.journey_handoffs, ops.journey_transition_receipts]
+    machines: [journey_instance, journey_handoff, journey_escalation]
+    routines: [ops.start_journey_instance_v1, ops.request_journey_handoff_v1, ops.decide_journey_handoff_v1, ops.escalate_journey_handoff_v1, ops.expire_journey_handoff_v1, ops.record_journey_outcome_v1]
+    receipt_kinds: [INSTANCE_STARTED, HANDOFF_REQUESTED, HANDOFF_ACKNOWLEDGED, HANDOFF_DECLINED, HANDOFF_ESCALATED, HANDOFF_EXPIRED, HANDOFF_CANCELLED, HANDOFF_SUPERSEDED, OUTCOME_RECORDED]
+    escalation_states: [NOT_DUE, DUE, ESCALATED, RESOLVED]
+    compound_branches: [decline_with_replacement, expiry_with_replacement, supersession_with_replacement, terminal_outcome_with_cancellation]
+    identity: journey_code+root_object_kind+root_object_id+root_object_version+root_object_digest
+    concurrency: serializable-instance-version+one-pending-handoff-generation+gapless-receipt-chain
+    operations: [decideJourneyHandoff]
+    events: [journey.instance_started.v1, journey.handoff_requested.v1, journey.handoff_decided.v1, journey.handoff_escalated.v1, journey.handoff_expired.v1, journey.outcome_recorded.v1]
+    errors: [HANDOFF_RECEIVER_MISMATCH, HANDOFF_STATE_INVALID, HANDOFF_BINDING_MISMATCH, HANDOFF_EXPIRED, JOURNEY_TERMINAL]
+  - noun: FxRateFact
+    rust_type: gurine_domain::economics::FxRateFact
+    owner: crates/domain
+    application: crates/application::economics_import
+    repository: crates/persistence-postgres::fx_rates
+    relations: [ops.fx_rate_facts]
+    identity: rate_id+sha256
+    concurrency: immutable-signed-fact
+    operations: [getBudgetOverview, exportCostReport]
+    events: [cost.fx_rate_recorded.v1]
+    errors: [FX_RATE_STALE, FX_RATE_CONFLICT]
+  - noun: AccountingCorrection
+    rust_type: gurine_domain::economics::AccountingCorrection
+    owner: crates/domain
+    application: crates/application::economics_import
+    repository: crates/persistence-postgres::accounting_corrections
+    relations: [ops.accounting_corrections]
+    identity: correction_id+target_fact_id+decision_digest
+    concurrency: immutable-signed-delta
+    operations: [getBudgetOverview, exportCostReport]
+    events: [accounting.correction_recorded.v1]
+    errors: [ACCOUNTING_CORRECTION_INVALID, ACCOUNTING_FACT_NOT_FOUND]
+  - noun: CommercialQualificationReceipt
+    rust_type: gurine_domain::economics::CommercialQualificationReceipt
+    owner: crates/domain
+    application: crates/application::commercial_qualification
+    repository: crates/persistence-postgres::commercial_qualification_receipts
+    relations: [ops.commercial_qualification_receipts]
+    identity: deployment_id+organization_id+sku+qualification_episode_id+revision
+    concurrency: serializable-current-leaf+immutable-signed-receipt
+    operations: [getInternalDashboard, getBudgetOverview, exportCostReport, searchAuditEvents]
+    events: []
+    errors: [COMMERCIAL_QUALIFICATION_INVALID, COMMERCIAL_QUALIFICATION_CONFLICT, FACT_CONFLICT]
+  - noun: CommercialContractPeriod
+    rust_type: gurine_domain::economics::CommercialContractPeriod
+    owner: crates/domain
+    application: crates/application::economics_import
+    repository: crates/persistence-postgres::commercial_contract_periods
+    relations: [ops.commercial_contract_periods, ops.offer_profile_capabilities]
+    identity: contract_id+organization_id+period_start+record_digest
+    concurrency: immutable-signed-fact
+    operations: [getBudgetOverview, exportCostReport]
+    events: [commercial.contract_period_recorded.v1]
+    errors: [COMMERCIAL_CONTRACT_INVALID, COMMERCIAL_PERIOD_OVERLAP]
+  - noun: TariffVersion
+    rust_type: gurine_domain::economics::TariffVersion
+    owner: crates/domain
+    application: crates/application::economics_import
+    repository: crates/persistence-postgres::tariffs
+    relations: [ops.tariff_versions]
+    identity: tariff_version_id+sku+effective_from
+    concurrency: immutable-effective-interval
+    operations: [getBudgetOverview, exportCostReport]
+    events: [commercial.tariff_version_activated.v1]
+    errors: [TARIFF_INVALID, TARIFF_INTERVAL_OVERLAP]
+  - noun: UsageFact
+    rust_type: gurine_domain::economics::UsageFact
+    owner: crates/domain
+    application: crates/application::usage_metering
+    repository: crates/persistence-postgres::usage_facts
+    relations: [ops.usage_window_receipts, ops.usage_facts]
+    identity: meter_kind+source_receipt_id+tariff_version_id
+    concurrency: immutable-terminal-receipt-fact
+    operations: [getBudgetOverview, exportCostReport]
+    events: [commercial.usage_fact_recorded.v1]
+    errors: [USAGE_FACT_DUPLICATE, USAGE_METER_UNKNOWN]
+  - noun: DiscountDecision
+    rust_type: gurine_domain::economics::DiscountDecision
+    owner: crates/domain
+    application: crates/application::economics_import
+    repository: crates/persistence-postgres::discounts
+    relations: [ops.discount_decisions]
+    identity: discount_id+decision_digest
+    concurrency: immutable-signed-decision
+    operations: [getBudgetOverview, exportCostReport]
+    events: [commercial.discount_decided.v1]
+    errors: [DISCOUNT_INVALID, DISCOUNT_AUTHORITY_REQUIRED]
+  - noun: InvoiceFact
+    rust_type: gurine_domain::economics::InvoiceFact
+    owner: crates/domain
+    application: crates/application::invoice_reconciliation
+    repository: crates/persistence-postgres::invoices
+    relations: [ops.invoice_facts, ops.invoice_line_facts]
+    identity: invoice_id+reconciliation_digest
+    concurrency: immutable-reconciled-invoice
+    operations: [getBudgetOverview, exportCostReport]
+    events: [commercial.invoice_reconciled.v1]
+    errors: [INVOICE_RECONCILIATION_FAILED, INVOICE_CONSERVATION_FAILED]
+  - noun: InvoiceUsageMembership
+    rust_type: gurine_domain::economics::InvoiceUsageMembership
+    owner: crates/domain
+    application: crates/application::invoice_reconciliation
+    repository: crates/persistence-postgres::invoice_usage_memberships
+    relations: [ops.invoice_usage_memberships]
+    identity: invoice_id+invoice_revision+usage_fact_id+usage_fact_revision+membership_sequence
+    concurrency: immutable-membership+superseding-restatement
+    operations: [getBudgetOverview, exportCostReport]
+    events: [commercial.invoice_reconciled.v1]
+    errors: [INVOICE_RECONCILIATION_FAILED, INVOICE_CONSERVATION_FAILED]
+  - noun: RevenueFact
+    rust_type: gurine_domain::economics::RevenueFact
+    owner: crates/domain
+    application: crates/application::revenue_recognition
+    repository: crates/persistence-postgres::revenue_facts
+    relations: [ops.revenue_facts]
+    identity: revenue_fact_id+record_digest
+    concurrency: immutable-recognition-fact
+    operations: [getBudgetOverview, exportCostReport]
+    events: [commercial.revenue_fact_recorded.v1]
+    errors: [REVENUE_FACT_INVALID, REVENUE_RECOGNITION_POLICY_STALE]
+  - noun: SkuReadinessEvaluation
+    rust_type: gurine_domain::economics::SkuReadinessEvaluation
+    owner: crates/domain
+    application: crates/application::sku_readiness
+    repository: crates/persistence-postgres::sku_readiness
+    relations: [ops.sku_readiness_evaluations, ops.sku_readiness_items]
+    identity: deployment_id+sku+evaluated_at+item_set_digest
+    concurrency: immutable-evaluation
+    operations: [getBudgetOverview, listProviders, getOperationsOverview]
+    events: [commercial.sku_readiness_evaluated.v1]
+    errors: [SKU_READINESS_BLOCKED, SKU_READINESS_EVIDENCE_STALE]
+  - noun: FundingDisclosure
+    rust_type: gurine_domain::governance::FundingDisclosure
+    owner: crates/domain
+    application: crates/application::funding_governance
+    repository: crates/persistence-postgres::funding_disclosures
+    relations: [ops.funding_concentration_snapshots, editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries]
+    identity: snapshot_batch_id+disclosure_revision
+    concurrency: immutable-snapshot+independent-publisher
+    operations: [getFundingContent, listTransparencyReports, getBudgetOverview, submitActionDecision]
+    events: [governance.funding_snapshot_created.v1, governance.funding_disclosure_published.v1]
+    errors: [FUNDING_DENOMINATOR_UNKNOWN, FUNDING_DISCLOSURE_STALE, FUNDING_SOD_REQUIRED]

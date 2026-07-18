@@ -1,4 +1,11 @@
 name: gurine
+x-runtime-hardening: &runtime-hardening
+  init: true
+  security_opt:
+  - no-new-privileges:true
+  cap_drop:
+  - ALL
+  pids_limit: 256
 services:
   postgres:
     image: postgres:18.4-bookworm@sha256:d9c83446333daec3f0588cc709adb80c26090b7f9f0f7ec8d43c243385d79818
@@ -19,6 +26,7 @@ services:
       timeout: 3s
       retries: 20
   migrator:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -39,6 +47,7 @@ services:
     - data
     restart: 'no'
   public-api:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -73,6 +82,7 @@ services:
     - /tmp
     restart: unless-stopped
   control-api:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -112,6 +122,7 @@ services:
     - /tmp
     restart: unless-stopped
   identity-api:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -169,6 +180,7 @@ services:
     - /tmp
     restart: unless-stopped
   submission-api:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -224,6 +236,7 @@ services:
     volumes:
     - gurine-objects:/var/lib/gurine-objects
   ingest-worker:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -263,6 +276,7 @@ services:
     volumes:
     - gurine-objects:/var/lib/gurine-objects
   analysis-worker:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -277,6 +291,7 @@ services:
       ANALYSIS_DATABASE_URL: ${ANALYSIS_DATABASE_URL:-}
       DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
       EGRESS_AI_CHANNEL_URL: ${EGRESS_AI_CHANNEL_URL:-}
+      EGRESS_OBJECT_STORE_CHANNEL_URL: ${EGRESS_OBJECT_STORE_CHANNEL_URL:-http://egress-gateway:8090/object-store}
       GURINE_ENV: ${GURINE_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
@@ -293,6 +308,7 @@ services:
     - /tmp
     restart: unless-stopped
   projection-worker:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -320,6 +336,7 @@ services:
     - /tmp
     restart: unless-stopped
   notification-worker:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -357,6 +374,7 @@ services:
     volumes:
     - gurine-mail:/var/lib/gurine-mail
   workflow-worker:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -398,6 +416,7 @@ services:
     volumes:
     - gurine-objects:/var/lib/gurine-objects
   document-extractor:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -430,6 +449,7 @@ services:
     volumes:
     - gurine-objects:/var/lib/gurine-objects
   scheduler:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -456,6 +476,7 @@ services:
     - /tmp
     restart: unless-stopped
   egress-gateway:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -516,6 +537,7 @@ services:
     volumes:
     - clamav-db:/var/lib/clamav
   oidc-test-provider:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/rust-service/Dockerfile
@@ -546,6 +568,7 @@ services:
       timeout: 3s
       retries: 12
   public-web:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/svelte-bun/Dockerfile
@@ -588,6 +611,7 @@ services:
       timeout: 3s
       retries: 12
   review-console:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/svelte-bun/Dockerfile
@@ -628,6 +652,7 @@ services:
       identity-api:
         condition: service_healthy
   response-portal:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: infra/docker/svelte-bun/Dockerfile

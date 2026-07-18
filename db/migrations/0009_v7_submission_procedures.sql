@@ -350,16 +350,14 @@ SECURITY DEFINER
 SET search_path = pg_catalog, intake, extensions, pg_temp
 AS $$
 DECLARE v_id uuid;
-v_hash text := btrim(p_receipt_token_hash::text);
 BEGIN
-  v_id := (substr(v_hash,1,8)||'-'||substr(v_hash,9,4)||'-4'||substr(v_hash,14,3)||'-8'||substr(v_hash,18,3)||'-'||substr(v_hash,21,12))::uuid;
   INSERT INTO intake.contact_requests(
-    id, category, name_encrypted, email_hash, email_encrypted,
+    category, name_encrypted, email_hash, email_encrypted,
     subject, message_encrypted, receipt_token_hash
   ) VALUES (
-    v_id, p_category, p_name_encrypted, p_email_hash, p_email_encrypted,
+    p_category, p_name_encrypted, p_email_hash, p_email_encrypted,
     p_subject, p_message_encrypted, p_receipt_token_hash
-  );
+  ) RETURNING id INTO v_id;
   RETURN v_id;
 END
 $$;
@@ -377,14 +375,12 @@ SECURITY DEFINER
 SET search_path = pg_catalog, intake, extensions, pg_temp
 AS $$
 DECLARE v_id uuid;
-v_hash text := btrim(p_request_token_hash::text);
 BEGIN
-  v_id := (substr(v_hash,1,8)||'-'||substr(v_hash,9,4)||'-4'||substr(v_hash,14,3)||'-8'||substr(v_hash,18,3)||'-'||substr(v_hash,21,12))::uuid;
   INSERT INTO intake.dataset_export_requests(
-    id, request_token_hash, email_hash, dataset_id, format, filters, status, expires_at
+    request_token_hash, email_hash, dataset_id, format, filters, expires_at
   ) VALUES (
-    v_id, p_request_token_hash, p_email_hash, p_dataset_id, p_format, p_filters, 'QUEUED', p_expires_at
-  );
+    p_request_token_hash, p_email_hash, p_dataset_id, p_format, p_filters, p_expires_at
+  ) RETURNING id INTO v_id;
   RETURN v_id;
 END
 $$;

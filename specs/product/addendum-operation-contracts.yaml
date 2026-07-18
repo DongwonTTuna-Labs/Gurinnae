@@ -1,0 +1,1049 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+base_authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+counts:
+  operations: derived len(operations)
+  queries: derived count(operations where kind=QUERY)
+  commands: derived count(operations where kind=COMMAND)
+  by_api:
+    control-api: derived count(operations where api=control-api)
+    submission-api: derived count(operations where api=submission-api)
+    identity-api: derived count(operations where api=identity-api)
+  rule: values are calculated from operations and compared set-equal to owner-addendum.additive_operations; numeric inventory literals are forbidden
+rules:
+  - Every schema is closed; additional properties, undocumented enum values, generic JSON and partial merge patch are invalid.
+  - Every command requires Idempotency-Key, canonical request SHA-256 and one transaction for domain rows, idempotency receipt, audit and outbox.
+  - Same idempotency scope and request digest returns the stored receipt byte-for-byte; changed bytes return IDEMPOTENCY_CONFLICT.
+  - Every mutation that uses expectedVersion locks the aggregate and maps zero rows to NOT_FOUND or VERSION_CONFLICT by an explicit existence check.
+  - Synthetic identifiers, timestamps, states, digests and receipts are forbidden.
+
+type_grammar:
+  uuid: RFC4122 lowercase string
+  sha256: lowercase 64-hex string
+  datetime: UTC RFC3339 with microseconds
+  decimal: canonical non-exponent decimal string
+  money: MoneyV1
+  cursor: authenticated opaque string
+  optional: field may be absent; nullable means field is present and may be null
+
+common_schemas:
+  canonical_source: specs/product/addendum-resource-error-contracts.yaml#schemas
+  required: [CommandReceiptV1, AddendumProblemDetailsV1]
+  rule: Concrete closed request, page, receipt and error schemas come only from the canonical additive resource/error contract; generic typed-array, typed-object, JSON or fallback error envelopes are forbidden.
+
+action_payloads:
+  kinds:
+    - HYPOTHESIS
+    - CLAIM
+    - TASK
+    - COMPARABLE
+    - COMMUNICATION
+    - PUBLICATION
+    - RETRACTION
+    - RULE_ACTIVATION
+    - ROLE_GRANT
+    - KILL_SWITCH
+    - COMMUNICATION_AUTHORIZATION
+    - ASSET_RIGHTS_DECISION
+    - RETENTION_SCHEDULE
+    - FUNDING_DISCLOSURE
+    - CAPABILITY_ACTIVATION
+    - RESPONSE_POLICY_CALENDAR
+    - COMMERCIAL_CONTROL
+  common:
+    additional_properties: false
+    required: [schemaVersion, kind, target, rationale, effect]
+    fields:
+      schemaVersion: const action-payload.v1
+      kind: enum action_payloads.kinds
+      target: ActionTargetV1
+      rationale: ActionRationaleV1
+      effect: ActionEffectV1
+  variants:
+    HYPOTHESIS:
+      required: [caseId, expectedCaseVersion, statement, unknowns, evidenceSegmentIds]
+      executor: createHypothesis
+      proposer_capability: cases.investigate
+    CLAIM:
+      required: [caseId, expectedCaseVersion, claimType, text, responseIds, limitations, evidenceSegmentIds]
+      executor: addClaim
+      proposer_capability: claims.author
+    TASK:
+      required: [objectType, objectId, expectedObjectVersion, taskType, title, description, priority, assigneeUserId, dueAt]
+      executor: private.CreateTaskFromApprovedAction
+      proposer_capability: cases.assign
+    COMPARABLE:
+      required: [caseId, expectedCaseVersion, targetLineItemId, targetLineItemVersion, candidateLineItemId, candidateLineItemVersion, compatibilityKind, includeReason, evidenceSegmentIds]
+      executor: private.MaterializeComparableCandidate
+      proposer_capability: cases.investigate
+    COMMUNICATION:
+      required: [caseId, expectedCaseVersion, purpose, provider, senderConfigId, templateId, templateRevision, locale, recipients, subject, bodyPlainText, attachmentIds, authorizationPurpose, maximumCost, notBefore, expiresAt]
+      executor: private.DispatchCommunicationIntent
+      proposer_capability: communications.propose
+    PUBLICATION:
+      required: [caseId, expectedCaseVersion, reviewSnapshotId, reviewSnapshotDigest, previewId, previewDigest, publicationGatePreviewDigest]
+      executor: publishCase
+      proposer_capability: publication.preview
+    RETRACTION:
+      required: [caseId, expectedCaseVersion, retractionDraftId, retractionDraftDigest, reviewSnapshotId, previewId, previewDigest, tombstoneReason]
+      executor: private.PublishRetraction
+      proposer_capability: publication.retract
+    RULE_ACTIVATION:
+      required: [ruleId, version, expectedRuleVersion, evaluationReceiptId, evaluationDigest, activationScope, effectiveAt]
+      executor: activateRuleVersion
+      proposer_capability: rules.propose
+    ROLE_GRANT:
+      required: [userId, roleId, expectedUserVersion, scope, expiresAt, reason]
+      executor: grantRole
+      proposer_capability: roles.grant
+    KILL_SWITCH:
+      required: [command, switchTarget, switchEffect, expectedGeneration, reason, expiresAt]
+      executor: private.ApplyKillSwitchCommand
+      proposer_capability: kill_switch.execute
+    COMMUNICATION_AUTHORIZATION:
+      required: [subjectId, endpointId, endpointVersion, purpose, topicScope, basis, jurisdiction, policyVersion, decision, proofReceiptId, effectiveAt, expiresAt]
+      executor: private.RecordCommunicationAuthorizationDecision
+      proposer_capability: communications.authorization.manage
+    ASSET_RIGHTS_DECISION:
+      required: [assetId, assetSha256, expectedDecisionVersion, decision, dimensions, legalBasis, licenseEvidenceDigests, jurisdiction, attribution, effectiveAt, expiresAt]
+      executor: private.ReviseAssetRightsDecision
+      proposer_capability: rights.decide
+    RETENTION_SCHEDULE:
+      required: [recordClass, expectedScheduleRevision, purpose, lawfulBasis, trigger, activeDuration, backupDuration, locations, terminalAction, holdBehavior, restoreSuppressionBehavior, effectiveAt, reviewExpiresAt]
+      executor: private.CreateRecordClassScheduleRevision
+      proposer_capability: retention.policy.manage
+    FUNDING_DISCLOSURE:
+      required: [snapshotBatchId, snapshotDigest, priorDisclosureRevision, fiscalYear, amountBand, concentrationBand, purpose, conflictSummary, policyRequestOutcomes, effectiveAt]
+      executor: private.PublishFundingDisclosureRevision
+      proposer_capability: funding.manage
+    CAPABILITY_ACTIVATION:
+      required: [capabilityClass, capabilityId, environment, configurationDigest, evidenceReceiptIds, policyDigest, contractDigest, rightsDigest, jurisdiction, effectiveAt, expiresAt]
+      executor: private.DecideCapabilityActivation
+      proposer_capability: providers.manage
+    RESPONSE_POLICY_CALENDAR:
+      required: [calendarId, expectedCalendarVersion, timezone, weekendDays, holidayDates, policyDigest, effectiveAt, reviewExpiresAt]
+      executor: private.CreateBusinessCalendarVersion
+      proposer_capability: responses.policy.manage
+    COMMERCIAL_CONTROL:
+      required: [triggerId, triggerVersion, triggerDigest, triggerKind, exactMetricResultDigests, dependencyInputSetDigest, evidenceSetDigest, affectedScopeDigest, requestedActions, expectedKillSwitchGeneration, expectedCapabilityVersionSetDigest, expectedContractVersionSetDigest, reason, consequence, existingCustomerContinuityPlanDigest, originalControlReceiptDigest, resumeEvidenceSetDigest, expiresAt, commercialControlBindingDigest]
+      executor: private.ApplyCommercialControl
+      proposer_capability: commercial.controls.propose
+
+action_digest_contract:
+  normative_source: specs/product/addendum-approval-policy.yaml#digest_contracts
+  contentDigest: RFC8785_JCS(ActionPayloadV1) with declared ordered arrays and UTF-8 free-text digests
+  approvalDigest: GURINE_CANONICAL_JSON_V1(ApprovalBindingV1)
+  actionDetailDigest: GURINE_CANONICAL_JSON_V1({actionDetailKind,actionDetail}) and actionDetailKind equals actionKind
+  actorActionDigest: GURINE_CANONICAL_JSON_V1(ActionAuthorizationContext) whose businessPayloadSha256 is approvalDigest
+  executionDigest: GURINE_CANONICAL_JSON_V1(ExecutionBindingV1)
+
+operations:
+  - operation_id: listActionApprovalQueue
+    api: control-api
+    method: GET
+    path: /v1/internal/action-proposals
+    kind: QUERY
+    capability: actions.read
+    assurance: ACTIVE_SESSION
+    request:
+      required: []
+      optional:
+        actionKind: unique-array<action_payloads.kinds>[1..17]
+        proposalState: unique-array<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>[1..8]
+        assignmentState: unique-array<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>[1..6]
+        dueBefore: datetime
+        cursor: cursor
+        limit: int32[1..100]=20
+        sort: DUE_ASC|UPDATED_DESC=DUE_ASC
+    response: ActionApprovalQueuePageV1
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID, CAPABILITY_DENIED, INTERNAL_ERROR]
+  - operation_id: createActionProposal
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals
+    kind: COMMAND
+    capability: actions.propose
+    assurance: ACTIVE_SESSION
+    request:
+      required: [actionKind, origin, draft, rationale, expiresAt]
+      fields:
+        actionKind: enum action_payloads.kinds
+        origin: ActionOriginV1
+        draft: ActionPayloadV1
+        rationale: ActionRationaleV1
+        expiresAt: datetime
+    response: ActionProposalReceiptV1
+    transition: NONE->DRAFT
+    concurrency: idempotency-key+content-digest
+    errors: [INVALID_PARAMETER, ACTION_KIND_MISMATCH, TARGET_NOT_FOUND, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: getActionProposal
+    api: control-api
+    method: GET
+    path: /v1/internal/action-proposals/{proposalId}
+    kind: QUERY
+    capability: actions.read
+    assurance: ACTIVE_SESSION
+    request: {required: [proposalId], fields: {proposalId: 'uuid'}}
+    response: ActionProposalDetailV1
+    errors: [INVALID_PARAMETER, ACTOR_ASSERTION_REQUIRED, CAPABILITY_DENIED, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - operation_id: updateActionDraft
+    api: control-api
+    method: PATCH
+    path: /v1/internal/action-proposals/{proposalId}/draft
+    kind: COMMAND
+    capability: actions.propose
+    assurance: ACTIVE_SESSION
+    request:
+      required: [proposalId, expectedVersion, expectedContentDigest, draft, rationale, expiresAt]
+      fields: {proposalId: 'uuid', expectedVersion: 'int64>=1', expectedContentDigest: 'sha256', draft: 'ActionPayloadV1', rationale: 'ActionRationaleV1', expiresAt: 'datetime'}
+    response: ActionProposalReceiptV1
+    transition: DRAFT(vN)->SUPERSEDED + DRAFT(vN+1)
+    errors: [INVALID_PARAMETER, ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: previewActionDraft
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:preview
+    kind: COMMAND
+    capability: actions.propose
+    assurance: ACTIVE_SESSION
+    request: {required: [proposalId, expectedVersion, expectedContentDigest], fields: {proposalId: 'uuid', expectedVersion: 'int64>=1', expectedContentDigest: 'sha256'}}
+    response: ActionPreviewReceiptV1
+    transition: DRAFT->DRAFT
+    errors: [ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_POLICY_BLOCKED, CAPABILITY_UNCONFIGURED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: submitActionForReview
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:submit-review
+    kind: COMMAND
+    capability: actions.propose
+    assurance: ACTIVE_SESSION
+    request: {required: [proposalId, expectedVersion, expectedContentDigest, previewId, previewDigest], fields: {proposalId: 'uuid', expectedVersion: 'int64>=1', expectedContentDigest: 'sha256', previewId: 'uuid', previewDigest: 'sha256'}}
+    response: ActionReviewRequestedReceiptV1
+    transition: DRAFT->PENDING_QUORUM
+    errors: [ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_PREVIEW_STALE, ACTION_POLICY_BLOCKED, ACTION_QUORUM_UNAVAILABLE, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: claimActionReview
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:claim-review
+    kind: COMMAND
+    capability: actions.review
+    assurance: ACTIVE_SESSION
+    request:
+      required: [proposalId, assignmentId, expectedProposalVersion, expectedAssignmentVersion, expectedApprovalDigest]
+      fields: {proposalId: 'uuid', assignmentId: 'uuid', expectedProposalVersion: 'int64>=1', expectedAssignmentVersion: 'int64>=1', expectedApprovalDigest: 'sha256'}
+    response: ActionReviewClaimedReceiptV1
+    transition: ASSIGNED->IN_PROGRESS
+    errors: [ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_REVIEW_ALREADY_CLAIMED, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: submitActionDecision
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:decide
+    kind: COMMAND
+    capability: actions.review
+    assurance: conditional-by-action-and-decision
+    request:
+      required: [proposalId, actionKind, assignmentId, expectedProposalVersion, expectedAssignmentVersion, expectedApprovalDigest, decision]
+      fields: {proposalId: 'uuid', actionKind: 'enum action_payloads.kinds', assignmentId: 'uuid', expectedProposalVersion: 'int64>=1', expectedAssignmentVersion: 'int64>=1', expectedApprovalDigest: 'sha256', decision: 'ActionDecisionV1'}
+    response: ActionDecisionReceiptV1
+    transition: IN_PROGRESS->COMPLETED or ASSIGNED|IN_PROGRESS->RECUSED; quorum may terminalize proposal
+    errors: [ACTION_KIND_MISMATCH, ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, ACTION_CONFLICT_UNRESOLVED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: getActionExecutionReceipt
+    api: control-api
+    method: GET
+    path: /v1/internal/action-executions/{executionId}/receipt
+    kind: QUERY
+    capability: actions.read
+    assurance: ACTIVE_SESSION
+    request: {required: [executionId], fields: {executionId: 'uuid'}}
+    response: ActionExecutionReceiptChainV1
+    errors: [CAPABILITY_DENIED, RESOURCE_NOT_FOUND, EXECUTION_RECEIPT_INCOMPLETE, INTERNAL_ERROR]
+  - operation_id: cancelActionExecution
+    api: control-api
+    method: POST
+    path: /v1/internal/action-executions/{executionId}:cancel
+    kind: COMMAND
+    capability: actions.operate
+    assurance: ACTIVE_SESSION
+    request:
+      required: [executionId, expectedGeneration, expectedStateVersion, reasonCode, reasonNote]
+      fields: {executionId: 'uuid', expectedGeneration: 'int64>=1', expectedStateVersion: 'int64>=1', reasonCode: 'USER_REQUEST|POLICY_CHANGE|CONSENT_REVOKED|SUPPRESSION|RIGHTS_REVOKED|INCIDENT|KILL_SWITCH|BUDGET|OTHER', reasonNote: 'string[1..2000]'}
+    response: ActionExecutionMutationReceiptV1
+    errors: [EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, EXECUTION_ALREADY_TERMINAL, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: retryActionExecution
+    api: control-api
+    method: POST
+    path: /v1/internal/action-executions/{executionId}:retry
+    kind: COMMAND
+    capability: actions.operate
+    assurance: conditional-by-action-kind
+    request:
+      required: [executionId, actionKind, expectedGeneration, expectedStateVersion, safeRetryProof, reasonCode, reasonNote]
+      fields: {executionId: 'uuid', actionKind: 'enum action_payloads.kinds', expectedGeneration: 'int64>=1', expectedStateVersion: 'int64>=1', safeRetryProof: 'SafeRetryProofV1', reasonCode: 'NO_PROVIDER_ATTEMPT|PROVIDER_LOOKUP_NOT_FOUND|PROVIDER_IDEMPOTENT_REPLAY_SAFE', reasonNote: 'string[1..2000]'}
+    response: ActionExecutionMutationReceiptV1
+    errors: [EXECUTION_FENCE_STALE, EXECUTION_RETRY_UNSAFE, EXECUTION_ATTEMPT_LIMIT, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: releaseLegalHold
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/release-legal-hold
+    kind: COMMAND
+    capability: review.legal
+    assurance: STEP_UP
+    request:
+      required: [holdId, caseId, reviewSnapshotId, expectedReleaseSequence, expectedCaseVersion, releaseScopeAtoms, affectedIds, releaseAuthorityReference, reasonCode, reason]
+      fields: {holdId: 'uuid', caseId: 'uuid', reviewSnapshotId: 'uuid', expectedReleaseSequence: 'int64>=0', expectedCaseVersion: 'int64>=1', releaseScopeAtoms: 'unique-array<RETENTION|DELETION|DISCLOSURE>[1..3]', affectedIds: 'unique-array<uuid>[1..10000]', releaseAuthorityReference: 'string[1..500]', reasonCode: 'AUTHORITY_WITHDRAWN|EXPIRED_REVIEWED|RESOLVED|SUPERSEDED|COURT_ORDER|OTHER', reason: 'string[1..4000]'}
+    response: LegalHoldReleaseReceiptV1
+    errors: [LEGAL_HOLD_NOT_FOUND, LEGAL_HOLD_RELEASE_STALE, LEGAL_HOLD_SCOPE_INVALID, LEGAL_HOLD_ALREADY_RELEASED, CONFLICT_UNRESOLVED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: createResponseAppeal
+    api: submission-api
+    method: POST
+    path: /v1/response-receipt/appeals
+    kind: COMMAND
+    authorization: derived-session:APPEAL_CREATE
+    assurance: SCOPED_TOKEN
+    request:
+      required: [expectedReceiptVersion, reasonCode, requestedOutcome, statement, supportingAttachmentIds, attestation, privacyConsent]
+      fields: {expectedReceiptVersion: 'int64>=1', reasonCode: 'DELIVERY_DISPUTE|SCOPE_DISPUTE|CONSENT_DISPUTE|PUBLICATION_EXCERPT_DISPUTE|DEADLINE_DISPUTE|OTHER', requestedOutcome: 'REOPEN_RESPONSE|REVIEW_EXCERPT|CORRECT_STATUS|EXTEND_DEADLINE|HUMAN_REVIEW', statement: 'string[1..10000]', supportingAttachmentIds: 'unique-array<uuid>[0..20]', attestation: 'boolean-true', privacyConsent: 'boolean-true'}
+    response: ResponseAppealReceiptV1
+    errors: [SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID, APPEAL_WINDOW_CLOSED, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: getResponseAppeal
+    api: submission-api
+    method: GET
+    path: /v1/response-receipt/appeals/{appealId}
+    kind: QUERY
+    authorization: derived-session:APPEAL_STATUS
+    assurance: SCOPED_TOKEN
+    request: {required: [appealId], fields: {appealId: 'uuid'}}
+    response: ResponseAppealPublicStatusV1
+    errors: [SCOPED_SESSION_REQUIRED, RESOURCE_NOT_FOUND, APPEAL_SCOPE_INVALID, INTERNAL_ERROR]
+  - operation_id: getCommunicationDeliveryReceipt
+    api: control-api
+    method: GET
+    path: /v1/internal/communication-deliveries/{deliveryId}/receipt
+    kind: QUERY
+    capability: communications.read
+    assurance: ACTIVE_SESSION
+    request: {required: [deliveryId], fields: {deliveryId: 'uuid'}}
+    response: CommunicationDeliveryReceiptViewV1
+    errors: [CAPABILITY_DENIED, RESOURCE_NOT_FOUND, DELIVERY_RECEIPT_INCOMPLETE, INTERNAL_ERROR]
+  - operation_id: reconcileCommunicationDelivery
+    api: control-api
+    method: POST
+    path: /v1/internal/communication-deliveries/{deliveryId}:reconcile
+    kind: COMMAND
+    capability: communications.operate
+    assurance: STEP_UP
+    request:
+      required: [deliveryId, expectedVersion, evidence, resolution, safeRetryProof, reason]
+      fields:
+        deliveryId: uuid
+        expectedVersion: int64>=1
+        evidence: CommunicationReconciliationEvidenceV1
+        resolution: NOT_TRANSMITTED|PROVIDER_ACCEPTED|DELIVERED|FAILED_PERMANENT
+        safeRetryProof: nullable<CommunicationSafeRetryProofV1>
+        reason: string[1..4000]
+    response: CommunicationDeliveryMutationReceiptV1
+    constraints:
+      - OPERATOR_EVIDENCE alone cannot assert DELIVERED or READ.
+      - NOT_TRANSMITTED requires one closed safeRetryProof that PostgreSQL re-resolves under the delivery lock; every other resolution requires null.
+      - NOT_TRANSMITTED proof is required before a retry or alternate endpoint becomes eligible.
+    errors: [DELIVERY_VERSION_CONFLICT, DELIVERY_RECONCILIATION_EVIDENCE_INVALID, DELIVERY_STATE_INVALID, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: cancelCommunicationDelivery
+    api: control-api
+    method: POST
+    path: /v1/internal/communication-deliveries/{deliveryId}:cancel
+    kind: COMMAND
+    capability: communications.operate
+    assurance: STEP_UP
+    request:
+      required: [deliveryId, expectedVersion, reasonCode, reason]
+      fields: {deliveryId: 'uuid', expectedVersion: 'int64>=1', reasonCode: 'USER_REQUEST|CONSENT_REVOKED|SUPPRESSION|POLICY_CHANGE|INCIDENT|KILL_SWITCH|OTHER', reason: 'string[1..4000]'}
+    response: CommunicationDeliveryMutationReceiptV1
+    constraints:
+      - Pre-dispatch cancellation may become CANCELLED.
+      - Post-dispatch records cancelRequestedAt and remains truthfully nonterminal until provider proof.
+    errors: [DELIVERY_VERSION_CONFLICT, DELIVERY_STATE_INVALID, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: getIncident
+    api: control-api
+    method: GET
+    path: /v1/internal/incidents/{incidentId}
+    kind: QUERY
+    capability: incidents.read
+    assurance: ACTIVE_SESSION
+    request: {required: [incidentId], fields: {incidentId: 'uuid'}}
+    response: IncidentDetailV1
+    errors: [CAPABILITY_DENIED, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - operation_id: triageIncident
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:triage
+    kind: COMMAND
+    capability: incidents.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: [incidentId, expectedVersion, severity, affectedCapabilities, ownerUserId, commanderUserId, nextUpdateAt, impact, evidenceRefs, reasonCode, reason]
+      fields: {incidentId: 'uuid', expectedVersion: 'int64>=1', severity: 'SEV0|SEV1|SEV2|SEV3', affectedCapabilities: 'unique-array<IncidentCapability>[1..32]', ownerUserId: 'uuid', commanderUserId: 'nullable-uuid', nextUpdateAt: 'datetime', impact: 'string[1..4000]', evidenceRefs: 'unique-array<IncidentEvidenceRefV1>[1..100]', reasonCode: 'string[1..100]', reason: 'string[1..4000]'}
+    response: IncidentTransitionReceiptV1
+    transition: DETECTED->TRIAGED
+    errors: [INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_COMMANDER_REQUIRED, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: containIncident
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:contain
+    kind: COMMAND
+    capability: incidents.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: [incidentId, expectedVersion, containmentActions, residualImpact, reconciliationPlan, nextUpdateAt, switchReceiptIds, cancellationReceiptIds, evidenceRefs, reasonCode, reason]
+      fields: {incidentId: 'uuid', expectedVersion: 'int64>=1', containmentActions: 'array<string[1..1000]>[1..100]', residualImpact: 'string[1..4000]', reconciliationPlan: 'string[1..4000]', nextUpdateAt: 'datetime', switchReceiptIds: 'unique-array<uuid>[0..100]', cancellationReceiptIds: 'unique-array<uuid>[0..100]', evidenceRefs: 'unique-array<IncidentEvidenceRefV1>[1..100]', reasonCode: 'string[1..100]', reason: 'string[1..4000]'}
+    response: IncidentTransitionReceiptV1
+    transition: TRIAGED->CONTAINED
+    errors: [INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_CONTAINMENT_INCOMPLETE, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: startIncidentRecovery
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:start-recovery
+    kind: COMMAND
+    capability: incidents.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: [incidentId, expectedVersion, recoveryPlan, rollbackPlan, recoveryOwnerUserId, validationEvidenceRefs, evidenceRefs, reasonCode, reason]
+      fields: {incidentId: 'uuid', expectedVersion: 'int64>=1', recoveryPlan: 'string[1..10000]', rollbackPlan: 'string[1..10000]', recoveryOwnerUserId: 'uuid', validationEvidenceRefs: 'unique-array<IncidentEvidenceRefV1>[1..100]', evidenceRefs: 'unique-array<IncidentEvidenceRefV1>[1..100]', reasonCode: 'string[1..100]', reason: 'string[1..4000]'}
+    response: IncidentTransitionReceiptV1
+    transition: CONTAINED->RECOVERING
+    errors: [INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: resolveIncident
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:resolve
+    kind: COMMAND
+    capability: incidents.manage
+    assurance: RECENT_SESSION
+    request:
+      required: [incidentId, expectedVersion, restoredSliReceiptIds, reconciliationReceiptIds, resolutionSummary, approverUserId, evidenceRefs, reasonCode, reason]
+      fields: {incidentId: 'uuid', expectedVersion: 'int64>=1', restoredSliReceiptIds: 'unique-array<uuid>[1..100]', reconciliationReceiptIds: 'unique-array<uuid>[0..100]', resolutionSummary: 'string[1..10000]', approverUserId: 'uuid', evidenceRefs: 'unique-array<IncidentEvidenceRefV1>[1..100]', reasonCode: 'string[1..100]', reason: 'string[1..4000]'}
+    response: IncidentTransitionReceiptV1
+    transition: RECOVERING->RESOLVED
+    constraints: [no required SLI is UNKNOWN, no affected reconciliation remains unresolved, every affected capability has current ready evidence]
+    errors: [INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_RESOLUTION_BLOCKED, RECENT_AUTH_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: closeIncidentPostmortem
+    api: control-api
+    method: POST
+    path: /v1/internal/incidents/{incidentId}:close-postmortem
+    kind: COMMAND
+    capability: incidents.manage
+    assurance: RECENT_SESSION
+    request:
+      required: [incidentId, expectedVersion, rootCause, contributingFactors, actionItems, postmortemDigest, reviewerUserId, evidenceRefs, reasonCode, reason]
+      fields: {incidentId: 'uuid', expectedVersion: 'int64>=1', rootCause: 'string[1..10000]', contributingFactors: 'array<string[1..2000]>[0..100]', actionItems: 'array<PostmortemActionItemV1>[1..100]', postmortemDigest: 'sha256', reviewerUserId: 'uuid', evidenceRefs: 'unique-array<IncidentEvidenceRefV1>[1..100]', reasonCode: 'string[1..100]', reason: 'string[1..4000]'}
+    response: IncidentTransitionReceiptV1
+    transition: RESOLVED->POSTMORTEM_CLOSED
+    errors: [INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_POSTMORTEM_INCOMPLETE, RECENT_AUTH_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: listResponseAppeals
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/list-response-appeals
+    kind: QUERY
+    capability: responses.review
+    assurance: ACTIVE_SESSION
+    request:
+      required: []
+      optional: {state: 'unique-array<RECEIVED|REVIEW|RESOLVED|REJECTED|DUPLICATE|WITHDRAWN>[1..6]', caseId: 'uuid', dueBefore: 'datetime', cursor: 'cursor', limit: 'int32[1..100]=20', sort: 'DUE_ASC|CREATED_DESC=DUE_ASC'}
+    response: ResponseAppealQueuePageV1
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, CAPABILITY_DENIED, INTERNAL_ERROR]
+  - operation_id: getResponseAppealWorkspace
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/get-response-appeal-workspace
+    kind: QUERY
+    capability: responses.review
+    assurance: ACTIVE_SESSION
+    request: {required: [appealId], fields: {appealId: 'uuid'}}
+    response: ResponseAppealWorkspaceV1
+    errors: [INVALID_PARAMETER, CAPABILITY_DENIED, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - operation_id: transitionResponseAppeal
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/transition-response-appeal
+    kind: COMMAND
+    capability: responses.review
+    assurance: STEP_UP
+    request:
+      required: [appealId, expectedDecisionSequence, transition, reasonCode, reason, evidenceReceiptIds, task]
+      fields: {appealId: 'uuid', expectedDecisionSequence: 'int64>=0', transition: 'START_REVIEW|RESOLVE|REJECT|MARK_DUPLICATE|WITHDRAW', reasonCode: 'string[1..100]', reason: 'string[1..10000]', evidenceReceiptIds: 'unique-array<uuid>[0..100]', task: 'nullable-ResponseAppealInformationTaskV1'}
+    response: ResponseAppealDecisionReceiptV1
+    errors: [APPEAL_VERSION_CONFLICT, APPEAL_STATE_INVALID, APPEAL_SCOPE_INVALID, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: decideResponseExtension
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/decide-response-extension
+    kind: COMMAND
+    capability: responses.policy.manage
+    assurance: STEP_UP
+    request:
+      required: [extensionRequestId, expectedVersion, decision, reasonCode, reason, calendarVersionId, newDueAt]
+      fields: {extensionRequestId: 'uuid', expectedVersion: 'int64>=1', decision: 'APPROVE|REJECT', reasonCode: 'string[1..100]', reason: 'string[1..4000]', calendarVersionId: 'uuid', newDueAt: 'nullable-datetime'}
+    response: ResponseExtensionDecisionReceiptV1
+    constraints: [APPROVE requires non-null future newDueAt computed by the pinned calendar; REJECT requires null newDueAt]
+    errors: [EXTENSION_VERSION_CONFLICT, EXTENSION_STATE_INVALID, BUSINESS_CALENDAR_STALE, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: listRetentionRequests
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/list-retention-requests
+    kind: QUERY
+    capability: privacy.requests.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: []
+      optional: {requestType: 'unique-array<ACCESS|CORRECTION|DELETION|RESTRICTION>[1..4]', state: 'unique-array<RECEIVED|REVIEW|APPROVED|REJECTED|COMPLETED>[1..5]', dueBefore: 'datetime', legalHoldBlocked: 'boolean', cursor: 'cursor', limit: 'int32[1..100]=20', sort: 'DUE_ASC|CREATED_DESC=DUE_ASC'}
+    response: RetentionRequestQueuePageV1
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, CAPABILITY_DENIED, INTERNAL_ERROR]
+  - operation_id: getRetentionRequest
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/get-retention-request
+    kind: QUERY
+    capability: privacy.requests.manage
+    assurance: ACTIVE_SESSION
+    request: {required: [retentionRequestId], fields: {retentionRequestId: 'uuid'}}
+    response: RetentionRequestWorkspaceV1
+    errors: [INVALID_PARAMETER, CAPABILITY_DENIED, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - operation_id: transitionRetentionRequest
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/transition-retention-request
+    kind: COMMAND
+    capability: privacy.requests.manage
+    assurance: STEP_UP
+    request:
+      required: [retentionRequestId, expectedDecisionVersion, transition, reasonCode, reason, inventorySnapshotDigest, holdCoverageDigest, completionReceiptId]
+      fields: {retentionRequestId: 'uuid', expectedDecisionVersion: 'int64>=0', transition: 'START_REVIEW|APPROVE|REJECT|COMPLETE', reasonCode: 'string[1..100]', reason: 'string[1..10000]', inventorySnapshotDigest: 'sha256', holdCoverageDigest: 'sha256', completionReceiptId: 'nullable-uuid'}
+    response: RetentionRequestDecisionReceiptV1
+    constraints: [COMPLETE requires a non-null all-location completion receipt and zero active hold coverage; other transitions require null completionReceiptId]
+    errors: [RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, LEGAL_HOLD_ACTIVE, RETENTION_COMPLETION_INCOMPLETE, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: listRecordClassSchedules
+    api: control-api
+    method: GET
+    path: /v1/internal/queries/list-record-class-schedules
+    kind: QUERY
+    capability: retention.policy.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: []
+      optional: {recordClass: 'unique-array<string>[1..100]', state: 'unique-array<CURRENT|FUTURE|REVIEW_EXPIRED>[1..3]', cursor: 'cursor', limit: 'int32[1..100]=100'}
+    response: RecordClassSchedulePageV1
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, CAPABILITY_DENIED, INTERNAL_ERROR]
+  - operation_id: requestCommunicationEndpointLink
+    api: submission-api
+    method: POST
+    path: /v1/communication-profile-session/endpoints:link
+    kind: COMMAND
+    authorization: derived-session:COMMUNICATION_PROFILE
+    assurance: SCOPED_TOKEN
+    request:
+      required: [contractVersion, endpoint, linkingConsent, expectedProfileVersion, abuseProof]
+      fields: {contractVersion: 'const communication-v1', endpoint: 'EndpointEnrollmentV1', linkingConsent: 'EndpointLinkingConsentV1', expectedProfileVersion: 'int64>=1', abuseProof: 'AbuseProofV1'}
+    response: CommunicationEndpointLinkRequestedReceiptV1
+    errors: [SCOPED_SESSION_REQUIRED, ENDPOINT_TYPE_UNSUPPORTED, ENDPOINT_ALREADY_LINKED, CONSENT_INVALID, ABUSE_PROOF_INVALID, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: verifyCommunicationEndpointLink
+    api: submission-api
+    method: POST
+    path: /v1/submission-session/communication-endpoint-link:verify
+    kind: COMMAND
+    authorization: derived-session:COMMUNICATION_PROFILE+one-time-endpoint-proof
+    assurance: SCOPED_TOKEN
+    request:
+      required: [challengeId, proof, expectedProfileVersion]
+      fields: {challengeId: 'uuid', proof: 'EndpointVerificationProofV1', expectedProfileVersion: 'int64>=1'}
+    response: CommunicationEndpointVerifiedReceiptV1
+    errors: [SCOPED_SESSION_REQUIRED, ENDPOINT_CHALLENGE_INVALID, ENDPOINT_CHALLENGE_EXPIRED, ENDPOINT_PROOF_INVALID, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: unlinkCommunicationEndpoint
+    api: submission-api
+    method: POST
+    path: /v1/communication-profile-session/endpoints/{endpointId}:unlink
+    kind: COMMAND
+    authorization: derived-session:COMMUNICATION_PROFILE
+    assurance: SCOPED_TOKEN
+    request:
+      required: [endpointId, expectedEndpointVersion, expectedProfileVersion, reasonCode]
+      fields: {endpointId: 'uuid', expectedEndpointVersion: 'int64>=1', expectedProfileVersion: 'int64>=1', reasonCode: 'USER_REQUEST|LOST_ACCESS|WRONG_ENDPOINT|PRIVACY|OTHER'}
+    response: CommunicationEndpointUnlinkedReceiptV1
+    errors: [SCOPED_SESSION_REQUIRED, ENDPOINT_NOT_FOUND, ENDPOINT_VERSION_CONFLICT, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: createPrivacyRequest
+    api: submission-api
+    method: POST
+    path: /v1/privacy-requests
+    kind: COMMAND
+    authorization: anonymous-proof
+    assurance: ANONYMOUS_PROOF
+    request:
+      required: [requestType, subjectIdentityProof, jurisdiction, scope, contactEndpoint, statement, attestation, privacyConsent, abuseProof]
+      fields: {requestType: 'ACCESS|CORRECTION|DELETION|RESTRICTION', subjectIdentityProof: 'PrivacyIdentityProofV1', jurisdiction: 'string[2..64]', scope: 'PrivacyRequestScopeV1', contactEndpoint: 'EndpointEnrollmentV1', statement: 'string[1..10000]', attestation: 'boolean-true', privacyConsent: 'boolean-true', abuseProof: 'AbuseProofV1'}
+    response: PrivacyRequestReceiptV1
+    errors: [INVALID_PARAMETER, IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, ABUSE_PROOF_INVALID, RATE_LIMITED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: exchangePrivacyRequestReceiptToken
+    api: submission-api
+    method: POST
+    path: /v1/submission-session/privacy-request-receipt:exchange
+    kind: COMMAND
+    authorization: one-time-receipt-token
+    assurance: SCOPED_TOKEN
+    request: {required: [token, proof], fields: {token: 'secret-string[32..4096]', proof: 'BrowserProofV1'}}
+    response: PrivacyRequestSessionReceiptV1
+    constraints: [token is one-time and never appears in URL, log, analytics, DOM, client storage or response]
+    errors: [TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REPLAYED, ABUSE_PROOF_INVALID, RATE_LIMITED, INTERNAL_ERROR]
+  - operation_id: getPrivacyRequest
+    api: submission-api
+    method: GET
+    path: /v1/privacy-request-receipt
+    kind: QUERY
+    authorization: privacy-request-receipt-session
+    assurance: SCOPED_TOKEN
+    request: {required: []}
+    response: PrivacyRequestPublicStatusV1
+    errors: [SCOPED_SESSION_REQUIRED, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+  - operation_id: declareConflict
+    api: control-api
+    method: POST
+    path: /v1/internal/conflict-declarations
+    kind: COMMAND
+    capability: conflicts.declare
+    alternate_capabilities: [conflicts.manage]
+    alternate_capability_condition: declaring another subject only
+    alternate_assurance: STEP_UP
+    assurance: ACTIVE_SESSION
+    request:
+      required: [subjectActorId, target, conflictType, relationState, materiality, temporalState, sourceClass, evidenceRefs, expectedPriorSequence, policyDigest, reason, effectiveAt, expiresAt]
+      fields:
+        subjectActorId: uuid
+        target: ConflictTargetV1
+        conflictType: AUTHORSHIP|EDITING|CASE_PARTY|RECIPIENT|ROLE|PERSONAL|FAMILY|EMPLOYMENT|ADVISORY|FINANCIAL|POLITICAL|FUNDING|CUSTOMER
+        relationState: PRESENT|UNKNOWN
+        materiality: MATERIAL|NON_MATERIAL|UNKNOWN
+        temporalState: CURRENT|PAST|UNKNOWN
+        sourceClass: SELF_DECLARED|INTERNAL_AUTHORITATIVE|EXTERNAL_AUTHORITATIVE
+        evidenceRefs: unique-array<ConflictEvidenceRefV1>[0..100]
+        expectedPriorSequence: int64>=0
+        policyDigest: sha256
+        reason: string[1..4000]
+        effectiveAt: datetime
+        expiresAt: datetime
+    response: ConflictDeclarationReceiptV1
+    transition: NONE|ACTIVE->ACTIVE_NEW_APPEND_ONLY_FACT
+    concurrency: subject+target+conflictType semantic lock and expectedPriorSequence
+    constraints:
+      - A self declaration requires subjectActorId equal the authenticated actor; declaring for another actor requires conflicts.manage and STEP_UP.
+      - expiresAt is after effectiveAt and the relation/materiality/temporal triple is one of the physical closed shapes.
+    errors: [INVALID_PARAMETER, TARGET_NOT_FOUND, CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: withdrawConflict
+    api: control-api
+    method: POST
+    path: /v1/internal/conflict-declarations/{declarationId}:withdraw
+    kind: COMMAND
+    capability: conflicts.declare
+    alternate_capabilities: [conflicts.manage]
+    alternate_capability_condition: oversight withdrawal only
+    alternate_assurance: STEP_UP
+    assurance: conditional-self-or-oversight
+    request:
+      required: [declarationId, expectedDeclarationSequence, expectedDeclarationDigest, expectedPolicyDigest, reasonCode, reason, effectiveAt, expiresAt]
+      fields:
+        declarationId: uuid
+        expectedDeclarationSequence: int64>=1
+        expectedDeclarationDigest: sha256
+        expectedPolicyDigest: sha256
+        reasonCode: NO_LONGER_PRESENT|DECLARED_IN_ERROR|SUPERSEDED_EVIDENCE|OVERSIGHT_DECISION|OTHER
+        reason: string[1..4000]
+        effectiveAt: datetime
+        expiresAt: datetime
+    response: ConflictDeclarationReceiptV1
+    transition: ACTIVE->WITHDRAWN_BY_APPEND_ONLY_ABSENT_FACT
+    concurrency: subject+target+conflictType semantic lock and exact declaration sequence+digest
+    constraints:
+      - Self withdrawal requires the authenticated actor to be the subject and no bound pending or completed decision to be rewritten; oversight withdrawal requires conflicts.manage, STEP_UP and separation from the original declarer.
+      - The prior declaration remains immutable. Success appends sequence+1 with relationState ABSENT, materiality and temporalState NOT_APPLICABLE, and supersedesDeclarationId equal declarationId.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, CONFLICT_WITHDRAWAL_FORBIDDEN, CONFLICT_DEPENDENCY_ACTIVE, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: withdrawActionProposal
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}:withdraw
+    kind: COMMAND
+    capability: actions.propose
+    assurance: ACTIVE_SESSION
+    request:
+      required: [proposalId, expectedProposalVersion, expectedStateVersion, expectedContentDigest, reasonCode, reason]
+      fields:
+        proposalId: uuid
+        expectedProposalVersion: int64>=1
+        expectedStateVersion: int64>=1
+        expectedContentDigest: sha256
+        reasonCode: OBJECTIVE_CHANGED|SOURCE_INVALIDATED|DUPLICATE|CREATED_IN_ERROR|OTHER
+        reason: string[1..4000]
+    response: ActionProposalReceiptV1
+    transition: DRAFT|PENDING_QUORUM->WITHDRAWN; every live assignment becomes CANCELLED in the same transaction
+    concurrency: exact proposal/version/approval-digest graph lock; final authorization or terminal decision wins the race and makes withdrawal fail closed
+    constraints:
+      - Only the proposal creator or current owner with exact object scope may withdraw.
+      - Withdrawal after execution authorization or POLICY_BLOCKED receipt creation is forbidden.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: withdrawActionDecision
+    api: control-api
+    method: POST
+    path: /v1/internal/action-proposals/{proposalId}/decisions/{decisionId}:withdraw
+    kind: COMMAND
+    capability: actions.review
+    assurance: conditional-original-decision-assurance
+    request:
+      required: [proposalId, decisionId, expectedProposalVersion, expectedProposalStateVersion, expectedAssignmentVersion, expectedApprovalDigest, expectedDecisionReceiptDigest, reasonCode, reason]
+      fields:
+        proposalId: uuid
+        decisionId: uuid
+        expectedProposalVersion: int64>=1
+        expectedProposalStateVersion: int64>=1
+        expectedAssignmentVersion: int64>=1
+        expectedApprovalDigest: sha256
+        expectedDecisionReceiptDigest: sha256
+        reasonCode: CONFLICT_DISCOVERED|EVIDENCE_CHANGED|DECISION_ERROR|NO_LONGER_ELIGIBLE|OTHER
+        reason: string[1..4000]
+    response: ActionDecisionReceiptV1
+    transition: counted APPROVE remains immutable and gains one APPROVAL_WITHDRAWAL record; its slot advances to generation+1 ASSIGNED when one deterministic eligible replacement exists, otherwise VACANT for the assignment coordinator
+    concurrency: exact proposal/version/decision/assignment graph lock; final quorum authorization or withdrawal wins and the loser writes zero rows
+    constraints:
+      - Only the exact original human APPROVE actor may withdraw the unwithdrawn decision while the proposal remains PENDING_QUORUM.
+      - The command re-performs the same or stronger assurance and never accepts a withdrawal as a submitActionDecision variant.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, STEP_UP_REQUIRED, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: promoteResearchArtifactToEvidence
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/promote-research-artifact-to-evidence
+    kind: COMMAND
+    capability: cases.evidence.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: [schemaVersion, caseId, expectedCaseVersion, agentRunId, researchArtifact, rightsDecision, evidence, selectedSegments, reason]
+      fields:
+        schemaVersion: const promote-research-artifact.request.v1
+        caseId: uuid
+        expectedCaseVersion: int64>=1
+        agentRunId: uuid
+        researchArtifact: PromoteResearchArtifactRefV1
+        rightsDecision: PromotionRightsDecisionRefV1
+        evidence: PromotionEvidenceDraftV1
+        selectedSegments: array<PromotionSegmentSelectionV1>[1..100]
+        reason: string[1..2000]
+    response: PromoteResearchArtifactReceiptV1
+    transition: immutable research-only artifact -> one revision-fixed Evidence graph; the artifact itself remains research-only
+    concurrency: Idempotency-Key header plus canonical request digest and expected case version under SERIALIZABLE locks
+    constraints:
+      - Idempotency-Key is a request-bound HTTP header and is forbidden from the body.
+      - The exact run/turn/tool/fetch/artifact tuple, CLEAN STORED bytes, current GRANT rights, pinned parser extraction, ordered nonoverlapping locators and selected-content digests are reverified before any write.
+      - One source-document revision, one or more evidence segments, one pending Evidence revision, one HUMAN_PROMOTION source use, promotion receipt, audit and event commit atomically.
+    errors: [INVALID_REQUEST, ACTOR_ASSERTION_INVALID, CAPABILITY_DENIED, RESOURCE_NOT_FOUND, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, ARTIFACT_NOT_CLEAN, RIGHTS_DENIED, LOCATOR_MISMATCH, CONTENT_HASH_MISMATCH, VALIDATION_FAILED, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+  - operation_id: cancelAgentRun
+    api: control-api
+    method: POST
+    path: /v1/internal/agent-runs/{runId}:cancel
+    kind: COMMAND
+    capability: cases.investigate
+    assurance: ACTIVE_SESSION
+    request:
+      required: [schemaVersion, runId, expectedVersion, reasonCode, reason]
+      fields:
+        schemaVersion: const cancel-agent-run.request.v2
+        runId: uuid
+        expectedVersion: int64>=1
+        reasonCode: USER_REQUEST|OBJECTIVE_CHANGED|SOURCE_INVALIDATED|COST_STOP|POLICY_STOP
+        reason: string[1..2000]
+    response: AgentRunControlReceiptV2
+    transition: QUEUED/NONE->CANCELLED/SETTLED when no claim exists; otherwise RUNNING/ACTIVE|RECONCILIATION_REQUIRED->RUNNING/CANCEL_REQUESTED
+    concurrency: expected aggregate version CAS plus request-bound Idempotency-Key; elapsed time is never terminal proof
+    constraints:
+      - A possibly dispatched provider or tool effect is never reported as cancelled without authenticated definitive no-effect proof.
+      - The durable control receipt, audit and agent.run_control_changed.v2 event commit atomically; exact replay writes nothing.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, AGENT_RUN_STATE_INVALID, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: decideJourneyHandoff
+    api: control-api
+    method: POST
+    path: /v1/internal/journey-handoffs/{handoffId}:decide
+    kind: COMMAND
+    capability: journeys.handoff.decide
+    assurance: conditional-by-persisted-handoff-binding-with-minimum-ACTIVE_SESSION
+    entry_boundaries:
+      external_actor_http: {transport: CONTROL_COMMAND, session_user: gurine_control_api, assertion_type: ACTOR, credential: X-Gurine-Actor-Assertion, service_credential: FORBIDDEN}
+      internal_service_workflow: {transport: JOURNEY_WORKFLOW_DB_COMMAND, session_user: gurine_workflow_worker, assertion_type: SERVICE, credential: closed in-process workload envelope serviceAssertion, actor_or_http_credential: FORBIDDEN}
+      mutual_exclusion: session_user and assertion type select exactly one boundary; the public control HTTP route is ACTOR-only and the workflow service path has no HTTP endpoint
+      shared_semantics: exact request schema, stable seven-field business hash, prepare/apply/finalize transaction, durable receipt and error-to-zero-write rules are identical
+    request:
+      required: [schemaVersion, handoffId, expectedHandoffVersion, expectedBindingDigest, decision, reasonCode, reason]
+      fields:
+        schemaVersion: const decide-journey-handoff.request.v1
+        handoffId: uuid
+        expectedHandoffVersion: int64>=1
+        expectedBindingDigest: sha256
+        decision: ACKNOWLEDGE|DECLINE
+        reasonCode: nullable<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>
+        reason: nullable<string[1..4000]>
+      forbidden: [journeyId, edgeId, handoffKind, receiver, receiverFunction, receiverCapability, destination, owner, domainAdapter]
+    decision_reason_shape:
+      discriminator: decision
+      closed_decline_reason_codes: [CAPABILITY_UNAVAILABLE, OBJECT_SCOPE_MISMATCH, CONFLICT_OF_INTEREST, WORKLOAD_CAPACITY, DEPENDENCY_BLOCKED, SUBJECT_INVALID, OWNER_UNAVAILABLE, POLICY_BLOCKED, RECEIVER_DECLINED]
+      branches:
+        ACKNOWLEDGE: {reasonCode: MUST_BE_NULL, reason: MUST_BE_NULL, reasonDigest: MUST_BE_NULL, reasonEncrypted: MUST_BE_NULL}
+        DECLINE: {reasonCode: REQUIRED_CLOSED_DECLINE_REASON_CODE, reason: REQUIRED_VALID_UNICODE_NUL_FREE_NFC_NON_WHITESPACE_1_TO_4000, reasonDigest: REQUIRED_SHA256_OF_EXACT_NFC_UTF8_BYTES, reasonEncrypted: REQUIRED_NEW_CLAIM_ONLY_RANDOMIZED_CIPHERTEXT}
+      transport_visibility: {reasonCode: REQUEST, reason: REQUEST, reasonDigest: SERVER_DERIVED, reasonEncrypted: SERVER_DERIVED_NEVER_RETURNED}
+    response: JourneyHandoffDecisionReceiptV1
+    transition: PENDING_ACK->ACKNOWLEDGED|DECLINED is the terminal old-handoff step; a compiled DECLINE replacement atomically follows with generation+1 NONE->PENDING_ACK and the final parent state WAITING_ACK
+    compound_branches: [decline_with_replacement, expiry_with_replacement, supersession_with_replacement, terminal_outcome_with_cancellation]
+    success_contract: {decision_receipt: required-old-terminal-step, replacement: nullable-complete-generation-plus-one-request, final_parent: required-authoritative-post-command-head}
+    concurrency: expected handoff version plus binding digest under SERIALIZABLE locks and one logical request-bound idempotency key; ACTOR derives its digest from the HTTP Idempotency-Key header and SERVICE supplies the already-derived idempotencyKeySha256 in the authenticated workload envelope
+    transaction_identity_contract:
+      authorization_attempt: Transaction A persists non-null equal ops.assertion_replay_guard.attempt_transaction_xid8 and generated ops.audit_events.attempt_transaction_xid8 from server-side pg_current_xact_id(); Transaction B sees both immutable rows and requires that xid8 to differ from its pg_current_xact_id()
+      business_claim: a BOUND_V1 NEW ops.idempotency_keys row persists server-only claim_transaction_xid8=pg_current_xact_id(); apply and finalize require equality in the same top-level Transaction B, including SAVEPOINT and nested SAVEPOINT execution
+      legacy: all three legacy xid8 values remain NULL and cannot be backfilled into proof
+      forbidden: [xmin authorization proof, hard pg_xact_status committed predicate, caller-supplied xid, migration backfill]
+      diagnostic: pg_xact_status committed corroborates; NULL is allowed after history truncation; in-progress or aborted is an integrity fault
+    idempotency_relation_access:
+      prepare: owner claim exactly once and owner replay exactly once iff FINAL_AVAILABLE; zero direct ops.idempotency_keys statements
+      apply: exactly one schema-qualified direct SELECT INTO STRICT of the complete prepared-NEW tuple; zero DML, helper or owner calls
+      finalize: exactly one pre-finalize SELECT INTO STRICT FOR UPDATE, exactly one owner-finalize call, zero replay-owner calls, then exactly one direct persisted-tuple readback comparing all response bytes, metadata, resource, receipt, audit, outbox and completion fields
+    constraints:
+      - The server resolves journey, edge, receiver, capability, destination, SLA and domain adapter only from the persisted binding and compiled registry; caller routing fields are forbidden.
+      - ACKNOWLEDGE always requires reasonCode and reason to be null; any receiver attestation is proven by the persisted acknowledgement-authority receipt and is never smuggled through free text. DECLINE requires both a closed reasonCode and bounded reason.
+      - Exact receiver identity, required capability, object scope, expiry and any stored stricter assurance are revalidated immediately before mutation.
+      - The service canonicalizes and encrypts a DECLINE reason, passes only encrypted bytes plus its digest to SQL, and never persists or logs plaintext reason at the database boundary.
+      - Every retry verifies and consumes a fresh request-bound actor or service assertion JTI and records one immutable authorization attempt before the business transaction. Request ID, assertion JTI/token bytes, randomized ciphertext and plaintext reason do not enter the stable business idempotency hash.
+      - ACTOR enters only through the control-api HTTP binding. SERVICE enters only through the gurine_workflow_worker in-process PostgreSQL command envelope bound to the exact regprocedure chain; neither path accepts the other's credential or transport.
+      - A finalized replay with the same Idempotency-Key and stable business fields returns the original stored bytes after the fresh assertion attempt; only a NEW business claim encrypts or mutates, and only a changed operation, handoff subject/version/binding, decision, reasonCode or reasonDigest conflicts.
+      - Transaction A proof uses ordinary MVCC visibility plus equal non-null persisted attempt_transaction_xid8 values that differ from Transaction B; tuple xmin is never authority and pg_xact_status NULL is not a hard failure.
+      - Transaction B apply/finalize use the server-persisted claim_transaction_xid8 top-level transaction proof and the exact relation-access registry. Finalize verifies persisted header/body bytes and the entire terminal tuple by direct post-owner readback without replay-owner or JSON reserialization.
+      - Success returns the durable old terminal decision receipt, a nullable complete replacement handoff/request receipt and the authoritative final parent head. Missing referenced receipts or a head mismatch makes success impossible.
+      - The decision event records the old terminal step even when a second journey.handoff_requested.v1 event records the replacement; HTTP success, task projection or notification is never a handoff outcome.
+    errors: [INVALID_PARAMETER, ACTOR_ASSERTION_INVALID, ACTOR_ASSERTION_REPLAYED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_REPLAYED, RESOURCE_NOT_FOUND, CAPABILITY_DENIED, HANDOFF_RECEIVER_MISMATCH, HANDOFF_STATE_INVALID, HANDOFF_BINDING_MISMATCH, VERSION_CONFLICT, HANDOFF_EXPIRED, JOURNEY_TERMINAL, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: recordSupplierIdentityResolution
+    api: identity-api
+    method: POST
+    path: /v1/internal/supplier-identity/resolutions
+    kind: COMMAND
+    capability: cases.evidence.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: [action, candidateRefs, expectedCandidateSetDigest, expectedPriorDecisionDigest, fromCanonicalSupplierIds, toCanonicalSupplierIds, evidenceLocators, expectedEvidenceLocatorSetDigest, expectedPublicImpactSetDigest, impactOwnerUserId, impactDueAt, reasonCode, reason]
+      fields: {action: 'enum<MERGE|SPLIT|KEEP_SEPARATE|MARK_AMBIGUOUS>', candidateRefs: 'array<SupplierPartyRefV1>[1..1000]', expectedCandidateSetDigest: sha256, expectedPriorDecisionDigest: 'nullable<sha256>', fromCanonicalSupplierIds: 'unique-array<uuid>[0..1000]', toCanonicalSupplierIds: 'unique-array<uuid>[0..1000]', evidenceLocators: 'array<EvidenceLocatorRefV1>[1..1000]', expectedEvidenceLocatorSetDigest: sha256, expectedPublicImpactSetDigest: sha256, impactOwnerUserId: 'nullable<uuid>', impactDueAt: 'nullable<datetime>', reasonCode: 'enum<AUTHORITATIVE_IDENTIFIER_MATCH|AUTHORITATIVE_IDENTIFIER_CONFLICT|SOURCE_CORRECTION|FALSE_MERGE|INSUFFICIENT_EVIDENCE>', reason: 'string[1..10000]'}
+      invariants: [supplier identifiers are HMAC digests only, MERGE has at least two candidates and one target, SPLIT has one source and two targets plus impact owner/due date, no automatic merge]
+    response: SupplierIdentityResolutionReceiptV1
+    transition: CANDIDATE->RESOLVED_APPEND_ONLY
+    concurrency: expected candidate-set, prior-decision and evidence locator digests under SERIALIZABLE locks
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: recordSupplierRelationshipAssertion
+    api: identity-api
+    method: POST
+    path: /v1/internal/supplier-relationships/assertions
+    kind: COMMAND
+    capability: cases.evidence.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: [relationshipKind, subject, object, ownershipPercent, managementRole, validFrom, validTo, validityCoverageStatus, evidenceLocators, expectedEvidenceLocatorSetDigest, reason]
+      fields: {relationshipKind: 'enum<OWNERSHIP|BENEFICIAL_OWNERSHIP|CONTROL|MANAGEMENT_ROLE|LEGAL_REPRESENTATIVE|CONTRACTUAL_RELATIONSHIP>', subject: AssertionPartyV1, object: AssertionPartyV1, ownershipPercent: 'nullable<decimal>', managementRole: 'nullable<string[1..500]>', validFrom: 'nullable<date>', validTo: 'nullable<date>', validityCoverageStatus: 'enum<COMPLETE|PARTIAL|UNKNOWN|NOT_AVAILABLE>', evidenceLocators: 'array<EvidenceLocatorRefV1>[1..1000]', expectedEvidenceLocatorSetDigest: sha256, reason: 'string[1..10000]'}
+      invariants: [creation always starts PENDING, verifiedBy and verifiedAt are server null, identifier fields are HMAC digests, no automatic verification]
+    response: SupplierRelationshipAssertionReceiptV1
+    transition: NONE->PENDING
+    concurrency: idempotency-key plus immutable evidence locator digest under SERIALIZABLE locks
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: decideSupplierRelationshipAssertion
+    api: identity-api
+    method: POST
+    path: /v1/internal/supplier-relationships/assertions/{assertionId}:decide
+    kind: COMMAND
+    capability: cases.evidence.manage
+    assurance: ACTIVE_SESSION
+    request:
+      required: [assertionId, expectedAssertionRevision, expectedAssertionDigest, expectedEvidenceLocatorSetDigest, decision, counterAssertionIds, reasonCode, reason]
+      fields: {assertionId: uuid, expectedAssertionRevision: 'int64>=1', expectedAssertionDigest: sha256, expectedEvidenceLocatorSetDigest: sha256, decision: 'enum<VERIFY|REJECT|MARK_CONFLICT|SUPERSEDE>', counterAssertionIds: 'unique-array<uuid>[0..1000]', reasonCode: 'enum<EVIDENCE_CONFIRMED|EVIDENCE_INSUFFICIENT|EVIDENCE_CONTRADICTED|SOURCE_CORRECTED|ASSERTION_SUPERSEDED>', reason: 'string[1..10000]'}
+      invariants: [decision actor is independent from assertion creator, exact revision and evidence digest are locked, stale decisions write zero rows]
+    response: SupplierRelationshipAssertionReceiptV1
+    transition: PENDING->VERIFIED|REJECTED|CONFLICTED|SUPERSEDED
+    concurrency: expected assertion revision, assertion digest and evidence locator digest under SERIALIZABLE locks
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+
+operation_screen_bindings:
+  listActionApprovalQueue: [INT-002.tasks, INT-004.notifications]
+  createActionProposal: [CAS-002.next, CAS-006.editor, CAS-007.board, CAS-009.preview, CAS-011.decisions, CAS-015.proposal, RULE-004.approval, REV-003.gates, OPS-005.status, OPS-006.approval, ADM-002.requests]
+  getActionProposal: [INT-002.handoff]
+  updateActionDraft: [CAS-002.next, CAS-006.editor, CAS-007.board, CAS-009.preview, CAS-011.decisions, CAS-015.proposal, RULE-004.approval, REV-003.gates, OPS-005.status, OPS-006.approval, ADM-002.requests]
+  previewActionDraft: [CAS-002.next, CAS-006.editor, CAS-007.board, CAS-009.preview, CAS-011.decisions, CAS-015.impact, RULE-004.impact, REV-003.gates, OPS-005.status, OPS-006.impact, ADM-002.conflicts]
+  submitActionForReview: [CAS-002.next, CAS-006.editor, CAS-007.board, CAS-009.gate, CAS-011.decisions, CAS-015.reviews, RULE-004.approval, REV-003.gates, OPS-005.status, OPS-006.approval, ADM-002.requests]
+  claimActionReview: [INT-002.handoff]
+  submitActionDecision: [INT-002.handoff]
+  getActionExecutionReceipt: [INT-002.handoff, OPS-003.audit, AUD-001.events]
+  cancelActionExecution: [OPS-003.recovery]
+  retryActionExecution: [OPS-003.recovery]
+  releaseLegalHold: [REV-002.risks, REV-002.decision]
+  createResponseAppeal: [RSP-006.next]
+  getResponseAppeal: [RSP-006.receipt, RSP-006.next]
+  getCommunicationDeliveryReceipt: [CAS-008.timeline, CAS-009.gate, OPS-005.incidents]
+  reconcileCommunicationDelivery: [CAS-008.timeline, OPS-005.incidents]
+  cancelCommunicationDelivery: [CAS-008.timeline, OPS-005.incidents]
+  getIncident: [OPS-001.incidents]
+  triageIncident: [OPS-001.incidents]
+  containIncident: [OPS-001.incidents]
+  startIncidentRecovery: [OPS-001.incidents]
+  resolveIncident: [OPS-001.incidents]
+  closeIncidentPostmortem: [OPS-001.incidents]
+  listResponseAppeals: [COR-001.requests]
+  getResponseAppealWorkspace: [COR-001.requests]
+  transitionResponseAppeal: [COR-001.requests]
+  decideResponseExtension: [CAS-008.requests, CAS-008.timeline]
+  listRetentionRequests: [COR-001.requests]
+  getRetentionRequest: [COR-001.requests]
+  transitionRetentionRequest: [COR-001.requests]
+  listRecordClassSchedules: [OPS-001.services]
+  requestCommunicationEndpointLink: [PUB-030.delivery]
+  verifyCommunicationEndpointLink: [PUB-030.delivery]
+  unlinkCommunicationEndpoint: [PUB-030.delivery, PUB-030.unsubscribe]
+  createPrivacyRequest: [PUB-031.rights]
+  exchangePrivacyRequestReceiptToken: [PUB-031.rights]
+  getPrivacyRequest: [PUB-031.rights]
+  declareConflict: [REV-002.decision, ADM-002.conflicts]
+  withdrawConflict: [ADM-002.conflicts]
+  withdrawActionProposal: [INT-002.handoff]
+  withdrawActionDecision: [INT-002.handoff]
+  promoteResearchArtifactToEvidence: [CAS-011.citations]
+  cancelAgentRun: [CAS-010.runs, CAS-011.model]
+  decideJourneyHandoff: [INT-002.handoff]
+  recordSupplierIdentityResolution: [INT-002.handoff]
+  recordSupplierRelationshipAssertion: [INT-002.handoff]
+  decideSupplierRelationshipAssertion: [INT-002.handoff]
+
+derived_session_authorization_overlay:
+  normative_source: specs/submission/addendum-derived-session-boundary.yaml#operation_authorization_overlay
+  parent_non_widening: RESPONSE_RECEIPT remains authorized only for getResponseReceipt; it cannot call createResponseAppeal or getResponseAppeal
+  operations:
+    createResponseAppeal:
+      required_session_kind: APPEAL_CREATE
+      scope_type: RESPONSE_SUBMISSION
+      successful_transition: APPEAL_CREATE ACTIVE->CONSUMED and APPEAL_STATUS NONE->ACTIVE in gurine.command.createResponseAppeal.v1
+      replay_order: finalized exact session+issuer+operation+idempotency-key+request-digest response is returned before ACTIVE validation
+    getResponseAppeal:
+      required_session_kind: APPEAL_STATUS
+      scope_type: APPEAL
+      rotation: read-only; re-entry uses the private broker and revokes the prior APPEAL_STATUS only when the same appeal composite is proven
+    requestCommunicationEndpointLink:
+      required_session_kind: COMMUNICATION_PROFILE
+      scope_type: COMMUNICATION_SUBJECT
+      successful_rotation: revoke the current child and issue one same-subject/same-origin COMMUNICATION_PROFILE child atomically
+    verifyCommunicationEndpointLink:
+      required_session_kind: COMMUNICATION_PROFILE
+      scope_type: COMMUNICATION_SUBJECT
+      successful_rotation: consume the exact challenge, revoke the current child and issue one same-subject/same-origin COMMUNICATION_PROFILE child atomically
+    unlinkCommunicationEndpoint:
+      required_session_kind: COMMUNICATION_PROFILE
+      scope_type: COMMUNICATION_SUBJECT
+      successful_rotation: revoke endpoint authorization rows, revoke the current child and issue one same-subject/same-origin COMMUNICATION_PROFILE child atomically
+  next_token: X-Gurine-Next-Submission-Session is BFF-generated, request-assertion-bound and persisted only as lowercase SHA-256; it is forbidden from request/response bodies, receipts, events, audit, logs and telemetry
+
+private_control_service_operations:
+  reconcileAgentRun:
+    transport: PRIVATE_CONTROL_SERVICE
+    api: control-api-private
+    method: POST
+    path: /v1/private/agent-runs/{runId}:reconcile
+    caller: reconciliation-worker
+    authorization: request-bound service assertion for exact operation, method, path, caller and request digest
+    request_schema:
+      additional_properties: false
+      required: [schemaVersion, runId, expectedVersion, reconciliationEvidenceId, reconciliationEvidenceSha256, affectedProviderTurnId, affectedToolCallId]
+      fields: {schemaVersion: 'const<reconcile-agent-run.request.v2>', runId: uuid, expectedVersion: 'int64[1..max]', reconciliationEvidenceId: uuid, reconciliationEvidenceSha256: sha256, affectedProviderTurnId: 'uuid|null', affectedToolCallId: 'uuid|null'}
+      header: {Idempotency-Key: 'secret-string[16..200]', X-Gurine-Service-Assertion: 'request-bound-service-assertion'}
+    response_schema: AgentRunControlReceiptV2
+    errors: [INVALID_REQUEST, SERVICE_ASSERTION_INVALID, RESOURCE_NOT_FOUND, VERSION_CONFLICT, AGENT_RUN_STATE_INVALID, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+
+private_action_executor_contract:
+  transport: PRIVATE_APPLICATION_COMMAND
+  authorization: exact current ExecutionAuthorization and generation; approvalDigest and countedDecisionReceiptSetDigest are immutable comparison fields
+  request_fields_exact: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest]
+  rules:
+    - The targetRequest is one closed action-kind-specific schema and its digest equals the authorization target digest.
+    - The worker commits dispatch/claim fencing before any egress and appends one definitive or reconciliation-required receipt after observation.
+    - Exact replay returns stored bytes and changed bytes fail with zero second effect.
+
+private_application_commands:
+  private.RecordOutboundDeliveryObservation:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: notification-worker communication gateway holding the exact committed delivery attempt fence; authenticated callback/poll/reconciliation gateways use the same routine with their closed source variant
+    authorization: workload identity plus exact delivery/attempt generation and adapter policy; no browser or caller-selected proof ceiling
+    request_schema:
+      additional_properties: false
+      required: [deliveryId, expectedDeliveryVersion, sourceKind, attemptId, sourceReceiptId, sourceReceiptDigest, observationKeyDigest, evidenceKind, assertedState, providerEvidenceDigest, providerOccurredAt]
+      fields: {deliveryId: uuid, expectedDeliveryVersion: 'int64[1..max]', sourceKind: 'enum<PROVIDER_RESPONSE|PROVIDER_CALLBACK|PROVIDER_POLL|RECONCILIATION_DECISION|CANCELLATION|SUPPRESSION>', attemptId: 'nullable<uuid>', sourceReceiptId: 'nullable<uuid>', sourceReceiptDigest: 'nullable<sha256>', observationKeyDigest: sha256, evidenceKind: 'enum<PROVIDER_RESPONSE|SIGNED_PROVIDER_CALLBACK|AUTHENTICATED_PROVIDER_POLL|OFFICIAL_CHANNEL_RECEIPT|RECONCILIATION_PROOF|CANCELLATION_PROOF>', assertedState: 'enum<PROVIDER_ACCEPTED|DELIVERED|READ|FAILED_PERMANENT|RECONCILIATION_REQUIRED|CANCELLED|SUPPRESSED>', providerEvidenceDigest: sha256, providerOccurredAt: 'nullable<datetime>'}
+      invariants: [PROVIDER_RESPONSE requires attemptId and forbids sourceReceiptId/sourceReceiptDigest, PROVIDER_CALLBACK|PROVIDER_POLL|RECONCILIATION_DECISION require an exact immutable sourceReceiptId/sourceReceiptDigest and forbid attemptId, cancellation/suppression forbid both source pointers, synchronous PROVIDER_RESPONSE assertedState is at most PROVIDER_ACCEPTED, observedAt is forbidden input and the database derives observed_at from transaction time or the immutable callback/poll/reconciliation receipt time, raw response/signature/provider identifier is absent]
+    response_schema: OutboundDeliveryObservationReceiptV1
+    errors: [RESOURCE_NOT_FOUND, DELIVERY_VERSION_CONFLICT, DELIVERY_OBSERVATION_INVALID, DELIVERY_OBSERVATION_CONFLICT, DELIVERY_RECONCILIATION_REQUIRED, INTERNAL_ERROR]
+  materializeResponseRequestSent:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: workflow-worker inbox consumer for communication.delivery_receipt_recorded.v1
+    authorization: authenticated consumer identity plus claimed inbox event and exact delivery aggregate binding
+    request_schema:
+      additional_properties: false
+      required: [sourceEventId, sourceEventEnvelopeDigest, responseRequestId, expectedRequestVersion, deliveryId, deliveryReceiptId, deliveryReceiptSequence, deliveryReceiptDigest]
+      fields: {sourceEventId: uuid, sourceEventEnvelopeDigest: sha256, responseRequestId: uuid, expectedRequestVersion: 'int64[1..max]', deliveryId: uuid, deliveryReceiptId: uuid, deliveryReceiptSequence: 'int64[1..max]', deliveryReceiptDigest: sha256}
+      invariants: [All intent/rendering/access/endpoint/provider/version/digest/time fields are reloaded from the authoritative database graph, providerAcceptedAt is the exact receipt observed_at and is never accepted in this request]
+    response_schema: ResponseRequestSentMaterializationResultV1 oneOf APPLIED_SENT|NO_OP_ALREADY_SENT|NO_OP_NONQUALIFYING
+    errors: [RESOURCE_NOT_FOUND, RESPONSE_REQUEST_VERSION_CONFLICT, RESPONSE_REQUEST_STATE_INVALID, RESPONSE_DELIVERY_BINDING_INVALID, EVENT_REPLAY_CONFLICT, INTERNAL_ERROR]
+  materializeResponseSubmissionIntake:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: workflow-worker response-submission-materializer inbox consumer for workflow.response_submitted.v2
+    authorization: authenticated workload identity plus one claimed source outbox envelope; browser/session/token credentials are forbidden
+    request_schema:
+      additional_properties: false
+      required: [sourceEventId,sourceEventEnvelopeDigest,responseSubmissionId,responseRequestId,responseRequestVersion,responseRequestBindingDigest,submissionSha256,receiptVersion,receiptDigest,submittedAt]
+      fields: {sourceEventId: uuid, sourceEventEnvelopeDigest: sha256, responseSubmissionId: uuid, responseRequestId: uuid, responseRequestVersion: 'int64[1..max]', responseRequestBindingDigest: sha256, submissionSha256: sha256, receiptVersion: 'int64[1..max]', receiptDigest: sha256, submittedAt: datetime}
+      invariants: [all payload fields are reloaded from the exact workflow.response_submitted.v2 outbox row and locked submission/request graph, requestToken actor operation arbitrary request ID and plaintext response are forbidden, submittedAt is equality-checked against the DB-owned submission timestamp]
+    response_schema: ResponseSubmissionMaterializationResultV1 oneOf APPLIED|NO_OP_ALREADY_MATERIALIZED
+    errors: [RESOURCE_NOT_FOUND,EVENT_REPLAY_CONFLICT,EVENT_EFFECT_CONFLICT,RESPONSE_SUBMISSION_BINDING_INVALID,INTERNAL_ERROR]
+  private.PublishRetraction:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: action-execution-worker holding the exact current RETRACTION ExecutionAuthorization
+    authorization: private_action_executor_contract plus the immutable STEP_UP assurance receipt
+    action_kind: RETRACTION
+    request_schema:
+      additional_properties: false
+      required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest]
+      targetRequest: RetractionActionTargetV1
+    response_schema: RetractionExecutionReceiptV1
+    errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, PUBLICATION_GATE_BLOCKED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  private.CreateTaskFromApprovedAction: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.task-executor, authorization: private_action_executor_contract, action_kind: TASK, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: TaskActionTargetV1}, response_schema: TaskExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.MaterializeComparableCandidate: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.comparable-executor, authorization: private_action_executor_contract, action_kind: COMPARABLE, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: ComparableActionTargetV1}, response_schema: ComparableExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.DispatchCommunicationIntent: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.communication-executor, authorization: private_action_executor_contract, action_kind: COMMUNICATION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CommunicationActionTargetV1}, response_schema: CommunicationDispatchAuthorizationReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMUNICATION_POLICY_BLOCKED, DELIVERY_RECONCILIATION_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.ApplyKillSwitchCommand: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.kill-switch-executor, authorization: private_action_executor_contract, action_kind: KILL_SWITCH, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: KillSwitchActionTargetV1}, response_schema: KillSwitchExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.RecordCommunicationAuthorizationDecision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.communication-authorization-executor, authorization: private_action_executor_contract, action_kind: COMMUNICATION_AUTHORIZATION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CommunicationAuthorizationActionTargetV1}, response_schema: CommunicationAuthorizationDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMUNICATION_NOT_AUTHORIZED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.ReviseAssetRightsDecision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.asset-rights-executor, authorization: private_action_executor_contract, action_kind: ASSET_RIGHTS_DECISION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: AssetRightsActionTargetV1}, response_schema: AssetRightsDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, RIGHTS_DECISION_STALE, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.CreateRecordClassScheduleRevision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.retention-schedule-executor, authorization: private_action_executor_contract, action_kind: RETENTION_SCHEDULE, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: RetentionScheduleActionTargetV1}, response_schema: RecordClassScheduleReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, RETENTION_POLICY_STALE, LEGAL_HOLD_ACTIVE, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.PublishFundingDisclosureRevision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.funding-disclosure-executor, authorization: private_action_executor_contract, action_kind: FUNDING_DISCLOSURE, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: FundingDisclosureActionTargetV1}, response_schema: FundingDisclosureExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.DecideCapabilityActivation: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.capability-activation-executor, authorization: private_action_executor_contract, action_kind: CAPABILITY_ACTIVATION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CapabilityActivationActionTargetV1}, response_schema: CapabilityActivationDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_UNCONFIGURED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.CreateBusinessCalendarVersion: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.business-calendar-executor, authorization: private_action_executor_contract, action_kind: RESPONSE_POLICY_CALENDAR, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: BusinessCalendarActionTargetV1}, response_schema: BusinessCalendarVersionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.ApplyCommercialControl: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.commercial-control-executor, authorization: private_action_executor_contract, action_kind: COMMERCIAL_CONTROL, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CommercialControlActionTargetV1}, response_schema: CommercialControlExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMERCIAL_CONTROL_TRIGGER_STALE, COMMERCIAL_CONTROL_RECEIPT_INVALID, RECONCILIATION_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.MaterializePaidEvidencePacket: {transport: PRIVATE_APPLICATION_COMMAND, caller: workflow-worker.paid-evidence-packet-materializer, authorization: claimed allowlisted source event plus exact organization qualification contract outcome subject and member candidate digests, request_schema: {additional_properties: false, required: [sourceEventId, packetId, organizationId, qualificationEpisodeId, qualificationEpisodeVersion, qualificationEpisodeDigest, commercialContractId, commercialContractVersion, commercialContractDigest, subject, orderedMembers, expectedPacketSubjectDigest], targetRequest: MaterializePaidEvidencePacketRequestV1}, response_schema: PaidEvidencePacketMaterializationReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, PAID_EVIDENCE_SUBJECT_INVALID, PAID_EVIDENCE_MEMBER_SET_INVALID, EVENT_REPLAY_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+
+base_operation_atomic_extensions:
+  resolveCorrectionRequest:
+    branch: resolution=RESOLVED
+    atomic_transition_group: gurine.command.resolveCorrectionRequest.publish.v1
+    effect_owner: control-api.resolveCorrectionRequest
+    required_request_overlay: [publicationPreviewId, publicationPreviewDigest, publicationGatePreviewDigest, expectedPublicationRevision, replacementContentDigest]
+    success: correction REVIEW->PUBLISHED and publication current state->CORRECTED with one immutable revision, one gate decision, audit, correction.resolved.v1, publication.revision_created.v1, projection outbox and one stored receipt
+  placeTemporaryRestriction:
+    atomic_transition_group: gurine.command.placeTemporaryRestriction.v1
+    effect_owner: control-api.placeTemporaryRestriction
+    required_request_overlay: [expectedPublicationRevision, expectedPublicationDigest, causeKind, causeDecisionId, causeDecisionDigest, preservedPriorPublicState, expiresAt]
+    success: append one restriction/access overlay and projection work item without mutating prior publication bytes
+  publishCase:
+    branch: source state TEMPORARILY_RESTRICTED and intent RESTORE_ACCESS
+    atomic_transition_group: gurine.command.publishCase.restore.v1
+    effect_owner: control-api.publishCase
+    required_request_overlay: [restrictionDecisionId, restrictionDecisionDigest, causeReleaseReceiptId, causeReleaseReceiptDigest, expectedPriorPublicState]
+    success: full fresh gate PASS plus one new immutable revision restores exactly the preserved prior public state; a normal publish branch cannot bypass the cause-release proof
+  placeLegalHold:
+    atomic_transition_group: gurine.command.placeLegalHold.v2
+    effect_owner: control-api.placeLegalHold
+    request_replacement: case-shaped object fields are replaced by closed LegalHoldTargetBindingV1 plus targetDigest, scopeAtoms, affectedIds, authorityReference, expiresAt
+    success: exact concrete target lock, derived/reused immutable target anchor, one hold placement, audit, legal_hold.placed.v1 and stored receipt; case-only version mutation occurs only for case-governed target variants

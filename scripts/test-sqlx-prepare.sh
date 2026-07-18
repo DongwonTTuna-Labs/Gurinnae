@@ -46,6 +46,18 @@ docker run --rm --network "$network" \
   --env GURINE_ENV=test \
   gurine-sqlx-migrator:13.0.0
 
+# The immutable authority baseline remains 24 migrations, while the runtime
+# image must apply the complete six-file additive set as well.  Assert both
+# the count and the contiguous version sequence so a missing or out-of-order
+# migration cannot be hidden by a successful SQLx run.
+expected_versions="$(seq -s, 1 30)"
+actual_migrations="$(docker exec "$postgres_container" psql -U gurine_dev -d gurine -Atc \
+  "SELECT count(*) || '|' || coalesce(string_agg(version::text, ',' ORDER BY version), '') FROM _sqlx_migrations WHERE success;")"
+[[ "$actual_migrations" == "30|$expected_versions" ]] || {
+  printf 'runtime migration canary failed: expected 30|%s, found %s\n' "$expected_versions" "$actual_migrations" >&2
+  exit 1
+}
+
 host_port="$(docker port "$postgres_container" 5432/tcp | sed -E 's/^.*:([0-9]+)$/\1/')"
 [[ "$host_port" =~ ^[0-9]+$ ]]
 export DATABASE_URL="postgresql://gurine_dev:gurine_dev_only@127.0.0.1:${host_port}/gurine"

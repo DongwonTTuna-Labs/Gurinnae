@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/agent-reconciliation-evidence.json",
+  "title": "AgentReconciliationEvidenceV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "evidenceId",
+    "runId",
+    "providerTurnId",
+    "toolCallId",
+    "evidenceKind",
+    "sourceProofKind",
+    "adapterId",
+    "adapterVersion",
+    "adapterConfigurationSha256",
+    "lookupRequestSha256",
+    "lookupIdempotencyKeySha256",
+    "callerAssertionSha256",
+    "providerReceiptId",
+    "providerReceiptSha256",
+    "toolTerminalSha256",
+    "resolution",
+    "budgetDisposition",
+    "observedAt",
+    "evidenceSha256"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "agent-reconciliation-evidence.v1"},
+    "evidenceId": {"type": "string", "format": "uuid"},
+    "runId": {"type": "string", "format": "uuid"},
+    "providerTurnId": {"$ref": "#/$defs/nullableUuid"},
+    "toolCallId": {"$ref": "#/$defs/nullableUuid"},
+    "evidenceKind": {
+      "enum": [
+        "PROVIDER_LOOKUP",
+        "IDEMPOTENCY_LOOKUP",
+        "TOOL_ADAPTER_LOOKUP",
+        "COST_USAGE_RECEIPT",
+        "DEFINITIVE_NO_DISPATCH"
+      ]
+    },
+    "sourceProofKind": {
+      "enum": [
+        "AUTHENTICATED_RESPONSE_HEADERS",
+        "SIGNED_PROVIDER_RECEIPT",
+        "IDEMPOTENCY_LOOKUP",
+        "USAGE_LOOKUP",
+        "TOOL_ADAPTER_TERMINAL_RECEIPT",
+        "DEFINITIVE_NO_DISPATCH"
+      ]
+    },
+    "adapterId": {"type": "string", "minLength": 1, "maxLength": 200},
+    "adapterVersion": {"type": "string", "minLength": 1, "maxLength": 100},
+    "adapterConfigurationSha256": {"$ref": "#/$defs/sha256"},
+    "lookupRequestSha256": {"$ref": "#/$defs/sha256"},
+    "lookupIdempotencyKeySha256": {"$ref": "#/$defs/sha256"},
+    "callerAssertionSha256": {"$ref": "#/$defs/sha256"},
+    "providerReceiptId": {"$ref": "#/$defs/nullableUuid"},
+    "providerReceiptSha256": {"$ref": "#/$defs/nullableSha256"},
+    "toolTerminalSha256": {"$ref": "#/$defs/nullableSha256"},
+    "resolution": {
+      "enum": [
+        "STILL_AMBIGUOUS",
+        "SAFE_RETRY_AUTHORIZED",
+        "RESUME_RECOVERED_RESULT",
+        "TERMINAL_SUCCEEDED",
+        "TERMINAL_FAILED",
+        "TERMINAL_CANCELLED"
+      ]
+    },
+    "budgetDisposition": {
+      "enum": ["NONE", "SETTLED", "RELEASED", "RECONCILIATION_REQUIRED"]
+    },
+    "observedAt": {"type": "string", "format": "date-time"},
+    "evidenceSha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"evidenceKind": {"const": "TOOL_ADAPTER_LOOKUP"}}, "required": ["evidenceKind"]},
+      "then": {
+        "properties": {
+          "toolCallId": {"type": "string", "format": "uuid"},
+          "toolTerminalSha256": {"$ref": "#/$defs/sha256"}
+        }
+      },
+      "else": {"properties": {"toolCallId": {"type": "null"}, "toolTerminalSha256": {"type": "null"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "evidenceKind": {"enum": ["PROVIDER_LOOKUP", "IDEMPOTENCY_LOOKUP", "COST_USAGE_RECEIPT"]}
+        },
+        "required": ["evidenceKind"]
+      },
+      "then": {"properties": {"providerTurnId": {"type": "string", "format": "uuid"}}}
+    },
+    {
+      "if": {"properties": {"providerReceiptId": {"type": "string"}}, "required": ["providerReceiptId"]},
+      "then": {"properties": {"providerReceiptSha256": {"$ref": "#/$defs/sha256"}}},
+      "else": {"properties": {"providerReceiptSha256": {"type": "null"}}}
+    },
+    {
+      "if": {"properties": {"resolution": {"const": "STILL_AMBIGUOUS"}}, "required": ["resolution"]},
+      "then": {"properties": {"budgetDisposition": {"const": "RECONCILIATION_REQUIRED"}}}
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableSha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "nullableUuid": {
+      "oneOf": [
+        {"type": "string", "format": "uuid"},
+        {"type": "null"}
+      ]
+    }
+  },
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["evidenceSha256"],
+    "rule": "evidenceSha256 is the SHA-256 of the exact canonical root object after removing only evidenceSha256"
+  }
+}

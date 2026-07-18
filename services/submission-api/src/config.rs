@@ -12,6 +12,8 @@ pub struct Config {
     pub public_web_key_previous: Option<Vec<u8>>,
     pub response_portal_key_current: Vec<u8>,
     pub response_portal_key_previous: Option<Vec<u8>>,
+    pub response_portal_otp_key_current: Vec<u8>,
+    pub response_portal_otp_key_previous: Option<Vec<u8>>,
     pub field_key_current: [u8; 32],
     pub field_key_previous: Option<[u8; 32]>,
     pub token_hmac_key: Vec<u8>,
@@ -90,6 +92,12 @@ impl Config {
                 "RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT",
             )?)?,
             response_portal_key_previous: optional_key(
+                "RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_PREVIOUS",
+            )?,
+            response_portal_otp_key_current: key_at_least_32(&required(
+                "RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT",
+            )?)?,
+            response_portal_otp_key_previous: optional_key(
                 "RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_PREVIOUS",
             )?,
             field_key_current: key_exact_32(&required("FIELD_ENCRYPTION_KEY_CURRENT")?)?,

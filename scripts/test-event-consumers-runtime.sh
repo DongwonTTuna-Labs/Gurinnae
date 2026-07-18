@@ -25,7 +25,7 @@ free_port() {
 
 cd "$root"
 cargo build -p gurine-scheduler -p gurine-workflow-worker -p gurine-notification-worker \
-  -p gurine-test-support --bins
+  -p gurine-acceptance-tests --bins
 
 docker run --rm -d --name "$container" \
   -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
@@ -279,5 +279,17 @@ assert contact["html_body"] == (
     "<p>제목: &lt;strong&gt;Event &amp; contact&lt;/strong&gt;</p>"
 ), contact["html_body"]
 assert expected_subject not in contact["html_body"], contact["html_body"]
+
+subscription = next(message for message in messages if message["subject"] == "구린네 구독 확인")
+assert "https://public.example.test/subscribe?token=" in subscription["text_body"], subscription["text_body"]
+assert "https://public.example.test/subscribe?token=" in subscription["html_body"], subscription["html_body"]
+assert "/subscription/verify" not in subscription["text_body"], subscription["text_body"]
+assert "/subscription/verify" not in subscription["html_body"], subscription["html_body"]
+
+response_request = next(message for message in messages if message["subject"] == "구린네 소명 요청")
+assert "https://response.example.test/respond/access?token=" in response_request["text_body"], response_request["text_body"]
+assert "https://response.example.test/respond/access?token=" in response_request["html_body"], response_request["html_body"]
+assert "https://response.example.test/respond?token=" not in response_request["text_body"], response_request["text_body"]
+assert "https://response.example.test/respond?token=" not in response_request["html_body"], response_request["html_body"]
 PY
 echo "workflow 8-event and notification 11-type fenced PostgreSQL/object-store/ClamAV/SMTP runtime: PASS"

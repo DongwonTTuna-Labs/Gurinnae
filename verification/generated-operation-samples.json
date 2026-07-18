@@ -529,7 +529,7 @@
         "to": "2026-07-12",
         "estimatedRecords": 0,
         "estimatedJobs": 0,
-        "estimatedCostKrw": "0",
+        "estimatedCostKrw": "",
         "estimatedDurationSeconds": 0,
         "dedupeStrategy": "",
         "downstreamEffects": []
@@ -797,21 +797,904 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "id": "",
-      "status": "",
+      "id": "00000000-0000-4000-8000-000000000001",
+      "status": "UNKNOWN",
       "data": {
-        "summary": {
-          "currency": "",
-          "dailyLimit": "0",
-          "dailyUsed": "0",
-          "monthlyLimit": "0",
-          "monthlyUsed": "0",
-          "status": ""
+        "asOf": "2026-07-12T00:00:00Z",
+        "specificationVersion": "13.1.0-business-model-r3",
+        "metricCatalogDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "funnel": [
+          {
+            "stage": "QUALIFIED",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          },
+          {
+            "stage": "CONFIGURED",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          },
+          {
+            "stage": "DATA_READY",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          },
+          {
+            "stage": "FIRST_PAID_VALUE",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          },
+          {
+            "stage": "ACTIVATED",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          },
+          {
+            "stage": "RETAINED",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          },
+          {
+            "stage": "AT_RISK",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          },
+          {
+            "stage": "CHURNED",
+            "state": "UNKNOWN",
+            "organizationCount": 0,
+            "unknownCount": 1,
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "primaryIssueCode": null,
+            "ownerFunction": "PRODUCT_PDM"
+          }
+        ],
+        "metrics": [
+          {
+            "metricId": "BM-ACQ-QUALIFIED-ORG-COUNT",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SCALAR",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-ACQ-CHANNEL-MIX",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SOURCE_BREAKDOWN",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-FUNNEL-CONFIGURATION-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-FUNNEL-DATA-READY-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-VALUE-PAID-MVW",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SCALAR",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-ACTIVATION-7D-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-ACTIVATION-TTFPV-P90",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "TIME_TO_EVENT_P90",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-RETENTION-D29-56-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-RETENTION-AT-RISK-ORG-COUNT",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SCALAR",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-RETENTION-CHURN-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-REVENUE-RECOGNIZED-KRW",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SCALAR",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-BILLING-RECONCILIATION-COVERAGE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-REVENUE-QUALIFIED-ORG-COUNT",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SCALAR",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-VALUE-PAID-MVW-PER-ACTIVE-ORG",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-MARGIN-VARIABLE-GROSS-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-MARGIN-CONTRIBUTION-KRW",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SCALAR",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-COST-PER-PAID-MVW-KRW",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-CAC-KRW",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-CAC-PAYBACK-MONTHS",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-SLA-AVAILABILITY-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-SUPPORT-HOURS-PER-ACTIVATED-ORG",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "DETERMINISTIC_RATIO",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-TRUST-HARD-STOP-COUNT",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "SCALAR",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-FUNNEL-PILOT-TO-PAID-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-EXPANSION-ELIGIBILITY-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          },
+          {
+            "metricId": "BM-RENEWAL-ELIGIBILITY-RATE",
+            "metricVersion": 1,
+            "formulaDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "inputSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "status": "UNKNOWN",
+            "reasonCode": "SOURCE_MISSING",
+            "resultKind": "BINOMIAL_RATE",
+            "result": {},
+            "eligibleCount": 0,
+            "pendingCount": 0,
+            "unknownCount": 1,
+            "unknownReasons": [
+              {
+                "reasonCode": "SOURCE_MISSING",
+                "count": 1
+              }
+            ],
+            "windowStart": "2026-06-12T00:00:00Z",
+            "windowEnd": "2026-07-12T00:00:00Z",
+            "accountingTimezone": "Asia/Seoul",
+            "asOf": "2026-07-12T00:00:00Z",
+            "latestSourceAt": null,
+            "freshUntil": null,
+            "thresholdState": "UNKNOWN",
+            "issueCode": "DATA_UNKNOWN",
+            "breachAction": "REPAIR_DATA_READINESS",
+            "owner": {
+              "primaryFunction": "PRODUCT_PDM"
+            }
+          }
+        ],
+        "topIssue": {
+          "issueCode": "DATA_UNKNOWN",
+          "severity": "BLOCKING",
+          "metricId": null,
+          "observedValue": null,
+          "thresholdValue": null,
+          "status": "UNKNOWN",
+          "firstObservedAt": "2026-07-12T00:00:00Z",
+          "ownerFunction": "PRODUCT_PDM",
+          "nextActionCode": "REPAIR_DATA_READINESS",
+          "nextReviewAt": "2026-07-13T00:00:00Z",
+          "evidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000"
         },
-        "providers": [],
-        "dailySeries": [],
-        "topCases": [],
-        "updatedAt": "2026-07-12T00:00:00Z"
+        "readinessState": "UNKNOWN",
+        "unknownSourceCount": 1,
+        "nextReviewAt": "2026-07-13T00:00:00Z"
       },
       "links": []
     }
@@ -3506,6 +4389,1701 @@
     "body": {
       "closed": false,
       "closedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listActionApprovalQueue": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "actionKind": [],
+        "proposalState": [],
+        "assignmentState": [],
+        "dueBefore": "2026-07-12T00:00:00Z",
+        "sort": "2026-07-12"
+      },
+      "asOf": "2026-07-12T00:00:00Z",
+      "nextCursor": {},
+      "totalApproximate": 0
+    }
+  },
+  "cancelAgentRun": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "schemaVersion": {},
+      "receiptId": "00000000-0000-4000-8000-000000000001",
+      "runId": "00000000-0000-4000-8000-000000000001",
+      "aggregateVersion": 0,
+      "priorStatus": "",
+      "priorControlState": "",
+      "nextStatus": "",
+      "nextControlState": "",
+      "affectedProviderTurnId": "00000000-0000-4000-8000-000000000001",
+      "affectedToolCallId": "00000000-0000-4000-8000-000000000001",
+      "reconciliationEvidenceId": "00000000-0000-4000-8000-000000000001",
+      "reconciliationEvidenceSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "proofKind": 0,
+      "proofSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "budgetDisposition": "",
+      "budgetResolutionSetSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "actorKind": "",
+      "actorId": "00000000-0000-4000-8000-000000000001",
+      "reasonCode": "2026-07-12",
+      "reasonSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "priorReceiptId": "00000000-0000-4000-8000-000000000001",
+      "priorReceiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "commandBinding": "",
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "occurredAt": "2026-07-12T00:00:00Z",
+      "receiptSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "getResponseAppealWorkspace": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "appeal": {
+        "appealId": "00000000-0000-4000-8000-000000000001",
+        "responseRequestId": "00000000-0000-4000-8000-000000000001",
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "decisionSequence": 0,
+        "state": "",
+        "reasonCode": "",
+        "requestedOutcome": "",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "dueAt": "2026-07-12T00:00:00Z"
+      },
+      "statement": "",
+      "supportingAttachmentIds": [],
+      "responseRequestVersion": 0,
+      "priorDecisionId": "00000000-0000-4000-8000-000000000001",
+      "priorReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "deliveryEvidenceReceiptIds": [],
+      "consentEvidenceReceiptIds": [],
+      "publicationExcerptEvidenceIds": [],
+      "tasks": [],
+      "decisionReceipts": [],
+      "asOf": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "listRecordClassSchedules": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedRecordClasses": [],
+      "appliedStates": [],
+      "asOf": "2026-07-12T00:00:00Z",
+      "nextCursor": {}
+    }
+  },
+  "getPrivacyRequest": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "request": {
+        "privacyRequestId": "00000000-0000-4000-8000-000000000001",
+        "requestType": "",
+        "state": "",
+        "jurisdiction": "",
+        "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "dueAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "decisionReason": "",
+      "completionSummary": "",
+      "nextActions": [],
+      "asOf": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "getActionExecutionReceipt": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "authorization": {
+        "executionId": "00000000-0000-4000-8000-000000000001",
+        "generation": 0,
+        "stateVersion": 0,
+        "actionKind": {},
+        "state": "",
+        "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "cancellationGeneration": 0,
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "binding": {
+        "schemaVersion": {},
+        "executionId": "00000000-0000-4000-8000-000000000001",
+        "generation": 0,
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "countedDecisionReceiptDigests": [],
+        "executorId": "",
+        "targetRequestSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "providerIdempotencyKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "budgetReservationDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "cancellationGeneration": 0,
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "attempts": [],
+      "receipts": [],
+      "terminal": false,
+      "reconciliationRequired": false,
+      "asOf": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "submitActionForReview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "proposal": {
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "actionKind": {},
+        "state": "",
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "target": {
+          "targetType": 0,
+          "targetId": "",
+          "expectedVersion": 0
+        },
+        "creator": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "lastEditor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "assignments": [],
+      "quorum": {
+        "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "requiredSlots": [],
+        "satisfiedSlots": [],
+        "blockingSlots": [],
+        "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "complete": false
+      }
+    }
+  },
+  "containIncident": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "incident": {
+        "incidentId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "severity": "",
+        "affectedCapabilities": [],
+        "ownerUserId": "00000000-0000-4000-8000-000000000001",
+        "commanderUserId": "00000000-0000-4000-8000-000000000001",
+        "impact": "",
+        "nextUpdateAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "transition": {
+        "eventId": "00000000-0000-4000-8000-000000000001",
+        "priorState": "",
+        "state": "",
+        "reasonCode": "",
+        "actor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "occurredAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "cancelActionExecution": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "authorization": {
+        "executionId": "00000000-0000-4000-8000-000000000001",
+        "generation": 0,
+        "stateVersion": 0,
+        "actionKind": {},
+        "state": "",
+        "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "cancellationGeneration": 0,
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "latestReceipt": {
+        "receiptId": "00000000-0000-4000-8000-000000000001",
+        "sequence": 0,
+        "executionId": "00000000-0000-4000-8000-000000000001",
+        "generation": 0,
+        "stateVersion": 0,
+        "state": "",
+        "providerEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "reconciliationEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "recordedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "createPrivacyRequest": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "request": {
+        "privacyRequestId": "00000000-0000-4000-8000-000000000001",
+        "requestType": "",
+        "state": "",
+        "jurisdiction": "",
+        "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "dueAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "receiptToken": ""
+    }
+  },
+  "resolveIncident": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "incident": {
+        "incidentId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "severity": "",
+        "affectedCapabilities": [],
+        "ownerUserId": "00000000-0000-4000-8000-000000000001",
+        "commanderUserId": "00000000-0000-4000-8000-000000000001",
+        "impact": "",
+        "nextUpdateAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "transition": {
+        "eventId": "00000000-0000-4000-8000-000000000001",
+        "priorState": "",
+        "state": "",
+        "reasonCode": "",
+        "actor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "occurredAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "createResponseAppeal": {
+    "api": "submission-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "appeal": {
+        "appealId": "00000000-0000-4000-8000-000000000001",
+        "responseRequestId": "00000000-0000-4000-8000-000000000001",
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "decisionSequence": 0,
+        "state": "",
+        "reasonCode": "",
+        "requestedOutcome": "",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "dueAt": "2026-07-12T00:00:00Z"
+      }
+    }
+  },
+  "verifyCommunicationEndpointLink": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "endpoint": {
+        "endpointId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "channel": "",
+        "maskedDestination": "",
+        "state": "",
+        "locale": "",
+        "verifiedAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "profileVersion": 0,
+      "authorizationEventId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "releaseLegalHold": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "coverage": {
+        "holdId": "00000000-0000-4000-8000-000000000001",
+        "releaseSequence": 0,
+        "activeScopeAtoms": [],
+        "releasedScopeAtoms": [],
+        "affectedSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "coverageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "state": ""
+      },
+      "priorCoverageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "resultingCoverageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "authorityReferenceDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "getRetentionRequest": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "request": {
+        "retentionRequestId": "00000000-0000-4000-8000-000000000001",
+        "requestType": "",
+        "decisionVersion": 0,
+        "state": "",
+        "jurisdiction": "",
+        "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "legalHoldBlocked": false,
+        "dueAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "identityVerificationReceiptId": "00000000-0000-4000-8000-000000000001",
+      "inventorySnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "holdCoverageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "activeHoldIds": [],
+      "affectedRecordClasses": [],
+      "locationReceipts": [],
+      "decisionReceipts": [],
+      "completionReceiptId": "00000000-0000-4000-8000-000000000001",
+      "asOf": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "transitionRetentionRequest": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "request": {
+        "retentionRequestId": "00000000-0000-4000-8000-000000000001",
+        "requestType": "",
+        "decisionVersion": 0,
+        "state": "",
+        "jurisdiction": "",
+        "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "legalHoldBlocked": false,
+        "dueAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "inventorySnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "holdCoverageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "completionReceiptId": "00000000-0000-4000-8000-000000000001",
+      "locationReceipts": []
+    }
+  },
+  "cancelCommunicationDelivery": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "delivery": {
+        "deliveryId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "intentId": "00000000-0000-4000-8000-000000000001",
+        "deliveryKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "channel": "",
+        "endpointId": "00000000-0000-4000-8000-000000000001",
+        "endpointVersion": 0,
+        "state": "",
+        "renderingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "authorizationSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "activationReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "budgetReservationId": "00000000-0000-4000-8000-000000000001",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "priorState": "",
+      "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "withdrawActionDecision": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "proposal": {
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "actionKind": {},
+        "state": "",
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "target": {
+          "targetType": 0,
+          "targetId": "",
+          "expectedVersion": 0
+        },
+        "creator": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "lastEditor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "decision": {},
+      "quorum": {
+        "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "requiredSlots": [],
+        "satisfiedSlots": [],
+        "blockingSlots": [],
+        "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "complete": false
+      },
+      "executionAuthorization": ""
+    }
+  },
+  "exchangePrivacyRequestReceiptToken": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "sessionId": "00000000-0000-4000-8000-000000000001",
+      "state": {},
+      "expiresAt": "2026-07-12T00:00:00Z",
+      "cookieName": "",
+      "tokenConsumedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "triageIncident": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "incident": {
+        "incidentId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "severity": "",
+        "affectedCapabilities": [],
+        "ownerUserId": "00000000-0000-4000-8000-000000000001",
+        "commanderUserId": "00000000-0000-4000-8000-000000000001",
+        "impact": "",
+        "nextUpdateAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "transition": {
+        "eventId": "00000000-0000-4000-8000-000000000001",
+        "priorState": "",
+        "state": "",
+        "reasonCode": "",
+        "actor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "occurredAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "listResponseAppeals": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "state": [],
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "dueBefore": "2026-07-12T00:00:00Z",
+        "sort": ""
+      },
+      "asOf": "2026-07-12T00:00:00Z",
+      "nextCursor": {},
+      "totalApproximate": 0
+    }
+  },
+  "getActionProposal": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "proposal": {
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "actionKind": {},
+        "state": "",
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "target": {
+          "targetType": 0,
+          "targetId": "",
+          "expectedVersion": 0
+        },
+        "creator": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "lastEditor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "origin": {},
+      "payload": {},
+      "rationale": {
+        "summary": "",
+        "evidenceSegmentIds": [],
+        "unknowns": [],
+        "alternativesConsidered": [],
+        "riskNote": ""
+      },
+      "latestPreview": "",
+      "assignmentHistory": {
+        "items": [],
+        "order": {},
+        "asOf": "2026-07-12T00:00:00Z",
+        "pageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "nextCursor": {},
+        "complete": false
+      },
+      "decisionHistory": {
+        "items": [],
+        "order": {},
+        "asOf": "2026-07-12T00:00:00Z",
+        "pageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "nextCursor": {},
+        "complete": false
+      },
+      "quorum": {
+        "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "requiredSlots": [],
+        "satisfiedSlots": [],
+        "blockingSlots": [],
+        "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "complete": false
+      },
+      "executionAuthorization": "",
+      "asOf": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "promoteResearchArtifactToEvidence": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "schemaVersion": {},
+      "promotionId": "00000000-0000-4000-8000-000000000001",
+      "caseId": "00000000-0000-4000-8000-000000000001",
+      "caseVersion": 0,
+      "agentRunId": "00000000-0000-4000-8000-000000000001",
+      "researchArtifactId": "00000000-0000-4000-8000-000000000001",
+      "researchArtifactSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "sourceDocumentId": "00000000-0000-4000-8000-000000000001",
+      "sourceAssetId": "00000000-0000-4000-8000-000000000001",
+      "sourceAssetRevision": 0,
+      "sourceContentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "evidenceSegmentBindings": [],
+      "selectedSegmentCount": 0,
+      "selectedSegmentSetSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "evidenceId": "00000000-0000-4000-8000-000000000001",
+      "evidenceVersion": 0,
+      "evidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "rightsDecisionId": "00000000-0000-4000-8000-000000000001",
+      "rightsDecisionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "reviewerUserId": "00000000-0000-4000-8000-000000000001",
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "outboxEventId": "00000000-0000-4000-8000-000000000001",
+      "idempotencyKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "promotedAt": "2026-07-12T00:00:00Z",
+      "receiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "links": []
+    }
+  },
+  "createActionProposal": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "proposal": {
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "actionKind": {},
+        "state": "",
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "target": {
+          "targetType": 0,
+          "targetId": "",
+          "expectedVersion": 0
+        },
+        "creator": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "lastEditor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z"
+      }
+    }
+  },
+  "updateActionDraft": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "proposal": {
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "actionKind": {},
+        "state": "",
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "target": {
+          "targetType": 0,
+          "targetId": "",
+          "expectedVersion": 0
+        },
+        "creator": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "lastEditor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z"
+      }
+    }
+  },
+  "submitActionDecision": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "proposal": {
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "actionKind": {},
+        "state": "",
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "target": {
+          "targetType": 0,
+          "targetId": "",
+          "expectedVersion": 0
+        },
+        "creator": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "lastEditor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "decision": {},
+      "quorum": {
+        "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "requiredSlots": [],
+        "satisfiedSlots": [],
+        "blockingSlots": [],
+        "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "complete": false
+      },
+      "executionAuthorization": ""
+    }
+  },
+  "declareConflict": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "declaration": {
+        "declarationId": "00000000-0000-4000-8000-000000000001",
+        "subjectActorId": "00000000-0000-4000-8000-000000000001",
+        "target": {},
+        "conflictType": "",
+        "relationState": "",
+        "materiality": "",
+        "temporalState": "",
+        "sourceClass": 0,
+        "nonwaivable": false,
+        "declarationSequence": 0,
+        "supersedesDeclarationId": "00000000-0000-4000-8000-000000000001",
+        "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "declarationDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "effectiveAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z"
+      },
+      "priorDeclarationDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "reconcileCommunicationDelivery": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "delivery": {
+        "deliveryId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "intentId": "00000000-0000-4000-8000-000000000001",
+        "deliveryKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "channel": "",
+        "endpointId": "00000000-0000-4000-8000-000000000001",
+        "endpointVersion": 0,
+        "state": "",
+        "renderingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "authorizationSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "activationReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "budgetReservationId": "00000000-0000-4000-8000-000000000001",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "priorState": "",
+      "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "getIncident": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "incident": {
+        "incidentId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "severity": "",
+        "affectedCapabilities": [],
+        "ownerUserId": "00000000-0000-4000-8000-000000000001",
+        "commanderUserId": "00000000-0000-4000-8000-000000000001",
+        "impact": "",
+        "nextUpdateAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "evidence": [],
+      "containmentActions": [],
+      "recoveryPlan": "",
+      "rollbackPlan": "",
+      "rootCause": "",
+      "actionItems": [],
+      "timeline": [],
+      "asOf": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "closeIncidentPostmortem": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "incident": {
+        "incidentId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "severity": "",
+        "affectedCapabilities": [],
+        "ownerUserId": "00000000-0000-4000-8000-000000000001",
+        "commanderUserId": "00000000-0000-4000-8000-000000000001",
+        "impact": "",
+        "nextUpdateAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "transition": {
+        "eventId": "00000000-0000-4000-8000-000000000001",
+        "priorState": "",
+        "state": "",
+        "reasonCode": "",
+        "actor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "occurredAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "retryActionExecution": {
+    "api": "control-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "authorization": {
+        "executionId": "00000000-0000-4000-8000-000000000001",
+        "generation": 0,
+        "stateVersion": 0,
+        "actionKind": {},
+        "state": "",
+        "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "cancellationGeneration": 0,
+        "expiresAt": "2026-07-12T00:00:00Z"
+      },
+      "latestReceipt": {
+        "receiptId": "00000000-0000-4000-8000-000000000001",
+        "sequence": 0,
+        "executionId": "00000000-0000-4000-8000-000000000001",
+        "generation": 0,
+        "stateVersion": 0,
+        "state": "",
+        "providerEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "reconciliationEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "recordedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "decideJourneyHandoff": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "schemaVersion": {},
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "decisionReceipt": {
+        "receiptId": "00000000-0000-4000-8000-000000000001",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "journeyInstanceId": "00000000-0000-4000-8000-000000000001",
+        "journeyInstanceVersion": 0,
+        "handoffId": "00000000-0000-4000-8000-000000000001",
+        "handoffVersion": 0,
+        "handoffKind": 0,
+        "generation": 0,
+        "decision": "",
+        "resultingHandoffState": "",
+        "resultingJourneyState": "",
+        "currentOwnerBindingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "nextOwnerBindingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "outboxEventId": "00000000-0000-4000-8000-000000000001"
+      },
+      "replacement": "",
+      "finalParent": {
+        "journeyInstanceId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "currentOwnerBindingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "nextOwnerBindingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "activeHandoffId": "00000000-0000-4000-8000-000000000001",
+        "activeHandoffGeneration": 0,
+        "activeHandoffState": "",
+        "escalationState": "",
+        "dueAt": "2026-07-12T00:00:00Z",
+        "headReceiptId": "00000000-0000-4000-8000-000000000001",
+        "headReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "effectDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "decidedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "previewActionDraft": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "preview": {
+        "previewId": "00000000-0000-4000-8000-000000000001",
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "proposalVersion": 0,
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalBinding": {
+          "schemaVersion": {},
+          "proposalId": "00000000-0000-4000-8000-000000000001",
+          "proposalVersion": 0,
+          "actionKind": {},
+          "originDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "rationaleDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "targetType": {},
+          "targetId": "",
+          "targetVersion": 0,
+          "targetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "objectScopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "operationId": "",
+          "requiredCapability": "",
+          "targetRequestDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "previewId": "00000000-0000-4000-8000-000000000001",
+          "approvalSubjectDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "contraryEvidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertaintySetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "riskAssessmentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "policySnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "expectedEffectDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "reversible": false,
+          "quorumPlanDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "effectIdempotencyKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "notBefore": "2026-07-12T00:00:00Z",
+          "expiresAt": "2026-07-12T00:00:00Z",
+          "actionDetailKind": {},
+          "actionDetail": {},
+          "actionDetailDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "approvalSubject": {
+          "summary": {
+            "plainLanguageChange": "",
+            "objectLabel": "",
+            "currentState": "",
+            "expectedState": "",
+            "whyNow": "",
+            "freshness": "",
+            "materialConsequence": ""
+          },
+          "evidence": {
+            "supporting": [],
+            "contrary": [],
+            "unknowns": [],
+            "investigationSummary": "",
+            "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "contraryEvidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+            "uncertaintySetDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "effect": {
+            "before": "",
+            "after": "",
+            "durableSuccessDefinition": "",
+            "partialOrAmbiguousMeaning": "",
+            "reversible": false,
+            "rollbackOrCompensation": "",
+            "expectedEffectDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "destination": {},
+          "exactContent": {},
+          "governance": {
+            "riskClass": "",
+            "riskSummary": "",
+            "policyStatus": "",
+            "policySummary": "",
+            "conflictStatus": "",
+            "rightsStatus": "",
+            "consentAndSuppressionStatus": "",
+            "cost": {},
+            "expirySummary": "",
+            "governanceDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "decisionHelp": {
+            "question": "",
+            "approveLabel": "",
+            "approveConsequence": "",
+            "rejectLabel": "",
+            "rejectConsequence": "",
+            "changesRequiredConsequence": "",
+            "recuseConsequence": "",
+            "requiredAssurance": "",
+            "requiredQuorum": [],
+            "defaultDecision": {}
+          },
+          "details": {}
+        },
+        "approvalSubjectDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "policyBlockers": [],
+        "warnings": [],
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "previewDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "withdrawActionProposal": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "proposal": {
+        "proposalId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "actionKind": {},
+        "state": "",
+        "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "target": {
+          "targetType": 0,
+          "targetId": "",
+          "expectedVersion": 0
+        },
+        "creator": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "lastEditor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z"
+      }
+    }
+  },
+  "withdrawConflict": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "declaration": {
+        "declarationId": "00000000-0000-4000-8000-000000000001",
+        "subjectActorId": "00000000-0000-4000-8000-000000000001",
+        "target": {},
+        "conflictType": "",
+        "relationState": "",
+        "materiality": "",
+        "temporalState": "",
+        "sourceClass": 0,
+        "nonwaivable": false,
+        "declarationSequence": 0,
+        "supersedesDeclarationId": "00000000-0000-4000-8000-000000000001",
+        "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "declarationDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "effectiveAt": "2026-07-12T00:00:00Z",
+        "expiresAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z"
+      },
+      "priorDeclarationDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "getCommunicationDeliveryReceipt": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "delivery": {
+        "deliveryId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "intentId": "00000000-0000-4000-8000-000000000001",
+        "deliveryKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "channel": "",
+        "endpointId": "00000000-0000-4000-8000-000000000001",
+        "endpointVersion": 0,
+        "state": "",
+        "renderingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "authorizationSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "activationReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "budgetReservationId": "00000000-0000-4000-8000-000000000001",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "attempts": [],
+      "receipts": [],
+      "latestProviderEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "reconciliationRequired": false,
+      "asOf": "2026-07-12T00:00:00Z",
+      "links": []
+    }
+  },
+  "listRetentionRequests": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [],
+      "appliedFilters": {
+        "requestType": [],
+        "state": [],
+        "dueBefore": "2026-07-12T00:00:00Z",
+        "legalHoldBlocked": false,
+        "sort": ""
+      },
+      "asOf": "2026-07-12T00:00:00Z",
+      "nextCursor": {},
+      "totalApproximate": 0
+    }
+  },
+  "transitionResponseAppeal": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "appeal": {
+        "appealId": "00000000-0000-4000-8000-000000000001",
+        "responseRequestId": "00000000-0000-4000-8000-000000000001",
+        "caseId": "00000000-0000-4000-8000-000000000001",
+        "decisionSequence": 0,
+        "state": "",
+        "reasonCode": "",
+        "requestedOutcome": "",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z",
+        "dueAt": "2026-07-12T00:00:00Z"
+      },
+      "transition": "",
+      "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "task": ""
+    }
+  },
+  "startIncidentRecovery": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "incident": {
+        "incidentId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "severity": "",
+        "affectedCapabilities": [],
+        "ownerUserId": "00000000-0000-4000-8000-000000000001",
+        "commanderUserId": "00000000-0000-4000-8000-000000000001",
+        "impact": "",
+        "nextUpdateAt": "2026-07-12T00:00:00Z",
+        "createdAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "transition": {
+        "eventId": "00000000-0000-4000-8000-000000000001",
+        "priorState": "",
+        "state": "",
+        "reasonCode": "",
+        "actor": {
+          "actorType": "",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "displayName": ""
+        },
+        "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "occurredAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "unlinkCommunicationEndpoint": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "endpoint": {
+        "endpointId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "channel": "",
+        "maskedDestination": "",
+        "state": "",
+        "locale": "",
+        "verifiedAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "profileVersion": 0,
+      "optOutReceiptId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "claimActionReview": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "proposalId": "00000000-0000-4000-8000-000000000001",
+      "proposalVersion": 0,
+      "assignment": {
+        "assignmentId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "assignmentGeneration": 0,
+        "slotKind": "",
+        "requiredCapability": "",
+        "reviewer": "",
+        "state": "",
+        "dueAt": "2026-07-12T00:00:00Z",
+        "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "requestCommunicationEndpointLink": {
+    "api": "submission-api",
+    "status": 202,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "endpoint": {
+        "endpointId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "channel": "",
+        "maskedDestination": "",
+        "state": "",
+        "locale": "",
+        "verifiedAt": "2026-07-12T00:00:00Z",
+        "updatedAt": "2026-07-12T00:00:00Z"
+      },
+      "challengeId": "00000000-0000-4000-8000-000000000001",
+      "challengeKind": "",
+      "expiresAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "decideResponseExtension": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "command": {
+        "operationId": "",
+        "requestId": "00000000-0000-4000-8000-000000000001",
+        "status": "",
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "aggregateVersion": 0,
+        "auditEventId": "00000000-0000-4000-8000-000000000001",
+        "acceptedAt": "2026-07-12T00:00:00Z",
+        "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "emittedEventIds": [],
+        "idempotencyReplay": {},
+        "links": []
+      },
+      "extension": {
+        "extensionRequestId": "00000000-0000-4000-8000-000000000001",
+        "responseRequestId": "00000000-0000-4000-8000-000000000001",
+        "version": 0,
+        "state": "",
+        "priorDueAt": "2026-07-12T00:00:00Z",
+        "newDueAt": "2026-07-12T00:00:00Z",
+        "calendarVersionId": "00000000-0000-4000-8000-000000000001",
+        "decisionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "decidedAt": "2026-07-12T00:00:00Z"
+      },
+      "priorDueAt": "2026-07-12T00:00:00Z",
+      "newDueAt": "2026-07-12T00:00:00Z",
+      "calendarDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "getResponseAppeal": {
+    "api": "submission-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "appealId": "00000000-0000-4000-8000-000000000001",
+      "state": "",
+      "requestedOutcome": "",
+      "submittedAt": "2026-07-12T00:00:00Z",
+      "updatedAt": "2026-07-12T00:00:00Z",
+      "dueAt": "2026-07-12T00:00:00Z",
+      "decisionReason": "",
+      "nextActions": [],
+      "links": []
     }
   }
 }

@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/citation.json",
+  "title": "CitationV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "citationId",
+    "proposalId",
+    "agentRunId",
+    "citationOrdinal",
+    "sourceKind",
+    "sourceIdentity",
+    "sourceUseId",
+    "sourceUseSha256",
+    "locator",
+    "selectedContentSha256",
+    "supportsRedacted",
+    "supportsSha256",
+    "citationSha256",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "citation.v2"
+    },
+    "citationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "proposalId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "agentRunId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "citationOrdinal": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sourceKind": {
+      "enum": [
+        "EVIDENCE_SEGMENT",
+        "RUN_TOOL_ARTIFACT"
+      ]
+    },
+    "sourceIdentity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "datasetSnapshotId",
+            "snapshotMemberId",
+            "snapshotMemberDigest",
+            "evidenceSegmentId",
+            "sourceDocumentId",
+            "sourceAssetId",
+            "sourceAssetRevision"
+          ],
+          "properties": {
+            "kind": {
+              "const": "EVIDENCE_SEGMENT"
+            },
+            "datasetSnapshotId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "snapshotMemberId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "snapshotMemberDigest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "evidenceSegmentId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sourceDocumentId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sourceAssetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sourceAssetRevision": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "researchArtifactId",
+            "assetId",
+            "assetRevision",
+            "artifactSha256"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RUN_TOOL_ARTIFACT"
+            },
+            "researchArtifactId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "assetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "assetRevision": {
+              "const": 1
+            },
+            "artifactSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "sourceUseId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sourceUseSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "locator": {
+      "$ref": "#/$defs/locator"
+    },
+    "selectedContentSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "supportsRedacted": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "supportsSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "citationSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "sourceKind": {
+            "const": "EVIDENCE_SEGMENT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sourceIdentity": {
+            "properties": {
+              "kind": {
+                "const": "EVIDENCE_SEGMENT"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "sourceKind": {
+            "const": "RUN_TOOL_ARTIFACT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sourceIdentity": {
+            "properties": {
+              "kind": {
+                "const": "RUN_TOOL_ARTIFACT"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value",
+        "locatorSha256"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH",
+            "JSON_POINTER",
+            "HTML_CSS_SELECTOR",
+            "API_FIELD",
+            "TEXT_RANGE",
+            "IMAGE_BBOX",
+            "AUDIO_TIME_RANGE",
+            "VIDEO_TIME_RANGE",
+            "VIDEO_REGION_TIME"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "locatorSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  },
+  "x-gurinnae-invariants": [
+    "sourceKind selects the same sourceIdentity kind and sourceUseId/sourceUseSha256 bind a source use in the same run, snapshot, immutable source revision, and rights decision.",
+    "locator re-extraction from the pinned source bytes equals selectedContentSha256 and supportsSha256 binds the exact redacted support text.",
+    "EVIDENCE_SEGMENT may support authoritative claims; RUN_TOOL_ARTIFACT is research-only until a human promotion receipt creates a distinct authoritative evidence revision."
+  ],
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["citationSha256"]
+  }
+}

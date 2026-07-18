@@ -10,8 +10,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA raw, core, editorial, intake, ops, public FRO
 GRANT USAGE ON SCHEMA public TO gurine_public_api;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO gurine_public_api;
 
-GRANT USAGE ON SCHEMA raw, core, editorial, intake, ops TO gurine_control_api;
-GRANT SELECT ON raw.source_documents TO gurine_control_api;
+GRANT USAGE ON SCHEMA core, editorial, intake, ops TO gurine_control_api;
 GRANT SELECT ON ALL TABLES IN SCHEMA core, editorial, intake, ops TO gurine_control_api;
 GRANT INSERT, UPDATE ON
   editorial.cases, editorial.case_signals, editorial.hypotheses,
@@ -101,7 +100,7 @@ GRANT SELECT, INSERT, UPDATE ON
   ops.email_deliveries, ops.jobs, ops.job_attempts, ops.inbox
 TO gurine_notification_worker;
 
-GRANT USAGE ON SCHEMA core, editorial, intake, ops, public TO gurine_workflow_worker;
+GRANT USAGE ON SCHEMA intake, editorial, ops TO gurine_workflow_worker;
 GRANT SELECT ON
   intake.response_attachments, intake.response_submissions,
   intake.correction_requests, intake.correction_attachments,

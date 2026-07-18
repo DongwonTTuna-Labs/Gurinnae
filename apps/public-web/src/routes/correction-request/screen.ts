@@ -50,7 +50,7 @@ export const screen = {
       order: 6,
       id: "review",
       title: "검토",
-      component: "DecisionReviewPanel",
+      component: "CheckAnswers",
       purpose: "check answers.",
       test_id: "pub_027__section__review",
     },

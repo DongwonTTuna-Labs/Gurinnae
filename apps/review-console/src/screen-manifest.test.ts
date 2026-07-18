@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { typedScreenViewModel, type ScreenViewModel } from "@gurine/ui";
 
 const screens = Object.values(
   import.meta.glob("./routes/**/screen.ts", { eager: true, import: "screen" }),
@@ -7,8 +8,19 @@ const screens = Object.values(
 describe("internal screen manifest", () => {
   it("materializes all 52 unique internal screens", () => {
     assertScreens(screens, 52);
+    assertTypedContracts(screens);
   });
 });
+
+function assertTypedContracts(values: unknown[]): void {
+  for (const value of values) {
+    const screen = value as ScreenViewModel;
+    const typed = typedScreenViewModel(screen);
+    expect(typed.screenId).toBe(screen.id);
+    expect(typed.sections.map((section) => section.id)).toEqual(screen.sections.map((section) => section.id));
+    expect(typed.sections.every((section) => section.fields.length > 0)).toBe(true);
+  }
+}
 
 function assertScreens(values: unknown[], expected: number): void {
   expect(values).toHaveLength(expected);

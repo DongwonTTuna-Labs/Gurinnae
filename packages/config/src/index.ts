@@ -7,3 +7,4 @@ export * from "./schema";
 export * from "./screen-runtime";
 export * from "./server";
 export * from "./submission-session";
+export * from "./synthetic-proof";

@@ -1,10 +1,10 @@
 <script lang="ts">
-import { firstValue, operationRecords } from "../../data";
+import { firstValue, semanticRecords } from "../../data";
 import type { ScreenSectionProps } from "../../index";
 import SectionHeading from "./SectionHeading.svelte";
 
 let { section, runtime }: ScreenSectionProps = $props();
-const record = $derived(operationRecords(runtime)[0]?.record ?? {});
+const record = $derived(semanticRecords(runtime)[0]?.record ?? {});
 </script>
 <SectionHeading {section} kicker="현재 상태" />
 <div class="status-revision-grid">

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/promote-research-artifact-receipt.json",
+  "title": "PromoteResearchArtifactReceiptV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "promotionId", "caseId", "caseVersion", "agentRunId", "researchArtifactId", "researchArtifactSha256", "sourceDocumentId", "sourceAssetId", "sourceAssetRevision", "sourceContentSha256", "evidenceSegmentBindings", "selectedSegmentCount", "selectedSegmentSetSha256", "evidenceId", "evidenceVersion", "evidenceDigest", "rightsDecisionId", "rightsDecisionDigest", "reviewerUserId", "auditEventId", "outboxEventId", "idempotencyKeySha256", "promotedAt", "receiptSha256", "links"],
+  "properties": {
+    "schemaVersion": {"const": "promote-research-artifact.receipt.v1"},
+    "promotionId": {"type": "string", "format": "uuid"},
+    "caseId": {"type": "string", "format": "uuid"},
+    "caseVersion": {"type": "integer", "minimum": 1},
+    "agentRunId": {"type": "string", "format": "uuid"},
+    "researchArtifactId": {"type": "string", "format": "uuid"},
+    "researchArtifactSha256": {"$ref": "#/$defs/sha256"},
+    "sourceDocumentId": {"type": "string", "format": "uuid"},
+    "sourceAssetId": {"type": "string", "format": "uuid"},
+    "sourceAssetRevision": {"type": "integer", "minimum": 1},
+    "sourceContentSha256": {"$ref": "#/$defs/sha256"},
+    "evidenceSegmentBindings": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"type": "object", "additionalProperties": false, "required": ["ordinal", "evidenceSegmentId", "locatorSha256", "selectedContentSha256"], "properties": {"ordinal": {"type": "integer", "minimum": 0}, "evidenceSegmentId": {"type": "string", "format": "uuid"}, "locatorSha256": {"$ref": "#/$defs/sha256"}, "selectedContentSha256": {"$ref": "#/$defs/sha256"}}}},
+    "selectedSegmentCount": {"type": "integer", "minimum": 1, "maximum": 100},
+    "selectedSegmentSetSha256": {"$ref": "#/$defs/sha256"},
+    "evidenceId": {"type": "string", "format": "uuid"},
+    "evidenceVersion": {"type": "integer", "minimum": 1},
+    "evidenceDigest": {"$ref": "#/$defs/sha256"},
+    "rightsDecisionId": {"type": "string", "format": "uuid"},
+    "rightsDecisionDigest": {"$ref": "#/$defs/sha256"},
+    "reviewerUserId": {"type": "string", "format": "uuid"},
+    "auditEventId": {"type": "string", "format": "uuid"},
+    "outboxEventId": {"type": "string", "format": "uuid"},
+    "idempotencyKeySha256": {"$ref": "#/$defs/sha256"},
+    "promotedAt": {"type": "string", "format": "date-time"},
+    "receiptSha256": {"$ref": "#/$defs/sha256"},
+    "links": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "object", "additionalProperties": false, "required": ["rel", "href"], "properties": {"rel": {"enum": ["agent-run", "source-document", "evidence", "case"]}, "href": {"type": "string", "pattern": "^/internal/", "maxLength": 1024}}}}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+  "x-gurinnae-invariants": [
+    "One committed transaction creates or replays the source document, exact parser/extraction, ordered evidence segments, one evidence revision, HUMAN_PROMOTION source use, promotion ledger, audit, outbox, and this receipt.",
+    "evidenceSegmentBindings are contiguous unique and byte/locator-digest equal to the request selections; selectedSegmentCount equals its length and selectedSegmentSetSha256 is recomputed from the ordered bindings; sourceContentSha256 equals the ResearchArtifact content bytes.",
+    "links contains exactly one entry for each rel in canonical order: agent-run, source-document, evidence, case.",
+    "Same idempotency key and canonical request returns a byte-equivalent receipt with zero new rows; changed bytes or semantics fail without partial authority."
+  ],
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["receiptSha256"]
+  }
+}

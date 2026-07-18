@@ -98,6 +98,20 @@ impl KeyRing {
             .filter(|key| key.kid == kid)
             .ok_or(AssertionError::UnknownKey)
     }
+
+    pub fn verify_hmac_tag(
+        &self,
+        kid: &str,
+        message: &[u8],
+        tag: &[u8],
+    ) -> Result<(), AssertionError> {
+        let key = self.by_id(kid)?;
+        let mut mac = Hmac::<Sha256>::new_from_slice(&key.bytes)
+            .map_err(|_| AssertionError::SignatureInvalid)?;
+        mac.update(message);
+        mac.verify_slice(tag)
+            .map_err(|_| AssertionError::SignatureInvalid)
+    }
 }
 
 pub fn sign(claims: &ServiceClaims, key: &AssertionKey) -> Result<String, AssertionError> {

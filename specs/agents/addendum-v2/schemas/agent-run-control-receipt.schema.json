@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/agent-run-control-receipt.json",
+  "title": "AgentRunControlReceiptV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "receiptId",
+    "runId",
+    "aggregateVersion",
+    "priorStatus",
+    "priorControlState",
+    "nextStatus",
+    "nextControlState",
+    "affectedProviderTurnId",
+    "affectedToolCallId",
+    "reconciliationEvidenceId",
+    "reconciliationEvidenceSha256",
+    "proofKind",
+    "proofSha256",
+    "budgetDisposition",
+    "budgetResolutionSetSha256",
+    "actorKind",
+    "actorId",
+    "reasonCode",
+    "reasonSha256",
+    "priorReceiptId",
+    "priorReceiptSha256",
+    "commandBinding",
+    "auditEventId",
+    "occurredAt",
+    "receiptSha256"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "agent-run-control-receipt.v2"},
+    "receiptId": {"type": "string", "format": "uuid"},
+    "runId": {"type": "string", "format": "uuid"},
+    "aggregateVersion": {"type": "integer", "minimum": 1},
+    "priorStatus": {"$ref": "#/$defs/nullableRunStatus"},
+    "priorControlState": {"$ref": "#/$defs/nullableControlState"},
+    "nextStatus": {"$ref": "#/$defs/runStatus"},
+    "nextControlState": {"$ref": "#/$defs/controlState"},
+    "affectedProviderTurnId": {"$ref": "#/$defs/nullableUuid"},
+    "affectedToolCallId": {"$ref": "#/$defs/nullableUuid"},
+    "reconciliationEvidenceId": {"$ref": "#/$defs/nullableUuid"},
+    "reconciliationEvidenceSha256": {"$ref": "#/$defs/nullableSha256"},
+    "proofKind": {
+      "enum": [
+        "COMMAND_INPUT",
+        "LEASE_CLAIM",
+        "PROVIDER_LOOKUP",
+        "IDEMPOTENCY_LOOKUP",
+        "TOOL_ADAPTER_LOOKUP",
+        "COST_USAGE_RECEIPT",
+        "DEFINITIVE_NO_DISPATCH",
+        "VALIDATED_FINAL_OUTPUT",
+        "DEFINITIVE_INTERNAL_FAILURE"
+      ]
+    },
+    "proofSha256": {"$ref": "#/$defs/sha256"},
+    "budgetDisposition": {
+      "enum": ["NONE", "RESERVED", "SETTLED", "RELEASED", "RECONCILIATION_REQUIRED"]
+    },
+    "budgetResolutionSetSha256": {"$ref": "#/$defs/sha256"},
+    "actorKind": {
+      "enum": ["CONTROL_API", "ANALYSIS_WORKER", "RECONCILIATION_WORKER", "SCHEDULER"]
+    },
+    "actorId": {"$ref": "#/$defs/nullableUuid"},
+    "reasonCode": {
+      "enum": [
+        "RUN_STARTED",
+        "TURN_ADVANCED",
+        "FINAL_OUTPUT_VALIDATED",
+        "DEFINITIVE_FAILURE",
+        "BUDGET_DENIED",
+        "POLICY_DENIED",
+        "PRE_DISPATCH_CANCELLED",
+        "CANCEL_REQUESTED",
+        "OUTCOME_AMBIGUOUS",
+        "SAFE_RETRY_AUTHORIZED",
+        "RECONCILED_SUCCEEDED",
+        "RECONCILED_FAILED",
+        "RECONCILED_CANCELLED",
+        "NO_STATE_CHANGE"
+      ]
+    },
+    "reasonSha256": {"$ref": "#/$defs/sha256"},
+    "priorReceiptId": {"$ref": "#/$defs/nullableUuid"},
+    "priorReceiptSha256": {"$ref": "#/$defs/nullableSha256"},
+    "commandBinding": {
+      "oneOf": [
+        {"$ref": "#/$defs/commandBinding"},
+        {"type": "null"}
+      ]
+    },
+    "auditEventId": {"type": "string", "format": "uuid"},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "receiptSha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"aggregateVersion": {"const": 1}}, "required": ["aggregateVersion"]},
+      "then": {
+        "properties": {
+          "priorStatus": {"type": "null"},
+          "priorControlState": {"type": "null"},
+          "priorReceiptId": {"type": "null"},
+          "priorReceiptSha256": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "priorStatus": {"$ref": "#/$defs/runStatus"},
+          "priorControlState": {"$ref": "#/$defs/controlState"},
+          "priorReceiptId": {"type": "string", "format": "uuid"},
+          "priorReceiptSha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "nextStatus": {
+            "enum": ["SUCCEEDED", "FAILED", "CANCELLED", "BUDGET_BLOCKED", "POLICY_BLOCKED"]
+          }
+        },
+        "required": ["nextStatus"]
+      },
+      "then": {"properties": {"nextControlState": {"const": "SETTLED"}}},
+      "else": {"properties": {"nextControlState": {"not": {"const": "SETTLED"}}}}
+    },
+    {
+      "if": {"properties": {"actorKind": {"const": "SCHEDULER"}}, "required": ["actorKind"]},
+      "then": {"properties": {"actorId": {"type": "null"}}},
+      "else": {"properties": {"actorId": {"type": "string", "format": "uuid"}}}
+    },
+    {
+      "if": {"properties": {"actorKind": {"const": "CONTROL_API"}}, "required": ["actorKind"]},
+      "then": {
+        "properties": {
+          "commandBinding": {
+            "allOf": [
+              {"$ref": "#/$defs/commandBinding"},
+              {"properties": {"operationId": {"const": "cancelAgentRun"}}, "required": ["operationId"]}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"actorKind": {"const": "RECONCILIATION_WORKER"}}, "required": ["actorKind"]},
+      "then": {
+        "properties": {
+          "commandBinding": {
+            "allOf": [
+              {"$ref": "#/$defs/commandBinding"},
+              {"properties": {"operationId": {"const": "reconcileAgentRun"}}, "required": ["operationId"]}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"actorKind": {"enum": ["ANALYSIS_WORKER", "SCHEDULER"]}}, "required": ["actorKind"]},
+      "then": {"properties": {"commandBinding": {"type": "null"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "proofKind": {
+            "enum": ["PROVIDER_LOOKUP", "IDEMPOTENCY_LOOKUP", "TOOL_ADAPTER_LOOKUP", "COST_USAGE_RECEIPT"]
+          }
+        },
+        "required": ["proofKind"]
+      },
+      "then": {
+        "properties": {
+          "reconciliationEvidenceId": {"type": "string", "format": "uuid"},
+          "reconciliationEvidenceSha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"priorControlState": {"const": "CANCEL_REQUESTED"}},
+        "required": ["priorControlState"]
+      },
+      "then": {"properties": {"nextControlState": {"not": {"const": "ACTIVE"}}}}
+    },
+    {
+      "if": {
+        "properties": {"nextControlState": {"const": "ACTIVE"}},
+        "required": ["nextControlState"]
+      },
+      "then": {"properties": {"priorControlState": {"const": "RECONCILIATION_REQUIRED"}}}
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableSha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "nullableUuid": {
+      "oneOf": [
+        {"type": "string", "format": "uuid"},
+        {"type": "null"}
+      ]
+    },
+    "runStatus": {
+      "enum": ["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED", "BUDGET_BLOCKED", "POLICY_BLOCKED"]
+    },
+    "nullableRunStatus": {"oneOf": [{"$ref": "#/$defs/runStatus"}, {"type": "null"}]},
+    "controlState": {
+      "enum": ["NONE", "ACTIVE", "CANCEL_REQUESTED", "RECONCILIATION_REQUIRED", "SETTLED"]
+    },
+    "nullableControlState": {"oneOf": [{"$ref": "#/$defs/controlState"}, {"type": "null"}]},
+    "commandBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "expectedRunVersion", "idempotencyKeySha256", "requestSha256"],
+      "properties": {
+        "operationId": {"enum": ["cancelAgentRun", "reconcileAgentRun"]},
+        "expectedRunVersion": {"type": "integer", "minimum": 1},
+        "idempotencyKeySha256": {"$ref": "#/$defs/sha256"},
+        "requestSha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["receiptSha256"],
+    "rule": "receiptSha256 is the SHA-256 of the exact canonical root object after removing only receiptSha256"
+  }
+}

@@ -4326,7 +4326,7 @@ operations:
   kind: QUERY
   capability: budgets.manage
   request_schema: getBudgetOverviewQuery
-  response_schema: BudgetOverviewResponse
+  response_schema: BusinessHealthResponse
   success_status: 200
   consuming_screens:
   - OPS-004

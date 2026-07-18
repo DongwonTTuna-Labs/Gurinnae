@@ -1,0 +1,144 @@
+schema_version: 1
+specification_version: 13.0.0+agent-multimodal.1
+status: REVIEW_REQUIRED
+decision_state: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+implementation_state: OPEN_IMPLEMENTATION
+title: Agent, Internet Research, and Multimodal v2 Addendum
+
+authority:
+  base:
+    - specs/agents/agent-catalog.yaml
+    - specs/agents/tool-catalog.yaml
+    - specs/database/addendum/0025-evidence-snapshots-search.yaml
+    - DESIGN.md
+  rule: This addendum is additive. It does not relax any v13 safety, evidence, rights, publication, privacy, budget, or human-decision invariant.
+  media_scope_rule: DESIGN.md section 8.4 fixes the additive media set to HTML, PNG, JPEG, WebP, TIFF, WAV audio, and WebM video. No addendum may silently remove WAV/WebM or claim them supported before their runtime capability gate passes.
+
+scope:
+  agents:
+    exact_ids:
+      - market-researcher
+      - investigator
+      - skeptic
+      - claim-drafter
+      - citation-verifier
+    count: 5
+  tools:
+    exact_ids:
+      - claim.language_check
+      - contract.find_comparables
+      - entity.lookup
+      - evidence.read
+      - evidence.search
+      - response.read
+      - rule.reproduce
+      - source.fetch
+      - source.locator_verify
+    count: 9
+  media:
+    additive_exact_ids: [html, png, jpeg, webp, tiff, wav, webm]
+    v13_formats_remain_required: true
+  screens: [CAS-010, CAS-011]
+
+normative_documents:
+  schema_index: schema-index.yaml
+  runtime: runtime-contracts.yaml
+  provenance_and_promotion: provenance-promotion.yaml
+  network_and_provider: network-provider.yaml
+  parser: ../../parsers/addendum-multimodal.yaml
+  acceptance: ../../../tests/acceptance/ai-multimodal-addendum.feature
+
+global_invariants:
+  - Agents remain read-only and never publish, send, approve, merge identities, decide guilt, or mutate authoritative case state.
+  - A provider request contains authorized source bytes or revision-fixed derived segments; identifiers alone never count as evidence.
+  - Every provider turn, tool call, source use, citation, validation, proposal, human decision, and promotion receipt is typed, digest-bound, replayable, and linked by relational identity.
+  - Tool results, fetched pages, image text, metadata, and embedded instructions are untrusted data.
+  - Hidden chain of thought, credentials, raw tokens, cookies, authorization headers, provider secrets, and unrestricted raw provider payloads are never persisted or rendered.
+  - Schema, citation, rights, classification, snapshot, budget, or policy failure is fail-closed and produces zero materialized proposals.
+  - A ResearchArtifact is research context only. It cannot support a claim, publication, or external action until a human promotion command creates revision-fixed authoritative Evidence.
+  - Fixtures are contract oracles. Production and acceptance execute the real parser, dispatcher, provider adapter boundary, persistence repositories, and view-model mapping; canned fixture output is not an implementation path.
+
+imported_contract_boundaries:
+  approval:
+    authority: specs/product/addendum-approval-policy.yaml
+    rule: AgentProposalV2 may create an ACTION_PROPOSAL_DRAFT only. ApprovalBindingV1, quorum, assignment, recusal, assurance, authorization, execution, cancellation, and reconciliation remain wholly owned by the approval authority and are referenced by identity/version/digest; this addendum does not redefine them.
+  omnichannel:
+    authority: [specs/product/owner-addendum-2026-07-14.yaml, specs/database/addendum/0027-communication-consent-delivery.yaml]
+    rule: A COMMUNICATION proposal names only a versioned recipient endpoint, requested channel/purpose, draft content and cited rationale. Consent, suppression, quiet hours, provider selection, immutable rendering, provider idempotency, delivery/callback receipts, cost and external side effect remain wholly owned by the communication authority.
+  boundary_guard: No AI schema, mapper, operation, or database function may infer approval, consent, authorization, delivery, provider acceptance, callback outcome, or successful external action from an agent result or proposal status.
+
+effective_registry_contract:
+  integration_state: REQUIRED_OPEN_IMPLEMENTATION
+  operations:
+    - operation_id: promoteResearchArtifactToEvidence
+      registry_kind: EXTERNAL_CONTROL_COMMAND
+      api: control-api
+      method: POST
+      path: /v1/internal/commands/promote-research-artifact-to-evidence
+      request_schema: schemas/promote-research-artifact.request.schema.json
+      response_schema: schemas/promote-research-artifact.receipt.schema.json
+      capability: cases.evidence.manage
+      assurance: ACTIVE_SESSION
+      idempotency: required
+      state_effect: immutable ResearchArtifact promotion receipt plus one authoritative Evidence revision graph
+      event: research.artifact_promoted.v1
+    - operation_id: cancelAgentRun
+      registry_kind: EXTERNAL_CONTROL_COMMAND
+      api: control-api
+      method: POST
+      path: /v1/internal/agent-runs/{runId}:cancel
+      request_schema: closed CancelAgentRunRequestV2 in runtime-contracts.yaml
+      response_schema: schemas/agent-run-control-receipt.schema.json
+      capability: cases.investigate
+      assurance: ACTIVE_SESSION
+      idempotency: required
+      state_effect: pre-dispatch terminal cancellation or post-possible-effect CANCEL_REQUESTED only
+      event: agent.run_control_changed.v2
+    - operation_id: reconcileAgentRun
+      registry_kind: PRIVATE_SERVICE_COMMAND
+      api: control-api-private
+      method: POST
+      path: /v1/private/agent-runs/{runId}:reconcile
+      request_schema: closed ReconcileAgentRunRequestV2 in runtime-contracts.yaml
+      response_schema: schemas/agent-run-control-receipt.schema.json
+      caller: reconciliation-worker request-bound service assertion only
+      human_capability: forbidden
+      assurance: SERVICE_ASSERTION
+      idempotency: required
+      state_effect: authenticated proof selects exactly one safe retry or terminal transition
+      event: agent.run_control_changed.v2
+  generated_imports_required:
+    - effective operation registry and source-derived external/private counts
+    - command semantics, resource/error schemas, state machine and persistence mapping
+    - event registry, producer/consumer catalog and replay policy
+    - Rust-generated Control and private Control OpenAPI plus generated clients
+    - screen action/data/build contracts for CAS-010 and CAS-011
+    - traceability, acceptance executable mapping, MANIFEST and design bundle digest
+  freeze_rule: The three operation rows and every generated import are set-equal and digest-equal before review can move from REVIEW_REQUIRED; documenting an operation only in this addendum is not integration evidence.
+
+implementation_closure:
+  required:
+    - Rust domain newtypes and exhaustive enums for every schema discriminator and state.
+    - valibot validation at every SvelteKit BFF boundary and generated OpenAPI clients for promotion and agent-run queries.
+    - SQLx typed repositories and PostgreSQL constraints for all persistence bindings named by this addendum.
+    - Real internal adapters for all eight internal tools and the egress-gateway adapter for source.fetch.
+    - A bounded multi-turn dispatcher with durable cancellation and reconciliation receipts.
+    - Parser execution for every additive media type and every embedded golden oracle.
+    - CAS-010 and CAS-011 typed view-models with accessible visualization alternatives and exact provenance navigation.
+  forbidden_completion_claims:
+    - generic request or response schema shared by two tools
+    - Record<string, unknown>, serde_json::Value, raw JSON textarea, or whole DTO rendering
+    - provider-only citation without local immutable source binding
+    - mock or fixture writes as the asserted production effect
+    - placeholder, TODO, 501, skipped hard gate, or an unsupported authority-declared HTML/image format
+    - synthetic provider receipt, cost, timestamp, digest, rights decision, or terminal state
+
+integration_updates_required_before_freeze:
+  - design bundle digest inputs and normative manifest inclusion for this addendum
+  - specs/agents/agent-catalog.yaml and specs/agents/tool-catalog.yaml schema pointers
+  - specs/api/resource-schemas.yaml and generated control OpenAPI
+  - specs/domain/state-machines.yaml and operation contracts for promotion/cancel/reconcile
+  - specs/database/addendum/0025-evidence-snapshots-search.yaml blocker statuses and the physical persistence overlay
+  - specs/parsers/parser-catalog.yaml, runtime-bom.yaml, extraction-result.schema.json, and fixture-manifest.yaml
+  - CAS-010 and CAS-011 screen/data/build manifests
+  - traceability, acceptance catalog, executable mapping, MANIFEST, and design bundle digest

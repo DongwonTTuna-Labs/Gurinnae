@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/evidence-read-request.json",
+  "title": "EvidenceReadRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "inputSnapshotId", "inputSnapshotSha256", "evidenceId", "evidenceVersion", "requestedSegmentIds", "includePublicExcerpt", "maxCharacters"],
+  "properties": {
+    "schemaVersion": {"const": "evidence.read.request.v2"},
+    "runId": {"type": "string", "format": "uuid"},
+    "inputSnapshotId": {"type": "string", "format": "uuid"},
+    "inputSnapshotSha256": {"$ref": "#/$defs/sha256"},
+    "evidenceId": {"type": "string", "format": "uuid"},
+    "evidenceVersion": {"type": "integer", "minimum": 1},
+    "requestedSegmentIds": {"type": "array", "uniqueItems": true, "maxItems": 100, "items": {"type": "string", "format": "uuid"}},
+    "includePublicExcerpt": {"type": "boolean"},
+    "maxCharacters": {"type": "integer", "minimum": 1, "maximum": 50000}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

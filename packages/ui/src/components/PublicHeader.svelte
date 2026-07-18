@@ -23,7 +23,10 @@ const degraded = $derived(
     <div class="header-actions">
       <a class="icon-button" href="/search" aria-label="검색">⌕</a>
       <a class="secondary-button subscribe-link" href="/subscribe">업데이트 구독</a>
-      <a class="icon-button mobile-menu" href="#page-actions" aria-label="화면 작업으로 이동">☰</a>
+      <details class="mobile-nav">
+        <summary class="icon-button" aria-label="주요 탐색 열기">☰</summary>
+        <nav aria-label="모바일 주요 탐색"><a href="/cases">사례</a><a href="/contracts">계약</a><a href="/agencies">기관·업체</a><a href="/methodology">방법론</a><a href="/coverage">데이터 범위</a><a href="/corrections">정정</a></nav>
+      </details>
     </div>
   </div>
 </header>

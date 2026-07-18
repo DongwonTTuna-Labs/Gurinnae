@@ -6,6 +6,7 @@ pub mod formats;
 pub mod handlers;
 pub mod health;
 pub mod model;
+pub mod multimodal;
 pub mod pdf;
 pub mod runner;
 pub mod shutdown;
@@ -67,6 +68,26 @@ pub async fn extract_path(path: &Path) -> Result<ExtractionResult, std::io::Erro
         )),
         blocking_kind => extract_blocking(path.to_path_buf(), bytes, blocking_kind).await,
     }
+}
+
+/// Executes the additive parser against an immutable, revision-bound asset.
+/// This entry point is used by the multimodal repository path; it deliberately
+/// requires the caller to provide the asset identity instead of deriving one
+/// from a filename or a fixture.
+pub async fn extract_multimodal_path(
+    path: &Path,
+    binding: multimodal::AssetBinding,
+) -> Result<multimodal::MultimodalExtractionResult, std::io::Error> {
+    let metadata = tokio::fs::metadata(path).await?;
+    if metadata.len() > 104_857_600 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "SIZE_LIMIT",
+        ));
+    }
+    let bytes = tokio::fs::read(path).await?;
+    multimodal::parse_bytes(&bytes, &binding)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error.to_string()))
 }
 
 async fn extract_blocking(

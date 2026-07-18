@@ -9584,7 +9584,7 @@ operations:
   capability: budgets.manage
   request_fields: []
   request_schema: getBudgetOverviewQuery
-  response_schema: BudgetOverviewResponse
+  response_schema: BusinessHealthResponse
   idempotency: not-applicable
   optimistic_concurrency: not-applicable
   audit: read-access-log
@@ -28854,7 +28854,7 @@ operations:
     required: true
     in: body
   - name: decision
-    type: enum:investigate,dismiss,duplicate,needs_data
+    type: enum:investigate,dismiss,duplicate,needs_data,link
     required: true
     in: body
   - name: reason
@@ -28864,6 +28864,18 @@ operations:
   - name: expectedVersion
     type: integer
     required: true
+    in: body
+  - name: expectedDuplicateSignalVersion
+    type: integer
+    required: false
+    in: body
+  - name: duplicateSignalId
+    type: uuid
+    required: false
+    in: body
+  - name: duplicateRelationship
+    type: enum:SAME_LOGICAL_EVENT,SAME_TARGET,SAME_SOURCE,OTHER
+    required: false
     in: body
   request_schema: triageSignalRequest
   response_schema: triageSignalReceipt
@@ -28905,6 +28917,18 @@ operations:
     required: false
   - name: receiptToken
     type: string
+    required: false
+  - name: result
+    type: enum:DISMISS,NEEDS_DATA,MARK_DUPLICATE,PROMOTE_TO_CASE,LINK_TO_CASE
+    required: false
+  - name: reasonDigest
+    type: sha256
+    required: false
+  - name: duplicateSignalId
+    type: uuid
+    required: false
+  - name: duplicateRelationship
+    type: enum:SAME_LOGICAL_EVENT,SAME_TARGET,SAME_SOURCE,OTHER
     required: false
   - name: acceptedAt
     type: date-time

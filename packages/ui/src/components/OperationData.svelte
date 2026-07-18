@@ -1,6 +1,7 @@
 <script lang="ts">
-import { display, operationRecords, visibleEntries } from "../data";
+import { display, semanticRecords, visibleEntries } from "../data";
 import type { ScreenRuntime } from "../index";
+import { humanFieldLabel } from "../screen-contract";
 
 let {
   runtime,
@@ -12,7 +13,7 @@ let {
   emptyLabel?: string;
 } = $props();
 
-const records = $derived(operationRecords(runtime));
+const records = $derived(semanticRecords(runtime));
 const keys = $derived(
   [
     ...new Set(
@@ -34,13 +35,13 @@ let scrollArea = $state<HTMLDivElement>();
   </div>
   <div bind:this={scrollArea} class="table-scroll" role="region" aria-label="데이터 표 가로 스크롤 영역">
     <table>
-      <caption class="sr-only">현재 화면의 계약 데이터</caption>
-      <thead><tr><th scope="col">Operation</th>{#each keys as key}<th scope="col">{key}</th>{/each}</tr></thead>
+      <caption class="sr-only">현재 화면에서 확인 가능한 기록</caption>
+      <thead><tr><th scope="col">항목</th>{#each keys as key}<th scope="col">{humanFieldLabel(key)}</th>{/each}</tr></thead>
       <tbody>
-        {#each records as item}
-          <tr data-operation-id={item.operationId}>
-            <th scope="row">{item.operationId}</th>
-            {#each keys as key}<td>{display(visibleEntries(item.record).find(([name]) => name === key)?.[1])}</td>{/each}
+        {#each records as item, rowIndex}
+          <tr data-record-index={rowIndex}>
+            <th scope="row">기록 {rowIndex + 1}</th>
+            {#each keys as key}<td data-label={humanFieldLabel(key)}>{display(visibleEntries(item.record).find(([name]) => name === key)?.[1])}</td>{/each}
           </tr>
         {/each}
       </tbody>
@@ -49,18 +50,18 @@ let scrollArea = $state<HTMLDivElement>();
 {:else if mode === "timeline"}
   <ol class="timeline">
     {#each records as item, index}
-      <li data-operation-id={item.operationId}>
+      <li data-record-index={index}>
         <span class="timeline-marker" aria-hidden="true">{index + 1}</span>
-        <div><strong>{item.operationId}</strong><dl>{#each visibleEntries(item.record).slice(0, 6) as [key, value]}<div><dt>{key}</dt><dd>{display(value)}</dd></div>{/each}</dl></div>
+        <div><strong>변경 기록 {index + 1}</strong><dl>{#each visibleEntries(item.record).slice(0, 6) as [key, value]}<div><dt>{humanFieldLabel(key)}</dt><dd>{display(value)}</dd></div>{/each}</dl></div>
       </li>
     {/each}
   </ol>
 {:else}
   <div class:metric-grid={mode === "metrics"} class:record-grid={mode !== "metrics"}>
-    {#each records as item}
-      <article class="data-card" data-operation-id={item.operationId}>
-        <h3>{item.operationId}</h3>
-        <dl>{#each visibleEntries(item.record).slice(0, mode === "metrics" ? 4 : 10) as [key, value]}<div><dt>{key}</dt><dd class:structured={typeof value === "object"}>{display(value)}</dd></div>{/each}</dl>
+    {#each records as item, index}
+      <article class="data-card" data-record-index={index}>
+        <h3>기록 {index + 1}</h3>
+        <dl>{#each visibleEntries(item.record).slice(0, mode === "metrics" ? 4 : 10) as [key, value]}<div><dt>{humanFieldLabel(key)}</dt><dd class:structured={typeof value === "object"}>{display(value)}</dd></div>{/each}</dl>
       </article>
     {/each}
   </div>

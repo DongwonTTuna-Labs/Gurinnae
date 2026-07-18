@@ -1,5 +1,5 @@
 use actix_web::{HttpRequest, HttpResponse, http::StatusCode, web};
-use gurine_api_contracts::{OperationSpec, control_api::OPERATIONS};
+use gurine_api_contracts::{OperationSpec, addendum, control_api::OPERATIONS};
 use gurine_auth::assertion::{
     AssertionError, BoundRequest,
     actor::{ActorClaims, ActorExpectation, verify_claims},
@@ -14,33 +14,47 @@ use crate::{service, state::AppState};
 pub fn configure(config: &mut web::ServiceConfig) {
     let list_saved = spec("listSavedViews");
     let create_saved = spec("createSavedView");
-    config.service(
-        web::resource("/v1/internal/saved-views")
-            .route(web::get().to(move |r, b, s| handle(list_saved, r, b, s)))
-            .route(web::post().to(move |r, b, s| handle(create_saved, r, b, s))),
-    );
+    if let (Some(list_saved), Some(create_saved)) = (list_saved, create_saved) {
+        config.service(
+            web::resource("/v1/internal/saved-views")
+                .route(web::get().to(move |r, b, s| handle(list_saved, r, b, s)))
+                .route(web::post().to(move |r, b, s| handle(create_saved, r, b, s))),
+        );
+    } else {
+        tracing::error!("generated Control operation catalog is missing saved-view routes");
+    }
     for dynamic in [false, true] {
-        for operation in OPERATIONS.iter().filter(|operation| {
-            !operation.path.starts_with("/v1/internal/saved-views")
-                && operation.path.contains('{') == dynamic
-        }) {
+        for operation in OPERATIONS
+            .iter()
+            .chain(addendum::CONTROL_OPERATIONS.iter())
+            .filter(|operation| {
+                !operation.path.starts_with("/v1/internal/saved-views")
+                    && operation.path.contains('{') == dynamic
+            })
+        {
             register(config, *operation);
         }
     }
     let update_saved = spec("updateSavedView");
     let delete_saved = spec("deleteSavedView");
-    config.service(
-        web::resource("/v1/internal/saved-views/{savedViewId}")
-            .route(web::patch().to(move |r, b, s| handle(update_saved, r, b, s)))
-            .route(web::delete().to(move |r, b, s| handle(delete_saved, r, b, s))),
-    );
+    if let (Some(update_saved), Some(delete_saved)) = (update_saved, delete_saved) {
+        config.service(
+            web::resource("/v1/internal/saved-views/{savedViewId}")
+                .route(web::patch().to(move |r, b, s| handle(update_saved, r, b, s)))
+                .route(web::delete().to(move |r, b, s| handle(delete_saved, r, b, s))),
+        );
+    } else {
+        tracing::error!(
+            "generated Control operation catalog is missing saved-view mutation routes"
+        );
+    }
 }
 
-fn spec(id: &str) -> OperationSpec {
-    *OPERATIONS
+fn spec(id: &str) -> Option<OperationSpec> {
+    OPERATIONS
         .iter()
         .find(|operation| operation.id == id)
-        .expect("generated Control operation must exist")
+        .copied()
 }
 
 fn register(config: &mut web::ServiceConfig, operation: OperationSpec) {

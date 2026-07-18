@@ -14,7 +14,11 @@ impl GatewayObjectStore {
     pub fn new(url: Url, caller: &'static str) -> Result<Self, ObjectStoreError> {
         if !matches!(
             caller,
-            "submission-api" | "workflow-worker" | "document-extractor" | "ingest-worker"
+            "submission-api"
+                | "workflow-worker"
+                | "document-extractor"
+                | "ingest-worker"
+                | "analysis-worker"
         ) {
             return Err(ObjectStoreError::InvalidKey);
         }

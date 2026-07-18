@@ -115,48 +115,56 @@ pub async fn extract(path: &Path, bytes: &[u8], versions: &ToolVersions) -> Extr
     let page_count = metadata.pages.max(1);
     let needs_ocr = characters / page_count < 20 || empty * 10 > page_count * 8;
     if !needs_ocr {
-        let pages = normalized
-            .into_iter()
-            .enumerate()
-            .map(|(index, text)| {
-                let blocks = if text.is_empty() {
-                    Vec::new()
-                } else {
-                    let value = format!(
+        return digital_result(document_sha256, normalized, metadata, versions);
+    }
+    ocr(path, document_sha256, metadata, versions).await
+}
+
+fn digital_result(
+    document_sha256: String,
+    texts: Vec<String>,
+    metadata: PdfMetadata,
+    versions: &ToolVersions,
+) -> ExtractionResult {
+    let pages = texts
+        .into_iter()
+        .enumerate()
+        .map(|(index, text)| {
+            let blocks = if text.is_empty() {
+                Vec::new()
+            } else {
+                vec![block(
+                    &document_sha256,
+                    BlockKind::Paragraph,
+                    LocatorKind::PageBbox,
+                    "PAGE_BBOX",
+                    format!(
                         "page={};bbox=0,0,{:.3},{:.3};unit=pt",
                         index + 1,
                         metadata.width,
                         metadata.height
-                    );
-                    vec![block(
-                        &document_sha256,
-                        BlockKind::Paragraph,
-                        LocatorKind::PageBbox,
-                        "PAGE_BBOX",
-                        value,
-                        text,
-                        None,
-                    )]
-                };
-                Page {
-                    index,
-                    width: Some(metadata.width),
-                    height: Some(metadata.height),
-                    blocks,
-                    tables: Vec::new(),
-                }
-            })
-            .collect();
-        return complete(
-            document_sha256,
-            PDF_MEDIA,
-            "pdf-digital",
-            &format!("pdftotext-{}", versions.pdftotext),
-            pages,
-            Vec::new(),
-        );
-    }
-    ocr(path, document_sha256, metadata, versions).await
+                    ),
+                    text,
+                    None,
+                )]
+            };
+            Page {
+                index,
+                width: Some(metadata.width),
+                height: Some(metadata.height),
+                blocks,
+                tables: Vec::new(),
+            }
+        })
+        .collect();
+    complete(
+        document_sha256,
+        PDF_MEDIA,
+        "pdf-digital",
+        &format!("pdftotext-{}", versions.pdftotext),
+        pages,
+        Vec::new(),
+    )
 }
 
 #[derive(Clone, Copy)]
@@ -268,16 +276,49 @@ async fn ocr_in_directory(
             "PDF_PAGE_COUNT_MISMATCH",
         );
     }
+    let pages = match ocr_pages(&images, document_sha256, metadata).await {
+        Ok(pages) => pages,
+        Err((code, rejected_result)) => {
+            return if rejected_result {
+                rejected(
+                    document_sha256.to_owned(),
+                    PDF_MEDIA,
+                    "pdf-ocr",
+                    &ocr_version(versions),
+                    &code,
+                )
+            } else {
+                failed(
+                    document_sha256.to_owned(),
+                    "pdf-ocr",
+                    &ocr_version(versions),
+                    &code,
+                )
+            };
+        }
+    };
+    complete(
+        document_sha256.to_owned(),
+        PDF_MEDIA,
+        "pdf-ocr",
+        &ocr_version(versions),
+        pages,
+        vec![
+            "OCR_FALLBACK_USED".to_owned(),
+            "OCR_LANGUAGE_KOR_ENG".to_owned(),
+        ],
+    )
+}
+
+async fn ocr_pages(
+    images: &[PathBuf],
+    document_sha256: &str,
+    metadata: PdfMetadata,
+) -> Result<Vec<Page>, (String, bool)> {
     let mut pages = Vec::new();
     for (index, image) in images.iter().enumerate() {
         if !valid_pixel_count(image).await {
-            return rejected(
-                document_sha256.to_owned(),
-                PDF_MEDIA,
-                "pdf-ocr",
-                &ocr_version(versions),
-                "PIXEL_LIMIT",
-            );
+            return Err(("PIXEL_LIMIT".to_owned(), true));
         }
         let output = run(
             &[
@@ -295,26 +336,10 @@ async fn ocr_in_directory(
         .await;
         let output = match output {
             Ok(output) if output.status.success() => output,
-            _ => {
-                return failed(
-                    document_sha256.to_owned(),
-                    "pdf-ocr",
-                    &ocr_version(versions),
-                    "OCR_FAILED",
-                );
-            }
+            _ => return Err(("OCR_FAILED".to_owned(), false)),
         };
-        let blocks = match tsv_blocks(&output.stdout, document_sha256, index) {
-            Ok(blocks) => blocks,
-            Err(code) => {
-                return failed(
-                    document_sha256.to_owned(),
-                    "pdf-ocr",
-                    &ocr_version(versions),
-                    &code,
-                );
-            }
-        };
+        let blocks =
+            tsv_blocks(&output.stdout, document_sha256, index).map_err(|code| (code, false))?;
         pages.push(Page {
             index,
             width: Some(metadata.width),
@@ -323,17 +348,7 @@ async fn ocr_in_directory(
             tables: Vec::new(),
         });
     }
-    complete(
-        document_sha256.to_owned(),
-        PDF_MEDIA,
-        "pdf-ocr",
-        &ocr_version(versions),
-        pages,
-        vec![
-            "OCR_FALLBACK_USED".to_owned(),
-            "OCR_LANGUAGE_KOR_ENG".to_owned(),
-        ],
-    )
+    Ok(pages)
 }
 
 #[derive(Clone)]
@@ -351,6 +366,66 @@ fn tsv_blocks(
     document_sha256: &str,
     page_index: usize,
 ) -> Result<Vec<crate::model::Block>, String> {
+    let lines = parse_tsv_words(bytes)?;
+    let mut blocks = Vec::new();
+    for (line_index, words) in lines.into_values().enumerate() {
+        let left = words
+            .iter()
+            .map(|word| word.left)
+            .min()
+            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
+        let top = words
+            .iter()
+            .map(|word| word.top)
+            .min()
+            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
+        let right = words
+            .iter()
+            .map(|word| word.left + word.width)
+            .max()
+            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
+        let bottom = words
+            .iter()
+            .map(|word| word.top + word.height)
+            .max()
+            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
+        let accepted = words
+            .iter()
+            .filter(|word| word.confidence >= 0.0)
+            .map(|word| word.confidence)
+            .collect::<Vec<_>>();
+        let confidence = (!accepted.is_empty()).then(|| {
+            let average = accepted.iter().sum::<f64>() / accepted.len() as f64 / 100.0;
+            (average * 1_000_000.0).round() / 1_000_000.0
+        });
+        let value = format!(
+            "page={};bbox={left},{top},{},{};unit=px;dpi=300;line={}",
+            page_index + 1,
+            right - left,
+            bottom - top,
+            line_index + 1
+        );
+        let text = words
+            .into_iter()
+            .map(|word| word.text)
+            .collect::<Vec<_>>()
+            .join(" ");
+        blocks.push(block(
+            document_sha256,
+            BlockKind::OcrText,
+            LocatorKind::PageBbox,
+            "PAGE_BBOX",
+            value,
+            text,
+            confidence,
+        ));
+    }
+    Ok(blocks)
+}
+
+type OcrWords = BTreeMap<(u32, u32, u32), Vec<Word>>;
+
+fn parse_tsv_words(bytes: &[u8]) -> Result<OcrWords, String> {
     let mut reader = csv::ReaderBuilder::new()
         .delimiter(b'\t')
         .from_reader(bytes);
@@ -414,62 +489,7 @@ fn tsv_blocks(
             confidence: parsed_confidence,
         });
     }
-    let mut blocks = Vec::new();
-    for (line_index, words) in lines.into_values().enumerate() {
-        let left = words
-            .iter()
-            .map(|word| word.left)
-            .min()
-            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
-        let top = words
-            .iter()
-            .map(|word| word.top)
-            .min()
-            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
-        let right = words
-            .iter()
-            .map(|word| word.left + word.width)
-            .max()
-            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
-        let bottom = words
-            .iter()
-            .map(|word| word.top + word.height)
-            .max()
-            .ok_or_else(|| "OCR_TSV_INVALID".to_owned())?;
-        let accepted = words
-            .iter()
-            .filter(|word| word.confidence >= 0.0)
-            .map(|word| word.confidence)
-            .collect::<Vec<_>>();
-        let confidence = if accepted.is_empty() {
-            None
-        } else {
-            let average = accepted.iter().sum::<f64>() / accepted.len() as f64 / 100.0;
-            Some((average * 1_000_000.0).round() / 1_000_000.0)
-        };
-        let value = format!(
-            "page={};bbox={left},{top},{},{};unit=px;dpi=300;line={}",
-            page_index + 1,
-            right - left,
-            bottom - top,
-            line_index + 1
-        );
-        let text = words
-            .into_iter()
-            .map(|word| word.text)
-            .collect::<Vec<_>>()
-            .join(" ");
-        blocks.push(block(
-            document_sha256,
-            BlockKind::OcrText,
-            LocatorKind::PageBbox,
-            "PAGE_BBOX",
-            value,
-            text,
-            confidence,
-        ));
-    }
-    Ok(blocks)
+    Ok(lines)
 }
 
 async fn image_files(directory: &Path) -> Result<Vec<PathBuf>, String> {

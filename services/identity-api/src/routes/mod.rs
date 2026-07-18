@@ -1,5 +1,5 @@
 use actix_web::{HttpRequest, HttpResponse, http::StatusCode, web};
-use gurine_api_contracts::{OperationSpec, identity_service_internal::OPERATIONS};
+use gurine_api_contracts::{OperationSpec, addendum, identity_service_internal::OPERATIONS};
 use gurine_application::idempotency;
 use gurine_auth::assertion::{
     AssertionError, BoundRequest,
@@ -18,7 +18,10 @@ use uuid::Uuid;
 use crate::{service, service::ServiceError, state::AppState};
 
 pub fn configure(config: &mut web::ServiceConfig) {
-    for operation in OPERATIONS {
+    for operation in OPERATIONS
+        .iter()
+        .chain(addendum::IDENTITY_OPERATIONS.iter())
+    {
         let operation_copy = *operation;
         config.service(
             web::resource(operation.path).name(operation.id).route(
@@ -151,6 +154,15 @@ async fn authorize(
 
 async fn dispatch(operation: &str, body: &[u8], state: &AppState) -> Result<Value, ServiceError> {
     match operation {
+        "recordSupplierIdentityResolution" => {
+            service::record_supplier_identity_resolution(state, body).await
+        }
+        "recordSupplierRelationshipAssertion" => {
+            service::record_supplier_relationship_assertion(state, body).await
+        }
+        "decideSupplierRelationshipAssertion" => {
+            service::decide_supplier_relationship_assertion(state, body).await
+        }
         "createLoginTransaction" => {
             json(service::create_login_transaction(state, parse(body)?).await?)
         }

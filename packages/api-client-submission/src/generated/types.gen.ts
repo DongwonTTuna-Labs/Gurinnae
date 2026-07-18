@@ -658,6 +658,249 @@ export type VerifySubscriptionResult = {
     session: SubmissionSessionDescriptor;
 };
 
+export type CreateResponseAppealRequestV1 = {
+    expectedReceiptVersion: number;
+    reasonCode: {
+        [key: string]: never;
+    };
+    requestedOutcome: {
+        [key: string]: never;
+    };
+    statement: string;
+    supportingAttachmentIds: Array<string>;
+    attestation: boolean;
+    privacyConsent: boolean;
+};
+
+export type ResponseAppealReceiptV1 = {
+    command: CommandReceiptV1;
+    appeal: ResponseAppealSummaryV1;
+};
+
+export type GetResponseAppealRequestV1 = {
+    appealId: string;
+};
+
+export type ResponseAppealPublicStatusV1 = {
+    appealId: string;
+    state: string;
+    requestedOutcome: string;
+    submittedAt: string;
+    updatedAt: string;
+    dueAt: string;
+    decisionReason: string | null;
+    nextActions: Array<string>;
+    links: Array<string>;
+};
+
+export type RequestCommunicationEndpointLinkRequestV1 = {
+    contractVersion: {
+        [key: string]: never;
+    };
+    endpoint: EndpointEnrollmentV1;
+    linkingConsent: EndpointLinkingConsentV1;
+    expectedProfileVersion: number;
+    abuseProof: AbuseProofV1;
+};
+
+export type CommunicationEndpointLinkRequestedReceiptV1 = {
+    command: CommandReceiptV1;
+    endpoint: CommunicationEndpointSummaryV1;
+    challengeId: string;
+    challengeKind: string;
+    expiresAt: string;
+};
+
+export type VerifyCommunicationEndpointLinkRequestV1 = {
+    challengeId: string;
+    proof: EndpointVerificationProofV1;
+    expectedProfileVersion: number;
+};
+
+export type CommunicationEndpointVerifiedReceiptV1 = {
+    command: CommandReceiptV1;
+    endpoint: CommunicationEndpointSummaryV1;
+    profileVersion: number;
+    authorizationEventId: string;
+};
+
+export type UnlinkCommunicationEndpointRequestV1 = {
+    endpointId: string;
+    expectedEndpointVersion: number;
+    expectedProfileVersion: number;
+    reasonCode: number;
+};
+
+export type CommunicationEndpointUnlinkedReceiptV1 = {
+    command: CommandReceiptV1;
+    endpoint: CommunicationEndpointSummaryV1;
+    profileVersion: number;
+    optOutReceiptId: string;
+};
+
+export type CreatePrivacyRequestRequestV1 = {
+    requestType: {
+        [key: string]: never;
+    };
+    subjectIdentityProof: PrivacyIdentityProofV1;
+    jurisdiction: string;
+    scope: PrivacyRequestScopeV1;
+    contactEndpoint: EndpointEnrollmentV1;
+    statement: string;
+    attestation: boolean;
+    privacyConsent: boolean;
+    abuseProof: AbuseProofV1;
+};
+
+export type PrivacyRequestReceiptV1 = {
+    command: CommandReceiptV1;
+    request: PrivacyRequestSummaryV1;
+    receiptToken: string;
+};
+
+export type ExchangePrivacyRequestReceiptTokenRequestV1 = {
+    token: string;
+    proof: BrowserProofV1;
+};
+
+export type PrivacyRequestSessionReceiptV1 = {
+    requestId: string;
+    sessionId: string;
+    state: {
+        [key: string]: never;
+    };
+    expiresAt: string;
+    cookieName: string;
+    tokenConsumedAt: string;
+};
+
+export type GetPrivacyRequestRequestV1 = {
+    [key: string]: never;
+};
+
+export type PrivacyRequestPublicStatusV1 = {
+    request: PrivacyRequestSummaryV1;
+    decisionReason: string | null;
+    completionSummary: string | null;
+    nextActions: Array<string>;
+    asOf: string;
+    links: Array<string>;
+};
+
+export type AddendumProblemDetailsV1 = {
+    code: string;
+    title: string;
+    status: number;
+    requestId: string;
+    detail?: string | null;
+};
+
+export type CommandReceiptV1 = {
+    operationId: string;
+    requestId: string;
+    status: string;
+    aggregateId: string;
+    aggregateVersion: number;
+    auditEventId: string;
+    acceptedAt: string;
+    receiptDigest: string;
+    emittedEventIds: Array<string>;
+    idempotencyReplay: {
+        [key: string]: never;
+    };
+    links: Array<string>;
+};
+
+export type ResponseAppealSummaryV1 = {
+    appealId: string;
+    responseRequestId: string;
+    caseId: string;
+    decisionSequence: number;
+    state: string;
+    reasonCode: string;
+    requestedOutcome: string;
+    createdAt: string;
+    updatedAt: string;
+    dueAt: string;
+};
+
+export type CommunicationEndpointSummaryV1 = {
+    endpointId: string;
+    version: number;
+    channel: string;
+    maskedDestination: string;
+    state: string;
+    locale: string;
+    verifiedAt: string;
+    updatedAt: string;
+};
+
+export type PrivacyRequestSummaryV1 = {
+    privacyRequestId: string;
+    requestType: string;
+    state: string;
+    jurisdiction: string;
+    scopeDigest: string;
+    dueAt: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type EndpointEnrollmentV1 = {
+    [key: string]: never;
+};
+
+export type EndpointLinkingConsentV1 = {
+    decision: {
+        [key: string]: never;
+    };
+    purposes: Array<string>;
+    policyVersion: string;
+    jurisdiction: string;
+    locale: string;
+    consentTextDigest: string;
+    acceptedAt: string;
+};
+
+export type AbuseProofV1 = {
+    provider: string;
+    token: string;
+    action: string;
+    issuedAtEpochSeconds: number;
+};
+
+export type EndpointVerificationProofV1 = {
+    [key: string]: never;
+};
+
+export type PrivacyIdentityProofV1 = {
+    [key: string]: never;
+};
+
+export type PrivacyRequestScopeV1 = {
+    scopeKind: string;
+    objectRefs: Array<string>;
+    dateFrom: string;
+    dateTo: string;
+    includeDerivatives: boolean;
+    includeBackups: boolean;
+};
+
+export type PrivacyObjectRefV1 = {
+    objectType: number;
+    objectId: string;
+};
+
+export type BrowserProofV1 = {
+    provider: string;
+    token: string;
+    action: {
+        [key: string]: never;
+    };
+    clientNonce: string;
+    issuedAtEpochSeconds: number;
+};
+
 export type CreateContactRequestData = {
     body: CreateContactRequestRequest;
     headers: {
@@ -2725,3 +2968,289 @@ export type UnsubscribeResponses = {
 };
 
 export type UnsubscribeResponse = UnsubscribeResponses[keyof UnsubscribeResponses];
+
+export type CreateResponseAppealData = {
+    body: CreateResponseAppealRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/response-receipt/appeals';
+};
+
+export type CreateResponseAppealErrors = {
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID, APPEAL_WINDOW_CLOSED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type CreateResponseAppealError = CreateResponseAppealErrors[keyof CreateResponseAppealErrors];
+
+export type CreateResponseAppealResponses = {
+    /**
+     * Successful response
+     */
+    201: ResponseAppealReceiptV1;
+};
+
+export type CreateResponseAppealResponse = CreateResponseAppealResponses[keyof CreateResponseAppealResponses];
+
+export type GetResponseAppealData = {
+    body?: never;
+    path: {
+        appealId: string;
+    };
+    query?: never;
+    url: '/v1/response-receipt/appeals/{appealId}';
+};
+
+export type GetResponseAppealErrors = {
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetResponseAppealError = GetResponseAppealErrors[keyof GetResponseAppealErrors];
+
+export type GetResponseAppealResponses = {
+    /**
+     * Successful response
+     */
+    200: ResponseAppealPublicStatusV1;
+};
+
+export type GetResponseAppealResponse = GetResponseAppealResponses[keyof GetResponseAppealResponses];
+
+export type RequestCommunicationEndpointLinkData = {
+    body: RequestCommunicationEndpointLinkRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/communication-profile-session/endpoints:link';
+};
+
+export type RequestCommunicationEndpointLinkErrors = {
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_TYPE_UNSUPPORTED, ENDPOINT_ALREADY_LINKED, CONSENT_INVALID, ABUSE_PROOF_INVALID
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type RequestCommunicationEndpointLinkError = RequestCommunicationEndpointLinkErrors[keyof RequestCommunicationEndpointLinkErrors];
+
+export type RequestCommunicationEndpointLinkResponses = {
+    /**
+     * Successful response
+     */
+    202: CommunicationEndpointLinkRequestedReceiptV1;
+};
+
+export type RequestCommunicationEndpointLinkResponse = RequestCommunicationEndpointLinkResponses[keyof RequestCommunicationEndpointLinkResponses];
+
+export type VerifyCommunicationEndpointLinkData = {
+    body: VerifyCommunicationEndpointLinkRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/submission-session/communication-endpoint-link:verify';
+};
+
+export type VerifyCommunicationEndpointLinkErrors = {
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_CHALLENGE_INVALID, ENDPOINT_CHALLENGE_EXPIRED, ENDPOINT_PROOF_INVALID
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type VerifyCommunicationEndpointLinkError = VerifyCommunicationEndpointLinkErrors[keyof VerifyCommunicationEndpointLinkErrors];
+
+export type VerifyCommunicationEndpointLinkResponses = {
+    /**
+     * Successful response
+     */
+    200: CommunicationEndpointVerifiedReceiptV1;
+};
+
+export type VerifyCommunicationEndpointLinkResponse = VerifyCommunicationEndpointLinkResponses[keyof VerifyCommunicationEndpointLinkResponses];
+
+export type UnlinkCommunicationEndpointData = {
+    body: UnlinkCommunicationEndpointRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        endpointId: string;
+    };
+    query?: never;
+    url: '/v1/communication-profile-session/endpoints/{endpointId}:unlink';
+};
+
+export type UnlinkCommunicationEndpointErrors = {
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_NOT_FOUND, ENDPOINT_VERSION_CONFLICT
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type UnlinkCommunicationEndpointError = UnlinkCommunicationEndpointErrors[keyof UnlinkCommunicationEndpointErrors];
+
+export type UnlinkCommunicationEndpointResponses = {
+    /**
+     * Successful response
+     */
+    200: CommunicationEndpointUnlinkedReceiptV1;
+};
+
+export type UnlinkCommunicationEndpointResponse = UnlinkCommunicationEndpointResponses[keyof UnlinkCommunicationEndpointResponses];
+
+export type CreatePrivacyRequestData = {
+    body: CreatePrivacyRequestRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/privacy-requests';
+};
+
+export type CreatePrivacyRequestErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, ABUSE_PROOF_INVALID, RATE_LIMITED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type CreatePrivacyRequestError = CreatePrivacyRequestErrors[keyof CreatePrivacyRequestErrors];
+
+export type CreatePrivacyRequestResponses = {
+    /**
+     * Successful response
+     */
+    201: PrivacyRequestReceiptV1;
+};
+
+export type CreatePrivacyRequestResponse = CreatePrivacyRequestResponses[keyof CreatePrivacyRequestResponses];
+
+export type ExchangePrivacyRequestReceiptTokenData = {
+    body: ExchangePrivacyRequestReceiptTokenRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/submission-session/privacy-request-receipt:exchange';
+};
+
+export type ExchangePrivacyRequestReceiptTokenErrors = {
+    /**
+     * Problem response: TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REPLAYED, ABUSE_PROOF_INVALID, RATE_LIMITED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ExchangePrivacyRequestReceiptTokenError = ExchangePrivacyRequestReceiptTokenErrors[keyof ExchangePrivacyRequestReceiptTokenErrors];
+
+export type ExchangePrivacyRequestReceiptTokenResponses = {
+    /**
+     * Successful response
+     */
+    200: PrivacyRequestSessionReceiptV1;
+};
+
+export type ExchangePrivacyRequestReceiptTokenResponse = ExchangePrivacyRequestReceiptTokenResponses[keyof ExchangePrivacyRequestReceiptTokenResponses];
+
+export type GetPrivacyRequestData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/privacy-request-receipt';
+};
+
+export type GetPrivacyRequestErrors = {
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: SCOPED_SESSION_REQUIRED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type GetPrivacyRequestError = GetPrivacyRequestErrors[keyof GetPrivacyRequestErrors];
+
+export type GetPrivacyRequestResponses = {
+    /**
+     * Successful response
+     */
+    200: PrivacyRequestPublicStatusV1;
+};
+
+export type GetPrivacyRequestResponse = GetPrivacyRequestResponses[keyof GetPrivacyRequestResponses];

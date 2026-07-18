@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateContactRequestData, CreateContactRequestErrors, CreateContactRequestResponses, CreateCorrectionAttachmentData, CreateCorrectionAttachmentErrors, CreateCorrectionAttachmentResponses, CreateCorrectionRequestData, CreateCorrectionRequestDraftData, CreateCorrectionRequestDraftErrors, CreateCorrectionRequestDraftResponses, CreateCorrectionRequestErrors, CreateCorrectionRequestResponses, CreateDatasetExportData, CreateDatasetExportErrors, CreateDatasetExportResponses, CreateResponseAttachmentUploadData, CreateResponseAttachmentUploadErrors, CreateResponseAttachmentUploadResponses, CreateSubscriptionData, CreateSubscriptionErrors, CreateSubscriptionResponses, DeleteCorrectionAttachmentData, DeleteCorrectionAttachmentErrors, DeleteCorrectionAttachmentResponses, DeleteCorrectionRequestDraftData, DeleteCorrectionRequestDraftErrors, DeleteCorrectionRequestDraftResponses, DeleteResponseAttachmentData, DeleteResponseAttachmentErrors, DeleteResponseAttachmentResponses, DownloadResponseRequestData, DownloadResponseRequestErrors, DownloadResponseRequestResponses, ExchangeCorrectionReceiptTokenData, ExchangeCorrectionReceiptTokenErrors, ExchangeCorrectionReceiptTokenResponses, ExchangeResponseAccessTokenData, ExchangeResponseAccessTokenErrors, ExchangeResponseAccessTokenResponses, ExchangeResponseReceiptTokenData, ExchangeResponseReceiptTokenErrors, ExchangeResponseReceiptTokenResponses, ExchangeSubscriptionManagementTokenData, ExchangeSubscriptionManagementTokenErrors, ExchangeSubscriptionManagementTokenResponses, FinalizeCorrectionAttachmentData, FinalizeCorrectionAttachmentErrors, FinalizeCorrectionAttachmentResponses, FinalizeResponseAttachmentData, FinalizeResponseAttachmentErrors, FinalizeResponseAttachmentResponses, GetCorrectionReceiptData, GetCorrectionReceiptErrors, GetCorrectionReceiptResponses, GetCorrectionRequestDraftData, GetCorrectionRequestDraftErrors, GetCorrectionRequestDraftPreviewData, GetCorrectionRequestDraftPreviewErrors, GetCorrectionRequestDraftPreviewResponses, GetCorrectionRequestDraftResponses, GetResponseAccessStatusData, GetResponseAccessStatusErrors, GetResponseAccessStatusResponses, GetResponseDraftData, GetResponseDraftErrors, GetResponseDraftResponses, GetResponseReceiptData, GetResponseReceiptErrors, GetResponseReceiptResponses, GetResponseRequestData, GetResponseRequestErrors, GetResponseRequestResponses, GetResponseSubmissionPreviewData, GetResponseSubmissionPreviewErrors, GetResponseSubmissionPreviewResponses, GetSubscriptionData, GetSubscriptionErrors, GetSubscriptionResponses, RequestResponseExtensionData, RequestResponseExtensionErrors, RequestResponseExtensionResponses, SaveCorrectionRequestDraftData, SaveCorrectionRequestDraftErrors, SaveCorrectionRequestDraftResponses, SaveResponseDraftData, SaveResponseDraftErrors, SaveResponseDraftResponses, SubmitResponseData, SubmitResponseErrors, SubmitResponseResponses, UnsubscribeData, UnsubscribeErrors, UnsubscribeResponses, UpdateSubscriptionData, UpdateSubscriptionErrors, UpdateSubscriptionResponses, VerifyResponseAccessData, VerifyResponseAccessErrors, VerifyResponseAccessResponses, VerifySubscriptionData, VerifySubscriptionErrors, VerifySubscriptionResponses } from './types.gen';
+import type { CreateContactRequestData, CreateContactRequestErrors, CreateContactRequestResponses, CreateCorrectionAttachmentData, CreateCorrectionAttachmentErrors, CreateCorrectionAttachmentResponses, CreateCorrectionRequestData, CreateCorrectionRequestDraftData, CreateCorrectionRequestDraftErrors, CreateCorrectionRequestDraftResponses, CreateCorrectionRequestErrors, CreateCorrectionRequestResponses, CreateDatasetExportData, CreateDatasetExportErrors, CreateDatasetExportResponses, CreatePrivacyRequestData, CreatePrivacyRequestErrors, CreatePrivacyRequestResponses, CreateResponseAppealData, CreateResponseAppealErrors, CreateResponseAppealResponses, CreateResponseAttachmentUploadData, CreateResponseAttachmentUploadErrors, CreateResponseAttachmentUploadResponses, CreateSubscriptionData, CreateSubscriptionErrors, CreateSubscriptionResponses, DeleteCorrectionAttachmentData, DeleteCorrectionAttachmentErrors, DeleteCorrectionAttachmentResponses, DeleteCorrectionRequestDraftData, DeleteCorrectionRequestDraftErrors, DeleteCorrectionRequestDraftResponses, DeleteResponseAttachmentData, DeleteResponseAttachmentErrors, DeleteResponseAttachmentResponses, DownloadResponseRequestData, DownloadResponseRequestErrors, DownloadResponseRequestResponses, ExchangeCorrectionReceiptTokenData, ExchangeCorrectionReceiptTokenErrors, ExchangeCorrectionReceiptTokenResponses, ExchangePrivacyRequestReceiptTokenData, ExchangePrivacyRequestReceiptTokenErrors, ExchangePrivacyRequestReceiptTokenResponses, ExchangeResponseAccessTokenData, ExchangeResponseAccessTokenErrors, ExchangeResponseAccessTokenResponses, ExchangeResponseReceiptTokenData, ExchangeResponseReceiptTokenErrors, ExchangeResponseReceiptTokenResponses, ExchangeSubscriptionManagementTokenData, ExchangeSubscriptionManagementTokenErrors, ExchangeSubscriptionManagementTokenResponses, FinalizeCorrectionAttachmentData, FinalizeCorrectionAttachmentErrors, FinalizeCorrectionAttachmentResponses, FinalizeResponseAttachmentData, FinalizeResponseAttachmentErrors, FinalizeResponseAttachmentResponses, GetCorrectionReceiptData, GetCorrectionReceiptErrors, GetCorrectionReceiptResponses, GetCorrectionRequestDraftData, GetCorrectionRequestDraftErrors, GetCorrectionRequestDraftPreviewData, GetCorrectionRequestDraftPreviewErrors, GetCorrectionRequestDraftPreviewResponses, GetCorrectionRequestDraftResponses, GetPrivacyRequestData, GetPrivacyRequestErrors, GetPrivacyRequestResponses, GetResponseAccessStatusData, GetResponseAccessStatusErrors, GetResponseAccessStatusResponses, GetResponseAppealData, GetResponseAppealErrors, GetResponseAppealResponses, GetResponseDraftData, GetResponseDraftErrors, GetResponseDraftResponses, GetResponseReceiptData, GetResponseReceiptErrors, GetResponseReceiptResponses, GetResponseRequestData, GetResponseRequestErrors, GetResponseRequestResponses, GetResponseSubmissionPreviewData, GetResponseSubmissionPreviewErrors, GetResponseSubmissionPreviewResponses, GetSubscriptionData, GetSubscriptionErrors, GetSubscriptionResponses, RequestCommunicationEndpointLinkData, RequestCommunicationEndpointLinkErrors, RequestCommunicationEndpointLinkResponses, RequestResponseExtensionData, RequestResponseExtensionErrors, RequestResponseExtensionResponses, SaveCorrectionRequestDraftData, SaveCorrectionRequestDraftErrors, SaveCorrectionRequestDraftResponses, SaveResponseDraftData, SaveResponseDraftErrors, SaveResponseDraftResponses, SubmitResponseData, SubmitResponseErrors, SubmitResponseResponses, UnlinkCommunicationEndpointData, UnlinkCommunicationEndpointErrors, UnlinkCommunicationEndpointResponses, UnsubscribeData, UnsubscribeErrors, UnsubscribeResponses, UpdateSubscriptionData, UpdateSubscriptionErrors, UpdateSubscriptionResponses, VerifyCommunicationEndpointLinkData, VerifyCommunicationEndpointLinkErrors, VerifyCommunicationEndpointLinkResponses, VerifyResponseAccessData, VerifyResponseAccessErrors, VerifyResponseAccessResponses, VerifySubscriptionData, VerifySubscriptionErrors, VerifySubscriptionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -418,4 +418,100 @@ export const unsubscribe = <ThrowOnError extends boolean = false>(options: Optio
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * createResponseAppeal
+ */
+export const createResponseAppeal = <ThrowOnError extends boolean = false>(options: Options<CreateResponseAppealData, ThrowOnError>): RequestResult<CreateResponseAppealResponses, CreateResponseAppealErrors, ThrowOnError> => (options.client ?? client).post<CreateResponseAppealResponses, CreateResponseAppealErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }, { name: 'X-Gurine-Submission-Session', type: 'apiKey' }],
+    url: '/v1/response-receipt/appeals',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * getResponseAppeal
+ */
+export const getResponseAppeal = <ThrowOnError extends boolean = false>(options: Options<GetResponseAppealData, ThrowOnError>): RequestResult<GetResponseAppealResponses, GetResponseAppealErrors, ThrowOnError> => (options.client ?? client).get<GetResponseAppealResponses, GetResponseAppealErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }, { name: 'X-Gurine-Submission-Session', type: 'apiKey' }],
+    url: '/v1/response-receipt/appeals/{appealId}',
+    ...options
+});
+
+/**
+ * requestCommunicationEndpointLink
+ */
+export const requestCommunicationEndpointLink = <ThrowOnError extends boolean = false>(options: Options<RequestCommunicationEndpointLinkData, ThrowOnError>): RequestResult<RequestCommunicationEndpointLinkResponses, RequestCommunicationEndpointLinkErrors, ThrowOnError> => (options.client ?? client).post<RequestCommunicationEndpointLinkResponses, RequestCommunicationEndpointLinkErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }, { name: 'X-Gurine-Submission-Session', type: 'apiKey' }],
+    url: '/v1/communication-profile-session/endpoints:link',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * verifyCommunicationEndpointLink
+ */
+export const verifyCommunicationEndpointLink = <ThrowOnError extends boolean = false>(options: Options<VerifyCommunicationEndpointLinkData, ThrowOnError>): RequestResult<VerifyCommunicationEndpointLinkResponses, VerifyCommunicationEndpointLinkErrors, ThrowOnError> => (options.client ?? client).post<VerifyCommunicationEndpointLinkResponses, VerifyCommunicationEndpointLinkErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }, { name: 'X-Gurine-Submission-Session', type: 'apiKey' }],
+    url: '/v1/submission-session/communication-endpoint-link:verify',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * unlinkCommunicationEndpoint
+ */
+export const unlinkCommunicationEndpoint = <ThrowOnError extends boolean = false>(options: Options<UnlinkCommunicationEndpointData, ThrowOnError>): RequestResult<UnlinkCommunicationEndpointResponses, UnlinkCommunicationEndpointErrors, ThrowOnError> => (options.client ?? client).post<UnlinkCommunicationEndpointResponses, UnlinkCommunicationEndpointErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }, { name: 'X-Gurine-Submission-Session', type: 'apiKey' }],
+    url: '/v1/communication-profile-session/endpoints/{endpointId}:unlink',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * createPrivacyRequest
+ */
+export const createPrivacyRequest = <ThrowOnError extends boolean = false>(options: Options<CreatePrivacyRequestData, ThrowOnError>): RequestResult<CreatePrivacyRequestResponses, CreatePrivacyRequestErrors, ThrowOnError> => (options.client ?? client).post<CreatePrivacyRequestResponses, CreatePrivacyRequestErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }],
+    url: '/v1/privacy-requests',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * exchangePrivacyRequestReceiptToken
+ */
+export const exchangePrivacyRequestReceiptToken = <ThrowOnError extends boolean = false>(options: Options<ExchangePrivacyRequestReceiptTokenData, ThrowOnError>): RequestResult<ExchangePrivacyRequestReceiptTokenResponses, ExchangePrivacyRequestReceiptTokenErrors, ThrowOnError> => (options.client ?? client).post<ExchangePrivacyRequestReceiptTokenResponses, ExchangePrivacyRequestReceiptTokenErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }],
+    url: '/v1/submission-session/privacy-request-receipt:exchange',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * getPrivacyRequest
+ */
+export const getPrivacyRequest = <ThrowOnError extends boolean = false>(options?: Options<GetPrivacyRequestData, ThrowOnError>): RequestResult<GetPrivacyRequestResponses, GetPrivacyRequestErrors, ThrowOnError> => (options?.client ?? client).get<GetPrivacyRequestResponses, GetPrivacyRequestErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Service-Assertion', type: 'apiKey' }, { name: 'X-Gurine-Submission-Session', type: 'apiKey' }],
+    url: '/v1/privacy-request-receipt',
+    ...options
 });

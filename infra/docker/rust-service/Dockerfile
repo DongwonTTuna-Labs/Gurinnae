@@ -159,6 +159,13 @@ RUN cargo test --locked -p gurine-document-extractor --lib
 FROM document-extractor-test AS rust-workspace-test
 COPY verification verification
 RUN rustup component add rustfmt clippy
+ARG CARGO_NEXTEST_VERSION=0.9.140
+RUN --mount=type=cache,id=gurine-nextest-registry,target=/usr/local/cargo/registry \
+    --mount=type=cache,id=gurine-nextest-git,target=/usr/local/cargo/git \
+    --mount=type=cache,id=gurine-nextest-target,target=/tmp/cargo-nextest-target \
+    CARGO_TARGET_DIR=/tmp/cargo-nextest-target \
+    cargo install cargo-nextest --version "${CARGO_NEXTEST_VERSION}" --locked \
+    && cargo nextest --version | grep --fixed-strings "cargo-nextest ${CARGO_NEXTEST_VERSION}"
 RUN cargo fmt --all -- --check
 RUN cargo clippy --locked --workspace --all-targets -- -D warnings
 RUN cargo test --locked --workspace --all-targets --no-run

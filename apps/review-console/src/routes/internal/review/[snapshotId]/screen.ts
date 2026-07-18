@@ -26,7 +26,7 @@ export const screen = {
       order: 3,
       id: "matrix",
       title: "claim/evidence/response",
-      component: "KnownUnknownResponse",
+      component: "EvidenceLedger",
       purpose: "coverage.",
       test_id: "rev_002__section__matrix",
     },
@@ -42,7 +42,7 @@ export const screen = {
       order: 5,
       id: "risks",
       title: "risk·blocker",
-      component: "StructuredContentSection",
+      component: "GateChecklist",
       purpose: "legal/privacy/source.",
       test_id: "rev_002__section__risks",
     },
@@ -87,6 +87,23 @@ export const screen = {
       },
       request_discriminator: {
         decision: "changes_required",
+      },
+    },
+    {
+      id: "reject",
+      label: "반려",
+      capability: "review.editorial",
+      operation_id: "submitReview",
+      guard: "independence + latest snapshot + reason",
+      interaction_kind: "DESTRUCTIVE_CONFIRMATION",
+      assurance_level: "STEP_UP",
+      step_up_required: true,
+      confirmation_required: true,
+      fixed_request: {
+        decision: "reject",
+      },
+      request_discriminator: {
+        decision: "reject",
       },
     },
     {

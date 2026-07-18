@@ -1,0 +1,1395 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+counts:
+  profiles: 9
+  unique_state_semantics: 36
+  profile_state_templates: 72
+runtime_signal_contract:
+  type: ScreenRuntimeSignalsV1
+  additional_properties: false
+  rule: Every signal is bound by a screen contract to an operation result, persisted receipt, trusted session fact, or browser
+    connectivity fact; a renderer cannot invent it.
+selection_rules:
+- A screen's explicit state_profile is authoritative.
+- Background refresh and orthogonal overlays cannot replace the primary task state without declared precedence.
+- A state is selected only when its typed trigger is true; trigger ties without coexistence or precedence fail closed.
+- Saved and receipt require server or database acknowledgement; timer, toast and HTTP status alone are insufficient.
+templates:
+- profile_state_id: public-data::initial-loading
+  profile: public-data
+  state: initial-loading
+  family: initial-read
+  trigger: &id001
+    all:
+    - path: signals.blocking_pending
+      op: eq
+      value: true
+    - path: signals.has_display_data
+      op: eq
+      value: false
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — initial-loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-data::refreshing
+  profile: public-data
+  state: refreshing
+  family: background-read
+  trigger: &id002
+    all:
+    - path: signals.background_pending
+      op: eq
+      value: true
+    - path: signals.has_display_data
+      op: eq
+      value: true
+  preserve: visible-data-and-focus
+  action_policy: keep-safe-actions
+  focus: preserve
+  live: polite-once-after-completion
+  copy_frame:
+    heading: '{screen_title} — refreshing'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-and-focus'
+    next_step: '허용 행동 정책: keep-safe-actions'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-data::empty
+  profile: public-data
+  state: empty
+  family: confirmed-zero
+  trigger: &id003
+    all:
+    - path: signals.blocking_pending
+      op: eq
+      value: false
+    - path: signals.blocking_failure
+      op: eq
+      value: false
+    - path: signals.authorized_record_count
+      op: eq
+      value: 0
+    - path: signals.filter_count
+      op: eq
+      value: 0
+    - path: signals.coverage_complete
+      op: eq
+      value: true
+  preserve: scope-and-freshness
+  action_policy: screen-empty-recovery
+  focus: empty-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — empty'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: scope-and-freshness'
+    next_step: '허용 행동 정책: screen-empty-recovery'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-data::filtered-empty
+  profile: public-data
+  state: filtered-empty
+  family: confirmed-filtered-zero
+  trigger: &id004
+    all:
+    - path: signals.blocking_pending
+      op: eq
+      value: false
+    - path: signals.blocking_failure
+      op: eq
+      value: false
+    - path: signals.authorized_record_count
+      op: eq
+      value: 0
+    - path: signals.filter_count
+      op: gt
+      value: 0
+    - path: signals.coverage_complete
+      op: eq
+      value: true
+  preserve: query-filters-sort
+  action_policy: clear-or-edit-filter
+  focus: result-summary
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — filtered-empty'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: query-filters-sort'
+    next_step: '허용 행동 정책: clear-or-edit-filter'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-data::partial
+  profile: public-data
+  state: partial
+  family: partial-data
+  trigger: &id005
+    all:
+    - path: signals.has_display_data
+      op: eq
+      value: true
+    - path: signals.required_slice_complete
+      op: eq
+      value: false
+    - path: signals.blocking_failure
+      op: eq
+      value: false
+  preserve: available-data-freshness-and-missing-scope
+  action_policy: retry-missing-slice
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — partial'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: available-data-freshness-and-missing-scope'
+    next_step: '허용 행동 정책: retry-missing-slice'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-data::stale
+  profile: public-data
+  state: stale
+  family: stale-data
+  trigger: &id006
+    all:
+    - path: signals.has_display_data
+      op: eq
+      value: true
+    - path: signals.freshness_state
+      op: eq
+      value: STALE
+  preserve: last-verified-data-and-as-of
+  action_policy: refresh-read-only
+  focus: stale-notice
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — stale'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: last-verified-data-and-as-of'
+    next_step: '허용 행동 정책: refresh-read-only'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-data::error
+  profile: public-data
+  state: error
+  family: blocking-failure
+  trigger: &id007
+    all:
+    - path: signals.blocking_failure
+      op: eq
+      value: true
+    - path: signals.has_display_data
+      op: eq
+      value: false
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: public-data::offline
+  profile: public-data
+  state: offline
+  family: connectivity-loss
+  trigger: &id009
+    all:
+    - path: signals.connectivity
+      op: eq
+      value: OFFLINE
+    - path: signals.persisted_outcome
+      op: eq
+      value: false
+  preserve: visible-data-local-input-and-last-server-ack
+  action_policy: disable-network-actions-until-online
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — offline'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-local-input-and-last-server-ack'
+    next_step: '허용 행동 정책: disable-network-actions-until-online'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-data::success
+  profile: public-data
+  state: success
+  family: successful-read-or-submit
+  trigger: &id010
+    all:
+    - path: signals.blocking_pending
+      op: eq
+      value: false
+    - path: signals.blocking_failure
+      op: eq
+      value: false
+    - path: signals.required_slice_complete
+      op: eq
+      value: true
+    - path: signals.outcome_state
+      op: eq
+      value: SUCCESS
+  preserve: current-authoritative-data-or-receipt
+  action_policy: screen-primary
+  focus: main-answer-or-receipt
+  live: polite-once-if-async
+  copy_frame:
+    heading: '{screen_title} — success'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: current-authoritative-data-or-receipt'
+    next_step: '허용 행동 정책: screen-primary'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::initial-loading
+  profile: collection
+  state: initial-loading
+  family: initial-read
+  trigger: *id001
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — initial-loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::refreshing
+  profile: collection
+  state: refreshing
+  family: background-read
+  trigger: *id002
+  preserve: visible-data-and-focus
+  action_policy: keep-safe-actions
+  focus: preserve
+  live: polite-once-after-completion
+  copy_frame:
+    heading: '{screen_title} — refreshing'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-and-focus'
+    next_step: '허용 행동 정책: keep-safe-actions'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::empty
+  profile: collection
+  state: empty
+  family: confirmed-zero
+  trigger: *id003
+  preserve: scope-and-freshness
+  action_policy: screen-empty-recovery
+  focus: empty-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — empty'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: scope-and-freshness'
+    next_step: '허용 행동 정책: screen-empty-recovery'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::filtered-empty
+  profile: collection
+  state: filtered-empty
+  family: confirmed-filtered-zero
+  trigger: *id004
+  preserve: query-filters-sort
+  action_policy: clear-or-edit-filter
+  focus: result-summary
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — filtered-empty'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: query-filters-sort'
+    next_step: '허용 행동 정책: clear-or-edit-filter'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::partial
+  profile: collection
+  state: partial
+  family: partial-data
+  trigger: *id005
+  preserve: available-data-freshness-and-missing-scope
+  action_policy: retry-missing-slice
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — partial'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: available-data-freshness-and-missing-scope'
+    next_step: '허용 행동 정책: retry-missing-slice'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::stale
+  profile: collection
+  state: stale
+  family: stale-data
+  trigger: *id006
+  preserve: last-verified-data-and-as-of
+  action_policy: refresh-read-only
+  focus: stale-notice
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — stale'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: last-verified-data-and-as-of'
+    next_step: '허용 행동 정책: refresh-read-only'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::invalid-filter
+  profile: collection
+  state: invalid-filter
+  family: invalid-query
+  trigger:
+    all:
+    - path: signals.query_validation
+      op: eq
+      value: INVALID
+    - path: signals.query_broadened
+      op: eq
+      value: false
+  preserve: entered-query-and-valid-filters
+  action_policy: correct-filter
+  focus: error-summary
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — invalid-filter'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: entered-query-and-valid-filters'
+    next_step: '허용 행동 정책: correct-filter'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: collection::error
+  profile: collection
+  state: error
+  family: blocking-failure
+  trigger: *id007
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: static-content::loading
+  profile: static-content
+  state: loading
+  family: initial-read
+  trigger: &id008
+    all:
+    - path: signals.blocking_pending
+      op: eq
+      value: true
+    - path: signals.has_display_data
+      op: eq
+      value: false
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: static-content::current
+  profile: static-content
+  state: current
+  family: current-content
+  trigger:
+    all:
+    - path: signals.content_revision_state
+      op: eq
+      value: CURRENT
+    - path: signals.blocking_failure
+      op: eq
+      value: false
+  preserve: content-version-effective-date-owner
+  action_policy: policy-navigation
+  focus: main-heading
+  live: none
+  copy_frame:
+    heading: '{screen_title} — current'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: content-version-effective-date-owner'
+    next_step: '허용 행동 정책: policy-navigation'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: static-content::superseded
+  profile: static-content
+  state: superseded
+  family: superseded-content
+  trigger:
+    all:
+    - path: signals.content_revision_state
+      op: eq
+      value: SUPERSEDED
+    - path: signals.current_revision_href_present
+      op: eq
+      value: true
+  preserve: historical-version-and-effective-period
+  action_policy: open-current-version
+  focus: superseded-notice
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — superseded'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: historical-version-and-effective-period'
+    next_step: '허용 행동 정책: open-current-version'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: static-content::error
+  profile: static-content
+  state: error
+  family: blocking-failure
+  trigger: *id007
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: guided-submission::loading
+  profile: guided-submission
+  state: loading
+  family: initial-read
+  trigger: *id008
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: guided-submission::draft
+  profile: guided-submission
+  state: draft
+  family: editable-draft
+  trigger: &id011
+    all:
+    - path: signals.draft_available
+      op: eq
+      value: true
+    - path: signals.save_phase
+      op: eq
+      value: IDLE
+    - path: signals.persisted_outcome
+      op: eq
+      value: false
+  preserve: server-ack-version-and-current-input
+  action_policy: screen-draft-actions
+  focus: current-field
+  live: none
+  copy_frame:
+    heading: '{screen_title} — draft'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: server-ack-version-and-current-input'
+    next_step: '허용 행동 정책: screen-draft-actions'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: guided-submission::saving
+  profile: guided-submission
+  state: saving
+  family: save-in-flight
+  trigger: &id012
+    all:
+    - path: signals.save_phase
+      op: eq
+      value: SAVING
+    - path: signals.persisted_outcome
+      op: eq
+      value: false
+  preserve: input-focus-and-idempotency-key
+  action_policy: prevent-duplicate-submit
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — saving'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: input-focus-and-idempotency-key'
+    next_step: '허용 행동 정책: prevent-duplicate-submit'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: guided-submission::saved
+  profile: guided-submission
+  state: saved
+  family: server-acknowledged-draft
+  trigger: &id013
+    all:
+    - path: signals.save_phase
+      op: eq
+      value: IDLE
+    - path: signals.server_ack_advanced
+      op: eq
+      value: true
+    - path: signals.dirty_field_count
+      op: eq
+      value: 0
+  preserve: server-ack-version-and-saved-at
+  action_policy: continue-editing
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — saved'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: server-ack-version-and-saved-at'
+    next_step: '허용 행동 정책: continue-editing'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: guided-submission::validation-error
+  profile: guided-submission
+  state: validation-error
+  family: field-validation
+  trigger:
+    all:
+    - path: signals.validation_error_count
+      op: gt
+      value: 0
+    - path: signals.server_mutation_count
+      op: eq
+      value: 0
+  preserve: all-entered-values
+  action_policy: correct-linked-fields
+  focus: error-summary
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — validation-error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: all-entered-values'
+    next_step: '허용 행동 정책: correct-linked-fields'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: guided-submission::server-error
+  profile: guided-submission
+  state: server-error
+  family: save-or-submit-failure
+  trigger:
+    all:
+    - path: signals.server_failure
+      op: eq
+      value: true
+    - path: signals.persisted_outcome
+      op: eq
+      value: false
+  preserve: draft-and-last-server-ack
+  action_policy: retry-same-idempotency-key-when-safe
+  focus: error-summary
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — server-error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: draft-and-last-server-ack'
+    next_step: '허용 행동 정책: retry-same-idempotency-key-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: guided-submission::offline
+  profile: guided-submission
+  state: offline
+  family: connectivity-loss
+  trigger: *id009
+  preserve: visible-data-local-input-and-last-server-ack
+  action_policy: disable-network-actions-until-online
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — offline'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-local-input-and-last-server-ack'
+    next_step: '허용 행동 정책: disable-network-actions-until-online'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: guided-submission::session-expiring
+  profile: guided-submission
+  state: session-expiring
+  family: session-expiry-warning
+  trigger:
+    all:
+    - path: signals.session_valid
+      op: eq
+      value: true
+    - path: signals.session_expiry_band
+      op: eq
+      value: WARNING
+  preserve: draft-server-ack-and-safe-return
+  action_policy: renew-or-submit-safely
+  focus: preserve
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — session-expiring'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: draft-server-ack-and-safe-return'
+    next_step: '허용 행동 정책: renew-or-submit-safely'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: guided-submission::success
+  profile: guided-submission
+  state: success
+  family: successful-read-or-submit
+  trigger: *id010
+  preserve: current-authoritative-data-or-receipt
+  action_policy: screen-primary
+  focus: main-answer-or-receipt
+  live: polite-once-if-async
+  copy_frame:
+    heading: '{screen_title} — success'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: current-authoritative-data-or-receipt'
+    next_step: '허용 행동 정책: screen-primary'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: internal-data::loading
+  profile: internal-data
+  state: loading
+  family: initial-read
+  trigger: *id008
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: internal-data::refreshing
+  profile: internal-data
+  state: refreshing
+  family: background-read
+  trigger: *id002
+  preserve: visible-data-and-focus
+  action_policy: keep-safe-actions
+  focus: preserve
+  live: polite-once-after-completion
+  copy_frame:
+    heading: '{screen_title} — refreshing'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-and-focus'
+    next_step: '허용 행동 정책: keep-safe-actions'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: internal-data::empty
+  profile: internal-data
+  state: empty
+  family: confirmed-zero
+  trigger: *id003
+  preserve: scope-and-freshness
+  action_policy: screen-empty-recovery
+  focus: empty-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — empty'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: scope-and-freshness'
+    next_step: '허용 행동 정책: screen-empty-recovery'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: internal-data::partial
+  profile: internal-data
+  state: partial
+  family: partial-data
+  trigger: *id005
+  preserve: available-data-freshness-and-missing-scope
+  action_policy: retry-missing-slice
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — partial'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: available-data-freshness-and-missing-scope'
+    next_step: '허용 행동 정책: retry-missing-slice'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: internal-data::error
+  profile: internal-data
+  state: error
+  family: blocking-failure
+  trigger: *id007
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: internal-data::unauthorized
+  profile: internal-data
+  state: unauthorized
+  family: authentication-required
+  trigger: &id015
+    all:
+    - path: signals.access_decision
+      op: eq
+      value: UNAUTHENTICATED
+    - path: signals.object_existence_disclosed
+      op: eq
+      value: false
+  preserve: safe-return-and-truthful-draft-state
+  action_policy: authenticate
+  focus: access-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — unauthorized'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: safe-return-and-truthful-draft-state'
+    next_step: '허용 행동 정책: authenticate'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: internal-data::forbidden
+  profile: internal-data
+  state: forbidden
+  family: authorization-denied
+  trigger: &id016
+    all:
+    - path: signals.access_decision
+      op: eq
+      value: FORBIDDEN
+    - path: signals.object_existence_disclosed
+      op: eq
+      value: false
+  preserve: request-reference-without-object-detail
+  action_policy: request-access-or-safe-return
+  focus: access-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — forbidden'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: request-reference-without-object-detail'
+    next_step: '허용 행동 정책: request-access-or-safe-return'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: internal-data::conflict
+  profile: internal-data
+  state: conflict
+  family: optimistic-conflict
+  trigger: &id014
+    all:
+    - path: signals.concurrency_result
+      op: eq
+      value: CONFLICT
+    - path: signals.attempted_input_preserved
+      op: eq
+      value: true
+  preserve: attempted-input-server-version-and-readable-diff
+  action_policy: reload-compare-or-reapply-explicitly
+  focus: conflict-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — conflict'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: attempted-input-server-version-and-readable-diff'
+    next_step: '허용 행동 정책: reload-compare-or-reapply-explicitly'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: internal-data::degraded
+  profile: internal-data
+  state: degraded
+  family: degraded-capability
+  trigger: &id018
+    all:
+    - path: signals.required_capability_state
+      op: eq
+      value: DEGRADED
+    - path: signals.claimed_healthy
+      op: eq
+      value: false
+  preserve: affected-scope-last-good-time-and-workaround
+  action_policy: bounded-recovery
+  focus: degraded-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — degraded'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: affected-scope-last-good-time-and-workaround'
+    next_step: '허용 행동 정책: bounded-recovery'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: workspace::loading
+  profile: workspace
+  state: loading
+  family: initial-read
+  trigger: *id008
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: workspace::draft
+  profile: workspace
+  state: draft
+  family: editable-draft
+  trigger: *id011
+  preserve: server-ack-version-and-current-input
+  action_policy: screen-draft-actions
+  focus: current-field
+  live: none
+  copy_frame:
+    heading: '{screen_title} — draft'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: server-ack-version-and-current-input'
+    next_step: '허용 행동 정책: screen-draft-actions'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: workspace::saving
+  profile: workspace
+  state: saving
+  family: save-in-flight
+  trigger: *id012
+  preserve: input-focus-and-idempotency-key
+  action_policy: prevent-duplicate-submit
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — saving'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: input-focus-and-idempotency-key'
+    next_step: '허용 행동 정책: prevent-duplicate-submit'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: workspace::saved
+  profile: workspace
+  state: saved
+  family: server-acknowledged-draft
+  trigger: *id013
+  preserve: server-ack-version-and-saved-at
+  action_policy: continue-editing
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — saved'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: server-ack-version-and-saved-at'
+    next_step: '허용 행동 정책: continue-editing'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: workspace::blocked
+  profile: workspace
+  state: blocked
+  family: decision-or-work-blocked
+  trigger: &id017
+    all:
+    - path: signals.blocker_count
+      op: gt
+      value: 0
+    - path: signals.override_allowed
+      op: eq
+      value: false
+  preserve: target-digest-draft-and-blocker-evidence
+  action_policy: resolve-owned-blocker
+  focus: blocker-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — blocked'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: target-digest-draft-and-blocker-evidence'
+    next_step: '허용 행동 정책: resolve-owned-blocker'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: workspace::conflict
+  profile: workspace
+  state: conflict
+  family: optimistic-conflict
+  trigger: *id014
+  preserve: attempted-input-server-version-and-readable-diff
+  action_policy: reload-compare-or-reapply-explicitly
+  focus: conflict-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — conflict'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: attempted-input-server-version-and-readable-diff'
+    next_step: '허용 행동 정책: reload-compare-or-reapply-explicitly'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: workspace::unauthorized
+  profile: workspace
+  state: unauthorized
+  family: authentication-required
+  trigger: *id015
+  preserve: safe-return-and-truthful-draft-state
+  action_policy: authenticate
+  focus: access-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — unauthorized'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: safe-return-and-truthful-draft-state'
+    next_step: '허용 행동 정책: authenticate'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: workspace::forbidden
+  profile: workspace
+  state: forbidden
+  family: authorization-denied
+  trigger: *id016
+  preserve: request-reference-without-object-detail
+  action_policy: request-access-or-safe-return
+  focus: access-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — forbidden'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: request-reference-without-object-detail'
+    next_step: '허용 행동 정책: request-access-or-safe-return'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: workspace::error
+  profile: workspace
+  state: error
+  family: blocking-failure
+  trigger: *id007
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: decision::loading
+  profile: decision
+  state: loading
+  family: initial-read
+  trigger: *id008
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: decision::ready
+  profile: decision
+  state: ready
+  family: decision-ready
+  trigger:
+    all:
+    - path: signals.target_current
+      op: eq
+      value: true
+    - path: signals.blocker_count
+      op: eq
+      value: 0
+    - path: signals.assurance_sufficient
+      op: eq
+      value: true
+    - path: signals.conflict_clear
+      op: eq
+      value: true
+  preserve: target-content-and-decision-digest
+  action_policy: exact-decision
+  focus: decision-heading
+  live: none
+  copy_frame:
+    heading: '{screen_title} — ready'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: target-content-and-decision-digest'
+    next_step: '허용 행동 정책: exact-decision'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: decision::blocked
+  profile: decision
+  state: blocked
+  family: decision-or-work-blocked
+  trigger: *id017
+  preserve: target-digest-draft-and-blocker-evidence
+  action_policy: resolve-owned-blocker
+  focus: blocker-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — blocked'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: target-digest-draft-and-blocker-evidence'
+    next_step: '허용 행동 정책: resolve-owned-blocker'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: decision::stale
+  profile: decision
+  state: stale
+  family: stale-data
+  trigger: *id006
+  preserve: last-verified-data-and-as-of
+  action_policy: refresh-read-only
+  focus: stale-notice
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — stale'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: last-verified-data-and-as-of'
+    next_step: '허용 행동 정책: refresh-read-only'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: decision::reauth-required
+  profile: decision
+  state: reauth-required
+  family: action-bound-reauth
+  trigger:
+    all:
+    - path: signals.target_current
+      op: eq
+      value: true
+    - path: signals.assurance_sufficient
+      op: eq
+      value: false
+    - path: signals.action_digest_present
+      op: eq
+      value: true
+  preserve: target-digest-reason-draft-and-safe-return
+  action_policy: reauthenticate-for-exact-action
+  focus: reauth-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — reauth-required'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: target-digest-reason-draft-and-safe-return'
+    next_step: '허용 행동 정책: reauthenticate-for-exact-action'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: decision::conflict
+  profile: decision
+  state: conflict
+  family: optimistic-conflict
+  trigger: *id014
+  preserve: attempted-input-server-version-and-readable-diff
+  action_policy: reload-compare-or-reapply-explicitly
+  focus: conflict-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — conflict'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: attempted-input-server-version-and-readable-diff'
+    next_step: '허용 행동 정책: reload-compare-or-reapply-explicitly'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: decision::submitting
+  profile: decision
+  state: submitting
+  family: decision-submit-in-flight
+  trigger:
+    all:
+    - path: signals.submit_phase
+      op: eq
+      value: SUBMITTING
+    - path: signals.persisted_outcome
+      op: eq
+      value: false
+  preserve: decision-digest-input-and-idempotency-key
+  action_policy: disable-duplicate-submit
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — submitting'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: decision-digest-input-and-idempotency-key'
+    next_step: '허용 행동 정책: disable-duplicate-submit'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: decision::receipt
+  profile: decision
+  state: receipt
+  family: persisted-receipt
+  trigger:
+    all:
+    - path: signals.persisted_outcome
+      op: eq
+      value: true
+    - path: signals.receipt_digest_verified
+      op: eq
+      value: true
+  preserve: receipt-target-digest-actor-time-and-links
+  action_policy: receipt-next-actions
+  focus: receipt-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — receipt'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: receipt-target-digest-actor-time-and-links'
+    next_step: '허용 행동 정책: receipt-next-actions'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: decision::partial-failure
+  profile: decision
+  state: partial-failure
+  family: post-effect-incomplete
+  trigger:
+    all:
+    - path: signals.effect_may_exist
+      op: eq
+      value: true
+    - path: signals.receipt_chain_complete
+      op: eq
+      value: false
+  preserve: all-known-receipts-and-no-retry-fence
+  action_policy: reconcile-not-retry
+  focus: reconciliation-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — partial-failure'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: all-known-receipts-and-no-retry-fence'
+    next_step: '허용 행동 정책: reconcile-not-retry'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: operations::loading
+  profile: operations
+  state: loading
+  family: initial-read
+  trigger: *id008
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: operations::healthy
+  profile: operations
+  state: healthy
+  family: verified-healthy
+  trigger:
+    all:
+    - path: signals.telemetry_complete
+      op: eq
+      value: true
+    - path: signals.slo_state
+      op: eq
+      value: HEALTHY
+    - path: signals.open_incident_count
+      op: eq
+      value: 0
+  preserve: window-build-and-evidence-receipt
+  action_policy: operations-navigation
+  focus: status-heading
+  live: none
+  copy_frame:
+    heading: '{screen_title} — healthy'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: window-build-and-evidence-receipt'
+    next_step: '허용 행동 정책: operations-navigation'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: operations::degraded
+  profile: operations
+  state: degraded
+  family: degraded-capability
+  trigger: *id018
+  preserve: affected-scope-last-good-time-and-workaround
+  action_policy: bounded-recovery
+  focus: degraded-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — degraded'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: affected-scope-last-good-time-and-workaround'
+    next_step: '허용 행동 정책: bounded-recovery'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: operations::incident
+  profile: operations
+  state: incident
+  family: active-incident
+  trigger:
+    all:
+    - path: signals.open_incident_count
+      op: gt
+      value: 0
+    - path: signals.incident_receipt_current
+      op: eq
+      value: true
+  preserve: severity-impact-owner-next-update-and-evidence
+  action_policy: open-incident
+  focus: incident-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — incident'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: severity-impact-owner-next-update-and-evidence'
+    next_step: '허용 행동 정책: open-incident'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: operations::telemetry-gap
+  profile: operations
+  state: telemetry-gap
+  family: telemetry-unknown
+  trigger:
+    all:
+    - path: signals.telemetry_complete
+      op: eq
+      value: false
+    - path: signals.claimed_healthy
+      op: eq
+      value: false
+  preserve: last-observation-gap-scope-and-escalation
+  action_policy: investigate-telemetry-gap
+  focus: telemetry-gap-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — telemetry-gap'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: last-observation-gap-scope-and-escalation'
+    next_step: '허용 행동 정책: investigate-telemetry-gap'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: operations::error
+  profile: operations
+  state: error
+  family: blocking-failure
+  trigger: *id007
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: operations::forbidden
+  profile: operations
+  state: forbidden
+  family: authorization-denied
+  trigger: *id016
+  preserve: request-reference-without-object-detail
+  action_policy: request-access-or-safe-return
+  focus: access-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — forbidden'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: request-reference-without-object-detail'
+    next_step: '허용 행동 정책: request-access-or-safe-return'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::not-found
+  profile: system
+  state: not-found
+  family: nonleaking-not-found
+  trigger:
+    all:
+    - path: signals.access_decision
+      op: eq
+      value: NOT_FOUND_OR_HIDDEN
+    - path: signals.object_existence_disclosed
+      op: eq
+      value: false
+  preserve: safe-navigation-only
+  action_policy: safe-home-or-search
+  focus: system-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — not-found'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: safe-navigation-only'
+    next_step: '허용 행동 정책: safe-home-or-search'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::unauthenticated
+  profile: system
+  state: unauthenticated
+  family: authentication-required
+  trigger:
+    all:
+    - path: signals.access_decision
+      op: eq
+      value: UNAUTHENTICATED
+    - path: signals.object_existence_disclosed
+      op: eq
+      value: false
+  preserve: safe-return-and-truthful-draft-state
+  action_policy: authenticate
+  focus: access-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — unauthenticated'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: safe-return-and-truthful-draft-state'
+    next_step: '허용 행동 정책: authenticate'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::forbidden
+  profile: system
+  state: forbidden
+  family: authorization-denied
+  trigger: *id016
+  preserve: request-reference-without-object-detail
+  action_policy: request-access-or-safe-return
+  focus: access-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — forbidden'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: request-reference-without-object-detail'
+    next_step: '허용 행동 정책: request-access-or-safe-return'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::session-expired
+  profile: system
+  state: session-expired
+  family: session-expired
+  trigger:
+    all:
+    - path: signals.session_valid
+      op: eq
+      value: false
+    - path: signals.session_expiry_band
+      op: eq
+      value: EXPIRED
+  preserve: truthful-server-saved-state-and-safe-return
+  action_policy: authenticate-or-request-new-access
+  focus: system-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — session-expired'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-server-saved-state-and-safe-return'
+    next_step: '허용 행동 정책: authenticate-or-request-new-access'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::maintenance
+  profile: system
+  state: maintenance
+  family: planned-unavailability
+  trigger:
+    all:
+    - path: signals.maintenance_active
+      op: eq
+      value: true
+    - path: signals.maintenance_window_verified
+      op: eq
+      value: true
+  preserve: scope-start-end-status-reference
+  action_policy: status-or-safe-return
+  focus: system-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — maintenance'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: scope-start-end-status-reference'
+    next_step: '허용 행동 정책: status-or-safe-return'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::degraded
+  profile: system
+  state: degraded
+  family: degraded-capability
+  trigger: *id018
+  preserve: affected-scope-last-good-time-and-workaround
+  action_policy: bounded-recovery
+  focus: degraded-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — degraded'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: affected-scope-last-good-time-and-workaround'
+    next_step: '허용 행동 정책: bounded-recovery'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::offline
+  profile: system
+  state: offline
+  family: connectivity-loss
+  trigger: *id009
+  preserve: visible-data-local-input-and-last-server-ack
+  action_policy: disable-network-actions-until-online
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — offline'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-local-input-and-last-server-ack'
+    next_step: '허용 행동 정책: disable-network-actions-until-online'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: system::error
+  profile: system
+  state: error
+  family: blocking-failure
+  trigger: *id007
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY

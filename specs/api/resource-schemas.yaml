@@ -15154,6 +15154,27 @@ resources:
           format: uuid
         receiptToken:
           type: string
+        result:
+          type: string
+          enum:
+          - DISMISS
+          - NEEDS_DATA
+          - MARK_DUPLICATE
+          - PROMOTE_TO_CASE
+          - LINK_TO_CASE
+        reasonDigest:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        duplicateSignalId:
+          type: string
+          format: uuid
+        duplicateRelationship:
+          type: string
+          enum:
+          - SAME_LOGICAL_EVENT
+          - SAME_TARGET
+          - SAME_SOURCE
+          - OTHER
         acceptedAt:
           type: string
           format: date-time
@@ -15184,11 +15205,26 @@ resources:
           - dismiss
           - duplicate
           - needs_data
+          - link
         reason:
           type: string
         expectedVersion:
           type: integer
           format: int64
+        expectedDuplicateSignalVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        duplicateSignalId:
+          type: string
+          format: uuid
+        duplicateRelationship:
+          type: string
+          enum:
+          - SAME_LOGICAL_EVENT
+          - SAME_TARGET
+          - SAME_SOURCE
+          - OTHER
       required:
       - signalId
       - decision

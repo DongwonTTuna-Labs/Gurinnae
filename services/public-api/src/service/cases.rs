@@ -1,0 +1,514 @@
+struct CaseFilters {
+    states: Vec<String>,
+    agency: Option<String>,
+    supplier: Option<String>,
+    rule: Option<String>,
+    published_from: Option<Date>,
+    published_to: Option<Date>,
+    has_response: Option<bool>,
+    has_correction: Option<bool>,
+    sort: String,
+}
+
+fn case_filters(query: &Query, relation: Option<(&str, &str)>) -> Result<CaseFilters, ServiceError> {
+    let states = query.many("publicationState");
+    let agency = relation
+        .filter(|value| value.0 == "agency")
+        .map(|value| value.1.to_owned())
+        .map_or_else(
+            || optional_uuid(query, "agencyId").map(|value| value.map(|id| id.to_string())),
+            |value| Ok(Some(value)),
+        )?;
+    let supplier = relation
+        .filter(|value| value.0 == "supplier")
+        .map(|value| value.1.to_owned())
+        .map_or_else(
+            || optional_uuid(query, "supplierId").map(|value| value.map(|id| id.to_string())),
+            |value| Ok(Some(value)),
+        )?;
+    let rule = relation
+        .filter(|value| value.0 == "rule")
+        .map(|value| value.1.to_owned())
+        .or_else(|| query.first("ruleId").map(str::to_owned));
+    let published_from = optional_date(query, "publishedFrom")?;
+    let published_to = optional_date(query, "publishedTo")?;
+    let has_response = optional_bool(query, "hasResponse")?;
+    let has_correction = optional_bool(query, "hasCorrection")?;
+    validate_range(published_from.as_ref(), published_to.as_ref())?;
+    let sort = if relation.is_some() {
+        requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?
+    } else {
+        requested_sort(
+            query,
+            &["updated_desc", "published_desc", "title_asc"],
+            "updated_desc",
+        )?
+    };
+    Ok(CaseFilters {
+        states,
+        agency,
+        supplier,
+        rule,
+        published_from,
+        published_to,
+        has_response,
+        has_correction,
+        sort: sort.to_owned(),
+    })
+}
+
+fn case_applied_filters(
+    query: &Query,
+    relation: Option<(&str, &str)>,
+    states: &[String],
+) -> Result<Value, ServiceError> {
+    if relation.is_some() {
+        return Ok(json!({}));
+    }
+    let mut filters = Map::new();
+    filters.insert("publicationState".into(), json!(states));
+    for name in [
+        "agencyId",
+        "supplierId",
+        "ruleId",
+        "publishedFrom",
+        "publishedTo",
+    ] {
+        if let Some(value) = query.first(name) {
+            filters.insert(name.into(), json!(value));
+        }
+    }
+    for name in ["hasResponse", "hasCorrection"] {
+        if let Some(value) = query.first(name) {
+            filters.insert(
+                name.into(),
+                json!(
+                    value
+                        .parse::<bool>()
+                        .map_err(|_| ServiceError::InvalidRequest)?
+                ),
+            );
+        }
+    }
+    Ok(Value::Object(filters))
+}
+
+async fn list_cases(
+    pool: &PgPool,
+    query: &Query,
+    relation: Option<(&str, &str)>,
+) -> Result<Value, ServiceError> {
+    let filters = case_filters(query, relation)?;
+    let rows = sqlx::query(
+        "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2::text IS NULL OR r.payload->>'agencyId'=$2 OR COALESCE(r.payload->'agencyIds','[]'::jsonb) ? $2) AND ($3::text IS NULL OR r.payload->>'supplierId'=$3 OR COALESCE(r.payload->'supplierIds','[]'::jsonb) ? $3) AND ($4::text IS NULL OR r.payload->>'ruleId'=$4 OR COALESCE(r.payload->'ruleIds','[]'::jsonb) ? $4) AND ($5::date IS NULL OR c.published_at::date >= $5) AND ($6::date IS NULL OR c.published_at::date <= $6) AND ($7::boolean IS NULL OR (jsonb_path_exists(r.payload,'$.responses[*]') OR jsonb_path_exists(r.payload,'$.partyResponses[*]'))=$7) AND ($8::boolean IS NULL OR EXISTS(SELECT 1 FROM public.corrections x WHERE x.case_id=c.id)=$8) ORDER BY CASE WHEN $9='updated_desc' THEN c.updated_at END DESC,CASE WHEN $9='created_asc' THEN c.published_at END ASC,CASE WHEN $9='published_desc' THEN c.published_at END DESC,CASE WHEN $9='title_asc' THEN c.title END ASC,c.id LIMIT $10 OFFSET $11",
+    )
+        .bind(&filters.states)
+        .bind(&filters.agency)
+        .bind(&filters.supplier)
+        .bind(&filters.rule)
+        .bind(filters.published_from)
+        .bind(filters.published_to)
+        .bind(filters.has_response)
+        .bind(filters.has_correction)
+        .bind(&filters.sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
+    page(
+        rows.iter().map(case_card).collect::<Result<_, _>>()?,
+        query,
+        case_applied_filters(query, relation, &filters.states)?,
+    )
+}
+
+async fn get_case(pool: &PgPool, slug: &str) -> Result<Value, ServiceError> {
+    let row=sqlx::query("SELECT c.slug,c.title,c.public_state,c.latest_revision,c.summary,c.published_at,c.updated_at,c.source_freshness,r.payload FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE c.slug=$1")
+        .bind(slug).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
+    let mut payload: Value = row.try_get("payload").map_err(db)?;
+    let obj = payload.as_object_mut().ok_or(ServiceError::Persistence)?;
+    obj.insert("slug".into(), json!(slug));
+    obj.insert(
+        "title".into(),
+        json!(row.try_get::<String, _>("title").map_err(db)?),
+    );
+    obj.insert(
+        "publicState".into(),
+        json!(row.try_get::<String, _>("public_state").map_err(db)?),
+    );
+    obj.insert(
+        "revision".into(),
+        json!(row.try_get::<i32, _>("latest_revision").map_err(db)?),
+    );
+    obj.insert(
+        "publishedAt".into(),
+        json!(timestamp(row.try_get("published_at").map_err(db)?)?),
+    );
+    obj.insert(
+        "updatedAt".into(),
+        json!(timestamp(row.try_get("updated_at").map_err(db)?)?),
+    );
+    obj.insert(
+        "summary".into(),
+        json!(row.try_get::<String, _>("summary").map_err(db)?),
+    );
+    for key in [
+        "confirmedFacts",
+        "criticalUnknowns",
+        "partyResponses",
+        "signals",
+        "counterEvidence",
+        "claims",
+        "evidence",
+        "timeline",
+        "corrections",
+        "limitations",
+    ] {
+        obj.entry(key).or_insert(json!([]));
+    }
+    obj.entry("freshness")
+        .or_insert(row.try_get::<Value, _>("source_freshness").map_err(db)?);
+    obj.entry("seo").or_insert(json!({"title":row.try_get::<String,_>("title").map_err(db)?,"description":row.try_get::<String,_>("summary").map_err(db)?,"canonicalUrl":format!("/cases/{slug}"),"robots":"index,follow"}));
+    obj.remove("reproducibility");
+    obj.remove("content");
+    obj.remove("agencyId");
+    obj.remove("supplierId");
+    obj.remove("ruleId");
+    obj.remove("agencyIds");
+    obj.remove("supplierIds");
+    obj.remove("ruleIds");
+    Ok(payload)
+}
+
+async fn list_revisions(pool: &PgPool, query: &Query, slug: &str) -> Result<Value, ServiceError> {
+    let sort = requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?;
+    let rows = sqlx::query(
+        "SELECT r.revision,r.state::text state,r.published_at,r.payload FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id WHERE c.slug=$1 ORDER BY CASE WHEN $2='updated_desc' THEN r.revision END DESC,CASE WHEN $2='created_asc' THEN r.revision END ASC LIMIT $3 OFFSET $4",
+    )
+        .bind(slug)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
+    if rows.is_empty() && query.offset == 0 {
+        return Err(ServiceError::NotFound);
+    }
+    let mut items = Vec::new();
+    for row in rows {
+        let rev: i32 = row.try_get("revision").map_err(db)?;
+        let payload: Value = row.try_get("payload").map_err(db)?;
+        items.push(json!({"revision":rev,"state":row.try_get::<String,_>("state").map_err(db)?,"publishedAt":timestamp(row.try_get("published_at").map_err(db)?)?,"summary":payload.get("summary").and_then(Value::as_str).unwrap_or("공개 revision"),"href":format!("/cases/{slug}/revisions/{rev}")}));
+    }
+    page(items, query, json!({}))
+}
+
+async fn get_revision(pool: &PgPool, slug: &str, revision: i32) -> Result<Value, ServiceError> {
+    let row=sqlx::query("SELECT c.latest_revision,r.revision,r.payload,r.payload_sha256,r.published_at,r.supersedes_revision FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id WHERE c.slug=$1 AND r.revision=$2")
+        .bind(slug).bind(revision).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
+    let payload: Value = row.try_get("payload").map_err(db)?;
+    let mut content = payload.get("content").cloned().unwrap_or(payload);
+    if let Some(object) = content.as_object_mut() {
+        for key in [
+            "agencyId",
+            "supplierId",
+            "ruleId",
+            "agencyIds",
+            "supplierIds",
+            "ruleIds",
+        ] {
+            object.remove(key);
+        }
+    }
+    Ok(
+        json!({"slug":slug,"revision":revision,"isLatest":row.try_get::<i32,_>("latest_revision").map_err(db)?==revision,"snapshotHash":row.try_get::<String,_>("payload_sha256").map_err(db)?.trim(),"publishedAt":timestamp(row.try_get("published_at").map_err(db)?)?,"content":content,"diffFromPrevious":[]}),
+    )
+}
+
+async fn reproducibility(pool: &PgPool, slug: &str) -> Result<Value, ServiceError> {
+    let payload:Value=sqlx::query_scalar("SELECT r.payload FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id AND r.revision=c.latest_revision WHERE c.slug=$1").bind(slug).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
+    payload
+        .get("reproducibility")
+        .cloned()
+        .ok_or(ServiceError::NotFound)
+}
+
+async fn download_reproducibility(
+    pool: &PgPool,
+    slug: &str,
+    query: &Query,
+) -> Result<Value, ServiceError> {
+    let format = query.first("format").ok_or(ServiceError::InvalidRequest)?;
+    if !matches!(format, "JSON" | "CSV") {
+        return Err(ServiceError::InvalidRequest);
+    }
+    let value = reproducibility(pool, slug).await?;
+    let bytes = serde_json::to_vec(&value).map_err(|_| ServiceError::Persistence)?;
+    Ok(json!({"id":format!("repro-{}",hex(&Sha256::digest(bytes))),"status":"READY","version":1}))
+}
+
+async fn list_corrections(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
+    let states = query.many("publicationState");
+    let published_from = optional_date(query, "publishedFrom")?;
+    let published_to = optional_date(query, "publishedTo")?;
+    validate_range(published_from.as_ref(), published_to.as_ref())?;
+    let sort = requested_sort(query, &["published_desc", "title_asc"], "published_desc")?;
+    let rows = sqlx::query(
+        "SELECT x.id,x.source_revision,x.target_revision,x.summary,x.reason,x.published_at,c.slug FROM public.corrections x JOIN public.cases c ON c.id=x.case_id WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2::date IS NULL OR x.published_at::date >= $2) AND ($3::date IS NULL OR x.published_at::date <= $3) ORDER BY CASE WHEN $4='published_desc' THEN x.published_at END DESC,CASE WHEN $4='title_asc' THEN x.summary END ASC,x.id LIMIT $5 OFFSET $6",
+    )
+        .bind(&states)
+        .bind(published_from)
+        .bind(published_to)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
+    let mut items = Vec::new();
+    for row in rows {
+        let id: Uuid = row.try_get("id").map_err(db)?;
+        items.push(json!({"id":id,"sourceRevision":row.try_get::<i32,_>("source_revision").map_err(db)?,"targetRevision":row.try_get::<Option<i32>,_>("target_revision").map_err(db)?,"summary":row.try_get::<String,_>("summary").map_err(db)?,"reason":row.try_get::<String,_>("reason").map_err(db)?,"publishedAt":timestamp(row.try_get("published_at").map_err(db)?)?,"href":format!("/corrections/{id}")}));
+    }
+    let mut filters = Map::new();
+    filters.insert("publicationState".into(), json!(states));
+    for name in ["publishedFrom", "publishedTo"] {
+        if let Some(value) = query.first(name) {
+            filters.insert(name.into(), json!(value));
+        }
+    }
+    page(items, query, Value::Object(filters))
+}
+
+async fn get_correction(pool: &PgPool, id: Uuid) -> Result<Value, ServiceError> {
+    let row=sqlx::query("SELECT x.id,x.source_revision,x.target_revision,x.summary,x.reason,x.published_at,c.slug FROM public.corrections x JOIN public.cases c ON c.id=x.case_id WHERE x.id=$1").bind(id).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
+    Ok(
+        json!({"id":{"id":id,"status":"PUBLISHED","version":1},"status":"PUBLISHED","data":{"id":id,"caseSlug":row.try_get::<String,_>("slug").map_err(db)?,"sourceRevision":row.try_get::<i32,_>("source_revision").map_err(db)?,"targetRevision":row.try_get::<Option<i32>,_>("target_revision").map_err(db)?,"summary":row.try_get::<String,_>("summary").map_err(db)?,"reason":row.try_get::<String,_>("reason").map_err(db)?,"publishedAt":timestamp(row.try_get("published_at").map_err(db)?)?,"affectedClaims":[]},"links":[]}),
+    )
+}
+
+async fn coverage(pool: &PgPool) -> Result<Value, ServiceError> {
+    let counts=sqlx::query("SELECT (SELECT count(*) FROM public.contracts) contracts,(SELECT count(*) FROM public.agencies) agencies,(SELECT count(*) FROM public.suppliers) suppliers,(SELECT count(*) FROM public.cases) cases").fetch_one(pool).await.map_err(db)?;
+    let source_status = list_source_values(pool, &[], 200, 0, "name_asc").await?;
+    let coverage_as_of = now()?;
+    let sources = source_status
+        .into_iter()
+        .map(|source| {
+            json!({
+                "sourceId":source["sourceId"],
+                "displayName":source["displayName"],
+                "status":source["status"],
+                "dateRange":{"label":"공개 projection 기간"},
+                "recordCount":0,
+                "freshness":{
+                    "asOf":coverage_as_of,
+                    "lastSuccessfulFetchAt":source["lastSuccessAt"],
+                    "lagSeconds":source["lagSeconds"],
+                    "status":"CURRENT"
+                },
+                "knownGaps":[]
+            })
+        })
+        .collect::<Vec<_>>();
+    Ok(
+        json!({"asOf":now()?,"sources":sources,"dateRange":{"label":"projection 전체 보유 기간"},"recordCounts":{"sourceDocuments":0,"contracts":counts.try_get::<i64,_>("contracts").map_err(db)?,"contractLineItems":0,"agencies":counts.try_get::<i64,_>("agencies").map_err(db)?,"suppliers":counts.try_get::<i64,_>("suppliers").map_err(db)?,"publicCases":counts.try_get::<i64,_>("cases").map_err(db)?},"knownGaps":[],"methodologyVersion":"v13.0.0"}),
+    )
+}
+
+async fn list_datasets(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
+    let formats = query.many("format");
+    let sort = requested_sort(query, &["updated_desc", "title_asc"], "updated_desc")?;
+    let rows = sqlx::query(
+        "SELECT id,title,description,format,coverage,license,download_url,updated_at FROM public.datasets WHERE cardinality($1::text[])=0 OR format=ANY($1) ORDER BY CASE WHEN $2='updated_desc' THEN updated_at END DESC,CASE WHEN $2='title_asc' THEN title END ASC,id LIMIT $3 OFFSET $4",
+    )
+        .bind(&formats)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
+    let mut items = Vec::new();
+    for r in rows {
+        items.push(json!({"id":r.try_get::<String,_>("id").map_err(db)?,"title":r.try_get::<String,_>("title").map_err(db)?,"description":r.try_get::<String,_>("description").map_err(db)?,"format":r.try_get::<String,_>("format").map_err(db)?,"coverage":r.try_get::<Value,_>("coverage").map_err(db)?,"license":r.try_get::<String,_>("license").map_err(db)?,"downloadUrl":r.try_get::<Option<String>,_>("download_url").map_err(db)?,"updatedAt":timestamp(r.try_get("updated_at").map_err(db)?)?}));
+    }
+    page(items, query, json!({"format":formats}))
+}
+
+async fn list_rules(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
+    let statuses = query.many("status");
+    let sort = requested_sort(query, &["name_asc", "updated_desc"], "name_asc")?;
+    let rows = sqlx::query(
+        "SELECT rule_id,name,active_version,public_description,requirements,exclusions,limitations,updated_at FROM public.rules WHERE cardinality($1::text[])=0 OR 'ACTIVE'::text=ANY($1) ORDER BY CASE WHEN $2='name_asc' THEN name END ASC,CASE WHEN $2='updated_desc' THEN updated_at END DESC,rule_id LIMIT $3 OFFSET $4",
+    )
+        .bind(&statuses)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
+    let mut items = Vec::new();
+    for r in rows {
+        items.push(rule_value(&r)?)
+    }
+    page(items, query, json!({"status":statuses}))
+}
+fn rule_value(r: &PgRow) -> Result<Value, ServiceError> {
+    Ok(
+        json!({"ruleId":r.try_get::<String,_>("rule_id").map_err(db)?,"name":r.try_get::<String,_>("name").map_err(db)?,"activeVersion":r.try_get::<String,_>("active_version").map_err(db)?,"description":r.try_get::<String,_>("public_description").map_err(db)?,"requiredFields":r.try_get::<Value,_>("requirements").map_err(db)?,"exclusions":r.try_get::<Value,_>("exclusions").map_err(db)?,"limitations":r.try_get::<Value,_>("limitations").map_err(db)?,"formula":"authority-defined deterministic evaluation","updatedAt":timestamp(r.try_get("updated_at").map_err(db)?)?}),
+    )
+}
+async fn get_rule(pool: &PgPool, id: &str) -> Result<Value, ServiceError> {
+    let r=sqlx::query("SELECT rule_id,name,active_version,public_description,requirements,exclusions,limitations,updated_at FROM public.rules WHERE rule_id=$1").bind(id).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
+    Ok(
+        json!({"id":{"id":id,"status":"ACTIVE","version":1},"status":"ACTIVE","data":rule_value(&r)?,"links":[]}),
+    )
+}
+
+async fn list_source_values(
+    pool: &PgPool,
+    statuses: &[String],
+    limit: i64,
+    offset: i64,
+    sort: &str,
+) -> Result<Vec<Value>, ServiceError> {
+    if !matches!(sort, "status_asc" | "last_success_desc" | "name_asc") {
+        return Err(ServiceError::InvalidRequest);
+    }
+    let rows = sqlx::query(
+        "SELECT source_id,display_name,status,last_success_at,lag_seconds,affected_scope,public_message,updated_at FROM public.source_status WHERE cardinality($1::text[])=0 OR status=ANY($1) ORDER BY CASE WHEN $2='status_asc' THEN status END ASC,CASE WHEN $2='last_success_desc' THEN last_success_at END DESC NULLS LAST,CASE WHEN $2='name_asc' THEN display_name END ASC,source_id LIMIT $3 OFFSET $4",
+    )
+        .bind(statuses)
+        .bind(sort)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
+    let mut values = Vec::new();
+    for r in rows {
+        values.push(json!({"sourceId":r.try_get::<String,_>("source_id").map_err(db)?,"displayName":r.try_get::<String,_>("display_name").map_err(db)?,"status":r.try_get::<String,_>("status").map_err(db)?,"lastSuccessAt":r.try_get::<Option<OffsetDateTime>,_>("last_success_at").map_err(db)?.map(timestamp).transpose()?,"lagSeconds":r.try_get::<Option<i64>,_>("lag_seconds").map_err(db)?,"publicMessage":r.try_get::<Option<String>,_>("public_message").map_err(db)?}));
+    }
+    Ok(values)
+}
+async fn list_sources(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
+    let statuses = query.many("status");
+    let sort = requested_sort(
+        query,
+        &["status_asc", "last_success_desc", "name_asc"],
+        "name_asc",
+    )?;
+    let items = list_source_values(pool, &statuses, query.limit + 1, query.offset, sort).await?;
+    page(items, query, json!({"status":statuses}))
+}
+async fn get_source(pool: &PgPool, id: &str) -> Result<Value, ServiceError> {
+    let r=sqlx::query("SELECT source_id,display_name,status,last_success_at,lag_seconds,affected_scope,public_message,updated_at FROM public.source_status WHERE source_id=$1").bind(id).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
+    let status: String = r.try_get("status").map_err(db)?;
+    Ok(
+        json!({"id":{"id":id,"status":status,"version":1},"status":status,"data":{"sourceId":id,"displayName":r.try_get::<String,_>("display_name").map_err(db)?,"owner":"공개 데이터 제공기관","accessType":"PUBLIC","status":status,"coverage":{"dateRange":{"label":"공개 projection 기간"},"sourceIds":[id],"recordCount":0,"knownGaps":[],"freshness":{"asOf":timestamp(r.try_get("updated_at").map_err(db)?)?,"status":"CURRENT"}},"freshness":{"asOf":timestamp(r.try_get("updated_at").map_err(db)?)?,"status":"CURRENT"},"knownIssues":[]},"links":[]}),
+    )
+}
+
+async fn search(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
+    let q = query
+        .first("q")
+        .filter(|v| v.trim().len() >= 2)
+        .ok_or(ServiceError::InvalidRequest)?;
+    let pattern = format!("%{q}%");
+    let types = query
+        .many("types")
+        .into_iter()
+        .map(|value| value.to_ascii_uppercase())
+        .collect::<Vec<_>>();
+    let states = query.many("publicationState");
+    let date_from = optional_date(query, "dateFrom")?;
+    let date_to = optional_date(query, "dateTo")?;
+    validate_range(date_from.as_ref(), date_to.as_ref())?;
+    let sort = requested_sort(
+        query,
+        &["relevance", "updated_desc", "title_asc"],
+        "relevance",
+    )?;
+    let rows = sqlx::query(
+        "SELECT result_type,id,title,subtitle,status,summary,updated_at,href FROM (\
+         SELECT 'CASE'::text result_type,id::text,title,slug subtitle,public_state status,summary,updated_at,'/cases/'||slug href FROM public.cases WHERE (title ILIKE $1 OR summary ILIKE $1) AND (cardinality($2::text[])=0 OR 'CASE'=ANY($2)) AND (cardinality($3::text[])=0 OR public_state=ANY($3)) AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'AGENCY',id::text,name,jurisdiction,agency_type,NULL,updated_at,'/agencies/'||id::text FROM public.agencies WHERE name ILIKE $1 AND (cardinality($2::text[])=0 OR 'AGENCY'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'SUPPLIER',id::text,name,business_status,business_status,NULL,updated_at,'/suppliers/'||id::text FROM public.suppliers WHERE name ILIKE $1 AND (cardinality($2::text[])=0 OR 'SUPPLIER'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'CONTRACT',id::text,title,contract_number,status,NULL,updated_at,'/contracts/'||id::text FROM public.contracts WHERE (title ILIKE $1 OR contract_number ILIKE $1) AND (cardinality($2::text[])=0 OR 'CONTRACT'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'RULE',rule_id,name,active_version,'ACTIVE',public_description,updated_at,'/methodology/rules/'||rule_id FROM public.rules WHERE (name ILIKE $1 OR public_description ILIKE $1) AND (cardinality($2::text[])=0 OR 'RULE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'CORRECTION',x.id::text,x.summary,c.slug,c.public_state,x.reason,x.published_at,'/corrections/'||x.id::text FROM public.corrections x JOIN public.cases c ON c.id=x.case_id WHERE (x.summary ILIKE $1 OR x.reason ILIKE $1) AND (cardinality($2::text[])=0 OR 'CORRECTION'=ANY($2)) AND (cardinality($3::text[])=0 OR c.public_state=ANY($3)) AND ($4::date IS NULL OR x.published_at::date >= $4) AND ($5::date IS NULL OR x.published_at::date <= $5) \
+         UNION ALL SELECT 'DATASET',id,title,format,'PUBLISHED',description,updated_at,'/data' FROM public.datasets WHERE (title ILIKE $1 OR description ILIKE $1) AND (cardinality($2::text[])=0 OR 'DATASET'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
+         UNION ALL SELECT 'SOURCE',source_id,display_name,status,status,public_message,updated_at,'/sources/'||source_id FROM public.source_status WHERE (display_name ILIKE $1 OR source_id ILIKE $1 OR public_message ILIKE $1) AND (cardinality($2::text[])=0 OR 'SOURCE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5)\
+         ) x ORDER BY CASE WHEN $6='relevance' THEN (title ILIKE $1) END DESC,CASE WHEN $6 IN ('relevance','updated_desc') THEN updated_at END DESC NULLS LAST,CASE WHEN $6='title_asc' THEN title END ASC,id LIMIT $7 OFFSET $8",
+    )
+        .bind(&pattern)
+        .bind(&types)
+        .bind(&states)
+        .bind(date_from)
+        .bind(date_to)
+        .bind(sort)
+        .bind(query.limit + 1)
+        .bind(query.offset)
+        .fetch_all(pool)
+        .await
+        .map_err(db)?;
+    let mut items = Vec::new();
+    for r in rows {
+        let mut v = Map::new();
+        for (k, c) in [
+            ("resultType", "result_type"),
+            ("id", "id"),
+            ("title", "title"),
+            ("href", "href"),
+        ] {
+            v.insert(k.into(), json!(r.try_get::<String, _>(c).map_err(db)?));
+        }
+        for (k, c) in [
+            ("subtitle", "subtitle"),
+            ("status", "status"),
+            ("summary", "summary"),
+        ] {
+            if let Some(x) = r.try_get::<Option<String>, _>(c).map_err(db)? {
+                v.insert(k.into(), json!(x));
+            }
+        }
+        if let Some(x) = r
+            .try_get::<Option<OffsetDateTime>, _>("updated_at")
+            .map_err(db)?
+        {
+            v.insert("updatedAt".into(), json!(timestamp(x)?));
+        }
+        items.push(Value::Object(v));
+    }
+    let mut filters = Map::new();
+    filters.insert("q".into(), json!(q));
+    filters.insert("types".into(), json!(types));
+    filters.insert("publicationState".into(), json!(states));
+    for name in ["dateFrom", "dateTo"] {
+        if let Some(value) = query.first(name) {
+            filters.insert(name.into(), json!(value));
+        }
+    }
+    page(items, query, Value::Object(filters))
+}
+
+async fn system_status(pool: &PgPool) -> Result<Value, ServiceError> {
+    let sources = list_source_values(pool, &[], 200, 0, "name_asc").await?;
+    let incident = sources.iter().any(|v| {
+        v.get("status")
+            .and_then(Value::as_str)
+            .is_some_and(|s| matches!(s, "FAILED" | "INCIDENT"))
+    });
+    let degraded = sources.iter().any(|v| {
+        v.get("status")
+            .and_then(Value::as_str)
+            .is_some_and(|s| matches!(s, "DEGRADED" | "STALE"))
+    });
+    Ok(
+        json!({"status":if incident{"incident"}else if degraded{"degraded"}else{"operational"},"asOf":now()?,"affectedCapabilities":if incident||degraded{json!(["source freshness"])}else{json!([])},"sourceStatus":sources}),
+    )
+}
+

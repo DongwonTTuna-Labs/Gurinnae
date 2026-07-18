@@ -17,6 +17,13 @@ pub struct OperationSpec {
     pub response_json: &'static str,
 }
 
+/// Addendum v13.1 operation catalog and closed transport metadata.
+///
+/// The base v13 catalog remains immutable; services explicitly chain this
+/// catalog when registering the additive surface. Keeping the catalogs
+/// separate prevents an unknown operation from being routed through a
+/// generic handler by accident.
+pub mod addendum;
 pub mod common;
 pub mod control;
 pub mod control_api;

@@ -1,7 +1,9 @@
 <script lang="ts">
 import type { ScreenField, ScreenRuntime, ScreenViewModel } from "../index";
 import { localActionHref } from "../local-actions";
+import { humanFieldLabel } from "../screen-contract";
 import BotChallenge from "./BotChallenge.svelte";
+import StructuredJsonField from "./StructuredJsonField.svelte";
 
 let { screen, runtime }: { screen: ScreenViewModel; runtime: ScreenRuntime } =
   $props();
@@ -44,9 +46,14 @@ const supportsLocalCommand = (action: ScreenViewModel["actions"][number]) => {
 };
 const visibleActions = $derived(
   screen.actions
+    // DecisionReviewPanel owns the single approval dialog and its form. Keeping
+    // decision mutations out of this generic command rail prevents a second
+    // direct POST path that could bypass the required reason/step-up UX.
+    .filter((action) => !["approve", "reject", "request-changes", "recuse", "accept-suggestion", "reject-suggestion"].includes(action.id))
     .filter((action) => action.id !== attachmentUpload?.actionId)
     .filter((action) => action.id !== attachmentRemoval?.actionId)
     .filter((action) => action.id !== "select-file")
+    .filter((action) => !(screen.id === "RSP-003" && action.id === "save-draft"))
     .filter((action) => {
       if (runtime.allowedActionIds)
         return runtime.allowedActionIds.includes(action.id);
@@ -252,7 +259,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                       challengeReady[action.id] = proof.length > 0;
                     }}
                   />
-                {:else}<label><span>{field.label}{field.required ? " (필수)" : ""}</span>
+                {:else}<label><span>{field.label && field.label !== field.name ? field.label : humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span>
                   {#if field.readonly}<input type="hidden" name={field.name} value={field.value ?? ""} readonly /><output>{field.value === undefined ? "—" : String(field.value)}</output>
                   {:else if field.type === "boolean" && !field.required}<select name={field.name}>
                     <option value="" selected={field.value === undefined}>변경 안 함</option>
@@ -260,8 +267,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                     <option value="false" selected={field.value === false}>아니오</option>
                   </select>
                   {:else if field.type === "boolean"}<input type="checkbox" name={field.name} value="true" checked={field.value === true} />
+                  {:else if field.type === "json" && (field.name === "answers" || field.name.toLowerCase().includes("consent"))}<StructuredJsonField name={field.name} label={field.label && field.label !== field.name ? field.label : humanFieldLabel(field.name)} value={field.value} required={field.required} />
                   {:else if field.type === "json"}<textarea name={field.name} required={field.required} rows="4">{typeof field.value === "string" ? field.value : ""}</textarea>
-                  {:else if field.options}<select name={field.name} required={field.required}>{#each field.options as option}<option value={option}>{option}</option>{/each}</select>
+                  {:else if field.options}<select name={field.name} required={field.required}>{#each field.options as option}<option value={option} selected={String(field.value ?? "") === option}>{option}</option>{/each}</select>
                   {:else}<input type={field.type} name={field.name} required={field.required} readonly={field.readonly} value={field.value ?? ""} />{/if}
                 </label>{/if}
               {/each}

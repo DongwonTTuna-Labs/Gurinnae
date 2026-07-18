@@ -4,9 +4,12 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+base64.workspace = true
 gurine-agent-orchestration = { path = "../../crates/agent-orchestration" }
 gurine-detection = { path = "../../crates/detection" }
 gurine-jobs = { path = "../../crates/jobs" }
+gurine-observability = { path = "../../crates/observability" }
+gurine-object-store = { path = "../../crates/object-store" }
 gurine-persistence-postgres = { path = "../../crates/persistence-postgres" }
 reqwest.workspace = true
 rust_decimal.workspace = true

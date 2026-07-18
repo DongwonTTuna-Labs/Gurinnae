@@ -11,81 +11,14 @@ use crate::engine::{
 
 type ContractGroupKey = (String, String, String);
 type ContractGroup<'a> = Vec<&'a Map<String, Value>>;
+type ValidatedContracts<'a> = (Vec<&'a Map<String, Value>>, Decimal, i64);
 
 pub fn evaluate(input: &Value) -> Result<Value, EvaluationError> {
-    if ["contracts", "single_source_threshold", "window_days"]
-        .iter()
-        .any(|path| missing(input, path))
-    {
+    let Some((contracts, threshold, window_days)) = validated(input)? else {
         return blocked("REQUIRED_FIELD_MISSING", input);
-    }
-    let contracts = unique_contracts(&input["contracts"])?;
-    let required = [
-        "agency_id",
-        "supplier_id",
-        "category",
-        "signed_at",
-        "amount",
-        "method",
-    ];
-    if contracts.iter().any(|contract| {
-        required
-            .iter()
-            .any(|field| contract.get(*field).is_none_or(Value::is_null))
-    }) {
-        return blocked("REQUIRED_FIELD_MISSING", input);
-    }
-    let threshold = decimal(&input["single_source_threshold"])?;
-    let window_days = integer(&input["window_days"])?;
-    let mut groups: BTreeMap<ContractGroupKey, ContractGroup<'_>> = BTreeMap::new();
-    for contract in &contracts {
-        let legitimate = contract
-            .get("legitimate_phase")
-            .map(bool_value)
-            .transpose()?
-            .unwrap_or(false);
-        if string(&contract["method"])? == "SINGLE_SOURCE"
-            && decimal(&contract["amount"])? < threshold
-            && !legitimate
-        {
-            groups
-                .entry((
-                    string(&contract["agency_id"])?.to_owned(),
-                    string(&contract["supplier_id"])?.to_owned(),
-                    string(&contract["category"])?.to_owned(),
-                ))
-                .or_default()
-                .push(contract);
-        }
-    }
-    let mut matched = Vec::new();
-    for group in groups.values_mut() {
-        group.sort_by_key(|contract| {
-            contract["signed_at"]
-                .as_str()
-                .unwrap_or_default()
-                .to_owned()
-        });
-        let first = parse_date(string(&group[0]["signed_at"])?)?;
-        let last = parse_date(string(&group[group.len() - 1]["signed_at"])?)?;
-        let total: Decimal = group
-            .iter()
-            .map(|contract| decimal(&contract["amount"]))
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .sum();
-        if group.len() >= 3
-            && i64::from(last.to_julian_day() - first.to_julian_day()) <= window_days
-            && total >= threshold
-        {
-            matched.extend(
-                group
-                    .iter()
-                    .map(|contract| string(&contract["id"]).map(ToOwned::to_owned))
-                    .collect::<Result<Vec<_>, _>>()?,
-            );
-        }
-    }
+    };
+    let groups = candidate_groups(&contracts, threshold)?;
+    let matched = matched_ids(groups, threshold, window_days)?;
     let matched_set: BTreeSet<_> = matched.iter().cloned().collect();
     let excluded = contracts
         .iter()
@@ -120,6 +53,100 @@ pub fn evaluate(input: &Value) -> Result<Value, EvaluationError> {
         },
         input,
     )
+}
+
+fn validated(input: &Value) -> Result<Option<ValidatedContracts<'_>>, EvaluationError> {
+    if ["contracts", "single_source_threshold", "window_days"]
+        .iter()
+        .any(|path| missing(input, path))
+    {
+        return Ok(None);
+    }
+    let contracts = unique_contracts(&input["contracts"])?;
+    let required = [
+        "agency_id",
+        "supplier_id",
+        "category",
+        "signed_at",
+        "amount",
+        "method",
+    ];
+    if contracts.iter().any(|contract| {
+        required
+            .iter()
+            .any(|field| contract.get(*field).is_none_or(Value::is_null))
+    }) {
+        return Ok(None);
+    }
+    Ok(Some((
+        contracts,
+        decimal(&input["single_source_threshold"])?,
+        integer(&input["window_days"])?,
+    )))
+}
+
+fn candidate_groups<'a>(
+    contracts: &'a [&'a Map<String, Value>],
+    threshold: Decimal,
+) -> Result<BTreeMap<ContractGroupKey, ContractGroup<'a>>, EvaluationError> {
+    let mut groups: BTreeMap<ContractGroupKey, ContractGroup<'a>> = BTreeMap::new();
+    for contract in contracts {
+        let legitimate = contract
+            .get("legitimate_phase")
+            .map(bool_value)
+            .transpose()?
+            .unwrap_or(false);
+        if string(&contract["method"])? == "SINGLE_SOURCE"
+            && decimal(&contract["amount"])? < threshold
+            && !legitimate
+        {
+            groups
+                .entry((
+                    string(&contract["agency_id"])?.to_owned(),
+                    string(&contract["supplier_id"])?.to_owned(),
+                    string(&contract["category"])?.to_owned(),
+                ))
+                .or_default()
+                .push(contract);
+        }
+    }
+    Ok(groups)
+}
+
+fn matched_ids(
+    mut groups: BTreeMap<ContractGroupKey, ContractGroup<'_>>,
+    threshold: Decimal,
+    window_days: i64,
+) -> Result<Vec<String>, EvaluationError> {
+    let mut matched = Vec::new();
+    for group in groups.values_mut() {
+        group.sort_by_key(|contract| {
+            contract["signed_at"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned()
+        });
+        let first = parse_date(string(&group[0]["signed_at"])?)?;
+        let last = parse_date(string(&group[group.len() - 1]["signed_at"])?)?;
+        let total: Decimal = group
+            .iter()
+            .map(|contract| decimal(&contract["amount"]))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .sum();
+        if group.len() >= 3
+            && i64::from(last.to_julian_day() - first.to_julian_day()) <= window_days
+            && total >= threshold
+        {
+            matched.extend(
+                group
+                    .iter()
+                    .map(|contract| string(&contract["id"]).map(ToOwned::to_owned))
+                    .collect::<Result<Vec<_>, _>>()?,
+            );
+        }
+    }
+    Ok(matched)
 }
 
 fn parse_date(value: &str) -> Result<Date, EvaluationError> {

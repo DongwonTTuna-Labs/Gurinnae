@@ -42,12 +42,12 @@ docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
   -v csv_size="$csv_size" -v hwp_size="$hwp_size" <<'SQL' >/dev/null
 INSERT INTO raw.source_documents(
   id,source_id,external_id,retrieved_at,content_type,content_sha256,
-  content_size_bytes,object_key,status
+  content_size_bytes,object_key,status,asset_id,asset_revision
 ) VALUES
  (:'csv_id','runtime-source','csv-1',clock_timestamp(),'text/csv',:'csv_sha',
-  :'csv_size','raw/runtime/valid-contract.csv','FETCHED'),
+  :'csv_size','raw/runtime/valid-contract.csv','FETCHED',:'csv_id',1),
  (:'hwp_id','runtime-source','hwp-1',clock_timestamp(),'application/x-hwp',:'hwp_sha',
-  :'hwp_size','raw/runtime/legacy-binary.hwp','FETCHED');
+  :'hwp_size','raw/runtime/legacy-binary.hwp','FETCHED',:'hwp_id',1);
 INSERT INTO core.rule_versions(
   id,rule_id,version,name,description,configuration,code_digest,status,row_version
 ) VALUES(

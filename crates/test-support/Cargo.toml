@@ -1,7 +1,142 @@
 [package]
-name = "gurine-test-support"
+name = "gurine-acceptance-tests"
 version.workspace = true
 edition.workspace = true
+
+[lib]
+name = "gurine_acceptance_testkit"
+
+[[test]]
+name = "ai_multimodal_addendum"
+path = "../../tests/integration/acceptance/ai_multimodal_addendum.rs"
+
+[[test]]
+name = "architecture_boundaries"
+path = "../../tests/integration/acceptance/architecture_boundaries.rs"
+
+[[test]]
+name = "budget_and_kill_switch"
+path = "../../tests/integration/acceptance/budget_and_kill_switch.rs"
+
+[[test]]
+name = "business_model_addendum"
+path = "../../tests/integration/acceptance/business_model_addendum.rs"
+
+[[test]]
+name = "case_lifecycle"
+path = "../../tests/integration/acceptance/case_lifecycle.rs"
+
+[[test]]
+name = "code_quality_and_idioms"
+path = "../../tests/integration/acceptance/code_quality_and_idioms.rs"
+
+[[test]]
+name = "copy_safety"
+path = "../../tests/integration/acceptance/copy_safety.rs"
+
+[[test]]
+name = "correction_history"
+path = "../../tests/integration/acceptance/correction_history.rs"
+
+[[test]]
+name = "dependency_pinning"
+path = "../../tests/integration/acceptance/dependency_pinning.rs"
+
+[[test]]
+name = "docker_development"
+path = "../../tests/integration/acceptance/docker_development.rs"
+
+[[test]]
+name = "entity_resolution"
+path = "../../tests/integration/acceptance/entity_resolution.rs"
+
+[[test]]
+name = "eventing"
+path = "../../tests/integration/acceptance/eventing.rs"
+
+[[test]]
+name = "final_delivery"
+path = "../../tests/integration/acceptance/final_delivery.rs"
+
+[[test]]
+name = "ingestion_idempotency"
+path = "../../tests/integration/acceptance/ingestion_idempotency.rs"
+
+[[test]]
+name = "internal_workspace"
+path = "../../tests/integration/acceptance/internal_workspace.rs"
+
+[[test]]
+name = "journey_graph_addendum"
+path = "../../tests/integration/acceptance/journey_graph_addendum.rs"
+
+[[test]]
+name = "journey_handoff_addendum"
+path = "../../tests/integration/acceptance/journey_handoff_addendum.rs"
+
+[[test]]
+name = "oidc_compose_concurrency"
+path = "../../tests/integration/acceptance/oidc_compose_concurrency.rs"
+
+[[test]]
+name = "openapi_codegen"
+path = "../../tests/integration/acceptance/openapi_codegen.rs"
+
+[[test]]
+name = "price_comparability"
+path = "../../tests/integration/acceptance/price_comparability.rs"
+
+[[test]]
+name = "procurement_domain_addendum"
+path = "../../tests/integration/acceptance/procurement_domain_addendum.rs"
+
+[[test]]
+name = "product_structure"
+path = "../../tests/integration/acceptance/product_structure.rs"
+
+[[test]]
+name = "production_readiness"
+path = "../../tests/integration/acceptance/production_readiness.rs"
+
+[[test]]
+name = "prompt_injection"
+path = "../../tests/integration/acceptance/prompt_injection.rs"
+
+[[test]]
+name = "provenance"
+path = "../../tests/integration/acceptance/provenance.rs"
+
+[[test]]
+name = "public_private_boundary"
+path = "../../tests/integration/acceptance/public_private_boundary.rs"
+
+[[test]]
+name = "publication_gate"
+path = "../../tests/integration/acceptance/publication_gate.rs"
+
+[[test]]
+name = "response_rights"
+path = "../../tests/integration/acceptance/response_rights.rs"
+
+[[test]]
+name = "route_operation_completeness"
+path = "../../tests/integration/acceptance/route_operation_completeness.rs"
+
+[[test]]
+name = "runtime_configuration"
+path = "../../tests/integration/acceptance/runtime_configuration.rs"
+
+[[test]]
+name = "schema_drift"
+path = "../../tests/integration/acceptance/schema_drift.rs"
+
+[[test]]
+name = "source_freshness"
+path = "../../tests/integration/acceptance/source_freshness.rs"
+
+[[test]]
+name = "sqlx_postgres"
+path = "../../tests/integration/acceptance/sqlx_postgres.rs"
 
 [dependencies]
 base64.workspace = true
@@ -9,8 +144,10 @@ gurine-application = { path = "../application" }
 gurine-auth = { path = "../auth" }
 serde.workspace = true
 serde_json.workspace = true
+sqlx.workspace = true
 thiserror.workspace = true
 time.workspace = true
+tokio.workspace = true
 uuid.workspace = true
 
 [lints]

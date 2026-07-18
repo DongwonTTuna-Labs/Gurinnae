@@ -89,10 +89,21 @@ export const GET: RequestHandler = async (event) => {
   const notice = control.response.ok
     ? `${pending.operationId} 완료`
     : `${pending.operationId} 실패`;
-  throw redirect(
-    303,
-    `${pending.returnTo}?notice=${encodeURIComponent(notice)}`,
-  );
+  const destination = new URL(pending.returnTo, event.url);
+  if (control.response.ok && pending.operationId === "submitActionDecision") {
+    const executionAuthorization =
+      typeof control.value.executionAuthorization === "string"
+        ? control.value.executionAuthorization
+        : undefined;
+    if (
+      executionAuthorization &&
+      /^[0-9a-f-]{16,128}$/i.test(executionAuthorization)
+    ) {
+      destination.searchParams.set("executionId", executionAuthorization);
+    }
+  }
+  destination.searchParams.set("notice", notice);
+  throw redirect(303, `${destination.pathname}${destination.search}`);
 };
 
 function requiredString(value: unknown): string {

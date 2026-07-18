@@ -85,6 +85,16 @@ for service in public-api control-api identity-api submission-api ingest-worker 
   [[ "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$container_id")" == "true" ]]
 done
 
+for service in "${application_services[@]}"; do
+  container_id="$("${compose[@]}" ps --all --quiet "$service")"
+  security_opts="$(docker inspect --format '{{join .HostConfig.SecurityOpt ","}}' "$container_id")"
+  cap_drop="$(docker inspect --format '{{join .HostConfig.CapDrop ","}}' "$container_id")"
+  [[ ",$security_opts," == *,no-new-privileges:true,* ]]
+  [[ ",$cap_drop," == *,ALL,* ]]
+  [[ "$(docker inspect --format '{{.HostConfig.PidsLimit}}' "$container_id")" == "256" ]]
+  [[ "$(docker inspect --format '{{.HostConfig.Init}}' "$container_id")" == "true" ]]
+done
+
 data_network="${project}_data"
 internal_network="${project}_internal"
 [[ "$(docker network inspect --format '{{.Internal}}' "$data_network")" == "true" ]]
@@ -130,4 +140,4 @@ for service in public-api control-api identity-api submission-api; do
   "${compose[@]}" up --detach --no-deps --wait --wait-timeout 120 "$service" >/dev/null
 done
 
-printf '20-service non-root/read-only/network/restart/volume/SIGTERM production stack: PASS\n'
+printf '20-service non-root/read-only/no-new-privileges/cap-drop/network/restart/volume/SIGTERM production stack: PASS\n'

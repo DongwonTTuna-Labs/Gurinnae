@@ -34,7 +34,7 @@ export const screen = {
       order: 4,
       id: "email",
       title: "이메일",
-      component: "AgentSuggestionPanel",
+      component: "CheckAnswers",
       purpose: "verification.",
       test_id: "pub_029__section__email",
     },

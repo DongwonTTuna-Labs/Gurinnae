@@ -14,13 +14,23 @@ class UniqueKeyLoader(yaml.SafeLoader):
 
 
 def _construct_mapping(loader: UniqueKeyLoader, node: yaml.MappingNode, deep: bool = False) -> dict[Any, Any]:
-    loader.flatten_mapping(node)
     mapping: dict[Any, Any] = {}
+    explicit: set[Any] = set()
     for key_node, value_node in node.value:
+        if key_node.tag == 'tag:yaml.org,2002:merge':
+            merged = loader.construct_object(value_node, deep=deep)
+            merged_values = merged if isinstance(merged, list) else [merged]
+            for inherited in merged_values:
+                if not isinstance(inherited, dict):
+                    raise ValueError('YAML merge value must be a mapping')
+                for key, value in inherited.items():
+                    mapping.setdefault(key, value)
+            continue
         key = loader.construct_object(key_node, deep=deep)
-        if key in mapping:
+        if key in explicit:
             mark = key_node.start_mark
             raise DuplicateKeyError(f"duplicate YAML key {key!r} at line {mark.line + 1}, column {mark.column + 1}")
+        explicit.add(key)
         mapping[key] = loader.construct_object(value_node, deep=deep)
     return mapping
 

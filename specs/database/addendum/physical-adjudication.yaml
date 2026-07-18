@@ -1,0 +1,433 @@
+schema_version: gurinnae.physical-adjudication.v2
+status: DECISION_COMPLETE_REVIEW_REQUIRED
+authority:
+  sole_authority_zip: /home/dongwonttuna/.codex/attachments/29aa0c62-686a-450b-84aa-944e5cb7d47a/gurine-codex-authority-pack-v13.0.0-20260712.zip
+  sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+  rule: No earlier pack or separate Gurinnae material is an input.
+scope:
+  observed_contract_candidates: 29
+  owner_correction_candidates: 3
+  adjudicated_candidates: 32
+  dispositions:
+    NEW: 22
+    MAP: 8
+    NONPHYSICAL: 2
+  count_rule: Counts apply only to candidate_adjudications below; protocol_receipt_maps are counted separately.
+
+global_decisions:
+  base_and_runtime_migrations:
+    authority_spec_rule: specs/database/migrations/0001..0024 remain byte-identical to the pinned authority archive.
+    runtime_rule: db/migrations/0001..0024 are the same byte-identical authority inputs; a separately pinned runtime derivation is forbidden.
+    correction_rule: Existing implementation deltas formerly mixed into 0009, 0013, and 0024 are relocated in original ordinal order to reviewed migration 0030. Every later correction uses post-base migrations, preflight, and rollback proof.
+  execution_identity:
+    aggregate: ops.in_flight_effects
+    immutable_authorization: ops.execution_authorizations
+    generation_attempt: ops.execution_attempts
+    append_only_receipt_chain: ops.execution_receipts
+    rule: Aggregate, authorization, attempt, and receipt identities are never collapsed into one row or one wire state.
+    policy_blocked:
+      terminal: true
+      authorization_rows: 0
+      attempt_rows: 0
+      provider_egress: 0
+      forbidden_edge: POLICY_BLOCKED->QUEUED
+  common_command_receipt:
+    relation: ops.idempotency_keys
+    rule: Every HTTP command stores exact status, headers, content type, and response bytes in the common command-receipt ledger. Domain decisions and execution receipts do not substitute for idempotency bytes.
+    installation: The exact-byte upgrade is installed before additive command routines, or every earlier routine is replaced after the upgrade and included in the exact command registry.
+  revision_history:
+    rule: A mutable head cannot be the target of a historical version-and-digest foreign key.
+    mapped_relations:
+      - intake.communication_endpoints
+      - ops.communication_provider_configs
+    required_alter:
+      - Persist every (stable_id, version, digest) forever using append-only rows in the mapped relation.
+      - State or configuration changes insert version+1; they never update away a referenced version.
+      - Current head is a deterministic projection and is not historical authority.
+      - Approval, rendering, delivery, callback, and receipt rows bind the exact composite revision key.
+  response_delivery_materialization:
+    sent_fact: Authenticated provider acceptance is the only DRAFT to SENT fact. PROVIDER_REQUEST_COMMITTED, timeout, partial response, retry scheduling, unauthenticated callback, manual assertion, suppression, cancellation, and unknown outcome never qualify.
+    provider_time_source: providerAcceptedAt is copied from the exact applied delivery receipt observation; callers cannot supply it independently.
+    clock_start: Only a separately verified DELIVERED or READ observation starts the response clock. EVIDENCE_PENDING is derived from a sent request with no applied clock decision and is never a placeholder row.
+    logical_consumer: response-request-materializer
+    physical_queue: workflow-worker
+    inbox_identity: [logical_consumer, source_event_id]
+    inbox_rule: The authoritative outbox-envelope digest, terminal disposition, typed handler result, and result digest are stored atomically with the request transition, sent receipt, audit, and outbox event. Exact replay writes zero; changed replay is EVENT_REPLAY_CONFLICT.
+    portal_open_rule: status IN [SENT, VIEWED] and effective_due_at is null or in the future. Planned due_at alone cannot expire a request before verified delivery evidence starts the clock.
+    owned_intake_rule: workflow.response_submitted.v2 materializes exactly one editorial response in the same logical-consumer inbox transaction; response.submitted.v1 and workflow.response_submitted.v1 are retired token-bearing contracts with no new producer or consumer and are not alternate routes.
+    normal_acceptance_producer:
+      operation_id: private.RecordOutboundDeliveryObservation
+      physical_routine: ops.record_outbound_delivery_observation(ops.outbound_delivery_observation_v1)
+      caller: notification-worker communication gateway after one authenticated synchronous provider response
+      source_rule: The gateway commits the claimed attempt before egress. A closed adapter may then assert at most PROVIDER_ACCEPTED from the exact authenticated response bytes; a socket write, provider identifier, queue admission, timeout, partial response, or unsigned caller claim does not qualify.
+      atomic_write_set: [ops.outbound_deliveries, ops.outbound_delivery_receipts, ops.audit_events, ops.outbox]
+      receipt_identity: [delivery_receipt_id, delivery_id, receipt_sequence, receipt_digest, resulting_state, applied]
+      time_source: providerAcceptedAt is the stored receipt observed_at, never a request or event payload timestamp.
+      event: One applied state-changing receipt inserts communication.delivery_receipt_recorded.v1 with sourceEventId equal to its outbox_event_id and the exact receipt identity. Exact replay inserts nothing; a stale observation is stored without a domain event; ambiguous delivery transitions to reconciliation and is never resent automatically.
+      callback_attempt_rule: attemptId is nullable for callback, poll, and reconciliation evidence. The event and materializer always bind deliveryReceiptId plus receiptSequence and reload the authoritative receipt; attemptId alone is never receipt identity.
+  offer_profile_parent_binding:
+    mapped_parent: ops.commercial_contract_periods
+    child: ops.offer_profile_capabilities
+    parent_alter_columns:
+      offer_profile_id: uuid NOT NULL
+      offer_profile_version: bigint NOT NULL
+      offer_profile_digest: char(64) NOT NULL
+      qualification_receipt_id: uuid NOT NULL
+      qualification_episode_id: uuid NOT NULL
+      qualification_receipt_digest: char(64) NOT NULL
+      tariff_record_digest: char(64) NOT NULL
+      offer_capability_set_digest: char(64) NOT NULL
+      offer_quota_set_digest: char(64) NOT NULL
+      offer_overage_policy_set_digest: char(64) NOT NULL
+      offer_service_credit_policy_digest: char(64) NOT NULL
+      offer_contract_binding_digest: char(64) NOT NULL
+      offer_effective_from: timestamptz NOT NULL
+      offer_effective_until: timestamptz NOT NULL
+      offer_source_receipt_digest: char(64) NOT NULL
+      offer_signature_digest: char(64) NOT NULL
+    original_profile_partial_unique:
+      predicate: fact_effect = ORIGINAL
+      keys:
+        - [offer_profile_id, offer_profile_version]
+        - [offer_profile_digest]
+      rule: These keys prevent a signed profile from being introduced by two economic roots, but operational status successors may inherit the tuple.
+    parent_candidate_keys:
+      - [id, offer_profile_id, offer_profile_version, offer_profile_digest]
+      - [id, offer_profile_id, offer_profile_version, offer_profile_digest, offer_capability_set_digest, offer_quota_set_digest, offer_overage_policy_set_digest, offer_service_credit_policy_digest]
+    exact_foreign_keys:
+      tariff: "[tariff_version_id, tariff_record_digest] -> ops.tariff_versions(id, record_digest)"
+      qualification: "[qualification_receipt_id, deployment_id, organization_id, sku, qualification_episode_id, qualification_receipt_digest] -> ops.commercial_qualification_receipts(id, deployment_id, organization_id, sku, qualification_episode_id, receipt_digest)"
+    required_parent_candidate_key_alter: ops.commercial_qualification_receipts adds UNIQUE(id, deployment_id, organization_id, sku, qualification_episode_id, receipt_digest) before the contract-period FK is installed.
+    qualification_guard: The referenced receipt is the effective non-REVERSAL leaf for the same deployment, organization, SKU, and qualification_episode_id at offer_effective_from. A replacement or reversal never mutates this historical binding; a later offer requires a new contract-period root.
+    interval_guard: offer_effective_from < offer_effective_until; the offer interval is contained by the tariff interval and by the contract period converted through accounting_timezone, and the contract state interval that sells it is ACTIVE. The source OfferProfileV1 contractPeriodId equals this row id.
+    cycle_free_digest_boundary:
+      offer_contract_binding_digest: SHA-256 of CommercialContractOfferParentV1, the exact immutable contract/tariff/qualification/effective-interval parent fields excluding offer_profile_digest, offer source/signature digests, record_digest, state-successor fields, and created_at.
+      offer_profile_contract_period_digest: OfferProfileV1.contractPeriodDigest equals offer_contract_binding_digest, never the final commercial-contract-period record_digest.
+      offer_profile_digest: Computed from OfferProfileV1 after contractPeriodDigest is fixed to offer_contract_binding_digest.
+      final_contract_record_digest: CommercialContractPeriodCanonicalV1 includes offer_contract_binding_digest and the complete OfferProfile identity/digest/set/source/signature tuple. It is computed last and is not an OfferProfile input.
+      rule: The three preimages are disjointly ordered as parent binding -> OfferProfile -> final contract record; a digest fixed point is forbidden.
+    digest_guard: Every parent, offer, tariff, qualification, capability, quota, overage, service-credit, source-receipt, and signature digest is lowercase SHA-256 and follows the cycle-free boundary above.
+    successor_rule: Offer/economic fields are immutable within a contract-period root. A changed OfferProfileV1, tariff, capability set, quota, overage, service-credit policy, or effective interval creates a new nonoverlapping commercial-contract-period root; an operational status successor must inherit the entire offer tuple byte-for-byte.
+    child_guard: Exactly twelve contiguous capability ordinals in the closed canonical capability order reproduce all four parent set digests. NOT_OFFERED remains explicit and cannot grant entitlement; INCLUDED_REQUIRED must resolve current production activation, consent, provider, rights, and cost evidence before CONFIGURED_FOR_SALE.
+  paid_evidence_packet_lifecycle:
+    relation: ops.paid_evidence_packets
+    member_relation: ops.paid_evidence_packet_members
+    append_only_versions:
+      - version: 1
+        state: AWAITING_TERMINAL_BINDING
+        shape: exact packet subject, commercial/qualification binding, ten ordered typed members, packet_subject_digest and member_set_digest; all terminal, invalidation, outcome and final packet fields are null
+      - version: 2
+        states: [FINALIZED, INVALIDATED]
+        predecessor: exact version 1 and predecessor_packet_record_digest
+        final_shape: FINALIZED has one exact allowed terminal resolver result, terminal_binding_digest, PaidEvidencePacketV1 packet_digest, outcome fact ID/digest and finalized_at; INVALIDATED has a closed invalidation reason/evidence digest and no terminal, outcome or packet_digest fields
+    transition_rule: Exactly one version-2 successor may be inserted. Missing, stale, ambiguous, queued, running, provider-accepted, retryable, or reconciliation-required evidence leaves version 1 awaiting recovery; it cannot be normalized to INVALIDATED or FINALIZED. INVALIDATED is reserved for an immutable correction/reversal or proven subject mismatch that can never satisfy the frozen subject.
+    packet_digest_rule: packet_digest is Gurine Canonical JSON v1 SHA-256 over the exact PaidEvidencePacketV1 final projection excluding only packetDigest; it exists only on FINALIZED and can never be recomputed in place.
+    member_rule: Ten immutable members belong to subject version 1, use contiguous ordinals 0..9 and the closed PaidEvidencePacketMemberInputV1 categories, and reproduce member_set_digest and packet_subject_digest. Version 2 points to the exact version-1 subject; members are not copied or rewritten.
+    terminal_uniqueness: "[terminal_receipt_kind, terminal_receipt_id, terminal_receipt_version, terminal_receipt_digest] is unique across FINALIZED packets, so retries and correction history cannot multiply paid value."
+    terminal_resolvers:
+      OUTBOUND_DELIVERY:
+        source: ops.outbound_delivery_receipts
+        candidate_key: [id, delivery_id, receipt_sequence, receipt_digest, resulting_state, applied]
+        terminal_version: receipt_sequence
+        allowed: applied=true, projection_disposition=APPLIED, resulting_state in [DELIVERED, READ], resulting_proof_level in [DELIVERED, READ]
+        exact_binding: The delivery object is the AUDITED_DELIVERY packet subject; rendering_digest, authorization_snapshot_digest, organization/contract scope, final packet subject digest, exact endpoint/provider revisions, and receipt observed_at are reloaded and locked. PROVIDER_ACCEPTED, callback request identity, or an attempt row is never terminal identity.
+      ORGANIZATION_DECISION:
+        rejected_final:
+          source: ops.action_decisions
+          candidate_key: [id, proposal_id, proposal_version, approval_digest, receipt_digest, actor_id, decision_kind, conflict_snapshot_digest]
+          terminal_version: proposal_version
+          allowed: record_kind=DECISION, decision_kind=REJECT, resulting_proposal_state=REJECTED, exact final reviewer assignment and conflict snapshot, no later decision/withdrawal for the same proposal version
+        effect_succeeded:
+          source: ops.execution_receipts
+          candidate_key: [id, execution_id, generation, receipt_sequence, receipt_digest, receipt_kind, aggregate_state, mutates_aggregate_state]
+          required_alter: ops.execution_receipts adds the exact UNIQUE candidate key above before any paid-packet terminal FK or resolver is installed.
+          terminal_version: receipt_sequence
+          allowed: receipt_kind=EFFECT_SUCCEEDED, aggregate_state=SUCCEEDED, mutates_aggregate_state=true, exact current generation and one terminal receipt
+        shared_binding: Resolve the exact action proposal/version/approval digest, counted nonwithdrawn decision receipt set, human decision ID/digest, optional execution authorization/receipt chain, COMPLETED_DECISION_CYCLE subject ID/version/digest, and packet_subject_digest. REJECTED_FINAL and EFFECT_SUCCEEDED are the only resulting states; APPROVED, queued, running, partial, failed, cancelled, or reconciliation-required is not terminal.
+    acyclic_finalization_digests:
+      - Compute final packet_digest from PaidEvidencePacketV1; the projection contains the terminal receipt but no outcome fact or outbox identity.
+      - Preallocate outcome_fact_id and compute outcome_fact_digest from the exact outcome canonical bytes including packet_digest.
+      - Compute packet_record_digest from the append-only version-2 storage row including packet_digest and outcome fact ID/digest. Outcome facts reference packet_digest, not packet_record_digest.
+      - Preallocate audit and outbox IDs, compute the typed binding receipt from packet_record_digest and outcome_fact_digest, then serialize the outbox payload. No digest preimage contains a digest that transitively depends on itself.
+    atomic_finalization: ops.bind_paid_terminal_receipt_v1 locks inbox, packet version 1, all ten members, contract/qualification, exact resolver graph and current correction head; inserts version 2, one ORIGINAL outcome fact only for an allowed paid pair, audit, outbox and typed inbox result in one SERIALIZABLE transaction following the acyclic digest order. Exact replay writes zero and a changed event is EVENT_REPLAY_CONFLICT.
+  procurement_physical_closure:
+    canonicalization:
+      decision: GURINE_CANONICAL_JSON_V1 is the product name for RFC8785 JCS encoded as UTF-8 bytes; they are one byte algorithm, not alternatives.
+      storage: Every relation-specific closed payload stores typed jsonb, canonical bytea, a digest-preimage bytea with only its self-digest field omitted, and the generated lowercase SHA-256. Database and Rust encoders must reproduce identical bytes.
+      mutation_oracle: Removing any material field from the preimage, including ordered member arrays, source revision, limitation, coverage, or locator fields, fails the digest validator.
+    common_revision_digest_split:
+      normalized_record_digest: record_digest is the immutable normalized revision digest from RevisionIdentityV1 and the normalization output candidate key.
+      source_record_digest: source_record_digest is SourceRevisionRefV1.recordDigest and binds raw.parsed_records.payload_sha256.
+      rule: The two digests are distinct named columns and preimages. A source document/parsed record/mapping identity that replays with changed normalized bytes is quarantined as NORMALIZATION_CONFLICT; neither digest is substituted for the other.
+    contract_line_item_authority:
+      schema: ProcurementContractLineItemRevisionV1
+      required_identity: [lineItemId, lineItemRootId, lineItemRevision, lineItemDigest, predecessorLineItemRevisionId, predecessorLineItemDigest, contractRevisionId, contractRootId, contractRevision, contractRecordDigest]
+      required_business_fields: [externalLineItemId, lineOrdinal, description, categoryCode, manufacturer, model, quantity, sourceUnit, normalizedQuantity, normalizedUnit, unitConversionFactor, unitConversionPolicyVersion, unitConversionPolicyDigest, unitConversionEvidenceDigest, currency, unitPrice, totalPrice, vatBasis, vatRate, vatAmount, shippingAmount, installationAmount, maintenanceAmount, warrantyMonths, bundleState, componentCount, componentSetDigest, sourceLocatorDigest, coverageStatus, limitations]
+      closed_values:
+        vatBasis: [INCLUDED, EXCLUDED, EXEMPT, UNKNOWN]
+        bundleState: [NOT_BUNDLE, COMPLETE, PARTIAL, UNKNOWN]
+        coverageStatus: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]
+      amount_rule: Decimal values use numeric(24,6), currency is uppercase ISO-4217, quantity and prices are nonnegative, and totalPrice equality follows the versioned rounding/VAT policy. UNKNOWN inputs remain null with an explicit coverage/limitation; no zero default is permitted.
+      bundle_rule: NOT_BUNDLE has zero components and canonical empty-set digest. COMPLETE has one or more exact child rows whose ordered digests reproduce componentSetDigest. PARTIAL or UNKNOWN is retained but blocks price comparability and paid evidence.
+    normalized_member_relations:
+      award_winners: core.procurement_award_winner_revisions
+      contract_suppliers: core.procurement_contract_supplier_revisions
+      line_item_components: core.procurement_contract_line_item_components
+      rule: Award winners, contract suppliers and bundle components are immutable ordinal-complete child relations with native composite FKs. JSON arrays remain round-trip projections only and cannot substitute for child rows.
+    exact_existing_relation_maps:
+      supplier_identifier_fact:
+        target: core.supplier_identifiers
+        alter: Add candidate_id/candidate_revision/candidate_digest, source locator digest, verification evidence digest, identifier_fact_digest and exact composite unique keys; classify base rows LEGACY_UNPROVEN, revoke direct mutation, and accept current rule input only from post-0025 immutable rows.
+      supplier_incorporation_fact:
+        target: core.field_provenance
+        alter: Add normalization/source composite keys and a closed SUPPLIER_INCORPORATION_DATE fact variant whose canonical normalized date, locator and transformation digests are immutable. core.suppliers.incorporation_date is only a current projection.
+      notice_specification_detail:
+        target: raw.evidence_segments
+        alter: Add optional notice revision/specification detail identity, revision, section ordinal, text digest and coverage status with a closed all-or-none shape and composite unique key. Only complete exact segment bindings are rule-eligible.
+      response_claim_and_evidence_history:
+        target: editorial.review_snapshots plus editorial.response_request_claim_scopes and editorial.response_request_evidence_scopes
+        rule: The immutable review snapshot member set is the historical claim/evidence authority. Scope rows copy the exact claim/evidence revision content and digest from that snapshot; no FK targets the later mutable head. A changed claim or evidence requires a new review snapshot and scope version.
+      procurement_export:
+        target: intake.dataset_export_requests
+        alter: Add snapshot_id, filter_digest, member_count, member_set_digest, projection generation/watermark and immutable export receipt digest. The public download receipt maps to the exact request/materialization/audit receipt; no symbolic receipt relation is assumed.
+    response_scope_header:
+      implementation: claim ordinal zero stores the complete closed ResponseRequestScopeV1 canonical header/preimage; all other claim rows have null header bytes. editorial.response_requests stores current scope_version/scope_digest and an initially deferred FK to the ordinal-zero candidate key.
+      evidence_rule: Evidence rows reference their claim-scope composite plus exact snapshot member identity/source locator. Claim and evidence ordinals are contiguous and their set digests reproduce the header.
+
+candidate_adjudications:
+  - candidate: core.procurement_notice_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [revision_id, root_id, revision, record_digest]
+  - candidate: core.procurement_award_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [revision_id, root_id, revision, record_digest]
+  - candidate: core.procurement_award_winner_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [award_revision_id, winner_ordinal]
+    member_binding: [candidate_id, candidate_revision, candidate_digest, member_digest]
+    rule: Ordinals are contiguous from zero, every member has a native supplier-candidate composite FK, and the complete ordered set reproduces the closed AwardRevisionV1 winners projection and winner_set_digest.
+  - candidate: core.procurement_bidder_participation_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [revision_id, root_id, revision, record_digest]
+  - candidate: core.procurement_contract_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [revision_id, root_id, revision, record_digest]
+    compatibility_projection: core.contracts
+    projection_rule: One current-head projector owns the base compatibility row; direct dual-write is forbidden.
+  - candidate: core.procurement_contract_supplier_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [contract_revision_id, supplier_ordinal]
+    member_binding: [candidate_id, candidate_revision, candidate_digest, member_digest]
+    rule: Ordinals are contiguous from zero, every member has a native supplier-candidate composite FK, and the complete ordered set reproduces the closed ProcurementContractRevisionV1 suppliers projection and supplier_set_digest.
+  - candidate: core.procurement_contract_amendment_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [revision_id, root_id, revision, record_digest]
+    compatibility_projection: core.contract_changes
+    projection_rule: One current-head projector owns the base compatibility row; historical revisions are immutable.
+  - candidate: core.procurement_contract_line_item_revisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [line_item_id, line_item_revision, line_item_digest]
+    parent_binding: [contract_revision_id, contract_root_id, contract_revision, contract_record_digest]
+    compatibility_projection: core.contract_line_items
+    projection_rule: One current-head projector owns the base compatibility row; comparison approval always binds the immutable revision.
+    schema: global_decisions.procurement_physical_closure.contract_line_item_authority
+  - candidate: core.procurement_contract_line_item_components
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [line_item_id, line_item_revision, component_ordinal]
+    member_binding: [component_id, component_revision, component_digest]
+    rule: Only a COMPLETE bundle has one or more contiguous component rows; their closed quantities, normalized units, price allocation, locator and limitation digests reproduce component_set_digest. Components cannot exist for NOT_BUNDLE and PARTIAL or UNKNOWN blocks comparison.
+  - candidate: core.procurement_line_item_revisions
+    disposition: MAP
+    target: core.procurement_contract_line_item_revisions
+    mapping_rule: The earlier phantom shorthand is retired. Every contract, schema, foreign key, query, and receipt uses the canonical contract-qualified relation name and exact immutable revision key.
+  - candidate: core.supplier_identity_candidates
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [candidate_id, candidate_revision, candidate_digest]
+  - candidate: core.supplier_identity_resolution_decisions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [decision_id, decision_digest]
+  - candidate: core.supplier_identity_resolution_decision_members
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [decision_id, member_ordinal]
+    member_binding: [candidate_id, candidate_revision, candidate_digest]
+  - candidate: core.supplier_relationship_assertions
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [assertion_id, assertion_revision, assertion_digest]
+  - candidate: core.supplier_relationship_assertion_evidence
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [assertion_id, assertion_revision, evidence_ordinal]
+  - candidate: core.procurement_query_snapshots
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [snapshot_id, filter_digest, member_set_digest]
+  - candidate: core.procurement_query_snapshot_members
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    resolves_unnamed_shape: procurement_query_snapshot_member_relation
+    canonical_identity: [snapshot_id, member_ordinal]
+    required_member_variants: [CONTRACT, CONTRACT_LINE_ITEM]
+    digest_rule: Ordered members are contiguous from zero and reproduce member_count and member_set_digest.
+  - candidate: editorial.response_request_claim_scopes
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [response_request_id, scope_version, claim_ordinal]
+  - candidate: editorial.response_request_evidence_scopes
+    disposition: NEW
+    migration: 0025_evidence_snapshots_and_search.sql
+    canonical_identity: [response_request_id, scope_version, claim_ordinal, evidence_ordinal]
+  - candidate: editorial.response_request_sent_receipts
+    disposition: NEW
+    migration: 0027_communication_consent_delivery.sql
+    canonical_identity: [id, response_request_id, receipt_digest]
+    unique_effect_keys: [source_event_id, response_request_id, delivery_receipt_id, outbox_event_id, receipt_digest]
+    rule: One immutable receipt binds the request version and scope digest to the exact intent, rendering, access artifact, endpoint revision, provider preflight snapshot, delivery, definitive applied acceptance receipt, audit, and response.request_sent.v1 outbox event. A mutable delivery head or caller timestamp is not proof.
+  - candidate: core.procurement_comparable_candidate_revisions
+    disposition: MAP
+    targets:
+      - relation: ops.action_approval_comparable_details
+        variant: COMPARABLE_CANDIDATE
+      - relation: ops.execution_receipts
+        variant: COMPARABLE_SELECTION_EFFECT
+    mapping_rule: A comparable candidate is a typed, digest-bound proposal detail and becomes authority only through the independently authorized definitive execution receipt. Query-snapshot membership proves the searched cohort but never authorizes the candidate choice.
+  - candidate: intake.privacy_request_receipt_tokens
+    disposition: MAP
+    target: intake.submission_sessions
+    target_variant: PRIVACY_REQUEST_RECEIPT
+    mapping_rule: One-shot HMAC token exchange consumes exactly one scoped session parent and creates one PRIVACY_REQUEST_STATUS child. Plaintext tokens are never persisted.
+  - candidate: intake.communication_endpoint_versions
+    disposition: MAP
+    target: intake.communication_endpoints
+    target_candidate_key: [id, version, endpoint_digest]
+    required_alter: append-only revision persistence as fixed by global_decisions.revision_history
+  - candidate: ops.communication_provider_config_versions
+    disposition: MAP
+    target: ops.communication_provider_configs
+    target_candidate_key: [id, version, configuration_digest]
+    required_alter: append-only revision persistence as fixed by global_decisions.revision_history
+  - candidate: ops.commercial_control_executions
+    disposition: MAP
+    target: ops.execution_attempts
+    target_variant: COMMERCIAL_CONTROL
+    mapping_rule: One independently approved bounded commercial effect owns one execution generation and fencing token.
+  - candidate: ops.commercial_control_execution_items
+    disposition: NONPHYSICAL
+    implementation: A batch is decomposed before approval into independent ActionProposal subjects. Post-approval item fan-out is forbidden.
+  - candidate: ops.commercial_control_import_receipts
+    disposition: MAP
+    target: ops.execution_receipts
+    target_variant: COMMERCIAL_CONTROL_IMPORT
+    mapping_rule: Typed closed receipt payload and canonical bytes remain in the common append-only execution chain.
+  - candidate: ops.commercial_control_acknowledgements
+    disposition: MAP
+    target: ops.execution_receipts
+    target_variant: COMMERCIAL_CONTROL_ACKNOWLEDGEMENT
+    mapping_rule: Acknowledgement and reconciliation are typed receipt variants of the same execution; provider acceptance is not terminal success.
+  - candidate: ops.business_control_trigger_snapshots
+    disposition: NONPHYSICAL
+    implementation: BusinessControlTriggerV1 is a deterministic read projection over immutable metric inputs. The exact inputs and trigger digest are copied into the immutable COMMERCIAL_CONTROL proposal detail and re-derived before authorization.
+  - candidate: ops.offer_profile_capabilities
+    disposition: NEW
+    migration: 0029_product_economics.sql
+    canonical_identity: [offer_profile_id, offer_profile_version, capability_id]
+    parent_mapping: global_decisions.offer_profile_parent_binding
+    rule: Commercial eligibility binds an exact contract-period offer-profile revision and closed capability. A provider configuration or UI-visible flag cannot create entitlement.
+  - candidate: ops.paid_evidence_packets
+    disposition: NEW
+    migration: 0029_product_economics.sql
+    canonical_identity: [packet_id, packet_version, packet_subject_digest]
+    lifecycle: global_decisions.paid_evidence_packet_lifecycle
+    rule: A paid outcome is not inferred from a page view, queued job, unreviewed model output, or provider acceptance.
+  - candidate: ops.paid_evidence_packet_members
+    disposition: NEW
+    migration: 0029_product_economics.sql
+    canonical_identity: [packet_id, packet_version, member_ordinal]
+    digest_rule: Ten ordered typed member keys belong to subject version 1, reproduce member_set_digest and packet_subject_digest, and bind exactly one terminal valuable outcome through the version-2 lifecycle.
+
+protocol_receipt_maps:
+  count: 4
+  mappings:
+    - logical_identity: HTTP command replay receipt
+      disposition: MAP
+      target: ops.idempotency_keys
+    - logical_identity: Action decision wire receipt
+      disposition: MAP
+      target: ops.action_decisions plus ops.idempotency_keys exact response bytes
+    - logical_identity: Action execution wire receipt
+      disposition: MAP
+      target: ops.execution_receipts plus ops.idempotency_keys exact response bytes
+    - logical_identity: Callback request receipt
+      disposition: MAP
+      target: ops.communication_callback_events
+
+implementation_requirements:
+  every_new_relation:
+    - closed typed columns and canonical payload bytes
+    - primary and all referenced candidate keys
+    - exact composite foreign keys and FK-leading indexes
+    - owner, ACL, RLS, retention, legal-hold behavior, and immutable mutation guard
+    - one exact writer regprocedure with fixed search_path, caller set, complete write set, audit, outbox, idempotency, and terminal/recovery receipt
+    - migration create/install/validate phases, backfill, rollback, and PostgreSQL 18.4 catalog proof
+  cross_contract_repairs:
+    - Replace every phantom relation reference with the NEW, MAP, or NONPHYSICAL decision above.
+    - Make product, command, persistence, event, database, Rust, and wire digest schemas field/order set-equal.
+    - Install parent plus all typed-detail constraint triggers only after every detail table and referenced candidate key exists.
+    - Late 0028 foreign keys have explicit names, ALTER owner, backfill, NOT VALID then VALIDATE phase, and rollback.
+    - Downstream approval consumers bind proposal/version/approval digest, decision actor/kind/receipt/conflict, execution generation/digest, and terminal receipt digest with composite keys.
+    - VACANT review assignments terminalize the old generation and insert generation+1; immutable NULL/non-NULL shapes are never inverted in place.
+    - Route communication.delivery_receipt_recorded.v1 to logical consumer response-request-materializer on workflow-worker and include consumerId in the job payload and dedupe key.
+    - Add private.RecordOutboundDeliveryObservation as the normal authenticated synchronous-response producer, return the exact outbound receipt ID/sequence/digest, and make the event payload bind that receipt while attemptId remains nullable for non-attempt evidence.
+    - Add event envelope and typed terminal handler-result columns to ops.inbox with an immutable all-or-none terminal shape and changed-replay denial.
+    - Add sent_receipt_id and sent_binding_digest to editorial.response_requests with an initially deferred composite FK to editorial.response_request_sent_receipts; the first DRAFT to SENT transition is the only writer.
+    - Generate one response access artifact during intent/rendering materialization and reuse the same token generation, rendering bytes, OTP derivation, provider idempotency key, and delivery identity across safe retries.
+    - Keep materializeResponseRequestSent read/write independent from editorial.response_delivery_clock_decisions; a delivery-observation worker owns verified DELIVERED or READ clock start.
+    - Emit token-free response.submitted.v2, notification.response_submitted.v2 and workflow.response_submitted.v2 in the submission transaction and enforce unique reciprocal owned-intake bindings on response_submission_id, response_request_id and editorial_response_id.
+    - Apply the exact OfferProfileV1 parent ALTER, candidate keys, foreign keys, canonical digest fields, interval/successor guards and twelve-entry child set declared above before any entitlement or readiness writer exists.
+    - Implement the append-only paid packet version-1 to version-2 lifecycle, both exact terminal resolver branches, terminal uniqueness, packetDigest and atomic outcome binding declared above; a symbolic terminal kind cannot pass migration or paid-MVW evaluation.
+    - Split procurement source_record_digest from normalized record_digest, define acyclic self-digest preimages, and make GURINE_CANONICAL_JSON_V1 byte-identical to RFC8785 JCS UTF-8 across database and Rust.
+    - Add the three normalized procurement member relations for award winners, contract suppliers and line-item components; JSON arrays or deferred trigger assertions cannot replace their native composite foreign keys.
+    - Add the complete ProcurementContractLineItemRevisionV1 schema and exact existing-relation ALTER mappings for supplier identifiers, incorporation provenance, notice specification segments, immutable review-snapshot scope history and export snapshot receipts before any procurement rule is executable.
+
+current_source_truth:
+  physically_implemented: false
+  current_source_derived_base_relations: 107
+  current_source_derived_additive_relations: 106
+  current_source_derived_final_relations: 213
+  current_generator_unresolved_rows: 48
+  current_generator_unresolved_breakdown:
+    relation_names: 24
+    routine_symbols_misclassified_as_relations: 24
+    unnamed_query_snapshot_member_blocker: 1
+    already_nonphysical_trigger_snapshot_in_unresolved_rows: 0
+  adjudicated_planned_additive_relations: 128
+  adjudicated_planned_final_relations: 235
+  planned_relation_delta_by_migration:
+    0025_evidence_snapshots_and_search.sql: 36
+    0026_agent_action_approval.sql: 27
+    0027_communication_consent_delivery.sql: 22
+    0028_governance_operations.sql: 19
+    0029_product_economics.sql: 24
+    0030_v13_submission_session_hardening.sql: 0
+  arithmetic: 106 existing additive + 22 NEW = 128 additive; 107 base + 128 additive = 235 final.
+  unresolved_conflicts:
+    - The 22 NEW relations do not yet exist in physical fragments or SQL migrations 0025, 0027, and 0029.
+    - The two version MAP targets are currently specified as mutable heads and need the append-only ALTER above before historical composite FKs are valid.
+    - Phantom relation names remain in command, persistence, and source-binding registries until the decisions above are propagated.
+    - The current source generator therefore correctly reports unresolved candidates and must not claim the adjudicated 235-table plan as compiled truth.
+    - Twenty-four ops.*_is_valid symbols in unresolved_physical_candidates are required PostgreSQL validation functions, not tables; they remain routine/compiler blockers and are excluded from the 26 relation-candidate disposition counts.
+    - Exact schema/FK/writer/event/ACL/install-phase repairs remain open until generated SQL compiles and PostgreSQL catalog, race, rollback, restore, and review gates pass.
+
+verdict: CHANGES_REQUIRED_FOR_IMPLEMENTATION

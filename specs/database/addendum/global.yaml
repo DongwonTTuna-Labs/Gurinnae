@@ -1,0 +1,883 @@
+schema_version: 1
+proposal_version: 2026-07-15.persistence-execution-closure.v3
+status: REVIEW_REQUIRED
+authority:
+  zip_path: /home/dongwonttuna/.codex/attachments/29aa0c62-686a-450b-84aa-944e5cb7d47a/gurine-codex-authority-pack-v13.0.0-20260712.zip
+  zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+  repository_root: /home/dongwonttuna/Documents/Programming/Gurinnae
+  immutable_base_migrations: 0001..0024
+  physical_additive_migrations: 0025..0029
+  final_hardening_migration: 0030_v13_submission_session_hardening.sql
+  authority_files:
+    - specs/product/owner-addendum-2026-07-14.yaml
+    - specs/product/addendum-persistence-contracts.yaml
+    - specs/product/addendum-operation-contracts.yaml
+    - specs/product/addendum-state-machines.yaml
+    - specs/product/addendum-approval-policy.yaml
+    - specs/product/addendum-event-contracts.yaml
+    - implementation-evidence/design-domain-closure.yaml
+    - specs/database/schema-catalog.yaml
+    - specs/database/privilege-matrix.yaml
+    - specs/database/migrations/0001_extensions_schemas_types.sql
+    - specs/database/migrations/0002_raw_and_core.sql
+    - specs/database/migrations/0003_editorial_and_intake.sql
+    - specs/database/migrations/0004_ops_and_public_projection.sql
+    - specs/database/migrations/0007_security_invariants.sql
+    - specs/database/migrations/0013_v7_final_privilege_closure.sql
+    - specs/database/migrations/0023_v12_legal_hold_and_event_closure.sql
+    - specs/database/migrations/0024_v13_submission_session_boundary.sql
+    - db/migrations/0030_v13_submission_session_hardening.sql
+
+inventory_lock:
+  base_migrations: 24
+  additive_migrations: 6
+  additive_migration_definition: migrations 0025 through 0029; the additive relation count is derived from the stable physical-fragment union and is never a generator input
+  hardening_migrations: 0
+  post_base_migrations: 6
+  final_migrations: 30
+  base_active_tables: 107
+  additive_tables: 128
+  final_active_tables: 235
+  relation_delta_by_migration:
+    0025_evidence_snapshots_and_search.sql: 36
+    0026_agent_action_approval.sql: 27
+    0027_communication_consent_delivery.sql: 22
+    0028_governance_operations.sql: 19
+    0029_product_economics.sql: 24
+    0030_v13_submission_session_hardening.sql: 0
+  migration_sequence:
+    - 0001_extensions_schemas_types.sql
+    - 0002_raw_and_core.sql
+    - 0003_editorial_and_intake.sql
+    - 0004_ops_and_public_projection.sql
+    - 0005_roles_grants_and_seed.sql
+    - 0006_operational_closure.sql
+    - 0007_security_invariants.sql
+    - 0008_v7_semantic_closure.sql
+    - 0009_v7_submission_procedures.sql
+    - 0010_v7_operation_support.sql
+    - 0011_v7_event_type_seed.sql
+    - 0012_v7_retry_and_query_snapshot.sql
+    - 0013_v7_final_privilege_closure.sql
+    - 0014_v7_state_and_audit_checkpoint.sql
+    - 0015_v8_oidc_concurrency_and_runtime_closure.sql
+    - 0016_v8_identity_service_privilege_closure.sql
+    - 0017_v8_extended_version_contracts.sql
+    - 0018_v9_csrf_and_runtime_closure.sql
+    - 0019_v10_assertion_and_concurrency_closure.sql
+    - 0020_v11_auth_retry_and_verification_closure.sql
+    - 0021_v11_remove_legacy_step_up_proof.sql
+    - 0022_v12_audit_export_assurance_parser_closure.sql
+    - 0023_v12_legal_hold_and_event_closure.sql
+    - 0024_v13_submission_session_boundary.sql
+    - 0025_evidence_snapshots_and_search.sql
+    - 0026_agent_action_approval.sql
+    - 0027_communication_consent_delivery.sql
+    - 0028_governance_operations.sql
+    - 0029_product_economics.sql
+    - 0030_v13_submission_session_hardening.sql
+  counting_rule: pg_class.relkind = 'r'; compatibility views and renamed base tables add zero
+  required_set_equalities:
+    - len(migration_sequence) == len(unique(migration_sequence)) == final_migrations == 30
+    - migration_sequence[0:24] == byte-pinned base migration filename sequence and migration_sequence[24:30] == relation_inventory migration key order
+    - sum(relation_delta_by_migration.values) == additive_tables and relation_delta_by_migration.0030_v13_submission_session_hardening.sql == 0
+    - set(owner_addendum.database_delta.additive_tables) == set(persistence.migration_ownership.flatten) == set(relation_inventory.flatten) == set(physical table_contracts.relation)
+    - len(relation_inventory.flatten) == len(unique(relation_inventory.flatten)) == additive_tables
+    - relation_delta_by_migration[key] == len(relation_inventory.by_migration[key]) for every post-base migration key
+    - final_expected_relations == ((schema_catalog.base_relations minus rename_plan.base_relation) union rename_plan.physical_target union relation_inventory.flatten)
+    - len(final_expected_relations) == runtime application relkind-r set size == final_active_tables
+    - final_active_tables == base_active_tables + additive_tables + sum(rename_plan.active_table_delta) + relation_delta_by_migration.0030_v13_submission_session_hardening.sql
+    - every relation_inventory.by_migration list set-equals its physical table-contract relation set and reproduces its explicit fragment creation order
+    - relation_inventory.by_migration.0029_product_economics.sql set-equals migration_plan.0029_product_economics.sql.creation_order and both lengths equal relation_delta_by_migration.0029_product_economics.sql
+
+relation_inventory:
+  stable_derivation_snapshot:
+    observed_window_utc: {start: "2026-07-15T05:30:30Z", end: "2026-07-15T05:31:30Z", seconds: 60}
+    input_sha256:
+      specs/database/addendum/0025-evidence-snapshots-search.yaml: 1e6ff1cf5daf0ce40cbfe7fdaf6a93e07a2ba8533de0d9674766ebf04de59ff0
+      specs/database/addendum/0026-agent-action-approval.yaml: f9f0771582a654fa3e0cae294925187a26256998bf146830369eb77cc72f1cf8
+      specs/database/addendum/0027-communication-consent-delivery.yaml: 9221b470145d330742390eb81feda221b1a220128d74a2a872ae1e2236b44344
+      specs/database/addendum/0028-governance-operations.yaml: e3e96b85b7eb2d13f3704479deed85b0b42067adca442d007d2f05f9fc867266
+      specs/database/addendum/0029-outcome-cost.yaml: 8c4e698bfe0b64427d4df53ad65e5f1ef0d7ab63e03f00b918f619af7fe066df
+      specs/database/addendum/0029-commercial-core.yaml: 4784e60a4703c1b6a9c47bda244daf47fc25f9340b1ab405aae90019ed86a34d
+      specs/database/addendum/0029-invoice-revenue-sku.yaml: 28acfa6d431ac91721099b36fb0f3b90461d11a5eb29a95dcf12f97feef200d3
+      specs/database/addendum/0029-funding-disclosure.yaml: 52f8e3035829a3c22f0340437d2bdd805b83625cdec6e0bf1e44637405e33338
+    derived_relation_delta: {"0025": 18, "0026": 10, "0027": 21, "0028": 16, "0029": 21, "0030": 0}
+    derived_additive_relations: 86
+    derived_final_active_relations: 193
+    use_rule: hashes and numeric values are validator outputs recorded for review, never inputs used to construct a set or order; any input hash drift invalidates this snapshot and requires a new stable window and full derivation
+  derivation_sources:
+    owner: specs/product/owner-addendum-2026-07-14.yaml#database_delta.additive_tables
+    persistence: specs/product/addendum-persistence-contracts.yaml#migration_ownership
+    physical_fragments:
+      - specs/database/addendum/0025-evidence-snapshots-search.yaml
+      - specs/database/addendum/0026-agent-action-approval.yaml
+      - specs/database/addendum/0027-communication-consent-delivery.yaml
+      - specs/database/addendum/0028-governance-operations.yaml
+      - specs/database/addendum/0029-outcome-cost.yaml
+      - specs/database/addendum/0029-commercial-core.yaml
+      - specs/database/addendum/0029-invoice-revenue-sku.yaml
+      - specs/database/addendum/0029-funding-disclosure.yaml
+  order_sources:
+    0025_evidence_snapshots_and_search.sql: specs/database/addendum/0025-evidence-snapshots-search.yaml#migration_creation_order sorted by contiguous ordinal
+    0026_agent_action_approval.sql: specs/database/addendum/0026-agent-action-approval.yaml#migration_creation_order
+    0027_communication_consent_delivery.sql: specs/database/addendum/0027-communication-consent-delivery.yaml#migration.creation_order
+    0028_governance_operations.sql: specs/database/addendum/0028-governance-operations.yaml#migration_creation_order sorted by contiguous ordinal
+    0029_product_economics.sql: specs/database/addendum/0029-commercial-core.yaml#physical_relation_registry.creation_order with every fragment assertion and per-table ordinal set-equal
+    0030_v13_submission_session_hardening.sql: explicit empty relation set and zero delta
+  derivation_rule: validators load every source after a stable hash window and derive sets and orders without a numeric fallback; they fail on missing, duplicate, extra, differently owned, differently migrated, noncontiguous or order-divergent relations
+  control_relations_excluded_from_product_count: [public._sqlx_migrations]
+  by_migration:
+    0025_evidence_snapshots_and_search.sql:
+      - core.normalization_runs
+      - raw.evidence_segments
+      - core.dataset_snapshots
+      - core.dataset_snapshot_members
+      - core.dataset_snapshot_member_sources
+      - ops.agent_provider_turns
+      - ops.agent_tool_calls
+      - raw.research_artifacts
+      - raw.asset_rights_decisions
+      - ops.agent_reconciliation_evidence
+      - ops.agent_run_control_receipts
+      - ops.agent_source_uses
+      - ops.agent_output_validations
+      - ops.agent_proposal_citations
+      - raw.research_artifact_promotions
+      - public.search_documents
+      - ops.search_documents
+      - raw.source_page_receipts
+      - core.procurement_notice_revisions
+      - core.procurement_award_revisions
+      - core.procurement_award_winner_revisions
+      - core.procurement_bidder_participation_revisions
+      - core.procurement_contract_revisions
+      - core.procurement_contract_supplier_revisions
+      - core.procurement_contract_amendment_revisions
+      - core.procurement_contract_line_item_revisions
+      - core.procurement_contract_line_item_components
+      - core.supplier_identity_candidates
+      - core.supplier_identity_resolution_decisions
+      - core.supplier_identity_resolution_decision_members
+      - core.supplier_relationship_assertions
+      - core.supplier_relationship_assertion_evidence
+      - core.procurement_query_snapshots
+      - core.procurement_query_snapshot_members
+      - editorial.response_request_claim_scopes
+      - editorial.response_request_evidence_scopes
+    0026_agent_action_approval.sql:
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.action_review_assignments
+      - ops.action_decisions
+      - ops.in_flight_effects
+      - ops.budget_reservations
+      - ops.budget_reservation_ledger_entries
+      - ops.execution_authorizations
+      - ops.execution_attempts
+      - ops.execution_receipts
+      - ops.action_approval_hypothesis_details
+      - ops.action_approval_claim_details
+      - ops.action_approval_task_details
+      - ops.action_approval_comparable_details
+      - ops.action_approval_communication_details
+      - ops.action_approval_publication_details
+      - ops.action_approval_retraction_details
+      - ops.action_approval_rule_activation_details
+      - ops.action_approval_role_grant_details
+      - ops.action_approval_kill_switch_details
+      - ops.action_approval_communication_authorization_details
+      - ops.action_approval_asset_rights_details
+      - ops.action_approval_retention_schedule_details
+      - ops.action_approval_funding_disclosure_details
+      - ops.action_approval_capability_activation_details
+      - ops.action_approval_response_policy_calendar_details
+      - ops.action_approval_commercial_control_details
+    0027_communication_consent_delivery.sql:
+      - intake.communication_subjects
+      - intake.communication_endpoints
+      - intake.communication_endpoint_verifications
+      - intake.communication_endpoint_link_events
+      - intake.communication_authorization_events
+      - intake.communication_preferences
+      - intake.communication_suppressions
+      - intake.communication_opt_out_receipts
+      - ops.communication_provider_configs
+      - ops.communication_provider_preflight_receipts
+      - ops.communication_intents
+      - ops.communication_renderings
+      - ops.outbound_delivery_attempts
+      - ops.communication_callback_events
+      - ops.communication_reconciliation_decisions
+      - ops.outbound_delivery_receipts
+      - editorial.response_request_sent_receipts
+      - ops.business_calendar_versions
+      - editorial.response_delivery_clock_decisions
+      - editorial.response_extension_decisions
+      - intake.appeals
+      - intake.appeal_decisions
+    0028_governance_operations.sql:
+      - ops.legal_hold_target_anchors
+      - editorial.conflict_declarations
+      - editorial.conflict_snapshots
+      - ops.capability_activation_decisions
+      - ops.capability_activation_evidence
+      - ops.record_class_schedules
+      - ops.retention_request_decisions
+      - ops.retention_execution_receipts
+      - ops.restoration_suppressions
+      - editorial.legal_hold_releases
+      - ops.incident_events
+      - editorial.publication_gate_decisions
+      - editorial.publication_gate_claim_evidence
+      - editorial.publication_gate_review_bindings
+      - editorial.publication_gate_blockers
+      - ops.sli_window_receipts
+      - ops.journey_instances
+      - ops.journey_handoffs
+      - ops.journey_transition_receipts
+    0029_product_economics.sql:
+      - ops.fx_rate_facts
+      - ops.product_events
+      - ops.outcome_facts
+      - ops.acquisition_source_receipts
+      - ops.cost_allocations
+      - ops.tariff_versions
+      - ops.commercial_contract_periods
+      - ops.usage_window_receipts
+      - ops.usage_facts
+      - ops.discount_decisions
+      - ops.invoice_facts
+      - ops.invoice_line_facts
+      - ops.invoice_usage_memberships
+      - ops.revenue_facts
+      - ops.funding_concentration_snapshots
+      - editorial.funding_disclosure_revisions
+      - editorial.funding_disclosure_entries
+      - ops.sku_readiness_evaluations
+      - ops.sku_readiness_items
+      - ops.accounting_corrections
+      - ops.commercial_qualification_receipts
+      - ops.offer_profile_capabilities
+      - ops.paid_evidence_packets
+      - ops.paid_evidence_packet_members
+    0030_v13_submission_session_hardening.sql: []
+
+physical_conventions:
+  schema_owner: gurine_schema_owner
+  object_owner: gurine_migrator
+  migration_executor: gurine_migration_executor
+  schema_owner_is_object_owner: false
+  schema_create_is_temporary: true
+  runtime_owner_forbidden: true
+  id: uuid PRIMARY KEY DEFAULT gen_random_uuid()
+  digest: char(64) with lowercase-hex CHECK
+  timestamp: timestamptz in UTC; creation defaults to clock_timestamp()
+  money: numeric(24,6); float and double precision forbidden
+  currency: char(3) with uppercase ISO-4217 shape CHECK
+  versions: bigint NOT NULL DEFAULT 1 CHECK(value > 0)
+  closed_state: text plus named CHECK; undocumented values forbidden
+  jsonb:
+    allowed_only_for: closed typed snapshots, closed typed payloads, ordered identifier arrays, immutable provider observations
+    rust_mapping: sqlx::types::Json<ClosedRustType>
+    forbidden: [serde_json::Value, generic attributes, string dispatch, polymorphic unvalidated payload]
+  encrypted_private_value: bytea envelope plus independent hash/digest; plaintext destination, token, secret and identity proof forbidden
+  generated_columns: only deterministic local expressions; no volatile function
+  constraint_naming:
+    explicit_names_preserved: true
+    generated_algorithm: g_<kind>_<first20-lower-hex-of-SHA256(UTF8(relation NUL kind NUL one-based-kind-ordinal NUL RFC8785-constraint-contract))>
+    kinds: {primary_key: pk, foreign_key: fk, unique: uq, check: ck}
+    max_bytes: 63
+    collision_rule: generated and explicit names must be unique across the additive constraint catalog; any collision is a design failure, never PostgreSQL truncation
+  deletes:
+    default_fk_action: RESTRICT
+    cascade_allowed_only_for: immutable membership child whose identity and retention are wholly owned by parent
+    soft_delete_forbidden_as_retention_proof: true
+
+mutation_classes:
+  IMMUTABLE:
+    database_guard: BEFORE UPDATE OR DELETE FOR EACH ROW EXECUTE FUNCTION ops.reject_mutation()
+    runtime_grants: SELECT and INSERT as explicitly declared; UPDATE and DELETE revoked from every runtime role
+  APPEND_ONLY:
+    database_guard: BEFORE UPDATE OR DELETE FOR EACH ROW EXECUTE FUNCTION ops.reject_mutation()
+    runtime_grants: SELECT and INSERT as explicitly declared; UPDATE and DELETE revoked from every runtime role
+  LIFECYCLE_GUARDED:
+    database_guard: named trigger validates exact current state, next state, expected version/generation and immutable identity fields
+    update_rule: only declared mutable columns may change and version increments exactly one
+  PROJECTION_REPLACEABLE:
+    database_guard: projector-only write role; API roles read only
+    update_rule: source revision and projection generation must advance; delete requires source tombstone/rebuild transaction
+  PROJECTION_REPLACEABLE_APPEND_VERSIONED:
+    database_guard: projector-only owner routines append a new immutable generation and atomically move the current-generation pointer; API roles read only
+    update_rule: a published generation is immutable, replacement requires generation plus one and an exact prior-generation digest, and delete is represented only by a source tombstone generation
+
+transactional_invariants:
+  command_atomicity:
+    required_same_transaction: [idempotency claim, domain mutation, audit append, outbox enqueue, immutable command receipt]
+    any_failure: full rollback
+    replay_same_digest: return stored response bytes without a second mutation or event
+    replay_changed_digest: IDEMPOTENCY_CONFLICT
+  external_effect:
+    phases:
+      - lock authorization, policy, consent, suppression, rights, switch and budget state
+      - append durable attempt with generation, lease and fencing token before egress
+      - commit claimed state
+      - perform one adapter call outside the database transaction
+      - append authenticated observation and receipt in a new transaction
+    ambiguity: RECONCILIATION_REQUIRED; never infer success, failure or safe retry
+  repository_cardinality:
+    detail: exactly one row or RESOURCE_NOT_FOUND
+    optimistic_mutation: exactly one row or explicit existence check mapping to NOT_FOUND/VERSION_CONFLICT
+    page: zero through bounded limit, stable total ordering and opaque cursor
+    append_fact: same identity and digest returns existing fact; changed digest is FACT_CONFLICT
+  lock_order_global:
+    - ops.idempotency_keys
+    - root aggregate row
+    - immutable version/snapshot rows
+    - assignments or authorization rows
+    - policy, consent, rights, switch and applicable budget ledgers in lexical primary-key order
+    - attempt or decision row
+    - ops.audit_events chain head through ops.append_audit_event
+    - ops.outbox through ops.enqueue_outbox
+    - immutable command receipt
+  command_lock_expansions:
+    research_artifact_promotion:
+      order: [ops.idempotency_keys, editorial.cases, raw.research_artifacts, raw.asset_rights_decisions, raw.source_documents, core.parser_runs, raw.evidence_segments, editorial.evidence, ops.agent_source_uses, raw.research_artifact_promotions, ops.audit_events, ops.outbox, immutable command receipt]
+      rule: the idempotency row is always first; exact replay is resolved from stored response bytes and a changed request digest returns IDEMPOTENCY_CONFLICT before any domain lock or mutation
+
+retention_and_hold:
+  schedule_source: latest effective nonexpired ops.record_class_schedules revision for exact record_class
+  missing_or_stale_schedule: fail closed for destructive action; preserve record and open review task
+  legal_hold_formula: union of all original hold scope-atom x affected-ID cells minus valid append-only release cells
+  hold_effects:
+    RETENTION: blocks scheduled terminal action
+    DELETION: blocks delete, anonymize and crypto-erase
+    DISCLOSURE: blocks projection, export, excerpt, model egress and external disclosure
+  expiry: creates review task/event and never releases coverage
+  restore_rule: apply restoration suppressions, revocations, deletion/anonymization facts and legal holds before making restored data accessible
+  hard_bounds:
+    consumed_or_expired_tokens: delete or crypto-erase at consumption/expiry
+    response_contact: at most one year after case closure while documented purpose remains
+    immutable_public_revision: PRESERVE_PUBLIC_REVISION
+    accounting_and_audit_facts: append correction; never rewrite original
+  per_table_required_fields: [record_class or exact outcome map, trigger, schedule_binding, legal_hold_key, backup_behavior, terminal_action]
+  expansion_rule: these fields must exist after explicit fragment-level references to this global contract are expanded; synonyms such as period/start/hold_behavior/delete_mode are accepted only through a reviewed one-to-one normalization map, and missing backup or target identity is never inferred from prose
+  non_case_coverage_anchor:
+    required_in_migration: 0028_governance_operations.sql
+    shape: {target_kind: RELATION_ROW, schema_name: closed application schema, relation_name: closed relation catalog, primary_key_digest: lowercase SHA-256 of typed primary-key tuple, record_class: exact schedule key, authority_reference_digest: lowercase SHA-256, optional_case_id: nullable UUID}
+    rule: product, cost, funding, commercial, invoice and SKU facts in 0029 resolve legal hold coverage through this lockable typed anchor; a free-form table name or unvalidated polymorphic UUID is forbidden.
+    concurrency: hold placement/release and terminal retention lock the same anchor before coverage cells and the target row; no destructive or disclosure action races a new hold.
+
+migration_execution_contract:
+  postgresql_version: 18.4
+  database_name: gurine
+  application_schemas: [raw, core, editorial, intake, ops, public]
+  trusted_extension_schema:
+    name: extensions
+    owner: cluster_extension_owner
+    handoff_to_application_roles: forbidden
+    migrator_privilege: USAGE plus only the explicitly required extension routine and type privileges
+  observed_post_0024_baseline:
+    verifier: PostgreSQL 18.4 server_version_num 180004 with immutable migrations 0001 through 0024 applied as postgres
+    database: {name: gurine, owner: postgres}
+    schema_source_owners:
+      raw: postgres
+      core: postgres
+      editorial: postgres
+      intake: postgres
+      ops: postgres
+      public: pg_database_owner
+      extensions: postgres
+    application_object_source_owner: postgres
+    catalog_counts: {application_relkind_r: 107, first_party_routines: 72, standalone_nonarray_types: 16}
+    public_schema_rule: PostgreSQL 18 template databases own public through the special pg_database_owner role; CREATE SCHEMA IF NOT EXISTS public does not change that owner, so a six-schemas-all-postgres preflight is invalid
+    authority_rule: every source owner and object identity is emitted by the byte-pinned post-0024 manifest; the values above are asserted outputs, not permissive alternatives
+  control_plane_role_bootstrap:
+    actor: recorded cluster administrator in a checksummed control-plane phase; it cannot submit migrations 0025 through 0030
+    gurine_migrator: must already exist from migration 0005, own no object before adoption, have no memberships, and be normalized to the exact role_model attributes including NOINHERIT
+    new_roles: [gurine_schema_owner, gurine_migration_executor]
+    absent_case: create each role with the exact role_model attributes, no password, no membership and no object or database privilege
+    present_case: require exact attributes, zero owned objects, zero membership and zero credentials; any reused or partially provisioned role aborts rather than being repaired silently
+    database_acl_baseline:
+      statements:
+        - REVOKE CONNECT, CREATE, TEMPORARY ON DATABASE gurine FROM PUBLIC
+        - REVOKE CONNECT, CREATE, TEMPORARY ON DATABASE gurine FROM gurine_schema_owner, gurine_migrator, gurine_migration_executor
+      runtime_connect: grant CONNECT only to the exact source-derived runtime service-principal bindings; privilege roles, migration owners and undeclared logins receive none
+      temporary: never granted to PUBLIC, a runtime role, gurine_migrator or gurine_migration_executor; migration and SECURITY DEFINER contracts do not rely on caller-created temporary objects
+      owner_exception: the recorded database owner retains PostgreSQL owner-implied control-plane authority but is forbidden from product DDL by execution provenance and deployment policy
+  role_model:
+    gurine_schema_owner:
+      attributes: [NOLOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION, NOBYPASSRLS]
+      owns_exactly: application_schemas
+      owns_application_relations_types_routines_or_sequences: false
+      membership_at_rest: no login role may have SET, INHERIT, or ADMIN option
+      reason: schema ownership is separated from object ownership so CREATE can be revoked from the dormant object owner after every deployment
+    gurine_migrator:
+      attributes: [NOLOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION, NOBYPASSRLS]
+      owns: every non-extension application relation, sequence, standalone application type, and routine, including the complete source-derived additive relation set and public._sqlx_migrations
+      schema_privileges_at_rest: [USAGE]
+      schema_create_at_rest: false
+      membership_at_rest: no login role may have SET, INHERIT, or ADMIN option
+      alter_rule: PostgreSQL ALTER authority comes only from exact object ownership; ALTER ALL, superuser execution, and ownership by a runtime role are forbidden
+    gurine_migration_executor:
+      attributes_at_rest: [NOLOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION, NOBYPASSRLS]
+      owns_objects: false
+      normal_privileges: none except CONNECT when a bounded deployment lease is open
+      temporary_membership: GRANT gurine_migrator TO gurine_migration_executor WITH INHERIT FALSE, SET TRUE, ADMIN FALSE
+      forbidden_memberships: [gurine_schema_owner, every runtime role, pg_database_owner]
+      secret_rule: an ephemeral credential is injected by the deployment secret manager, never stored in source, SQL, migration metadata, logs, or an image
+  prohibited_additive_execution:
+    session_users: [postgres, root, gurine_schema_owner, every runtime role]
+    rules:
+      - No statement from migrations 0025 through 0030 may be piped to psql as postgres, a database owner, an operating-system root identity, or a superuser.
+      - A superuser or original base owner may execute only the separately checksummed ownership-adoption and lease-open or lease-close control-plane statements; it may not execute product DDL or data backfills.
+      - SET SESSION AUTHORIZATION, SECURITY DEFINER migration wrappers, inherited superuser membership, and a silent fallback from the executor URL to the PostgreSQL bootstrap URL are forbidden.
+    provenance_boundary:
+      sql_assertion: every migration transaction proves session_user gurine_migration_executor and current_user gurine_migrator, but this alone cannot detect a superuser that previously used SET SESSION AUTHORIZATION
+      external_proof: the deployment controller, PostgreSQL connection log and TLS or local-verifier harness bind the originally authenticated principal, application_name, backend start, database, lease id and migration digest; a bootstrap identity in that record fails even if SQL-visible identities were spoofed
+      local_verifier_exception: an operating-system container launcher may be root only in the disposable pinned verifier, but it must open the migration connection directly as gurine_migration_executor and the negative postgres-execution canary must fail at the first preamble assertion
+  base_ownership_adoption:
+    source_state: immutable migrations 0001 through 0024 were applied by postgres; all 107 base application relations, 72 first-party routines and standalone application types are postgres-owned, raw/core/editorial/intake/ops are postgres-owned, and public is owned by pg_database_owner for database owner postgres
+    execution_actor: the recorded original base owner or cluster administrator, visibly logged as an ownership-adoption control-plane phase and never reused as the additive migration executor
+    entry_modes:
+      UNADOPTED: exact source-owner manifest plus a checksum-valid ledger ending at 24; run adoption once
+      ADOPTED: exact target-owner manifest plus a checksum-valid contiguous ledger ending at any ordinal from 24 through 30; verify the adoption receipt and skip adoption
+      OTHER: any mixed owner state, partial manifest, missing receipt or incompatible ledger fails closed and neither adopts nor migrates
+    prerequisites:
+      - PostgreSQL server_version_num is in the 18.4 release line and current_database is gurine.
+      - The first twenty-four ledger filenames, ordinals, success flags and SHA-256 digests equal the pinned authority, and no ordinal from 25 through 30 is present.
+      - The 107 base application relation set, all application routines, standalone types, sequences, views and per-object source owners set-equal the generated post-0024 ownership manifest; raw/core/editorial/intake/ops resolve to postgres while public resolves to pg_database_owner for the recorded postgres database owner.
+      - All runtime services are stopped, new runtime connections are fenced, a verified backup exists, and the deployment advisory lock is held.
+    forbidden_shortcuts:
+      - REASSIGN OWNED BY postgres
+      - DROP OWNED BY any role
+      - a live-catalog loop that adopts unmanifested objects
+      - transfer of an extension, extension-owned object, pg_catalog object, information_schema object, or temporary object
+    exact_handoff_manifest:
+      artifact: a checksummed offline manifest derived only from immutable migrations 0001 through 0024 and the SQLx ledger contract; live catalog discovery may compare with it but never expands it
+      identity_fields: [object class, schema, object name, exact identity arguments or column signature, expected source owner, target owner, extension dependency flag]
+      schemas: raw/core/editorial/intake/ops from postgres and public from pg_database_owner, all transferred to gurine_schema_owner
+      relations: every manifest-listed base table, partitioned table, view, materialized view and sequence plus public._sqlx_migrations, transferred to gurine_migrator using object-kind-correct ALTER OWNER statements
+      indexes_and_table_row_types: ownership follows the owning table and must not be independently rewritten
+      standalone_types: every manifest-listed non-extension enum, domain, range, multirange and standalone composite, transferred to gurine_migrator with identity arguments where required
+      routines: every manifest-listed non-extension function, procedure and aggregate, transferred to gurine_migrator by exact regprocedure identity; name-only ALTER is forbidden
+      unsupported_object_class: abort and extend the reviewed manifest before adoption
+    one_transaction_order:
+      - Acquire pg_advisory_xact_lock for the exact Gurinnae authority digest and database identity.
+      - Lock and recheck the migration ledger and ownership manifest immediately before DDL.
+      - Temporarily grant CREATE on database gurine to gurine_schema_owner and CREATE plus USAGE on each application schema to gurine_migrator solely to satisfy PostgreSQL ALTER OWNER target-role requirements.
+      - Execute the checksummed, manifest-derived ALTER OWNER statements and prove that no source-owned application object remains.
+      - Transfer each application schema to gurine_schema_owner; extensions remains owned by the cluster extension owner.
+      - Revoke CREATE on database gurine from gurine_schema_owner and gurine_migrator, revoke CREATE on every application schema from gurine_migrator, retain only USAGE, and commit only after the stable-state catalog oracle passes.
+    failure: any mismatch or statement error rolls back the complete adoption transaction; no best-effort continuation or partial ownership handoff is allowed
+    ambiguous_commit: after connection loss or missing COMMIT acknowledgement, do not rerun adoption; reconnect through the control plane and set-compare the complete owner manifest plus adoption receipt digest, accepting only the exact all-before or all-after state and treating every mixed state as corruption
+  ddl_lease:
+    open_actor: isolated deployment authorizer; it may grant and revoke the lease but cannot submit migration SQL through the migrator service
+    network_fence: before any role or ACL mutation, the deployment route denies new runtime and executor connections at the pooler or network boundary; it opens only for the single executor after the lease transaction and negative canary commit, and closes before the first close-phase catalog mutation
+    open_transaction:
+      - Lock the same deployment advisory key and require the stable ownership state.
+      - Reset every per-role and per-database GUC for gurine_migration_executor, make it LOGIN with CONNECTION LIMIT 1, an externally bounded VALID UNTIL and an ephemeral credential, and grant CONNECT only on database gurine.
+      - Grant gurine_migrator to gurine_migration_executor with INHERIT FALSE, SET TRUE and ADMIN FALSE; never grant gurine_schema_owner.
+      - Grant USAGE and CREATE on exactly the six application schemas to gurine_migrator; grant no database CREATE, TEMPORARY, schema ownership, extension CREATE, runtime role, or broad object privilege.
+      - Grant gurine_migration_executor no application or migration-ledger privilege; every ledger read and write occurs after SET LOCAL ROLE gurine_migrator inside the same migration transaction.
+      - Commit, open the single-connection route, and require a fresh executor session negative canary proving that without SET ROLE it cannot CREATE, ALTER, read or write an application object or public._sqlx_migrations.
+    default_acl_preflight_transaction:
+      - Connect directly as gurine_migration_executor, begin, set the safe pre-role search_path, prove the SET-only membership, SET LOCAL ROLE gurine_migrator, and install default_acl_before_product_ddl before any additive object is created.
+      - Create and drop table and sequence canaries in every application schema plus one enum and one routine canary after the global routine/type default revokes; a fresh zero-membership canary role must have no effective privilege.
+      - Commit only the default ACL rows after all canaries pass; failure rolls back and closes the lease without applying migration 0025.
+    lifetime: from the immediate preflight before migration 0025 until the mandatory close transaction after success or failure; unrelated SQL and concurrent deployments are forbidden
+    close_phases:
+      - Close the external executor route first and keep every runtime route fenced; PostgreSQL role changes are transactional and NOLOGIN is not visible until commit, so an in-transaction NOLOGIN alone is not a connection race fence.
+      - Cancel and terminate every backend whose session_user is gurine_migration_executor and prove the executor backend count is zero before revoking the lease; no finalizer runs under the executor identity.
+      - In the authorizer transaction acquire the deployment lock, set gurine_migration_executor NOLOGIN, revoke CONNECT, revoke gurine_migrator membership, revoke every direct privilege, revoke CREATE on all application schemas from gurine_migrator, and revoke database CONNECT, CREATE and TEMPORARY from all three control-plane roles; commit.
+      - Clear the external credential, rerun the idempotent termination and revokes, retain gurine_migrator USAGE only, and run the stable privilege oracle from an authorizer connection.
+      - Reopen runtime routes only after row 30, exact catalog state, zero executor backends and stable no-lease privileges all pass; the executor route remains closed.
+    crash_safety: the deployment controller executes every close phase in an unconditional finally path and an independent watchdog repeats the idempotent network fence, NOLOGIN, revoke, termination and credential-clear sequence; until the stable oracle succeeds every runtime service startup gate remains closed
+  per_migration_session:
+    connection:
+      session_user: gurine_migration_executor
+      application_name: gurinnae-authority-v13-migration-executor
+      max_connections: 1
+      ssl: required outside the local pinned verifier
+    transaction_rule: each migration 0025 through 0030 is one outer transaction owned by the executor; files contain no BEGIN, COMMIT, ROLLBACK, VACUUM, CREATE INDEX CONCURRENTLY, database or role DDL, or other transaction-breaking statement
+    mandatory_preamble:
+      - BEGIN is the first statement; immediately SET LOCAL search_path = pg_catalog, pg_temp before any query, function call or unqualified name can resolve through a connection-supplied path.
+      - Assert session_user and current_user are both gurine_migration_executor, rolsuper and rolbypassrls are false, pg_db_role_setting contains no persistent override, and the exact temporary SET membership exists with INHERIT FALSE and ADMIN FALSE.
+      - SET LOCAL ROLE gurine_migrator and assert session_user remains gurine_migration_executor while current_user becomes gurine_migrator.
+      - Execute SET LOCAL search_path = pg_catalog, extensions, pg_temp; every application object and public._sqlx_migrations reference remains schema-qualified.
+      - Execute SET LOCAL row_security = on and SET LOCAL check_function_bodies = on as separate statements; reject connection options or persistent role settings that change them.
+      - Assert current_setting('transaction_read_only') is off, the exact prior migration prefix and checksums read only after SET ROLE are present, the current migration ordinal is the first missing ordinal, and the DDL lease catalog predicate is true.
+    body_order: [preflight catalog assertions, DDL and deterministic backfill, constraints and guards, exact ACL reset and regrant, migration-local catalog self-check, immutable migration receipt and ledger success row]
+    mandatory_epilogue:
+      - Assert session_user is gurine_migration_executor and current_user is gurine_migrator through the last product and ledger statement.
+      - Commit only when the migration-local relation delta, owners, constraints, routines, ACL and digest assertions have zero warnings and zero errors.
+      - SET LOCAL ROLE and search_path automatically reset at commit or rollback; session pooling or connection reuse after the one-shot migrator exits is forbidden.
+    hardening_0030:
+      prerequisites: all migrations 0001 through 0029 are successful with exact checksums and the additive relation set equals the source-derived relation_inventory flatten set
+      relation_delta: 0
+      scope: final submission-session hardening plus global ownership, default-ACL, privilege, SECURITY DEFINER and catalog closure
+      completion: it is ledger row 30 and the only migration allowed to produce the final schema-ready receipt; its absence or failure blocks every runtime service
+  default_acl_before_product_ddl:
+    owner: gurine_migrator
+    per_schema: [raw, core, editorial, intake, ops, public]
+    global_statements:
+      - ALTER DEFAULT PRIVILEGES FOR ROLE gurine_migrator REVOKE ALL ON TABLES FROM PUBLIC
+      - ALTER DEFAULT PRIVILEGES FOR ROLE gurine_migrator REVOKE ALL ON SEQUENCES FROM PUBLIC
+      - ALTER DEFAULT PRIVILEGES FOR ROLE gurine_migrator REVOKE EXECUTE ON ROUTINES FROM PUBLIC
+      - ALTER DEFAULT PRIVILEGES FOR ROLE gurine_migrator REVOKE USAGE ON TYPES FROM PUBLIC
+    schema_canary_rule: create and drop a table and sequence in every application schema after the global statements; no per-schema default grant is allowed
+    postgresql_semantics: routine EXECUTE and type USAGE are built-in global PUBLIC defaults; an IN SCHEMA REVOKE cannot subtract a global or built-in grant and therefore is not accepted as closure evidence
+    public_oracle: inspect aclexplode with grantee OID 0 and test a fresh zero-membership NOLOGIN canary; has_*_privilege with the string PUBLIC is forbidden because PUBLIC is not a catalog role
+    rule: no default runtime grant is permitted; every runtime table, sequence, type and exact routine-signature privilege is an explicit reviewed post-creation grant
+  routine_ownership_and_search_path:
+    owner: gurine_migrator
+    security_definer:
+      owner_exact: true
+      public_execute: revoked
+      runtime_execute: exact signature and role allowlist only
+      search_path: pg_catalog first, only required trusted application schemas and extensions next, pg_temp explicitly last
+      forbidden_search_path_entries: [public, current_user, "$user", any writable or caller-selected schema]
+      forbidden_proconfig: [role, session_authorization, row_security=off, search_path containing an untrusted schema]
+      body_rules: all mutation targets are schema-qualified; no caller-controlled identifier, dynamic SQL, SET ROLE, or caller-selected search_path
+    security_invoker: owner is still gurine_migrator, PUBLIC default EXECUTE is revoked, and any EXECUTE grant is signature-specific
+    pg_temp_rule: pg_temp is explicit and last so PostgreSQL cannot implicitly search a caller's temporary schema before trusted objects; no routine creates or resolves an unqualified temporary object
+  rollback_and_partial_failure:
+    migration_atomicity: each migration and its ledger row commit together or both roll back; nontransactional DDL is forbidden
+    valid_partial_ledger: exactly a checksum-valid contiguous prefix ending at any ordinal from 24 through 29; gaps, failed rows, unknown rows, changed checksums, or row 30 without rows 25 through 29 are corruption and fail closed
+    safe_nonledger_state: a committed ownership adoption and committed deny-only gurine_migrator default ACL preflight may exist with ledger prefix 24; both are set-equal catalog states and grant no runtime serving authority
+    unknown_commit_resolution: after a transport or process failure, query the exact ledger checksum, migration-local relation/owner digest and receipt under a fresh bounded lease; classify the migration as committed only when all three match, otherwise as rolled back only when all three are absent, and treat a mixed result as corruption
+    after_failure:
+      - Preserve already committed prefix migrations and never mark a failed migration successful.
+      - Run every ddl_lease.close phase even when migration execution, catalog validation, network, process or host fails; keep the external executor and runtime fences closed until cleanup is proved.
+      - Keep all runtime services stopped because their startup oracle requires row 30 and stable no-lease privileges.
+      - Diagnose and roll forward from the first missing ordinal after checksum and catalog revalidation; ad hoc repair SQL and destructive down migrations are forbidden.
+    abandonment: restore the verified pre-adoption backup into a new isolated database and revalidate before cutover; never reverse committed append-only facts or renames in place
+    finalizer_failure: classify as an active privilege incident, deny runtime startup, terminate the executor at the control plane, repeat the idempotent revoke and NOLOGIN sequence, and require a clean catalog oracle before resumption
+
+privilege_closure:
+  control_plane_roles: [gurine_schema_owner, gurine_migrator, gurine_migration_executor]
+  required_roles:
+    - gurine_public_api
+    - gurine_submission_api
+    - gurine_control_api
+    - gurine_ingest_worker
+    - gurine_analysis_worker
+    - gurine_public_projector
+    - gurine_notification_worker
+    - gurine_workflow_worker
+    - gurine_document_extractor
+    - gurine_scheduler
+    - gurine_auditor
+    - gurine_identity_api
+  universal_denies:
+    PUBLIC: [database CONNECT, database CREATE, database TEMPORARY, application schema usage or create, table privileges, sequence privileges, type usage, routine execute]
+    runtime_roles: [object ownership, CREATE on application schemas, database CREATE, database TEMPORARY, SUPERUSER, BYPASSRLS, replication, broad ALL TABLES future grants, membership in a control-plane role]
+    migration_executor_at_rest: [LOGIN, CONNECT, SET or INHERIT membership, schema USAGE or CREATE, database CREATE, database TEMPORARY, application or migration-ledger object privilege]
+  default_privileges:
+    owner: gurine_migrator
+    schemas: [raw, core, editorial, intake, ops, public]
+    global_statements_ref: migration_execution_contract.default_acl_before_product_ddl.global_statements
+    semantics: function or routine EXECUTE and type USAGE must be revoked at global default scope; schema-scoped REVOKE cannot subtract the PostgreSQL built-in PUBLIC default
+    runtime_grant_policy: every privilege is relation, sequence, type, or exact-routine-signature specific after creation; no additive ALL TABLES or ALL FUNCTIONS grant
+  final_acl_reset:
+    migration: 0030_v13_submission_session_hardening.sql
+    order:
+      - Revoke PUBLIC privileges on every manifest-listed application schema, relation, sequence, standalone type and routine, including objects inherited from the base owner.
+      - Revoke every runtime privilege on all additive objects and changed base objects, then regrant only the exact per-object allowlists after role inheritance expansion.
+      - Revoke CREATE from every runtime and object-owner role on all application schemas; only inert gurine_schema_owner retains owner-implied schema authority.
+      - Reapply all gurine_migrator global default ACL denials, create table and sequence canaries in all six schemas plus type and routine canaries as gurine_migrator while the lease is open, prove ACL grantee OID 0 and a fresh zero-membership role are denied, and drop the canaries in the same transaction.
+      - Close the DDL lease outside the migration transaction and rerun the stable privilege oracle before starting any service.
+    broad_grant_detection: pg_catalog effective privilege expansion must set-equal the declared per-object matrix; ACL text comparison alone is insufficient because role membership can add privilege
+  schema_usage:
+    derivation_sources: [base privilege-matrix role/object allowlists, immutable migration ACLs, every additive table privilege map, exact routine EXECUTE allowlists, sequence privileges, custom-type USAGE allowlists]
+    derivation_rule: for each role, collect the schema of every object on which that role has an effective declared privilege, add extensions only when an exact extension routine or type privilege requires it, and set-compare that result with schema USAGE after recursively expanding memberships; no unrelated schema USAGE is retained
+    expected_application_schema_snapshot:
+      gurine_migrator: [raw, core, editorial, intake, ops, public]
+      gurine_public_api: [public]
+      gurine_submission_api: [intake, editorial, ops]
+      gurine_control_api: [raw, core, editorial, intake, ops]
+      gurine_ingest_worker: [raw, core, ops]
+      gurine_analysis_worker: [raw, core, editorial, ops]
+      gurine_public_projector: [ops, public]
+      gurine_notification_worker: [intake, editorial, ops]
+      gurine_workflow_worker: [raw, core, intake, editorial, ops]
+      gurine_document_extractor: [raw, core, ops]
+      gurine_scheduler: [core, ops]
+      gurine_auditor: [editorial, ops]
+      gurine_identity_api: [ops]
+    extension_usage: source-derived from the exact extension dependency and privilege registry rather than granted to every runtime role by default
+    owner_rule: gurine_schema_owner has owner-implied authority on the six application schemas but is NOLOGIN and has no membership; it is excluded from runtime effective-usage derivation
+  public_projector_firewall:
+    role: gurine_public_projector
+    scanned_physical_fragments:
+      - specs/database/addendum/0025-evidence-snapshots-search.yaml
+      - specs/database/addendum/0026-agent-action-approval.yaml
+      - specs/database/addendum/0027-communication-consent-delivery.yaml
+      - specs/database/addendum/0028-governance-operations.yaml
+      - specs/database/addendum/0029-outcome-cost.yaml
+      - specs/database/addendum/0029-commercial-core.yaml
+      - specs/database/addendum/0029-invoice-revenue-sku.yaml
+      - specs/database/addendum/0029-funding-disclosure.yaml
+    forbidden_direct_relation_schemas: [raw, core, intake, editorial, ops]
+    allowed_direct_public_relation_privileges: {}
+    execute_routine_allowlist:
+      - "ops.claim_projection_work_v2(ops.projection_work_claim_v2) RETURNS ops.projection_work_claim_receipt_v2"
+      - "ops.fail_projection_work_v2(ops.projection_work_failure_v2) RETURNS ops.projection_work_failure_receipt_v2"
+      - "public.project_publication_revision_v2(public.publication_revision_projection_v2) RETURNS public.projection_mutation_receipt_v2"
+      - "public.project_publication_access_v2(public.publication_access_projection_v2) RETURNS public.projection_mutation_receipt_v2"
+      - "public.project_public_search_generation_v2(public.public_search_generation_projection_v2) RETURNS public.projection_mutation_receipt_v2"
+      - "ops.project_internal_search_generation_v2(ops.internal_search_generation_projection_v2) RETURNS ops.projection_mutation_receipt_v2"
+      - "public.project_funding_disclosure_revision_v2(public.funding_disclosure_projection_v2) RETURNS public.projection_mutation_receipt_v2"
+      - "public.project_public_outcome_fact_v2(public.public_outcome_projection_v2) RETURNS public.projection_mutation_receipt_v2"
+      - "public.project_response_policy_status_v2(public.response_policy_projection_v2) RETURNS public.projection_mutation_receipt_v2"
+      - "public.purge_public_search_generation_v2(public.search_generation_purge_v2) RETURNS public.projection_mutation_receipt_v2"
+      - "ops.purge_internal_search_generation_v2(ops.search_generation_purge_v2) RETURNS ops.projection_mutation_receipt_v2"
+    type_usage_allowlist:
+      - ops.projection_work_claim_v2
+      - ops.projection_work_claim_receipt_v2
+      - ops.projection_claim_binding_v2
+      - ops.projection_work_failure_v2
+      - ops.projection_work_failure_receipt_v2
+      - ops.internal_search_generation_projection_v2
+      - ops.search_generation_purge_v2
+      - ops.projection_mutation_receipt_v2
+      - public.publication_revision_projection_v2
+      - public.publication_access_projection_v2
+      - public.public_search_generation_projection_v2
+      - public.funding_disclosure_projection_v2
+      - public.public_outcome_projection_v2
+      - public.response_policy_projection_v2
+      - public.search_generation_purge_v2
+      - public.projection_mutation_receipt_v2
+    revoke_legacy_and_generic_routines:
+      - ops.append_audit_event
+      - ops.enqueue_outbox
+      - ops.append_outcome_fact_v1
+      - ops.read_public_outcome_projection_inputs_v1
+      - editorial.read_public_funding_projection_inputs_v1
+      - public.project_funding_disclosure_revision_v1
+      - core.begin_dataset_snapshot
+      - core.begin_search_projection
+      - core.finalize_dataset_snapshot
+      - public.purge_search_generation
+      - ops.purge_search_generation
+    source_read_rule: gurine_public_projector receives no direct raw or internal relation privilege; every source read is a fixed-search-path SECURITY DEFINER typed projection function that verifies exact source version and digest under the current rights, privacy, hold and disclosure policy.
+    public_write_rule: Direct relation and column privileges are empty. Every public projection mutation is an exact fixed-signature SECURITY DEFINER function and every undeclared effective privilege fails the catalog oracle.
+    runtime_oracle: Expand role memberships and aclexplode every application relation after migration 0030; the exact positive direct relation privilege map must equal allowed_direct_public_relation_privileges and all forbidden schemas must have zero rows.
+  intake_boundary:
+    submission_direct_table_writes: revoked
+    submission_access: exact fixed-search-path SECURITY DEFINER procedures only
+    internal_direct_writes: revoked unless table contract explicitly proves no equivalent procedure is required
+    reads: exact relation grants plus RLS trusted-service policy
+  auditor_boundary: SELECT only on declared immutable decisions, receipts, accounting corrections and audit linkage; no private message bodies or endpoint ciphertext
+
+rls_contract:
+  relations: every additive intake relation
+  enabled: true
+  forced: false
+  submission_role:
+    direct_privilege: none
+    access_path: owner-controlled SECURITY DEFINER procedure validates intake.submission_sessions token hash, issuer, kind, scope, expiry, status and version
+  trusted_internal_policies:
+    rule: explicit per-command SELECT/INSERT/UPDATE policy for only the service roles named by that table contract
+    using_check: scope predicate must be repeated in WITH CHECK; role-name-only policy is insufficient for externally scoped rows
+  no_leakage: an invalid, expired, revoked, consumed or cross-object session produces the same typed unavailable result
+
+rename_plan:
+  - migration: 0027_communication_consent_delivery.sql
+    base_relation: ops.email_deliveries
+    physical_target: ops.outbound_deliveries
+    steps:
+      - rename table without copying rows
+      - add channel with NOT NULL DEFAULT SMTP_EMAIL for historical rows and then retain closed channel CHECK
+      - add version, generation, intent/rendering/endpoint/provider identity and digest columns in a staged nullable-backfill-validate-not-null sequence where required
+      - retain original id, provider_message_id, recipient_hash, status, attempt_count and timestamps
+      - create ops.email_deliveries compatibility view filtered by channel = SMTP_EMAIL WITH LOCAL CHECK OPTION
+      - grant compatibility view exactly to roles that possessed the base-table columns; never dual-write
+    active_table_delta: 0
+  - migration: 0028_governance_operations.sql
+    base_relation: ops.source_incidents
+    physical_target: ops.incidents
+    steps:
+      - rename table without copying rows
+      - preserve source_id/source_run_id for historical source incidents
+      - map legacy OPEN/ACKNOWLEDGED/MITIGATED/RESOLVED rows to DETECTED/TRIAGED/CONTAINED/RESOLVED with migration provenance and no invented postmortem
+      - add general incident state/version/evidence/owner/commander/next-update and linked-parent columns
+      - create ops.source_incidents compatibility view filtered by source_id IS NOT NULL WITH LOCAL CHECK OPTION
+      - preserve base grants on physical rows and grant the compatibility view only to former readers/writers; never dual-write
+    active_table_delta: 0
+
+migration_plan:
+  0025_evidence_snapshots_and_search.sql:
+    phases: [preflight base catalog assertions, create supporting checks/functions, create 36 tables in fragment creation order, create indexes, install immutability/lifecycle triggers, revoke PUBLIC, exact grants, catalog self-check]
+    cross_migration_rule: cannot reference tables introduced after 0025
+  0026_agent_action_approval.sql:
+    phases: [preflight 0025 digest, create 27 tables in declared order including the exact seventeen typed approval-detail relations, install parent-child/quorum/execution/budget guards, immutable triggers, exact grants, catalog self-check]
+    forward_reference_columns: communication target identity may exist without FK until its exact closed target is available; digest binding is mandatory meanwhile
+  0027_communication_consent_delivery.sql:
+    phases: [preflight 0026 digest, execute outbound-delivery rename plan, create subject-and-endpoint graph, create intent/rendering/provider/attempt/callback/receipt graph, create response/appeal/calendar graph, install RLS/procedures/triggers, exact grants, catalog self-check]
+  0028_governance_operations.sql:
+    phases: [preflight 0027 digest, execute incident rename plan, create 19 governance and journey-coordination tables, add now-resolvable provider-activation and deferred journey-graph FKs, install publication/retention/legal-hold/SLI/journey guards, exact grants, catalog self-check]
+  0029_product_economics.sql:
+    phases: [preflight 0028 digest, create 24 immutable fact/ledger/qualification/offer/paid-packet tables, add now-resolvable tariff/provider/accounting/terminal-receipt FKs, run additive privilege reset and exact regrant, validate every FK and CHECK, source-derived additive relation catalog set-equality self-check]
+    creation_order:
+      - ops.fx_rate_facts
+      - ops.product_events
+      - ops.outcome_facts
+      - ops.acquisition_source_receipts
+      - ops.cost_allocations
+      - ops.tariff_versions
+      - ops.commercial_contract_periods
+      - ops.usage_window_receipts
+      - ops.usage_facts
+      - ops.discount_decisions
+      - ops.invoice_facts
+      - ops.invoice_line_facts
+      - ops.invoice_usage_memberships
+      - ops.revenue_facts
+      - ops.funding_concentration_snapshots
+      - editorial.funding_disclosure_revisions
+      - editorial.funding_disclosure_entries
+      - ops.sku_readiness_evaluations
+      - ops.sku_readiness_items
+      - ops.accounting_corrections
+      - ops.commercial_qualification_receipts
+      - ops.offer_profile_capabilities
+      - ops.paid_evidence_packets
+      - ops.paid_evidence_packet_members
+    constraint_phase: create every relation first, then add every cross-relation FK, unique, CHECK, trigger and index in the same listed dependency order; list length must equal the derived 0029 relation delta
+  0030_v13_submission_session_hardening.sql:
+    relation_delta: 0
+    phases: [preflight exact 0001-through-0029 ledger and source-derived additive relation set, apply submission-session hardening, normalize every application object owner, reapply global default ACL denials, revoke PUBLIC and undeclared effective privileges, validate SECURITY DEFINER owner and fixed search_path, run source-derived final relation and thirty-migration catalog oracle]
+    final_only: no earlier migration may emit the schema-ready receipt or authorize runtime startup
+
+foreign_key_closure:
+  construction_rule: create parent before child inside each migration; cross-migration references only point backward
+  candidate_key_rule: every target column tuple set-equals a nonpartial primary-key or unique constraint in identical order and every constraint is convalidated=true before migration commit
+  source_index_rule: every source FK column tuple is the leftmost identical-order prefix of a declared valid btree index, primary key or unique constraint; an index is nonpartial or, for a nullable MATCH SIMPLE FK only, has exactly the conjunction that every source FK column IS NOT NULL and no other filter; DEFERRABLE and low-cardinality FKs receive no exemption
+  extraction_rule: derive FKs from column-level fk declarations, table foreign_keys, constraints.foreign_keys and deferred_foreign_keys across every fragment plus altered-base relation contracts; derive indexes from primary keys, unique constraints, indexes and additive_indexes rather than a numeric count
+  forward_edges:
+    - source: ops.communication_provider_configs.activation_decision_id
+      target: ops.capability_activation_decisions.id
+      created_column_in: 0027
+      add_validated_fk_in: 0028
+  cycles:
+    rule: no pair of mutable root aggregates may carry mutually required FKs
+    break_strategy: child owns root FK; root stores current child identity only as nullable digest-bound pointer added after child creation or derives latest child by indexed query
+    delete_rule: RESTRICT across aggregate roots; cascade only within immutable membership rows
+  polymorphic_identity:
+    allowed_only_when: the closed target_type CHECK and target_id are paired with target_version and target_digest and application repository validates existence under the same transaction
+    preferred: concrete nullable FK columns plus exactly-one-target CHECK
+  final_oracle: every pg_constraint contype=f is validated, target table/columns and exact candidate key exist, the source leading index resolves with indisvalid and indisready true and an allowed predicate, delete action is declared, and the recursive graph has no required-FK cycle
+
+source_derived_global_gates:
+  source_model:
+    base: [specs/database/schema-catalog.yaml, specs/database/privilege-matrix.yaml, immutable migrations 0001 through 0024]
+    additive: relation_inventory.derivation_sources.physical_fragments
+    extraction: normalize table_contracts list rows and tables map rows into one relation-keyed model; normalize columns maps/lists, primary and unique keys, FKs, indexes, privileges, routines, custom types, JSON contracts and retention contracts without fallback counts
+    drift_rule: any stable input hash, declared relation, ordinal, owner, type, privilege or validator change invalidates all derived snapshots and requires complete regeneration
+  retention:
+    relation_set: relation_inventory.flatten plus every changed base relation named by the fragments
+    required_table_fields: [record_class or explicit outcome-to-record-class map, trigger, schedule_binding, legal_hold_key, backup_behavior, terminal_action]
+    child_inheritance: an immutable child may reference an exact parent retention contract only when its FK is mandatory and RESTRICT, its lifecycle cannot outlive the parent, and the child declares its own legal-hold traversal and backup behavior; prose-only inheritance fails
+    schedule_oracle: every emitted record class resolves to one latest-effective nonexpired ops.record_class_schedules revision or the destructive/disclosure operation preserves the row and opens review; DDL never invents a duration
+    hold_oracle: each relation has a deterministic resolver to case hold cells or ops.legal_hold_target_anchors, and terminal retention and disclosure lock the same anchor before the target row
+    restore_oracle: restoration suppression, active hold union, tombstone and current schedule are evaluated before restored bytes become readable, processable, searchable or externally disclosable
+  jsonb:
+    discovery: inspect type or sql_type values jsonb and jsonb:<Contract> plus schema, rust_type, logical_type and json_type annotations on every additive and altered-base column and routine composite field
+    reference_rule: every JSONB occurrence names exactly one closed logical contract that resolves once across closed_type_contracts, closed_json_contracts, closed_json_types or the fragment's explicitly classified closed_types registry; a bare unannotated jsonb fails
+    schema_rule: object contracts reject additional properties, declare all required keys, closed discriminators/enums, bounds and ordered/unique array rules; every variant is exhaustive and unknown schemaVersion fails
+    database_rule: a named immutable validator or equivalent named CHECK rejects malformed stored JSONB, and canonical byte/digest mirrors are equality-checked where replay, evidence or accounting identity depends on bytes
+    rust_rule: every column maps to sqlx::types::Json<ClosedRustType>; serde_json::Value, map-of-unknown, string dispatch and unchecked deserialization are forbidden
+    catalog_oracle: PostgreSQL format_type, column nullability/default, validator CHECK and Rust mapping set-equal the normalized contract model
+  indexes:
+    declaration_rule: every primary, unique, FK-support, query-order, lock-predicate and partial index has a unique declared name, method, ordered key expressions, include list, collation/opclass when nondefault and predicate
+    fk_rule_ref: foreign_key_closure.source_index_rule
+    query_rule: each repository list cursor, optimistic lock, retention/hold selector, outbox/inbox consumer, lease claim and uniqueness probe names its supporting index and the query predicate implies any partial-index predicate
+    catalog_oracle: pg_index, pg_class, pg_am, pg_attribute and pg_get_expr set-equal the declaration; indisvalid=false, indisready=false, an unexpected duplicate or an undeclared product index fails
+  schema_usage:
+    contract_ref: privilege_closure.schema_usage
+    equality: derived object privilege schemas equal effective schema USAGE for every runtime role after recursive membership expansion; required USAGE missing and unrelated USAGE present are both failures
+  type_registry:
+    discovery: normalize every column, routine argument/result, standalone composite field, CHECK cast and index expression type after removing typmods and array dimensions
+    builtins: resolve only against the PostgreSQL 18.4 pg_catalog type registry; an unknown unqualified type is never treated as text
+    application_types: every non-pg_catalog named type resolves exactly once in the base ownership manifest or a fragment physical_type_registry with kind, schema, ordered enum labels or composite attributes, creation phase, owner and ACL
+    dependency_order: topologically create enums/domains/ranges before standalone composites and routines, then relations; cycles or implicit creation fail
+    implicit_types: table row types and PostgreSQL-generated array types are derived catalog dependents and excluded from standalone declared-type counts, but their owner and ACL inheritance are still checked
+    acl_rule: PUBLIC has zero USAGE; runtime type USAGE is derived from permitted table columns and exact routine signatures and implies schema USAGE; gurine_migrator owns every non-extension application type
+    catalog_oracle: pg_type, pg_enum, pg_attribute, pg_range, pg_depend and aclexplode set-equal the normalized registry including enum order, composite ordinal/type/typmod, owner and effective grants
+
+repository_round_trip_contract:
+  required_per_relation:
+    - insert every required field with non-default boundary values
+    - read through typed SQLx row and map to closed Rust domain type
+    - assert byte-identical encrypted/digest fields and numeric precision
+    - assert optional null versus absent semantics
+    - execute every allowed lifecycle transition with expected version/generation
+    - assert stale version, duplicate identity, invalid CHECK, missing FK and forbidden mutation fail with exact typed error
+    - assert role-positive and role-negative access in PostgreSQL 18.4
+    - assert retention/hold selection includes the row and a legal hold blocks terminal action
+  no_synthesis: repository may not invent identifier, timestamp, state, digest, receipt, provider proof or default for a missing stored field
+  test_identity: AC-OA-TABLE-<SCHEMA>-<TABLE>-CONTRACT
+
+runtime_oracles:
+  catalog:
+    - The successful migration ledger set-equals inventory_lock.migration_sequence in exact ordinal order, has thirty rows, has no failed or unknown row, and preserves every pinned checksum.
+    - The relation delta grouped by owning migration set-equals inventory_lock.relation_delta_by_migration; its flattened set equals relation_inventory and the final application relkind-r set equals the base-plus-derived-additive formula without a numeric fallback.
+    - Every source-derived additive table and every manifest-listed base or changed application object is owned by gurine_migrator; every application schema is owned by gurine_schema_owner.
+    - extensions and extension-owned objects remain owned by the cluster extension owner; no extension dependency was transferred or rewritten.
+    - Compatibility views for ops.email_deliveries and ops.source_incidents have relkind v, their renamed physical targets have relkind r, and no compatibility view or public._sqlx_migrations row is counted as a product table.
+    - Migration 0030 exists after 0029, adds zero relation, and the final schema-ready receipt binds the thirty migration checksums, derived final-relation digest, privilege digest and authority ZIP digest.
+  constraints:
+    - every primary, foreign, unique and check constraint named in table contracts resolves and is validated
+    - every named index resolves to exact access method, key order, include list and predicate
+    - every digest CHECK rejects uppercase, nonhex and non-64-byte values
+  privileges:
+    - PUBLIC has zero CONNECT, CREATE and TEMPORARY on database gurine and zero effective privilege on every application schema, relation, sequence, standalone type and routine; a public projection is granted to gurine_public_api, never to the PostgreSQL PUBLIC pseudo-role.
+    - gurine_schema_owner is NOLOGIN and owns only the six application schemas; gurine_migrator is NOLOGIN, has permanent USAGE but no CREATE on those schemas, and owns all non-extension application objects.
+    - gurine_migration_executor is NOLOGIN, owns zero objects, has zero application or ledger privilege, has no database CREATE or TEMPORARY, and has no membership edge to gurine_migrator, gurine_schema_owner, a runtime role or pg_database_owner.
+    - has_schema_privilege(role, schema, 'CREATE') is false for gurine_migrator, gurine_migration_executor, PUBLIC and every runtime role on all six schemas; owner-implied authority exists only on the inert gurine_schema_owner.
+    - Every runtime role owns zero objects, has no control-plane membership, and its effective privileges after recursive role expansion set-equal the exact relation, sequence, type and routine allowlist.
+    - every forbidden UPDATE/DELETE and direct intake mutation is denied at runtime
+    - pg_default_acl for gurine_migrator exposes no PUBLIC table, sequence, type or routine privilege; global routine/type revokes and table/sequence canaries in every application schema prove new objects are inaccessible until explicitly granted.
+    - PUBLIC ACL checks use aclexplode grantee OID 0 plus a fresh zero-membership role, never has_*_privilege('PUBLIC', ...), because PUBLIC is not a pg_roles row.
+    - A negative executor rehearsal proves CREATE and ALTER fail before SET ROLE, succeed only as current_user gurine_migrator while the lease is open, and fail again after membership removal, NOLOGIN and schema CREATE revocation.
+  routines:
+    - Every application routine owner is gurine_migrator and every SECURITY DEFINER routine has prosecdef true, a signature-specific EXECUTE allowlist and zero PUBLIC EXECUTE.
+    - Every SECURITY DEFINER proconfig contains one fixed search_path with pg_catalog first, only declared trusted schemas in the middle and pg_temp last; role, session_authorization, row_security=off, public, "$user" and caller-selected settings are absent.
+    - A malicious same-name object in a caller-owned temporary schema cannot change routine resolution, and no function body executes dynamic identifier SQL or SET ROLE.
+  execution_provenance:
+    - Every post-base migration receipt and PostgreSQL audit record identifies session_user gurine_migration_executor, current_user gurine_migrator, the exact application_name, migration ordinal and checksum; postgres or a runtime role is never the additive statement executor.
+    - Ownership-adoption and lease-control records are separately typed, checksummed and bounded; they contain no product DDL and cannot be mistaken for a successful migration receipt.
+    - Runtime startup requires both ledger row 30 and the stable no-lease catalog predicate, so a committed prefix or leaked temporary grant cannot become serving state.
+  rls:
+    - all additive intake tables have relrowsecurity=true
+    - cross-session, cross-subject and expired-session access is denied without object-existence leakage
+  concurrency:
+    - optimistic updates return one winner and 63 VERSION_CONFLICT results in a 64-client race
+    - decision/quorum, delivery dispatch, reservation settlement, legal-hold release and retention completion each have one durable terminal winner
+    - replay produces zero duplicate business effects, receipts, decisions or facts
+  retention:
+    - active hold coverage blocks destructive action and disclosure as declared
+    - partial nonoverlapping release changes only released cells
+    - restore applies suppression before any row becomes readable or processable
+  source_derived_gates:
+    - every additive and changed-base table passes the retention contract and hold resolver gate
+    - every JSONB occurrence resolves one closed validator-backed type and one non-Value Rust mapping
+    - every FK has an exact target candidate key and source-leading valid index
+    - effective schema USAGE and custom-type USAGE set-equal source-derived object privilege dependencies
+    - declared indexes and named custom types set-equal PostgreSQL 18.4 catalog objects, order, owners and ACLs
+
+cross_file_requirements:
+  - Generate migrations 0025 through 0029 byte-identically under specs/database/migrations and db/migrations, mirror reviewed migration 0030 under specs/database/migrations, and make all six files obey the executor preamble, one-transaction and zero-gap contracts.
+  - Replace the current 0030 self-contained BEGIN or COMMIT and 24-only assumption with the outer executor transaction, 0025-through-0029 checksum preflight, zero relation delta and final global oracle defined here.
+  - Implement the checksummed post-0024 ownership manifest with the exact postgres versus pg_database_owner source-owner split, ownership-adoption, network-fenced lease-open, unconditional multi-phase lease-close and watchdog artifacts; update compose, deployment preflight and secret catalog so MIGRATOR_DATABASE_URL authenticates only gurine_migration_executor and never falls back to postgres, the database owner or a development bootstrap role.
+  - Update services/migrator to require the exact thirty-file sequence, reject gaps before applying any post-base migration, issue SET LOCAL ROLE per transaction, preserve session_user or current_user provenance, emit the schema-ready receipt only for 0030 and execute cleanup on every exit.
+  - Keep the business-model-required ops.commercial_qualification_receipts as the sole qualification-episode authority in 0029; its physical contract, owner, persistence, hold, privilege and validator registries must remain set-equal and it must never be folded into a generic stage ledger.
+  - Regenerate schema catalog, privilege matrix, runtime-security tests and PostgreSQL 18.4 evidence from relation_inventory and inventory_lock; numeric 29-migration or stale relation-count fallbacks are forbidden.
+  - Extend scripts/validation/design_database.py to derive and set-compare all six post-base migration relation lists, the additive and final sets, the complete economics order, stable fragment hashes, retention/JSONB/FK-index/schema-usage/type registries, role attributes, ownership classes, global default ACLs, SECURITY DEFINER proconfig and final lease closure without numeric fallbacks.
+  - Replace every schema-scoped default routine EXECUTE or type USAGE revoke with the global gurine_migrator default ACL statements, then retain per-schema table/sequence and fresh-role canaries; PostgreSQL 18.4 proves an IN SCHEMA revoke does not subtract the built-in PUBLIC routine/type default.
+  - Expand every table retention contract to the normalized six-field model, with special attention to the 0026 period/start/hold/delete shorthand and 0028 schedule bindings, and add every missing source-leading FK index or exact nullable null-excluding index before migration generation.
+  - Replace every test helper that applies post-base SQL with psql -U postgres by the adoption plus bounded executor rehearsal; retain a negative assertion that postgres execution of migrations 0025 through 0030 is rejected by their preamble.
+  - Regenerate SQLx offline metadata and one repository round-trip test for every source-derived additive relation from the same PostgreSQL 18.4 catalog, then regenerate MANIFEST.md and MANIFEST.sha256 only after the source, spec mirror and runtime migration bytes are equal.
+  - Operation persistence rows must reference exact repositories, lock predicates and receipt tables; this ownership contract does not waive remaining product, command, event or repository closure gates.

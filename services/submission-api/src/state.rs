@@ -17,6 +17,8 @@ pub struct AppState {
     pub pool: PgPool,
     pub public_web_keys: KeyRing,
     pub response_portal_keys: KeyRing,
+    pub response_portal_otp_key_current: Vec<u8>,
+    pub response_portal_otp_key_previous: Option<Vec<u8>>,
     pub field_keys: EnvelopeKeyRing,
     pub token_hmac_key: Vec<u8>,
     pub environment: String,
@@ -61,6 +63,8 @@ impl AppState {
                 &config.response_portal_key_current,
                 config.response_portal_key_previous.as_deref(),
             )?,
+            response_portal_otp_key_current: config.response_portal_otp_key_current.clone(),
+            response_portal_otp_key_previous: config.response_portal_otp_key_previous.clone(),
             field_keys: EnvelopeKeyRing {
                 current: EnvelopeKey::new(config.field_key_current),
                 previous: config.field_key_previous.map(EnvelopeKey::new),

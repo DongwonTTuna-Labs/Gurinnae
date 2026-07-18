@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/response-read-request.json",
+  "title": "ResponseReadRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "inputSnapshotId", "inputSnapshotSha256", "responseId", "responseVersion", "includeAttachments", "includeConsent", "maxCharacters"],
+  "properties": {
+    "schemaVersion": {"const": "response.read.request.v2"},
+    "runId": {"type": "string", "format": "uuid"},
+    "inputSnapshotId": {"type": "string", "format": "uuid"},
+    "inputSnapshotSha256": {"$ref": "#/$defs/sha256"},
+    "responseId": {"type": "string", "format": "uuid"},
+    "responseVersion": {"type": "integer", "minimum": 1},
+    "includeAttachments": {"type": "boolean"},
+    "includeConsent": {"type": "boolean"},
+    "maxCharacters": {"type": "integer", "minimum": 1, "maximum": 50000}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

@@ -1,180 +1,8 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
-
-const mock = "http://127.0.0.1:29100";
-
-type MockState = {
-  submissionExchanges: Array<{
-    path: string;
-    tokenSha256: string;
-    sessionKind: string;
-    idempotencyKeySha256: string;
-    accepted: boolean;
-  }>;
-  submissionReads: Array<{ path: string; sessionTokenSha256: string }>;
-  submissionWrites: Array<{
-    method: string;
-    path: string;
-    sessionTokenSha256: string;
-    bodySha256: string;
-  }>;
-  attachmentUploads: Array<{
-    id: string;
-    kind: "correction" | "response";
-    sizeBytes: number;
-    sha256: string;
-    uploaded: boolean;
-    finalized: boolean;
-  }>;
-};
-
-const sha256 = (value: string) =>
-  createHash("sha256").update(value).digest("hex");
-
-async function state(request: import("@playwright/test").APIRequestContext) {
-  const response = await request.get(`${mock}/_test/state`);
-  expect(response.ok()).toBe(true);
-  return (await response.json()) as MockState;
-}
-
-test("magic-link exchanges use no-referrer while canonical forms retain a same-origin Origin", async ({
-  request,
-}) => {
-  for (const contract of [
-    {
-      exchange: "http://127.0.0.1:29103/respond/access",
-      canonical: "http://127.0.0.1:29103/respond/access",
-    },
-    {
-      exchange: "http://127.0.0.1:29101/correction-request/receipt",
-      canonical: "http://127.0.0.1:29101/correction-request/receipt",
-    },
-  ]) {
-    const response = await request.get(
-      `${contract.exchange}?token=${encodeURIComponent(`referrer-${randomUUID()}`)}`,
-      { maxRedirects: 0 },
-    );
-    expect(response.status()).toBe(303);
-    expect(response.headers()["referrer-policy"]).toBe("no-referrer");
-    expect(response.headers().location).toBe(
-      new URL(contract.canonical).pathname,
-    );
-
-    const canonical = await request.get(contract.canonical);
-    expect(canonical.status()).toBe(200);
-    expect(canonical.headers()["referrer-policy"]).toBe(
-      "strict-origin-when-cross-origin",
-    );
-  }
-});
-
-for (const contract of [
-  {
-    name: "response access",
-    url: "http://127.0.0.1:29103/respond/access",
-    exchangePath: "/v1/submission-session/response:exchange",
-    readPath: "/v1/response-session/access-status",
-  },
-  {
-    name: "response receipt",
-    url: "http://127.0.0.1:29103/respond/receipt",
-    exchangePath: "/v1/submission-session/response-receipt:exchange",
-    readPath: "/v1/response-receipt",
-  },
-  {
-    name: "correction receipt",
-    url: "http://127.0.0.1:29101/correction-request/receipt",
-    exchangePath: "/v1/submission-session/correction-receipt:exchange",
-    readPath: "/v1/correction-receipt",
-  },
-  {
-    name: "subscription management",
-    url: "http://127.0.0.1:29101/subscription/manage",
-    exchangePath: "/v1/submission-session/subscription-management:exchange",
-    readPath: "/v1/subscription-session",
-  },
-]) {
-  test(`${contract.name} exchanges the token and uses the submission client`, async ({
-    page,
-    request,
-  }) => {
-    const oneTimeToken = `${contract.name}-${randomUUID()}`;
-    await page.goto(
-      `${contract.url}?token=${encodeURIComponent(oneTimeToken)}`,
-      {
-        waitUntil: "networkidle",
-      },
-    );
-    expect(page.url()).toBe(contract.url);
-    const observed = await state(request);
-    expect(observed.submissionExchanges).toContainEqual(
-      expect.objectContaining({
-        path: contract.exchangePath,
-        tokenSha256: sha256(oneTimeToken),
-      }),
-    );
-    expect(observed.submissionReads).toContainEqual(
-      expect.objectContaining({ path: contract.readPath }),
-    );
-  });
-}
-
-test("failed token exchange removes the bearer token from the URL", async ({
-  page,
-}) => {
-  const oneTimeToken = `invalid-${randomUUID()}`;
-  await page.goto(
-    `http://127.0.0.1:29103/respond/access?token=${encodeURIComponent(oneTimeToken)}`,
-    { waitUntil: "networkidle" },
-  );
-  expect(page.url()).not.toContain("token=");
-  expect(page.url()).not.toContain(encodeURIComponent(oneTimeToken));
-  await expect(page.locator(".notice")).toContainText("ONE_TIME_TOKEN_INVALID");
-});
-
-for (const retryContract of [
-  {
-    name: "response portal",
-    url: "http://127.0.0.1:29103/respond/access",
-  },
-  {
-    name: "public web",
-    url: "http://127.0.0.1:29101/correction-request/receipt",
-  },
-]) {
-  test(`${retryContract.name} one-time token retries use a fresh idempotency scope`, async ({
-    page,
-    request,
-    browser,
-  }) => {
-    const oneTimeToken = `${retryContract.name}-one-time-${randomUUID()}`;
-    const target = `${retryContract.url}?token=${encodeURIComponent(oneTimeToken)}`;
-    await page.goto(target, { waitUntil: "networkidle" });
-    expect(page.url()).toBe(retryContract.url);
-
-    const secondContext = await browser.newContext();
-    try {
-      const secondPage = await secondContext.newPage();
-      await secondPage.goto(target, { waitUntil: "networkidle" });
-      expect(secondPage.url()).not.toContain("token=");
-      await expect(secondPage.locator(".notice")).toContainText(
-        "ONE_TIME_TOKEN_INVALID",
-      );
-    } finally {
-      await secondContext.close();
-    }
-
-    const attempts = (await state(request)).submissionExchanges.filter(
-      (exchange) => exchange.tokenSha256 === sha256(oneTimeToken),
-    );
-    expect(attempts).toHaveLength(2);
-    expect(attempts.map((attempt) => attempt.accepted)).toEqual([true, false]);
-    expect(
-      new Set(attempts.map((attempt) => attempt.idempotencyKeySha256)).size,
-    ).toBe(2);
-  });
-}
+import { sha256, state } from "./submission-routing.shared";
+import "./submission-routing-token.helpers";
 
 test("failed scoped form actions expose the server error to the user", async ({
   page,
@@ -528,6 +356,72 @@ test("subscription flow persists the pending session and consumes verification i
   expect(observed.submissionReads.map(({ path }) => path)).toContain(
     "/v1/subscription-session",
   );
+});
+
+test("scoped subscription presets remain server-bound through browser submission", async ({
+  page,
+  request,
+}) => {
+  const scopes = [
+    {
+      url: "http://127.0.0.1:29101/cases/integration-case",
+      scopeType: "CASE",
+      scopeRef: "integration-case",
+    },
+    {
+      url: "http://127.0.0.1:29101/agencies/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      scopeType: "AGENCY",
+      scopeRef: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    },
+    {
+      url: "http://127.0.0.1:29101/suppliers/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      scopeType: "SUPPLIER",
+      scopeRef: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    },
+    {
+      url: "http://127.0.0.1:29101/corrections",
+      scopeType: "CORRECTIONS",
+    },
+    {
+      url: "http://127.0.0.1:29101/cases?publicationState=PUBLISHED_ANOMALY",
+      scopeType: "QUERY",
+    },
+  ];
+
+  for (const [index, scope] of scopes.entries()) {
+    await page.goto(scope.url, { waitUntil: "networkidle" });
+    const form = page.locator('form:has(input[name="scopeType"])').first();
+    await expect(form.locator('select[name="scopeType"]')).toHaveCount(0);
+    await expect(form.locator('input[name="scopeType"]')).toHaveValue(
+      scope.scopeType,
+    );
+    await expect(form.locator('input[name="scopeType"] + output')).toHaveText(
+      scope.scopeType,
+    );
+    if (scope.scopeRef) {
+      await expect(form.locator('input[name="scopeRef"]')).toHaveValue(
+        scope.scopeRef,
+      );
+    }
+    await form
+      .locator('input[name="email"]')
+      .fill(`scoped-${index}@example.test`);
+    await form.locator('select[name="frequency"]').selectOption("DAILY");
+    await form.locator('input[name="locale"]').fill("ko-KR");
+    await form.locator('input[name="consent"]').check();
+    await expect(form.locator('button[type="submit"]')).toBeEnabled();
+    await form.locator('button[type="submit"]').click();
+    await page.waitForURL(/notice=/);
+
+    const writes = (await state(request)).submissionWrites.filter(
+      (write) =>
+        write.method === "POST" && write.path === "/v1/subscription-session",
+    );
+    expect(writes.at(-1)).toMatchObject({
+      scopeType: scope.scopeType,
+      ...(scope.scopeRef ? { scopeRef: scope.scopeRef } : {}),
+    });
+  }
 });
 
 test("dataset download requests a real abuse-controlled export job", async ({

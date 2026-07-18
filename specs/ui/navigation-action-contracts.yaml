@@ -1,0 +1,2097 @@
+schema_version: 1
+status: REVIEW_REQUIRED
+scope: all 102 authority navigation actions with owner-resolved destinations
+sources:
+- specs/ui/screen-catalog.yaml
+- specs/product/owner-addendum-2026-07-14.yaml#route_contract
+rules:
+- resolved means this proposal closes an unambiguous semantic edge; it does not mean the permitted source files already contain an action-to-screen
+  binding.
+- Canonical routes are token-free screen routes; token exchange endpoints are never navigation destinations.
+- A route parameter marked exact_destination_request_type binds to the exact same-name typed destination request field.
+- agencySlug and supplierSlug are the only public slug aliases explicitly typed by the owner addendum.
+- CAS-011 runId maps to agentRunId UUID; SRC-004 runId maps to sourceRunId UUID.
+- source_screen safe return means the source screen, its already-validated route params, and only an explicit query allowlist.
+- A missing destination discriminator, binding, safe query key or return context is a validation failure and never an implementation
+  default.
+- A missing destination discriminator, binding, safe query key or return context is a validation failure and never an implementation
+  default.
+invalid_behavior_profiles:
+  fixed_target_error: keep source screen and announce navigation unavailable; never synthesize another route
+  row_target_fail_closed: omit or disable the row action when its typed identity is absent or invalid; never build an empty or coerced
+    path
+  current_context_fail_closed: keep source screen and surface a route-context error; never discard or substitute a current object ID
+  response_session_fail_closed: redirect to RSP-008 without object-existence detail when the scoped response session is absent, invalid,
+    expired, revoked, or consumed
+  internal_target_fail_closed: keep source screen; show authorized generic unavailable state; do not disclose object existence or guess
+    a destination
+  same_screen_selection_fail_closed: retain current screen and focus the collection error/status; do not open a different record
+  missing_contract_fail_closed: action cannot ship until the destination discriminator or selector contract is authority-defined
+navigation_contracts:
+  PUB-001.search:
+    status: resolved
+    target:
+      screen_id: PUB-002
+      route: /search
+      fragment: query
+    bindings: {}
+    required_context:
+      entered_search_query:
+        source: search_form.q
+        query_key: q
+        type: string[1..512]
+    preserved_query_keys:
+    - q
+    safe_return:
+      screen_id: PUB-001
+      route: /
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-001-SEARCH
+  PUB-001.browse-cases:
+    status: resolved
+    target:
+      screen_id: PUB-003
+      route: /cases
+    bindings: {}
+    preserved_query_keys: []
+    safe_return:
+      screen_id: PUB-001
+      route: /
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-001-BROWSE-CASES
+  PUB-001.subscribe:
+    status: resolved
+    target:
+      screen_id: PUB-029
+      route: /subscribe
+    bindings: {}
+    required_context:
+      scope_type:
+        value: CORRECTIONS
+        transport: query:scope
+        type: CORRECTIONS
+    preserved_query_keys: []
+    safe_return:
+      screen_id: PUB-001
+      route: /
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-001-SUBSCRIBE
+  PUB-003.open-case:
+    status: resolved
+    target:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    bindings:
+      caseSlug:
+        source: selected_case.caseSlug
+        type: public-slug
+    preserved_query_keys:
+    - limit
+    - publicationState
+    - agencyId
+    - supplierId
+    - ruleId
+    - publishedFrom
+    - publishedTo
+    - hasResponse
+    - hasCorrection
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-003-OPEN-CASE
+  PUB-004.request-correction:
+    status: resolved
+    target:
+      screen_id: PUB-027
+      route: /correction-request
+    bindings: {}
+    required_context:
+      target_case:
+        source: current_case.caseSlug
+        transport: query:case
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-004-REQUEST-CORRECTION
+  PUB-005.view-latest:
+    status: resolved
+    target:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    bindings:
+      caseSlug:
+        source: current_route.caseSlug
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-005-VIEW-LATEST
+  PUB-005.compare:
+    status: resolved
+    target:
+      screen_id: PUB-005
+      route: /cases/{caseSlug}/revisions/{revision}
+      fragment: comparison
+    bindings:
+      caseSlug:
+        source: current_route.caseSlug
+        type: public-slug
+      revision:
+        source: current_route.revision
+        type: int64>=1
+    required_context:
+      comparison_revision:
+        source: comparison_selector.revision
+        transport: query:compareTo
+        type: int64>=1
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-005-COMPARE
+  PUB-006.view-rule:
+    status: resolved
+    target:
+      screen_id: PUB-014
+      route: /methodology/rules/{ruleId}
+    bindings:
+      ruleId:
+        source: reproduction.ruleId
+        type: rule-id
+    required_context:
+      reproduced_rule_version:
+        transport: query:version
+        source: reproduction.ruleVersion
+        type: rule-version
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-006-VIEW-RULE
+  PUB-007.open-agency:
+    status: resolved
+    target:
+      screen_id: PUB-008
+      route: /agencies/{agencySlug}
+    bindings:
+      agencySlug:
+        source: selected_agency.canonicalSlug
+        type: string
+        resolves_to: agencyId
+    preserved_query_keys:
+    - limit
+    - q
+    - agencyType
+    - jurisdiction
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-007-OPEN-AGENCY
+  PUB-008.view-contract:
+    status: resolved
+    target:
+      screen_id: PUB-012
+      route: /contracts/{contractId}
+    bindings:
+      contractId:
+        source: selected_contract.contractId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-008-VIEW-CONTRACT
+  PUB-008.view-case:
+    status: resolved
+    target:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    bindings:
+      caseSlug:
+        source: selected_case.caseSlug
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-008-VIEW-CASE
+  PUB-009.open-supplier:
+    status: resolved
+    target:
+      screen_id: PUB-010
+      route: /suppliers/{supplierSlug}
+    bindings:
+      supplierSlug:
+        source: selected_supplier.canonicalSlug
+        type: string
+        resolves_to: supplierId
+    preserved_query_keys:
+    - limit
+    - q
+    - businessStatus
+    - identityStatus
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-009-OPEN-SUPPLIER
+  PUB-010.view-contract:
+    status: resolved
+    target:
+      screen_id: PUB-012
+      route: /contracts/{contractId}
+    bindings:
+      contractId:
+        source: selected_contract.contractId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-010-VIEW-CONTRACT
+  PUB-010.view-case:
+    status: resolved
+    target:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    bindings:
+      caseSlug:
+        source: selected_case.caseSlug
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-010-VIEW-CASE
+  PUB-011.open-contract:
+    status: resolved
+    target:
+      screen_id: PUB-012
+      route: /contracts/{contractId}
+    bindings:
+      contractId:
+        source: selected_contract.contractId
+        type: uuid
+    preserved_query_keys:
+    - limit
+    - q
+    - agencyId
+    - supplierId
+    - contractStatus
+    - procurementMethod
+    - signedFrom
+    - signedTo
+    - amountMin
+    - amountMax
+    - sort
+    - format
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-011-OPEN-CONTRACT
+  PUB-012.open-case:
+    status: resolved
+    target:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    bindings:
+      caseSlug:
+        source: selected_related_case.caseSlug
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-012-OPEN-CASE
+  PUB-013.open-rule:
+    status: resolved
+    target:
+      screen_id: PUB-014
+      route: /methodology/rules/{ruleId}
+    bindings:
+      ruleId:
+        source: selected_rule.ruleId
+        type: rule-id
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-013-OPEN-RULE
+  PUB-013.view-coverage:
+    status: resolved
+    target:
+      screen_id: PUB-015
+      route: /coverage
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-013-VIEW-COVERAGE
+  PUB-014.view-related-cases:
+    status: resolved
+    target:
+      screen_id: PUB-003
+      route: /cases
+    bindings: {}
+    required_context:
+      ruleId:
+        source: current_route.ruleId
+        query_key: ruleId
+        type: rule-id
+    preserved_query_keys:
+    - ruleId
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-014-VIEW-RELATED-CASES
+  PUB-015.open-source:
+    status: resolved
+    target:
+      screen_id: PUB-017
+      route: /sources/{sourceId}
+    bindings:
+      sourceId:
+        source: selected_source.sourceId
+        type: source-id
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-015-OPEN-SOURCE
+  PUB-016.open-source:
+    status: resolved
+    target:
+      screen_id: PUB-017
+      route: /sources/{sourceId}
+    bindings:
+      sourceId:
+        source: selected_source.sourceId
+        type: source-id
+    preserved_query_keys:
+    - limit
+    - status
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-016-OPEN-SOURCE
+  PUB-017.view-related-rules:
+    status: resolved
+    target:
+      screen_id: PUB-013
+      route: /methodology
+      fragment: rules
+    bindings: {}
+    required_context:
+      sourceId:
+        source: current_route.sourceId
+        query_key: sourceId
+        type: source-id
+    preserved_query_keys:
+    - sourceId
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-017-VIEW-RELATED-RULES
+  PUB-018.open-correction:
+    status: resolved
+    target:
+      screen_id: PUB-019
+      route: /corrections/{correctionId}
+    bindings:
+      correctionId:
+        source: selected_correction.correctionId
+        type: uuid
+    preserved_query_keys:
+    - limit
+    - publicationState
+    - publishedFrom
+    - publishedTo
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-018-OPEN-CORRECTION
+  PUB-019.open-case:
+    status: resolved
+    target:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    bindings:
+      caseSlug:
+        source: correction_target.caseSlug
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-019-OPEN-CASE
+  PUB-019.view-old-revision:
+    status: resolved
+    target:
+      screen_id: PUB-005
+      route: /cases/{caseSlug}/revisions/{revision}
+    bindings:
+      caseSlug:
+        source: correction_target.caseSlug
+        type: public-slug
+      revision:
+        source: correction_target.previousRevision
+        type: int64>=1
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-019-VIEW-OLD-REVISION
+  PUB-020.view-schema:
+    status: resolved
+    target:
+      screen_id: PUB-020
+      route: /data
+      fragment: schemas
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-020-VIEW-SCHEMA
+  PUB-020.open-api-docs:
+    status: resolved
+    target:
+      screen_id: PUB-021
+      route: /api
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-020-OPEN-API-DOCS
+  PUB-021.view-data-policy:
+    status: resolved
+    target:
+      screen_id: PUB-020
+      route: /data
+      fragment: license
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-021-VIEW-DATA-POLICY
+  PUB-022.view-governance:
+    status: resolved
+    target:
+      screen_id: PUB-024
+      route: /about/governance
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-022-VIEW-GOVERNANCE
+  PUB-022.contact:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: form
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-022-CONTACT
+  PUB-023.view-governance:
+    status: resolved
+    target:
+      screen_id: PUB-024
+      route: /about/governance
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-023-VIEW-GOVERNANCE
+  PUB-024.view-editorial-policy:
+    status: resolved
+    target:
+      screen_id: PUB-025
+      route: /editorial-policy
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-024-VIEW-EDITORIAL-POLICY
+  PUB-024.request-correction:
+    status: resolved
+    target:
+      screen_id: PUB-027
+      route: /correction-request
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-024-REQUEST-CORRECTION
+  PUB-025.request-correction:
+    status: resolved
+    target:
+      screen_id: PUB-027
+      route: /correction-request
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-025-REQUEST-CORRECTION
+  PUB-025.view-history:
+    status: resolved
+    target:
+      screen_id: PUB-025
+      route: /editorial-policy
+      fragment: history
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-025-VIEW-HISTORY
+  PUB-026.open-correction:
+    status: resolved
+    target:
+      screen_id: PUB-027
+      route: /correction-request
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-026-OPEN-CORRECTION
+  PUB-026.security-report:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: security
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-026-SECURITY-REPORT
+  PUB-028.manage-request:
+    status: resolved
+    target:
+      screen_id: PUB-028
+      route: /correction-request/receipt
+      fragment: manage
+    bindings: {}
+    required_context:
+      correction_request_receipt_session:
+        source: current_scoped_session
+        type: scoped-correction-receipt-session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-028-MANAGE-REQUEST
+  PUB-031.privacy-contact:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: form
+    bindings: {}
+    required_context:
+      contact_topic:
+        value: PRIVACY
+        transport: query:topic
+        type: contact-topic
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-031-PRIVACY-CONTACT
+  PUB-031.view-history:
+    status: resolved
+    target:
+      screen_id: PUB-031
+      route: /privacy
+      fragment: history
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-031-VIEW-HISTORY
+  PUB-032.view-data:
+    status: resolved
+    target:
+      screen_id: PUB-020
+      route: /data
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-032-VIEW-DATA
+  PUB-032.contact:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: form
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-032-CONTACT
+  PUB-033.report-accessibility:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: form
+    bindings: {}
+    required_context:
+      contact_topic:
+        value: ACCESSIBILITY_PROBLEM
+        transport: query:topic
+        type: contact-topic
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-033-REPORT-ACCESSIBILITY
+  PUB-033.request-alternative:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: form
+    bindings: {}
+    required_context:
+      contact_topic:
+        value: ALTERNATIVE_FORMAT
+        transport: query:topic
+        type: contact-topic
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-033-REQUEST-ALTERNATIVE
+  PUB-034.go-home:
+    status: resolved
+    target:
+      screen_id: PUB-001
+      route: /
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: null
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-034-GO-HOME
+  PUB-034.view-status:
+    status: resolved
+    target:
+      screen_id: PUB-034
+      route: /{systemPath}
+      fragment: status
+    bindings:
+      systemPath:
+        source: current_route.systemPath
+        type: not-found|maintenance|degraded|offline|error
+    concrete_path: current_route.systemPath
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-034-VIEW-STATUS
+  RSP-001.continue:
+    status: resolved
+    target:
+      screen_id: RSP-002
+      route: /respond/overview
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-001-CONTINUE
+  RSP-001.report-problem:
+    status: resolved
+    target:
+      screen_id: RSP-008
+      route: /respond/unavailable
+      fragment: actions
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    required_context:
+      reason:
+        value: ACCESS_PROBLEM
+        transport: scoped-session-state
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-001-REPORT-PROBLEM
+  RSP-002.start-answer:
+    status: resolved
+    target:
+      screen_id: RSP-003
+      route: /respond/answer
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-002-START-ANSWER
+  RSP-002.request-extension:
+    status: resolved
+    target:
+      screen_id: RSP-007
+      route: /respond/extension
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-002-REQUEST-EXTENSION
+  RSP-003.next:
+    status: resolved
+    target:
+      screen_id: RSP-004
+      route: /respond/attachments
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-003-NEXT
+  RSP-004.next:
+    status: resolved
+    target:
+      screen_id: RSP-005
+      route: /respond/review
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-004-NEXT
+  RSP-005.change-answer:
+    status: resolved
+    target:
+      screen_id: RSP-003
+      route: /respond/answer
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-005-CHANGE-ANSWER
+  RSP-005.change-files:
+    status: resolved
+    target:
+      screen_id: RSP-004
+      route: /respond/attachments
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-005-CHANGE-FILES
+  RSP-006.submit-supplement:
+    status: resolved
+    target:
+      screen_id: RSP-006
+      route: /respond/receipt
+      fragment: next
+    bindings: {}
+    required_context:
+      mode:
+        value: SUPPLEMENT_GUIDANCE_ONLY
+        transport: local-fragment
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-006-SUBMIT-SUPPLEMENT
+  RSP-007.return:
+    status: resolved
+    target:
+      screen_id: RSP-002
+      route: /respond/overview
+    bindings: {}
+    required_context: scoped_response_session
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: response_session_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-007-RETURN
+  RSP-008.request-new-link:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: form
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    required_context:
+      contact_topic:
+        value: RESPONSE_LINK_REISSUE
+        transport: query:topic
+        type: contact-topic
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-008-REQUEST-NEW-LINK
+  RSP-008.contact-owner:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+      fragment: form
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    required_context:
+      contact_topic:
+        value: RESPONSE_OWNER_CONTACT
+        transport: query:topic
+        type: contact-topic
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RSP-008-CONTACT-OWNER
+  AUTH-002.cancel:
+    status: resolved
+    target:
+      kind: ACTION_BOUND_SAFE_RETURN
+      source: signed_step_up_context.return_to
+      allowlist: catalog-internal-routes
+      fallback_screen_id: INT-002
+      fallback_route: /internal/my-work
+    bindings: {}
+    preserved_query_keys:
+    - signed_step_up_context.allowlisted_query
+    safe_return:
+      fallback_screen_id: INT-002
+      fallback_route: /internal/my-work
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-AUTH-002-CANCEL
+  AUTH-003.request-access:
+    status: resolved
+    target:
+      screen_id: ACC-001
+      route: /internal/account
+      fragment: access-request
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: internal_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-AUTH-003-REQUEST-ACCESS
+  AUTH-003.go-my-work:
+    status: resolved
+    target:
+      screen_id: INT-002
+      route: /internal/my-work
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-AUTH-003-GO-MY-WORK
+  INT-001.open-task:
+    status: resolved
+    target:
+      kind: VALIDATED_INTERNAL_HREF
+      source: selected_task.href
+      schema: TaskSummary.href
+    bindings:
+      task_target:
+        source: selected_task.href
+        type: catalog-internal-uri-reference
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-INT-001-OPEN-TASK
+  INT-001.open-incident:
+    status: resolved
+    target:
+      screen_id: OPS-001
+      route: /internal/operations
+      fragment: incidents
+    bindings: {}
+    required_context:
+      selected_incident_identity:
+        source: selected_incident.incidentId
+        transport: query:incidentId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-INT-001-OPEN-INCIDENT
+  INT-002.open-task:
+    status: resolved
+    target:
+      kind: VALIDATED_INTERNAL_HREF
+      source: selected_task.href
+      schema: TaskSummary.href
+    bindings:
+      task_target:
+        source: selected_task.href
+        type: catalog-internal-uri-reference
+    preserved_query_keys:
+    - taskStatus
+    - taskType
+    - overdueOnly
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-INT-002-OPEN-TASK
+  INT-003.open-result:
+    status: resolved
+    target:
+      kind: DISCRIMINATED_INTERNAL_SEARCH_HREF
+      source: selected_result.href
+      schema: InternalRecordsSearchResultItem.href
+      allowed_types:
+      - CASE
+      - SIGNAL
+      - EVIDENCE
+      - AGENT_RUN
+      - AUDIT_EVENT
+    bindings:
+      result_target:
+        source: selected_result.href
+        type: catalog-internal-uri-reference
+    preserved_query_keys:
+    - q
+    - types
+    - status
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-INT-003-OPEN-RESULT
+  INT-004.open:
+    status: resolved
+    target:
+      kind: VALIDATED_INTERNAL_HREF
+      source: selected_notification.href
+      schema: Notification.href
+    bindings:
+      notification_target:
+        source: selected_notification.href
+        type: nullable-catalog-internal-uri-reference
+    preserved_query_keys:
+    - unreadOnly
+    - notificationType
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-INT-004-OPEN
+  INT-004.manage:
+    status: resolved
+    target:
+      screen_id: ACC-001
+      route: /internal/account
+      fragment: notifications
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: internal_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-INT-004-MANAGE
+  SIG-001.open-signal:
+    status: resolved
+    target:
+      screen_id: SIG-002
+      route: /internal/signals/{signalId}
+    bindings:
+      signalId:
+        source: selected_signal.signalId
+        type: uuid
+    preserved_query_keys:
+    - signalStatus
+    - severity
+    - ruleId
+    - assignedUserId
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-SIG-001-OPEN-SIGNAL
+  CAS-001.open-case:
+    status: resolved
+    target:
+      screen_id: CAS-002
+      route: /internal/cases/{caseId}/overview
+    bindings:
+      caseId:
+        source: selected_case.caseId
+        type: uuid
+    preserved_query_keys:
+    - investigationState
+    - publicationState
+    - resolutionCode
+    - priority
+    - assigneeUserId
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-001-OPEN-CASE
+  CAS-002.start-next:
+    status: resolved
+    target:
+      kind: VALIDATED_INTERNAL_HREF
+      source: case_overview.nextRequiredActions[selected].href
+      schema: TaskAction.href
+    bindings:
+      next_task_target:
+        source: case_overview.nextRequiredActions[selected].href
+        type: catalog-internal-uri-reference
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-002-START-NEXT
+  CAS-003.open-signal:
+    status: resolved
+    target:
+      screen_id: SIG-002
+      route: /internal/signals/{signalId}
+    bindings:
+      signalId:
+        source: selected_signal.signalId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-003-OPEN-SIGNAL
+  CAS-004.open-evidence:
+    status: resolved
+    target:
+      screen_id: CAS-005
+      route: /internal/cases/{caseId}/evidence/{evidenceId}
+    bindings:
+      caseId:
+        source: current_route.caseId
+        type: uuid
+      evidenceId:
+        source: selected_evidence.evidenceId
+        type: uuid
+    preserved_query_keys:
+    - caseId
+    - verificationStatus
+    - classification
+    - evidenceType
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-004-OPEN-EVIDENCE
+  CAS-008.new-request:
+    status: resolved
+    target:
+      screen_id: CAS-009
+      route: /internal/cases/{caseId}/responses/new
+    bindings:
+      caseId:
+        source: current_route.caseId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-008-NEW-REQUEST
+  CAS-008.open-submission:
+    status: resolved
+    target:
+      screen_id: CAS-008
+      route: /internal/cases/{caseId}/responses
+      fragment: submissions
+    bindings:
+      caseId:
+        source: current_route.caseId
+        type: uuid
+    required_context:
+      selected_submission_identity:
+        source: selected_submission.submissionId
+        transport: query:submissionId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-008-OPEN-SUBMISSION
+  CAS-010.open-run:
+    status: resolved
+    target:
+      screen_id: CAS-011
+      route: /internal/cases/{caseId}/agent-runs/{runId}
+    bindings:
+      caseId:
+        source: current_route.caseId
+        type: uuid
+      runId:
+        source: selected_run.agentRunId
+        type: uuid
+        alias_to: agentRunId
+    preserved_query_keys:
+    - caseId
+    - status
+    - agentType
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-010-OPEN-RUN
+  CAS-012.open-event:
+    status: resolved
+    target:
+      screen_id: CAS-012
+      route: /internal/cases/{caseId}/timeline
+      fragment: timeline
+    bindings:
+      caseId:
+        source: current_route.caseId
+        type: uuid
+    required_context:
+      selected_event_identity:
+        source: selected_event.eventId
+        transport: query:eventId
+        type: event-id
+    preserved_query_keys:
+    - caseId
+    - eventType
+    - actorId
+    - from
+    - to
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-012-OPEN-EVENT
+  CAS-013.open-blocker:
+    status: resolved
+    target:
+      kind: VALIDATED_INTERNAL_HREF
+      source: selected_blocker.resolutionAction.href
+      schema: ReviewBlockerResolutionAction.href
+    bindings:
+      blocker_target:
+        source: selected_blocker.resolutionAction.href
+        type: catalog-internal-uri-reference
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-013-OPEN-BLOCKER
+  CAS-014.open-review:
+    status: resolved
+    target:
+      screen_id: REV-002
+      route: /internal/review/{snapshotId}
+    bindings:
+      snapshotId:
+        source: publication_preview.reviewSnapshotId
+        type: uuid
+        availability: required non-null reviewSnapshotId from current publication preview
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-014-OPEN-REVIEW
+  CAS-015.open-request:
+    status: resolved
+    target:
+      screen_id: COR-002
+      route: /internal/corrections/{correctionId}
+    bindings:
+      correctionId:
+        source: selected_request.correctionId
+        type: uuid
+        relation_from_request: selected_request.currentCorrectionId must be a non-null UUID linked to that request
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-015-OPEN-REQUEST
+  CAS-016.open-event:
+    status: resolved
+    target:
+      screen_id: CAS-016
+      route: /internal/cases/{caseId}/audit
+      fragment: events
+    bindings:
+      caseId:
+        source: current_route.caseId
+        type: uuid
+    required_context:
+      selected_event_identity:
+        source: selected_event.eventId
+        transport: query:eventId
+        type: event-id
+    preserved_query_keys:
+    - caseId
+    - action
+    - actorId
+    - from
+    - to
+    - limit
+    - sort
+    - auditExportId
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-CAS-016-OPEN-EVENT
+  REV-001.open-review:
+    status: resolved
+    target:
+      screen_id: REV-002
+      route: /internal/review/{snapshotId}
+    bindings:
+      snapshotId:
+        source: selected_review.snapshotId
+        type: uuid
+    preserved_query_keys:
+    - reviewStatus
+    - reviewType
+    - assigneeUserId
+    - overdueOnly
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-REV-001-OPEN-REVIEW
+  REV-003.cancel:
+    status: resolved
+    target:
+      screen_id: REV-002
+      route: /internal/review/{snapshotId}
+    bindings:
+      snapshotId:
+        source: current_route.snapshotId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-REV-003-CANCEL
+  REV-003.open-public:
+    status: resolved
+    target:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    bindings:
+      caseSlug:
+        source: publication_receipt.caseSlug
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-REV-003-OPEN-PUBLIC
+  COR-001.open-correction:
+    status: resolved
+    target:
+      screen_id: COR-002
+      route: /internal/corrections/{correctionId}
+    bindings:
+      correctionId:
+        source: selected_correction.correctionId
+        type: uuid
+    preserved_query_keys:
+    - status
+    - assigneeUserId
+    - overdueOnly
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-COR-001-OPEN-CORRECTION
+  SRC-001.open-source:
+    status: resolved
+    target:
+      screen_id: SRC-002
+      route: /internal/sources/{sourceId}
+    bindings:
+      sourceId:
+        source: selected_source.sourceId
+        type: source-id
+    preserved_query_keys:
+    - enabled
+    - status
+    - connectorType
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-SRC-001-OPEN-SOURCE
+  SRC-002.view-runs:
+    status: resolved
+    target:
+      screen_id: SRC-003
+      route: /internal/sources/{sourceId}/runs
+    bindings:
+      sourceId:
+        source: current_route.sourceId
+        type: source-id
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-SRC-002-VIEW-RUNS
+  SRC-002.view-drift:
+    status: resolved
+    target:
+      screen_id: SRC-005
+      route: /internal/sources/{sourceId}/schema-drift
+    bindings:
+      sourceId:
+        source: current_route.sourceId
+        type: source-id
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-SRC-002-VIEW-DRIFT
+  SRC-003.open-run:
+    status: resolved
+    target:
+      screen_id: SRC-004
+      route: /internal/sources/{sourceId}/runs/{runId}
+    bindings:
+      sourceId:
+        source: current_route.sourceId
+        type: source-id
+      runId:
+        source: selected_run.sourceRunId
+        type: uuid
+        alias_to: sourceRunId
+    preserved_query_keys:
+    - sourceId
+    - status
+    - mode
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-SRC-003-OPEN-RUN
+  SRC-004.open-quarantine:
+    status: resolved
+    target:
+      screen_id: SRC-004
+      route: /internal/sources/{sourceId}/runs/{runId}
+      fragment: counts
+    bindings:
+      sourceId:
+        source: current_route.sourceId
+        type: source-id
+      runId:
+        source: current_route.runId
+        type: uuid
+        alias_to: sourceRunId
+    required_context:
+      selected_quarantine_record_identity:
+        source: selected_record.quarantineRecordId
+        transport: query:quarantineId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-SRC-004-OPEN-QUARANTINE
+  RULE-001.open-rule:
+    status: resolved
+    target:
+      screen_id: RULE-002
+      route: /internal/rules/{ruleId}/versions/{version}
+    bindings:
+      ruleId:
+        source: selected_rule.ruleId
+        type: rule-id
+      version:
+        source: selected_rule.version
+        type: rule-version
+    preserved_query_keys: &id001
+    - status
+    - ruleFamily
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RULE-001-OPEN-RULE
+  RULE-001.propose-version:
+    status: resolved
+    target:
+      candidate_screen_id: RULE-002
+      candidate_route: /internal/rules/{ruleId}/versions/{version}
+      screen_id: RULE-002
+      route: /internal/rules/{ruleId}/versions/{version}
+      fragment: approval
+    bindings:
+      ruleId:
+        source: selected_rule.ruleId
+        type: rule-id
+      version:
+        source: selected_rule.currentVersion
+        type: rule-version
+    preserved_query_keys: *id001
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    arrival_action: RULE-002.create-draft
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RULE-001-PROPOSE-VERSION
+  RULE-002.open-evaluation:
+    status: resolved
+    target:
+      screen_id: RULE-003
+      route: /internal/rules/{ruleId}/versions/{version}/evaluation
+    bindings:
+      ruleId:
+        source: current_route.ruleId
+        type: rule-id
+      version:
+        source: current_route.version
+        type: rule-version
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RULE-002-OPEN-EVALUATION
+  RULE-003.open-sample:
+    status: resolved
+    target:
+      kind: VALIDATED_SAMPLE_HREF
+      source: selected_sample.href
+      schema: RuleEvaluationSampleV1.href
+      allowed_types:
+      - SIGNAL
+      - CASE
+      - PUBLIC_CASE
+    bindings:
+      sample_target:
+        source: selected_sample.href
+        type: catalog-authorized-uri-reference
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: missing_contract_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-RULE-003-OPEN-SAMPLE
+  OPS-001.open-incident:
+    status: resolved
+    target:
+      screen_id: OPS-001
+      route: /internal/operations
+      fragment: incidents
+    bindings: {}
+    required_context:
+      selected_incident_identity:
+        source: selected_incident.incidentId
+        transport: query:incidentId
+        type: uuid
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-OPS-001-OPEN-INCIDENT
+  OPS-001.open-jobs:
+    status: resolved
+    target:
+      screen_id: OPS-002
+      route: /internal/operations/jobs
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-OPS-001-OPEN-JOBS
+  OPS-001.open-kill:
+    status: resolved
+    target:
+      screen_id: OPS-006
+      route: /internal/operations/kill-switches
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: internal_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-OPS-001-OPEN-KILL
+  OPS-002.open-job:
+    status: resolved
+    target:
+      screen_id: OPS-003
+      route: /internal/operations/jobs/{jobId}
+    bindings:
+      jobId:
+        source: selected_job.jobId
+        type: uuid
+    preserved_query_keys:
+    - queue
+    - jobStatus
+    - jobType
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-OPS-002-OPEN-JOB
+  OPS-004.open-provider:
+    status: resolved
+    target:
+      screen_id: OPS-005
+      route: /internal/operations/providers
+    bindings: {}
+    required_context:
+      provider_filter:
+        source: selected_provider.providerId
+        query_key: providerId
+        type: provider-id
+    preserved_query_keys:
+    - providerId
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-OPS-004-OPEN-PROVIDER
+  OPS-005.open-provider:
+    status: resolved
+    target:
+      screen_id: OPS-005
+      route: /internal/operations/providers
+      fragment: status
+    bindings: {}
+    required_context:
+      selected_provider_identity:
+        source: selected_provider.providerId
+        transport: query:providerId
+        type: provider-id
+    preserved_query_keys:
+    - enabled
+    - providerType
+    - routingStatus
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-OPS-005-OPEN-PROVIDER
+  AUD-001.open-event:
+    status: resolved
+    target:
+      screen_id: AUD-001
+      route: /internal/audit
+      fragment: events
+    bindings: {}
+    required_context:
+      selected_event_identity:
+        source: selected_event.eventId
+        transport: query:eventId
+        type: event-id
+    preserved_query_keys:
+    - q
+    - action
+    - actorId
+    - objectType
+    - outcome
+    - from
+    - to
+    - limit
+    - sort
+    - auditExportId
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-AUD-001-OPEN-EVENT
+  ADM-001.open-user:
+    status: resolved
+    target:
+      screen_id: ADM-002
+      route: /internal/admin/users/{userId}
+    bindings:
+      userId:
+        source: selected_user.userId
+        type: uuid
+    preserved_query_keys:
+    - status
+    - roleId
+    - q
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-ADM-001-OPEN-USER
+  ADM-003.open-role:
+    status: resolved
+    target:
+      screen_id: ADM-003
+      route: /internal/admin/roles
+      fragment: catalog
+    bindings: {}
+    required_context:
+      selected_role_identity:
+        source: selected_role.roleId
+        transport: query:roleId
+        type: role-id
+    preserved_query_keys:
+    - riskLevel
+    - systemRole
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: same_screen_selection_fail_closed
+    history_semantics: REPLACE_FRAGMENT
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-ADM-003-OPEN-ROLE
+owner_decisions:
+- Dynamic task and notification links use only server-produced href fields validated against the 94-route same-origin catalog.
+- Response help and link-reissue paths use the public contact form without carrying response object identity in the URL.
+- Additional-material navigation on RSP-006 opens guidance only; it does not invent a supplemental-submission API.
+- Query preservation excludes cursor, token, proof and secret fields and uses only the exact per-screen allowlists in this file.

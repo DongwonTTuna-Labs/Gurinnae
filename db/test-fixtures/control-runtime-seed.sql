@@ -22,6 +22,33 @@ INSERT INTO ops.roles(id,code,name,description,risk_level)
 VALUES('f627eed8-b162-59dd-bfd7-7ef7d65cd39b','CONTROL_FIXTURE_ROLE','Control Fixture Role','Control integration canonical role','HIGH')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO raw.source_documents(
+  id,source_id,external_id,retrieved_at,content_type,content_sha256,
+  content_size_bytes,object_key,status,asset_id,asset_revision
+) VALUES(
+  '8af025c4-7ee9-59af-9e5b-8286302be41a','control-fixture-source',
+  'control-relation-contract','2026-07-12T00:00:00Z','application/json',
+  repeat('3',64),2,'control/relation-contract.json','PARSED','8af025c4-7ee9-59af-9e5b-8286302be41a',1
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO core.agencies(id,canonical_name,agency_type,jurisdiction,identity_status)
+VALUES('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Control relation agency','CENTRAL','KR','VERIFIED')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO core.suppliers(id,canonical_name,business_status,identity_status)
+VALUES('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Control relation supplier','ACTIVE','VERIFIED')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO core.contracts(
+  id,source_id,external_contract_id,contract_number,title,agency_id,supplier_id,
+  status,currency,normalization_version,source_document_id,source_record_locator
+) VALUES(
+  'cccccccc-cccc-4ccc-8ccc-cccccccccccc','control-fixture-source',
+  'control-relation-contract','CONTROL-RELATION-1','Control relation contract',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  'ACTIVE','KRW','v13','8af025c4-7ee9-59af-9e5b-8286302be41a','record:0'
+) ON CONFLICT DO NOTHING;
+
 INSERT INTO editorial.cases(id,public_slug,title,investigation_state,publication_state,summary,priority,version)
 VALUES('148b09d5-aa28-5351-b471-9ef333a3e410','control-fixture-case','Control canonical case','INVESTIGATING','PUBLISHED_ANOMALY','Canonical integration case','HIGH',1)
 ON CONFLICT DO NOTHING;
@@ -70,6 +97,14 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO core.anomaly_signals(id,rule_run_id,rule_version_id,signal_type,target_type,target_id,severity,status,explanation,calculation,version)
 VALUES('641fc905-1d30-5062-b0e6-9fbb468502c4','4b777e28-9532-5ad1-8c9b-78c8088538bd','b821788c-164c-5da0-8571-74b7ef417538','CONTROL_FIXTURE','CASE','148b09d5-aa28-5351-b471-9ef333a3e410','HIGH','NEW','{}','{}',1)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO core.anomaly_signals(id,rule_run_id,rule_version_id,signal_type,target_type,target_id,severity,status,explanation,calculation,version)
+VALUES('8d98ac36-3177-5f7b-bfbe-528be006ef51','4b777e28-9532-5ad1-8c9b-78c8088538bd','b821788c-164c-5da0-8571-74b7ef417538','CONTROL_RELATION','CONTRACT','cccccccc-cccc-4ccc-8ccc-cccccccccccc','HIGH','LINKED','{}','{}',1)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO editorial.case_signals(case_id,signal_id,link_reason,linked_by)
+VALUES('148b09d5-aa28-5351-b471-9ef333a3e410','8d98ac36-3177-5f7b-bfbe-528be006ef51','Publication relation regression','11111111-1111-4111-8111-111111111111')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO editorial.claims(id,case_id,claim_type,text,validation_status,version,created_by)

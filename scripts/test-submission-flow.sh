@@ -97,7 +97,7 @@ trap cleanup EXIT
 cd "$root"
 cargo build -p gurine-submission-api -p gurine-workflow-worker \
   -p gurine-notification-worker -p gurine-scheduler -p gurine-egress-gateway \
-  -p gurine-test-support --bins
+  -p gurine-acceptance-tests --bins
 
 docker run --rm -d --name "$container" \
   -e POSTGRES_DB="$database" \
@@ -132,13 +132,19 @@ docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
 raw_key="01234567890123456789012345678901"
 test_key="$(printf '%s' "$raw_key" | base64 -w0)"
 bot_secret="submission-integration-bot-secret"
+distractor_token="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
 magic_token="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
 hmac_hex() {
   printf '%s' "$2" | openssl dgst -sha256 -hmac "$1" | awk '{print $2}'
 }
+distractor_hash="$(hmac_hex "$raw_key" "$distractor_token")"
 magic_hash="$(hmac_hex "$raw_key" "$magic_token")"
 otp_digest="$(hmac_hex "$raw_key" "response-otp:$magic_hash")"
 printf -v response_otp '%06d' "$((16#${otp_digest:0:8} % 1000000))"
+distractor_otp_digest="$(hmac_hex "$raw_key" "response-otp:$distractor_hash")"
+printf -v distractor_otp '%06d' "$((16#${distractor_otp_digest:0:8} % 1000000))"
+magic_verifier_hmac="$(hmac_hex "$raw_key" "response-access-otp-v2:response-access:$response_otp")"
+distractor_verifier_hmac="$(hmac_hex "$raw_key" "response-access-otp-v2:response-access:$distractor_otp")"
 
 docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
   "ALTER ROLE gurine_submission_api LOGIN PASSWORD 'submission_test';
@@ -160,10 +166,16 @@ docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
      '11111111-1111-4111-8111-111111111111'
    );
    INSERT INTO intake.response_access_tokens(
-     response_request_id,token_hash,expires_at,max_uses
+     response_request_id,token_hash,expires_at,max_uses,
+     otp_derivation_version,otp_verifier_hmac,otp_verifier_key_version
    ) VALUES (
+     '33333333-3333-4333-8333-333333333333','$distractor_hash',
+     clock_timestamp()+interval '1 hour',20,'response-access-otp-v2',
+     '$distractor_verifier_hmac','response-portal-submission-hmac-v1'
+   ),(
      '33333333-3333-4333-8333-333333333333','$magic_hash',
-     clock_timestamp()+interval '1 hour',20
+     clock_timestamp()+interval '1 hour',20,'response-access-otp-v2',
+     '$magic_verifier_hmac','response-portal-submission-hmac-v1'
    );" >/dev/null
 
 postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"

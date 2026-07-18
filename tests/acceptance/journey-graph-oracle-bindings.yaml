@@ -1,0 +1,95 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+registry_kind: JOURNEY_GRAPH_ACCEPTANCE_BINDING
+product_source: specs/product/addendum-journey-contracts.yaml#acceptance_contract
+feature_source: tests/acceptance/journey-graph-addendum.feature
+binding_count: 28
+rules:
+- Each product oracle binds to exactly one independently named executable scenario.
+- Scenario identity is stable and an implementation receipt cannot satisfy a different oracle.
+bindings:
+- oracle_id: UX-JOURNEY-GRAPH-12X129-SET-EQUALITY
+  scenario_id: AC-JOURNEY_GRAPH-001
+  implementation_test_id: ac_journey_graph_001
+- oracle_id: UX-JOURNEY-GRAPH-ALL-NODES-REACH-TERMINAL
+  scenario_id: AC-JOURNEY_GRAPH-002
+  implementation_test_id: ac_journey_graph_002
+- oracle_id: UX-JOURNEY-GRAPH-EVERY-NONTERMINAL-HAS-OUTGOING
+  scenario_id: AC-JOURNEY_GRAPH-003
+  implementation_test_id: ac_journey_graph_003
+- oracle_id: UX-JOURNEY-GRAPH-RESOLVER-SET-EQUALITY
+  scenario_id: AC-JOURNEY_GRAPH-004
+  implementation_test_id: ac_journey_graph_004
+- oracle_id: UX-JOURNEY-GRAPH-ROUTE-SET-94-UNCHANGED
+  scenario_id: AC-JOURNEY_GRAPH-005
+  implementation_test_id: ac_journey_graph_005
+- oracle_id: UX-JOURNEY-GRAPH-CROSS-RETURN-CONTEXT-PARITY
+  scenario_id: AC-JOURNEY_GRAPH-006
+  implementation_test_id: ac_journey_graph_006
+- oracle_id: UX-JOURNEY-J-03-NO-DIRECT-RESPONSE-SEND
+  scenario_id: AC-JOURNEY_GRAPH-007
+  implementation_test_id: ac_journey_graph_007
+- oracle_id: UX-JOURNEY-J-05-FIVE-BRANCH-SEPARATION
+  scenario_id: AC-JOURNEY_GRAPH-008
+  implementation_test_id: ac_journey_graph_008
+- oracle_id: UX-JOURNEY-J-06-J10-AND-J03-ROUNDTRIP
+  scenario_id: AC-JOURNEY_GRAPH-009
+  implementation_test_id: ac_journey_graph_009
+- oracle_id: UX-JOURNEY-J-07-FOUR-DECISIONS-NO-DIRECT-PUBLISH
+  scenario_id: AC-JOURNEY_GRAPH-010
+  implementation_test_id: ac_journey_graph_010
+- oracle_id: UX-JOURNEY-J-10-ENTRY-TO-PROMOTED-EVIDENCE
+  scenario_id: AC-JOURNEY_GRAPH-011
+  implementation_test_id: ac_journey_graph_011
+- oracle_id: UX-JOURNEY-J-10-CANCEL-RECONCILE
+  scenario_id: AC-JOURNEY_GRAPH-012
+  implementation_test_id: ac_journey_graph_012
+- oracle_id: UX-JOURNEY-J-10-CITATION-PROMOTION-DIGEST-PARITY
+  scenario_id: AC-JOURNEY_GRAPH-013
+  implementation_test_id: ac_journey_graph_013
+- oracle_id: UX-JOURNEY-J-11-ENTRY-TO-DURABLE-EFFECT
+  scenario_id: AC-JOURNEY_GRAPH-014
+  implementation_test_id: ac_journey_graph_014
+- oracle_id: UX-JOURNEY-J-11-DECISION-BRANCH-SEPARATION
+  scenario_id: AC-JOURNEY_GRAPH-015
+  implementation_test_id: ac_journey_graph_015
+- oracle_id: UX-JOURNEY-J-11-WITHDRAWAL-RACES
+  scenario_id: AC-JOURNEY_GRAPH-016
+  implementation_test_id: ac_journey_graph_016
+- oracle_id: UX-JOURNEY-J-11-CANCEL-DISPATCH-RECONCILE
+  scenario_id: AC-JOURNEY_GRAPH-017
+  implementation_test_id: ac_journey_graph_017
+- oracle_id: UX-JOURNEY-J-11-ORIGIN-RECEIPT-RETURN
+  scenario_id: AC-JOURNEY_GRAPH-018
+  implementation_test_id: ac_journey_graph_018
+- oracle_id: UX-JOURNEY-J-11-COMMUNICATION-FIVE-PHYSICAL-MILESTONES
+  scenario_id: AC-JOURNEY_GRAPH-019
+  implementation_test_id: ac_journey_graph_019
+- oracle_id: UX-JOURNEY-J-12-OPS004-TO-OWNED-REMEDIATION-ACK
+  scenario_id: AC-JOURNEY_GRAPH-020
+  implementation_test_id: ac_journey_graph_020
+- oracle_id: UX-JOURNEY-J-12-QUALIFIED-CONFIGURED-DATA-READY-ORDER
+  scenario_id: AC-JOURNEY_GRAPH-021
+  implementation_test_id: ac_journey_graph_021
+- oracle_id: UX-JOURNEY-J-12-QUALIFIED-TO-FIRST-PAID-VALUE
+  scenario_id: AC-JOURNEY_GRAPH-022
+  implementation_test_id: ac_journey_graph_022
+- oracle_id: UX-JOURNEY-J-12-ACTIVATION-BOUNDARIES
+  scenario_id: AC-JOURNEY_GRAPH-023
+  implementation_test_id: ac_journey_graph_023
+- oracle_id: UX-JOURNEY-J-12-RETENTION-FIXED-WINDOW
+  scenario_id: AC-JOURNEY_GRAPH-024
+  implementation_test_id: ac_journey_graph_024
+- oracle_id: UX-JOURNEY-J-12-AT-RISK-CHURN-CORRECTION
+  scenario_id: AC-JOURNEY_GRAPH-025
+  implementation_test_id: ac_journey_graph_025
+- oracle_id: UX-JOURNEY-J-12-NO-STAGE-LEDGER
+  scenario_id: AC-JOURNEY_GRAPH-026
+  implementation_test_id: ac_journey_graph_026
+- oracle_id: UX-JOURNEY-J-12-OPTIONAL-J10-MANDATORY-J11-ROUNDTRIP
+  scenario_id: AC-JOURNEY_GRAPH-027
+  implementation_test_id: ac_journey_graph_027
+- oracle_id: UX-JOURNEY-J-12-PAID-TERMINAL-PAIR-EXACT
+  scenario_id: AC-JOURNEY_GRAPH-028
+  implementation_test_id: ac_journey_graph_028

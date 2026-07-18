@@ -12140,46 +12140,54 @@ screens:
     component: AgentSuggestionPanel
     anchor: envelope
     responsive_order: 1
+  - id: business-health
+    title: Business Health
+    purpose: qualification·activation·retention·revenue·margin·SLA의 현재 projection.
+    priority: primary
+    order: 2
+    component: StructuredContentSection
+    anchor: business-health
+    responsive_order: 2
   - id: spend
     title: 사용량
     purpose: provider/workload/case bucket.
     priority: primary
-    order: 2
+    order: 3
     component: StructuredContentSection
     anchor: spend
-    responsive_order: 2
+    responsive_order: 3
   - id: forecast
     title: forecast
     purpose: confidence/assumption.
     priority: primary
-    order: 3
+    order: 4
     component: StructuredContentSection
     anchor: forecast
-    responsive_order: 3
+    responsive_order: 4
   - id: limits
     title: 한도
     purpose: soft/hard/fallback.
     priority: primary
-    order: 4
+    order: 5
     component: StructuredContentSection
     anchor: limits
-    responsive_order: 4
+    responsive_order: 5
   - id: alerts
     title: 경고
     purpose: threshold.
     priority: primary
-    order: 5
+    order: 6
     component: StructuredContentSection
     anchor: alerts
-    responsive_order: 5
+    responsive_order: 6
   - id: changes
     title: 변경 이력
     purpose: approver/reason.
     priority: primary
-    order: 6
+    order: 7
     component: RevisionTimeline
     anchor: changes
-    responsive_order: 6
+    responsive_order: 7
   actions:
   - id: change-limit
     label: 예산 한도 변경
@@ -12215,7 +12223,7 @@ screens:
     method: GET
     path: /v1/internal/queries/get-budget-overview
     request_schema: getBudgetOverviewQuery
-    response_schema: BudgetOverviewResponse
+    response_schema: BusinessHealthResponse
   - operation_id: updateBudgetLimit
     status: READY
     api: control-api

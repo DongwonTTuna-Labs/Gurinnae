@@ -1,0 +1,425 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+base_authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+
+rules:
+  - An Actor Assertion carries exactly one asserted_required_capability; assignment and target capabilities are authoritative persisted predicates, never concatenated strings.
+  - A service, agent, proposal creator, last editor, target subject, recipient, executor, conflicted actor or recused actor cannot satisfy an independent human quorum slot.
+  - One actor can satisfy at most one slot for one proposal version; every counted decision is re-authorized in the final SERIALIZABLE transaction.
+  - Approval binds exact content, target, recipient, evidence, policy, conflict, rights, consent, budget, rendering and expiry digests and cannot authorize changed bytes.
+  - A private executor is an application command behind a current ExecutionAuthorization and does not add an HTTP operation.
+  - ApprovalBindingV1 is common to every reviewer of one proposal version; decision kind, actor, reason, assurance and recusal evidence belong only to the immutable decision receipt and never alter approvalDigest.
+  - The final APPROVE branch of submitActionDecision is the sole effect owner. It creates either one POLICY_BLOCKED effect or one QUEUED effect with its authorization and first attempt in the same SERIALIZABLE transaction; no later materializer may create a second effect.
+  - An execution aggregate, an execution generation authorization, an execution attempt and an execution receipt are distinct identities. State is never inferred by copying one enum into all four records.
+
+digest_contracts:
+  contentDigest:
+    schema: ActionPayloadV1
+    canonicalization: RFC8785_JCS
+    ordered_arrays: [evidenceSegmentIds, recipients, attachmentIds, affectedIds, releaseScopeAtoms, evidenceReceiptIds]
+    free_text: UTF8_SHA256_FIELDS
+  approvalDigest:
+    schema: ApprovalBindingV1
+    canonicalization: GURINE_CANONICAL_JSON_V1
+    includes: [schemaVersion, proposalId, proposalVersion, actionKind, originDigest, contentDigest, rationaleDigest, targetType, targetId, targetVersion, targetDigest, objectScopeDigest, operationId, requiredCapability, targetRequestDigest, previewId, approvalSubjectDigest, evidenceSetDigest, contraryEvidenceSetDigest, uncertaintySetDigest, riskAssessmentDigest, policySnapshotDigest, conflictSnapshotDigest, expectedEffectDigest, reversible, quorumPlanDigest, effectIdempotencyKeySha256, notBefore, expiresAt, actionDetailKind, actionDetail, actionDetailDigest]
+    excludes: [decisionKind, actorId, assignmentId, slotKind, reasonCode, reason, assurance, conflictDeclarationId, decidedAt]
+    invariants:
+      - actionKind equals actionDetailKind and selects exactly one closed ActionApprovalDetailV1 branch.
+      - actionDetailDigest is SHA256 of Gurine Canonical JSON v1 bytes for {actionDetailKind,actionDetail}.
+      - No communication, rendering, recipient, provider, cost, rights, consent or suppression sentinel is permitted outside the branch that owns it.
+  decisionReceiptDigest:
+    schema: ActionDecisionReceiptBindingV1
+    canonicalization: GURINE_CANONICAL_JSON_V1
+    includes: [decisionId, proposalId, proposalVersion, assignmentId, assignmentGeneration, slotKind, decisionKind, actorId, assertedRequiredCapability, assurance, reasonCode, reasonDigest, conflictDeclarationId, approvalDigest, decidedAt]
+  actorActionDigest:
+    schema: ActionAuthorizationContext
+    canonicalization: GURINE_CANONICAL_JSON_V1
+    businessPayloadSha256: approvalDigest
+  executionDigest:
+    schema: ExecutionBindingV1
+    canonicalization: GURINE_CANONICAL_JSON_V1
+    includes: [executionId, generation, approvalDigest, countedDecisionReceiptDigests, executorId, targetRequestSha256, providerIdempotencyKeySha256, budgetReservationDigest, cancellationGeneration, expiresAt]
+
+closed_binding_schemas:
+  ApprovalBindingV1:
+    additional_properties: false
+    discriminator: actionDetailKind
+    required: [schemaVersion, proposalId, proposalVersion, actionKind, originDigest, contentDigest, rationaleDigest, targetType, targetId, targetVersion, targetDigest, objectScopeDigest, operationId, requiredCapability, targetRequestDigest, previewId, approvalSubjectDigest, evidenceSetDigest, contraryEvidenceSetDigest, uncertaintySetDigest, riskAssessmentDigest, policySnapshotDigest, conflictSnapshotDigest, expectedEffectDigest, reversible, quorumPlanDigest, effectIdempotencyKeySha256, notBefore, expiresAt, actionDetailKind, actionDetail, actionDetailDigest]
+    properties:
+      schemaVersion: const<approval-binding.v1>
+      proposalId: uuid
+      proposalVersion: int64[1..max]
+      actionKind: ActionKindV1
+      originDigest: sha256
+      contentDigest: sha256
+      rationaleDigest: sha256
+      targetType: ActionTargetTypeV1
+      targetId: string[1..500]
+      targetVersion: int64[1..max]
+      targetDigest: sha256
+      objectScopeDigest: sha256
+      operationId: string[1..128]
+      requiredCapability: string[1..128]
+      targetRequestDigest: sha256
+      previewId: uuid
+      approvalSubjectDigest: sha256
+      evidenceSetDigest: sha256
+      contraryEvidenceSetDigest: sha256
+      uncertaintySetDigest: sha256
+      riskAssessmentDigest: sha256
+      policySnapshotDigest: sha256
+      conflictSnapshotDigest: sha256
+      expectedEffectDigest: sha256
+      reversible: boolean
+      quorumPlanDigest: sha256
+      effectIdempotencyKeySha256: sha256
+      notBefore: datetime
+      expiresAt: datetime
+      actionDetailKind: ActionKindV1
+      actionDetail: ActionApprovalDetailV1
+      actionDetailDigest: sha256
+    invariants:
+      - targetType, targetId and targetVersion equal the selected ActionPayloadV1 target and its persisted immutable version.
+      - contentDigest equals SHA256 of RFC8785 ActionPayloadV1 bytes and targetRequestDigest binds the closed executor request.
+      - actionKind equals actionDetailKind; actionDetail is the exact selected branch and actionDetailDigest is recomputed from canonical branch bytes.
+      - approvalSubjectDigest binds the exact readable ActionApprovalSubjectViewV1 branch shown to the reviewer.
+      - Empty typed evidence sets may use their canonical empty-set digest; inapplicable domain fields never use sentinel values because they are absent from other branches.
+  ActionDecisionReceiptBindingV1:
+    additional_properties: false
+    required: [decisionId, proposalId, proposalVersion, assignmentId, assignmentGeneration, slotKind, decisionKind, actorId, assertedRequiredCapability, assurance, reasonCode, reasonDigest, conflictDeclarationId, approvalDigest, decidedAt]
+    properties:
+      decisionId: uuid
+      proposalId: uuid
+      proposalVersion: int64[1..max]
+      assignmentId: uuid
+      assignmentGeneration: int64[1..max]
+      slotKind: string[1..100]
+      decisionKind: enum<APPROVE|REJECT|CHANGES_REQUIRED|RECUSE>
+      actorId: uuid
+      assertedRequiredCapability: string[1..128]
+      assurance: enum<ACTIVE_SESSION|RECENT_SESSION|STEP_UP>
+      reasonCode: string[1..100]
+      reasonDigest: sha256
+      conflictDeclarationId: nullable<uuid>
+      approvalDigest: sha256
+      decidedAt: datetime
+
+approval_cycle:
+  identity: [proposalId, proposalVersion]
+  common_binding: exactly one ApprovalBindingV1 and approvalDigest per cycle
+  decisions: append-only; APPROVE alone can count; REJECT and CHANGES_REQUIRED terminalize the proposal version; RECUSE terminalizes only the assignment
+  terminal_race: first SERIALIZABLE terminal commit wins; every loser receives ACTION_DECISION_CLOSED with zero mutation
+  final_approve_effect_owner: control-api.submitActionDecision.final-approve
+  atomic_transition_group: gurine.command.submitActionDecision.v1
+
+recusal_and_replacement:
+  transaction: SERIALIZABLE with the complete proposal/version/assignment/decision graph locked in canonical order
+  recusal_receipt: decisionKind RECUSE with typed reason and optional current conflictDeclarationId; never counted toward quorum
+  replacement:
+    cardinality: exactly one new assignment for the same quorum slot in the same transaction
+    generation: prior assignmentGeneration + 1
+    exclusions: [recusedActorId, proposalCreatorId, lastEditorId, targetSubjectId, recipientActorIds, executorActorId, conflictedActorIds, everyActorAlreadyUsedByAnotherSlot]
+    eligibility: actor has actions.review, exact slot capability, object scope and required assurance at assignment time and claim/decision time
+    failure: when no eligible reviewer exists the recusal still commits and generation plus one is a reviewer-null VACANT assignment with ACTION_QUORUM_UNAVAILABLE; staffing failure never rolls back a valid recusal
+  repeated_recusal: each generation is immutable and excluded actors accumulate for that proposal version
+
+quorum_evaluation:
+  counted_decision_predicate: recordKind = DECISION and decisionKind = APPROVE and assignment state = COMPLETED and assignment generation is MAX for the slot and approvalDigest equals the common cycle digest and no APPROVAL_WITHDRAWAL row references the decision ID and receipt digest
+  global_distinctness: one actorId may satisfy at most one slot for the proposal version across every quorum class
+  reauthorization: final transaction verifies actor active status, role, slot capability, actions.review, object scope, assurance, conflict snapshot and exclusion set for every counted receipt
+  stale_rule: any changed target, payload, rendering, recipient, attachment, evidence, policy, conflict, rights, consent, suppression, budget, activation, quorum plan or expiry digest supersedes the version; no prior decision carries forward
+  exact_completion: every required slot has exactly one counted current decision and no unresolved blocking conflict; extra or duplicate counted decisions are invalid data
+
+effect_ownership:
+  final_approve:
+    owner: control-api.submitActionDecision.final-approve
+    atomic_writes: [terminal action decision, assignment terminal state, proposal terminal state, one ops.in_flight_effects row, zero-or-one budget reservation, zero-or-six budget ledger rows, zero-or-one generation-one execution authorization, zero-or-one generation-one execution attempt, audit, conditional outbox events, closed decision receipt]
+    policy_pass: exactly one QUEUED effect, one authorization and one QUEUED attempt
+    policy_block: exactly one POLICY_BLOCKED effect and no authorization or attempt
+    uniqueness: [one effect_key_digest, one effect per proposalId+proposalVersion, one terminal decision winner]
+  workers:
+    permitted: claim an existing attempt, dispatch after durable claim, append observations/receipts, reconcile, expire or execute a new explicitly authorized retry generation
+    forbidden: create a second effect for an approved proposal version, alter approved bytes, synthesize authorization, change provider idempotency identity or treat an event replay as a new effect
+
+execution_identity_split:
+  aggregate: {relation: ops.in_flight_effects, identity: executionId, version: stateVersion, mutable_head: [currentGeneration, state, cancellationGeneration, dispatchAttemptCount, runAfter, fenceDigests, lastReceiptPointer]}
+  authorization: {relation: ops.execution_authorizations, identity: [executionId, generation], mutability: IMMUTABLE, meaning: one approved right to attempt exact bytes in one generation}
+  attempt: {relation: ops.execution_attempts, identity: [executionId, generation], version: fencingToken, states: [QUEUED, CLAIMED, DISPATCHING, PROVIDER_ACCEPTED, SUCCEEDED, PARTIALLY_SUCCEEDED, RETRYABLE_FAILED, PERMANENT_FAILED, CANCEL_REQUESTED, CANCELLED, RECONCILIATION_REQUIRED]}
+  receipt: {relation: ops.execution_receipts, identity: [executionId, receiptSequence], mutability: APPEND_ONLY, chain: priorReceiptDigest must reference sequence minus one}
+
+operation_authorization:
+  listActionApprovalQueue: {asserted_required_capability: actions.read, persisted_predicates: [assigned_or_owned_or_explicit_audit_scope], assurance: ACTIVE_SESSION}
+  createActionProposal: {asserted_required_capability: actions.propose, persisted_predicates: [actor_has_variant_proposer_capability, actor_has_object_scope], assurance: ACTIVE_SESSION}
+  getActionProposal: {asserted_required_capability: actions.read, persisted_predicates: [actor_has_object_scope], assurance: ACTIVE_SESSION}
+  updateActionDraft: {asserted_required_capability: actions.propose, persisted_predicates: [actor_has_variant_proposer_capability, actor_owns_current_draft], assurance: ACTIVE_SESSION}
+  previewActionDraft: {asserted_required_capability: actions.propose, persisted_predicates: [actor_has_variant_proposer_capability, actor_has_object_scope], assurance: ACTIVE_SESSION}
+  submitActionForReview: {asserted_required_capability: actions.propose, persisted_predicates: [actor_has_variant_proposer_capability, current_quorum_policy_exists], assurance: ACTIVE_SESSION}
+  claimActionReview: {asserted_required_capability: actions.review, persisted_predicates: [actor_has_assignment_required_capability, assignment_reviewer_equals_actor, actor_has_object_scope, actor_not_excluded], assurance: ACTIVE_SESSION}
+  submitActionDecision: {asserted_required_capability: actions.review, persisted_predicates: [actor_has_assignment_required_capability, assignment_reviewer_equals_actor, actor_has_object_scope, actor_passes_separation_of_duty], assurance: MAX_OF_ASSIGNMENT_TARGET_AND_DECISION}
+  getActionExecutionReceipt: {asserted_required_capability: actions.read, persisted_predicates: [actor_has_object_scope], assurance: ACTIVE_SESSION}
+  cancelActionExecution: {asserted_required_capability: actions.operate, persisted_predicates: [actor_has_target_operate_capability, current_generation], assurance: MAX_OF_ACTIVE_AND_TARGET}
+  retryActionExecution: {asserted_required_capability: actions.operate, persisted_predicates: [actor_has_target_operate_capability, current_generation, stored_action_kind_matches_request], assurance: MAX_OF_TARGET_AND_ACTION_KIND}
+  declareConflict: {asserted_required_capability: conflicts.declare, persisted_predicates: [self_subject_or_conflicts_manage, exact_target_scope, expected_prior_sequence, current_policy_digest], assurance: SELF_ACTIVE_SESSION_OR_OTHER_SUBJECT_STEP_UP}
+  withdrawConflict: {asserted_required_capability: conflicts.declare, persisted_predicates: [self_subject_or_conflicts_manage, exact_prior_sequence_and_digest, current_policy_digest, no_history_rewrite, oversight_separated_from_original_declarer_when_required], assurance: SELF_ACTIVE_SESSION_OR_OVERSIGHT_STEP_UP}
+
+derived_session_operation_authorization:
+  normative_source: specs/submission/addendum-derived-session-boundary.yaml
+  parent_non_widening: RESPONSE_RECEIPT authorizes getResponseReceipt only and cannot create or read an appeal.
+  createResponseAppeal:
+    authentication: request-bound BFF service assertion plus opaque derived session
+    required_session_kind: APPEAL_CREATE
+    scope_type: RESPONSE_SUBMISSION
+    persisted_predicates: [active-unexpired-session, exact-bff-issuer, exact-response-submission-request-receipt-version-and-digest-binding, appeal-window-open]
+    success: consume APPEAL_CREATE and issue APPEAL_STATUS scoped to the new appeal atomically
+    exact_replay: finalized same session/key/request digest returns stored bytes before ACTIVE-state validation and creates no second appeal or status child
+  getResponseAppeal:
+    authentication: request-bound BFF service assertion plus opaque derived session
+    required_session_kind: APPEAL_STATUS
+    scope_type: APPEAL
+    persisted_predicates: [active-unexpired-session, exact-bff-issuer, appealId-equals-session-scope, exact-appeal-to-submission-to-request-composite]
+    writes: none
+  requestCommunicationEndpointLink:
+    authentication: request-bound BFF service assertion plus opaque derived session
+    required_session_kind: COMMUNICATION_PROFILE
+    scope_type: COMMUNICATION_SUBJECT
+    persisted_predicates: [active-unexpired-session, exact-origin-bound-subject, expected-profile-version]
+    success: rotate COMMUNICATION_PROFILE under the identical subject/origin binding
+  verifyCommunicationEndpointLink:
+    authentication: request-bound BFF service assertion plus opaque derived session plus one-time endpoint proof
+    required_session_kind: COMMUNICATION_PROFILE
+    scope_type: COMMUNICATION_SUBJECT
+    persisted_predicates: [active-unexpired-session, exact-origin-bound-subject, challenge-profile-session-id-equals-current-child, expected-profile-version]
+    success: consume challenge and rotate COMMUNICATION_PROFILE under the identical subject/origin binding
+  unlinkCommunicationEndpoint:
+    authentication: request-bound BFF service assertion plus opaque derived session
+    required_session_kind: COMMUNICATION_PROFILE
+    scope_type: COMMUNICATION_SUBJECT
+    persisted_predicates: [active-unexpired-session, exact-origin-bound-subject, endpoint-belongs-to-subject, expected-endpoint-and-profile-versions]
+    success: revoke endpoint authorizations and rotate COMMUNICATION_PROFILE under the identical subject/origin binding
+  uniform_failure:
+    code: SCOPED_SESSION_REQUIRED
+    indistinguishable: [unknown-token, wrong-issuer, wrong-kind, wrong-scope, expired, consumed, revoked, lineage-mismatch, cross-object]
+  next_session_token:
+    source: BFF-only X-Gurine-Next-Submission-Session, fresh 32-byte base64url-no-padding
+    binding: request-bound service assertion plus idempotency request digest
+    persistence: lowercase SHA-256 only
+    forbidden: [browser request, URL, DOM, client storage, audit, outbox, event, receipt, error, log, trace, metric, analytics]
+
+quorum_policies:
+  version: action-quorum.v2
+  global_distinct_by: actor_id
+  action_kinds:
+    HYPOTHESIS:
+      proposer_capability: cases.investigate
+      slots: [{slot_id: investigator_acceptance, capability: cases.investigate, allowed_roles: [INVESTIGATOR]}]
+    CLAIM:
+      proposer_capability: claims.author
+      slots: [{slot_id: claim_acceptance, capability: claims.author, allowed_roles: [INVESTIGATOR, EDITOR]}]
+    TASK:
+      proposer_capability: cases.assign
+      slots: [{slot_id: task_owner, capability: cases.assign, allowed_roles: [INVESTIGATOR, EDITOR]}]
+    COMPARABLE:
+      proposer_capability: cases.investigate
+      slots: [{slot_id: comparison_acceptance, capability: cases.investigate, allowed_roles: [INVESTIGATOR]}]
+    COMMUNICATION:
+      proposer_capability: communications.propose
+      classifier: communication_classification
+      classes:
+        PUBLIC_SERVICE_OR_TRANSACTIONAL:
+          slots: [{slot_id: content_approval, capability: communications.approve, allowed_roles: [EDITOR, PUBLISHER, EXECUTIVE_APPROVER]}]
+        DISCRETIONARY_OR_RESTRICTED:
+          slots:
+            - {slot_id: content_approval, capability: communications.approve, allowed_roles: [EDITOR, PUBLISHER, EXECUTIVE_APPROVER]}
+            - {slot_id: authorization_approval, capability: communications.authorization.manage, allowed_roles: [EDITOR, LEGAL_REVIEWER]}
+    PUBLICATION:
+      proposer_capability: publication.preview
+      slots:
+        - {slot_id: independent_editorial, capability: review.editorial, allowed_roles: [EDITOR, PUBLISHER]}
+        - {slot_id: publisher, capability: publication.publish, allowed_roles: [PUBLISHER, EXECUTIVE_APPROVER]}
+    RETRACTION:
+      proposer_capability: publication.retract
+      slots:
+        - {slot_id: legal_review, capability: review.legal, allowed_roles: [LEGAL_REVIEWER]}
+        - {slot_id: publisher, capability: publication.retract, allowed_roles: [PUBLISHER, EXECUTIVE_APPROVER]}
+    RULE_ACTIVATION:
+      proposer_capability: rules.propose
+      slots: [{slot_id: independent_activator, capability: rules.activate, allowed_roles: [EXECUTIVE_APPROVER]}]
+    ROLE_GRANT:
+      proposer_capability: roles.grant
+      slots: [{slot_id: independent_access_admin, capability: roles.grant, allowed_roles: [ACCESS_ADMIN, SECURITY_ADMIN]}]
+    KILL_SWITCH:
+      proposer_capability: kill_switch.execute
+      classifier: kill_switch_breadth
+      classes:
+        NARROW:
+          slots: [{slot_id: operator, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}]
+        BROAD:
+          slots:
+            - {slot_id: operator_a, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}
+            - {slot_id: operator_b, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}
+    COMMUNICATION_AUTHORIZATION:
+      proposer_capability: communications.authorization.manage
+      slots: [{slot_id: authorization_decider, capability: communications.authorization.manage, allowed_roles: [EDITOR, LEGAL_REVIEWER]}]
+    ASSET_RIGHTS_DECISION:
+      proposer_capability: rights.decide
+      slots: [{slot_id: rights_decider, capability: rights.decide, allowed_roles: [LEGAL_REVIEWER]}]
+    RETENTION_SCHEDULE:
+      proposer_capability: retention.policy.manage
+      slots:
+        - {slot_id: operational_owner, capability: retention.policy.manage, allowed_roles: [OPERATIONS]}
+        - {slot_id: legal_owner, capability: retention.policy.manage, allowed_roles: [LEGAL_REVIEWER]}
+    FUNDING_DISCLOSURE:
+      proposer_capability: funding.manage
+      slots:
+        - {slot_id: funding_preparer, capability: funding.manage, allowed_roles: [OPERATIONS, EXECUTIVE_APPROVER]}
+        - {slot_id: funding_publisher, capability: funding.publish, allowed_roles: [EXECUTIVE_APPROVER]}
+    CAPABILITY_ACTIVATION:
+      proposer_capability: providers.manage
+      slots:
+        - {slot_id: legal_activation, capability: providers.activate, allowed_roles: [LEGAL_REVIEWER]}
+        - {slot_id: operational_activation, capability: providers.activate, allowed_roles: [SECURITY_ADMIN, EXECUTIVE_APPROVER]}
+    RESPONSE_POLICY_CALENDAR:
+      proposer_capability: responses.policy.manage
+      slots:
+        - {slot_id: response_policy_owner, capability: responses.policy.manage, allowed_roles: [EDITOR]}
+        - {slot_id: calendar_operator, capability: responses.policy.manage, allowed_roles: [OPERATIONS]}
+    COMMERCIAL_CONTROL:
+      proposer_capability: commercial.controls.propose
+      classifier: commercial_control_trigger_class
+      classes:
+        STANDARD_COMMERCIAL:
+          slots:
+            - {slot_id: finance_control, capability: commercial.controls.review, allowed_roles: [EXECUTIVE_APPROVER]}
+            - {slot_id: product_control, capability: commercial.controls.review, allowed_roles: [EDITOR, OPERATIONS]}
+            - {slot_id: sre_control, capability: commercial.controls.review, allowed_roles: [OPERATIONS, SECURITY_ADMIN]}
+        TRUST_HARD_STOP:
+          slots:
+            - {slot_id: finance_control, capability: commercial.controls.review, allowed_roles: [EXECUTIVE_APPROVER]}
+            - {slot_id: product_control, capability: commercial.controls.review, allowed_roles: [EDITOR, OPERATIONS]}
+            - {slot_id: sre_control, capability: commercial.controls.review, allowed_roles: [OPERATIONS, SECURITY_ADMIN]}
+            - {slot_id: trust_control, capability: commercial.controls.review, allowed_roles: [LEGAL_REVIEWER]}
+            - {slot_id: executive_control, capability: commercial.controls.review, allowed_roles: [EXECUTIVE_APPROVER]}
+
+executor_catalog:
+  HYPOTHESIS: {executor_id: createHypothesis, transport: BASE_APPLICATION_COMMAND, capability: cases.investigate, assurance: ACTIVE_SESSION, transaction: optimistic_command, repository: hypotheses}
+  CLAIM: {executor_id: addClaim, transport: BASE_APPLICATION_COMMAND, capability: claims.author, assurance: ACTIVE_SESSION, transaction: optimistic_command, repository: claims}
+  TASK: {executor_id: private.CreateTaskFromApprovedAction, transport: PRIVATE_APPLICATION_COMMAND, capability: cases.assign, assurance: ACTIVE_SESSION, transaction: optimistic_command, repository: tasks}
+  COMPARABLE: {executor_id: private.MaterializeComparableCandidate, transport: PRIVATE_APPLICATION_COMMAND, capability: cases.investigate, assurance: ACTIVE_SESSION, transaction: serializable_decision, repository: comparables}
+  COMMUNICATION: {executor_id: private.DispatchCommunicationIntent, transport: PRIVATE_APPLICATION_COMMAND, capability: communications.approve, assurance: STEP_UP, transaction: external_effect_request, repository: communication}
+  PUBLICATION: {executor_id: publishCase, transport: BASE_APPLICATION_COMMAND, capability: publication.publish, assurance: STEP_UP, transaction: publication_gate, repository: publication}
+  RETRACTION: {executor_id: private.PublishRetraction, transport: PRIVATE_APPLICATION_COMMAND, capability: publication.retract, assurance: STEP_UP, transaction: publication_gate, repository: publication}
+  RULE_ACTIVATION: {executor_id: activateRuleVersion, transport: BASE_APPLICATION_COMMAND, capability: rules.activate, assurance: STEP_UP, transaction: serializable_decision, repository: rules}
+  ROLE_GRANT: {executor_id: grantRole, transport: BASE_APPLICATION_COMMAND, capability: roles.grant, assurance: STEP_UP, transaction: serializable_decision, repository: access}
+  KILL_SWITCH: {executor_id: private.ApplyKillSwitchCommand, transport: PRIVATE_APPLICATION_COMMAND, capability: kill_switch.execute, assurance: STEP_UP, transaction: serializable_decision, repository: kill_switches}
+  COMMUNICATION_AUTHORIZATION: {executor_id: private.RecordCommunicationAuthorizationDecision, transport: PRIVATE_APPLICATION_COMMAND, capability: communications.authorization.manage, assurance: STEP_UP, transaction: serializable_decision, repository: communication_authorization}
+  ASSET_RIGHTS_DECISION: {executor_id: private.ReviseAssetRightsDecision, transport: PRIVATE_APPLICATION_COMMAND, capability: rights.decide, assurance: STEP_UP, transaction: serializable_decision, repository: asset_rights}
+  RETENTION_SCHEDULE: {executor_id: private.CreateRecordClassScheduleRevision, transport: PRIVATE_APPLICATION_COMMAND, capability: retention.policy.manage, assurance: STEP_UP, transaction: serializable_decision, repository: retention}
+  FUNDING_DISCLOSURE: {executor_id: private.PublishFundingDisclosureRevision, transport: PRIVATE_APPLICATION_COMMAND, capability: funding.publish, assurance: STEP_UP, transaction: serializable_decision, repository: funding}
+  CAPABILITY_ACTIVATION: {executor_id: private.DecideCapabilityActivation, transport: PRIVATE_APPLICATION_COMMAND, capability: providers.activate, assurance: STEP_UP, transaction: serializable_decision, repository: capability_activation}
+  RESPONSE_POLICY_CALENDAR: {executor_id: private.CreateBusinessCalendarVersion, transport: PRIVATE_APPLICATION_COMMAND, capability: responses.policy.manage, assurance: STEP_UP, transaction: serializable_decision, repository: response_clock}
+  COMMERCIAL_CONTROL: {executor_id: private.ApplyCommercialControl, transport: PRIVATE_APPLICATION_COMMAND, capability: commercial.controls.review, assurance: STEP_UP, transaction: external_effect_request, repository: commercial_control}
+
+safe_retry_proof:
+  schema: SafeRetryProofV1
+  additional_properties: false
+  discriminator: kind
+  one_of:
+    - {kind: NO_PROVIDER_ATTEMPT, required: [attemptReceiptId, attemptReceiptDigest]}
+    - {kind: PROVIDER_LOOKUP_NOT_FOUND, required: [lookupReceiptId, lookupReceiptDigest, observedAt]}
+    - {kind: PROVIDER_IDEMPOTENT_REPLAY_SAFE, required: [providerCapabilityReceiptId, lookupReceiptId, providerIdempotencyKeySha256]}
+  rules:
+    - Operator confirmation, free-form OTHER and nullable proof are forbidden.
+    - Any possible provider acceptance requires reconciliation and is not retryable.
+    - The three-attempt ceiling counts actual effect dispatch attempts, not HTTP requests.
+    - A definitive not-accepted result with dispatchAttemptCount below 3 may become RETRYABLE_FAILED; the same result at dispatchAttemptCount 3 becomes PERMANENT_FAILED atomically and can never remain retryable.
+    - Claim or lease reclamation without a dispatch ordinal does not consume an attempt; assigning the next unique dispatch ordinal and incrementing the aggregate dispatchAttemptCount happen under the effect/attempt locks before egress.
+    - Safe retry preserves approvalDigest, exact rendered bytes, target request digest, executor, provider configuration and provider idempotency key. Any changed business effect is a new proposal, never a retry.
+
+cancel_reconcile_compensate:
+  cancel_race:
+    lock_order: [ops.in_flight_effects, ops.execution_authorizations, ops.execution_attempts, ops.execution_receipts]
+    pre_dispatch: if the locked current attempt has no dispatchOrdinal, cancelActionExecution revokes its lease and commits aggregate/attempt CANCELLED before the worker can assign an ordinal
+    dispatch_winner: if the worker assigned dispatchOrdinal first, cancellation commits CANCEL_REQUESTED and cannot assert cancellation as provider fact
+    forbidden: [check-then-act without attempt lock, deleting queued work, marking possible effect CANCELLED, reusing a revoked fencing token]
+  reconciliation:
+    entry: any possible external acceptance, callback ambiguity, timeout after egress or cancel after dispatch
+    destinations: [SUCCEEDED, PERMANENT_FAILED, RETRYABLE_FAILED, CANCELLED]
+    retryable_destination_guard: authenticated definitive NOT_ACCEPTED proof and dispatchAttemptCount below 3
+    cancelled_destination_guard: authenticated definitive NOT_ACCEPTED or provider-confirmed cancellation proof
+    ambiguous_result: remains RECONCILIATION_REQUIRED with a new bounded observation receipt and incident linkage
+  compensation:
+    origin_kind: COMPENSATION
+    required_link: compensatesExecutionId identifies one immutable SUCCEEDED predecessor effect
+    content: a new typed ActionPayloadV1 with its own target version, common approval binding, quorum, authorization, idempotency identity and receipts
+    predecessor: remains SUCCEEDED and immutable; compensation never rewrites or relabels history
+
+cross_file_required_changes:
+  status: BLOCKING_FINAL
+  resource_error_contract:
+    - Execution error/view schemas must expose aggregate state separately from attempt state and cannot use one conflated enum.
+  operation_contract:
+    - Generated OpenAPI, BFF clients and runtime repositories must consume the now-closed APPEAL_CREATE, APPEAL_STATUS and COMMUNICATION_PROFILE authorization/rotation overlay without widening RESPONSE_RECEIPT.
+  physical_contract:
+    - ops.in_flight_effects and proposal origin constraints must admit the exact COMPENSATION link contract while preserving a SUCCEEDED predecessor.
+    - Every approval digest field above needs a typed physical column or closed encrypted snapshot field plus a canonical digest canary; missing fields cannot be replaced with nullable JSON.
+  completion_rule: these imported files and runtime/acceptance tests must become set-equal before status may become FINAL.
+
+binding_schema_set_equality:
+  ApprovalBindingV1:
+    canonical: closed_binding_schemas.ApprovalBindingV1
+    imports:
+      - specs/product/addendum-resource-error-contracts.yaml#schemas.ApprovalBindingV1
+    assertion: imported field keys equal canonical properties keys equal required; decisionKind, actorId, assignmentId, slotKind, reasonCode, reason, assurance, conflictDeclarationId and decidedAt are absent
+  ActionDecisionReceiptBindingV1:
+    canonical: closed_binding_schemas.ActionDecisionReceiptBindingV1
+    imports:
+      - specs/product/addendum-resource-error-contracts.yaml#schemas.ActionDecisionReceiptBindingV1
+    assertion: imported field keys equal canonical properties keys equal required and include decisionKind, actorId, assertedRequiredCapability, assurance, reasonDigest and conflictDeclarationId
+
+private_application_command_authorization:
+  materializeResponseRequestSent:
+    caller: workflow-worker.response-request-materializer
+    required_proof: claimed ops.inbox event for communication.delivery_receipt_recorded.v1 plus exact request/intent/rendering/endpoint/provider/delivery/receipt composite
+    assurance: SERVICE_WORKLOAD_IDENTITY
+    forbidden: [human actor assertion, browser session, inferred SENT state, unclaimed event replay]
+  private.PublishRetraction:
+    caller: action-execution-worker.retraction-executor
+    required_proof: exact current RETRACTION ExecutionAuthorization, executionDigest, approvalDigest, complete counted decision receipt set, generation and unexpired STEP_UP authorization
+    assurance: BOUND_STEP_UP_EXECUTION_AUTHORIZATION
+    forbidden: [event-only materialization, changed tombstone bytes, mutable current-head substitution, second effect for one proposal version]
+  private.ApplyCommercialControl:
+    caller: action-execution-worker.commercial-control-executor
+    required_proof: exact current COMMERCIAL_CONTROL ExecutionAuthorization, executionDigest, approvalDigest, complete counted decision receipt set, commercial trigger snapshot, product fence receipt, external import receipt and distinct acknowledgement receipt
+    assurance: BOUND_STEP_UP_EXECUTION_AUTHORIZATION
+    forbidden: [metric-only auto-effect, inferred acknowledgement, elapsed-time resume, import receipt reused as acknowledgement, commercial stage mutation, paid-value inference]
+
+base_operation_guards:
+  activateKillSwitch:
+    broad_classifier: GLOBAL_OR_PUBLIC_SERVING_OR_MULTI_TARGET
+    required_execution_authorization: {actionKind: KILL_SWITCH, command: ACTIVATE, quorumClass: BROAD}
+    failure: ACTION_APPROVAL_REQUIRED
+  deactivateKillSwitch:
+    broad_classifier: GLOBAL_OR_PUBLIC_SERVING_OR_MULTI_TARGET
+    required_execution_authorization: {actionKind: KILL_SWITCH, command: DEACTIVATE, quorumClass: BROAD}
+    failure: ACTION_APPROVAL_REQUIRED
+  extendKillSwitch:
+    broad_classifier: GLOBAL_OR_PUBLIC_SERVING_OR_MULTI_TARGET
+    required_execution_authorization: {actionKind: KILL_SWITCH, command: EXTEND, quorumClass: BROAD}
+    failure: ACTION_APPROVAL_REQUIRED
+  publishCase:
+    required_execution_authorization: {actionKind: PUBLICATION, generation: current, executionDigest: exact}
+    failure: ACTION_APPROVAL_REQUIRED
+    restoration_branch: TEMPORARILY_RESTRICTED requires cause-release receipt, preserved prior public state and a full fresh gate; ordinary publish authorization cannot bypass these predicates
+  resolveCorrectionRequest:
+    resolved_branch: resolution RESOLVED requires current publication preview/gate and atomically creates the CORRECTED immutable publication revision
+    assurance: RECENT_SESSION
+    failure: PUBLICATION_GATE_BLOCKED
+  placeTemporaryRestriction:
+    required_cause: exact legal, rights, hold or safety decision with preserved prior public state
+    assurance: STEP_UP
+    failure: PUBLICATION_RESTRICTION_CAUSE_INVALID
+  placeLegalHold:
+    target: closed LegalHoldTargetBindingV1 including exact target version/digest and derived anchor digest
+    assurance: STEP_UP
+    failure: LEGAL_HOLD_TARGET_INVALID

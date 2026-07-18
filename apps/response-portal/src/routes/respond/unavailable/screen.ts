@@ -10,7 +10,7 @@ export const screen = {
       order: 1,
       id: "status",
       title: "접근 상태",
-      component: "StatusAndRevisionHeader",
+      component: "NotificationBanner",
       purpose: "과도한 token 정보 없이.",
       test_id: "rsp_008__section__status",
     },

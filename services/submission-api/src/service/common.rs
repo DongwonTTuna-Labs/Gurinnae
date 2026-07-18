@@ -13,6 +13,9 @@ use zeroize::Zeroize;
 use super::{RequestContext, ServiceError};
 
 const FIELD_PREFIX: &str = "gurine-fe-v1";
+pub const RESPONSE_OTP_DERIVATION_VERSION: &str = "response-access-otp-v2";
+pub const RESPONSE_OTP_KEY_VERSION: &str = "response-portal-submission-hmac-v1";
+pub const RESPONSE_OTP_PREVIOUS_KEY_VERSION: &str = "response-portal-submission-hmac-v0";
 
 pub fn parse(body: &[u8]) -> Result<Value, ServiceError> {
     serde_json::from_slice(body).map_err(|_| ServiceError::InvalidRequest)
@@ -117,22 +120,22 @@ pub fn uuid_from_hash(hash: &str) -> Result<Uuid, ServiceError> {
     Ok(Uuid::from_bytes(uuid_bytes))
 }
 
-pub fn response_otp(key: &[u8], access_token_hash: &str) -> Result<String, ServiceError> {
+#[cfg(test)]
+fn response_otp(key: &[u8], access_token_hash: &str) -> Result<String, ServiceError> {
     let digest = token_hmac(key, &format!("response-otp:{access_token_hash}"))?;
     let prefix = digest.get(..8).ok_or(ServiceError::Cryptography)?;
     let value = u32::from_str_radix(prefix, 16).map_err(|_| ServiceError::Cryptography)?;
     Ok(format!("{:06}", value % 1_000_000))
 }
 
-pub fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
-    let mut difference = left.len() ^ right.len();
-    let width = left.len().max(right.len());
-    for index in 0..width {
-        let left_byte = left.get(index).copied().unwrap_or(0);
-        let right_byte = right.get(index).copied().unwrap_or(0);
-        difference |= usize::from(left_byte ^ right_byte);
-    }
-    difference == 0
+/// Computes the candidate verifier submitted to PostgreSQL for a response
+/// access OTP.  The raw OTP never crosses the persistence boundary: it is
+/// bound to the response-access purpose and derivation revision.
+pub fn response_otp_verifier(key: &[u8], otp: &str) -> Result<String, ServiceError> {
+    token_hmac(
+        key,
+        &format!("{RESPONSE_OTP_DERIVATION_VERSION}:response-access:{otp}"),
+    )
 }
 
 pub fn normalized_email(value: &str) -> Result<String, ServiceError> {
@@ -348,11 +351,53 @@ fn verify_synthetic(
     if issued_at > now + 5 || now - issued_at > 300 {
         return Err(ServiceError::AbuseProofInvalid);
     }
-    let signature = decode_hex(token).ok_or(ServiceError::AbuseProofInvalid)?;
-    let mut mac = Hmac::<Sha256>::new_from_slice(context.state.bot_challenge_secret.as_bytes())
-        .map_err(|_| ServiceError::Cryptography)?;
-    mac.update(format!("{action}:{issued_at}").as_bytes());
-    mac.verify_slice(&signature)
+    if let Some(signature) = decode_hex(token) {
+        let mut mac = Hmac::<Sha256>::new_from_slice(context.state.bot_challenge_secret.as_bytes())
+            .map_err(|_| ServiceError::Cryptography)?;
+        mac.update(format!("{action}:{issued_at}").as_bytes());
+        return mac
+            .verify_slice(&signature)
+            .map_err(|_| ServiceError::AbuseProofInvalid);
+    }
+    verify_bff_synthetic(context, token, action, issued_at)
+}
+
+fn verify_bff_synthetic(
+    context: &RequestContext<'_>,
+    token: &str,
+    action: &str,
+    issued_at: i64,
+) -> Result<(), ServiceError> {
+    let mut parts = token.split('.');
+    let (Some(prefix), Some(kid), Some(nonce), Some(encoded_signature), None) = (
+        parts.next(),
+        parts.next(),
+        parts.next(),
+        parts.next(),
+        parts.next(),
+    ) else {
+        return Err(ServiceError::AbuseProofInvalid);
+    };
+    if prefix != "gurine-synth-v1"
+        || kid.len() != 16
+        || !kid
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        || !(16..=128).contains(&nonce.len())
+        || !nonce
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
+    {
+        return Err(ServiceError::AbuseProofInvalid);
+    }
+    let signature = decode_hex(encoded_signature).ok_or(ServiceError::AbuseProofInvalid)?;
+    let keys = match context.issuer {
+        "public-web" => &context.state.public_web_keys,
+        "response-portal" => &context.state.response_portal_keys,
+        _ => return Err(ServiceError::AbuseProofInvalid),
+    };
+    let message = format!("gurine-synthetic-proof-v1\0{action}\0{issued_at}\0{nonce}");
+    keys.verify_hmac_tag(kid, message.as_bytes(), &signature)
         .map_err(|_| ServiceError::AbuseProofInvalid)
 }
 
@@ -451,7 +496,7 @@ pub fn database_error(error: sqlx::Error) -> ServiceError {
 mod tests {
     use serde_json::json;
 
-    use super::provider_action_matches;
+    use super::{provider_action_matches, response_otp, response_otp_verifier};
 
     #[test]
     fn turnstile_action_is_required_and_request_bound() {
@@ -484,5 +529,22 @@ mod tests {
             "createSubscription",
             false,
         ));
+    }
+
+    #[test]
+    fn response_otp_verifier_is_bound_to_artifact_and_user_code() {
+        let key = b"01234567890123456789012345678901";
+        let artifact = "a".repeat(64);
+        let otp = response_otp(key, &artifact).expect("deterministic test OTP");
+        let verifier = response_otp_verifier(key, &otp).expect("verifier");
+        assert_eq!(verifier.len(), 64);
+        assert_eq!(
+            verifier,
+            response_otp_verifier(key, &otp).expect("same OTP")
+        );
+        assert_ne!(
+            verifier,
+            response_otp_verifier(key, "000000").expect("different OTP")
+        );
     }
 }

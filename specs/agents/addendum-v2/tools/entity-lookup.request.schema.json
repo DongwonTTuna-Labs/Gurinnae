@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/entity-lookup-request.json",
+  "title": "EntityLookupRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "inputSnapshotId", "inputSnapshotSha256", "entityKind", "identifiers", "asOf", "requestedFields", "identityStates", "maxResults"],
+  "properties": {
+    "schemaVersion": {"const": "entity.lookup.request.v2"},
+    "runId": {"type": "string", "format": "uuid"},
+    "inputSnapshotId": {"type": "string", "format": "uuid"},
+    "inputSnapshotSha256": {"$ref": "#/$defs/sha256"},
+    "entityKind": {"enum": ["AGENCY", "SUPPLIER"]},
+    "identifiers": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object", "additionalProperties": false, "required": ["kind", "value"], "properties": {"kind": {"enum": ["CANONICAL_NAME", "BUSINESS_REGISTRATION_NUMBER", "AGENCY_CODE", "PUBLIC_SLUG", "VERIFIED_ALIAS"]}, "value": {"type": "string", "minLength": 1, "maxLength": 255}}}},
+    "asOf": {"type": "string", "format": "date-time"},
+    "requestedFields": {"type": "array", "minItems": 1, "uniqueItems": true, "maxItems": 20, "items": {"enum": ["CANONICAL_NAME", "IDENTIFIERS", "JURISDICTION", "BUSINESS_STATUS", "IDENTITY_STATUS", "VERIFIED_ALIASES", "PARENT_AGENCY"]}},
+    "identityStates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["VERIFIED", "PROVISIONAL", "DISPUTED", "SUPERSEDED"]}},
+    "maxResults": {"type": "integer", "minimum": 1, "maximum": 50}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

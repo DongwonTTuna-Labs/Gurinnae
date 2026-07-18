@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/communication-proposal-payload.json",
+  "title": "CommunicationProposalPayloadV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "recipientBinding",
+    "channel",
+    "purpose",
+    "draftText",
+    "rationale",
+    "citationIds",
+    "requiresApproval"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "communication-proposal-payload.v1"
+    },
+    "kind": {
+      "const": "COMMUNICATION"
+    },
+    "recipientBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subjectId",
+        "endpointId",
+        "endpointVersion",
+        "endpointDigest"
+      ],
+      "properties": {
+        "subjectId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "endpointId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "endpointVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endpointDigest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "channel": {
+      "enum": [
+        "SMTP_EMAIL",
+        "TELEGRAM_BOT_API",
+        "META_WHATSAPP_BUSINESS_CLOUD",
+        "LINE_MESSAGING_API",
+        "SOLAPI_SMS",
+        "SOLAPI_KAKAO_BIZMESSAGE",
+        "TWILIO_VOICE",
+        "SIGNED_WEBHOOK"
+      ]
+    },
+    "purpose": {
+      "enum": [
+        "ENDPOINT_VERIFICATION",
+        "RIGHT_OF_REPLY_REQUEST",
+        "RIGHT_OF_REPLY_REMINDER",
+        "RESPONSE_RECEIPT",
+        "CORRECTION_STATUS",
+        "CORRECTION_RETRACTION_NOTICE",
+        "PRIVACY_TRANSACTIONAL_NOTICE",
+        "SECURITY_TRANSACTIONAL_NOTICE",
+        "SUBSCRIPTION_UPDATE",
+        "PRODUCT_MARKETING",
+        "INCIDENT_RECOVERY",
+        "INTERNAL_ACTION_REQUEST",
+        "DISCRETIONARY_OUTREACH"
+      ]
+    },
+    "draftText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "citationIds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "requiresApproval": {
+      "const": true
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "x-gurinnae-invariants": [
+    "The recipient binds an immutable endpoint revision by subject ID, endpoint ID, endpoint version, and endpoint digest.",
+    "Channel and purpose are exact values from the 0027 communication closed-type catalog; aliases such as EMAIL or RIGHT_OF_REPLY are invalid.",
+    "Consent, suppression, provider, price, budget, rendering, delivery, authorization, attempt, and receipt state are absent and must be reloaded by the approval/execution owner immediately before any effect.",
+    "The exact RFC8785 JCS bytes and SHA-256 of this object are preserved unchanged from validated provider output through AgentProposal and ActionProposal DRAFT."
+  ]
+}

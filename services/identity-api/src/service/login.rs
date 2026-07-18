@@ -213,28 +213,19 @@ pub async fn consume_step_up_callback(
         .await
         .map_err(|_| ServiceError::Persistence)?
         .ok_or(ServiceError::Conflict)?;
-    if claimed.kind != TransactionKind::StepUp
-        || claimed.session_id != Some(session.session_id)
-        || claimed.expires_at <= OffsetDateTime::now_utc()
-        || request
-            .issuer
-            .as_deref()
-            .is_some_and(|issuer| issuer != state.config.oidc_issuer_url)
-    {
-        return Err(ServiceError::CallbackBinding);
-    }
+    validate_step_up_binding(
+        &claimed,
+        session.session_id,
+        request.issuer.as_deref(),
+        &state.config.oidc_issuer_url,
+    )?;
     let identity = exchange_identity(state, &claimed, &request.code).await?;
     let user = active_user_by_subject(&state.pool, &identity.subject)
         .await
         .map_err(|_| ServiceError::Persistence)?
         .ok_or(ServiceError::SessionNotActive)?;
-    if user.0 != session.user_id {
-        return Err(ServiceError::CallbackBinding);
-    }
-    let action_digest = claimed.action_digest.ok_or(ServiceError::CallbackBinding)?;
-    let idempotency_hash = claimed
-        .idempotency_key_sha256
-        .ok_or(ServiceError::CallbackBinding)?;
+    ensure_step_up_user(user.0, session.user_id)?;
+    let (action_digest, idempotency_hash) = step_up_context(&claimed)?;
     let authorization_token = random_token()?;
     let csrf_token = random_token()?;
     let expires_at = OffsetDateTime::now_utc() + Duration::minutes(5);
@@ -288,6 +279,46 @@ pub async fn consume_step_up_callback(
         authorization_cookie_domain_mode: "HOST_ONLY",
         authorization_cookie_same_site: "Strict",
     })
+}
+
+fn ensure_step_up_user(
+    user_id: uuid::Uuid,
+    session_user_id: uuid::Uuid,
+) -> Result<(), ServiceError> {
+    (user_id == session_user_id)
+        .then_some(())
+        .ok_or(ServiceError::CallbackBinding)
+}
+
+fn validate_step_up_binding(
+    claimed: &gurine_persistence_postgres::identity::ClaimedOidcTransaction,
+    session_id: uuid::Uuid,
+    issuer: Option<&str>,
+    expected_issuer: &str,
+) -> Result<(), ServiceError> {
+    if claimed.kind != TransactionKind::StepUp
+        || claimed.session_id != Some(session_id)
+        || claimed.expires_at <= OffsetDateTime::now_utc()
+        || issuer.is_some_and(|value| value != expected_issuer)
+    {
+        return Err(ServiceError::CallbackBinding);
+    }
+    Ok(())
+}
+
+fn step_up_context(
+    claimed: &gurine_persistence_postgres::identity::ClaimedOidcTransaction,
+) -> Result<(String, String), ServiceError> {
+    Ok((
+        claimed
+            .action_digest
+            .clone()
+            .ok_or(ServiceError::CallbackBinding)?,
+        claimed
+            .idempotency_key_sha256
+            .clone()
+            .ok_or(ServiceError::CallbackBinding)?,
+    ))
 }
 
 fn provider_config<'a>(

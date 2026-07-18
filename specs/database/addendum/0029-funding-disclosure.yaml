@@ -1,0 +1,1298 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+physical_relation_registry_ref: specs/database/addendum/0029-commercial-core.yaml#physical_relation_registry
+fragment_creation_order_assertion: [ops.funding_concentration_snapshots, editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries]
+
+scope:
+  migration: 0029_product_economics.sql
+  authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+  relations:
+    - ops.funding_concentration_snapshots
+    - editorial.funding_disclosure_revisions
+    - editorial.funding_disclosure_entries
+  repository_namespace: crates/persistence-postgres::funding
+  domain_namespace: gurine_domain::funding
+
+closed_types:
+  ops.funding_snapshot_row_kind: [SNAPSHOT_HEADER, COUNTERPARTY_ENTRY]
+  ops.funding_denominator_state: [APPROVED, UNKNOWN]
+  ops.funding_denominator_unknown_reason: [MISSING, ZERO, APPROVAL_MISSING, APPROVAL_STALE]
+  ops.funding_grouping_state: [RESOLVED, DISPUTED]
+  ops.funding_grouping_dispute_reason:
+    - IDENTITY_AMBIGUOUS
+    - MEMBER_SET_DISPUTED
+    - RELATED_PARTY_STATUS_DISPUTED
+    - AUTHORITATIVE_SOURCE_CONFLICT
+  ops.funding_concentration_unknown_reason: [DENOMINATOR_UNKNOWN, GROUPING_DISPUTED]
+  ops.funding_source_kind:
+    - DONATION
+    - GRANT
+    - INSTITUTIONAL_CUSTOMER_REVENUE
+    - COMMERCIAL_CUSTOMER_REVENUE
+    - SPONSORSHIP
+    - OTHER_REVIEWED
+    - MIXED
+  ops.funding_amount_basis: [RECOGNIZED, BINDING_COMMITTED]
+  editorial.funding_concentration_band:
+    - UNKNOWN
+    - LE_5_PERCENT
+    - GT_5_TO_15_PERCENT
+    - GT_15_TO_25_PERCENT
+    - GT_25_PERCENT
+  editorial.funding_identity_disclosure_mode: [NAMED, CATEGORY_ONLY, WITHHELD_LEGAL]
+  editorial.funding_quorum_class: [STANDARD, OVERSIGHT, BOARD, RELATED_PARTY, OVERSIGHT_RELATED_PARTY, BOARD_RELATED_PARTY]
+  editorial.funding_disclosure_unknown_reason: [DENOMINATOR_UNKNOWN, GROUPING_DISPUTED, MULTIPLE_UNKNOWN_CAUSES]
+  editorial.funding_identity_withholding_reason:
+    - BELOW_NAMING_THRESHOLD
+    - LEGAL_RESTRICTION
+    - PRIVACY_RESTRICTION
+    - REVIEWED_CONFIDENTIALITY_DUTY
+
+physical_type_registry:
+  owner: gurine_migrator
+  implementation: PostgreSQL ENUM with labels in the exact closed_types order
+  creation_after_ref: specs/database/addendum/0029-commercial-core.yaml#physical_type_registry.commercial_enum_creation_order
+  enum_creation_order:
+    - ops.funding_snapshot_row_kind
+    - ops.funding_denominator_state
+    - ops.funding_denominator_unknown_reason
+    - ops.funding_grouping_state
+    - ops.funding_grouping_dispute_reason
+    - ops.funding_concentration_unknown_reason
+    - ops.funding_source_kind
+    - ops.funding_amount_basis
+    - editorial.funding_concentration_band
+    - editorial.funding_identity_disclosure_mode
+    - editorial.funding_quorum_class
+    - editorial.funding_disclosure_unknown_reason
+    - editorial.funding_identity_withholding_reason
+  acl:
+    public: []
+    gurine_workflow_worker: [USAGE]
+    gurine_control_api: [USAGE]
+    gurine_auditor: [USAGE]
+    all_other_runtime_roles: []
+  acl_overrides:
+    gurine_public_projector_usage_only:
+      - ops.funding_denominator_unknown_reason
+      - ops.funding_grouping_dispute_reason
+      - ops.funding_concentration_unknown_reason
+      - ops.funding_source_kind
+      - editorial.funding_concentration_band
+      - editorial.funding_identity_disclosure_mode
+      - editorial.funding_disclosure_unknown_reason
+    rule: These enum USAGE grants are required only to decode the allowlisted public composites; they confer no table privilege, cast function, schema CREATE or raw source access.
+  composite_creation_order:
+    - ops.funding_snapshot_import_v1
+    - ops.funding_snapshot_entry_input_v1
+    - ops.funding_snapshot_import_receipt_v1
+    - editorial.funding_disclosure_publish_v1
+    - editorial.funding_disclosure_entry_input_v1
+    - editorial.funding_disclosure_publish_receipt_v1
+    - editorial.funding_public_revision_v1
+    - editorial.funding_public_entry_v1
+    - editorial.funding_public_projection_input_v1
+  composite_types:
+    ops.funding_snapshot_import_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_workflow_worker]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: idempotency_key, type: text, nullable: false}
+        - {ordinal: 2, name: snapshot_batch_id, type: uuid, nullable: false}
+        - {ordinal: 3, name: expected_prior_header_id, type: uuid, nullable: true}
+        - {ordinal: 4, name: expected_prior_snapshot_digest, type: "char(64)", nullable: true}
+        - {ordinal: 5, name: fiscal_year, type: integer, nullable: false}
+        - {ordinal: 6, name: as_of, type: timestamptz, nullable: false}
+        - {ordinal: 7, name: reporting_currency, type: "char(3)", nullable: false}
+        - {ordinal: 8, name: funding_policy_version, type: text, nullable: false}
+        - {ordinal: 9, name: funding_policy_digest, type: "char(64)", nullable: false}
+        - {ordinal: 10, name: fx_snapshot_digest, type: "char(64)", nullable: false}
+        - {ordinal: 11, name: denominator_state, type: ops.funding_denominator_state, nullable: false}
+        - {ordinal: 12, name: denominator_amount, type: "numeric(24,6)", nullable: true}
+        - {ordinal: 13, name: denominator_unknown_reason, type: ops.funding_denominator_unknown_reason, nullable: true}
+        - {ordinal: 14, name: denominator_approval_digest, type: "char(64)", nullable: true}
+        - {ordinal: 15, name: denominator_approver_set_digest, type: "char(64)", nullable: true}
+        - {ordinal: 16, name: denominator_approved_at, type: timestamptz, nullable: true}
+        - {ordinal: 17, name: denominator_approval_expires_at, type: timestamptz, nullable: true}
+        - {ordinal: 18, name: expected_entry_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 19, name: expected_source_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 20, name: expected_snapshot_digest, type: "char(64)", nullable: false}
+      sensitive_fields: [idempotency_key]
+      ddl_rule: CREATE TYPE uses these fields and ordinals byte-for-byte; nullable is an application/validator rule because PostgreSQL composite attributes themselves do not carry NOT NULL.
+    ops.funding_snapshot_entry_input_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_workflow_worker]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: ordinal, type: integer, nullable: false}
+        - {ordinal: 2, name: counterparty_group_id, type: uuid, nullable: false}
+        - {ordinal: 3, name: counterparty_group_digest, type: "char(64)", nullable: false}
+        - {ordinal: 4, name: grouping_state, type: ops.funding_grouping_state, nullable: false}
+        - {ordinal: 5, name: grouping_dispute_reason, type: ops.funding_grouping_dispute_reason, nullable: true}
+        - {ordinal: 6, name: grouping_evidence_digest, type: "char(64)", nullable: false}
+        - {ordinal: 7, name: member_supplier_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 8, name: member_supplier_identity_digests, type: "char(64)[]", nullable: false}
+        - {ordinal: 9, name: funding_source_kind, type: ops.funding_source_kind, nullable: false}
+        - {ordinal: 10, name: government_related, type: boolean, nullable: false}
+        - {ordinal: 11, name: political_party_related, type: boolean, nullable: false}
+        - {ordinal: 12, name: procurement_supplier_related, type: boolean, nullable: false}
+        - {ordinal: 13, name: investigated_subject_related, type: boolean, nullable: false}
+        - {ordinal: 14, name: related_party, type: boolean, nullable: false}
+        - {ordinal: 15, name: related_case_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 16, name: recognized_revenue_fact_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 17, name: recognized_revenue_fact_digests, type: "char(64)[]", nullable: false}
+        - {ordinal: 18, name: recognized_revenue_fact_amounts, type: "numeric(24,6)[]", nullable: false}
+        - {ordinal: 19, name: binding_contract_period_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 20, name: binding_contract_period_digests, type: "char(64)[]", nullable: false}
+        - {ordinal: 21, name: binding_contract_period_amounts, type: "numeric(24,6)[]", nullable: false}
+        - {ordinal: 22, name: external_funding_source_receipt_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 23, name: external_funding_source_receipt_digests, type: "char(64)[]", nullable: false}
+        - {ordinal: 24, name: external_funding_source_signature_digests, type: "char(64)[]", nullable: false}
+        - {ordinal: 25, name: external_funding_source_kinds, type: "ops.funding_source_kind[]", nullable: false}
+        - {ordinal: 26, name: external_funding_amount_bases, type: "ops.funding_amount_basis[]", nullable: false}
+        - {ordinal: 27, name: external_funding_source_amounts, type: "numeric(24,6)[]", nullable: false}
+        - {ordinal: 28, name: expected_entry_source_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 29, name: expected_independent_review_requirement_digest, type: "char(64)", nullable: false}
+        - {ordinal: 30, name: expected_entry_digest, type: "char(64)", nullable: false}
+    ops.funding_snapshot_import_receipt_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_workflow_worker]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: receipt_id, type: uuid, nullable: false}
+        - {ordinal: 2, name: snapshot_header_id, type: uuid, nullable: false}
+        - {ordinal: 3, name: snapshot_batch_id, type: uuid, nullable: false}
+        - {ordinal: 4, name: snapshot_version, type: bigint, nullable: false}
+        - {ordinal: 5, name: snapshot_digest, type: "char(64)", nullable: false}
+        - {ordinal: 6, name: entry_count, type: integer, nullable: false}
+        - {ordinal: 7, name: entry_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 8, name: audit_event_id, type: uuid, nullable: false}
+        - {ordinal: 9, name: outbox_id, type: uuid, nullable: false}
+        - {ordinal: 10, name: response_digest, type: "char(64)", nullable: false}
+        - {ordinal: 11, name: receipt_digest, type: "char(64)", nullable: false}
+        - {ordinal: 12, name: committed_at, type: timestamptz, nullable: false}
+        - {ordinal: 13, name: idempotency_replay, type: boolean, nullable: false}
+    editorial.funding_disclosure_publish_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_workflow_worker]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: idempotency_key, type: text, nullable: false}
+        - {ordinal: 2, name: disclosure_id, type: uuid, nullable: false}
+        - {ordinal: 3, name: expected_prior_revision_id, type: uuid, nullable: true}
+        - {ordinal: 4, name: expected_prior_revision, type: bigint, nullable: true}
+        - {ordinal: 5, name: expected_prior_revision_digest, type: "char(64)", nullable: true}
+        - {ordinal: 6, name: fiscal_year, type: integer, nullable: false}
+        - {ordinal: 7, name: fiscal_quarter, type: smallint, nullable: false}
+        - {ordinal: 8, name: period_start, type: date, nullable: false}
+        - {ordinal: 9, name: period_end, type: date, nullable: false}
+        - {ordinal: 10, name: snapshot_header_id, type: uuid, nullable: false}
+        - {ordinal: 11, name: snapshot_batch_id, type: uuid, nullable: false}
+        - {ordinal: 12, name: snapshot_digest, type: "char(64)", nullable: false}
+        - {ordinal: 13, name: funding_policy_version, type: text, nullable: false}
+        - {ordinal: 14, name: funding_policy_digest, type: "char(64)", nullable: false}
+        - {ordinal: 15, name: naming_threshold_amount, type: "numeric(24,6)", nullable: false}
+        - {ordinal: 16, name: amount_band_lower, type: "numeric(24,6)", nullable: false}
+        - {ordinal: 17, name: amount_band_upper, type: "numeric(24,6)", nullable: true}
+        - {ordinal: 18, name: purpose, type: text, nullable: false}
+        - {ordinal: 19, name: conflict_summary, type: text, nullable: false}
+        - {ordinal: 20, name: policy_request_total, type: integer, nullable: false}
+        - {ordinal: 21, name: policy_request_accepted, type: integer, nullable: false}
+        - {ordinal: 22, name: policy_request_partially_accepted, type: integer, nullable: false}
+        - {ordinal: 23, name: policy_request_rejected, type: integer, nullable: false}
+        - {ordinal: 24, name: policy_request_withdrawn, type: integer, nullable: false}
+        - {ordinal: 25, name: policy_request_pending, type: integer, nullable: false}
+        - {ordinal: 26, name: expected_policy_request_outcome_digest, type: "char(64)", nullable: false}
+        - {ordinal: 27, name: expected_source_link_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 28, name: policy_snapshot_digest, type: "char(64)", nullable: false}
+        - {ordinal: 29, name: conflict_snapshot_id, type: uuid, nullable: false}
+        - {ordinal: 30, name: conflict_snapshot_digest, type: "char(64)", nullable: false}
+        - {ordinal: 31, name: proposal_id, type: uuid, nullable: false}
+        - {ordinal: 32, name: proposal_version, type: bigint, nullable: false}
+        - {ordinal: 33, name: execution_id, type: uuid, nullable: false}
+        - {ordinal: 34, name: execution_generation, type: bigint, nullable: false}
+        - {ordinal: 35, name: approval_digest, type: "char(64)", nullable: false}
+        - {ordinal: 36, name: execution_digest, type: "char(64)", nullable: false}
+        - {ordinal: 37, name: preparer_decision_id, type: uuid, nullable: false}
+        - {ordinal: 38, name: publisher_decision_id, type: uuid, nullable: false}
+        - {ordinal: 39, name: oversight_decision_id, type: uuid, nullable: true}
+        - {ordinal: 40, name: board_decision_id, type: uuid, nullable: true}
+        - {ordinal: 41, name: independent_case_review_decision_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 42, name: prepared_by_user_id, type: uuid, nullable: false}
+        - {ordinal: 43, name: published_by_user_id, type: uuid, nullable: false}
+        - {ordinal: 44, name: oversight_reviewer_user_id, type: uuid, nullable: true}
+        - {ordinal: 45, name: board_approver_user_id, type: uuid, nullable: true}
+        - {ordinal: 46, name: effective_at, type: timestamptz, nullable: false}
+        - {ordinal: 47, name: expected_entry_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 48, name: expected_public_content_digest, type: "char(64)", nullable: false}
+        - {ordinal: 49, name: expected_revision_digest, type: "char(64)", nullable: false}
+      sensitive_fields: [idempotency_key]
+      derived_not_accepted: [concentration_band, quorum_class, requires_oversight_review, requires_board_approval, requires_enhanced_public_disclosure, has_related_party_gate, conditional_gate_set_digest, unknown_reason, public_caveat_text, quorum_snapshot_digest, decision_receipt_set_digest, receipt_digest, audit_event_id, outbox_id, published_at, created_at]
+    editorial.funding_disclosure_entry_input_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_workflow_worker]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: ordinal, type: integer, nullable: false}
+        - {ordinal: 2, name: source_snapshot_entry_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 3, name: source_snapshot_entry_digests, type: "char(64)[]", nullable: false}
+        - {ordinal: 4, name: expected_source_snapshot_entry_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 5, name: identity_disclosure_mode, type: editorial.funding_identity_disclosure_mode, nullable: false}
+        - {ordinal: 6, name: public_display_name, type: text, nullable: true}
+        - {ordinal: 7, name: withholding_reason, type: editorial.funding_identity_withholding_reason, nullable: true}
+        - {ordinal: 8, name: withholding_public_explanation, type: text, nullable: true}
+        - {ordinal: 9, name: counterparty_category, type: text, nullable: false}
+        - {ordinal: 10, name: amount_band_lower, type: "numeric(24,6)", nullable: false}
+        - {ordinal: 11, name: amount_band_upper, type: "numeric(24,6)", nullable: true}
+        - {ordinal: 12, name: purpose, type: text, nullable: false}
+        - {ordinal: 13, name: conflict_disclosure, type: text, nullable: false}
+        - {ordinal: 14, name: mitigation_summary, type: text, nullable: false}
+        - {ordinal: 15, name: evidence_ids, type: "uuid[]", nullable: false}
+        - {ordinal: 16, name: expected_source_link_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 17, name: expected_entry_digest, type: "char(64)", nullable: false}
+      derived_not_accepted: [funding_source_kind, reporting_currency, concentration_band, denominator_unknown_reason, grouping_dispute_reason, concentration_unknown_reason, public_caveat_text, relationship_flags, related_case_ids, independent_review_required, independent_review_decision_ids, independent_review_set_digest]
+    editorial.funding_disclosure_publish_receipt_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_workflow_worker]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: receipt_id, type: uuid, nullable: false}
+        - {ordinal: 2, name: revision_id, type: uuid, nullable: false}
+        - {ordinal: 3, name: disclosure_id, type: uuid, nullable: false}
+        - {ordinal: 4, name: revision, type: bigint, nullable: false}
+        - {ordinal: 5, name: revision_digest, type: "char(64)", nullable: false}
+        - {ordinal: 6, name: public_content_digest, type: "char(64)", nullable: false}
+        - {ordinal: 7, name: entry_count, type: integer, nullable: false}
+        - {ordinal: 8, name: entry_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 9, name: execution_receipt_id, type: uuid, nullable: false}
+        - {ordinal: 10, name: audit_event_id, type: uuid, nullable: false}
+        - {ordinal: 11, name: outbox_id, type: uuid, nullable: false}
+        - {ordinal: 12, name: response_digest, type: "char(64)", nullable: false}
+        - {ordinal: 13, name: receipt_digest, type: "char(64)", nullable: false}
+        - {ordinal: 14, name: committed_at, type: timestamptz, nullable: false}
+        - {ordinal: 15, name: idempotency_replay, type: boolean, nullable: false}
+    editorial.funding_public_revision_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_public_projector]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: disclosure_id, type: uuid, nullable: false}
+        - {ordinal: 2, name: revision, type: bigint, nullable: false}
+        - {ordinal: 3, name: prior_revision, type: bigint, nullable: true}
+        - {ordinal: 4, name: fiscal_year, type: integer, nullable: false}
+        - {ordinal: 5, name: fiscal_quarter, type: smallint, nullable: false}
+        - {ordinal: 6, name: period_start, type: date, nullable: false}
+        - {ordinal: 7, name: period_end, type: date, nullable: false}
+        - {ordinal: 8, name: reporting_currency, type: "char(3)", nullable: false}
+        - {ordinal: 9, name: concentration_band, type: editorial.funding_concentration_band, nullable: false}
+        - {ordinal: 10, name: unknown_reason, type: editorial.funding_disclosure_unknown_reason, nullable: true}
+        - {ordinal: 11, name: public_caveat_text, type: text, nullable: true}
+        - {ordinal: 12, name: purpose, type: text, nullable: false}
+        - {ordinal: 13, name: policy_request_total, type: integer, nullable: false}
+        - {ordinal: 14, name: policy_request_accepted, type: integer, nullable: false}
+        - {ordinal: 15, name: policy_request_partially_accepted, type: integer, nullable: false}
+        - {ordinal: 16, name: policy_request_rejected, type: integer, nullable: false}
+        - {ordinal: 17, name: policy_request_withdrawn, type: integer, nullable: false}
+        - {ordinal: 18, name: policy_request_pending, type: integer, nullable: false}
+        - {ordinal: 19, name: policy_request_outcome_digest, type: "char(64)", nullable: false}
+        - {ordinal: 20, name: source_link_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 21, name: entry_count, type: integer, nullable: false}
+        - {ordinal: 22, name: entry_set_digest, type: "char(64)", nullable: false}
+        - {ordinal: 23, name: funding_policy_version, type: text, nullable: false}
+        - {ordinal: 24, name: funding_policy_digest, type: "char(64)", nullable: false}
+        - {ordinal: 25, name: effective_at, type: timestamptz, nullable: false}
+        - {ordinal: 26, name: published_at, type: timestamptz, nullable: false}
+        - {ordinal: 27, name: public_content_digest, type: "char(64)", nullable: false}
+        - {ordinal: 28, name: revision_digest, type: "char(64)", nullable: false}
+        - {ordinal: 29, name: requires_enhanced_public_disclosure, type: boolean, nullable: false}
+    editorial.funding_public_entry_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_public_projector]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: ordinal, type: integer, nullable: false}
+        - {ordinal: 2, name: identity_disclosure_mode, type: editorial.funding_identity_disclosure_mode, nullable: false}
+        - {ordinal: 3, name: public_display_name, type: text, nullable: true}
+        - {ordinal: 4, name: withholding_public_explanation, type: text, nullable: true}
+        - {ordinal: 5, name: counterparty_category, type: text, nullable: false}
+        - {ordinal: 6, name: funding_source_kind, type: ops.funding_source_kind, nullable: false}
+        - {ordinal: 7, name: amount_band_lower, type: "numeric(24,6)", nullable: false}
+        - {ordinal: 8, name: amount_band_upper, type: "numeric(24,6)", nullable: true}
+        - {ordinal: 9, name: reporting_currency, type: "char(3)", nullable: false}
+        - {ordinal: 10, name: concentration_band, type: editorial.funding_concentration_band, nullable: false}
+        - {ordinal: 11, name: denominator_unknown_reason, type: ops.funding_denominator_unknown_reason, nullable: true}
+        - {ordinal: 12, name: grouping_dispute_reason, type: ops.funding_grouping_dispute_reason, nullable: true}
+        - {ordinal: 13, name: concentration_unknown_reason, type: ops.funding_concentration_unknown_reason, nullable: true}
+        - {ordinal: 14, name: public_caveat_text, type: text, nullable: true}
+        - {ordinal: 15, name: purpose, type: text, nullable: false}
+        - {ordinal: 16, name: conflict_disclosure, type: text, nullable: false}
+        - {ordinal: 17, name: mitigation_summary, type: text, nullable: false}
+        - {ordinal: 18, name: government_related, type: boolean, nullable: false}
+        - {ordinal: 19, name: political_party_related, type: boolean, nullable: false}
+        - {ordinal: 20, name: procurement_supplier_related, type: boolean, nullable: false}
+        - {ordinal: 21, name: investigated_subject_related, type: boolean, nullable: false}
+        - {ordinal: 22, name: related_party, type: boolean, nullable: false}
+        - {ordinal: 23, name: public_case_refs, type: "text[]", nullable: false}
+        - {ordinal: 24, name: public_source_links, type: "text[]", nullable: false}
+        - {ordinal: 25, name: entry_digest, type: "char(64)", nullable: false}
+    editorial.funding_public_projection_input_v1:
+      owner: gurine_migrator
+      usage_roles: [gurine_public_projector]
+      public_usage: revoked
+      fields:
+        - {ordinal: 1, name: revision, type: editorial.funding_public_revision_v1, nullable: false}
+        - {ordinal: 2, name: entries, type: "editorial.funding_public_entry_v1[]", nullable: false}
+  composite_validation:
+    - Every fields list has ordinals exactly 1..N, no duplicate names, exact PostgreSQL type names and no default expressions.
+    - SQL migration constructs CREATE TYPE in composite_creation_order, then queries pg_attribute/pg_type for byte-exact name/type/ordinal equality and revokes PUBLIC USAGE before any function creation.
+    - Functions reject a NULL required attribute, an unexpected NULL/non-NULL pair, unsorted array, duplicate member or derived field supplied through another channel before any persistent lock.
+  catalog_gate: Exact pg_type label order, owner and ACL set equality; PUBLIC or an undeclared runtime role with USAGE fails migration.
+
+economics_shared_contract_refs:
+  rounding: specs/database/addendum/0029-commercial-core.yaml#round_half_even_contract
+  idempotency: specs/database/addendum/0029-commercial-core.yaml#exact_idempotency_stored_response_contract
+  public_projection: specs/database/addendum/0029-commercial-core.yaml#public_projection_boundary
+  idempotency_scopes:
+    ops.import_funding_snapshot_v1: ECONOMICS.IMPORT_FUNDING_SNAPSHOT.V1
+    editorial.publish_funding_disclosure_v1: ECONOMICS.PUBLISH_FUNDING_DISCLOSURE.V1
+
+funding_semantics:
+  denominator:
+    value: Board-approved expected annual revenue for the fiscal year in reporting_currency under the exact funding policy digest.
+    approved_path: Positive numeric value plus current denominator approval, approver-set and FX snapshot digests at snapshot as_of.
+    unknown_paths: Missing, zero, approval-missing and approval-stale are separately stored and all remain UNKNOWN.
+  numerator:
+    recognized_revenue: Sum of effective immutable ops.revenue_facts plus verified external donation, grant, sponsorship and other reviewed receipts with RECOGNIZED basis for the fiscal year and counterparty group after append-only corrections and exact FX conversion.
+    binding_committed_revenue: Enforceable, unrecognized fiscal-year commitment remaining under bound ops.commercial_contract_periods plus verified external receipts with BINDING_COMMITTED basis at snapshot as_of; already recognized value is excluded so it is never double counted.
+    formula: numerator = recognized_revenue + binding_committed_revenue.
+  concentration:
+    exact_comparison: Compare numerator * 100 with denominator * 5, 15 and 25 before calculating concentration_share = ops.round_half_even_numeric_v1(numerator * 100 / denominator, 6) percentage points.
+    unknown_precedence: GROUPING_DISPUTED precedes DENOMINATOR_UNKNOWN for a disputed entry; neither path permits a numeric share or known band.
+    policy_effects:
+      GT_15_TO_25_PERCENT: current independent oversight review
+      GT_25_PERCENT: current independent oversight review, board approval and enhanced public disclosure
+      investigated_subject_or_related_party_above_5_percent: one current independent review per related case
+    disclosure_aggregate_derivation: If any included disclosure entry is UNKNOWN the revision band is UNKNOWN; otherwise it is the maximum exact source-entry band in order LE_5_PERCENT, GT_5_TO_15_PERCENT, GT_15_TO_25_PERCENT, GT_25_PERCENT. Every source entry gate is evaluated before aggregation, so an UNKNOWN or category aggregation cannot hide a known threshold trigger.
+  independence:
+    global_distinctness: Preparation, publication, oversight and board actors are pairwise distinct for one disclosure proposal. Each related case has its own independently authorized review; its reviewer is excluded from the disclosure actors and conflicted parties, while one eligible reviewer may cover different case proposals only when each proposal independently authorizes that actor.
+    exclusions: [proposal_creator, last_editor, executor, counterparty_or_related_party, case_party_or_recipient, conflicted_actor, recused_actor]
+    stale_rule: A changed snapshot, grouping, policy, conflict, source fact, related-case set or public rendering invalidates every decision bound to the old digest.
+
+required_support_objects:
+  ops.import_funding_snapshot_v1:
+    kind: SECURITY_DEFINER_FUNCTION
+    owner: gurine_migrator
+    signature: "ops.import_funding_snapshot_v1(ops.funding_snapshot_import_v1, ops.funding_snapshot_entry_input_v1[]) RETURNS ops.funding_snapshot_import_receipt_v1"
+    search_path: [pg_catalog, ops, core, editorial, pg_temp]
+    revoke_execute_from: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_control_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_scheduler, gurine_auditor, gurine_identity_api, gurine_document_extractor]
+    grant_execute_to: [gurine_workflow_worker]
+    input_contract: Closed composite header plus closed composite entry array; no jsonb, polymorphic map, caller-supplied derived total, band or digest is trusted.
+    idempotency_scope: ECONOMICS.IMPORT_FUNDING_SNAPSHOT.V1
+    transaction: SERIALIZABLE; claims exact idempotency key/request digest, locks the prior fiscal-year header, verifies signed sources, inserts the full graph, audit, one outbox event, immutable receipt and canonical stored response bytes or rolls back all.
+    replay: Same canonical request returns the original response_body_bytes decoded to ops.funding_snapshot_import_receipt_v1 and writes zero rows; changed request is IDEMPOTENCY_CONFLICT.
+  editorial.publish_funding_disclosure_v1:
+    kind: SECURITY_DEFINER_FUNCTION
+    owner: gurine_migrator
+    signature: "editorial.publish_funding_disclosure_v1(editorial.funding_disclosure_publish_v1, editorial.funding_disclosure_entry_input_v1[]) RETURNS editorial.funding_disclosure_publish_receipt_v1"
+    search_path: [pg_catalog, editorial, ops, core, pg_temp]
+    revoke_execute_from: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_control_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_scheduler, gurine_auditor, gurine_identity_api, gurine_document_extractor]
+    grant_execute_to: [gurine_workflow_worker]
+    input_contract: Closed approval-bound publish composite plus closed ordered entry composites; no jsonb, partial patch or caller-supplied derived quorum, band, caveat, digest or receipt is trusted.
+    idempotency_scope: ECONOMICS.PUBLISH_FUNDING_DISCLOSURE.V1
+    transaction: SERIALIZABLE; claims exact idempotency key/request digest, locks and re-authorizes the exact snapshot, prior revision, authorization, complete decision set, cases and conflict evidence, then inserts revision, entries, audit, outbox, execution receipt and canonical stored response atomically.
+    replay: Same canonical request returns the original response_body_bytes decoded to editorial.funding_disclosure_publish_receipt_v1 and writes zero rows; changed request is IDEMPOTENCY_CONFLICT.
+  ops.validate_funding_snapshot_graph_at_commit:
+    kind: DEFERRABLE_INITIALLY_DEFERRED_CONSTRAINT_TRIGGER
+    events: [INSERT]
+    relation: ops.funding_concentration_snapshots
+    assertions:
+      - Exactly one header exists for snapshot_batch_id and child ordinals are gapless 1 through header.entry_count.
+      - Every child header_id resolves to that header and repeats exact batch, version, fiscal year, as-of and currency.
+      - A version above one points to the exact prior same-fiscal-year header and digest; no fork or skipped version is accepted.
+      - Member, revenue-fact, contract-period, external signed funding-receipt and related-case arrays are sorted, duplicate-free, element digests/signatures are lowercase SHA-256 and every concrete ID/digest pair is verified at the locked revision or signed-import boundary.
+      - Per-source reporting-currency amounts are nonnegative and paired by ordinal; recognized and binding totals are independently recomputed under the funding/FX/correction policy, then numerator, UNKNOWN precedence, exact threshold band and rounded display share are derived rather than trusted from the importer.
+      - Ordered entry digests recompute entry_set_digest and the canonical header plus entry set recomputes snapshot_digest.
+  editorial.validate_funding_disclosure_at_commit:
+    kind: DEFERRABLE_INITIALLY_DEFERRED_CONSTRAINT_TRIGGER
+    events: [INSERT]
+    relations: [editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries]
+    assertions:
+      - The exact snapshot header is the latest imported snapshot for its fiscal year at authorization and publication; the reporting period, quarter and currency are policy-valid.
+      - The prior revision CAS is gapless and binds the exact prior revision digest.
+      - ExecutionAuthorization is current, unexpired, action_kind FUNDING_DISCLOSURE, executor private.PublishFundingDisclosureRevision and its proposal payload/approval/execution digests exactly equal the stored revision and ordered entries.
+      - Derive requires_oversight_review when any exact source entry is above 15 percent or UNKNOWN; derive requires_board_approval and enhanced-public-disclosure when any entry is above 25 percent or UNKNOWN; derive has_related_party_gate when an investigated-subject or related-party entry exceeds 5 percent. Recompute conditional_gate_set_digest over each triggering source entry ID, digest, exact band, relationship flags and related-case set.
+      - Preparer and publisher base slots plus exactly the derived conditional oversight and board slots resolve to counted APPROVE decisions with current assurance, role/capability, assignment and conflict snapshot. A nonrequired conditional decision is rejected rather than counted; per-related-case reviews are separately authorized prerequisite decisions bound by independent_case_review_set_digest and revalidated in the same transaction.
+      - Preparer, publisher, oversight reviewer and board approver users and decision rows are pairwise distinct when present, and the trigger separately excludes proposal creator, last editor, executor, counterparty/related-party actors, case parties/recipients, conflicted and recused actors using the locked proposal, execution, case and conflict graphs.
+      - Source snapshot entry arrays form a duplicate-free exact partition for the disclosure policy; bands, flags, naming/withholding, evidence/rights, related cases and independent-review requirements are derived from locked source rows and policy.
+      - Child ordinals are gapless, child entry digests recompute parent entry_set_digest and all policy/outcome/source/public/revision digests recompute byte-exactly.
+      - The execution receipt, audit row and one governance.funding_disclosure_published.v1 outbox row bind the same revision digest in the same transaction.
+  ops.reject_mutation:
+    kind: BEFORE_UPDATE_OR_DELETE_TRIGGER_FUNCTION
+    applies_to:
+      - ops.funding_concentration_snapshots
+      - editorial.funding_disclosure_revisions
+      - editorial.funding_disclosure_entries
+    effect: Reject every UPDATE and DELETE; corrections and supersession are insert-only.
+
+tables:
+  ops.funding_concentration_snapshots:
+    creation_order: 15
+    owner:
+      object_owner: gurine_migrator
+      logical_component: funding-importer
+      physical_service: workflow-worker
+      repository: crates/persistence-postgres::funding
+      rust_rows: [FundingConcentrationSnapshotHeaderRow, FundingConcentrationSnapshotEntryRow]
+      rust_domain: gurine_domain::funding::FundingConcentrationSnapshot
+    purpose: A single immutable self-graph per fiscal-year snapshot; the header is ordinal zero and every counterparty entry is a child row, so no eighteenth 0029 table is introduced.
+    columns:
+      id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      snapshot_batch_id: {type: uuid, nullable: false, default: null}
+      snapshot_version: {type: bigint, nullable: false, default: null}
+      row_kind: {type: ops.funding_snapshot_row_kind, nullable: false, default: null}
+      ordinal: {type: integer, nullable: false, default: null}
+      header_id: {type: uuid, nullable: true, default: null}
+      fiscal_year: {type: integer, nullable: false, default: null}
+      as_of: {type: timestamptz, nullable: false, default: null}
+      reporting_currency: {type: "char(3)", nullable: false, default: null}
+      prior_header_id: {type: uuid, nullable: true, default: null}
+      prior_snapshot_digest: {type: "char(64)", nullable: true, default: null}
+      funding_policy_version: {type: text, nullable: true, default: null}
+      funding_policy_digest: {type: "char(64)", nullable: true, default: null}
+      fx_snapshot_digest: {type: "char(64)", nullable: true, default: null}
+      denominator_amount: {type: "numeric(24,6)", nullable: true, default: null}
+      denominator_state: {type: ops.funding_denominator_state, nullable: true, default: null}
+      denominator_unknown_reason: {type: ops.funding_denominator_unknown_reason, nullable: true, default: null}
+      denominator_approval_digest: {type: "char(64)", nullable: true, default: null}
+      denominator_approver_set_digest: {type: "char(64)", nullable: true, default: null}
+      denominator_approved_at: {type: timestamptz, nullable: true, default: null}
+      denominator_approval_expires_at: {type: timestamptz, nullable: true, default: null}
+      entry_count: {type: integer, nullable: true, default: null}
+      entry_set_digest: {type: "char(64)", nullable: true, default: null}
+      source_set_digest: {type: "char(64)", nullable: true, default: null}
+      snapshot_digest: {type: "char(64)", nullable: true, default: null}
+      import_receipt_digest: {type: "char(64)", nullable: true, default: null}
+      audit_event_id: {type: uuid, nullable: true, default: null}
+      outbox_id: {type: uuid, nullable: true, default: null}
+      imported_at: {type: timestamptz, nullable: true, default: null}
+      counterparty_group_id: {type: uuid, nullable: true, default: null}
+      counterparty_group_digest: {type: "char(64)", nullable: true, default: null}
+      grouping_state: {type: ops.funding_grouping_state, nullable: true, default: null}
+      grouping_dispute_reason: {type: ops.funding_grouping_dispute_reason, nullable: true, default: null}
+      grouping_evidence_digest: {type: "char(64)", nullable: true, default: null}
+      member_supplier_ids: {type: "uuid[]", nullable: true, default: null}
+      member_supplier_identity_digests: {type: "char(64)[]", nullable: true, default: null}
+      funding_source_kind: {type: ops.funding_source_kind, nullable: true, default: null}
+      recognized_revenue: {type: "numeric(24,6)", nullable: true, default: null}
+      binding_committed_revenue: {type: "numeric(24,6)", nullable: true, default: null}
+      numerator: {type: "numeric(24,6)", nullable: true, default: null}
+      concentration_share: {type: "numeric(24,6)", nullable: true, default: null}
+      concentration_band: {type: editorial.funding_concentration_band, nullable: true, default: null}
+      concentration_unknown_reason: {type: ops.funding_concentration_unknown_reason, nullable: true, default: null}
+      government_related: {type: boolean, nullable: true, default: null}
+      political_party_related: {type: boolean, nullable: true, default: null}
+      procurement_supplier_related: {type: boolean, nullable: true, default: null}
+      investigated_subject_related: {type: boolean, nullable: true, default: null}
+      related_party: {type: boolean, nullable: true, default: null}
+      related_case_ids: {type: "uuid[]", nullable: true, default: null}
+      recognized_revenue_fact_ids: {type: "uuid[]", nullable: true, default: null}
+      recognized_revenue_fact_digests: {type: "char(64)[]", nullable: true, default: null}
+      recognized_revenue_fact_amounts: {type: "numeric(24,6)[]", nullable: true, default: null}
+      binding_contract_period_ids: {type: "uuid[]", nullable: true, default: null}
+      binding_contract_period_digests: {type: "char(64)[]", nullable: true, default: null}
+      binding_contract_period_amounts: {type: "numeric(24,6)[]", nullable: true, default: null}
+      external_funding_source_receipt_ids: {type: "uuid[]", nullable: true, default: null}
+      external_funding_source_receipt_digests: {type: "char(64)[]", nullable: true, default: null}
+      external_funding_source_signature_digests: {type: "char(64)[]", nullable: true, default: null}
+      external_funding_source_kinds: {type: "ops.funding_source_kind[]", nullable: true, default: null}
+      external_funding_amount_bases: {type: "ops.funding_amount_basis[]", nullable: true, default: null}
+      external_funding_source_amounts: {type: "numeric(24,6)[]", nullable: true, default: null}
+      entry_source_set_digest: {type: "char(64)", nullable: true, default: null}
+      independent_review_requirement_digest: {type: "char(64)", nullable: true, default: null}
+      entry_digest: {type: "char(64)", nullable: true, default: null}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: [id]
+    foreign_keys:
+      - {name: funding_snapshot_header_fk, columns: [header_id], references: "ops.funding_concentration_snapshots(id)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+      - {name: funding_snapshot_prior_header_fk, columns: [prior_header_id], references: "ops.funding_concentration_snapshots(id)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+      - {name: funding_snapshot_audit_fk, columns: [audit_event_id], references: "ops.audit_events(id)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+      - {name: funding_snapshot_outbox_fk, columns: [outbox_id], references: "ops.outbox(id)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+    unique_constraints:
+      - {name: funding_snapshot_batch_ordinal_uq, columns: [snapshot_batch_id, ordinal]}
+      - {name: funding_snapshot_id_batch_uq, columns: [id, snapshot_batch_id]}
+      - {name: funding_snapshot_header_binding_uq, columns: [id, snapshot_batch_id, snapshot_digest]}
+      - {name: funding_snapshot_entry_binding_uq, columns: [id, snapshot_batch_id, entry_digest]}
+      - {name: funding_snapshot_group_once_uq, columns: [header_id, counterparty_group_id]}
+    checks:
+      - {name: funding_snapshot_common_check, expression: "snapshot_version > 0 AND ordinal >= 0 AND fiscal_year BETWEEN 1 AND 9999 AND reporting_currency ~ '^[A-Z]{3}$' AND as_of <= created_at + interval '5 seconds'"}
+      - name: funding_snapshot_row_shape_check
+        expression: >-
+          (row_kind = 'SNAPSHOT_HEADER' AND ordinal = 0 AND header_id IS NULL
+           AND funding_policy_version IS NOT NULL AND funding_policy_digest IS NOT NULL
+           AND fx_snapshot_digest IS NOT NULL AND denominator_state IS NOT NULL
+           AND entry_count IS NOT NULL AND entry_set_digest IS NOT NULL
+           AND source_set_digest IS NOT NULL AND snapshot_digest IS NOT NULL
+           AND import_receipt_digest IS NOT NULL AND audit_event_id IS NOT NULL
+           AND outbox_id IS NOT NULL AND imported_at IS NOT NULL
+           AND counterparty_group_id IS NULL AND counterparty_group_digest IS NULL
+           AND grouping_state IS NULL AND grouping_dispute_reason IS NULL
+           AND grouping_evidence_digest IS NULL AND member_supplier_ids IS NULL
+           AND member_supplier_identity_digests IS NULL AND funding_source_kind IS NULL
+           AND recognized_revenue IS NULL AND binding_committed_revenue IS NULL
+           AND numerator IS NULL AND concentration_share IS NULL
+           AND concentration_band IS NULL AND concentration_unknown_reason IS NULL
+           AND government_related IS NULL AND political_party_related IS NULL
+           AND procurement_supplier_related IS NULL AND investigated_subject_related IS NULL
+           AND related_party IS NULL
+           AND related_case_ids IS NULL AND recognized_revenue_fact_ids IS NULL
+           AND recognized_revenue_fact_digests IS NULL AND recognized_revenue_fact_amounts IS NULL
+           AND binding_contract_period_ids IS NULL AND binding_contract_period_digests IS NULL
+           AND binding_contract_period_amounts IS NULL
+           AND external_funding_source_receipt_ids IS NULL
+           AND external_funding_source_receipt_digests IS NULL
+           AND external_funding_source_signature_digests IS NULL
+           AND external_funding_source_kinds IS NULL AND external_funding_amount_bases IS NULL
+           AND external_funding_source_amounts IS NULL AND entry_source_set_digest IS NULL
+           AND independent_review_requirement_digest IS NULL AND entry_digest IS NULL)
+          OR
+          (row_kind = 'COUNTERPARTY_ENTRY' AND ordinal > 0 AND header_id IS NOT NULL
+           AND prior_header_id IS NULL AND prior_snapshot_digest IS NULL
+           AND funding_policy_version IS NULL AND funding_policy_digest IS NULL
+           AND fx_snapshot_digest IS NULL AND denominator_amount IS NULL
+           AND denominator_state IS NULL AND denominator_unknown_reason IS NULL
+           AND denominator_approval_digest IS NULL AND denominator_approver_set_digest IS NULL
+           AND denominator_approved_at IS NULL AND denominator_approval_expires_at IS NULL
+           AND entry_count IS NULL AND entry_set_digest IS NULL AND source_set_digest IS NULL
+           AND snapshot_digest IS NULL AND import_receipt_digest IS NULL
+           AND audit_event_id IS NULL AND outbox_id IS NULL AND imported_at IS NULL
+           AND counterparty_group_id IS NOT NULL AND counterparty_group_digest IS NOT NULL
+           AND grouping_state IS NOT NULL AND grouping_evidence_digest IS NOT NULL
+           AND member_supplier_ids IS NOT NULL AND member_supplier_identity_digests IS NOT NULL
+           AND funding_source_kind IS NOT NULL AND recognized_revenue IS NOT NULL
+           AND binding_committed_revenue IS NOT NULL AND numerator IS NOT NULL
+           AND concentration_band IS NOT NULL AND government_related IS NOT NULL
+           AND political_party_related IS NOT NULL AND procurement_supplier_related IS NOT NULL
+           AND investigated_subject_related IS NOT NULL AND related_party IS NOT NULL
+           AND related_case_ids IS NOT NULL
+           AND recognized_revenue_fact_ids IS NOT NULL
+           AND recognized_revenue_fact_digests IS NOT NULL
+           AND recognized_revenue_fact_amounts IS NOT NULL
+           AND binding_contract_period_ids IS NOT NULL
+           AND binding_contract_period_digests IS NOT NULL
+           AND binding_contract_period_amounts IS NOT NULL
+           AND external_funding_source_receipt_ids IS NOT NULL
+           AND external_funding_source_receipt_digests IS NOT NULL
+           AND external_funding_source_signature_digests IS NOT NULL
+           AND external_funding_source_kinds IS NOT NULL
+           AND external_funding_amount_bases IS NOT NULL
+           AND external_funding_source_amounts IS NOT NULL
+           AND entry_source_set_digest IS NOT NULL
+           AND independent_review_requirement_digest IS NOT NULL AND entry_digest IS NOT NULL)
+      - name: funding_snapshot_header_chain_check
+        expression: >-
+          row_kind <> 'SNAPSHOT_HEADER' OR
+          ((snapshot_version = 1 AND prior_header_id IS NULL AND prior_snapshot_digest IS NULL)
+           OR (snapshot_version > 1 AND prior_header_id IS NOT NULL
+            AND prior_snapshot_digest IS NOT NULL AND prior_snapshot_digest ~ '^[0-9a-f]{64}$'))
+      - name: funding_snapshot_denominator_check
+        expression: >-
+          row_kind <> 'SNAPSHOT_HEADER' OR
+          (denominator_state = 'APPROVED' AND denominator_amount IS NOT NULL AND denominator_amount > 0
+           AND denominator_unknown_reason IS NULL
+           AND denominator_approval_digest IS NOT NULL AND denominator_approval_digest ~ '^[0-9a-f]{64}$'
+           AND denominator_approver_set_digest IS NOT NULL AND denominator_approver_set_digest ~ '^[0-9a-f]{64}$'
+           AND denominator_approved_at IS NOT NULL
+           AND denominator_approved_at <= as_of
+           AND denominator_approval_expires_at IS NOT NULL
+           AND denominator_approval_expires_at > denominator_approved_at
+           AND as_of < denominator_approval_expires_at)
+          OR
+          (denominator_state = 'UNKNOWN' AND denominator_unknown_reason IS NOT NULL AND (
+             (denominator_unknown_reason = 'MISSING' AND denominator_amount IS NULL
+              AND denominator_approval_digest IS NULL AND denominator_approver_set_digest IS NULL
+              AND denominator_approved_at IS NULL AND denominator_approval_expires_at IS NULL)
+             OR (denominator_unknown_reason = 'ZERO' AND denominator_amount IS NOT NULL AND denominator_amount = 0
+              AND denominator_approval_digest IS NULL AND denominator_approver_set_digest IS NULL
+              AND denominator_approved_at IS NULL AND denominator_approval_expires_at IS NULL)
+             OR (denominator_unknown_reason = 'APPROVAL_MISSING' AND denominator_amount IS NOT NULL AND denominator_amount > 0
+              AND denominator_approval_digest IS NULL AND denominator_approver_set_digest IS NULL
+              AND denominator_approved_at IS NULL AND denominator_approval_expires_at IS NULL)
+             OR (denominator_unknown_reason = 'APPROVAL_STALE'
+              AND denominator_amount IS NOT NULL AND denominator_amount > 0
+              AND denominator_approval_digest IS NOT NULL AND denominator_approval_digest ~ '^[0-9a-f]{64}$'
+              AND denominator_approver_set_digest IS NOT NULL AND denominator_approver_set_digest ~ '^[0-9a-f]{64}$'
+              AND denominator_approved_at IS NOT NULL
+              AND denominator_approved_at <= as_of
+              AND denominator_approval_expires_at IS NOT NULL
+              AND denominator_approval_expires_at > denominator_approved_at
+              AND as_of >= denominator_approval_expires_at)))
+      - {name: funding_snapshot_header_count_check, expression: "row_kind <> 'SNAPSHOT_HEADER' OR entry_count >= 0"}
+      - {name: funding_snapshot_header_time_check, expression: "row_kind <> 'SNAPSHOT_HEADER' OR (as_of <= imported_at AND imported_at <= created_at + interval '5 seconds')"}
+      - {name: funding_snapshot_policy_check, expression: "row_kind <> 'SNAPSHOT_HEADER' OR (funding_policy_version IS NOT NULL AND length(btrim(funding_policy_version)) BETWEEN 1 AND 128 AND funding_policy_digest IS NOT NULL AND funding_policy_digest ~ '^[0-9a-f]{64}$')"}
+      - {name: funding_snapshot_amount_check, expression: "row_kind <> 'COUNTERPARTY_ENTRY' OR (recognized_revenue >= 0 AND binding_committed_revenue >= 0 AND numerator = recognized_revenue + binding_committed_revenue)"}
+      - {name: funding_snapshot_member_pair_check, expression: "row_kind <> 'COUNTERPARTY_ENTRY' OR (cardinality(member_supplier_ids) = cardinality(member_supplier_identity_digests) AND cardinality(member_supplier_ids) <= 10000)"}
+      - name: funding_snapshot_source_fact_check
+        expression: >-
+          row_kind <> 'COUNTERPARTY_ENTRY' OR
+          (cardinality(recognized_revenue_fact_ids) = cardinality(recognized_revenue_fact_digests)
+           AND cardinality(recognized_revenue_fact_ids) = cardinality(recognized_revenue_fact_amounts)
+           AND cardinality(binding_contract_period_ids) = cardinality(binding_contract_period_digests)
+           AND cardinality(binding_contract_period_ids) = cardinality(binding_contract_period_amounts)
+           AND cardinality(external_funding_source_receipt_ids) = cardinality(external_funding_source_receipt_digests)
+           AND cardinality(external_funding_source_receipt_ids) = cardinality(external_funding_source_signature_digests)
+           AND cardinality(external_funding_source_receipt_ids) = cardinality(external_funding_source_kinds)
+           AND cardinality(external_funding_source_receipt_ids) = cardinality(external_funding_amount_bases)
+           AND cardinality(external_funding_source_receipt_ids) = cardinality(external_funding_source_amounts)
+           AND cardinality(recognized_revenue_fact_ids) + cardinality(binding_contract_period_ids)
+             + cardinality(external_funding_source_receipt_ids) BETWEEN 1 AND 10000)
+      - {name: funding_snapshot_entry_source_digest_check, expression: "row_kind <> 'COUNTERPARTY_ENTRY' OR (entry_source_set_digest IS NOT NULL AND entry_source_set_digest ~ '^[0-9a-f]{64}$')"}
+      - {name: funding_snapshot_related_case_check, expression: "row_kind <> 'COUNTERPARTY_ENTRY' OR cardinality(related_case_ids) <= 10000"}
+      - name: funding_snapshot_grouping_check
+        expression: >-
+          row_kind <> 'COUNTERPARTY_ENTRY' OR
+          (grouping_state = 'RESOLVED' AND grouping_dispute_reason IS NULL)
+          OR
+          (grouping_state = 'DISPUTED' AND grouping_dispute_reason IS NOT NULL
+           AND concentration_share IS NULL AND concentration_band = 'UNKNOWN'
+           AND concentration_unknown_reason IS NOT NULL
+           AND concentration_unknown_reason = 'GROUPING_DISPUTED')
+      - name: funding_snapshot_concentration_check
+        expression: >-
+          row_kind <> 'COUNTERPARTY_ENTRY' OR
+          (concentration_band = 'UNKNOWN' AND concentration_share IS NULL
+           AND concentration_unknown_reason IS NOT NULL)
+          OR
+          (concentration_band IN ('LE_5_PERCENT','GT_5_TO_15_PERCENT','GT_15_TO_25_PERCENT','GT_25_PERCENT')
+           AND concentration_unknown_reason IS NULL
+           AND concentration_share IS NOT NULL AND concentration_share >= 0)
+      - name: funding_snapshot_scalar_digest_check
+        expression: >-
+          (prior_snapshot_digest IS NULL OR prior_snapshot_digest ~ '^[0-9a-f]{64}$')
+          AND (funding_policy_digest IS NULL OR funding_policy_digest ~ '^[0-9a-f]{64}$')
+          AND (fx_snapshot_digest IS NULL OR fx_snapshot_digest ~ '^[0-9a-f]{64}$')
+          AND (entry_set_digest IS NULL OR entry_set_digest ~ '^[0-9a-f]{64}$')
+          AND (source_set_digest IS NULL OR source_set_digest ~ '^[0-9a-f]{64}$')
+          AND (snapshot_digest IS NULL OR snapshot_digest ~ '^[0-9a-f]{64}$')
+          AND (import_receipt_digest IS NULL OR import_receipt_digest ~ '^[0-9a-f]{64}$')
+          AND (counterparty_group_digest IS NULL OR counterparty_group_digest ~ '^[0-9a-f]{64}$')
+          AND (grouping_evidence_digest IS NULL OR grouping_evidence_digest ~ '^[0-9a-f]{64}$')
+          AND (entry_source_set_digest IS NULL OR entry_source_set_digest ~ '^[0-9a-f]{64}$')
+          AND (independent_review_requirement_digest IS NULL OR independent_review_requirement_digest ~ '^[0-9a-f]{64}$')
+          AND (entry_digest IS NULL OR entry_digest ~ '^[0-9a-f]{64}$')
+    indexes:
+      - {name: funding_snapshot_header_batch_uq, method: btree, columns: [snapshot_batch_id], unique: true, where: "row_kind = 'SNAPSHOT_HEADER'"}
+      - {name: funding_snapshot_fiscal_version_uq, method: btree, columns: [fiscal_year, snapshot_version], unique: true, where: "row_kind = 'SNAPSHOT_HEADER'"}
+      - {name: funding_snapshot_digest_uq, method: btree, columns: [snapshot_digest], unique: true, where: "row_kind = 'SNAPSHOT_HEADER'"}
+      - {name: funding_snapshot_latest_idx, method: btree, columns: [fiscal_year, as_of DESC, snapshot_version DESC, id DESC], unique: false, where: "row_kind = 'SNAPSHOT_HEADER'"}
+      - {name: funding_snapshot_entry_order_idx, method: btree, columns: [header_id, ordinal, id], unique: false, where: "row_kind = 'COUNTERPARTY_ENTRY'"}
+      - {name: funding_snapshot_group_history_idx, method: btree, columns: [counterparty_group_digest, fiscal_year DESC, as_of DESC, id DESC], unique: false, where: "row_kind = 'COUNTERPARTY_ENTRY'"}
+      - {name: funding_snapshot_related_cases_idx, method: gin, columns: [related_case_ids], unique: false, where: "row_kind = 'COUNTERPARTY_ENTRY' AND cardinality(related_case_ids) > 0"}
+      - {name: funding_snapshot_prior_header_fk_idx, method: btree, columns: [prior_header_id, id], unique: false, where: "prior_header_id IS NOT NULL"}
+      - {name: funding_snapshot_audit_fk_idx, method: btree, columns: [audit_event_id, id], unique: false, where: "audit_event_id IS NOT NULL"}
+      - {name: funding_snapshot_outbox_fk_idx, method: btree, columns: [outbox_id, id], unique: false, where: "outbox_id IS NOT NULL"}
+    grants:
+      gurine_workflow_worker: [SELECT]
+      gurine_control_api: [SELECT]
+      gurine_auditor: [SELECT]
+      gurine_public_projector: []
+      gurine_public_api: []
+      gurine_submission_api: []
+      gurine_ingest_worker: []
+      gurine_analysis_worker: []
+      gurine_notification_worker: []
+      gurine_scheduler: []
+      gurine_document_extractor: []
+      gurine_identity_api: []
+      forbidden_for_all_runtime_roles: [INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER]
+    function_grants:
+      ops.import_funding_snapshot_v1: {gurine_workflow_worker: [EXECUTE]}
+    rls:
+      enabled: false
+      forced: false
+      policies: []
+      rationale: Internal single-organization immutable governance fact; service-role grants and the funding/detection firewall are the scope boundary.
+    mutability:
+      mode: APPEND_ONLY_IMMUTABLE_SELF_GRAPH
+      allowed_updates: []
+      delete: FORBIDDEN
+      immutable_trigger: ops.reject_mutation()
+      deferred_graph_trigger: ops.validate_funding_snapshot_graph_at_commit()
+      version_rule: Header snapshot_version is exactly prior same-fiscal-year version plus one; child version, batch, year, as-of and currency equal the header.
+      digest_rule: entry_digest covers the canonical scalar entry including ordered arrays; entry_set_digest covers entry_digest by ordinal; snapshot_digest covers header fields plus entry_set_digest and excludes database timestamps and row UUIDs not declared in the import identity.
+      correction_rule: A changed fact creates a new snapshot_batch_id and next snapshot_version; an existing batch with the same digest returns the stored graph and an existing batch with a different digest is FACT_CONFLICT.
+    retention:
+      record_class: FUNDING_GOVERNANCE_SNAPSHOT
+      trigger: Creation; supersession changes current selection but never starts a destruction clock.
+      schedule_binding: Latest effective nonexpired ops.record_class_schedules revision for FUNDING_GOVERNANCE_SNAPSHOT.
+      legal_hold_key: [relation, snapshot_batch_id, id]
+      backup_behavior: Preserve the immutable graph; on restore apply restoration suppressions and the union of RETENTION, DELETION and DISCLOSURE hold cells before read, export or projection.
+      terminal_action: PRESERVE_PUBLIC_REVISION
+    repository:
+      roundtrip:
+        - Insert one header and zero or more entries using boundary numeric values and non-default UUIDs.
+        - Read through FundingConcentrationSnapshotHeaderRow and FundingConcentrationSnapshotEntryRow without select-star or synthesized defaults.
+        - Preserve numeric(24,6), null versus zero denominator, array order, boolean flags and lowercase digest bytes exactly.
+        - Reject missing header, wrong entry_count, ordinal gap, duplicate group, unknown enum, invalid member/source digest, missing supplier/case identity and digest mismatch as typed stored-data corruption.
+      detail_cardinality: Exactly one header and exactly entry_count entries or FUNDING_SNAPSHOT_CORRUPT.
+      append_replay: Same snapshot_batch_id plus canonical request digest returns the stored graph and receipt; changed bytes return FACT_CONFLICT.
+      ordering:
+        graph: row_kind header first, then ordinal ASC, id ASC
+        entries: ordinal ASC, id ASC
+        history: fiscal_year DESC, snapshot_version DESC, as_of DESC, snapshot_batch_id DESC
+        ordered_arrays: Member supplier IDs, recognized revenue fact IDs, binding contract-period IDs, external funding receipt IDs, related case IDs and every paired kind, basis, amount, signature and digest array use the corresponding UUID byte order ASC before canonical hashing.
+      transaction:
+        isolation: SERIALIZABLE
+        lock_order: Prior fiscal-year header, new header, entries by ordinal, audit chain head, outbox.
+        atomicity: Header, complete entry graph, audit append, governance.funding_snapshot_created.v1 outbox and immutable import receipt commit or roll back together.
+
+  editorial.funding_disclosure_revisions:
+    creation_order: 16
+    owner:
+      object_owner: gurine_migrator
+      logical_component: funding-disclosure-publisher
+      physical_service: workflow-worker
+      repository: crates/persistence-postgres::funding
+      rust_row: FundingDisclosureRevisionRow
+      rust_domain: gurine_domain::funding::FundingDisclosureRevision
+    columns:
+      id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      disclosure_id: {type: uuid, nullable: false, default: null}
+      revision: {type: bigint, nullable: false, default: null}
+      prior_revision_id: {type: uuid, nullable: true, default: null}
+      prior_disclosure_id: {type: uuid, nullable: true, default: null}
+      prior_revision: {type: bigint, nullable: true, default: null}
+      prior_revision_digest: {type: "char(64)", nullable: true, default: null}
+      fiscal_year: {type: integer, nullable: false, default: null}
+      fiscal_quarter: {type: smallint, nullable: false, default: null}
+      period_start: {type: date, nullable: false, default: null}
+      period_end: {type: date, nullable: false, default: null}
+      snapshot_header_id: {type: uuid, nullable: false, default: null}
+      snapshot_batch_id: {type: uuid, nullable: false, default: null}
+      snapshot_digest: {type: "char(64)", nullable: false, default: null}
+      funding_policy_version: {type: text, nullable: false, default: null}
+      funding_policy_digest: {type: "char(64)", nullable: false, default: null}
+      naming_threshold_amount: {type: "numeric(24,6)", nullable: false, default: null}
+      amount_band_lower: {type: "numeric(24,6)", nullable: false, default: null}
+      amount_band_upper: {type: "numeric(24,6)", nullable: true, default: null}
+      reporting_currency: {type: "char(3)", nullable: false, default: null}
+      concentration_band: {type: editorial.funding_concentration_band, nullable: false, default: null}
+      quorum_class: {type: editorial.funding_quorum_class, nullable: false, default: null}
+      requires_oversight_review: {type: boolean, nullable: false, default: null}
+      requires_board_approval: {type: boolean, nullable: false, default: null}
+      requires_enhanced_public_disclosure: {type: boolean, nullable: false, default: null}
+      has_related_party_gate: {type: boolean, nullable: false, default: null}
+      conditional_gate_set_digest: {type: "char(64)", nullable: false, default: null}
+      unknown_reason: {type: editorial.funding_disclosure_unknown_reason, nullable: true, default: null}
+      public_caveat_text: {type: text, nullable: true, default: null}
+      purpose: {type: text, nullable: false, default: null}
+      conflict_summary: {type: text, nullable: false, default: null}
+      policy_request_total: {type: integer, nullable: false, default: null}
+      policy_request_accepted: {type: integer, nullable: false, default: null}
+      policy_request_partially_accepted: {type: integer, nullable: false, default: null}
+      policy_request_rejected: {type: integer, nullable: false, default: null}
+      policy_request_withdrawn: {type: integer, nullable: false, default: null}
+      policy_request_pending: {type: integer, nullable: false, default: null}
+      policy_request_outcome_digest: {type: "char(64)", nullable: false, default: null}
+      source_link_set_digest: {type: "char(64)", nullable: false, default: null}
+      entry_count: {type: integer, nullable: false, default: null}
+      entry_set_digest: {type: "char(64)", nullable: false, default: null}
+      policy_snapshot_digest: {type: "char(64)", nullable: false, default: null}
+      conflict_snapshot_id: {type: uuid, nullable: false, default: null}
+      conflict_snapshot_digest: {type: "char(64)", nullable: false, default: null}
+      quorum_snapshot_digest: {type: "char(64)", nullable: false, default: null}
+      public_content_digest: {type: "char(64)", nullable: false, default: null}
+      proposal_id: {type: uuid, nullable: false, default: null}
+      proposal_version: {type: bigint, nullable: false, default: null}
+      execution_id: {type: uuid, nullable: false, default: null}
+      execution_generation: {type: bigint, nullable: false, default: null}
+      approval_digest: {type: "char(64)", nullable: false, default: null}
+      execution_digest: {type: "char(64)", nullable: false, default: null}
+      preparer_decision_id: {type: uuid, nullable: false, default: null}
+      publisher_decision_id: {type: uuid, nullable: false, default: null}
+      oversight_decision_id: {type: uuid, nullable: true, default: null}
+      board_decision_id: {type: uuid, nullable: true, default: null}
+      independent_case_review_decision_ids: {type: "uuid[]", nullable: false, default: "'{}'::uuid[]"}
+      independent_case_review_set_digest: {type: "char(64)", nullable: false, default: null}
+      decision_receipt_set_digest: {type: "char(64)", nullable: false, default: null}
+      prepared_by_user_id: {type: uuid, nullable: false, default: null}
+      published_by_user_id: {type: uuid, nullable: false, default: null}
+      oversight_reviewer_user_id: {type: uuid, nullable: true, default: null}
+      board_approver_user_id: {type: uuid, nullable: true, default: null}
+      effective_at: {type: timestamptz, nullable: false, default: null}
+      published_at: {type: timestamptz, nullable: false, default: null}
+      execution_receipt_id: {type: uuid, nullable: false, default: null}
+      receipt_digest: {type: "char(64)", nullable: false, default: null}
+      revision_digest: {type: "char(64)", nullable: false, default: null}
+      audit_event_id: {type: uuid, nullable: false, default: null}
+      outbox_id: {type: uuid, nullable: false, default: null}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: [id]
+    foreign_keys:
+      - {name: funding_disclosure_snapshot_fk, columns: [snapshot_header_id, snapshot_batch_id, snapshot_digest], references: "ops.funding_concentration_snapshots(id,snapshot_batch_id,snapshot_digest)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_prior_fk, columns: [prior_revision_id, prior_disclosure_id, prior_revision, prior_revision_digest], references: "editorial.funding_disclosure_revisions(id,disclosure_id,revision,revision_digest)", on_delete: RESTRICT, match: FULL, deferrable: true, initially: DEFERRED}
+      - {name: funding_disclosure_proposal_fk, columns: [proposal_id, proposal_version, approval_digest], references: "ops.action_proposal_versions(proposal_id,version,approval_digest)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_authorization_fk, columns: [execution_id, execution_generation], references: "ops.execution_authorizations(execution_id,generation)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_preparer_decision_fk, columns: [preparer_decision_id], references: "ops.action_decisions(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_publisher_decision_fk, columns: [publisher_decision_id], references: "ops.action_decisions(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_oversight_decision_fk, columns: [oversight_decision_id], references: "ops.action_decisions(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_board_decision_fk, columns: [board_decision_id], references: "ops.action_decisions(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_preparer_user_fk, columns: [prepared_by_user_id], references: "ops.users(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_publisher_user_fk, columns: [published_by_user_id], references: "ops.users(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_oversight_user_fk, columns: [oversight_reviewer_user_id], references: "ops.users(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_board_user_fk, columns: [board_approver_user_id], references: "ops.users(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_conflict_snapshot_fk, columns: [conflict_snapshot_id], references: "editorial.conflict_snapshots(id)", on_delete: RESTRICT, deferrable: false}
+      - {name: funding_disclosure_execution_receipt_fk, columns: [execution_receipt_id], references: "ops.execution_receipts(id)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+      - {name: funding_disclosure_audit_fk, columns: [audit_event_id], references: "ops.audit_events(id)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+      - {name: funding_disclosure_outbox_fk, columns: [outbox_id], references: "ops.outbox(id)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+    unique_constraints:
+      - {name: funding_disclosure_series_revision_uq, columns: [disclosure_id, revision]}
+      - {name: funding_disclosure_entry_parent_identity_uq, columns: [id, disclosure_id, revision]}
+      - {name: funding_disclosure_chain_reference_uq, columns: [id, disclosure_id, revision, revision_digest]}
+      - {name: funding_disclosure_quarter_revision_uq, columns: [fiscal_year, fiscal_quarter, revision]}
+      - {name: funding_disclosure_execution_uq, columns: [execution_id, execution_generation]}
+      - {name: funding_disclosure_receipt_uq, columns: [receipt_digest]}
+      - {name: funding_disclosure_revision_digest_uq, columns: [revision_digest]}
+      - {name: funding_disclosure_public_source_uq, columns: [id, revision_digest]}
+      - {name: funding_disclosure_entry_parent_uq, columns: [id, disclosure_id, revision, entry_set_digest]}
+    checks:
+      - {name: funding_disclosure_identity_check, expression: "revision > 0 AND proposal_version > 0 AND execution_generation > 0 AND fiscal_year BETWEEN 1 AND 9999 AND fiscal_quarter BETWEEN 1 AND 4"}
+      - {name: funding_disclosure_period_check, expression: "period_start < period_end AND period_end <= published_at::date"}
+      - name: funding_disclosure_prior_check
+        expression: >-
+          (revision = 1 AND prior_revision_id IS NULL AND prior_disclosure_id IS NULL
+           AND prior_revision IS NULL AND prior_revision_digest IS NULL)
+          OR
+          (revision > 1 AND prior_revision_id IS NOT NULL AND prior_disclosure_id IS NOT NULL
+           AND prior_disclosure_id = disclosure_id AND prior_revision IS NOT NULL
+           AND prior_revision = revision - 1 AND prior_revision_digest IS NOT NULL
+           AND prior_revision_digest ~ '^[0-9a-f]{64}$')
+      - {name: funding_disclosure_amount_band_check, expression: "naming_threshold_amount >= 0 AND amount_band_lower >= 0 AND (amount_band_upper IS NULL OR amount_band_upper > amount_band_lower) AND reporting_currency ~ '^[A-Z]{3}$'"}
+      - {name: funding_disclosure_policy_check, expression: "length(btrim(funding_policy_version)) BETWEEN 1 AND 128 AND funding_policy_digest ~ '^[0-9a-f]{64}$'"}
+      - name: funding_disclosure_unknown_check
+        expression: >-
+          (concentration_band = 'UNKNOWN' AND unknown_reason IS NOT NULL
+           AND public_caveat_text IS NOT NULL AND length(btrim(public_caveat_text)) BETWEEN 1 AND 2000)
+          OR
+          (concentration_band <> 'UNKNOWN' AND unknown_reason IS NULL AND public_caveat_text IS NULL)
+      - {name: funding_disclosure_text_check, expression: "length(btrim(purpose)) BETWEEN 1 AND 4000 AND length(btrim(conflict_summary)) BETWEEN 1 AND 8000"}
+      - name: funding_disclosure_policy_count_check
+        expression: >-
+          policy_request_total >= 0 AND policy_request_accepted >= 0
+          AND policy_request_partially_accepted >= 0 AND policy_request_rejected >= 0
+          AND policy_request_withdrawn >= 0 AND policy_request_pending >= 0
+          AND policy_request_total = policy_request_accepted + policy_request_partially_accepted
+            + policy_request_rejected + policy_request_withdrawn + policy_request_pending
+      - {name: funding_disclosure_entry_count_check, expression: "entry_count >= 0"}
+      - {name: funding_disclosure_base_sod_check, expression: "preparer_decision_id <> publisher_decision_id AND prepared_by_user_id <> published_by_user_id"}
+      - {name: funding_disclosure_conditional_pair_check, expression: "(oversight_decision_id IS NULL) = (oversight_reviewer_user_id IS NULL) AND (board_decision_id IS NULL) = (board_approver_user_id IS NULL)"}
+      - name: funding_disclosure_actor_pairwise_check
+        expression: "(oversight_reviewer_user_id IS NULL OR (oversight_reviewer_user_id <> prepared_by_user_id AND oversight_reviewer_user_id <> published_by_user_id)) AND (board_approver_user_id IS NULL OR (board_approver_user_id <> prepared_by_user_id AND board_approver_user_id <> published_by_user_id AND (oversight_reviewer_user_id IS NULL OR board_approver_user_id <> oversight_reviewer_user_id))) AND (oversight_decision_id IS NULL OR (oversight_decision_id <> preparer_decision_id AND oversight_decision_id <> publisher_decision_id)) AND (board_decision_id IS NULL OR (board_decision_id <> preparer_decision_id AND board_decision_id <> publisher_decision_id AND (oversight_decision_id IS NULL OR board_decision_id <> oversight_decision_id)))"
+      - name: funding_disclosure_conditional_gate_shape_check
+        expression: "(requires_board_approval = false OR requires_oversight_review = true) AND (requires_enhanced_public_disclosure = false OR requires_board_approval = true) AND ((requires_oversight_review AND oversight_decision_id IS NOT NULL) OR (NOT requires_oversight_review AND oversight_decision_id IS NULL)) AND ((requires_board_approval AND board_decision_id IS NOT NULL) OR (NOT requires_board_approval AND board_decision_id IS NULL))"
+      - name: funding_disclosure_threshold_approval_check
+        expression: >-
+          (concentration_band IN ('LE_5_PERCENT','GT_5_TO_15_PERCENT')
+           AND requires_oversight_review = false AND requires_board_approval = false
+           AND requires_enhanced_public_disclosure = false)
+          OR (concentration_band = 'GT_15_TO_25_PERCENT'
+           AND requires_oversight_review = true AND requires_board_approval = false
+           AND requires_enhanced_public_disclosure = false)
+          OR (concentration_band IN ('GT_25_PERCENT','UNKNOWN')
+           AND requires_oversight_review = true AND requires_board_approval = true
+           AND requires_enhanced_public_disclosure = true)
+      - name: funding_disclosure_quorum_class_check
+        expression: >-
+          (NOT requires_oversight_review AND NOT requires_board_approval
+           AND ((NOT has_related_party_gate AND quorum_class = 'STANDARD')
+             OR (has_related_party_gate AND quorum_class = 'RELATED_PARTY')))
+          OR (requires_oversight_review AND NOT requires_board_approval
+           AND ((NOT has_related_party_gate AND quorum_class = 'OVERSIGHT')
+             OR (has_related_party_gate AND quorum_class = 'OVERSIGHT_RELATED_PARTY')))
+          OR (requires_oversight_review AND requires_board_approval
+           AND ((NOT has_related_party_gate AND quorum_class = 'BOARD')
+             OR (has_related_party_gate AND quorum_class = 'BOARD_RELATED_PARTY')))
+      - {name: funding_disclosure_case_review_array_check, expression: "cardinality(independent_case_review_decision_ids) <= 10000"}
+      - name: funding_disclosure_digest_check
+        expression: >-
+          snapshot_digest ~ '^[0-9a-f]{64}$' AND funding_policy_digest ~ '^[0-9a-f]{64}$'
+          AND policy_request_outcome_digest ~ '^[0-9a-f]{64}$'
+          AND source_link_set_digest ~ '^[0-9a-f]{64}$' AND entry_set_digest ~ '^[0-9a-f]{64}$'
+          AND policy_snapshot_digest ~ '^[0-9a-f]{64}$' AND conflict_snapshot_digest ~ '^[0-9a-f]{64}$'
+          AND quorum_snapshot_digest ~ '^[0-9a-f]{64}$'
+          AND conditional_gate_set_digest ~ '^[0-9a-f]{64}$'
+          AND public_content_digest ~ '^[0-9a-f]{64}$' AND approval_digest ~ '^[0-9a-f]{64}$'
+          AND execution_digest ~ '^[0-9a-f]{64}$' AND independent_case_review_set_digest ~ '^[0-9a-f]{64}$'
+          AND decision_receipt_set_digest ~ '^[0-9a-f]{64}$' AND receipt_digest ~ '^[0-9a-f]{64}$'
+          AND revision_digest ~ '^[0-9a-f]{64}$'
+      - {name: funding_disclosure_time_check, expression: "effective_at <= published_at AND published_at <= created_at + interval '5 seconds'"}
+    indexes:
+      - {name: funding_disclosure_latest_idx, method: btree, columns: [fiscal_year DESC, fiscal_quarter DESC, effective_at DESC, revision DESC, id DESC], unique: false}
+      - {name: funding_disclosure_history_idx, method: btree, columns: [disclosure_id, revision ASC, id ASC], unique: false}
+      - {name: funding_disclosure_snapshot_idx, method: btree, columns: [snapshot_batch_id, snapshot_digest, revision DESC, id DESC], unique: false}
+      - {name: funding_disclosure_effective_idx, method: btree, columns: [effective_at DESC, id DESC], unique: false}
+      - {name: funding_disclosure_conditional_gate_idx, method: btree, columns: [requires_board_approval, requires_oversight_review, has_related_party_gate, effective_at DESC, id DESC], unique: false}
+      - {name: funding_disclosure_snapshot_fk_idx, method: btree, columns: [snapshot_header_id, snapshot_batch_id, snapshot_digest, id], unique: false}
+      - {name: funding_disclosure_prior_fk_idx, method: btree, columns: [prior_revision_id, prior_disclosure_id, prior_revision, prior_revision_digest, id], unique: false, where: "prior_revision_id IS NOT NULL"}
+      - {name: funding_disclosure_proposal_fk_idx, method: btree, columns: [proposal_id, proposal_version, approval_digest, id], unique: false}
+      - {name: funding_disclosure_preparer_decision_fk_idx, method: btree, columns: [preparer_decision_id, id], unique: false}
+      - {name: funding_disclosure_publisher_decision_fk_idx, method: btree, columns: [publisher_decision_id, id], unique: false}
+      - {name: funding_disclosure_oversight_decision_fk_idx, method: btree, columns: [oversight_decision_id, id], unique: false, where: "oversight_decision_id IS NOT NULL"}
+      - {name: funding_disclosure_board_decision_fk_idx, method: btree, columns: [board_decision_id, id], unique: false, where: "board_decision_id IS NOT NULL"}
+      - {name: funding_disclosure_preparer_user_fk_idx, method: btree, columns: [prepared_by_user_id, id], unique: false}
+      - {name: funding_disclosure_publisher_user_fk_idx, method: btree, columns: [published_by_user_id, id], unique: false}
+      - {name: funding_disclosure_oversight_user_fk_idx, method: btree, columns: [oversight_reviewer_user_id, id], unique: false, where: "oversight_reviewer_user_id IS NOT NULL"}
+      - {name: funding_disclosure_board_user_fk_idx, method: btree, columns: [board_approver_user_id, id], unique: false, where: "board_approver_user_id IS NOT NULL"}
+      - {name: funding_disclosure_conflict_snapshot_fk_idx, method: btree, columns: [conflict_snapshot_id, id], unique: false}
+      - {name: funding_disclosure_execution_receipt_fk_idx, method: btree, columns: [execution_receipt_id, id], unique: false}
+      - {name: funding_disclosure_audit_fk_idx, method: btree, columns: [audit_event_id, id], unique: false}
+      - {name: funding_disclosure_outbox_fk_idx, method: btree, columns: [outbox_id, id], unique: false}
+    canonical_digest_contract:
+      conditional_gate_set_digest:
+        domain: GURINE_FUNDING_CONDITIONAL_GATE_SET_V1
+        members: Every source snapshot entry that triggers oversight, board, enhanced disclosure or related-party review, ordered source snapshot ordinal then entry UUID, with entry_digest, exact concentration band/unknown cause, relationship flags and sorted related-case IDs.
+      revision_digest:
+        domain: GURINE_FUNDING_DISCLOSURE_REVISION_V1
+        field_order: [id, disclosure_id, revision, prior_revision_id, prior_disclosure_id, prior_revision, prior_revision_digest, fiscal_year, fiscal_quarter, period_start, period_end, snapshot_header_id, snapshot_batch_id, snapshot_digest, funding_policy_version, funding_policy_digest, naming_threshold_amount, amount_band_lower, amount_band_upper, reporting_currency, concentration_band, quorum_class, requires_oversight_review, requires_board_approval, requires_enhanced_public_disclosure, has_related_party_gate, conditional_gate_set_digest, unknown_reason, public_caveat_text, purpose, conflict_summary, policy_request_total, policy_request_accepted, policy_request_partially_accepted, policy_request_rejected, policy_request_withdrawn, policy_request_pending, policy_request_outcome_digest, source_link_set_digest, entry_count, entry_set_digest, policy_snapshot_digest, conflict_snapshot_id, conflict_snapshot_digest, quorum_snapshot_digest, public_content_digest, proposal_id, proposal_version, execution_id, execution_generation, approval_digest, execution_digest, preparer_decision_id, publisher_decision_id, oversight_decision_id, board_decision_id, independent_case_review_decision_ids, independent_case_review_set_digest, decision_receipt_set_digest, prepared_by_user_id, published_by_user_id, oversight_reviewer_user_id, board_approver_user_id, effective_at, published_at, execution_receipt_id, receipt_digest, audit_event_id, outbox_id]
+        excluded: [revision_digest, created_at]
+      public_content_digest: Covers only the source-read allowlist and ordered public entries; changing a private-only actor/audit pointer changes revision_digest but not public_content_digest unless the authorized public representation changes.
+    grants:
+      gurine_workflow_worker: [SELECT]
+      gurine_control_api: [SELECT]
+      gurine_public_projector: []
+      gurine_auditor: [SELECT]
+      gurine_public_api: []
+      gurine_submission_api: []
+      gurine_ingest_worker: []
+      gurine_analysis_worker: []
+      gurine_notification_worker: []
+      gurine_scheduler: []
+      gurine_document_extractor: []
+      gurine_identity_api: []
+      forbidden_for_all_runtime_roles: [INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER]
+    function_grants:
+      editorial.publish_funding_disclosure_v1: {gurine_workflow_worker: [EXECUTE]}
+      editorial.read_public_funding_projection_inputs_v1: {gurine_public_projector: [EXECUTE]}
+    rls:
+      enabled: false
+      forced: false
+      policies: []
+      rationale: Internal immutable approval-bound revision; anonymous readers consume only a public-schema projection.
+    mutability:
+      mode: APPEND_ONLY_IMMUTABLE_REVISION
+      allowed_updates: []
+      delete: FORBIDDEN
+      immutable_trigger: ops.reject_mutation()
+      deferred_publish_trigger: editorial.validate_funding_disclosure_at_commit()
+      version_rule: First revision has no predecessor; every later revision binds exactly the immediately prior revision and digest under a SERIALIZABLE prior-revision CAS.
+      digest_rule: revision_digest covers the exact snapshot, period, bands, purpose, conflicts, policy outcomes, entry_set_digest, policy/conflict snapshots, approvals, effective time and prior digest; created_at is excluded.
+      conditional_quorum_rule: The deferred trigger derives all four gate booleans and conditional_gate_set_digest from the complete locked source-entry partition before checking decision slots; caller values are never trusted.
+      correction_rule: Corrections append revision + 1 and never modify or hide prior public history.
+    retention:
+      record_class: FUNDING_PUBLIC_DISCLOSURE_REVISION
+      trigger: Supersession does not start destruction; public revision history remains preservable indefinitely.
+      schedule_binding: Latest effective nonexpired ops.record_class_schedules revision for FUNDING_PUBLIC_DISCLOSURE_REVISION.
+      legal_hold_key: [relation, disclosure_id, revision, snapshot_batch_id]
+      backup_behavior: Preserve every revision and reapply restoration suppression and DISCLOSURE holds before public projection or export after restore.
+      terminal_action: PRESERVE_PUBLIC_REVISION
+    repository:
+      roundtrip:
+        - Round-trip all scalar columns through FundingDisclosureRevisionRow, including null first-prior and unbounded upper amount band.
+        - Recompute approval, execution, decision-receipt, entry-set, public-content and revision digests from stored typed values.
+        - Missing conditional approval, stale snapshot, stale prior revision, duplicated execution authorization and any actor overlap fail with exact domain errors.
+      detail_cardinality: Exactly one revision and exactly entry_count ordered entries or FUNDING_DISCLOSURE_CORRUPT.
+      ordering:
+        history: revision ASC, id ASC
+        latest: fiscal_year DESC, fiscal_quarter DESC, effective_at DESC, revision DESC, id DESC
+        decision_ids: approval slot ordinal ASC, action decision id ASC
+      transaction:
+        isolation: SERIALIZABLE
+        lock_order: Snapshot header and entries by ordinal; latest quarterly disclosure revision; execution authorization; action assignments and decisions by slot ordinal; related cases by UUID; audit chain head; outbox; execution receipt.
+        atomicity: Revision, complete entry set, audit, governance.funding_disclosure_published.v1 outbox, execution receipt and public-projection work item commit or roll back together.
+
+  editorial.funding_disclosure_entries:
+    creation_order: 17
+    owner:
+      object_owner: gurine_migrator
+      logical_component: funding-disclosure-publisher
+      physical_service: workflow-worker
+      repository: crates/persistence-postgres::funding
+      rust_row: FundingDisclosureEntryRow
+      rust_domain: gurine_domain::funding::FundingDisclosureEntry
+    columns:
+      id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      revision_id: {type: uuid, nullable: false, default: null}
+      disclosure_id: {type: uuid, nullable: false, default: null}
+      revision: {type: bigint, nullable: false, default: null}
+      ordinal: {type: integer, nullable: false, default: null}
+      snapshot_batch_id: {type: uuid, nullable: false, default: null}
+      snapshot_digest: {type: "char(64)", nullable: false, default: null}
+      source_snapshot_entry_ids: {type: "uuid[]", nullable: false, default: null}
+      source_snapshot_entry_digests: {type: "char(64)[]", nullable: false, default: null}
+      source_snapshot_entry_set_digest: {type: "char(64)", nullable: false, default: null}
+      source_counterparty_group_set_digest: {type: "char(64)", nullable: false, default: null}
+      identity_disclosure_mode: {type: editorial.funding_identity_disclosure_mode, nullable: false, default: null}
+      public_display_name: {type: text, nullable: true, default: null}
+      withholding_reason: {type: editorial.funding_identity_withholding_reason, nullable: true, default: null}
+      withholding_public_explanation: {type: text, nullable: true, default: null}
+      counterparty_category: {type: text, nullable: false, default: null}
+      funding_source_kind: {type: ops.funding_source_kind, nullable: false, default: null}
+      amount_band_lower: {type: "numeric(24,6)", nullable: false, default: null}
+      amount_band_upper: {type: "numeric(24,6)", nullable: true, default: null}
+      reporting_currency: {type: "char(3)", nullable: false, default: null}
+      concentration_band: {type: editorial.funding_concentration_band, nullable: false, default: null}
+      denominator_unknown_reason: {type: ops.funding_denominator_unknown_reason, nullable: true, default: null}
+      grouping_dispute_reason: {type: ops.funding_grouping_dispute_reason, nullable: true, default: null}
+      concentration_unknown_reason: {type: ops.funding_concentration_unknown_reason, nullable: true, default: null}
+      public_caveat_text: {type: text, nullable: true, default: null}
+      purpose: {type: text, nullable: false, default: null}
+      conflict_disclosure: {type: text, nullable: false, default: null}
+      mitigation_summary: {type: text, nullable: false, default: null}
+      government_related: {type: boolean, nullable: false, default: null}
+      political_party_related: {type: boolean, nullable: false, default: null}
+      procurement_supplier_related: {type: boolean, nullable: false, default: null}
+      investigated_subject_related: {type: boolean, nullable: false, default: null}
+      related_party: {type: boolean, nullable: false, default: null}
+      related_case_ids: {type: "uuid[]", nullable: false, default: "'{}'::uuid[]"}
+      independent_review_required: {type: boolean, nullable: false, default: null}
+      independent_review_decision_ids: {type: "uuid[]", nullable: false, default: "'{}'::uuid[]"}
+      independent_review_set_digest: {type: "char(64)", nullable: false, default: null}
+      evidence_ids: {type: "uuid[]", nullable: false, default: null}
+      source_link_set_digest: {type: "char(64)", nullable: false, default: null}
+      entry_digest: {type: "char(64)", nullable: false, default: null}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: [id]
+    foreign_keys:
+      - {name: funding_disclosure_entry_revision_fk, columns: [revision_id, disclosure_id, revision], references: "editorial.funding_disclosure_revisions(id,disclosure_id,revision)", on_delete: RESTRICT, deferrable: true, initially: DEFERRED}
+    unique_constraints:
+      - {name: funding_disclosure_entry_ordinal_uq, columns: [revision_id, ordinal]}
+      - {name: funding_disclosure_entry_digest_uq, columns: [revision_id, entry_digest]}
+      - {name: funding_disclosure_entry_source_set_uq, columns: [revision_id, source_snapshot_entry_set_digest]}
+    checks:
+      - {name: funding_disclosure_entry_identity_check, expression: "revision > 0 AND ordinal > 0"}
+      - {name: funding_disclosure_entry_source_pair_check, expression: "cardinality(source_snapshot_entry_ids) = cardinality(source_snapshot_entry_digests) AND cardinality(source_snapshot_entry_ids) BETWEEN 1 AND 10000"}
+      - name: funding_disclosure_entry_name_check
+        expression: >-
+          (identity_disclosure_mode = 'NAMED' AND cardinality(source_snapshot_entry_ids) = 1
+           AND public_display_name IS NOT NULL
+           AND length(btrim(public_display_name)) BETWEEN 1 AND 500
+           AND withholding_reason IS NULL AND withholding_public_explanation IS NULL)
+          OR
+          (identity_disclosure_mode IN ('CATEGORY_ONLY','WITHHELD_LEGAL')
+           AND public_display_name IS NULL AND withholding_reason IS NOT NULL
+           AND withholding_public_explanation IS NOT NULL
+           AND length(btrim(withholding_public_explanation)) BETWEEN 1 AND 2000)
+      - name: funding_disclosure_entry_withholding_check
+        expression: >-
+          identity_disclosure_mode <> 'WITHHELD_LEGAL'
+          OR (withholding_reason IS NOT NULL
+           AND withholding_reason IN ('LEGAL_RESTRICTION','PRIVACY_RESTRICTION','REVIEWED_CONFIDENTIALITY_DUTY'))
+      - {name: funding_disclosure_entry_text_check, expression: "length(btrim(counterparty_category)) BETWEEN 1 AND 200 AND length(btrim(purpose)) BETWEEN 1 AND 4000 AND length(btrim(conflict_disclosure)) BETWEEN 1 AND 8000 AND length(btrim(mitigation_summary)) BETWEEN 1 AND 8000"}
+      - {name: funding_disclosure_entry_amount_check, expression: "amount_band_lower >= 0 AND (amount_band_upper IS NULL OR amount_band_upper > amount_band_lower) AND reporting_currency ~ '^[A-Z]{3}$'"}
+      - name: funding_disclosure_entry_unknown_check
+        expression: >-
+          (concentration_band = 'UNKNOWN' AND concentration_unknown_reason IS NOT NULL
+           AND public_caveat_text IS NOT NULL AND length(btrim(public_caveat_text)) BETWEEN 1 AND 2000
+           AND ((concentration_unknown_reason = 'DENOMINATOR_UNKNOWN'
+             AND denominator_unknown_reason IS NOT NULL AND grouping_dispute_reason IS NULL)
+            OR (concentration_unknown_reason = 'GROUPING_DISPUTED'
+             AND grouping_dispute_reason IS NOT NULL)))
+          OR
+          (concentration_band <> 'UNKNOWN' AND denominator_unknown_reason IS NULL
+           AND grouping_dispute_reason IS NULL AND concentration_unknown_reason IS NULL
+           AND public_caveat_text IS NULL)
+      - {name: funding_disclosure_entry_case_check, expression: "cardinality(related_case_ids) <= 10000 AND cardinality(evidence_ids) BETWEEN 1 AND 10000"}
+      - name: funding_disclosure_entry_independence_check
+        expression: >-
+          (independent_review_required AND cardinality(related_case_ids) > 0
+           AND cardinality(independent_review_decision_ids) = cardinality(related_case_ids))
+          OR
+          (NOT independent_review_required AND cardinality(independent_review_decision_ids) = 0)
+      - name: funding_disclosure_entry_digest_check
+        expression: >-
+          snapshot_digest ~ '^[0-9a-f]{64}$'
+          AND source_snapshot_entry_set_digest ~ '^[0-9a-f]{64}$'
+          AND source_counterparty_group_set_digest ~ '^[0-9a-f]{64}$'
+          AND independent_review_set_digest ~ '^[0-9a-f]{64}$'
+          AND source_link_set_digest ~ '^[0-9a-f]{64}$'
+          AND entry_digest ~ '^[0-9a-f]{64}$'
+    indexes:
+      - {name: funding_disclosure_entry_order_idx, method: btree, columns: [revision_id, ordinal, id], unique: false}
+      - {name: funding_disclosure_entry_category_idx, method: btree, columns: [counterparty_category, revision DESC, ordinal, id], unique: false}
+      - {name: funding_disclosure_entry_related_cases_idx, method: gin, columns: [related_case_ids], unique: false, where: "cardinality(related_case_ids) > 0"}
+      - {name: funding_disclosure_entry_source_ids_idx, method: gin, columns: [source_snapshot_entry_ids], unique: false}
+      - {name: funding_disclosure_entry_revision_fk_idx, method: btree, columns: [revision_id, disclosure_id, revision, id], unique: false}
+    grants:
+      gurine_workflow_worker: [SELECT]
+      gurine_control_api: [SELECT]
+      gurine_public_projector: []
+      gurine_auditor: [SELECT]
+      gurine_public_api: []
+      gurine_submission_api: []
+      gurine_ingest_worker: []
+      gurine_analysis_worker: []
+      gurine_notification_worker: []
+      gurine_scheduler: []
+      gurine_document_extractor: []
+      gurine_identity_api: []
+      forbidden_for_all_runtime_roles: [INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER]
+    function_grants:
+      editorial.publish_funding_disclosure_v1: {gurine_workflow_worker: [EXECUTE]}
+      editorial.read_public_funding_projection_inputs_v1: {gurine_public_projector: [EXECUTE]}
+    rls:
+      enabled: false
+      forced: false
+      policies: []
+      rationale: Immutable child of an internal approval-bound disclosure revision; anonymous access is only through a rights-filtered public projection.
+    mutability:
+      mode: APPEND_ONLY_IMMUTABLE_MEMBERSHIP
+      allowed_updates: []
+      delete: FORBIDDEN
+      immutable_trigger: ops.reject_mutation()
+      digest_rule: entry_digest covers ordinal, exact ordered source entry identities and digests, identity mode, public strings, bands, relationship flags, related cases, review decisions, evidence IDs and source-link digest.
+      correction_rule: Entries of a published revision are never changed; corrections append a complete replacement set under the next revision.
+    retention:
+      record_class: FUNDING_PUBLIC_DISCLOSURE_ENTRY
+      trigger: Owning public revision preservation rule.
+      schedule_binding: Latest effective nonexpired ops.record_class_schedules revision for FUNDING_PUBLIC_DISCLOSURE_ENTRY.
+      legal_hold_key: [relation, revision_id, id, snapshot_batch_id]
+      backup_behavior: Preserve with the owning revision; after restore re-evaluate rights, restoration suppression and DISCLOSURE holds before projection or export.
+      terminal_action: PRESERVE_PUBLIC_REVISION
+    repository:
+      roundtrip:
+        - Round-trip exact ordered UUID/digest arrays, null public name and unbounded upper amount band through FundingDisclosureEntryRow.
+        - Validate every source snapshot entry ID/digest against the exact snapshot batch and every evidence/case/decision ID against its concrete table in the publish transaction.
+        - Reject duplicate, missing or multiply consumed source snapshot entries and any reordered entry set before commit.
+      detail_cardinality: Exactly one row per parent ordinal from 1 through parent entry_count.
+      ordering:
+        parent: ordinal ASC, id ASC
+        source_snapshot_entries: source snapshot ordinal ASC, source entry id ASC
+        related_cases: UUID byte order ASC
+        review_decisions: related case UUID byte order ASC, action decision id ASC
+
+public_projection_contract:
+  source_read_function:
+    name: editorial.read_public_funding_projection_inputs_v1
+    signature: "editorial.read_public_funding_projection_inputs_v1(uuid,char(64)) RETURNS SETOF editorial.funding_public_projection_input_v1"
+    owner: gurine_migrator
+    security: SECURITY_DEFINER
+    search_path: [pg_catalog, editorial, ops, public, pg_temp]
+    execute_roles: []
+    public_execute: revoked
+    lock_and_verify:
+      - Lock the exact revision ID and expected revision digest plus its complete ordered entry set; reject stale/mismatched source, incomplete cardinality or noncurrent rights/source-link policy.
+      - Recompute revision, public-content, entry-set, conditional-gate and every public entry digest; active DISCLOSURE hold or unresolved rights blocks the row set without exposing whether private source data exists.
+      - Resolve related internal case/evidence UUIDs only through approved public projection identifiers and rights-filtered source links; raw UUIDs and withheld identities never leave the function.
+    return_allowlist:
+      revision: [disclosure_id, revision, prior_revision, fiscal_year, fiscal_quarter, period_start, period_end, reporting_currency, concentration_band, unknown_reason, public_caveat_text, purpose, policy_request_total, policy_request_accepted, policy_request_partially_accepted, policy_request_rejected, policy_request_withdrawn, policy_request_pending, policy_request_outcome_digest, source_link_set_digest, entry_count, entry_set_digest, funding_policy_version, funding_policy_digest, effective_at, published_at, public_content_digest, revision_digest, requires_enhanced_public_disclosure]
+      entry: [ordinal, identity_disclosure_mode, public_display_name, withholding_public_explanation, counterparty_category, funding_source_kind, amount_band_lower, amount_band_upper, reporting_currency, concentration_band, denominator_unknown_reason, grouping_dispute_reason, concentration_unknown_reason, public_caveat_text, purpose, conflict_disclosure, mitigation_summary, government_related, political_party_related, procurement_supplier_related, investigated_subject_related, related_party, public_case_refs, public_source_links, entry_digest]
+    forbidden: [snapshot_header_id, snapshot_batch_id, source_snapshot_entry_ids, counterparty_group_id, member_supplier_ids, recognized_revenue_fact_ids, contract_period_ids, external_receipt_ids, evidence_ids, action_decision_ids, user_ids, proposal_id, execution_id, conflict_snapshot_id, audit_event_id, outbox_id, raw_source_url, private_case_id]
+  existing_public_relation_hardening:
+    relation: public.transparency_reports
+    migration: 0029_product_economics.sql
+    additive_columns:
+      report_kind: {type: text, nullable: false, default: "'GENERAL'::text", historical_backfill: GENERAL}
+      source_revision_id: {type: uuid, nullable: true}
+      source_disclosure_id: {type: uuid, nullable: true}
+      source_revision: {type: bigint, nullable: true}
+      source_revision_digest: {type: "char(64)", nullable: true}
+      supersedes_report_id: {type: uuid, nullable: true}
+      report_schema_version: {type: bigint, nullable: true}
+      projection_digest: {type: "char(64)", nullable: true}
+      projected_at: {type: timestamptz, nullable: true}
+    additive_foreign_keys:
+      - {name: transparency_report_funding_source_fk, columns: [source_revision_id, source_revision_digest], references: "editorial.funding_disclosure_revisions(id,revision_digest)", on_delete: RESTRICT, match: FULL, deferrable: false}
+      - {name: transparency_report_supersedes_fk, columns: [supersedes_report_id], references: "public.transparency_reports(id)", on_delete: RESTRICT, deferrable: false}
+    additive_unique_constraints:
+      - {name: transparency_report_funding_source_uq, columns: [source_revision_id]}
+      - {name: transparency_report_funding_series_revision_uq, columns: [source_disclosure_id, source_revision]}
+      - {name: transparency_report_projection_digest_uq, columns: [projection_digest]}
+    additive_indexes:
+      - {name: transparency_report_funding_source_fk_idx, columns: [source_revision_id, source_revision_digest, id], where: "source_revision_id IS NOT NULL"}
+      - {name: transparency_report_funding_history_idx, columns: [source_disclosure_id, source_revision ASC, id ASC], where: "report_kind = 'FUNDING_DISCLOSURE'"}
+      - {name: transparency_report_funding_period_idx, columns: [period_end DESC, period_start DESC, published_at DESC, id DESC], where: "report_kind = 'FUNDING_DISCLOSURE'"}
+      - {name: transparency_report_supersedes_fk_idx, columns: [supersedes_report_id, id], where: "supersedes_report_id IS NOT NULL"}
+    additive_checks:
+      - {name: transparency_report_kind_ck, expression: "report_kind IN ('GENERAL','FUNDING_DISCLOSURE')"}
+      - name: transparency_report_funding_shape_ck
+        expression: "(report_kind = 'GENERAL' AND source_revision_id IS NULL AND source_disclosure_id IS NULL AND source_revision IS NULL AND source_revision_digest IS NULL AND supersedes_report_id IS NULL AND report_schema_version IS NULL AND projection_digest IS NULL AND projected_at IS NULL) OR (report_kind = 'FUNDING_DISCLOSURE' AND source_revision_id IS NOT NULL AND source_disclosure_id IS NOT NULL AND source_revision IS NOT NULL AND source_revision > 0 AND source_revision_digest IS NOT NULL AND report_schema_version = 1 AND projection_digest IS NOT NULL AND projected_at IS NOT NULL)"
+      - {name: transparency_report_funding_digest_ck, expression: "source_revision_digest IS NULL OR (source_revision_digest ~ '^[0-9a-f]{64}$' AND projection_digest ~ '^[0-9a-f]{64}$')"}
+      - {name: transparency_report_funding_time_ck, expression: "projected_at IS NULL OR published_at <= projected_at"}
+    report_json_contract:
+      type: FundingDisclosurePublicV1
+      additional_properties: false
+      required: [schemaVersion, disclosureId, revision, fiscalYear, fiscalQuarter, periodStart, periodEnd, reportingCurrency, concentrationBand, caveat, purpose, policyRequests, sources, entries, effectiveAt, publishedAt, supersedesRevision, sourceRevisionDigest, publicContentDigest]
+      entries_type: FundingDisclosurePublicEntryV1 closed to the source function return_allowlist; internal IDs, exact private amounts, decision actors and unapproved links are impossible fields.
+      canonicalization: RFC 8785 canonical JSON; projection_digest is SHA-256 over report_kind, source revision identity/digest, period/title/summary, canonical report, published_at and supersedes_report_id.
+  projector_function:
+    name: public.project_funding_disclosure_revision_v2
+    signature: "public.project_funding_disclosure_revision_v2(public.funding_disclosure_projection_v2) RETURNS public.projection_mutation_receipt_v2"
+    owner: gurine_migrator
+    security: SECURITY_DEFINER
+    search_path: [pg_catalog, public, editorial, ops, pg_temp]
+    execute_roles: [gurine_public_projector]
+    public_execute: revoked
+    idempotency_scope: ECONOMICS.PROJECT_FUNDING_DISCLOSURE.V2
+    transaction: SERIALIZABLE
+    source_reader: editorial.read_public_funding_projection_inputs_v1 is internal-only and cannot be executed by gurine_public_projector
+    mutation: Claim one typed projection work item and insert exactly one immutable FUNDING_DISCLOSURE report per source revision. Same event/source digest returns the stored receipt; changed digest is PROJECTION_REPLAY_CONFLICT. Prior public report is never updated or hidden; supersedes_report_id forms gapless history.
+    atomic_writes: [projection work claim, source verification, public transparency report revision, inbox and job terminalization, audit, public.funding_disclosure_projected.v1 outbox, immutable typed receipt]
+  acl:
+    public.transparency_reports:
+      gurine_public_api: [SELECT]
+      gurine_public_projector: []
+      all_other_runtime_roles: []
+    functions:
+      editorial.read_public_funding_projection_inputs_v1: {gurine_public_projector: []}
+      public.project_funding_disclosure_revision_v2: {gurine_public_projector: [EXECUTE]}
+    rule: Projector has no raw source-table SELECT and no direct public-table mutation. Public API has no source access and reads only the typed public revision row.
+  immutable_public_revision_guard:
+    trigger: public.guard_funding_transparency_report_mutation_v1()
+    rule: Reject UPDATE or DELETE when OLD.report_kind = FUNDING_DISCLOSURE for every role and owner canary; a correction is a new source and public revision. GENERAL legacy rows keep their separately declared projection lifecycle.
+  runtime_oracle: PUB-023 lists current and complete historical revisions in source_revision DESC,id DESC order, exposes caveats and rights-filtered source links, and a source/public digest mismatch, hold, incomplete entry set, duplicate revision or attempted rewrite fails before visibility.
+
+runtime_oracles:
+  - id: AC-OA-TABLE-OPS-FUNDING_CONCENTRATION_SNAPSHOTS-CONTRACT
+    assertion: PostgreSQL 18.4 round-trips one header plus entries, rejects every row-shape violation, validates the prior-version chain and returns same-batch same-digest replay without a second audit, outbox event or row.
+  - id: AC-OA-TABLE-EDITORIAL-FUNDING_DISCLOSURE_REVISIONS-CONTRACT
+    assertion: One SERIALIZABLE winner publishes the next quarterly revision; 63 concurrent stale-prior writers return VERSION_CONFLICT and write zero revision, entry, audit, outbox or receipt rows.
+  - id: AC-OA-TABLE-EDITORIAL-FUNDING_DISCLOSURE_ENTRIES-CONTRACT
+    assertion: Parent entry_count, gapless ordinals, exact source-entry partition and entry_set_digest are recomputed at deferred-constraint time; missing, duplicate or reordered input fails atomically.
+  - id: FUNDING-DENOMINATOR-UNKNOWN
+    assertion: Missing denominator, numeric zero, missing approval and stale approval remain distinct stored causes but all yield band UNKNOWN; no repository or event mapper synthesizes a positive denominator or approval digest.
+  - id: FUNDING-CONCENTRATION-BOUNDARIES
+    assertion: Band derivation compares exact numerator times 100 with denominator times 5, 15 and 25 before rounding percentage-point display share; 5 is LE_5_PERCENT, values above 5 through 15 are GT_5_TO_15_PERCENT, values above 15 through 25 are GT_15_TO_25_PERCENT and values above 25 are GT_25_PERCENT. A value 5.000000000001 percent that displays as 5.000000 remains GT_5_TO_15_PERCENT.
+  - id: FUNDING-GROUPING-DISPUTE
+    assertion: Any disputed counterparty grouping forces that entry to UNKNOWN regardless of denominator and cannot be named or used to satisfy a known concentration gate.
+  - id: FUNDING-SOURCE-COVERAGE
+    assertion: Recognized revenue facts, binding commercial contract periods and signed external donation, grant, sponsorship or other reviewed funding receipts each round-trip exact ID, digest and reporting-currency amount; at least one source exists, all arrays are paired/sorted/unique and their canonical digest equals entry_source_set_digest and header source_set_digest.
+  - id: FUNDING-DENOMINATOR-APPROVAL
+    assertion: APPROVED requires a positive denominator and a current board-approval receipt/approver-set digest at snapshot as_of; zero, absent or expired approval cannot enter the calculable path.
+  - id: FUNDING-DISCLOSURE-INDEPENDENCE
+    assertion: Funding preparer, publisher, exactly derived conditional oversight reviewer, exactly derived conditional board approver, proposal creator, last editor and executor satisfy pairwise/exclusion rules; every related-case review separately proves an eligible reviewer distinct from those disclosure actors and conflicted parties. All assignments, counted action decisions and prerequisite case decisions are re-authorized in the final transaction, and a spurious nonrequired slot fails.
+  - id: FUNDING-THRESHOLD-GATES
+    assertion: Any exact source entry above 15 percent requires oversight review, above 25 percent additionally requires board approval and enhanced public disclosure, and an investigated-subject or related-party entry above 5 percent requires one independent current review for every related case.
+  - id: FUNDING-UNKNOWN-PUBLICATION
+    assertion: UNKNOWN can only be published as UNKNOWN with explicit caveat, oversight review and board approval; it can never be relabelled as a lower band or omitted from the disclosure entry set.
+  - id: FUNDING-NAMING-AND-WITHHOLDING
+    assertion: A resolved single counterparty at or above the versioned naming threshold is NAMED unless a current legal/privacy/confidentiality withholding decision is bound; category aggregation cannot hide an entry requiring enhanced disclosure.
+  - id: FUNDING-STALE-SNAPSHOT
+    assertion: A newer immutable snapshot for the same fiscal year makes an authorization bound to an older snapshot stale; publication fails FUNDING_DISCLOSURE_STALE before writing any domain or receipt row.
+  - id: FUNDING-DETECTION-FIREWALL
+    assertion: gurine_analysis_worker and every detection/ranking/priority path have zero table privilege and zero event consumption path for raw funding or customer identities; funding is used only for conflict, independence and publication gates.
+  - id: FUNDING-PUBLIC-BOUNDARY
+    assertion: gurine_public_api and gurine_public_projector have zero privilege on ops/editorial funding relations; projector uses only the allowlisted digest-bound read/project functions and public API reads immutable FundingDisclosurePublicV1 rows. Every public revision remains discoverable with period, revision, caveat, rights-filtered source links and gapless supersession history, while raw private IDs/amounts/actors are absent.
+  - id: FUNDING-RETENTION-HOLD
+    assertion: All three record classes have exact terminal_action PRESERVE_PUBLIC_REVISION and no runtime delete path; DISCLOSURE holds still block projection/export, expiry never releases coverage and restore evaluates suppression plus the current hold union before access.
+  - id: FUNDING-PRIVILEGE-CLOSURE
+    assertion: All three relations are owned by gurine_migrator; PUBLIC and undeclared runtime roles have zero privilege; direct INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES and TRIGGER fail for every runtime role. Only gurine_workflow_worker may execute the two fixed-search-path typed SECURITY DEFINER write functions.
+  - id: FUNDING-EVENT-UNKNOWN-CLOSURE
+    assertion: governance.funding_snapshot_created.v1 carries denominatorState and denominatorUnknownReason and permits null or zero denominator plus null approval digest only for UNKNOWN; the current positive-only event schema is a hard closure blocker until changed.
+
+required_cross_contract_changes:
+  - The FUNDING_DISCLOSURE action payload must add disclosureId, fiscalQuarter, periodStart, periodEnd, namingThresholdAmount, ordered disclosure entries, source/evidence links, policySnapshotDigest, conflictSnapshotDigest and explicit first-revision null semantics; the current singular amount/concentration fields cannot reconstruct this ledger.
+  - The FUNDING_DISCLOSURE quorum policy must reproduce requires_oversight_review, requires_board_approval, requires_enhanced_public_disclosure, has_related_party_gate and conditional_gate_set_digest and add exactly those conditional oversight/board slots; ops.execution_authorizations counted-decision arrays/check/domain schema/digest/roundtrip must use one identical bounded cardinality of 1..16 instead of the current database maximum 3. Per-related-case reviews remain separately authorized prerequisite decisions whose sorted IDs and receipt digest set are bound into the target request, approval digest, execution digest and independent_case_review_set_digest; they do not consume same-proposal counted slots.
+  - governance.funding_snapshot_created.v1 must add denominatorState, denominatorUnknownReason and per-entry grouping/concentration status or a companion typed entry-set contract; its current required positive denominator and approval digest conflict with the authoritative UNKNOWN path.
+  - governance.funding_disclosure_published.v1 must add revisionId, fiscalQuarter, period bounds, policy/conflict/public-content/conditional-gate digests, derived gate booleans, exact conditional decision set and publisher identity so the projector can verify the stored revision rather than trust event text.
+  - FundingContentResponse must map the immutable public.transparency_reports FundingDisclosurePublicV1 revision history, denominator/grouping caveats, amount/concentration bands, rights-filtered source links and supersession; static ContentSection copy is not persistence closure.

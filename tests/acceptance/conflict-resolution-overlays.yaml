@@ -1,0 +1,116 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: FINAL
+base_lock: tests/acceptance/base-v13.lock.yaml
+rules:
+  - Base feature and scenario bytes are immutable; an overlay changes only the effective executable oracle.
+  - Every overlay is addressed by one existing base scenario ID and one recorded SPEC-CONFLICT.
+  - An overlay cannot delete, rename, skip, weaken, or double-count a base scenario.
+  - The effective registry must execute every overlaid scenario exactly once and retain both the base text digest and overlay digest in its receipt.
+
+overlays:
+  - scenario_id: AC-ROUTE_OPERATION_COMPLETENESS-002
+    conflict_id: SPEC-CONFLICT-001
+    superseded_assertion: 42 public, 125 control and 22 submission operations exist
+    effective_oracle:
+      base_compatibility:
+        external_http: 212
+        public: 41
+        control: 131
+        submission: 34
+        browser_identity: 6
+        private_identity: 9
+      additive_release:
+        external_http: 37
+        control: 29
+        submission: 8
+        private_communication: 8
+      final_runtime:
+        external_http: 249
+        public: 41
+        control: 160
+        submission: 42
+        browser_identity: 6
+        private_identity: 9
+        private_communication: 8
+        complete_http: 266
+      invariants:
+        - Every operation ID is globally unique and exposed exactly once in its declared catalog.
+        - Base operation IDs and semantics remain present; additive operations do not repurpose them.
+        - Every operation has a real handler, closed request and response schema, authorization, persistence when mutating, and integration evidence.
+
+  - scenario_id: AC-PROMPT_INJECTION-003
+    conflict_id: SPEC-CONFLICT-002
+    superseded_assertion: agent task is REJECTED
+    effective_oracle:
+      agent_run_status: ABSTAINED
+      reason_code: EVIDENCE_OUTSIDE_SNAPSHOT
+      proposal_count: 0
+      claim_mutation_count: 0
+      authoritative_state_change_count: 0
+
+  - scenario_id: AC-PRICE_COMPARABILITY-003
+    conflict_id: SPEC-CONFLICT-003
+    superseded_assertion: blocker BUNDLE_UNKNOWN
+    effective_oracle:
+      rule_outcome: BLOCKED
+      blockers: [TARGET_BUNDLE_UNKNOWN]
+      signal_count: 0
+  - scenario_id: AC-PRICE_COMPARABILITY-004
+    conflict_id: SPEC-CONFLICT-003
+    superseded_assertion: blocker UNIT_INCOMPATIBLE
+    effective_oracle:
+      excluded_reason: INCOMPATIBLE_UNIT
+      compatible_comparable_count: 0
+      rule_outcome: BLOCKED
+      blockers: [INSUFFICIENT_COMPARABLES]
+      guessed_conversion_count: 0
+  - scenario_id: AC-PRICE_COMPARABILITY-005
+    conflict_id: SPEC-CONFLICT-003
+    superseded_assertion: blocker VAT_UNKNOWN
+    effective_oracle:
+      rule_outcome: BLOCKED
+      blockers: [TARGET_VAT_UNKNOWN]
+      defaulted_vat_count: 0
+  - scenario_id: AC-PRICE_COMPARABILITY-006
+    conflict_id: SPEC-CONFLICT-003
+    superseded_assertion: blocker CONTRACT_CANCELLED
+    effective_oracle:
+      contract_boundary: normalization-and-cohort-selection
+      normalized_target_eligibility: EXCLUDED_CANCELLED
+      evaluator_invocation_count: 0
+      signal_count: 0
+      expenditure_cohort_membership_count: 0
+  - scenario_id: AC-PRICE_COMPARABILITY-007
+    conflict_id: SPEC-CONFLICT-003
+    superseded_assertion: blocker INSUFFICIENT_DATA
+    effective_oracle:
+      compatible_comparable_count: 2
+      rule_outcome: BLOCKED
+      blockers: [INSUFFICIENT_COMPARABLES]
+      signal_count: 0
+
+  - scenario_id: AC-CASE_LIFECYCLE-002
+    conflict_id: SPEC-CONFLICT-004
+    superseded_assertion: combined PUBLISHED_ANOMALY target state
+    effective_oracle:
+      before: {lifecycle: SIGNAL_DETECTED, publication: NEVER_PUBLISHED, correction: NONE}
+      requested_transition: READY_TO_PUBLISH
+      error: INVALID_STATE_TRANSITION
+      version_delta: 0
+  - scenario_id: AC-CASE_LIFECYCLE-004
+    conflict_id: SPEC-CONFLICT-004
+    superseded_assertion: combined DISMISSED_DATA_ERROR state
+    effective_oracle:
+      before: {lifecycle: CLOSED, publication: NEVER_PUBLISHED, disposition: DATA_ERROR}
+      after: {lifecycle: INVESTIGATING, publication: NEVER_PUBLISHED, disposition: DATA_ERROR}
+      historical_resolution_preserved: true
+      version_delta: 1
+  - scenario_id: AC-CASE_LIFECYCLE-005
+    conflict_id: SPEC-CONFLICT-004
+    superseded_assertion: combined CORRECTION_REVIEW state
+    effective_oracle:
+      case_tuple: {lifecycle: READY_TO_PUBLISH, publication: PUBLISHED_ANOMALY, correction: NONE}
+      correction_aggregate_state: REVIEW
+      public_revision_overwrite_count: 0
+      immutable_prior_revision_preserved: true

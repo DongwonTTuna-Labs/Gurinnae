@@ -46,6 +46,10 @@ def validate(root: Path, result: Validation) -> None:
     contract = load_yaml(root / 'specs/api/operation-contracts.yaml')
     operations = contract['operations']
     by_id = {op['operation_id']: op for op in operations}
+    addendum = load_yaml(root / 'specs/product/addendum-operation-contracts.yaml')
+    addendum_resources = load_yaml(root / 'specs/product/addendum-resource-error-contracts.yaml')
+    addendum_by_id = {op['operation_id']: op for op in addendum['operations'] if op.get('api') in APIS}
+    addendum_bindings = addendum_resources.get('operation_bindings', {})
     errors = load_yaml(root / 'specs/api/error-code-catalog.yaml')['errors']
     error_by = {error['code']: error for error in errors}
 
@@ -155,7 +159,8 @@ def validate(root: Path, result: Validation) -> None:
         except Exception as exc:
             result.error(f'{api}: official OpenAPI validation failed: {exc}')
         found = _ops(yaml_doc)
-        expected = {op['operation_id'] for op in operations if op['api'] == api}
+        expected = ({op['operation_id'] for op in operations if op['api'] == api}
+                    | {op['operation_id'] for op in addendum_by_id.values() if op['api'] == api})
         result.require(set(found) == expected, f'{api}: operation set differs')
         schemas = yaml_doc.get('components', {}).get('schemas', {})
         schema_total += len(schemas)
@@ -174,9 +179,25 @@ def validate(root: Path, result: Validation) -> None:
                 'description': schemes['ActorAssertion']['description'],
             }, 'Control API ActorAssertion security scheme is malformed')
         for oid, (method, path, node) in found.items():
-            op = by_id[oid]
             result.require(oid not in all_ids, f'duplicate OpenAPI operation ID {oid}')
             all_ids.add(oid)
+            op = by_id.get(oid)
+            additive = addendum_by_id.get(oid)
+            if additive is not None:
+                binding = addendum_bindings.get(oid, {})
+                result.require((method, path) == (additive['method'], additive['path']), f'{api}:{oid}: additive method/path mismatch')
+                result.require(node.get('x-operation-kind') == additive['kind'], f'{api}:{oid}: additive operation kind mismatch')
+                result.require(node.get('x-error-codes') == additive.get('errors', []), f'{api}:{oid}: additive error code mismatch')
+                result.require(str(binding.get('success_status')) in node.get('responses', {}), f'{api}:{oid}: additive success status missing')
+                if api == 'submission-api':
+                    expected_security = ([{'BffServiceAssertion': [], 'ScopedSubmissionSession': []}]
+                                         if 'SCOPED' in binding.get('transport_profile', '')
+                                         else [{'BffServiceAssertion': []}])
+                    result.require(node.get('security') == expected_security, f'{oid}: additive Submission OpenAPI security differs')
+                elif api == 'control-api':
+                    result.require(node.get('security') == [{'ActorAssertion': []}], f'{oid}: additive Control OpenAPI security differs')
+                continue
+            result.require(op is not None, f'{api}:{oid}: operation missing from base/addendum contract')
             result.require((method, path) == (op['method'], op['path']), f'{api}:{oid}: method/path mismatch')
             result.require(node.get('x-operation-kind') == op['operation_kind'], f'{api}:{oid}: operation kind mismatch')
             result.require(node.get('x-error-codes') == op['error_codes'], f'{api}:{oid}: error code mismatch')
@@ -196,7 +217,7 @@ def validate(root: Path, result: Validation) -> None:
         for name, schema in schemas.items():
             if schema.get('type') == 'object':
                 result.require(schema.get('additionalProperties') is False or name == 'ProblemDetails', f'{api}: open object schema {name}')
-    result.require(all_ids == set(by_id), 'OpenAPI global set differs')
+    result.require(all_ids == (set(by_id) | set(addendum_by_id)), 'OpenAPI global set differs')
 
     internal_y = load_yaml(root / 'specs/api/identity-service-internal.openapi.yaml')
     internal_j = load_json(root / 'specs/api/identity-service-internal.openapi.json')

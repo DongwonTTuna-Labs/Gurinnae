@@ -46,6 +46,8 @@ gateway_port="$(free_port)"
 provider_key="runtime-openai-key-never-persist"
 
 AI_PROVIDER_TEST_PORT="$provider_port" AI_PROVIDER_EXPECTED_KEY="$provider_key" \
+AI_PROVIDER_EVIDENCE_ID="71000000-0000-4000-8000-000000000004" \
+AI_PROVIDER_EVIDENCE_LOCATOR="page:7" \
   bun run tests/integration/ai-provider-upstream.ts >"$temp/provider.log" 2>&1 &
 provider_pid=$!
 GURINE_ENV=test HTTP_BIND="127.0.0.1:$gateway_port" OIDC_ISSUER_HOST=localhost \
@@ -75,9 +77,10 @@ VALUES('71000000-0000-4000-8000-000000000001','production-egress','production-eg
 INSERT INTO editorial.cases(id,title,investigation_state,publication_state,summary)
 VALUES('71000000-0000-4000-8000-000000000002','Production egress case','INVESTIGATING','NEVER_PUBLISHED','Provider gateway gate');
 INSERT INTO raw.source_documents(id,source_id,external_id,retrieved_at,content_type,content_sha256,
-  content_size_bytes,object_key,status,parser_name,parser_version,prompt_injection_flags,updated_at)
+  content_size_bytes,object_key,status,parser_name,parser_version,prompt_injection_flags,updated_at,asset_id,asset_revision)
 VALUES('71000000-0000-4000-8000-000000000003','production-egress','evidence','2026-07-12T00:00:00Z','application/json',
-  repeat('a',64),128,'raw/provider-evidence.json','PARSED','json','runtime-v1','[]','2026-07-12T00:00:00Z');
+  repeat('a',64),128,'raw/provider-evidence.json','PARSED','json','runtime-v1','[]','2026-07-12T00:00:00Z',
+  '71000000-0000-4000-8000-000000000003',1);
 INSERT INTO editorial.evidence(id,case_id,evidence_type,title,source_document_id,source_locator,
   content_sha256,verification_status,verified_by,verified_at,created_by,updated_at)
 VALUES('71000000-0000-4000-8000-000000000004','71000000-0000-4000-8000-000000000002','DOCUMENT','Provider evidence',
@@ -85,9 +88,22 @@ VALUES('71000000-0000-4000-8000-000000000004','71000000-0000-4000-8000-000000000
   '2026-07-12T00:00:00Z','71000000-0000-4000-8000-000000000001','2026-07-12T00:00:00Z');
 INSERT INTO ops.provider_configs(id,provider_type,name,enabled,routing_policy,secret_reference,data_retention_policy)
 VALUES('71000000-0000-4000-8000-000000000005','openai','OpenAI Runtime',true,
-  jsonb_build_object('targetUrl','http://localhost:$provider_port/agent','model','approved-runtime-v1'),
+  jsonb_build_object('targetUrl','http://localhost:$provider_port/agent','model','approved-runtime-v1',
+    'pricing',jsonb_build_object('currency','KRW','pricingVersion','runtime-v1',
+      'pricingSha256','b8b195a7f9fc71a2adb5dec8f49be073b75db56365fa6939917b3b626024ea20',
+      'inputMicrosKrwPerUnit',8500000,'outputMicrosKrwPerUnit',8500000)),
   'env:OPENAI_API_KEY','NO_RETENTION');
+INSERT INTO ops.budget_limits(scope,daily_limit,monthly_limit,currency,updated_by)
+VALUES
+  ('ENVIRONMENT:PRODUCTION',100000,1000000,'KRW','71000000-0000-4000-8000-000000000001'),
+  ('PROVIDER:71000000-0000-4000-8000-000000000005',100000,1000000,'KRW','71000000-0000-4000-8000-000000000001'),
+  ('CASE:71000000-0000-4000-8000-000000000002',100000,1000000,'KRW','71000000-0000-4000-8000-000000000001');
 SQL
+
+sed -e "s/:'document_id'/'71000000-0000-4000-8000-000000000003'/g" \
+    -e "s/:'evidence_id'/'71000000-0000-4000-8000-000000000004'/g" \
+    -e "s/:'actor_id'/'71000000-0000-4000-8000-000000000001'/g" db/test-fixtures/analysis-source-graph.sql \
+  | docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" >/dev/null
 
 snapshot="$(docker exec "$container" psql -At -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
   "SELECT jsonb_build_object('caseId','71000000-0000-4000-8000-000000000002','evidence',(SELECT jsonb_agg(jsonb_build_object('id',e.id,'contentSha256',btrim(e.content_sha256::text),'locator',e.source_locator,'updatedAt',e.updated_at,'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb)) ORDER BY e.id) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.id='71000000-0000-4000-8000-000000000004'),'objective','production provider runtime')")"
@@ -116,7 +132,7 @@ BEGIN
   IF (SELECT status FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'SUCCEEDED'
      OR (SELECT provider FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'openai'
      OR (SELECT model FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'approved-runtime-v1'
-     OR (SELECT actual_cost FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>17
+     OR (SELECT actual_cost FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>34
      OR (SELECT output_payload->>'status' FROM ops.agent_runs WHERE id='71000000-0000-4000-8000-000000000006')<>'COMPLETED' THEN
     RAISE EXCEPTION 'production provider egress run did not complete';
   END IF;
@@ -126,6 +142,20 @@ BEGIN
        WHERE agent_run_id='71000000-0000-4000-8000-000000000006'
          AND citation_checks @> '[{"evidence_id":"71000000-0000-4000-8000-000000000004","locator":"page:7"}]') THEN
     RAISE EXCEPTION 'provider cost or verified citation was not persisted';
+  END IF;
+  IF (SELECT count(*) FROM ops.agent_source_uses WHERE agent_run_id='71000000-0000-4000-8000-000000000006' AND use_kind='TOOL_QUERY')<>1
+     OR (SELECT count(*) FROM ops.agent_source_uses WHERE agent_run_id='71000000-0000-4000-8000-000000000006' AND use_kind='MODEL_INPUT')<>2
+     OR EXISTS(SELECT 1 FROM ops.agent_provider_turns t JOIN ops.agent_source_uses su ON su.agent_run_id=t.agent_run_id AND su.provider_turn_id=t.provider_turn_id WHERE t.agent_run_id='71000000-0000-4000-8000-000000000006' AND su.use_kind='MODEL_INPUT' AND su.provider_receipt_id IS DISTINCT FROM t.provider_receipt_id) THEN
+    RAISE EXCEPTION 'provider source-use lineage is incomplete';
+  END IF;
+  IF (SELECT count(*) FROM ops.budget_reservation_ledger_entries
+      WHERE reservation_id IN (SELECT id FROM ops.budget_reservations
+        WHERE job_id=(SELECT id FROM ops.jobs WHERE dedupe_key='production-egress-agent')))<>24
+     OR EXISTS(SELECT 1 FROM ops.budget_reservation_ledger_entries
+       WHERE reservation_id IN (SELECT id FROM ops.budget_reservations
+         WHERE job_id=(SELECT id FROM ops.jobs WHERE dedupe_key='production-egress-agent'))
+         AND available_after < 0) THEN
+    RAISE EXCEPTION 'budget six-cell reservation ledger is incomplete';
   END IF;
   IF EXISTS(SELECT 1 FROM ops.jobs WHERE payload::text LIKE '%runtime-openai-key-never-persist%'
             OR COALESCE(last_error_detail,'') LIKE '%runtime-openai-key-never-persist%')

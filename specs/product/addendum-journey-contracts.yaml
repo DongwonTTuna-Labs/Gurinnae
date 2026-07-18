@@ -1,0 +1,3460 @@
+schema_version: 1
+specification_version: 13.0.0+owner-journey-authority.1
+status: REVIEW_REQUIRED
+authority_mode: ADDITIVE_OWNER_DECISION
+authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+adoption:
+  decision_artifact_id: gurinnae-journey-graph-owner-decisions-v1
+  decision_artifact_sha256: c0e35f285cba56b6b3e62c0b07eeb1280ba00abbd1f24f055cbbfbd719b063b8
+  decision: ADOPT_EXACT_GRAPH_AND_COMPILED_REGISTRIES
+  adopted_by: root-product-owner-codex
+  open_decisions: 0
+source_pins_role: ADOPTION_INPUT_SNAPSHOT_BEFORE_CANONICAL_INTEGRATION
+source_pins:
+- path: DESIGN.md
+  sha256: 4573de892087ddf717d5b974a379d48c1f923a8c2492c7982bedde792c7db40f
+- path: specs/ui/journey-graph-contracts.yaml
+  sha256: fd9187324535380332b7065f22e678e172f84517d005ed9ff3fead1a97986feb
+- path: specs/ui/screen-catalog.yaml
+  sha256: e2dc57a4b6092105b088b84723456037bf2892f168afd542056c23284e6bff2b
+- path: specs/ui/screen-action-contracts.yaml
+  sha256: eeeb632a12ced0681c7cf3e5cd351378b6ba9a470c659c955717ce3a81d8109a
+- path: specs/ui/effective-screen-contracts.yaml
+  sha256: 9165eba8d31cd2d4486b95d80e888c109c3d66eb32e82a64bfb9abe2bde4da9c
+- path: specs/api/operation-contracts.yaml
+  sha256: 665495729bd5a6ecfb8828583689a5ffc3ed18642b8d4aa7690da1834c1d987a
+- path: specs/product/addendum-operation-contracts.yaml
+  sha256: 4248ed4d645cb228800d8428aac6faff4cb8f216a6222e176e3cd4f3faf537ec
+- path: specs/domain/state-machines.yaml
+  sha256: 8325ece11d5847dccc8de409293a9054704f6b643ff7627342ecb9a40d947b58
+- path: specs/product/addendum-state-machines.yaml
+  sha256: 37d6a9e8a2aed945953d7bbffe5b951a13772211b060e2e142d611338e0410ec
+- path: specs/events/event-catalog.yaml
+  sha256: 13d8253d807d1336c196dfe9de67d6b8de786d9e814dfb734af40706607b1c06
+- path: specs/product/addendum-event-contracts.yaml
+  sha256: f89ca4354764fd353c849cd2f31858c84b95e5b6dc750c5a8bb31f7d3b7488df
+- path: specs/product/business-model-contract.yaml
+  sha256: 04fd27d8b03bde4d0fda2d4d074454362c5da73541debbbe337380da0e9c0c43
+- path: specs/application/command-semantics.yaml
+  sha256: b5c0ade4a0d27b5877db378398c7aca4853e693bb6748fea21ac3f5613f7c7e5
+- path: specs/product/addendum-command-semantics.yaml
+  sha256: f2e8405151b22acea4bde0c3102b1cb025d2ee4721cbe347fc253069b6f18c6f
+- path: specs/product/addendum-approval-policy.yaml
+  sha256: cb5f1fad6473975d1d950d94a2dec6a45c2b4ea2f7b8128703d5cb947ecedb51
+rules:
+- Every edge is an authored row. No enumerate(step-list), regex-derived resolver, fallback handler, or dynamic workflow DSL
+  may create an edge.
+- Branch selectors and convergence inputs are closed maps in branch_contracts; an unlisted selector is a contract error and
+  writes no journey receipt.
+- Resolver edge IDs and edge-registry IDs are set-equal. One edge has exactly one compiled resolver entry even when that resolver
+  owns a closed selector map.
+- Every reachable nonterminal node has at least one outgoing edge, and every reachable node has a finite path to SUCCESS_TERMINAL,
+  NONVALUE_TERMINAL, or RECOVERY_TERMINAL.
+- RECONCILIATION_REQUIRED is a nonterminal node in J-10 and J-11. It cannot be relabelled as success, failure, cancellation,
+  paid value, or a completed journey.
+- Cross-journey entry and return preserve root object ID, version, digest, current owner, due/SLO, last receipt, origin screen,
+  safe return route, and journey-instance linkage.
+- J-12 begins with a visible OPS-004 current-health answer, then an INT-002 owned remediation acknowledgement, then signed
+  qualification, CONFIGURED and DATA_READY evidence, before paid work starts.
+- J-12 stages other than QUALIFIED are read projections. No commercial stage row or stage event is created.
+- J-11 communication edges E19 through E23 remain five separate physical milestones: intent, delivery claim, provider observation,
+    reconciliation, and origin receipt return.
+- The 94 route set is byte-for-byte unchanged. New work is a section/action/view-model refinement on an existing route.
+counts:
+  journeys: 12
+  edges: 129
+  branches: 17
+  handoff_kinds: 20
+  cross_journey_arcs: 12
+  routes: 94
+edge_count_contract:
+  fixed_equation: 47 + 17 + 29 + 36 = 129
+  j12_equation: E01..E08=8 + E09A..E09B=2 + E10..E17=8 + E18A..E18D=4 + E19A..E19C=3 + E20=1 + E21..E30=10 = 36
+  e20_rule: J-12-E20 remains one authored edge and one resolver-registry row. Its closed branch contract owns the typed ACTION_RETRY_AUTHORIZED
+    and DELIVERY_RETRY_AUTHORIZED selectors. cross_journey_arc_contracts has two selector-specialization rows only so each
+    selector binds a different callee entry and handoff kind; those rows are return-binding metadata and are not additional
+    edge IDs.
+  rejected_suffix_edge: J-12-E20A or J-12-E20B is forbidden because it would create a thirty-seventh J-12 edge, violate DESIGN.md
+    E20 identity, and change the fixed 129-edge registry without adding a distinct user or domain transition.
+closed_enums:
+  node_kind:
+  - SCREEN
+  - MILESTONE
+  - BRANCH
+  - CROSS_JOURNEY
+  - RECOVERY
+  - TERMINAL
+  terminal_class:
+  - NONTERMINAL
+  - SUCCESS_TERMINAL
+  - NONVALUE_TERMINAL
+  - RECOVERY_TERMINAL
+  - BY_SELECTOR
+  authority_status:
+  - EXISTING
+  - EXISTING_DESIGN_ONLY
+  - NEW_COMPILED_REGISTRY_REQUIRED
+  - NEW_FUNCTION_REQUIRED
+  - REPLACE_BYPASS
+  handler_status:
+  - DECLARED_RUNTIME_OPEN
+  - NEW_REQUIRED
+journey_contracts:
+  J-01:
+    entry: PUB-002
+    success: PUB-006::locator-understood
+    accountable_owner: public-data-product-and-editorial
+  J-02:
+    entry: PUB-004
+    success: PUB-018::reproduction-bundle-receipt
+    accountable_owner: public-data-product
+  J-03:
+    entry: CAS-009
+    success: CAS-008::submission-owned
+    accountable_owner: editorial-response-duty
+  J-04:
+    entry: PUB-027
+    success: PUB-019::request-linked-decision
+    accountable_owner: editorial-correction-duty
+  J-05:
+    entry: SIG-001
+    success: CAS-002::triage-receipt-owned
+    accountable_owner: triage-lead-and-acknowledged-owner
+  J-06:
+    entry: CAS-002
+    success: REV-002::review-ready-snapshot
+    accountable_owner: lead-investigator-and-editorial-readiness
+  J-07:
+    entry: REV-001
+    success: PUB-004::public-smoke-receipt
+    accountable_owner: independent-reviewer-and-distinct-publisher
+  J-08:
+    entry: COR-001
+    success: PUB-018::correction-visible-and-notified
+    accountable_owner: editorial-correction-and-legal-when-required
+  J-09:
+    entry: SRC-005
+    success: OPS-001::freshness-restored-or-degraded
+    accountable_owner: data-operations
+  J-10:
+    entry: CAS-010
+    success: CAS-004::promoted-evidence-visible
+    accountable_owner: lead-investigator-or-evidence-curator
+  J-11:
+    entry: J-11::ORIGIN
+    success: J-11::SUCCEEDED
+    accountable_owner: proposal-owner-reviewer-executor-or-reconciliation-owner
+  J-12:
+    entry: OPS-004
+    success: AUD-001::paid-retention-audit-verified
+    accountable_owner: product-pdm-with-sales-cs-finance-data-sre-backups
+edge_failure_contract:
+  applicability: every primary edge row unless a stricter operation/state contract applies
+  dispositions:
+    CANCELLED:
+      terminal_class: NONVALUE_TERMINAL
+      requires:
+      - reason
+      - actor
+      - effective_at
+      - receipt_id
+      - receipt_digest
+    EXPIRED:
+      terminal_class: NONVALUE_TERMINAL
+      requires:
+      - scope
+      - expired_at
+      - owner
+      - receipt_id
+      - receipt_digest
+    REJECTED:
+      terminal_class: NONVALUE_TERMINAL
+      requires:
+      - reason_code
+      - reason_digest
+      - decided_at
+      - receipt_id
+      - receipt_digest
+    ACCESS_UNAVAILABLE:
+      terminal_class: RECOVERY_TERMINAL
+      requires:
+      - safe_message
+      - support_reference
+      - safe_return_route
+    CONFLICT:
+      terminal_class: RECOVERY_TERMINAL
+      requires:
+      - attempted_version
+      - current_version
+      - readable_diff
+      - preserved_input
+    PARTIAL_EFFECT:
+      terminal_class: RECOVERY_TERMINAL
+      requires:
+      - possible_effect
+      - known_receipt_set_digest
+      - reconciliation_owner
+      - retry_fence
+  named_specializations:
+    J-10::DEPENDENCY_UNAVAILABLE:
+      base_disposition: ACCESS_UNAVAILABLE
+      terminal_class: RECOVERY_TERMINAL
+      applies_to: every J-10 edge with an unavailable required provider tool parser projection or persistence dependency
+  rule: These are typed edge exits, not additional happy-path edge IDs. They are included in terminal reachability but never
+    counted in the fixed 129-edge registry.
+edge_tuple_fields:
+- edge_id
+- edge_name
+- from_node
+- from_node_kind
+- to_node
+- to_node_kind
+- edge_kind
+- resolver_kind
+- authority_key
+- handler_id
+- source_screen
+- destination_screen
+- cross_journey_return
+- terminal_class
+- authority_status
+- handler_status
+edge_registry:
+  J-01:
+  - - J-01-E01
+    - OPEN_CASE_RESULT
+    - PUB-002
+    - SCREEN
+    - PUB-004
+    - SCREEN
+    - ROW_NAVIGATION
+    - VISIBLE_ACTION
+    - PUB-002.open-case-result
+    - ui__pub_002__open_case_result
+    - PUB-002
+    - PUB-004
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-01-E02
+    - OPEN_EVIDENCE
+    - PUB-004
+    - SCREEN
+    - PUB-004::evidence-open
+    - MILESTONE
+    - LOCAL_ACTION
+    - VISIBLE_ACTION
+    - PUB-004.open-evidence
+    - ui__pub_004__open_evidence
+    - PUB-004
+    - PUB-004
+    - optional J-04 entry uses existing PUB-004.request-correction and returns through J-08 to the same case revision
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-01-E03
+    - REPRODUCE_CALCULATION
+    - PUB-004::evidence-open
+    - MILESTONE
+    - PUB-006
+    - SCREEN
+    - OVERLAY_NAVIGATION
+    - VISIBLE_ACTION
+    - PUB-004.reproduce-calculation
+    - ui__pub_004__reproduce_calculation
+    - PUB-004
+    - PUB-006
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-01-E04
+    - VERIFY_LOCATOR_UNDERSTOOD
+    - PUB-006
+    - SCREEN
+    - PUB-006::locator-understood
+    - TERMINAL
+    - USER_VERIFICATION
+    - VERIFICATION_HANDLER
+    - verify__pub_006__state_fact_unknown_locator
+    - verify__pub_006__state_fact_unknown_locator
+    - PUB-006
+    - PUB-006
+    - null
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  J-02:
+  - - J-02-E01
+    - OPEN_FIXED_REVISION
+    - PUB-004
+    - SCREEN
+    - PUB-005
+    - SCREEN
+    - OVERLAY_NAVIGATION
+    - VISIBLE_ACTION
+    - PUB-004.open-fixed-revision
+    - ui__pub_004__open_fixed_revision
+    - PUB-004
+    - PUB-005
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-02-E02
+    - REPRODUCE_FIXED_REVISION
+    - PUB-005
+    - SCREEN
+    - PUB-006
+    - SCREEN
+    - OVERLAY_NAVIGATION
+    - VISIBLE_ACTION
+    - PUB-005.reproduce-fixed-revision
+    - ui__pub_005__reproduce_fixed_revision
+    - PUB-005
+    - PUB-006
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-02-E03
+    - DOWNLOAD_REPRODUCTION_BUNDLE
+    - PUB-006
+    - SCREEN
+    - PUB-006::bundle-downloaded
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - downloadCaseReproducibility
+    - operation__download_case_reproducibility
+    - PUB-006
+    - PUB-006
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-02-E04
+    - VIEW_CORRECTION_CONTEXT
+    - PUB-006::bundle-downloaded
+    - MILESTONE
+    - PUB-018
+    - SCREEN
+    - OVERLAY_NAVIGATION
+    - VISIBLE_ACTION
+    - PUB-006.view-correction-context
+    - ui__pub_006__view_correction_context
+    - PUB-006
+    - PUB-018
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-02-E05
+    - VERIFY_REPRODUCTION_RECEIPT
+    - PUB-018
+    - SCREEN
+    - PUB-018::reproduction-bundle-receipt
+    - TERMINAL
+    - USER_VERIFICATION
+    - VERIFICATION_HANDLER
+    - verify__pub_018__checksum_rights_correction
+    - verify__pub_018__checksum_rights_correction
+    - PUB-018
+    - PUB-018
+    - null
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  J-03:
+  - - J-03-E01
+    - APPROVE_AND_DELIVER_RESPONSE_REQUEST
+    - CAS-009
+    - SCREEN
+    - J-11::ORIGIN[CAS-009]
+    - CROSS_JOURNEY
+    - CROSS_JOURNEY_HANDOFF
+    - COMPILED_CROSS_JOURNEY_BINDER
+    - J11_ACTION_ORIGIN_PLACEMENT_SET_V1#CAS-009+J11_COMMUNICATION_EXECUTOR_REGISTRY_V1#createResponseRequest+materializeResponseRequestSent
+    - journey__enter_j11_response_request_v1
+    - CAS-009
+    - RSP-001
+    - J-11 communication SUCCEEDED plus materializeResponseRequestSent receipt returns to RSP-001; direct browser createResponseRequest
+      effect is forbidden
+    - NONTERMINAL
+    - REPLACE_BYPASS
+    - NEW_REQUIRED
+  - - J-03-E02
+    - CONTINUE_FROM_ACCESS
+    - RSP-001
+    - SCREEN
+    - RSP-002
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - RSP-001.continue
+    - ui__rsp_001__continue
+    - RSP-001
+    - RSP-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-03-E03
+    - START_ANSWER
+    - RSP-002
+    - SCREEN
+    - RSP-003
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - RSP-002.start-answer
+    - ui__rsp_002__start_answer
+    - RSP-002
+    - RSP-003
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-03-E04
+    - OPEN_ATTACHMENTS
+    - RSP-003
+    - SCREEN
+    - RSP-004
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - RSP-003.next
+    - ui__rsp_003__next
+    - RSP-003
+    - RSP-004
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-03-E05
+    - OPEN_SUBMISSION_REVIEW
+    - RSP-004
+    - SCREEN
+    - RSP-005
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - RSP-004.next
+    - ui__rsp_004__next
+    - RSP-004
+    - RSP-005
+    - extension branch uses RSP-007 and returns to the same draft generation before this edge
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-03-E06
+    - SUBMIT_RESPONSE
+    - RSP-005
+    - SCREEN
+    - RSP-006
+    - SCREEN
+    - COMMAND_SUCCESS
+    - OPERATION
+    - submitResponse
+    - operation__submit_response
+    - RSP-005
+    - RSP-006
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-03-E07
+    - MATERIALIZE_OWNED_INTAKE
+    - RSP-006
+    - SCREEN
+    - CAS-008::submission-owned
+    - TERMINAL
+    - MATERIALIZATION
+    - MATERIALIZER
+    - workflow.response_submitted.v2
+    - materialize__response_submission_intake
+    - RSP-006
+    - CAS-008
+    - return to J-06 at CAS-008 with the same case and response receipt
+    - SUCCESS_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  J-04:
+  - - J-04-E01
+    - CREATE_CORRECTION_REQUEST
+    - PUB-027
+    - SCREEN
+    - PUB-028
+    - SCREEN
+    - COMMAND_SUCCESS
+    - OPERATION
+    - createCorrectionRequest
+    - operation__create_correction_request
+    - PUB-027
+    - PUB-028
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-04-E02
+    - MATERIALIZE_CORRECTION_INTAKE
+    - PUB-028
+    - SCREEN
+    - COR-001
+    - SCREEN
+    - MATERIALIZATION
+    - MATERIALIZER
+    - workflow.correction_request_submitted.v1
+    - materialize__correction_request_intake
+    - PUB-028
+    - COR-001
+    - enters J-08 on the same immutable request receipt
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-04-E03
+    - OPEN_CORRECTION
+    - COR-001
+    - SCREEN
+    - COR-002
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - COR-001.open-correction
+    - ui__cor_001__open_correction
+    - COR-001
+    - COR-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-04-E04
+    - RESOLVE_CORRECTION_REQUEST
+    - COR-002
+    - SCREEN
+    - PUB-019
+    - SCREEN
+    - PROJECTION
+    - OPERATION_HANDLER
+    - resolveCorrectionRequest
+    - project__resolved_correction_request
+    - COR-002
+    - PUB-019
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-04-E05
+    - VERIFY_REQUEST_DECISION_LINK
+    - PUB-019
+    - SCREEN
+    - PUB-019::request-linked-decision
+    - TERMINAL
+    - USER_VERIFICATION
+    - VERIFICATION_HANDLER
+    - verify__pub_019__receipt_decision_revision_link
+    - verify__pub_019__receipt_decision_revision_link
+    - PUB-019
+    - PUB-019
+    - J-08 completion returns to J-01 through PUB-019.open-case
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  J-05:
+  - - J-05-E01
+    - OPEN_SIGNAL
+    - SIG-001
+    - SCREEN
+    - SIG-002
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - SIG-001.open-signal
+    - ui__sig_001__open_signal
+    - SIG-001
+    - SIG-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-05-E02
+    - RECORD_TRIAGE_DECISION
+    - SIG-002
+    - SCREEN
+    - SIG-002::triage-receipt
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - triageSignal
+    - operation__triage_signal
+    - SIG-002
+    - SIG-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-05-E03
+    - ROUTE_TRIAGE_BRANCH
+    - SIG-002::triage-receipt
+    - MILESTONE
+    - '@branch:J-05-E03'
+    - BRANCH
+    - CONDITIONAL_DESTINATION
+    - RECEIPT_ROUTER
+    - triageSignal#closed-five-way-result
+    - route__j05__triage_result_v1
+    - SIG-002
+    - '@branch:J-05-E03'
+    - null
+    - BY_SELECTOR
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-05-E04
+    - ACK_OWNED_CASE_OR_TASK
+    - CAS-002::case-ownership-pending|INT-002::signal-enrichment-pending
+    - BRANCH
+    - CAS-002::triage-receipt-owned
+    - TERMINAL
+    - HANDOFF_ACK
+    - OPERATION
+    - decideJourneyHandoff#ACKNOWLEDGE[HS-03|HS-04]
+    - route__j05__owned_handoff_ack_v1
+    - CAS-002|INT-002
+    - CAS-002|INT-002
+    - null
+    - SUCCESS_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  J-06:
+  - - J-06-E01
+    - OPEN_LINKED_SIGNALS
+    - CAS-002
+    - SCREEN
+    - CAS-003
+    - SCREEN
+    - TASK_NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-002.open-linked-signals
+    - ui__cas_002__open_linked_signals
+    - CAS-002
+    - CAS-003
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-06-E02
+    - OPEN_EVIDENCE_MATRIX
+    - CAS-003
+    - SCREEN
+    - CAS-004
+    - SCREEN
+    - TASK_NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-003.open-evidence-matrix
+    - ui__cas_003__open_evidence_matrix
+    - CAS-003
+    - CAS-004
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-06-E03
+    - OPEN_EVIDENCE_OR_AI_RESEARCH
+    - CAS-004
+    - SCREEN
+    - '@branch:J-06-E03'
+    - BRANCH
+    - CONDITIONAL_DESTINATION
+    - VISIBLE_ACTION_ROUTER
+    - CAS-004.open-evidence|CAS-004.start-agent-research
+    - route__j06__evidence_or_j10_v1
+    - CAS-004
+    - CAS-005|CAS-010
+    - J-10 success returns to CAS-004 with promoted Evidence ID/version/digest; every J-10 nonvalue terminal returns a reasoned
+      J-06 blocker
+    - BY_SELECTOR
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-06-E04
+    - OPEN_HYPOTHESIS_BOARD
+    - CAS-005
+    - SCREEN
+    - CAS-007
+    - SCREEN
+    - TASK_NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-005.open-hypotheses
+    - ui__cas_005__open_hypotheses
+    - CAS-005
+    - CAS-007
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-06-E05
+    - OPEN_CLAIM_EDITOR
+    - CAS-007
+    - SCREEN
+    - CAS-006
+    - SCREEN
+    - TASK_NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-007.open-claims
+    - ui__cas_007__open_claims
+    - CAS-007
+    - CAS-006
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-06-E06
+    - OPEN_RESPONSE_WORKSPACE
+    - CAS-006
+    - SCREEN
+    - CAS-008
+    - SCREEN
+    - TASK_NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-006.open-responses
+    - ui__cas_006__open_responses
+    - CAS-006
+    - CAS-008
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-06-E07
+    - REQUEST_RESPONSE_OR_REVIEW_READINESS
+    - CAS-008
+    - SCREEN
+    - '@branch:J-06-E07'
+    - BRANCH
+    - CONDITIONAL_DESTINATION
+    - VISIBLE_ACTION_ROUTER
+    - CAS-008.new-request|CAS-008.open-review-readiness
+    - route__j06__response_or_readiness_v1
+    - CAS-008
+    - CAS-009|CAS-013
+    - J-03 success returns to CAS-008 and this edge is evaluated again against the same case version
+    - BY_SELECTOR
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-06-E08
+    - CREATE_REVIEW_SNAPSHOT
+    - CAS-013
+    - SCREEN
+    - CAS-014
+    - SCREEN
+    - COMMAND_SUCCESS
+    - OPERATION
+    - createReviewSnapshot
+    - operation__create_review_snapshot
+    - CAS-013
+    - CAS-014
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-06-E09
+    - HANDOFF_REVIEW_READY_SNAPSHOT
+    - CAS-014
+    - SCREEN
+    - REV-002::review-ready-snapshot
+    - TERMINAL
+    - HANDOFF_AND_NAVIGATION
+    - JOURNEY_HANDOFF_ROUTINE
+    - ops.request_journey_handoff_v1#HS-05
+    - handoff__j06__editorial_review_assignment_v1
+    - CAS-014
+    - REV-002
+    - enters J-07 with the exact review snapshot and acknowledged HS-05 owner
+    - SUCCESS_TERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  J-07:
+  - - J-07-E01
+    - OPEN_ASSIGNED_REVIEW
+    - REV-001
+    - SCREEN
+    - REV-002
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - REV-001.open-review
+    - ui__rev_001__open_review
+    - REV-001
+    - REV-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-07-E02
+    - ROUTE_REVIEW_DECISION
+    - REV-002
+    - SCREEN
+    - '@branch:J-07-E02'
+    - BRANCH
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT_ROUTER
+    - submitReview#APPROVE|CHANGES_REQUIRED|REJECT|RECUSE
+    - route__j07__review_decision_v1
+    - REV-002
+    - REV-003|CAS-002|REV-001
+    - CHANGES_REQUIRED returns an acknowledged HS-06 task to J-06; RECUSE creates generation+1 replacement assignment
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-07-E03
+    - ENTER_PUBLICATION_ACTION_SPINE
+    - REV-003
+    - SCREEN
+    - J-11::ORIGIN[REV-003]
+    - CROSS_JOURNEY
+    - CROSS_JOURNEY_HANDOFF
+    - COMPILED_CROSS_JOURNEY_BINDER
+    - J11_ACTION_ORIGIN_PLACEMENT_SET_V1#REV-003[PUBLICATION]
+    - journey__enter_j11_publication_v1
+    - REV-003
+    - REV-003
+    - only J-11 PUBLICATION SUCCEEDED returns REV-003::publication-receipt; direct publishCase is fenced
+    - NONTERMINAL
+    - REPLACE_BYPASS
+    - NEW_REQUIRED
+  - - J-07-E04
+    - PROJECT_PUBLIC_REVISION
+    - REV-003::publication-receipt
+    - MILESTONE
+    - PUB-004
+    - SCREEN
+    - PROJECTION
+    - MATERIALIZER
+    - projection.publication_revision_created.v1
+    - materialize__public_case_projection
+    - REV-003
+    - PUB-004
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-07-E05
+    - VERIFY_PUBLIC_SMOKE
+    - PUB-004
+    - SCREEN
+    - PUB-004::public-smoke-receipt
+    - TERMINAL
+    - SMOKE_VERIFICATION
+    - VERIFICATION_HANDLER
+    - verify__pub_004__revision_evidence_route
+    - verify__pub_004__revision_evidence_route
+    - PUB-004
+    - PUB-004
+    - returns to J-01 at the same public case revision
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  J-08:
+  - - J-08-E01
+    - OPEN_CORRECTION_WORKSPACE
+    - COR-001
+    - SCREEN
+    - COR-002
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - COR-001.open-correction
+    - ui__cor_001__open_correction
+    - COR-001
+    - COR-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-08-E02
+    - COMMIT_CORRECTION_DECISION
+    - COR-002
+    - SCREEN
+    - PUB-019
+    - SCREEN
+    - COMMAND_BRANCH
+    - OPERATION_ALTERNATIVES
+    - createCorrection|resolveCorrectionRequest
+    - operation__correction_create_or_resolve
+    - COR-002
+    - PUB-019
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-08-E03
+    - PROJECT_CORRECTION_FEED
+    - PUB-019
+    - SCREEN
+    - PUB-018
+    - SCREEN
+    - FEED_PROJECTION
+    - MATERIALIZER
+    - projection.publication_revision_created.v1#CORRECTED|RETRACTED
+    - materialize__correction_feed_entry
+    - PUB-019
+    - PUB-018
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-08-E04
+    - DELIVER_CORRECTION_NOTICE
+    - PUB-018
+    - SCREEN
+    - PUB-018::correction-visible-and-notified
+    - TERMINAL
+    - DELIVERY_RECEIPT
+    - DELIVERY_HANDLER
+    - communication.delivery_receipt_recorded.v1#correction-notice-terminal
+    - delivery__subscriber_correction_notice
+    - PUB-018
+    - PUB-018
+    - returns to J-01 through PUB-019.open-case without changing the historical revision
+    - SUCCESS_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  J-09:
+  - - J-09-E01
+    - APPROVE_SCHEMA_MAPPING
+    - SRC-005
+    - SCREEN
+    - SRC-006
+    - SCREEN
+    - COMMAND_SUCCESS
+    - OPERATION
+    - approveSchemaMapping
+    - operation__approve_schema_mapping
+    - SRC-005
+    - SRC-006
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-09-E02
+    - START_BACKFILL
+    - SRC-006
+    - SCREEN
+    - SRC-006::replay-receipt
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - startBackfill
+    - operation__start_backfill
+    - SRC-006
+    - SRC-006
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-09-E03
+    - PROJECT_SOURCE_HEALTH
+    - SRC-006::replay-receipt
+    - MILESTONE
+    - OPS-001
+    - SCREEN
+    - OBSERVABILITY_HANDOFF
+    - OBSERVABILITY_HANDLER
+    - source.backfill_requested.v1+source-run-terminal-receipt
+    - observe__source_health_and_freshness
+    - SRC-006
+    - OPS-001
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-09-E04
+    - VERIFY_FRESHNESS_RESTORED_OR_DEGRADED
+    - OPS-001
+    - SCREEN
+    - OPS-001::freshness-restored-or-degraded
+    - TERMINAL
+    - OPERATOR_VERIFICATION
+    - VERIFICATION_HANDLER
+    - verify__ops_001__checkpoint_dedupe_freshness
+    - verify__ops_001__checkpoint_dedupe_freshness
+    - OPS-001
+    - OPS-001
+    - returns to every waiting DATA_READY/freshness consumer including J-12-E07 with the same source receipt
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  J-10:
+  - - J-10-E01
+    - START_RUN
+    - CAS-010
+    - SCREEN
+    - CAS-010::run-created
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - startAgentRun
+    - operation__start_agent_run
+    - CAS-010
+    - CAS-010
+    - entry may originate from J-06-E03 or J-12-E09A and retains that caller as return context
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E02
+    - OPEN_RUN
+    - CAS-010::run-created
+    - MILESTONE
+    - CAS-011
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-010.open-run
+    - ui__cas_010__open_run
+    - CAS-010
+    - CAS-011
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-10-E03
+    - TERMINAL_OBSERVED
+    - CAS-011
+    - SCREEN
+    - '@branch:J-10-E03'
+    - BRANCH
+    - OBSERVATION_BRANCH
+    - EVENT_PROJECTION
+    - agent.run_control_changed.v2#SETTLED
+    - journey__j10__route_settled_run_v2
+    - CAS-011
+    - CAS-011
+    - null
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E04
+    - CANCEL_REQUESTED_BY_HUMAN
+    - CAS-010::run-created|CAS-011
+    - BRANCH
+    - CAS-011::cancel-control-receipt
+    - MILESTONE
+    - COMMAND_BRANCH
+    - OPERATION
+    - cancelAgentRun@CAS-010.runs|cancelAgentRun@CAS-011.model
+    - journey__j10__cancel_by_visible_origin_v2
+    - CAS-010|CAS-011
+    - CAS-011
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E05
+    - PRE_DISPATCH_CANCELLED
+    - CAS-011::cancel-control-receipt
+    - MILESTONE
+    - J-10::CANCELLED
+    - TERMINAL
+    - RECEIPT_BRANCH
+    - RECEIPT_ROUTER
+    - AgentRunControlReceiptV2#PRE_DISPATCH_CANCELLED
+    - route__j10__pre_dispatch_cancelled_v2
+    - CAS-011
+    - CAS-011
+    - null
+    - NONVALUE_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E06
+    - POST_DISPATCH_CANCEL_PENDING
+    - CAS-011::cancel-control-receipt
+    - MILESTONE
+    - J-10::CANCEL_REQUESTED
+    - RECOVERY
+    - RECEIPT_BRANCH
+    - RECEIPT_ROUTER
+    - AgentRunControlReceiptV2#CANCEL_REQUESTED
+    - route__j10__post_dispatch_cancel_pending_v2
+    - CAS-011
+    - CAS-011
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E07
+    - OUTCOME_AMBIGUOUS
+    - CAS-011|J-10::CANCEL_REQUESTED
+    - BRANCH
+    - J-10::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - OBSERVATION_BRANCH
+    - EVENT_PROJECTION
+    - agent.run_control_changed.v2#OUTCOME_AMBIGUOUS
+    - route__j10__outcome_ambiguous_v2
+    - CAS-011
+    - OPS-003
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E08
+    - SAFE_RETRY_AUTHORIZED
+    - J-10::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - CAS-011
+    - SCREEN
+    - PRIVATE_COMMAND_BRANCH
+    - PRIVATE_OPERATION_VARIANT
+    - reconcileAgentRun#SAFE_RETRY_AUTHORIZED
+    - private_operation__reconcile_agent_run__safe_retry_v2
+    - OPS-003
+    - CAS-011
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E09
+    - RECONCILIATION_TERMINAL
+    - J-10::CANCEL_REQUESTED|J-10::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - '@branch:J-10-E09'
+    - BRANCH
+    - PRIVATE_COMMAND_BRANCH
+    - PRIVATE_OPERATION_VARIANT
+    - reconcileAgentRun#DEFINITIVE_TERMINAL
+    - private_operation__reconcile_agent_run__terminal_v2
+    - OPS-003
+    - CAS-011
+    - null
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E10
+    - RECONCILIATION_NO_CHANGE
+    - J-10::CANCEL_REQUESTED|J-10::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - J-10::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - PRIVATE_COMMAND_BRANCH
+    - PRIVATE_OPERATION_VARIANT
+    - reconcileAgentRun#NO_CHANGE
+    - private_operation__reconcile_agent_run__no_change_v2
+    - OPS-003
+    - OPS-003
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E11
+    - ANALYSIS_VERIFIED
+    - CAS-011::settled-success-output
+    - MILESTONE
+    - '@branch:J-10-E11'
+    - BRANCH
+    - VALIDATION_BRANCH
+    - EVENT_PROJECTION
+    - agent.output_validated.v1
+    - journey__j10__verify_analysis_citations_v1
+    - CAS-011
+    - CAS-011
+    - null
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E12
+    - PROMOTION_CANDIDATE_SELECTED
+    - CAS-011::analysis-verified
+    - MILESTONE
+    - CAS-011::promotion-candidate-selected
+    - MILESTONE
+    - LOCAL_SELECTION
+    - VISIBLE_ACTION
+    - CAS-011.select-promotion-candidate
+    - ui__cas_011__select_promotion_candidate
+    - CAS-011
+    - CAS-011
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-10-E13
+    - ARTIFACT_PROMOTED
+    - CAS-011::promotion-candidate-selected
+    - MILESTONE
+    - CAS-011::promotion-receipt
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - promoteResearchArtifactToEvidence@CAS-011.citations
+    - handle__cas_011__promote_research_artifact_to_evidence__citations
+    - CAS-011
+    - CAS-011
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-10-E14
+    - OPEN_PROMOTED_EVIDENCE
+    - CAS-011::promotion-receipt
+    - MILESTONE
+    - CAS-005
+    - SCREEN
+    - RECEIPT_NAVIGATION
+    - RECEIPT_ROUTER
+    - PromoteResearchArtifactReceiptV1#validated-destination
+    - route__j10__open_promoted_evidence_v1
+    - CAS-011
+    - CAS-005
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-10-E15
+    - PROMOTION_BINDING_VERIFIED
+    - CAS-005
+    - SCREEN
+    - CAS-005::promotion-binding-verified
+    - MILESTONE
+    - USER_VERIFICATION
+    - VERIFICATION_HANDLER
+    - raw.research_artifact_promotions#evidence-candidate-key-parity
+    - verify__cas_005__promotion_binding_v1
+    - CAS-005
+    - CAS-005
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-10-E16
+    - OPEN_EVIDENCE_MATRIX
+    - CAS-005::promotion-binding-verified
+    - MILESTONE
+    - CAS-004
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-005.open-evidence-matrix
+    - ui__cas_005__open_evidence_matrix
+    - CAS-005
+    - CAS-004
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-10-E17
+    - PROMOTED_EVIDENCE_VISIBLE
+    - CAS-004
+    - SCREEN
+    - CAS-004::promoted-evidence-visible
+    - TERMINAL
+    - PROJECTION_VERIFICATION
+    - VERIFICATION_HANDLER
+    - research.artifact_promoted.v1#review-console-projection-parity
+    - verify__cas_004__promoted_evidence_visible_v1
+    - CAS-004
+    - CAS-004
+    - returns to J-06-E03 or J-12-E10 according to the immutable caller journey context
+    - SUCCESS_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  J-11:
+  - - J-11-E01
+    - CREATE_DRAFT
+    - J-11::ORIGIN
+    - CROSS_JOURNEY
+    - J-11::DRAFT
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - COMPILED_PLACEMENT_ROUTER
+    - J11_ACTION_ORIGIN_PLACEMENT_SET_V1#createActionProposal
+    - journey__j11__create_draft_by_origin_v1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-11-E02
+    - UPDATE_DRAFT
+    - J-11::DRAFT
+    - MILESTONE
+    - J-11::DRAFT
+    - MILESTONE
+    - COMMAND_LOOP
+    - COMPILED_PLACEMENT_ROUTER
+    - J11_ACTION_ORIGIN_PLACEMENT_SET_V1#updateActionDraft
+    - journey__j11__update_draft_by_origin_v1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-11-E03
+    - BIND_PREVIEW
+    - J-11::DRAFT
+    - MILESTONE
+    - J-11::PREVIEW_BOUND
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - COMPILED_PLACEMENT_ROUTER
+    - J11_ACTION_ORIGIN_PLACEMENT_SET_V1#previewActionDraft
+    - journey__j11__bind_preview_by_origin_v1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-11-E04
+    - SUBMIT_FOR_REVIEW
+    - J-11::PREVIEW_BOUND
+    - MILESTONE
+    - J-11::PENDING_QUORUM
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - COMPILED_PLACEMENT_ROUTER
+    - J11_ACTION_ORIGIN_PLACEMENT_SET_V1#submitActionForReview
+    - journey__j11__submit_review_by_origin_v1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-11-E05
+    - PROJECT_ASSIGNMENT
+    - J-11::PENDING_QUORUM
+    - MILESTONE
+    - INT-002::assignment-projected
+    - MILESTONE
+    - PROJECTION
+    - EVENT_PROJECTION
+    - action.review_requested.v1#review-console-projector
+    - handle_action_review_requested_v1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-11-E06
+    - CLAIM_REVIEW
+    - INT-002::assignment-projected
+    - MILESTONE
+    - INT-002::review-in-progress
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - claimActionReview@INT-002.handoff
+    - handle__int_002__claim_action_review__handoff
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-11-E07
+    - VERIFY_EXACT_SUBJECT
+    - INT-002::review-in-progress
+    - MILESTONE
+    - INT-002::subject-verified
+    - MILESTONE
+    - USER_VERIFICATION
+    - VERIFICATION_HANDLER
+    - ApprovalBindingV1#preview-subject-digest-parity
+    - verify__int_002__action_subject_digest_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-11-E08A
+    - APPROVE_QUORUM_INCOMPLETE
+    - INT-002::subject-verified
+    - MILESTONE
+    - J-11::PENDING_QUORUM
+    - MILESTONE
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#APPROVE+QUORUM_INCOMPLETE
+    - route__j11__approve_quorum_incomplete_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E08B
+    - APPROVE_POLICY_BLOCKED
+    - INT-002::subject-verified
+    - MILESTONE
+    - J-11::POLICY_BLOCKED
+    - TERMINAL
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#APPROVE+POLICY_BLOCKED
+    - route__j11__approve_policy_blocked_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONVALUE_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E08C
+    - APPROVE_FINAL_QUEUED
+    - INT-002::subject-verified
+    - MILESTONE
+    - OPS-003::execution-queued
+    - MILESTONE
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#APPROVE+FINAL_QUORUM+QUEUED
+    - route__j11__approve_final_queued_v1
+    - INT-002
+    - OPS-003
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E08D
+    - REJECT
+    - INT-002::subject-verified
+    - MILESTONE
+    - J-11::REJECTED
+    - TERMINAL
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#REJECT
+    - route__j11__reject_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONVALUE_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E08E
+    - CHANGES_REQUIRED
+    - INT-002::subject-verified
+    - MILESTONE
+    - J-11::CHANGES_REQUIRED
+    - TERMINAL
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#CHANGES_REQUIRED
+    - route__j11__changes_required_v1
+    - INT-002
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - a new owned change-task generation may start a new J-11 instance; this proposal version is terminal
+    - RECOVERY_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E08F
+    - RECUSE
+    - INT-002::subject-verified
+    - MILESTONE
+    - INT-002::assignment-projected
+    - MILESTONE
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#RECUSE+action.review_vacancy_filled.v1
+    - route__j11__recuse_replacement_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E09
+    - CLAIM_EXECUTION
+    - OPS-003::execution-queued
+    - MILESTONE
+    - OPS-003::execution-claimed
+    - MILESTONE
+    - WORKER_TRANSITION
+    - DATABASE_ROUTINE
+    - ops.claim_action_execution_v1
+    - worker__claim_action_execution_v1
+    - OPS-003
+    - OPS-003
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-11-E10
+    - BEGIN_DISPATCH
+    - OPS-003::execution-claimed
+    - MILESTONE
+    - OPS-003::execution-dispatching
+    - MILESTONE
+    - WORKER_TRANSITION
+    - DATABASE_ROUTINE
+    - ops.begin_action_dispatch_v1
+    - worker__begin_action_dispatch_v1
+    - OPS-003
+    - OPS-003
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-11-E11
+    - RECORD_OBSERVATION
+    - OPS-003::execution-dispatching
+    - MILESTONE
+    - '@branch:J-11-E11'
+    - BRANCH
+    - WORKER_BRANCH
+    - COMPILED_EXECUTOR_AND_DATABASE_ROUTINE
+    - addendum-approval-policy.executor_catalog+ops.record_action_execution_observation_v1
+    - worker__execute_action_and_record_observation_v1
+    - OPS-003
+    - OPS-003
+    - null
+    - BY_SELECTOR
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-11-E12A
+    - CANCEL_PRE_DISPATCH
+    - OPS-003::execution-queued|OPS-003::execution-claimed
+    - BRANCH
+    - J-11::CANCELLED
+    - TERMINAL
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - cancelActionExecution#NO_DISPATCH
+    - route__j11__cancel_pre_dispatch_v1
+    - OPS-003
+    - OPS-003
+    - null
+    - NONVALUE_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E12B
+    - CANCEL_POST_DISPATCH
+    - OPS-003::execution-dispatching|J-11::RECONCILIATION_REQUIRED
+    - BRANCH
+    - J-11::CANCEL_REQUESTED
+    - RECOVERY
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - cancelActionExecution#POSSIBLE_EFFECT
+    - route__j11__cancel_post_dispatch_v1
+    - OPS-003
+    - OPS-003
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E13
+    - SAFE_RETRY
+    - J-11::RETRYABLE_FAILED
+    - RECOVERY
+    - OPS-003::execution-queued
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - retryActionExecution
+    - handle__ops_003__retry_action_execution__recovery
+    - OPS-003
+    - OPS-003
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-11-E14
+    - RECONCILE_ACTION
+    - J-11::CANCEL_REQUESTED|J-11::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - '@branch:J-11-E14'
+    - BRANCH
+    - WORKER_BRANCH
+    - DATABASE_ROUTINE
+    - ops.reconcile_action_execution_v1
+    - worker__reconcile_action_execution_v1
+    - OPS-003
+    - OPS-003
+    - null
+    - BY_SELECTOR
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-11-E15
+    - RETURN_DURABLE_RECEIPT_TO_ORIGIN
+    - J-11::DURABLE_EFFECT_RECEIPT
+    - MILESTONE
+    - J-11::SUCCEEDED
+    - TERMINAL
+    - ORIGIN_RECEIPT_RETURN
+    - EVENT_PROJECTION
+    - action.execution_completed.v1#origin-receipt
+    - handle_action_execution_completed_origin_receipt_v1
+    - OPS-003
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - returns to the exact bound origin route/section only after getActionExecutionReceipt terminal digest parity
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-11-E16
+    - WITHDRAW_PROPOSAL
+    - J-11::DRAFT|J-11::PENDING_QUORUM
+    - BRANCH
+    - J-11::WITHDRAWN
+    - TERMINAL
+    - COMMAND_BRANCH
+    - OPERATION
+    - withdrawActionProposal@INT-002.handoff
+    - handle__int_002__withdraw_action_proposal__handoff
+    - INT-002
+    - INT-002
+    - null
+    - NONVALUE_TERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-11-E17
+    - WITHDRAW_APPROVAL
+    - J-11::PENDING_QUORUM
+    - MILESTONE
+    - INT-002::assignment-projected
+    - MILESTONE
+    - COMMAND_BRANCH
+    - OPERATION
+    - withdrawActionDecision@INT-002.handoff
+    - handle__int_002__withdraw_action_decision__handoff
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-11-E18
+    - EXPIRE_OR_SUPERSEDE
+    - J-11::DRAFT|J-11::PENDING_QUORUM
+    - BRANCH
+    - '@branch:J-11-E18'
+    - BRANCH
+    - SYSTEM_BRANCH
+    - EVENT_PROJECTION
+    - action.proposal_updated.v1#EXPIRED|SUPERSEDED
+    - route__j11__expire_or_supersede_v1
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1|INT-002
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1|INT-002
+    - null
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E19
+    - DISPATCH_COMMUNICATION_INTENT
+    - OPS-003::execution-dispatching
+    - MILESTONE
+    - OPS-005::communication-intent-created
+    - MILESTONE
+    - COMMUNICATION_EXECUTOR
+    - COMPILED_EXECUTOR_ROUTER
+    - J11_COMMUNICATION_EXECUTOR_REGISTRY_V1
+    - worker__dispatch_communication_intent_v1
+    - OPS-003
+    - OPS-005
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-11-E20
+    - CLAIM_OUTBOUND_DELIVERY
+    - OPS-005::communication-intent-created|OPS-005::delivery-retry-scheduled
+    - BRANCH
+    - OPS-005::delivery-sending
+    - MILESTONE
+    - WORKER_TRANSITION
+    - DATABASE_ROUTINE
+    - ops.claim_outbound_delivery_attempt
+    - worker__claim_outbound_delivery_attempt_v1
+    - OPS-005
+    - OPS-005
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-11-E21
+    - RECORD_PROVIDER_OBSERVATION
+    - OPS-005::delivery-sending|OPS-005::provider-accepted
+    - BRANCH
+    - '@branch:J-11-E21'
+    - BRANCH
+    - PROVIDER_OBSERVATION_BRANCH
+    - DATABASE_ROUTINE
+    - ops.record_outbound_delivery_observation
+    - worker__record_outbound_delivery_observation_v1
+    - OPS-005
+    - OPS-005
+    - null
+    - BY_SELECTOR
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-11-E22
+    - RECONCILE_DELIVERY
+    - J-11::DELIVERY_RECONCILIATION_REQUIRED
+    - RECOVERY
+    - '@branch:J-11-E22'
+    - BRANCH
+    - COMMAND_BRANCH
+    - OPERATION
+    - reconcileCommunicationDelivery@OPS-005.incidents
+    - route__j11__reconcile_delivery_v1
+    - OPS-005
+    - OPS-005
+    - null
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-11-E23
+    - RETURN_DELIVERY_RECEIPT_TO_ORIGIN
+    - J-11::DELIVERED_OR_READ_RECEIPT
+    - MILESTONE
+    - J-11::SUCCEEDED
+    - TERMINAL
+    - ORIGIN_RECEIPT_RETURN
+    - EVENT_PROJECTION
+    - communication.delivery_receipt_recorded.v1#DELIVERED|READ+origin-receipt
+    - handle_communication_delivery_receipt_origin_v1
+    - OPS-005
+    - J11_ACTION_ORIGIN_SCREEN_SET_V1
+    - returns to the exact origin after getCommunicationDeliveryReceipt proves applied DELIVERED or READ and packet/rendering
+      parity
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  J-12:
+  - - J-12-E01
+    - OPEN_CURRENT_HEALTH
+    - OPS-004
+    - SCREEN
+    - OPS-004::commercial-health-inspected
+    - MILESTONE
+    - QUERY_PROJECTION
+    - READ_PROJECTION
+    - getBudgetOverview+ops.read_business_health_projection_v1
+    - projection__j12__current_health_v1
+    - OPS-004
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E02
+    - REQUEST_COMMERCIAL_REMEDIATION
+    - OPS-004::commercial-health-inspected
+    - MILESTONE
+    - INT-002::commercial-remediation-pending
+    - MILESTONE
+    - HANDOFF_REQUEST
+    - JOURNEY_HANDOFF_ROUTINE
+    - ops.start_journey_instance_v1+ops.request_journey_handoff_v1#HS-15
+    - journey__j12__request_commercial_remediation_v1
+    - OPS-004
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E03
+    - OPEN_REMEDIATION_TASK
+    - INT-002::commercial-remediation-pending
+    - MILESTONE
+    - INT-002::commercial-remediation-open
+    - MILESTONE
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - INT-002.open-task
+    - ui__int_002__open_task
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E04
+    - ACK_REMEDIATION_OWNERSHIP
+    - INT-002::commercial-remediation-open
+    - MILESTONE
+    - INT-002::commercial-remediation-owned
+    - MILESTONE
+    - HANDOFF_ACK
+    - OPERATION_VARIANT
+    - decideJourneyHandoff#ACKNOWLEDGE[HS-15]
+    - route__j12__ack_commercial_remediation_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E05
+    - RECORD_QUALIFICATION
+    - INT-002::commercial-remediation-owned
+    - MILESTONE
+    - OPS-004::qualified-receipt-visible
+    - MILESTONE
+    - SIGNED_IMPORT
+    - DATABASE_ROUTINE
+    - ops.record_commercial_qualification_receipt_v1
+    - commercial_import__record_qualification_receipt_v1
+    - INT-002
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E06
+    - PROJECT_CONFIGURED
+    - OPS-004::qualified-receipt-visible
+    - MILESTONE
+    - OPS-001::configured-evidence-visible
+    - MILESTONE
+    - READ_PROJECTION
+    - DATABASE_READ_FUNCTION
+    - ops.read_business_stage_projection_v1#CONFIGURED
+    - projection__j12__configured_v1
+    - OPS-004
+    - OPS-001
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E07
+    - RESOLVE_DATA_READINESS
+    - OPS-001::configured-evidence-visible
+    - MILESTONE
+    - '@branch:J-12-E07'
+    - BRANCH
+    - READINESS_BRANCH
+    - DATABASE_READ_FUNCTION
+    - ops.read_business_stage_projection_v1#DATA_READY
+    - route__j12__data_readiness_v1
+    - OPS-001
+    - OPS-001|SRC-005|INT-002
+    - schema drift enters J-09 at SRC-005 and only J-09-E04 may return to re-evaluate this same cutoff/input digest
+    - BY_SELECTOR
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E08
+    - ENTER_PAID_WORKFLOW
+    - OPS-001::data-ready
+    - MILESTONE
+    - CAS-002::paid-workflow-entry
+    - MILESTONE
+    - HANDOFF_AND_NAVIGATION
+    - JOURNEY_HANDOFF_ROUTINE
+    - ops.request_journey_handoff_v1#HS-03
+    - handoff__j12__paid_workflow_case_owner_v1
+    - OPS-001
+    - CAS-002
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E09A
+    - ENTER_OPTIONAL_AI_RESEARCH
+    - CAS-002::paid-workflow-entry
+    - MILESTONE
+    - J-10::ENTRY[CAS-010]
+    - CROSS_JOURNEY
+    - CROSS_JOURNEY_ENTRY
+    - VISIBLE_ACTION
+    - CAS-002.open-agent-research
+    - journey__j12__enter_j10_v1
+    - CAS-002
+    - CAS-010
+    - only J-10-E17 success returns to J-12-E10; J-10 nonvalue terminals return an owned blocker without fabricating Evidence
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E09B
+    - ENTER_HUMAN_EVIDENCE_PATH
+    - CAS-002::paid-workflow-entry
+    - MILESTONE
+    - CAS-004::paid-evidence-candidate
+    - MILESTONE
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-002.open-evidence-matrix
+    - ui__cas_002__open_evidence_matrix
+    - CAS-002
+    - CAS-004
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E10
+    - OPEN_SELECTED_EVIDENCE
+    - CAS-004::paid-evidence-candidate|CAS-004::promoted-evidence-visible
+    - BRANCH
+    - CAS-005
+    - SCREEN
+    - CONVERGENCE_NAVIGATION
+    - VISIBLE_ACTION
+    - CAS-004.open-evidence
+    - journey__j12__open_bound_evidence_v1
+    - CAS-004
+    - CAS-005
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E11
+    - VERIFY_EVIDENCE_AND_ROUTE_READINESS
+    - CAS-005
+    - SCREEN
+    - CAS-013
+    - SCREEN
+    - COMMAND_WITH_RECEIPT_NAVIGATION
+    - OPERATION
+    - verifyEvidence+verifyEvidenceResult#review-readiness-destination
+    - journey__j12__verify_evidence_route_readiness_v1
+    - CAS-005
+    - CAS-013
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E12
+    - CREATE_REVIEW_SNAPSHOT
+    - CAS-013
+    - SCREEN
+    - REV-002
+    - SCREEN
+    - COMMAND_SUCCESS
+    - OPERATION
+    - createReviewSnapshot
+    - operation__create_review_snapshot
+    - CAS-013
+    - REV-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-12-E13
+    - APPROVE_AND_BIND_PACKET_SOURCE
+    - REV-002
+    - SCREEN
+    - CAS-002::paid-packet-source-bound
+    - MILESTONE
+    - COMMAND_AND_READ_BINDING
+    - OPERATION_VARIANT
+    - submitReview#APPROVE+ops.build_paid_evidence_member_candidate_set_v1
+    - journey__j12__approve_bind_packet_source_v1
+    - REV-002
+    - CAS-002
+    - null
+    - NONTERMINAL
+    - NEW_FUNCTION_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E14
+    - CREATE_OR_UPDATE_ACTION_DRAFT
+    - CAS-002::paid-packet-source-bound
+    - MILESTONE
+    - CAS-002::paid-action-draft
+    - MILESTONE
+    - COMMAND_BRANCH
+    - COMPILED_PLACEMENT_ROUTER
+    - J12_PAID_ACTION_PLACEMENT_SET_V1#createActionProposal|updateActionDraft
+    - journey__j12__create_or_update_action_draft_v1
+    - CAS-002
+    - CAS-002
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E15
+    - BIND_ACTION_PREVIEW
+    - CAS-002::paid-action-draft
+    - MILESTONE
+    - CAS-002::paid-action-preview-bound
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - COMPILED_PLACEMENT_ROUTER
+    - J12_PAID_ACTION_PLACEMENT_SET_V1#previewActionDraft
+    - journey__j12__bind_action_preview_v1
+    - CAS-002
+    - CAS-002
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E16
+    - SUBMIT_ACTION_REVIEW
+    - CAS-002::paid-action-preview-bound
+    - MILESTONE
+    - INT-002::paid-action-assigned
+    - MILESTONE
+    - COMMAND_WITH_PROJECTION
+    - COMPILED_PLACEMENT_ROUTER
+    - J12_PAID_ACTION_PLACEMENT_SET_V1#submitActionForReview+action.review_requested.v1
+    - journey__j12__submit_action_review_v1
+    - CAS-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E17
+    - CLAIM_ACTION_REVIEW
+    - INT-002::paid-action-assigned
+    - MILESTONE
+    - INT-002::paid-action-review-in-progress
+    - MILESTONE
+    - COMMAND_SUCCESS
+    - OPERATION
+    - claimActionReview@INT-002.handoff
+    - handle__int_002__claim_action_review__handoff
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-12-E18A
+    - APPROVE
+    - INT-002::paid-action-review-in-progress
+    - MILESTONE
+    - '@branch:J-12-E18A'
+    - BRANCH
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#APPROVE
+    - route__j12__approve_v1
+    - INT-002
+    - INT-002|OPS-003
+    - final queued approval enters mandatory J-11 at E09 and returns only through J-12-E19A, E19B, or E19C
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E18B
+    - CHANGES_REQUIRED
+    - INT-002::paid-action-review-in-progress
+    - MILESTONE
+    - J-12::CHANGES_REQUIRED
+    - TERMINAL
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#CHANGES_REQUIRED
+    - route__j12__changes_required_v1
+    - INT-002
+    - CAS-002
+    - a new owned change task starts a new proposal generation; this journey instance is a recovery terminal
+    - RECOVERY_TERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E18C
+    - RECUSE
+    - INT-002::paid-action-review-in-progress
+    - MILESTONE
+    - INT-002::paid-action-assigned
+    - MILESTONE
+    - COMMAND_BRANCH
+    - OPERATION_VARIANT
+    - submitActionDecision#RECUSE+action.review_vacancy_filled.v1
+    - route__j12__recuse_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E18D
+    - REJECT_OR_EXPIRE
+    - INT-002::paid-action-review-in-progress|INT-002::paid-action-assigned
+    - BRANCH
+    - '@branch:J-12-E18D'
+    - BRANCH
+    - OPERATION_OR_EVENT_BRANCH
+    - OPERATION_OR_EVENT_VARIANT
+    - submitActionDecision#REJECT|action.proposal_updated.v1#EXPIRED
+    - route__j12__reject_or_expire_v1
+    - INT-002
+    - INT-002|OPS-004
+    - null
+    - BY_SELECTOR
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E19A
+    - RESOLVE_ORGANIZATION_DECISION_TERMINAL
+    - J-12::organization-decision-candidate
+    - MILESTONE
+    - OPS-004::organization-decision-terminal-bound
+    - MILESTONE
+    - TERMINAL_RESOLUTION
+    - DATABASE_READ_FUNCTION
+    - ops.resolve_organization_decision_terminal_v1
+    - resolver__organization_decision_terminal_v1
+    - INT-002|OPS-003
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - NEW_FUNCTION_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E19B
+    - RESOLVE_OUTBOUND_DELIVERY_TERMINAL
+    - J-12::outbound-delivery-candidate
+    - MILESTONE
+    - OPS-004::outbound-delivery-terminal-bound
+    - MILESTONE
+    - TERMINAL_RESOLUTION
+    - DATABASE_READ_FUNCTION
+    - ops.resolve_outbound_delivery_terminal_v1
+    - resolver__outbound_delivery_terminal_v1
+    - OPS-005
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - NEW_FUNCTION_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E19C
+    - ROUTE_RECONCILIATION_REQUIRED
+    - J-11::RECONCILIATION_REQUIRED|J-11::DELIVERY_RECONCILIATION_REQUIRED
+    - RECOVERY
+    - J-12::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - CROSS_JOURNEY_RETURN
+    - COMPILED_CROSS_JOURNEY_BINDER
+    - J12_TERMINAL_RECONCILIATION_RETURN_V1
+    - journey__j12__route_reconciliation_required_v1
+    - OPS-003|OPS-005
+    - OPS-003|OPS-005
+    - null
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E20
+    - AUTHENTICATED_RECONCILIATION
+    - J-12::RECONCILIATION_REQUIRED
+    - RECOVERY
+    - '@branch:J-12-E20'
+    - BRANCH
+    - AUTHENTICATED_RECONCILIATION_BRANCH
+    - COMPILED_RECONCILIATION_ROUTER
+    - ops.reconcile_action_execution_v1|reconcileCommunicationDelivery
+    - route__j12__authenticated_reconciliation_v1
+    - OPS-003|OPS-005
+    - OPS-003|OPS-005|OPS-004
+    - null
+    - BY_SELECTOR
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E21
+    - FINALIZE_PAID_PACKET_AND_OUTCOME_FACT
+    - OPS-004::organization-decision-terminal-bound|OPS-004::outbound-delivery-terminal-bound
+    - BRANCH
+    - OPS-004::paid-outcome-fact-recorded
+    - MILESTONE
+    - PAID_TERMINAL_BINDING
+    - EVENT_SAGA
+    - private.MaterializePaidEvidencePacket+product.paid_evidence_packet_subject_persisted.v1+ops.bind_paid_terminal_receipt_v1+product.paid_terminal_receipt_bound.v1+ops.append_paid_outcome_fact_v1
+    - handle_j12_finalize_paid_packet_outcome_v1
+    - OPS-004
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - NEW_FUNCTION_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E22
+    - PROJECT_FIRST_PAID_VALUE_AND_ACTIVATED
+    - OPS-004::paid-outcome-fact-recorded
+    - MILESTONE
+    - OPS-004::activated
+    - MILESTONE
+    - READ_PROJECTION
+    - DATABASE_READ_FUNCTION
+    - ops.read_business_stage_projection_v1#FIRST_PAID_VALUE+ACTIVATED
+    - projection__j12__activated_v1
+    - OPS-004
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E23
+    - CREATE_RETENTION_WATCH
+    - OPS-004::activated
+    - MILESTONE
+    - INT-002::retention-watch-pending
+    - MILESTONE
+    - HANDOFF_REQUEST
+    - JOURNEY_HANDOFF_ROUTINE
+    - ops.request_journey_handoff_v1#HS-16
+    - journey__j12__create_retention_watch_v1
+    - OPS-004
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E24
+    - ACK_RETENTION_WATCH
+    - INT-002::retention-watch-pending
+    - MILESTONE
+    - INT-002::retention-watch-owned
+    - MILESTONE
+    - HANDOFF_ACK
+    - OPERATION_VARIANT
+    - decideJourneyHandoff#ACKNOWLEDGE[HS-16]
+    - route__j12__ack_retention_watch_v1
+    - INT-002
+    - INT-002
+    - null
+    - NONTERMINAL
+    - EXISTING
+    - NEW_REQUIRED
+  - - J-12-E25
+    - START_REPEAT_PAID_WORKFLOW
+    - INT-002::retention-watch-owned
+    - MILESTONE
+    - CAS-002::paid-workflow-entry
+    - MILESTONE
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - INT-002.open-task
+    - ui__int_002__open_repeat_paid_workflow_v1
+    - INT-002
+    - CAS-002
+    - after each distinct repeat root returns through J-12-E19..E22; the watch remains owned until the fixed window matures
+    - NONTERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+  - - J-12-E26
+    - PROJECT_RETAINED
+    - OPS-004::activated
+    - MILESTONE
+    - OPS-004::retained
+    - MILESTONE
+    - READ_PROJECTION
+    - DATABASE_READ_FUNCTION
+    - ops.read_business_stage_projection_v1#RETAINED
+    - projection__j12__retained_v1
+    - OPS-004
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E27
+    - PROJECT_AT_RISK_OVERLAY
+    - J-12::current-nonchurned-milestone
+    - BRANCH
+    - OPS-004::at-risk-overlay
+    - RECOVERY
+    - READ_PROJECTION
+    - DATABASE_READ_FUNCTION
+    - ops.read_business_health_projection_v1#AT_RISK
+    - projection__j12__at_risk_v1
+    - OPS-004|OPS-001|INT-002|CAS-002
+    - OPS-004
+    - null
+    - NONTERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E28
+    - RECOVER_FROM_AT_RISK
+    - OPS-004::at-risk-overlay
+    - RECOVERY
+    - '@branch:J-12-E28'
+    - BRANCH
+    - READ_PROJECTION_BRANCH
+    - DATABASE_READ_FUNCTION
+    - ops.read_business_health_projection_v1#RISK_CLEARED
+    - route__j12__risk_recovery_v1
+    - OPS-004
+    - OPS-004|OPS-001|CAS-002
+    - null
+    - BY_SELECTOR
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E29
+    - PROJECT_CHURNED
+    - J-12::current-episode
+    - BRANCH
+    - OPS-004::churned
+    - TERMINAL
+    - READ_PROJECTION
+    - DATABASE_READ_FUNCTION
+    - ops.read_business_stage_projection_v1#CHURNED
+    - projection__j12__churned_v1
+    - OPS-004|OPS-001|INT-002|CAS-002
+    - OPS-004
+    - null
+    - NONVALUE_TERMINAL
+    - EXISTING_DESIGN_ONLY
+    - NEW_REQUIRED
+  - - J-12-E30
+    - OPEN_IMMUTABLE_AUDIT
+    - OPS-004::retained
+    - MILESTONE
+    - AUD-001::paid-retention-audit-verified
+    - TERMINAL
+    - AUDIT_NAVIGATION_AND_VERIFICATION
+    - VISIBLE_ACTION
+    - OPS-004.open-paid-workflow-audit
+    - ui__ops_004__open_paid_workflow_audit_v1
+    - OPS-004
+    - AUD-001
+    - null
+    - SUCCESS_TERMINAL
+    - NEW_COMPILED_REGISTRY_REQUIRED
+    - NEW_REQUIRED
+node_group_registry:
+  J11_ACTION_ORIGIN_SCREEN_SET_V1:
+  - CAS-006
+  - CAS-007
+  - CAS-009
+  - CAS-011
+  - CAS-015
+  - RULE-004
+  - REV-003
+  - OPS-005
+  - OPS-006
+  - ADM-002
+  J-12::current-nonchurned-milestone:
+  - OPS-004::qualified-receipt-visible
+  - OPS-001::configured-evidence-visible
+  - OPS-001::data-ready
+  - OPS-004::activated
+  - OPS-004::retained
+  J-12::current-episode:
+  - OPS-004::qualified-receipt-visible
+  - OPS-001::configured-evidence-visible
+  - OPS-001::data-ready
+  - OPS-004::activated
+  - OPS-004::retained
+  - OPS-004::at-risk-overlay
+  J-12::organization-decision-candidate:
+  - J-12::rejected-final-candidate
+  - J-11::DURABLE_EFFECT_RECEIPT
+  J-12::outbound-delivery-candidate:
+  - J-11::DELIVERED_OR_READ_RECEIPT
+branch_contracts:
+  J-05-E03:
+    selector_source: triageSignalReceipt.result
+    exact:
+      DISMISS:
+        to: J-05::DISMISSED
+        to_kind: TERMINAL
+        destination_screen: SIG-002
+        terminal_class: NONVALUE_TERMINAL
+        owned: false
+      NEEDS_DATA:
+        to: INT-002::signal-enrichment-pending
+        to_kind: MILESTONE
+        destination_screen: INT-002
+        terminal_class: NONTERMINAL
+        owned: true
+        handoff_kind: HS-04
+      MARK_DUPLICATE:
+        to: J-05::DUPLICATE
+        to_kind: TERMINAL
+        destination_screen: SIG-002
+        terminal_class: NONVALUE_TERMINAL
+        owned: false
+      PROMOTE_TO_CASE:
+        to: CAS-002::case-ownership-pending
+        to_kind: MILESTONE
+        destination_screen: CAS-002
+        terminal_class: NONTERMINAL
+        owned: true
+        handoff_kind: HS-03
+      LINK_TO_CASE:
+        to: CAS-002::case-ownership-pending
+        to_kind: MILESTONE
+        destination_screen: CAS-002
+        terminal_class: NONTERMINAL
+        owned: true
+        handoff_kind: HS-03
+  J-06-E03:
+    selector_source: authorized visible action
+    exact:
+      OPEN_EVIDENCE:
+        to: CAS-005
+        to_kind: SCREEN
+        destination_screen: CAS-005
+        terminal_class: NONTERMINAL
+      START_AI_RESEARCH:
+        to: J-10::ENTRY[CAS-010]
+        to_kind: CROSS_JOURNEY
+        destination_screen: CAS-010
+        terminal_class: NONTERMINAL
+        return: J-10-E17 -> CAS-004
+  J-06-E07:
+    selector_source: authorized visible action
+    exact:
+      OPEN_REVIEW_READINESS:
+        to: CAS-013
+        to_kind: SCREEN
+        destination_screen: CAS-013
+        terminal_class: NONTERMINAL
+      NEW_RESPONSE_REQUEST:
+        to: J-03::ENTRY[CAS-009]
+        to_kind: CROSS_JOURNEY
+        destination_screen: CAS-009
+        terminal_class: NONTERMINAL
+        return: J-03-E07 -> CAS-008
+  J-07-E02:
+    selector_source: submitReviewReceipt.decision
+    exact:
+      APPROVE:
+        to: REV-003
+        to_kind: SCREEN
+        destination_screen: REV-003
+        terminal_class: NONTERMINAL
+      CHANGES_REQUIRED:
+        to: J-07::CHANGES_REQUIRED
+        to_kind: TERMINAL
+        destination_screen: CAS-002
+        terminal_class: RECOVERY_TERMINAL
+        return: HS-06 acknowledged task enters J-06
+      REJECT:
+        to: J-07::REJECTED
+        to_kind: TERMINAL
+        destination_screen: REV-002
+        terminal_class: NONVALUE_TERMINAL
+      RECUSE:
+        to: REV-001
+        to_kind: SCREEN
+        destination_screen: REV-001
+        terminal_class: NONTERMINAL
+  J-10-E03:
+    selector_source: AgentRunControlReceiptV2.nextStatus plus nextControlState
+    exact:
+      SUCCEEDED_SETTLED:
+        to: CAS-011::settled-success-output
+        to_kind: MILESTONE
+        destination_screen: CAS-011
+        terminal_class: NONTERMINAL
+      FAILED_SETTLED:
+        to: J-10::FAILED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      CANCELLED_SETTLED:
+        to: J-10::CANCELLED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      BUDGET_BLOCKED_SETTLED:
+        to: J-10::BUDGET_BLOCKED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      POLICY_BLOCKED_SETTLED:
+        to: J-10::POLICY_BLOCKED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+  J-10-E09:
+    selector_source: AgentRunControlReceiptV2.reasonCode plus nextStatus plus nextControlState
+    exact:
+      RECONCILED_SUCCEEDED:
+        to: CAS-011::settled-success-output
+        to_kind: MILESTONE
+        destination_screen: CAS-011
+        terminal_class: NONTERMINAL
+      RECONCILED_FAILED:
+        to: J-10::FAILED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      RECONCILED_CANCELLED:
+        to: J-10::CANCELLED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      BUDGET_DENIED:
+        to: J-10::BUDGET_BLOCKED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      POLICY_DENIED:
+        to: J-10::POLICY_BLOCKED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+  J-10-E11:
+    selector_source: agent.output_validated.v1 payload disposition plus eligiblePromotionArtifactCount
+    exact:
+      VALIDATED_WITH_ELIGIBLE_ARTIFACT:
+        to: CAS-011::analysis-verified
+        to_kind: MILESTONE
+        destination_screen: CAS-011
+        terminal_class: NONTERMINAL
+      ABSTAINED:
+        to: J-10::ABSTAINED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      VALIDATED_NO_ELIGIBLE_ARTIFACT:
+        to: J-10::NO_ELIGIBLE_ARTIFACT
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      OUTPUT_SCHEMA_INVALID:
+        to: J-10::FAILED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+      CITATION_INVALID:
+        to: J-10::ABSTAINED
+        to_kind: TERMINAL
+        destination_screen: CAS-011
+        terminal_class: NONVALUE_TERMINAL
+  J-11-E11:
+    selector_source: ActionExecutionMutationReceiptV1.aggregateState plus actionKind
+    exact:
+      NON_COMMUNICATION_SUCCEEDED:
+        to: J-11::DURABLE_EFFECT_RECEIPT
+        to_kind: MILESTONE
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+      PARTIALLY_SUCCEEDED:
+        to: J-11::PARTIALLY_SUCCEEDED
+        to_kind: TERMINAL
+        destination_screen: OPS-003
+        terminal_class: NONVALUE_TERMINAL
+      RETRYABLE_FAILED:
+        to: J-11::RETRYABLE_FAILED
+        to_kind: RECOVERY
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+      PERMANENT_FAILED:
+        to: J-11::PERMANENT_FAILED
+        to_kind: TERMINAL
+        destination_screen: OPS-003
+        terminal_class: NONVALUE_TERMINAL
+      RECONCILIATION_REQUIRED:
+        to: J-11::RECONCILIATION_REQUIRED
+        to_kind: RECOVERY
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+      CANCELLED:
+        to: J-11::CANCELLED
+        to_kind: TERMINAL
+        destination_screen: OPS-003
+        terminal_class: NONVALUE_TERMINAL
+      EXPIRED:
+        to: J-11::EXPIRED
+        to_kind: TERMINAL
+        destination_screen: OPS-003
+        terminal_class: NONVALUE_TERMINAL
+    exclusion: actionKind COMMUNICATION is resolved only by J-11-E19 and cannot pass this branch.
+  J-11-E14:
+    selector_source: ActionExecutionMutationReceiptV1.aggregateState
+    exact:
+      SUCCEEDED:
+        to: J-11::DURABLE_EFFECT_RECEIPT
+        to_kind: MILESTONE
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+      PARTIALLY_SUCCEEDED:
+        to: J-11::PARTIALLY_SUCCEEDED
+        to_kind: TERMINAL
+        destination_screen: OPS-003
+        terminal_class: NONVALUE_TERMINAL
+      RETRYABLE_FAILED:
+        to: J-11::RETRYABLE_FAILED
+        to_kind: RECOVERY
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+      PERMANENT_FAILED:
+        to: J-11::PERMANENT_FAILED
+        to_kind: TERMINAL
+        destination_screen: OPS-003
+        terminal_class: NONVALUE_TERMINAL
+      CANCELLED:
+        to: J-11::CANCELLED
+        to_kind: TERMINAL
+        destination_screen: OPS-003
+        terminal_class: NONVALUE_TERMINAL
+      STILL_AMBIGUOUS:
+        to: J-11::RECONCILIATION_REQUIRED
+        to_kind: RECOVERY
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+  J-11-E18:
+    selector_source: action.proposal_updated.v1 payload resultingState
+    exact:
+      EXPIRED:
+        to: J-11::EXPIRED
+        to_kind: TERMINAL
+        destination_screen: INT-002
+        terminal_class: NONVALUE_TERMINAL
+      SUPERSEDED:
+        to: J-11::SUPERSEDED
+        to_kind: TERMINAL
+        destination_screen: J11_ACTION_ORIGIN_SCREEN_SET_V1
+        terminal_class: RECOVERY_TERMINAL
+  J-11-E21:
+    selector_source: ops.outbound_delivery_observation_receipt_v1.resulting_state
+    exact:
+      PROVIDER_ACCEPTED:
+        to: OPS-005::provider-accepted
+        to_kind: MILESTONE
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      DELIVERED:
+        to: J-11::DELIVERED_OR_READ_RECEIPT
+        to_kind: MILESTONE
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      READ:
+        to: J-11::DELIVERED_OR_READ_RECEIPT
+        to_kind: MILESTONE
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      RETRY_SCHEDULED:
+        to: OPS-005::delivery-retry-scheduled
+        to_kind: RECOVERY
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      FAILED_PERMANENT:
+        to: J-11::DELIVERY_FAILED_PERMANENT
+        to_kind: TERMINAL
+        destination_screen: OPS-005
+        terminal_class: NONVALUE_TERMINAL
+      SUPPRESSED:
+        to: J-11::DELIVERY_SUPPRESSED
+        to_kind: TERMINAL
+        destination_screen: OPS-005
+        terminal_class: NONVALUE_TERMINAL
+      CANCELLED:
+        to: J-11::DELIVERY_CANCELLED
+        to_kind: TERMINAL
+        destination_screen: OPS-005
+        terminal_class: NONVALUE_TERMINAL
+      RECONCILIATION_REQUIRED:
+        to: J-11::DELIVERY_RECONCILIATION_REQUIRED
+        to_kind: RECOVERY
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+  J-11-E22:
+    selector_source: CommunicationDeliveryMutationReceiptV1.resolution
+    exact:
+      NOT_TRANSMITTED:
+        to: OPS-005::delivery-retry-scheduled
+        to_kind: RECOVERY
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      PROVIDER_ACCEPTED:
+        to: OPS-005::provider-accepted
+        to_kind: MILESTONE
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      DELIVERED:
+        to: J-11::DELIVERED_OR_READ_RECEIPT
+        to_kind: MILESTONE
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      FAILED_PERMANENT:
+        to: J-11::DELIVERY_FAILED_PERMANENT
+        to_kind: TERMINAL
+        destination_screen: OPS-005
+        terminal_class: NONVALUE_TERMINAL
+  J-12-E07:
+    selector_source: BusinessStageProjectionV1.DATA_READY status and first blocker
+    exact:
+      READY:
+        to: OPS-001::data-ready
+        to_kind: MILESTONE
+        destination_screen: OPS-001
+        terminal_class: NONTERMINAL
+      SCHEMA_DRIFT:
+        to: J-09::ENTRY[SRC-005]
+        to_kind: CROSS_JOURNEY
+        destination_screen: SRC-005
+        terminal_class: NONTERMINAL
+        return: J-09-E04 -> J-12-E07
+      OWNED_REPAIRABLE_BLOCKER:
+        to: J-12::DATA_READINESS_BLOCKED
+        to_kind: TERMINAL
+        destination_screen: INT-002
+        terminal_class: RECOVERY_TERMINAL
+      UNKNOWN_OR_UNOWNED:
+        to: J-12::DATA_READINESS_BLOCKED
+        to_kind: TERMINAL
+        destination_screen: OPS-001
+        terminal_class: RECOVERY_TERMINAL
+  J-12-E18A:
+    selector_source: ActionDecisionReceiptV1.quorumResult plus effectState
+    exact:
+      QUORUM_INCOMPLETE:
+        to: INT-002::paid-action-assigned
+        to_kind: MILESTONE
+        destination_screen: INT-002
+        terminal_class: NONTERMINAL
+      FINAL_QUEUED:
+        to: J-11::ENTRY[E09]
+        to_kind: CROSS_JOURNEY
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+        return: J-11 noncommunication receipt -> E19A; delivery receipt -> E19B; reconciliation -> E19C
+      POLICY_BLOCKED:
+        to: J-12::POLICY_BLOCKED
+        to_kind: TERMINAL
+        destination_screen: INT-002
+        terminal_class: NONVALUE_TERMINAL
+  J-12-E18D:
+    selector_source: ActionDecisionReceiptV1.decisionKind or ActionProposalExpiryReceiptV1.resultingState
+    exact:
+      REJECT:
+        to: J-12::rejected-final-candidate
+        to_kind: MILESTONE
+        destination_screen: OPS-004
+        terminal_class: NONTERMINAL
+      EXPIRED:
+        to: J-12::EXPIRED
+        to_kind: TERMINAL
+        destination_screen: INT-002
+        terminal_class: NONVALUE_TERMINAL
+  J-12-E20:
+    selector_source: authenticated action/delivery reconciliation receipt
+    exact:
+      ACTION_SUCCEEDED:
+        to: J-11::DURABLE_EFFECT_RECEIPT
+        to_kind: MILESTONE
+        destination_screen: OPS-004
+        terminal_class: NONTERMINAL
+      DELIVERY_DELIVERED_OR_READ:
+        to: J-11::DELIVERED_OR_READ_RECEIPT
+        to_kind: MILESTONE
+        destination_screen: OPS-004
+        terminal_class: NONTERMINAL
+      ACTION_RETRY_AUTHORIZED:
+        to: J-11::ENTRY[E09]
+        to_kind: CROSS_JOURNEY
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+      DELIVERY_RETRY_AUTHORIZED:
+        to: J-11::ENTRY[E20]
+        to_kind: CROSS_JOURNEY
+        destination_screen: OPS-005
+        terminal_class: NONTERMINAL
+      DEFINITIVE_NONVALUE:
+        to: J-12::TERMINAL_NONVALUE
+        to_kind: TERMINAL
+        destination_screen: OPS-004
+        terminal_class: NONVALUE_TERMINAL
+      STILL_AMBIGUOUS:
+        to: J-12::RECONCILIATION_REQUIRED
+        to_kind: RECOVERY
+        destination_screen: OPS-003
+        terminal_class: NONTERMINAL
+  J-12-E28:
+    selector_source: BusinessHealthProjectionV1.highestStillProvenMilestone after every active reason has a current closure
+      receipt
+    exact:
+      QUALIFIED:
+        to: OPS-004::qualified-receipt-visible
+        to_kind: MILESTONE
+        destination_screen: OPS-004
+        terminal_class: NONTERMINAL
+      CONFIGURED:
+        to: OPS-001::configured-evidence-visible
+        to_kind: MILESTONE
+        destination_screen: OPS-001
+        terminal_class: NONTERMINAL
+      DATA_READY:
+        to: OPS-001::data-ready
+        to_kind: MILESTONE
+        destination_screen: OPS-001
+        terminal_class: NONTERMINAL
+      FIRST_PAID_VALUE:
+        to: OPS-004::activated
+        to_kind: MILESTONE
+        destination_screen: OPS-004
+        terminal_class: NONTERMINAL
+      ACTIVATED:
+        to: OPS-004::activated
+        to_kind: MILESTONE
+        destination_screen: OPS-004
+        terminal_class: NONTERMINAL
+      RETAINED:
+        to: OPS-004::retained
+        to_kind: MILESTONE
+        destination_screen: OPS-004
+        terminal_class: NONTERMINAL
+handoff_kind_registry:
+  source: DESIGN.md#43-closed-handoff-spine
+  count: 20
+  count_rule: derived as len(rows)
+  rows:
+  - handoff_kind: HS-01
+    name: RESPONSE_REQUEST_DELIVERY
+  - handoff_kind: HS-02
+    name: RESPONSE_INTAKE_OWNERSHIP
+  - handoff_kind: HS-03
+    name: CASE_OWNERSHIP
+  - handoff_kind: HS-04
+    name: SIGNAL_ENRICHMENT_TASK
+  - handoff_kind: HS-05
+    name: EDITORIAL_REVIEW_ASSIGNMENT
+  - handoff_kind: HS-06
+    name: REVIEW_CHANGES_TASK
+  - handoff_kind: HS-07
+    name: PUBLICATION_ASSIGNMENT
+  - handoff_kind: HS-08
+    name: ACTION_REVIEW_ASSIGNMENT
+  - handoff_kind: HS-09
+    name: ACTION_EXECUTION_CLAIM
+  - handoff_kind: HS-10
+    name: ACTION_RECONCILIATION
+  - handoff_kind: HS-11
+    name: AI_RUN_RECONCILIATION
+  - handoff_kind: HS-12
+    name: EVIDENCE_PROJECTION_ACK
+  - handoff_kind: HS-13
+    name: CORRECTION_OWNER
+  - handoff_kind: HS-14
+    name: SOURCE_DRIFT_RECOVERY
+  - handoff_kind: HS-15
+    name: COMMERCIAL_REMEDIATION_TASK
+  - handoff_kind: HS-16
+    name: RETENTION_WATCH_TASK
+  - handoff_kind: HS-17
+    name: COMMUNICATION_DELIVERY_OWNERSHIP
+  - handoff_kind: HS-18
+    name: COMMUNICATION_DELIVERY_RECONCILIATION
+  - handoff_kind: HS-19
+    name: PAID_PACKET_TERMINAL_BINDING
+  - handoff_kind: HS-20
+    name: COMMERCIAL_CONTROL_EXTERNAL_ACK
+  set_equality:
+    expected_ids:
+    - HS-01
+    - HS-02
+    - HS-03
+    - HS-04
+    - HS-05
+    - HS-06
+    - HS-07
+    - HS-08
+    - HS-09
+    - HS-10
+    - HS-11
+    - HS-12
+    - HS-13
+    - HS-14
+    - HS-15
+    - HS-16
+    - HS-17
+    - HS-18
+    - HS-19
+    - HS-20
+    rule: rows.handoff_kind is unique and set-equal to expected_ids; no inferred, caller-selected, renamed, fallback, or additional
+      handoff kind is allowed.
+cross_journey_arc_contracts:
+  arcs:
+  - caller_edge: J-03-E01
+    mode: REPLACES_EDGE_DESTINATION
+    caller_selector: ALL
+    callee: J-11
+    callee_entry: J-11::ORIGIN[CAS-009]
+    success_return: RSP-001
+    nonvalue_return: J-03::DELIVERY_NONVALUE
+    recovery_return: J-03::DELIVERY_RECOVERY_REQUIRED
+    required_handoff: HS-01
+  - caller_edge: J-06-E03
+    mode: BRANCH_SELECTOR
+    caller_selector: START_AI_RESEARCH
+    callee: J-10
+    callee_entry: CAS-010
+    success_return: CAS-004
+    nonvalue_return: J-06::AI_RESEARCH_BLOCKED
+    recovery_return: J-06::AI_RESEARCH_RECOVERY_REQUIRED
+    required_handoff: HS-11
+  - caller_edge: J-06-E07
+    mode: BRANCH_SELECTOR
+    caller_selector: NEW_RESPONSE_REQUEST
+    callee: J-03
+    callee_entry: CAS-009
+    success_return: CAS-008
+    nonvalue_return: J-06::RESPONSE_REQUEST_BLOCKED
+    recovery_return: J-06::RESPONSE_DELIVERY_RECOVERY_REQUIRED
+    required_handoff: HS-01
+  - caller_edge: J-06-E09
+    mode: AFTER_TERMINAL
+    caller_selector: SUCCESS
+    callee: J-07
+    callee_entry: REV-001
+    success_return: PUB-004::public-smoke-receipt
+    nonvalue_return: J-06::EDITORIAL_REVIEW_NONVALUE
+    recovery_return: J-06::REVIEW_CHANGES_REQUIRED
+    required_handoff: HS-05
+  - caller_edge: J-07-E03
+    mode: REPLACES_EDGE_DESTINATION
+    caller_selector: ALL
+    callee: J-11
+    callee_entry: J-11::ORIGIN[REV-003]
+    success_return: REV-003::publication-receipt
+    nonvalue_return: J-07::PUBLICATION_NONVALUE
+    recovery_return: J-07::PUBLICATION_RECOVERY_REQUIRED
+    required_handoff: HS-07
+  - caller_edge: J-08-E04
+    mode: AFTER_TERMINAL
+    caller_selector: SUCCESS
+    callee: J-01
+    callee_entry: PUB-004
+    success_return: PUB-004::corrected-case-visible
+    nonvalue_return: J-08::PUBLIC_RETURN_UNAVAILABLE
+    recovery_return: J-08::PUBLIC_RETURN_RECOVERY_REQUIRED
+    required_handoff: HS-13
+  - caller_edge: J-12-E07
+    mode: BRANCH_SELECTOR
+    caller_selector: SCHEMA_DRIFT
+    callee: J-09
+    callee_entry: SRC-005
+    success_return: OPS-001::configured-evidence-visible
+    nonvalue_return: J-12::DATA_READINESS_BLOCKED
+    recovery_return: J-12::DATA_READINESS_BLOCKED
+    required_handoff: HS-14
+  - caller_edge: J-12-E09A
+    mode: REPLACES_EDGE_DESTINATION
+    caller_selector: ALL
+    callee: J-10
+    callee_entry: CAS-010
+    success_return: CAS-004::promoted-evidence-visible
+    nonvalue_return: J-12::AI_PATH_NONVALUE
+    recovery_return: J-12::AI_PATH_RECOVERY_REQUIRED
+    required_handoff: HS-11
+  - caller_edge: J-12-E18A
+    mode: BRANCH_SELECTOR
+    caller_selector: FINAL_QUEUED
+    callee: J-11
+    callee_entry: J-11::ENTRY[E09]
+    success_return: J-11::DURABLE_EFFECT_RECEIPT|J-11::DELIVERED_OR_READ_RECEIPT
+    nonvalue_return: J-12::TERMINAL_NONVALUE
+    recovery_return: J-11::RECONCILIATION_REQUIRED|J-11::DELIVERY_RECONCILIATION_REQUIRED
+    required_handoff: HS-09
+  - caller_edge: J-12-E20
+    mode: BRANCH_SELECTOR
+    caller_selector: ACTION_RETRY_AUTHORIZED
+    callee: J-11
+    callee_entry: J-11::ENTRY[E09]
+    success_return: J-11::DURABLE_EFFECT_RECEIPT
+    nonvalue_return: J-12::TERMINAL_NONVALUE
+    recovery_return: J-11::RECONCILIATION_REQUIRED
+    required_handoff: HS-10
+  - caller_edge: J-12-E20
+    mode: BRANCH_SELECTOR
+    caller_selector: DELIVERY_RETRY_AUTHORIZED
+    callee: J-11
+    callee_entry: J-11::ENTRY[E20]
+    success_return: J-11::DELIVERED_OR_READ_RECEIPT
+    nonvalue_return: J-12::TERMINAL_NONVALUE
+    recovery_return: J-11::DELIVERY_RECONCILIATION_REQUIRED
+    required_handoff: HS-18
+  - caller_edge: J-12-E25
+    mode: REPLACES_EDGE_DESTINATION
+    caller_selector: ALL
+    callee: J-12
+    callee_entry: CAS-002::paid-workflow-entry
+    success_return: OPS-004::activated
+    nonvalue_return: INT-002::retention-watch-owned
+    recovery_return: J-12::RECONCILIATION_REQUIRED
+    required_handoff: HS-16
+  invariant: A return is a journey transition receipt, never browser history alone. The caller root/version/digest and callee
+    terminal receipt must be equal to the compiled return binding.
+route_lock:
+  CAS-002: /internal/cases/{caseId}/overview
+  CAS-004: /internal/cases/{caseId}/evidence
+  CAS-005: /internal/cases/{caseId}/evidence/{evidenceId}
+  CAS-010: /internal/cases/{caseId}/agent-runs
+  CAS-011: /internal/cases/{caseId}/agent-runs/{runId}
+  CAS-013: /internal/cases/{caseId}/review
+  INT-002: /internal/my-work
+  REV-002: /internal/review/{snapshotId}
+  REV-003: /internal/review/{snapshotId}/publish
+  SRC-005: /internal/sources/{sourceId}/schema-drift
+  OPS-001: /internal/operations
+  OPS-003: /internal/operations/jobs/{jobId}
+  OPS-004: /internal/operations/budgets
+  OPS-005: /internal/operations/providers
+  AUD-001: /internal/audit
+  rule: These are existing routes. No route, surface, tenant switcher, checkout, billing, or generic workflow page is added.
+compiled_registry_decisions:
+  J11_ACTION_EXECUTOR_CATALOG_V1:
+    source: specs/product/addendum-approval-policy.yaml#executor_catalog
+    exact:
+      HYPOTHESIS:
+        executor_id: createHypothesis
+        transport: BASE_APPLICATION_COMMAND
+      CLAIM:
+        executor_id: addClaim
+        transport: BASE_APPLICATION_COMMAND
+      TASK:
+        executor_id: private.CreateTaskFromApprovedAction
+        transport: PRIVATE_APPLICATION_COMMAND
+      COMPARABLE:
+        executor_id: private.MaterializeComparableCandidate
+        transport: PRIVATE_APPLICATION_COMMAND
+      COMMUNICATION:
+        executor_id: J11_COMMUNICATION_EXECUTOR_REGISTRY_V1
+        transport: COMPILED_SPECIALIZATION
+      PUBLICATION:
+        executor_id: publishCase
+        transport: BASE_APPLICATION_COMMAND
+      RETRACTION:
+        executor_id: private.PublishRetraction
+        transport: PRIVATE_APPLICATION_COMMAND
+      RULE_ACTIVATION:
+        executor_id: activateRuleVersion
+        transport: BASE_APPLICATION_COMMAND
+      ROLE_GRANT:
+        executor_id: grantRole
+        transport: BASE_APPLICATION_COMMAND
+      KILL_SWITCH:
+        executor_id: private.ApplyKillSwitchCommand
+        transport: PRIVATE_APPLICATION_COMMAND
+      COMMUNICATION_AUTHORIZATION:
+        executor_id: private.RecordCommunicationAuthorizationDecision
+        transport: PRIVATE_APPLICATION_COMMAND
+      ASSET_RIGHTS_DECISION:
+        executor_id: private.ReviseAssetRightsDecision
+        transport: PRIVATE_APPLICATION_COMMAND
+      RETENTION_SCHEDULE:
+        executor_id: private.CreateRecordClassScheduleRevision
+        transport: PRIVATE_APPLICATION_COMMAND
+      FUNDING_DISCLOSURE:
+        executor_id: private.PublishFundingDisclosureRevision
+        transport: PRIVATE_APPLICATION_COMMAND
+      CAPABILITY_ACTIVATION:
+        executor_id: private.DecideCapabilityActivation
+        transport: PRIVATE_APPLICATION_COMMAND
+      RESPONSE_POLICY_CALENDAR:
+        executor_id: private.CreateBusinessCalendarVersion
+        transport: PRIVATE_APPLICATION_COMMAND
+      COMMERCIAL_CONTROL:
+        executor_id: private.ApplyCommercialControl
+        transport: PRIVATE_APPLICATION_COMMAND
+    invariant: The worker invokes the typed application routine under the immutable ExecutionAuthorization; a BASE_APPLICATION_COMMAND
+      is never re-exposed as a browser side door or called with a browser assertion.
+  J11_COMMUNICATION_EXECUTOR_REGISTRY_V1:
+    exact:
+      RESPONSE_REQUEST_DELIVERY:
+        selector: operationId=createResponseRequest
+        executor_id: createResponseRequest
+        transport: BASE_APPLICATION_COMMAND
+        completion_event: notification.response_request_delivery_requested.v1
+        sent_materializer: materializeResponseRequestSent
+      DISCRETIONARY_OR_OTHER_COMMUNICATION:
+        selector: operationId!=createResponseRequest
+        executor_id: private.DispatchCommunicationIntent
+        transport: PRIVATE_APPLICATION_COMMAND
+        completion_event: communication.intent_created.v1
+    invariant: Both branches use the same approved COMMUNICATION binding and exact rendered/recipient/channel digest. Request
+      creation is not delivery, and neither branch reaches J-11 success before E20 through E23.
+  J11_ACTION_ORIGIN_PLACEMENT_SET_V1:
+    origin_screens:
+    - CAS-006
+    - CAS-007
+    - CAS-009
+    - CAS-011
+    - CAS-015
+    - RULE-004
+    - REV-003
+    - OPS-005
+    - OPS-006
+    - ADM-002
+    create_existing:
+      CAS-006: createActionProposal@CAS-006.editor
+      CAS-007: createActionProposal@CAS-007.board
+      CAS-009: createActionProposal@CAS-009.preview
+      CAS-011: createActionProposal@CAS-011.decisions
+      CAS-015: createActionProposal@CAS-015.proposal
+      RULE-004: createActionProposal@RULE-004.approval
+      REV-003: createActionProposal@REV-003.gates
+      OPS-005: createActionProposal@OPS-005.status
+      OPS-006: createActionProposal@OPS-006.approval
+      ADM-002: createActionProposal@ADM-002.requests
+    missing_placements_to_add_exactly:
+    - operation_id: updateActionDraft
+      placement_key: updateActionDraft@REV-003.gates
+      action_key: REV-003.update-action-draft--gates
+      handler_id: handle__rev_003__update_action_draft__gates
+    - operation_id: previewActionDraft
+      placement_key: previewActionDraft@CAS-006.editor
+      action_key: CAS-006.preview-action-draft--editor
+      handler_id: handle__cas_006__preview_action_draft__editor
+    - operation_id: previewActionDraft
+      placement_key: previewActionDraft@CAS-007.board
+      action_key: CAS-007.preview-action-draft--board
+      handler_id: handle__cas_007__preview_action_draft__board
+    - operation_id: previewActionDraft
+      placement_key: previewActionDraft@REV-003.gates
+      action_key: REV-003.preview-action-draft--gates
+      handler_id: handle__rev_003__preview_action_draft__gates
+    - operation_id: submitActionForReview
+      placement_key: submitActionForReview@CAS-006.editor
+      action_key: CAS-006.submit-action-for-review--editor
+      handler_id: handle__cas_006__submit_action_for_review__editor
+    - operation_id: submitActionForReview
+      placement_key: submitActionForReview@CAS-007.board
+      action_key: CAS-007.submit-action-for-review--board
+      handler_id: handle__cas_007__submit_action_for_review__board
+    - operation_id: submitActionForReview
+      placement_key: submitActionForReview@REV-003.gates
+      action_key: REV-003.submit-action-for-review--gates
+      handler_id: handle__rev_003__submit_action_for_review__gates
+    invariant: Every origin has create, update, preview, and submit placements in one compiled map; an absent operation never
+      falls back to another screen or generic form.
+  J12_PAID_ACTION_PLACEMENT_SET_V1:
+    screen_id: CAS-002
+    section_id: next
+    additions_exactly:
+    - operation_id: createActionProposal
+      placement_key: createActionProposal@CAS-002.next
+      action_key: CAS-002.create-action-proposal--next
+      handler_id: handle__cas_002__create_action_proposal__next
+    - operation_id: updateActionDraft
+      placement_key: updateActionDraft@CAS-002.next
+      action_key: CAS-002.update-action-draft--next
+      handler_id: handle__cas_002__update_action_draft__next
+    - operation_id: previewActionDraft
+      placement_key: previewActionDraft@CAS-002.next
+      action_key: CAS-002.preview-action-draft--next
+      handler_id: handle__cas_002__preview_action_draft__next
+    - operation_id: submitActionForReview
+      placement_key: submitActionForReview@CAS-002.next
+      action_key: CAS-002.submit-action-for-review--next
+      handler_id: handle__cas_002__submit_action_for_review__next
+    invariant: The source is the exact bound review snapshot and paid packet member-candidate digest. CAS-002 never exposes
+      a raw action JSON editor.
+  J12_TERMINAL_RECONCILIATION_RETURN_V1:
+    exact:
+      ACTION:
+        resolver: ops.reconcile_action_execution_v1
+        success_destination: J-12::organization-decision-candidate
+      OUTBOUND_DELIVERY:
+        resolver: reconcileCommunicationDelivery
+        success_destination: J-12::outbound-delivery-candidate
+    invariant: A possible effect remains J-12::RECONCILIATION_REQUIRED. Caller-selected terminal kind or success state is
+      forbidden.
+  J12_PAID_REPEAT_TASK_BINDING_V1:
+    source_action: INT-002.open-task
+    task_kind: PAID_REPEAT_ROOT
+    required_subject_fields:
+    - qualificationEpisodeId
+    - qualificationEpisodeVersion
+    - qualificationEpisodeDigest
+    - retentionWatchReceiptId
+    - retentionWatchReceiptDigest
+    destination: CAS-002::paid-workflow-entry
+    invariant: The task row, not an action-ID suffix or caller input, selects the paid-repeat destination and immutable repeat
+      root. Any other task kind follows its own compiled destination contract.
+  new_visible_actions_exactly:
+  - action_key: CAS-004.start-agent-research
+    source_screen: CAS-004
+    destination_screen: CAS-010
+    responsibility: enter J-10 with case and return binding
+  - action_key: CAS-011.select-promotion-candidate
+    source_screen: CAS-011
+    destination_screen: CAS-011
+    responsibility: select exactly one validated eligible artifact and bind its run turn tool fetch artifact and content digests
+      before promotion
+  - action_key: CAS-005.open-evidence-matrix
+    source_screen: CAS-005
+    destination_screen: CAS-004
+    responsibility: open the matrix focused on the promoted Evidence ID
+  - action_key: CAS-002.open-agent-research
+    source_screen: CAS-002
+    destination_screen: CAS-010
+    responsibility: optional J-12 AI path with no fabricated run
+  - action_key: CAS-002.open-evidence-matrix
+    source_screen: CAS-002
+    destination_screen: CAS-004
+    responsibility: human-only J-12 path
+  - action_key: OPS-004.open-paid-workflow-audit
+    source_screen: OPS-004
+    destination_screen: AUD-001
+    responsibility: open immutable packet terminal and retention receipts
+  resolver_registry:
+    name: journey_edge_resolver_registry_v1
+    key: edge_id
+    row_count: 129
+    required_fields:
+    - edge_id
+    - resolver_kind
+    - authority_key
+    - handler_id
+    - selector_contract_digest
+    - source_screen_set_digest
+    - destination_screen_set_digest
+    - return_contract_digest
+    uniqueness:
+    - edge_id
+    handler_reuse_exact:
+      ui__cor_001__open_correction:
+      - J-04-E03
+      - J-08-E01
+      operation__create_review_snapshot:
+      - J-06-E08
+      - J-12-E12
+      handle__int_002__claim_action_review__handoff:
+      - J-11-E06
+      - J-12-E17
+    handler_reuse_rule: A concrete handler may serve more than one explicit edge only when its complete sorted edge set is
+      listed in handler_reuse_exact; every other duplicate handler identity is forbidden.
+    equality: edge_registry IDs equal resolver_registry IDs equal executable acceptance edge IDs
+required_functions:
+- name: ops.read_business_health_projection_v1
+  status: EXISTING_DESIGN_ONLY
+  responsibility: Return current relationship-health state, every typed reason, highest still-proven milestone, formula/policy/input/freshness
+    digests, and cutoff without writing a stage row/event.
+- name: ops.read_business_stage_projection_v1
+  status: EXISTING_DESIGN_ONLY
+  responsibility: Derive CONFIGURED, DATA_READY, FIRST_PAID_VALUE, ACTIVATED, RETAINED, and CHURNED for one qualification
+    episode and cutoff; missing predecessor is UNKNOWN/BLOCKED.
+- name: ops.build_paid_evidence_member_candidate_set_v1
+  status: NEW_FUNCTION_REQUIRED
+  responsibility: Resolve the exact ten PaidEvidencePacketMemberInputV1 categories from the approved review snapshot and return
+    typed candidate keys plus canonical set digest; it is read-only and cannot accept caller-supplied replacement facts.
+- name: ops.resolve_organization_decision_terminal_v1
+  status: NEW_FUNCTION_REQUIRED
+  responsibility: Resolve exactly REJECTED_FINAL from one immutable ops.action_decisions REJECT receipt or EFFECT_SUCCEEDED
+    from one immutable ops.execution_receipts EFFECT_SUCCEEDED receipt, with proposal/version/approval/counted-decision/packet/resulting-state
+    parity. No new stage row or symbolic receipt kind is allowed.
+- name: ops.resolve_outbound_delivery_terminal_v1
+  status: NEW_FUNCTION_REQUIRED
+  responsibility: Resolve one applied ops.outbound_delivery_receipts candidate in DELIVERED or READ with delivery/rendering/authorization/packet
+    digest parity; PROVIDER_ACCEPTED and callback-attempt rows are rejected.
+- name: ops.materialize_paid_evidence_packet_subject_v1
+  status: EXISTING_DESIGN_ONLY
+  responsibility: Persist the exact ten typed member candidate bindings before terminal binding, under private.MaterializePaidEvidencePacket
+    idempotency and service identity.
+- name: ops.bind_paid_terminal_receipt_v1
+  status: NEW_FUNCTION_REQUIRED
+  responsibility: Lock one awaiting packet and one exact terminal resolver result, finalize packetDigest once, append the
+    terminal binding receipt, and emit product.paid_terminal_receipt_bound.v1.
+- name: ops.append_paid_outcome_fact_v1
+  status: NEW_FUNCTION_REQUIRED
+  responsibility: Validate the finalized packet, allowed paid pair, active contract interval, DATA_READY cutoff, four ordered
+    workflow milestones, and current correction head, then call the existing append-only outcome-fact boundary exactly once.
+- name: ops.request_journey_handoff_v1
+  status: EXISTING_DESIGN_ONLY
+  responsibility: Persist J-12 HS-15, HS-16, and paid-workflow owner handoffs from the compiled graph; the caller cannot select
+    receiver, capability, destination, or adapter.
+event_and_consumer_decisions:
+  new_stage_events: []
+  reuse_exactly:
+  - agent.run_control_changed.v2
+  - agent.output_validated.v1
+  - research.artifact_promoted.v1
+  - action.review_requested.v1
+  - action.decision_recorded.v1
+  - action.execution_completed.v1
+  - communication.intent_created.v1
+  - communication.delivery_requested.v1
+  - communication.delivery_receipt_recorded.v1
+  - commercial.sku_readiness_evaluated.v1
+  - product.paid_evidence_packet_subject_persisted.v1
+  - product.paid_terminal_receipt_bound.v1
+  - product.fact_recorded.v1
+  - journey.instance_started.v1
+  - journey.handoff_requested.v1
+  - journey.handoff_decided.v1
+  - journey.outcome_recorded.v1
+  consumer_bindings_to_add_exactly:
+  - event: action.execution_completed.v1
+    consumer: review-console-projector
+    physical_service: projection-worker
+    module: review_console
+    handler: handle_action_execution_completed_origin_receipt_v1
+    responsibility: project exact terminal receipt to bound origin context
+  - event: communication.delivery_receipt_recorded.v1
+    consumer: review-console-projector
+    physical_service: projection-worker
+    module: review_console
+    handler: handle_communication_delivery_receipt_origin_v1
+    responsibility: project DELIVERED or READ receipt to bound origin without state regression
+  - event: workflow.correction_request_submitted.v1
+    consumer: correction-intake-materializer
+    physical_service: workflow-worker
+    module: correction_intake
+    handler: handle_correction_request_submitted_v1
+    responsibility: project the immutable submission receipt into the internal correction queue exactly once
+  producer_contract_repair:
+    event: evidence.segment_created.v1
+    current_conflict: The event contract names ingest-worker only, while promoteResearchArtifactToEvidence explicitly emits
+      the event from control-api.
+    exact_fix: The producer set becomes exactly ingest-worker|control-api. control-api may produce only from promoteResearchArtifactToEvidence
+      and emits exactly one event per atomically created EvidenceSegment; ingest-worker retains its existing producer operations
+      and cardinality. The event envelope records the producer operation and both producer paths use identical replay and
+      segment candidate-key rules.
+    rejected_alternative: Stopping promoteResearchArtifactToEvidence from emitting this event is forbidden because it would
+      orphan the J-10 promotion projection and origin-return contract after the command has atomically created EvidenceSegments.
+  base_event_transport_repair:
+    event: correction.request_submitted.v1
+    current_conflict: It is IN_PROCESS with no consumer, but J-04 requires a separate workflow-worker correction-intake materializer.
+    exact_fix: Add a distinct OUTBOX_AT_LEAST_ONCE integration event workflow.correction_request_submitted.v1 produced atomically
+      by createCorrectionRequest and consumed by handle_correction_request_submitted_v1; keep the base domain event in-process.
+terminal_registry:
+  J-10:
+    success:
+    - CAS-004::promoted-evidence-visible
+    nonvalue:
+    - J-10::ABSTAINED
+    - J-10::FAILED
+    - J-10::CANCELLED
+    - J-10::BUDGET_BLOCKED
+    - J-10::POLICY_BLOCKED
+    - J-10::NO_ELIGIBLE_ARTIFACT
+    recovery:
+    - J-10::DEPENDENCY_UNAVAILABLE
+    nonterminal_recovery:
+    - J-10::CANCEL_REQUESTED
+    - J-10::RECONCILIATION_REQUIRED
+  J-11:
+    success:
+    - J-11::SUCCEEDED
+    nonvalue:
+    - J-11::POLICY_BLOCKED
+    - J-11::REJECTED
+    - J-11::WITHDRAWN
+    - J-11::EXPIRED
+    - J-11::PARTIALLY_SUCCEEDED
+    - J-11::PERMANENT_FAILED
+    - J-11::CANCELLED
+    - J-11::DELIVERY_FAILED_PERMANENT
+    - J-11::DELIVERY_SUPPRESSED
+    - J-11::DELIVERY_CANCELLED
+    recovery:
+    - J-11::CHANGES_REQUIRED
+    - J-11::SUPERSEDED
+    nonterminal_recovery:
+    - J-11::RETRYABLE_FAILED
+    - J-11::CANCEL_REQUESTED
+    - J-11::RECONCILIATION_REQUIRED
+    - J-11::DELIVERY_RECONCILIATION_REQUIRED
+  J-12:
+    success:
+    - AUD-001::paid-retention-audit-verified
+    nonvalue:
+    - OPS-004::churned
+    - J-12::EXPIRED
+    - J-12::POLICY_BLOCKED
+    - J-12::TERMINAL_NONVALUE
+    recovery:
+    - J-12::CHANGES_REQUIRED
+    - J-12::DATA_READINESS_BLOCKED
+    nonterminal_recovery:
+    - OPS-004::at-risk-overlay
+    - J-12::RECONCILIATION_REQUIRED
+acceptance_contract:
+  graph_static:
+  - UX-JOURNEY-GRAPH-12X129-SET-EQUALITY
+  - UX-JOURNEY-GRAPH-ALL-NODES-REACH-TERMINAL
+  - UX-JOURNEY-GRAPH-EVERY-NONTERMINAL-HAS-OUTGOING
+  - UX-JOURNEY-GRAPH-RESOLVER-SET-EQUALITY
+  - UX-JOURNEY-GRAPH-ROUTE-SET-94-UNCHANGED
+  - UX-JOURNEY-GRAPH-CROSS-RETURN-CONTEXT-PARITY
+  bypass_and_existing_journeys:
+  - UX-JOURNEY-J-03-NO-DIRECT-RESPONSE-SEND
+  - UX-JOURNEY-J-05-FIVE-BRANCH-SEPARATION
+  - UX-JOURNEY-J-06-J10-AND-J03-ROUNDTRIP
+  - UX-JOURNEY-J-07-FOUR-DECISIONS-NO-DIRECT-PUBLISH
+  J-10:
+  - UX-JOURNEY-J-10-ENTRY-TO-PROMOTED-EVIDENCE
+  - UX-JOURNEY-J-10-CANCEL-RECONCILE
+  - UX-JOURNEY-J-10-CITATION-PROMOTION-DIGEST-PARITY
+  J-11:
+  - UX-JOURNEY-J-11-ENTRY-TO-DURABLE-EFFECT
+  - UX-JOURNEY-J-11-DECISION-BRANCH-SEPARATION
+  - UX-JOURNEY-J-11-WITHDRAWAL-RACES
+  - UX-JOURNEY-J-11-CANCEL-DISPATCH-RECONCILE
+  - UX-JOURNEY-J-11-ORIGIN-RECEIPT-RETURN
+  - UX-JOURNEY-J-11-COMMUNICATION-FIVE-PHYSICAL-MILESTONES
+  J-12:
+  - UX-JOURNEY-J-12-OPS004-TO-OWNED-REMEDIATION-ACK
+  - UX-JOURNEY-J-12-QUALIFIED-CONFIGURED-DATA-READY-ORDER
+  - UX-JOURNEY-J-12-QUALIFIED-TO-FIRST-PAID-VALUE
+  - UX-JOURNEY-J-12-ACTIVATION-BOUNDARIES
+  - UX-JOURNEY-J-12-RETENTION-FIXED-WINDOW
+  - UX-JOURNEY-J-12-AT-RISK-CHURN-CORRECTION
+  - UX-JOURNEY-J-12-NO-STAGE-LEDGER
+  - UX-JOURNEY-J-12-OPTIONAL-J10-MANDATORY-J11-ROUNDTRIP
+  - UX-JOURNEY-J-12-PAID-TERMINAL-PAIR-EXACT
+negative_canaries:
+- id: JG-NEG-001
+  mutation: remove one edge row
+  expected: edge count and resolver set-equality fail
+- id: JG-NEG-002
+  mutation: add a resolver with no edge or an edge with no resolver
+  expected: bidirectional set-equality fail
+- id: JG-NEG-003
+  mutation: create an unreachable node or a nonterminal with no outgoing edge
+  expected: reachability fail
+- id: JG-NEG-004
+  mutation: point a cycle only to itself with no terminal path
+  expected: reverse terminal reachability fail
+- id: JG-NEG-005
+  mutation: use an unlisted branch selector
+  expected: contract error and zero journey/outcome writes
+- id: JG-NEG-006
+  mutation: change or add one browser route
+  expected: 94-ID and route-set lock fail
+- id: JG-NEG-007
+  mutation: call createResponseRequest directly from J-03 or publishCase directly from J-07
+  expected: approval-spine bypass fail
+- id: JG-NEG-008
+  mutation: return from J-10 or J-11 with a changed root ID version digest owner due/SLO or receipt
+  expected: cross-return parity fail
+- id: JG-NEG-009
+  mutation: treat CANCEL_REQUESTED or RECONCILIATION_REQUIRED as terminal
+  expected: terminal registry fail
+- id: JG-NEG-010
+  mutation: collapse J-11-E19 through E23 or let provider acceptance jump to success
+  expected: communication milestone and durable-effect fail
+- id: JG-NEG-011
+  mutation: begin J-12 at an internal service state without OPS-004 health and INT-002 owner ACK
+  expected: user-entry-order fail
+- id: JG-NEG-012
+  mutation: write CONFIGURED DATA_READY FIRST_PAID_VALUE ACTIVATED RETAINED AT_RISK or CHURNED stage row/event
+  expected: no-stage-ledger fail
+- id: JG-NEG-013
+  mutation: count AI output proposal approval provider acceptance invoice or page view as paid value
+  expected: paid-terminal-pair fail
+- id: JG-NEG-014
+  mutation: resolve ORGANIZATION_DECISION symbolically without exact action decision/execution candidate key and digest
+  expected: packet/outcome finalization blocked
+- id: JG-NEG-015
+  mutation: count a duplicate root or an outcome outside activation+29d inclusive to activation+57d exclusive
+  expected: RETAINED projection fail
+- id: JG-NEG-016
+  mutation: let inactivity alone produce CHURNED
+  expected: contract-terminal proof fail
+- id: JG-NEG-017
+  mutation: use CAS-011 or a fake AgentRun on the human-only J-12 branch
+  expected: human-path provenance fail
+- id: JG-NEG-018
+  mutation: show origin success before terminal receipt query and projection digest parity
+  expected: origin-receipt-return fail
+rejected_alternatives:
+- alternative: retain 9 journeys and 47 linear edges
+  reason: J-10 through J-12 and mandatory durable return paths remain absent
+- alternative: keep createResponseRequest and publishCase as direct journey effects
+  reason: they bypass the current exact proposal review authorization execution and receipt spine
+- alternative: infer branch edges from labels route names regex or list order
+  reason: this recreates a dynamic workflow DSL and cannot prove resolver set equality
+- alternative: use one generic branch handler without a closed selector map
+  reason: unknown decisions could route or succeed silently
+- alternative: collapse J-11 communication execution into one send edge
+  reason: intent authorization delivery claim provider observation reconciliation and origin receipt are different facts
+- alternative: treat PROVIDER_ACCEPTED as delivery or paid value
+  reason: only applied DELIVERED or READ may close the delivery pair
+- alternative: start J-12 at a backend qualification or stage projection
+  reason: the user loses the current-health answer owned remediation task and explicit acknowledgement
+- alternative: force the human-only J-12 path through CAS-011 by inventing an AgentRun
+  reason: it fabricates AI provenance and violates the two-path decision
+- alternative: persist a general commercial stage ledger or event stream
+  reason: every stage after QUALIFIED is a deterministic as-of projection
+- alternative: add a fourth paid surface or generic workflow route
+  reason: the fixed three surfaces and 94 routes are product invariants
+- alternative: mark J-12 complete at first paid value or activation
+  reason: the journey completes only after two additional distinct roots in the fixed window and immutable audit visibility
+implementation_gate:
+  status: OPEN_IMPLEMENTATION
+  rule: No edge, handler, handoff, event consumer, operation placement, database resolver, or acceptance receipt may be claimed
+    complete until the same source digest passes real runtime gates.

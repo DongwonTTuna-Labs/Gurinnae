@@ -1,0 +1,539 @@
+openapi: 3.1.0
+info:
+  title: Gurine Identity API
+  version: 13.0.0
+servers:
+- url: http://identity-api:8085
+tags:
+- name: procurement
+paths:
+  /v1/internal/supplier-identity/resolutions:
+    post:
+      operationId: recordSupplierIdentityResolution
+      summary: recordSupplierIdentityResolution
+      tags:
+      - addendum
+      x-operation-kind: COMMAND
+      x-error-codes:
+      - INVALID_PARAMETER
+      - RESOURCE_NOT_FOUND
+      - VERSION_CONFLICT
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      security:
+      - ServiceAssertion: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierIdentityResolutionReceiptV1'
+        '400':
+          description: 'Problem response: INVALID_PARAMETER'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INVALID_PARAMETER
+        '404':
+          description: 'Problem response: RESOURCE_NOT_FOUND'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - RESOURCE_NOT_FOUND
+        '409':
+          description: 'Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - VERSION_CONFLICT
+          - IDEMPOTENCY_CONFLICT
+        '403':
+          description: 'Problem response: CAPABILITY_DENIED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - CAPABILITY_DENIED
+        '500':
+          description: 'Problem response: INTERNAL_ERROR'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INTERNAL_ERROR
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierIdentityResolutionRequestV1'
+  /v1/internal/supplier-relationships/assertions:
+    post:
+      operationId: recordSupplierRelationshipAssertion
+      summary: recordSupplierRelationshipAssertion
+      tags:
+      - addendum
+      x-operation-kind: COMMAND
+      x-error-codes:
+      - INVALID_PARAMETER
+      - RESOURCE_NOT_FOUND
+      - VERSION_CONFLICT
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      security:
+      - ServiceAssertion: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierRelationshipAssertionReceiptV1'
+        '400':
+          description: 'Problem response: INVALID_PARAMETER'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INVALID_PARAMETER
+        '404':
+          description: 'Problem response: RESOURCE_NOT_FOUND'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - RESOURCE_NOT_FOUND
+        '409':
+          description: 'Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - VERSION_CONFLICT
+          - IDEMPOTENCY_CONFLICT
+        '403':
+          description: 'Problem response: CAPABILITY_DENIED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - CAPABILITY_DENIED
+        '500':
+          description: 'Problem response: INTERNAL_ERROR'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INTERNAL_ERROR
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupplierRelationshipAssertionRequestV1'
+  /v1/internal/supplier-relationships/assertions/{assertionId}:decide:
+    post:
+      operationId: decideSupplierRelationshipAssertion
+      summary: decideSupplierRelationshipAssertion
+      tags:
+      - addendum
+      x-operation-kind: COMMAND
+      x-error-codes:
+      - INVALID_PARAMETER
+      - RESOURCE_NOT_FOUND
+      - VERSION_CONFLICT
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      security:
+      - ServiceAssertion: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierRelationshipAssertionReceiptV1'
+        '400':
+          description: 'Problem response: INVALID_PARAMETER'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INVALID_PARAMETER
+        '404':
+          description: 'Problem response: RESOURCE_NOT_FOUND'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - RESOURCE_NOT_FOUND
+        '409':
+          description: 'Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - VERSION_CONFLICT
+          - IDEMPOTENCY_CONFLICT
+        '403':
+          description: 'Problem response: CAPABILITY_DENIED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - CAPABILITY_DENIED
+        '500':
+          description: 'Problem response: INTERNAL_ERROR'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INTERNAL_ERROR
+      parameters:
+      - name: assertionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecideSupplierRelationshipAssertionRequestV1'
+components:
+  securitySchemes:
+    ServiceAssertion:
+      type: apiKey
+      in: header
+      name: X-Gurine-Service-Assertion
+  schemas:
+    AddendumProblemDetailsV1:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        requestId:
+          type: string
+          format: uuid
+      required:
+      - code
+      - title
+      - status
+      - requestId
+    SupplierIdentityResolutionRequestV1:
+      type: object
+      additionalProperties: false
+      properties:
+        action:
+          type: string
+        candidateRefs:
+          type: array
+          items:
+            type: string
+        expectedCandidateSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        expectedPriorDecisionDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        fromCanonicalSupplierIds:
+          type: array
+          items:
+            type: string
+        toCanonicalSupplierIds:
+          type: array
+          items:
+            type: string
+        evidenceLocators:
+          type: array
+          items:
+            type: string
+        expectedEvidenceLocatorSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        expectedPublicImpactSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        impactOwnerUserId:
+          type: string
+          format: uuid
+        impactDueAt:
+          type: string
+          format: date-time
+        reasonCode:
+          type: string
+        reason:
+          type: string
+      required:
+      - action
+      - candidateRefs
+      - expectedCandidateSetDigest
+      - expectedPriorDecisionDigest
+      - fromCanonicalSupplierIds
+      - toCanonicalSupplierIds
+      - evidenceLocators
+      - expectedEvidenceLocatorSetDigest
+      - expectedPublicImpactSetDigest
+      - impactOwnerUserId
+      - impactDueAt
+      - reasonCode
+      - reason
+    SupplierIdentityResolutionReceiptV1:
+      type: object
+      additionalProperties: false
+      properties:
+        decisionId:
+          type: string
+          format: uuid
+        decisionSequence:
+          type: integer
+          format: int64
+        action:
+          type: string
+        candidateSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        evidenceLocatorSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        publicImpactSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        decisionDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        actorUserId:
+          type: string
+          format: uuid
+        auditEventId:
+          type: string
+          format: uuid
+        emittedEventIds:
+          type: array
+          items:
+            type: string
+        acceptedAt:
+          type: string
+          format: date-time
+      required:
+      - decisionId
+      - decisionSequence
+      - action
+      - candidateSetDigest
+      - evidenceLocatorSetDigest
+      - publicImpactSetDigest
+      - decisionDigest
+      - actorUserId
+      - auditEventId
+      - emittedEventIds
+      - acceptedAt
+    AssertionPartyV1:
+      type: object
+      additionalProperties: false
+      properties:
+        partyKind:
+          type: string
+        supplierCandidateId:
+          type: string
+          format: uuid
+        supplierCandidateRevision:
+          type: integer
+          format: int64
+        supplierCandidateDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        canonicalSupplierId:
+          type: string
+          format: uuid
+        identityKeyDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        identityStatus:
+          type: string
+          format: date
+      required:
+      - partyKind
+      - supplierCandidateId
+      - supplierCandidateRevision
+      - supplierCandidateDigest
+      - canonicalSupplierId
+      - identityKeyDigest
+      - identityStatus
+    CreateSupplierRelationshipAssertionRequestV1:
+      type: object
+      additionalProperties: false
+      properties:
+        relationshipKind:
+          type: string
+        subject:
+          $ref: '#/components/schemas/AssertionPartyV1'
+        object:
+          $ref: '#/components/schemas/AssertionPartyV1'
+        ownershipPercent:
+          type: integer
+          format: int64
+        managementRole:
+          type:
+          - string
+          - 'null'
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: string
+          format: date
+        validityCoverageStatus:
+          type: string
+        evidenceLocators:
+          type: array
+          items:
+            type: string
+        expectedEvidenceLocatorSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        reason:
+          type: string
+      required:
+      - relationshipKind
+      - subject
+      - object
+      - ownershipPercent
+      - managementRole
+      - validFrom
+      - validTo
+      - validityCoverageStatus
+      - evidenceLocators
+      - expectedEvidenceLocatorSetDigest
+      - reason
+    SupplierRelationshipAssertionReceiptV1:
+      type: object
+      additionalProperties: false
+      properties:
+        assertionId:
+          type: string
+          format: uuid
+        assertionRevision:
+          type: integer
+          format: int64
+        assertionDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        verificationStatus:
+          type: string
+        evidenceLocatorSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        verifiedBy:
+          type: string
+          format: uuid
+        verifiedAt:
+          type: string
+          format: date-time
+        auditEventId:
+          type: string
+          format: uuid
+        emittedEventIds:
+          type: array
+          items:
+            type: string
+        acceptedAt:
+          type: string
+          format: date-time
+      required:
+      - assertionId
+      - assertionRevision
+      - assertionDigest
+      - verificationStatus
+      - evidenceLocatorSetDigest
+      - verifiedBy
+      - verifiedAt
+      - auditEventId
+      - emittedEventIds
+      - acceptedAt
+    DecideSupplierRelationshipAssertionRequestV1:
+      type: object
+      additionalProperties: false
+      properties:
+        assertionId:
+          type: string
+          format: uuid
+        expectedAssertionRevision:
+          type: integer
+          format: int64
+        expectedAssertionDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        expectedEvidenceLocatorSetDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        decision:
+          type: string
+        counterAssertionIds:
+          type: array
+          items:
+            type: string
+        reasonCode:
+          type: string
+        reason:
+          type: string
+      required:
+      - assertionId
+      - expectedAssertionRevision
+      - expectedAssertionDigest
+      - expectedEvidenceLocatorSetDigest
+      - decision
+      - counterAssertionIds
+      - reasonCode
+      - reason

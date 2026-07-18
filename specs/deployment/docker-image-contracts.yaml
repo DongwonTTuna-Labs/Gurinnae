@@ -58,4 +58,6 @@ rules:
 - No source credential or production .env is copied into an image.
 - Runtime images contain only the required binary/build output, CA certificates and timezone data.
 - Containers run non-root unless the upstream PostgreSQL image requires its documented user.
+- Every first-party Compose service runs with `init: true`, `no-new-privileges`, all Linux capabilities dropped, and a `pids_limit` of 256. Upstream PostgreSQL, ClamAV, and telemetry images retain their documented entrypoint privileges.
+- Runtime network access is limited to the explicitly declared Compose networks; `internal` and `data` networks remain externally unroutable.
 - SBOM and vulnerability scan are attached to release evidence.

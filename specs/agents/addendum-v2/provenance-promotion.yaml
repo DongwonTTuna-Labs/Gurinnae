@@ -1,0 +1,140 @@
+schema_version: 1
+specification_version: 13.0.0+agent-multimodal.1
+status: REVIEW_REQUIRED
+decision_state: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+implementation_state: OPEN_IMPLEMENTATION
+
+source_use:
+  schema: schemas/source-use.schema.json
+  immutable_identity:
+    digest_input_order:
+      - schemaVersion
+      - sourceUseId
+      - agentRunId
+      - providerTurnId
+      - toolCallId
+      - parentSourceUseId
+      - parentSourceUseSha256
+      - useKind
+      - sourceKind
+      - sourceIdentity
+      - locator
+      - selectedContentSha256
+      - classification
+      - rightsDecision
+      - providerReceiptId
+      - occurredAt
+  use_kinds: [TOOL_QUERY, TOOL_RESULT, MODEL_INPUT, MODEL_OUTPUT_DERIVATION, CITATION, PROPOSAL, HUMAN_PROMOTION]
+  source_kinds: [EVIDENCE_SEGMENT, RESPONSE_SNAPSHOT, DATASET_MEMBER, RESEARCH_ARTIFACT]
+  required_join_rules:
+    - MODEL_INPUT joins exactly one ProviderTurn and ProviderReceipt; external model use additionally requires modelEgressRight=ALLOW and modelUseRight=ALLOW.
+    - TOOL_QUERY and TOOL_RESULT join exactly one ToolCall unless the source is only a dataset member used by a pure internal query plan.
+    - CITATION joins one Citation and the prior source use that exposed the exact bytes/segment to the run.
+    - Derived use kinds bind parentSourceUseId and parentSourceUseSha256 through a same-run self-FK; cycles and cross-run ancestry are rejected.
+    - RESEARCH_ARTIFACT belongs to the same run and source.fetch call; another run cannot cite or promote it by identifier reuse.
+    - Every source revision/digest and rights-decision revision/digest is an FK/candidate-key binding, not application-only comparison.
+
+citation:
+  schema: schemas/citation.schema.json
+  allowed_source_kinds: [EVIDENCE_SEGMENT, RUN_TOOL_ARTIFACT]
+  authority:
+    EVIDENCE_SEGMENT: May support an internal proposal after exact snapshot-member, locator, selected-content, source-use, and rights validation.
+    RUN_TOOL_ARTIFACT: Research/candidate context only; cannot support a claim, publication, communication rationale, or external action until human promotion.
+  digest_input_order: [schemaVersion,citationId,proposalId,sourceKind,sourceIdentity,sourceUseId,sourceUseSha256,locator,selectedContentSha256,supportsSha256,citationOrdinal]
+  validation:
+    - Resolve source through relational joins under the same run and immutable snapshot.
+    - Re-extract the locator against the pinned source bytes and compare selectedContentSha256.
+    - Compare the normalized support text digest; a nearby or semantically similar passage is not a match.
+    - Re-evaluate the exact rights decision at the use time; missing, expired, UNKNOWN, DENY, SUSPEND, or REVOKE fails closed.
+    - Sort citations by citationOrdinal and reject duplicate source/locator/content tuples.
+
+research_artifact:
+  schema: schemas/research-artifact.schema.json
+  status: ResearchArtifact is immutable untrusted research input, never Evidence.
+  allowed_fetch_outcomes: [STORED, RENDER_REQUIRED, QUARANTINED]
+  use_before_promotion: [private review, candidate comparison, source discovery, further bounded internal analysis when rights permit]
+  prohibited_before_promotion: [claim support, publication, public excerpt, external message rationale, authoritative fact insertion]
+
+human_promotion:
+  operation_id: promoteResearchArtifactToEvidence
+  request_schema: schemas/promote-research-artifact.request.schema.json
+  receipt_schema: schemas/promote-research-artifact.receipt.schema.json
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/promote-research-artifact-to-evidence
+  consumer: CAS-011
+  capability: cases.evidence.manage
+  assurance: ACTIVE_SESSION
+  idempotency: required
+  optimistic_concurrency:
+    guard_relation: editorial.cases
+    identity: id = :caseId
+    version: version = :expectedCaseVersion
+  preconditions:
+    - The artifact, run, case, fetch, provider turn, tool call, request digest, result digest, asset revision, content digest, and object key match by FK/candidate key.
+    - fetchOutcome is STORED and contentSafetyState is CLEAN with a verified scan receipt; RENDER_REQUIRED and QUARANTINED are ineligible.
+    - The exact latest effective asset-rights GRANT permits access, private storage, derivative creation, and excerpt. Public classification also requires redistribution, commercial use, and public display ALLOW.
+    - Selected locators are sorted, non-overlapping where positional, within the asset, and re-extract to the submitted selectedContentSha256 values.
+    - The reviewer sees source authority, final URL, retrieval time, media type, safety, rights dimensions, selected content, limitations, and consequences before submit.
+  transaction:
+    isolation: SERIALIZABLE
+    lock_order:
+      - editorial.cases by caseId
+      - raw.research_artifacts by researchArtifactId
+      - latest raw.asset_rights_decisions by asset identity/version
+      - raw.research_artifact_promotions by artifact/idempotency digest
+    statements:
+      - Verify or insert one raw.source_documents row backed by the same immutable object bytes; assign a distinct SourceDocument asset identity and preserve the research artifact FK in the promotion ledger.
+      - Insert the exact parser/extraction receipt or bind an existing byte-identical successful extraction; fixture output or client-supplied extracted text is forbidden.
+      - Insert one raw.evidence_segments row per selected locator with source and selected-content digests.
+      - Insert exactly one editorial.evidence revision bound to the primary segment; additional segments are immutable supporting selections in the promotion ledger.
+      - Insert SourceUse(HUMAN_PROMOTION), the promotion ledger row, audit event, outbox event, and receipt atomically.
+    zero_or_many_rule: At least one selected segment is required. Any failed insert or mismatch rolls back every source/evidence/audit/outbox write.
+  event:
+    type: research.artifact_promoted.v1
+    payload_required: [promotionId,researchArtifactId,researchArtifactSha256,sourceDocumentId,sourceAssetId,sourceAssetRevision,sourceContentSha256,evidenceId,evidenceVersion,evidenceDigest,rightsDecisionId,rightsDecisionDigest,reviewerUserId,auditEventId,occurredAt,receiptDigest]
+  replay:
+    same_idempotency_same_bytes: Return the stored receipt byte-equivalently; no new rows or event.
+    same_idempotency_changed_bytes: IDEMPOTENCY_CONFLICT
+    artifact_already_promoted_different_key: Return existing promotion identity for identical target semantics; otherwise PRECONDITION_FAILED and require an explicit new evidence revision workflow.
+  errors: [INVALID_REQUEST,ACTOR_ASSERTION_INVALID,CAPABILITY_DENIED,RESOURCE_NOT_FOUND,VERSION_CONFLICT,IDEMPOTENCY_CONFLICT,ARTIFACT_NOT_CLEAN,RIGHTS_DENIED,LOCATOR_MISMATCH,CONTENT_HASH_MISMATCH,VALIDATION_FAILED,DEPENDENCY_UNAVAILABLE,INTERNAL_ERROR]
+  approval_boundary:
+    kind: HUMAN_EVIDENCE_PROMOTION_COMMAND
+    rule: This command is an evidence-curation decision under cases.evidence.manage, not approval of an external ActionProposal and not consent to communicate. If a promoted Evidence revision later supports an external action, that separate proposal starts a fresh approval cycle under specs/product/addendum-approval-policy.yaml and the omnichannel consent/delivery contract.
+    forbidden_inference: A promotion receipt never sets ApprovalBindingV1, communication authorization, provider selection, send state, delivery state, publication approval, or public visibility.
+
+view_models:
+  analysis: schemas/analysis-vm.schema.json
+  visualization: schemas/visualization-vm.schema.json
+  provenance_graph: schemas/provenance-graph.schema.json
+  cas_010:
+    required_answers: [object_and_scope,current_state,highest_priority_result,input_snapshot_and_freshness,unknown_or_blocker,next_action_and_consequence]
+    no_raw_output: true
+  cas_011:
+    information_order: [identity,inputs,model,output,citations,safety,decisions,cost]
+    output_requirements:
+      - Typed conclusion/abstention, hypotheses, counter-evidence, unknowns, investigations performed, and next actions are separate labelled regions.
+      - Every material statement links to a typed citation and graph path; UUID-only citations and hidden prompts/provenance are forbidden.
+      - Provider/tool timeline shows status, bounded reason, latency, cost, and safe receipt, never hidden chain of thought.
+      - Visualizations include unit, as-of, uncertainty, source digest, keyboard data table, and narrative alternative with equal facts.
+      - A RUN_TOOL_ARTIFACT displays a research-only badge and promotion eligibility/reason; promotion is a human command, never an AI button side effect.
+      - Every proposal row exposes proposal version, payload/citation-set digests and an ordered typed before/after field diff. The UI never renders raw proposal JSON or treats acceptance as approval/delivery.
+      - COMMUNICATION rows expose a handoff reference to the canonical ActionProposal and omnichannel contracts; recipient endpoint version, current consent/suppression/quiet-hour state and approval/execution receipt are loaded from their owners, not synthesized by the AI mapper.
+      - Every source activation binds source asset ID/revision/content digest, locator kind/value/digest, selected-content digest, activation control ID and focus-return control ID. Navigation opens the exact immutable locator and restores focus after return or typed failure.
+  typed_mapper_contract:
+    source: SQLx rows decoded as AgentRunV2, ProviderTurnV2, ToolCallV2, SourceUseV2, CitationV2, OutputValidationV2, AgentProposalV2 and typed owner handoff summaries
+    target: AnalysisVmV2 plus VisualizationVmV2 and ProvenanceGraphV2
+    authorization_order: authorize case/run/source/decision/action references before mapping labels, counts, graph nodes, links, diffs or focus targets
+    digest_rule: one canonical authorized fact set produces the analysis, graph, table and narrative digests; client-side recomputation or independently transformed chart facts are forbidden
+    state_rule: loading, partial, stale, blocked, conflict, unauthorized, forbidden and dependency error are typed variants with the same information hierarchy; raw DTO/JSON fallback is forbidden
+  external_handoff_refs:
+    approval_contract: specs/product/addendum-approval-policy.yaml#approval_cycle
+    omnichannel_contract: specs/database/addendum/0027-communication-consent-delivery.yaml
+    rule: These are imported by immutable identity/version/digest. This addendum defines only the read model reference and never duplicates their quorum, consent, provider, callback, cancellation or reconciliation state machines.
+
+acceptance:
+  - A valid EvidenceSegment citation traverses snapshot member -> source use -> citation -> proposal and opens the exact locator.
+  - Stale snapshot, wrong run artifact, wrong locator, wrong selected-content hash, expired rights, or missing join produces zero proposals.
+  - Promotion creates exactly one authoritative evidence graph and byte-identical replay; rollback leaves zero partial rows/events.
+  - Public/external consumers reject an unpromoted ResearchArtifact even when an AI summary cites it.
+  - CAS-011 graph and accessible rows are set-equal and digest-equal; keyboard activation reaches the exact source locator and returns focus.

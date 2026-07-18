@@ -167,56 +167,12 @@ pub fn xlsx(path: &Path, bytes: &[u8]) -> ExtractionResult {
                 );
             }
         };
-        let start = range.start().unwrap_or((0, 0));
-        let rows = range
-            .rows()
-            .enumerate()
-            .map(|(row_offset, values)| {
-                values
-                    .iter()
-                    .enumerate()
-                    .map(|(column_offset, value)| {
-                        let row = start.0 as usize + row_offset + 1;
-                        let column = start.1 as usize + column_offset + 1;
-                        let reference = format!("{}{row}", column_letters(column));
-                        Cell {
-                            text: normalize_text(&value.to_string()),
-                            row,
-                            column,
-                            locator: locator(
-                                LocatorKind::XlsxCell,
-                                format!("sheet={sheet_name};cell={reference}"),
-                            ),
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-        let range_reference = range
-            .start()
-            .zip(range.end())
-            .map(|(start, end)| {
-                format!(
-                    "{}{}:{}{}",
-                    column_letters(start.1 as usize + 1),
-                    start.0 + 1,
-                    column_letters(end.1 as usize + 1),
-                    end.0 + 1
-                )
-            })
-            .unwrap_or_default();
-        let table_locator = format!("sheet={sheet_name};range={range_reference}");
-        pages.push(Page {
-            index: sheet_index,
-            width: None,
-            height: None,
-            blocks: Vec::new(),
-            tables: vec![Table {
-                id: stable_id("tbl", &document_sha256, "XLSX_CELL", &table_locator, ""),
-                locator: locator(LocatorKind::XlsxCell, table_locator),
-                rows,
-            }],
-        });
+        pages.push(xlsx_page(
+            &document_sha256,
+            sheet_index,
+            &sheet_name,
+            &range,
+        ));
     }
     complete(
         document_sha256,
@@ -226,6 +182,64 @@ pub fn xlsx(path: &Path, bytes: &[u8]) -> ExtractionResult {
         pages,
         Vec::new(),
     )
+}
+
+fn xlsx_page(
+    document_sha256: &str,
+    index: usize,
+    sheet_name: &str,
+    range: &calamine::Range<calamine::Data>,
+) -> Page {
+    let start = range.start().unwrap_or((0, 0));
+    let rows = range
+        .rows()
+        .enumerate()
+        .map(|(row_offset, values)| {
+            values
+                .iter()
+                .enumerate()
+                .map(|(column_offset, value)| {
+                    let row = start.0 as usize + row_offset + 1;
+                    let column = start.1 as usize + column_offset + 1;
+                    let reference = format!("{}{row}", column_letters(column));
+                    Cell {
+                        text: normalize_text(&value.to_string()),
+                        row,
+                        column,
+                        locator: locator(
+                            LocatorKind::XlsxCell,
+                            format!("sheet={sheet_name};cell={reference}"),
+                        ),
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let range_reference = range
+        .start()
+        .zip(range.end())
+        .map(|(start, end)| {
+            format!(
+                "{}{}:{}{}",
+                column_letters(start.1 as usize + 1),
+                start.0 + 1,
+                column_letters(end.1 as usize + 1),
+                end.0 + 1
+            )
+        })
+        .unwrap_or_default();
+    let table_locator = format!("sheet={sheet_name};range={range_reference}");
+    Page {
+        index,
+        width: None,
+        height: None,
+        blocks: Vec::new(),
+        tables: vec![Table {
+            id: stable_id("tbl", document_sha256, "XLSX_CELL", &table_locator, ""),
+            locator: locator(LocatorKind::XlsxCell, table_locator),
+            rows,
+        }],
+    }
 }
 
 pub fn docx(path: &Path, bytes: &[u8]) -> ExtractionResult {
@@ -275,44 +289,7 @@ pub fn docx(path: &Path, bytes: &[u8]) -> ExtractionResult {
             );
         }
     };
-    let body = root.descendants_named("body").into_iter().next();
-    let paragraphs = body
-        .map(|body| body.children.iter().filter(|node| node.name == "p"))
-        .into_iter()
-        .flatten();
-    let blocks = paragraphs
-        .enumerate()
-        .filter_map(|(index, paragraph)| {
-            let text = normalize_text(&paragraph.all_text());
-            if text.is_empty() {
-                return None;
-            }
-            let heading = paragraph
-                .descendants_named("pStyle")
-                .into_iter()
-                .filter_map(|style| style.attributes.get("val"))
-                .any(|style| {
-                    matches!(
-                        style.to_ascii_lowercase().as_str(),
-                        "title" | "heading1" | "heading2"
-                    )
-                });
-            let value = format!("word/document.xml#/w:document/w:body/w:p[{}]", index + 1);
-            Some(block(
-                &document_sha256,
-                if heading {
-                    BlockKind::Heading
-                } else {
-                    BlockKind::Paragraph
-                },
-                LocatorKind::DocxParagraph,
-                "DOCX_PARAGRAPH",
-                value,
-                text,
-                None,
-            ))
-        })
-        .collect();
+    let blocks = docx_blocks(&document_sha256, &root);
     extracted_blocks(
         document_sha256,
         DOCX_MEDIA,
@@ -320,6 +297,49 @@ pub fn docx(path: &Path, bytes: &[u8]) -> ExtractionResult {
         "zip-8.6.0+quick-xml-0.41.0-reference-v1",
         blocks,
     )
+}
+
+fn docx_blocks(document_sha256: &str, root: &XmlNode) -> Vec<Block> {
+    root.descendants_named("body")
+        .into_iter()
+        .next()
+        .map(|body| {
+            body.children
+                .iter()
+                .filter(|node| node.name == "p")
+                .enumerate()
+                .filter_map(|(index, paragraph)| {
+                    let text = normalize_text(&paragraph.all_text());
+                    if text.is_empty() {
+                        return None;
+                    }
+                    let heading = paragraph
+                        .descendants_named("pStyle")
+                        .into_iter()
+                        .filter_map(|style| style.attributes.get("val"))
+                        .any(|style| {
+                            matches!(
+                                style.to_ascii_lowercase().as_str(),
+                                "title" | "heading1" | "heading2"
+                            )
+                        });
+                    Some(block(
+                        document_sha256,
+                        if heading {
+                            BlockKind::Heading
+                        } else {
+                            BlockKind::Paragraph
+                        },
+                        LocatorKind::DocxParagraph,
+                        "DOCX_PARAGRAPH",
+                        format!("word/document.xml#/w:document/w:body/w:p[{}]", index + 1),
+                        text,
+                        None,
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 pub fn hwpx(path: &Path, bytes: &[u8]) -> ExtractionResult {
@@ -364,50 +384,18 @@ pub fn hwpx(path: &Path, bytes: &[u8]) -> ExtractionResult {
             "HWPX_SECTION_MISSING",
         );
     }
-    let mut pages = Vec::new();
-    for (page_index, name) in sections.into_iter().enumerate() {
-        let section =
-            match archive::read_entry(&mut archive, &name).and_then(|bytes| xml::parse(&bytes)) {
-                Ok(section) => section,
-                Err(code) => {
-                    return rejected(
-                        document_sha256,
-                        HWPX_MEDIA,
-                        "hwpx",
-                        "zip-8.6.0+quick-xml-0.41.0-reference-v1",
-                        &code,
-                    );
-                }
-            };
-        let blocks = section
-            .descendants_named("p")
-            .into_iter()
-            .enumerate()
-            .filter_map(|(index, paragraph)| {
-                let text = normalize_text(&paragraph.all_text());
-                if text.is_empty() {
-                    return None;
-                }
-                let value = format!("{name}#/section[1]/p[{}]", index + 1);
-                Some(block(
-                    &document_sha256,
-                    BlockKind::Paragraph,
-                    LocatorKind::HwpxXpath,
-                    "HWPX_XPATH",
-                    value,
-                    text,
-                    None,
-                ))
-            })
-            .collect();
-        pages.push(Page {
-            index: page_index,
-            width: None,
-            height: None,
-            blocks,
-            tables: Vec::new(),
-        });
-    }
+    let pages = match hwpx_pages(&mut archive, &sections, &document_sha256) {
+        Ok(pages) => pages,
+        Err(code) => {
+            return rejected(
+                document_sha256,
+                HWPX_MEDIA,
+                "hwpx",
+                "zip-8.6.0+quick-xml-0.41.0-reference-v1",
+                &code,
+            );
+        }
+    };
     complete(
         document_sha256,
         HWPX_MEDIA,
@@ -416,6 +404,48 @@ pub fn hwpx(path: &Path, bytes: &[u8]) -> ExtractionResult {
         pages,
         Vec::new(),
     )
+}
+
+fn hwpx_pages(
+    archive: &mut zip::ZipArchive<std::fs::File>,
+    sections: &[String],
+    document_sha256: &str,
+) -> Result<Vec<Page>, String> {
+    sections
+        .iter()
+        .enumerate()
+        .map(|(page_index, name)| {
+            let section =
+                archive::read_entry(archive, name).and_then(|bytes| xml::parse(&bytes))?;
+            let blocks = section
+                .descendants_named("p")
+                .into_iter()
+                .enumerate()
+                .filter_map(|(index, paragraph)| {
+                    let text = normalize_text(&paragraph.all_text());
+                    if text.is_empty() {
+                        return None;
+                    }
+                    Some(block(
+                        document_sha256,
+                        BlockKind::Paragraph,
+                        LocatorKind::HwpxXpath,
+                        "HWPX_XPATH",
+                        format!("{name}#/section[1]/p[{}]", index + 1),
+                        text,
+                        None,
+                    ))
+                })
+                .collect();
+            Ok(Page {
+                index: page_index,
+                width: None,
+                height: None,
+                blocks,
+                tables: Vec::new(),
+            })
+        })
+        .collect()
 }
 
 fn preflight_archive(path: &Path) -> Result<(), String> {

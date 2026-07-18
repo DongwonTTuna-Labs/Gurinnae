@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AcceptAgentSuggestionData, AcceptAgentSuggestionErrors, AcceptAgentSuggestionResponses, AcknowledgeSourceIncidentData, AcknowledgeSourceIncidentErrors, AcknowledgeSourceIncidentResponses, ActivateKillSwitchData, ActivateKillSwitchErrors, ActivateKillSwitchResponses, ActivateRuleVersionData, ActivateRuleVersionErrors, ActivateRuleVersionResponses, AddClaimData, AddClaimErrors, AddClaimResponses, AddEvidenceData, AddEvidenceErrors, AddEvidenceResponses, ApproveResponseExcerptData, ApproveResponseExcerptErrors, ApproveResponseExcerptResponses, ApproveSchemaMappingData, ApproveSchemaMappingErrors, ApproveSchemaMappingResponses, AssignCaseData, AssignCaseErrors, AssignCaseResponses, AssignCorrectionData, AssignCorrectionErrors, AssignCorrectionResponses, AssignReviewData, AssignReviewErrors, AssignReviewResponses, AssignSignalData, AssignSignalErrors, AssignSignalResponses, CancelJobData, CancelJobErrors, CancelJobResponses, CreateAccessRequestData, CreateAccessRequestErrors, CreateAccessRequestResponses, CreateAuditExportData, CreateAuditExportErrors, CreateAuditExportResponses, CreateCorrectionData, CreateCorrectionErrors, CreateCorrectionResponses, CreateEvidenceRedactionData, CreateEvidenceRedactionErrors, CreateEvidenceRedactionResponses, CreateHypothesisData, CreateHypothesisErrors, CreateHypothesisResponses, CreateResponseRequestData, CreateResponseRequestErrors, CreateResponseRequestResponses, CreateRetractionDraftData, CreateRetractionDraftErrors, CreateRetractionDraftResponses, CreateReviewSnapshotData, CreateReviewSnapshotErrors, CreateReviewSnapshotResponses, CreateRuleVersionDraftData, CreateRuleVersionDraftErrors, CreateRuleVersionDraftResponses, CreateSavedViewData, CreateSavedViewErrors, CreateSavedViewResponses, DeactivateKillSwitchData, DeactivateKillSwitchErrors, DeactivateKillSwitchResponses, DeleteSavedViewData, DeleteSavedViewErrors, DeleteSavedViewResponses, DisableProviderRoutingData, DisableProviderRoutingErrors, DisableProviderRoutingResponses, DisableUserData, DisableUserErrors, DisableUserResponses, DownloadSourceRunReportData, DownloadSourceRunReportErrors, DownloadSourceRunReportResponses, EstimateBackfillData, EstimateBackfillErrors, EstimateBackfillResponses, ExportCostReportData, ExportCostReportErrors, ExportCostReportResponses, ExtendKillSwitchData, ExtendKillSwitchErrors, ExtendKillSwitchResponses, GetAgentRunData, GetAgentRunErrors, GetAgentRunResponses, GetAuditExportData, GetAuditExportErrors, GetAuditExportResponses, GetBudgetOverviewData, GetBudgetOverviewErrors, GetBudgetOverviewResponses, GetCaseWorkspaceOverviewData, GetCaseWorkspaceOverviewErrors, GetCaseWorkspaceOverviewResponses, GetCorrectionWorkspaceData, GetCorrectionWorkspaceErrors, GetCorrectionWorkspaceResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserCapabilitiesData, GetCurrentUserCapabilitiesErrors, GetCurrentUserCapabilitiesResponses, GetEvidenceWorkspaceData, GetEvidenceWorkspaceErrors, GetEvidenceWorkspaceResponses, GetInternalCaseData, GetInternalCaseErrors, GetInternalCaseResponses, GetInternalDashboardData, GetInternalDashboardErrors, GetInternalDashboardResponses, GetInternalRuleVersionData, GetInternalRuleVersionErrors, GetInternalRuleVersionResponses, GetInternalSourceData, GetInternalSourceErrors, GetInternalSourceResponses, GetJobData, GetJobErrors, GetJobResponses, GetOperationsOverviewData, GetOperationsOverviewErrors, GetOperationsOverviewResponses, GetPublicationPreviewData, GetPublicationPreviewErrors, GetPublicationPreviewResponses, GetPublicationReceiptData, GetPublicationReceiptErrors, GetPublicationReceiptResponses, GetPublishConfirmationData, GetPublishConfirmationErrors, GetPublishConfirmationResponses, GetResponseRequestComposerData, GetResponseRequestComposerErrors, GetResponseRequestComposerResponses, GetReviewReadinessData, GetReviewReadinessErrors, GetReviewReadinessResponses, GetReviewSnapshotData, GetReviewSnapshotErrors, GetReviewSnapshotResponses, GetRuleActivationReadinessData, GetRuleActivationReadinessErrors, GetRuleActivationReadinessResponses, GetRuleEvaluationData, GetRuleEvaluationErrors, GetRuleEvaluationResponses, GetSchemaDriftData, GetSchemaDriftErrors, GetSchemaDriftResponses, GetSignalTriageViewData, GetSignalTriageViewErrors, GetSignalTriageViewResponses, GetSourceRunData, GetSourceRunErrors, GetSourceRunResponses, GetUserAccessDetailData, GetUserAccessDetailErrors, GetUserAccessDetailResponses, GrantRoleData, GrantRoleErrors, GrantRoleResponses, InviteUserData, InviteUserErrors, InviteUserResponses, LinkEvidenceData, LinkEvidenceErrors, LinkEvidenceResponses, LinkSignalToCaseData, LinkSignalToCaseErrors, LinkSignalToCaseResponses, ListCaseAgentRunsData, ListCaseAgentRunsErrors, ListCaseAgentRunsResponses, ListCaseAuditEventsData, ListCaseAuditEventsErrors, ListCaseAuditEventsResponses, ListCaseClaimsData, ListCaseClaimsErrors, ListCaseClaimsResponses, ListCaseCorrectionsData, ListCaseCorrectionsErrors, ListCaseCorrectionsResponses, ListCaseEvidenceData, ListCaseEvidenceErrors, ListCaseEvidenceResponses, ListCaseHypothesesData, ListCaseHypothesesErrors, ListCaseHypothesesResponses, ListCaseResponsesData, ListCaseResponsesErrors, ListCaseResponsesResponses, ListCaseSignalsData, ListCaseSignalsErrors, ListCaseSignalsResponses, ListCaseTimelineData, ListCaseTimelineErrors, ListCaseTimelineResponses, ListCorrectionQueueData, ListCorrectionQueueErrors, ListCorrectionQueueResponses, ListInternalCasesData, ListInternalCasesErrors, ListInternalCasesResponses, ListInternalNotificationsData, ListInternalNotificationsErrors, ListInternalNotificationsResponses, ListInternalRulesData, ListInternalRulesErrors, ListInternalRulesResponses, ListInternalSourcesData, ListInternalSourcesErrors, ListInternalSourcesResponses, ListJobsData, ListJobsErrors, ListJobsResponses, ListKillSwitchesData, ListKillSwitchesErrors, ListKillSwitchesResponses, ListMyTasksData, ListMyTasksErrors, ListMyTasksResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListReviewQueueData, ListReviewQueueErrors, ListReviewQueueResponses, ListRoleDefinitionsData, ListRoleDefinitionsErrors, ListRoleDefinitionsResponses, ListSavedViewsData, ListSavedViewsErrors, ListSavedViewsResponses, ListSignalsData, ListSignalsErrors, ListSignalsResponses, ListSourceRunsData, ListSourceRunsErrors, ListSourceRunsResponses, ListUsersData, ListUsersErrors, ListUsersResponses, MarkNotificationReadData, MarkNotificationReadErrors, MarkNotificationReadResponses, PauseBackfillData, PauseBackfillErrors, PauseBackfillResponses, PauseJobQueueData, PauseJobQueueErrors, PauseJobQueueResponses, PauseSourceData, PauseSourceErrors, PauseSourceResponses, PlaceLegalHoldData, PlaceLegalHoldErrors, PlaceLegalHoldResponses, PlaceTemporaryRestrictionData, PlaceTemporaryRestrictionErrors, PlaceTemporaryRestrictionResponses, PreviewPublicationData, PreviewPublicationErrors, PreviewPublicationResponses, ProposeRoleDefinitionChangeData, ProposeRoleDefinitionChangeErrors, ProposeRoleDefinitionChangeResponses, PublishCaseData, PublishCaseErrors, PublishCaseResponses, QuarantineJobData, QuarantineJobErrors, QuarantineJobResponses, ReassignTaskData, ReassignTaskErrors, ReassignTaskResponses, RejectAgentSuggestionData, RejectAgentSuggestionErrors, RejectAgentSuggestionResponses, RejectSchemaMappingData, RejectSchemaMappingErrors, RejectSchemaMappingResponses, ResolveCorrectionRequestData, ResolveCorrectionRequestErrors, ResolveCorrectionRequestResponses, RetryJobData, RetryJobErrors, RetryJobResponses, RetryJobsData, RetryJobsErrors, RetryJobsResponses, RetrySourceRunData, RetrySourceRunErrors, RetrySourceRunResponses, RevokeOwnSessionData, RevokeOwnSessionErrors, RevokeOwnSessionResponses, RevokeRoleData, RevokeRoleErrors, RevokeRoleResponses, RevokeUserSessionsData, RevokeUserSessionsErrors, RevokeUserSessionsResponses, RollbackRuleVersionData, RollbackRuleVersionErrors, RollbackRuleVersionResponses, RunRuleEvaluationData, RunRuleEvaluationErrors, RunRuleEvaluationResponses, SaveResponseRequestDraftData, SaveResponseRequestDraftErrors, SaveResponseRequestDraftResponses, ScheduleRuleActivationData, ScheduleRuleActivationErrors, ScheduleRuleActivationResponses, SearchAuditEventsData, SearchAuditEventsErrors, SearchAuditEventsResponses, SearchInternalRecordsData, SearchInternalRecordsErrors, SearchInternalRecordsResponses, StartAccessReviewData, StartAccessReviewErrors, StartAccessReviewResponses, StartAgentRunData, StartAgentRunErrors, StartAgentRunResponses, StartBackfillData, StartBackfillErrors, StartBackfillResponses, StartRuleShadowData, StartRuleShadowErrors, StartRuleShadowResponses, StartSourceRunData, StartSourceRunErrors, StartSourceRunResponses, SubmitReviewData, SubmitReviewErrors, SubmitReviewResponses, TestProviderConnectionData, TestProviderConnectionErrors, TestProviderConnectionResponses, TransitionCaseData, TransitionCaseErrors, TransitionCaseResponses, TriageCorrectionData, TriageCorrectionErrors, TriageCorrectionResponses, TriageSignalData, TriageSignalErrors, TriageSignalResponses, UnlinkSignalFromCaseData, UnlinkSignalFromCaseErrors, UnlinkSignalFromCaseResponses, UpdateBudgetLimitData, UpdateBudgetLimitErrors, UpdateBudgetLimitResponses, UpdateClaimData, UpdateClaimErrors, UpdateClaimResponses, UpdateCorrectionDraftData, UpdateCorrectionDraftErrors, UpdateCorrectionDraftResponses, UpdateEvidenceData, UpdateEvidenceErrors, UpdateEvidenceResponses, UpdateHypothesisData, UpdateHypothesisErrors, UpdateHypothesisResponses, UpdateSavedViewData, UpdateSavedViewErrors, UpdateSavedViewResponses, ValidateClaimsData, ValidateClaimsErrors, ValidateClaimsResponses, VerifyAuditIntegrityData, VerifyAuditIntegrityErrors, VerifyAuditIntegrityResponses, VerifyEvidenceData, VerifyEvidenceErrors, VerifyEvidenceResponses } from './types.gen';
+import type { AcceptAgentSuggestionData, AcceptAgentSuggestionErrors, AcceptAgentSuggestionResponses, AcknowledgeSourceIncidentData, AcknowledgeSourceIncidentErrors, AcknowledgeSourceIncidentResponses, ActivateKillSwitchData, ActivateKillSwitchErrors, ActivateKillSwitchResponses, ActivateRuleVersionData, ActivateRuleVersionErrors, ActivateRuleVersionResponses, AddClaimData, AddClaimErrors, AddClaimResponses, AddEvidenceData, AddEvidenceErrors, AddEvidenceResponses, ApproveResponseExcerptData, ApproveResponseExcerptErrors, ApproveResponseExcerptResponses, ApproveSchemaMappingData, ApproveSchemaMappingErrors, ApproveSchemaMappingResponses, AssignCaseData, AssignCaseErrors, AssignCaseResponses, AssignCorrectionData, AssignCorrectionErrors, AssignCorrectionResponses, AssignReviewData, AssignReviewErrors, AssignReviewResponses, AssignSignalData, AssignSignalErrors, AssignSignalResponses, CancelActionExecutionData, CancelActionExecutionErrors, CancelActionExecutionResponses, CancelAgentRunData, CancelAgentRunErrors, CancelAgentRunResponses, CancelCommunicationDeliveryData, CancelCommunicationDeliveryErrors, CancelCommunicationDeliveryResponses, CancelJobData, CancelJobErrors, CancelJobResponses, ClaimActionReviewData, ClaimActionReviewErrors, ClaimActionReviewResponses, CloseIncidentPostmortemData, CloseIncidentPostmortemErrors, CloseIncidentPostmortemResponses, ContainIncidentData, ContainIncidentErrors, ContainIncidentResponses, CreateAccessRequestData, CreateAccessRequestErrors, CreateAccessRequestResponses, CreateActionProposalData, CreateActionProposalErrors, CreateActionProposalResponses, CreateAuditExportData, CreateAuditExportErrors, CreateAuditExportResponses, CreateCorrectionData, CreateCorrectionErrors, CreateCorrectionResponses, CreateEvidenceRedactionData, CreateEvidenceRedactionErrors, CreateEvidenceRedactionResponses, CreateHypothesisData, CreateHypothesisErrors, CreateHypothesisResponses, CreateResponseRequestData, CreateResponseRequestErrors, CreateResponseRequestResponses, CreateRetractionDraftData, CreateRetractionDraftErrors, CreateRetractionDraftResponses, CreateReviewSnapshotData, CreateReviewSnapshotErrors, CreateReviewSnapshotResponses, CreateRuleVersionDraftData, CreateRuleVersionDraftErrors, CreateRuleVersionDraftResponses, CreateSavedViewData, CreateSavedViewErrors, CreateSavedViewResponses, DeactivateKillSwitchData, DeactivateKillSwitchErrors, DeactivateKillSwitchResponses, DecideJourneyHandoffData, DecideJourneyHandoffErrors, DecideJourneyHandoffResponses, DecideResponseExtensionData, DecideResponseExtensionErrors, DecideResponseExtensionResponses, DeclareConflictData, DeclareConflictErrors, DeclareConflictResponses, DeleteSavedViewData, DeleteSavedViewErrors, DeleteSavedViewResponses, DisableProviderRoutingData, DisableProviderRoutingErrors, DisableProviderRoutingResponses, DisableUserData, DisableUserErrors, DisableUserResponses, DownloadSourceRunReportData, DownloadSourceRunReportErrors, DownloadSourceRunReportResponses, EstimateBackfillData, EstimateBackfillErrors, EstimateBackfillResponses, ExportCostReportData, ExportCostReportErrors, ExportCostReportResponses, ExtendKillSwitchData, ExtendKillSwitchErrors, ExtendKillSwitchResponses, GetActionExecutionReceiptData, GetActionExecutionReceiptErrors, GetActionExecutionReceiptResponses, GetActionProposalData, GetActionProposalErrors, GetActionProposalResponses, GetAgentRunData, GetAgentRunErrors, GetAgentRunResponses, GetAuditExportData, GetAuditExportErrors, GetAuditExportResponses, GetBudgetOverviewData, GetBudgetOverviewErrors, GetBudgetOverviewResponses, GetCaseWorkspaceOverviewData, GetCaseWorkspaceOverviewErrors, GetCaseWorkspaceOverviewResponses, GetCommunicationDeliveryReceiptData, GetCommunicationDeliveryReceiptErrors, GetCommunicationDeliveryReceiptResponses, GetCorrectionWorkspaceData, GetCorrectionWorkspaceErrors, GetCorrectionWorkspaceResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserCapabilitiesData, GetCurrentUserCapabilitiesErrors, GetCurrentUserCapabilitiesResponses, GetEvidenceWorkspaceData, GetEvidenceWorkspaceErrors, GetEvidenceWorkspaceResponses, GetIncidentData, GetIncidentErrors, GetIncidentResponses, GetInternalCaseData, GetInternalCaseErrors, GetInternalCaseResponses, GetInternalDashboardData, GetInternalDashboardErrors, GetInternalDashboardResponses, GetInternalRuleVersionData, GetInternalRuleVersionErrors, GetInternalRuleVersionResponses, GetInternalSourceData, GetInternalSourceErrors, GetInternalSourceResponses, GetJobData, GetJobErrors, GetJobResponses, GetOperationsOverviewData, GetOperationsOverviewErrors, GetOperationsOverviewResponses, GetPublicationPreviewData, GetPublicationPreviewErrors, GetPublicationPreviewResponses, GetPublicationReceiptData, GetPublicationReceiptErrors, GetPublicationReceiptResponses, GetPublishConfirmationData, GetPublishConfirmationErrors, GetPublishConfirmationResponses, GetResponseAppealWorkspaceData, GetResponseAppealWorkspaceErrors, GetResponseAppealWorkspaceResponses, GetResponseRequestComposerData, GetResponseRequestComposerErrors, GetResponseRequestComposerResponses, GetRetentionRequestData, GetRetentionRequestErrors, GetRetentionRequestResponses, GetReviewReadinessData, GetReviewReadinessErrors, GetReviewReadinessResponses, GetReviewSnapshotData, GetReviewSnapshotErrors, GetReviewSnapshotResponses, GetRuleActivationReadinessData, GetRuleActivationReadinessErrors, GetRuleActivationReadinessResponses, GetRuleEvaluationData, GetRuleEvaluationErrors, GetRuleEvaluationResponses, GetSchemaDriftData, GetSchemaDriftErrors, GetSchemaDriftResponses, GetSignalTriageViewData, GetSignalTriageViewErrors, GetSignalTriageViewResponses, GetSourceRunData, GetSourceRunErrors, GetSourceRunResponses, GetUserAccessDetailData, GetUserAccessDetailErrors, GetUserAccessDetailResponses, GrantRoleData, GrantRoleErrors, GrantRoleResponses, InviteUserData, InviteUserErrors, InviteUserResponses, LinkEvidenceData, LinkEvidenceErrors, LinkEvidenceResponses, LinkSignalToCaseData, LinkSignalToCaseErrors, LinkSignalToCaseResponses, ListActionApprovalQueueData, ListActionApprovalQueueErrors, ListActionApprovalQueueResponses, ListCaseAgentRunsData, ListCaseAgentRunsErrors, ListCaseAgentRunsResponses, ListCaseAuditEventsData, ListCaseAuditEventsErrors, ListCaseAuditEventsResponses, ListCaseClaimsData, ListCaseClaimsErrors, ListCaseClaimsResponses, ListCaseCorrectionsData, ListCaseCorrectionsErrors, ListCaseCorrectionsResponses, ListCaseEvidenceData, ListCaseEvidenceErrors, ListCaseEvidenceResponses, ListCaseHypothesesData, ListCaseHypothesesErrors, ListCaseHypothesesResponses, ListCaseResponsesData, ListCaseResponsesErrors, ListCaseResponsesResponses, ListCaseSignalsData, ListCaseSignalsErrors, ListCaseSignalsResponses, ListCaseTimelineData, ListCaseTimelineErrors, ListCaseTimelineResponses, ListCorrectionQueueData, ListCorrectionQueueErrors, ListCorrectionQueueResponses, ListInternalCasesData, ListInternalCasesErrors, ListInternalCasesResponses, ListInternalNotificationsData, ListInternalNotificationsErrors, ListInternalNotificationsResponses, ListInternalRulesData, ListInternalRulesErrors, ListInternalRulesResponses, ListInternalSourcesData, ListInternalSourcesErrors, ListInternalSourcesResponses, ListJobsData, ListJobsErrors, ListJobsResponses, ListKillSwitchesData, ListKillSwitchesErrors, ListKillSwitchesResponses, ListMyTasksData, ListMyTasksErrors, ListMyTasksResponses, ListProvidersData, ListProvidersErrors, ListProvidersResponses, ListRecordClassSchedulesData, ListRecordClassSchedulesErrors, ListRecordClassSchedulesResponses, ListResponseAppealsData, ListResponseAppealsErrors, ListResponseAppealsResponses, ListRetentionRequestsData, ListRetentionRequestsErrors, ListRetentionRequestsResponses, ListReviewQueueData, ListReviewQueueErrors, ListReviewQueueResponses, ListRoleDefinitionsData, ListRoleDefinitionsErrors, ListRoleDefinitionsResponses, ListSavedViewsData, ListSavedViewsErrors, ListSavedViewsResponses, ListSignalsData, ListSignalsErrors, ListSignalsResponses, ListSourceRunsData, ListSourceRunsErrors, ListSourceRunsResponses, ListUsersData, ListUsersErrors, ListUsersResponses, MarkNotificationReadData, MarkNotificationReadErrors, MarkNotificationReadResponses, PauseBackfillData, PauseBackfillErrors, PauseBackfillResponses, PauseJobQueueData, PauseJobQueueErrors, PauseJobQueueResponses, PauseSourceData, PauseSourceErrors, PauseSourceResponses, PlaceLegalHoldData, PlaceLegalHoldErrors, PlaceLegalHoldResponses, PlaceTemporaryRestrictionData, PlaceTemporaryRestrictionErrors, PlaceTemporaryRestrictionResponses, PreviewActionDraftData, PreviewActionDraftErrors, PreviewActionDraftResponses, PreviewPublicationData, PreviewPublicationErrors, PreviewPublicationResponses, PromoteResearchArtifactToEvidenceData, PromoteResearchArtifactToEvidenceErrors, PromoteResearchArtifactToEvidenceResponses, ProposeRoleDefinitionChangeData, ProposeRoleDefinitionChangeErrors, ProposeRoleDefinitionChangeResponses, PublishCaseData, PublishCaseErrors, PublishCaseResponses, QuarantineJobData, QuarantineJobErrors, QuarantineJobResponses, ReassignTaskData, ReassignTaskErrors, ReassignTaskResponses, ReconcileCommunicationDeliveryData, ReconcileCommunicationDeliveryErrors, ReconcileCommunicationDeliveryResponses, RejectAgentSuggestionData, RejectAgentSuggestionErrors, RejectAgentSuggestionResponses, RejectSchemaMappingData, RejectSchemaMappingErrors, RejectSchemaMappingResponses, ReleaseLegalHoldData, ReleaseLegalHoldErrors, ReleaseLegalHoldResponses, ResolveCorrectionRequestData, ResolveCorrectionRequestErrors, ResolveCorrectionRequestResponses, ResolveIncidentData, ResolveIncidentErrors, ResolveIncidentResponses, RetryActionExecutionData, RetryActionExecutionErrors, RetryActionExecutionResponses, RetryJobData, RetryJobErrors, RetryJobResponses, RetryJobsData, RetryJobsErrors, RetryJobsResponses, RetrySourceRunData, RetrySourceRunErrors, RetrySourceRunResponses, RevokeOwnSessionData, RevokeOwnSessionErrors, RevokeOwnSessionResponses, RevokeRoleData, RevokeRoleErrors, RevokeRoleResponses, RevokeUserSessionsData, RevokeUserSessionsErrors, RevokeUserSessionsResponses, RollbackRuleVersionData, RollbackRuleVersionErrors, RollbackRuleVersionResponses, RunRuleEvaluationData, RunRuleEvaluationErrors, RunRuleEvaluationResponses, SaveResponseRequestDraftData, SaveResponseRequestDraftErrors, SaveResponseRequestDraftResponses, ScheduleRuleActivationData, ScheduleRuleActivationErrors, ScheduleRuleActivationResponses, SearchAuditEventsData, SearchAuditEventsErrors, SearchAuditEventsResponses, SearchInternalRecordsData, SearchInternalRecordsErrors, SearchInternalRecordsResponses, StartAccessReviewData, StartAccessReviewErrors, StartAccessReviewResponses, StartAgentRunData, StartAgentRunErrors, StartAgentRunResponses, StartBackfillData, StartBackfillErrors, StartBackfillResponses, StartIncidentRecoveryData, StartIncidentRecoveryErrors, StartIncidentRecoveryResponses, StartRuleShadowData, StartRuleShadowErrors, StartRuleShadowResponses, StartSourceRunData, StartSourceRunErrors, StartSourceRunResponses, SubmitActionDecisionData, SubmitActionDecisionErrors, SubmitActionDecisionResponses, SubmitActionForReviewData, SubmitActionForReviewErrors, SubmitActionForReviewResponses, SubmitReviewData, SubmitReviewErrors, SubmitReviewResponses, TestProviderConnectionData, TestProviderConnectionErrors, TestProviderConnectionResponses, TransitionCaseData, TransitionCaseErrors, TransitionCaseResponses, TransitionResponseAppealData, TransitionResponseAppealErrors, TransitionResponseAppealResponses, TransitionRetentionRequestData, TransitionRetentionRequestErrors, TransitionRetentionRequestResponses, TriageCorrectionData, TriageCorrectionErrors, TriageCorrectionResponses, TriageIncidentData, TriageIncidentErrors, TriageIncidentResponses, TriageSignalData, TriageSignalErrors, TriageSignalResponses, UnlinkSignalFromCaseData, UnlinkSignalFromCaseErrors, UnlinkSignalFromCaseResponses, UpdateActionDraftData, UpdateActionDraftErrors, UpdateActionDraftResponses, UpdateBudgetLimitData, UpdateBudgetLimitErrors, UpdateBudgetLimitResponses, UpdateClaimData, UpdateClaimErrors, UpdateClaimResponses, UpdateCorrectionDraftData, UpdateCorrectionDraftErrors, UpdateCorrectionDraftResponses, UpdateEvidenceData, UpdateEvidenceErrors, UpdateEvidenceResponses, UpdateHypothesisData, UpdateHypothesisErrors, UpdateHypothesisResponses, UpdateSavedViewData, UpdateSavedViewErrors, UpdateSavedViewResponses, ValidateClaimsData, ValidateClaimsErrors, ValidateClaimsResponses, VerifyAuditIntegrityData, VerifyAuditIntegrityErrors, VerifyAuditIntegrityResponses, VerifyEvidenceData, VerifyEvidenceErrors, VerifyEvidenceResponses, WithdrawActionDecisionData, WithdrawActionDecisionErrors, WithdrawActionDecisionResponses, WithdrawActionProposalData, WithdrawActionProposalErrors, WithdrawActionProposalResponses, WithdrawConflictData, WithdrawConflictErrors, WithdrawConflictResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1756,6 +1756,434 @@ export const deleteSavedView = <ThrowOnError extends boolean = false>(options: O
 export const updateSavedView = <ThrowOnError extends boolean = false>(options: Options<UpdateSavedViewData, ThrowOnError>): RequestResult<UpdateSavedViewResponses, UpdateSavedViewErrors, ThrowOnError> => (options.client ?? client).patch<UpdateSavedViewResponses, UpdateSavedViewErrors, ThrowOnError>({
     security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
     url: '/v1/internal/saved-views/{savedViewId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * listActionApprovalQueue
+ */
+export const listActionApprovalQueue = <ThrowOnError extends boolean = false>(options?: Options<ListActionApprovalQueueData, ThrowOnError>): RequestResult<ListActionApprovalQueueResponses, ListActionApprovalQueueErrors, ThrowOnError> => (options?.client ?? client).get<ListActionApprovalQueueResponses, ListActionApprovalQueueErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals',
+    ...options
+});
+
+/**
+ * createActionProposal
+ */
+export const createActionProposal = <ThrowOnError extends boolean = false>(options: Options<CreateActionProposalData, ThrowOnError>): RequestResult<CreateActionProposalResponses, CreateActionProposalErrors, ThrowOnError> => (options.client ?? client).post<CreateActionProposalResponses, CreateActionProposalErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * getActionProposal
+ */
+export const getActionProposal = <ThrowOnError extends boolean = false>(options: Options<GetActionProposalData, ThrowOnError>): RequestResult<GetActionProposalResponses, GetActionProposalErrors, ThrowOnError> => (options.client ?? client).get<GetActionProposalResponses, GetActionProposalErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}',
+    ...options
+});
+
+/**
+ * updateActionDraft
+ */
+export const updateActionDraft = <ThrowOnError extends boolean = false>(options: Options<UpdateActionDraftData, ThrowOnError>): RequestResult<UpdateActionDraftResponses, UpdateActionDraftErrors, ThrowOnError> => (options.client ?? client).patch<UpdateActionDraftResponses, UpdateActionDraftErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}/draft',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * previewActionDraft
+ */
+export const previewActionDraft = <ThrowOnError extends boolean = false>(options: Options<PreviewActionDraftData, ThrowOnError>): RequestResult<PreviewActionDraftResponses, PreviewActionDraftErrors, ThrowOnError> => (options.client ?? client).post<PreviewActionDraftResponses, PreviewActionDraftErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}:preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * submitActionForReview
+ */
+export const submitActionForReview = <ThrowOnError extends boolean = false>(options: Options<SubmitActionForReviewData, ThrowOnError>): RequestResult<SubmitActionForReviewResponses, SubmitActionForReviewErrors, ThrowOnError> => (options.client ?? client).post<SubmitActionForReviewResponses, SubmitActionForReviewErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}:submit-review',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * claimActionReview
+ */
+export const claimActionReview = <ThrowOnError extends boolean = false>(options: Options<ClaimActionReviewData, ThrowOnError>): RequestResult<ClaimActionReviewResponses, ClaimActionReviewErrors, ThrowOnError> => (options.client ?? client).post<ClaimActionReviewResponses, ClaimActionReviewErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}:claim-review',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * submitActionDecision
+ */
+export const submitActionDecision = <ThrowOnError extends boolean = false>(options: Options<SubmitActionDecisionData, ThrowOnError>): RequestResult<SubmitActionDecisionResponses, SubmitActionDecisionErrors, ThrowOnError> => (options.client ?? client).post<SubmitActionDecisionResponses, SubmitActionDecisionErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}:decide',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * getActionExecutionReceipt
+ */
+export const getActionExecutionReceipt = <ThrowOnError extends boolean = false>(options: Options<GetActionExecutionReceiptData, ThrowOnError>): RequestResult<GetActionExecutionReceiptResponses, GetActionExecutionReceiptErrors, ThrowOnError> => (options.client ?? client).get<GetActionExecutionReceiptResponses, GetActionExecutionReceiptErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-executions/{executionId}/receipt',
+    ...options
+});
+
+/**
+ * cancelActionExecution
+ */
+export const cancelActionExecution = <ThrowOnError extends boolean = false>(options: Options<CancelActionExecutionData, ThrowOnError>): RequestResult<CancelActionExecutionResponses, CancelActionExecutionErrors, ThrowOnError> => (options.client ?? client).post<CancelActionExecutionResponses, CancelActionExecutionErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-executions/{executionId}:cancel',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * retryActionExecution
+ */
+export const retryActionExecution = <ThrowOnError extends boolean = false>(options: Options<RetryActionExecutionData, ThrowOnError>): RequestResult<RetryActionExecutionResponses, RetryActionExecutionErrors, ThrowOnError> => (options.client ?? client).post<RetryActionExecutionResponses, RetryActionExecutionErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-executions/{executionId}:retry',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * releaseLegalHold
+ */
+export const releaseLegalHold = <ThrowOnError extends boolean = false>(options: Options<ReleaseLegalHoldData, ThrowOnError>): RequestResult<ReleaseLegalHoldResponses, ReleaseLegalHoldErrors, ThrowOnError> => (options.client ?? client).post<ReleaseLegalHoldResponses, ReleaseLegalHoldErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/commands/release-legal-hold',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * getCommunicationDeliveryReceipt
+ */
+export const getCommunicationDeliveryReceipt = <ThrowOnError extends boolean = false>(options: Options<GetCommunicationDeliveryReceiptData, ThrowOnError>): RequestResult<GetCommunicationDeliveryReceiptResponses, GetCommunicationDeliveryReceiptErrors, ThrowOnError> => (options.client ?? client).get<GetCommunicationDeliveryReceiptResponses, GetCommunicationDeliveryReceiptErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/communication-deliveries/{deliveryId}/receipt',
+    ...options
+});
+
+/**
+ * reconcileCommunicationDelivery
+ */
+export const reconcileCommunicationDelivery = <ThrowOnError extends boolean = false>(options: Options<ReconcileCommunicationDeliveryData, ThrowOnError>): RequestResult<ReconcileCommunicationDeliveryResponses, ReconcileCommunicationDeliveryErrors, ThrowOnError> => (options.client ?? client).post<ReconcileCommunicationDeliveryResponses, ReconcileCommunicationDeliveryErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/communication-deliveries/{deliveryId}:reconcile',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * cancelCommunicationDelivery
+ */
+export const cancelCommunicationDelivery = <ThrowOnError extends boolean = false>(options: Options<CancelCommunicationDeliveryData, ThrowOnError>): RequestResult<CancelCommunicationDeliveryResponses, CancelCommunicationDeliveryErrors, ThrowOnError> => (options.client ?? client).post<CancelCommunicationDeliveryResponses, CancelCommunicationDeliveryErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/communication-deliveries/{deliveryId}:cancel',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * getIncident
+ */
+export const getIncident = <ThrowOnError extends boolean = false>(options: Options<GetIncidentData, ThrowOnError>): RequestResult<GetIncidentResponses, GetIncidentErrors, ThrowOnError> => (options.client ?? client).get<GetIncidentResponses, GetIncidentErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/incidents/{incidentId}',
+    ...options
+});
+
+/**
+ * triageIncident
+ */
+export const triageIncident = <ThrowOnError extends boolean = false>(options: Options<TriageIncidentData, ThrowOnError>): RequestResult<TriageIncidentResponses, TriageIncidentErrors, ThrowOnError> => (options.client ?? client).post<TriageIncidentResponses, TriageIncidentErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/incidents/{incidentId}:triage',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * containIncident
+ */
+export const containIncident = <ThrowOnError extends boolean = false>(options: Options<ContainIncidentData, ThrowOnError>): RequestResult<ContainIncidentResponses, ContainIncidentErrors, ThrowOnError> => (options.client ?? client).post<ContainIncidentResponses, ContainIncidentErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/incidents/{incidentId}:contain',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * startIncidentRecovery
+ */
+export const startIncidentRecovery = <ThrowOnError extends boolean = false>(options: Options<StartIncidentRecoveryData, ThrowOnError>): RequestResult<StartIncidentRecoveryResponses, StartIncidentRecoveryErrors, ThrowOnError> => (options.client ?? client).post<StartIncidentRecoveryResponses, StartIncidentRecoveryErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/incidents/{incidentId}:start-recovery',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * resolveIncident
+ */
+export const resolveIncident = <ThrowOnError extends boolean = false>(options: Options<ResolveIncidentData, ThrowOnError>): RequestResult<ResolveIncidentResponses, ResolveIncidentErrors, ThrowOnError> => (options.client ?? client).post<ResolveIncidentResponses, ResolveIncidentErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/incidents/{incidentId}:resolve',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * closeIncidentPostmortem
+ */
+export const closeIncidentPostmortem = <ThrowOnError extends boolean = false>(options: Options<CloseIncidentPostmortemData, ThrowOnError>): RequestResult<CloseIncidentPostmortemResponses, CloseIncidentPostmortemErrors, ThrowOnError> => (options.client ?? client).post<CloseIncidentPostmortemResponses, CloseIncidentPostmortemErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/incidents/{incidentId}:close-postmortem',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * listResponseAppeals
+ */
+export const listResponseAppeals = <ThrowOnError extends boolean = false>(options?: Options<ListResponseAppealsData, ThrowOnError>): RequestResult<ListResponseAppealsResponses, ListResponseAppealsErrors, ThrowOnError> => (options?.client ?? client).get<ListResponseAppealsResponses, ListResponseAppealsErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/queries/list-response-appeals',
+    ...options
+});
+
+/**
+ * getResponseAppealWorkspace
+ */
+export const getResponseAppealWorkspace = <ThrowOnError extends boolean = false>(options?: Options<GetResponseAppealWorkspaceData, ThrowOnError>): RequestResult<GetResponseAppealWorkspaceResponses, GetResponseAppealWorkspaceErrors, ThrowOnError> => (options?.client ?? client).get<GetResponseAppealWorkspaceResponses, GetResponseAppealWorkspaceErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/queries/get-response-appeal-workspace',
+    ...options
+});
+
+/**
+ * transitionResponseAppeal
+ */
+export const transitionResponseAppeal = <ThrowOnError extends boolean = false>(options: Options<TransitionResponseAppealData, ThrowOnError>): RequestResult<TransitionResponseAppealResponses, TransitionResponseAppealErrors, ThrowOnError> => (options.client ?? client).post<TransitionResponseAppealResponses, TransitionResponseAppealErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/commands/transition-response-appeal',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * decideResponseExtension
+ */
+export const decideResponseExtension = <ThrowOnError extends boolean = false>(options: Options<DecideResponseExtensionData, ThrowOnError>): RequestResult<DecideResponseExtensionResponses, DecideResponseExtensionErrors, ThrowOnError> => (options.client ?? client).post<DecideResponseExtensionResponses, DecideResponseExtensionErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/commands/decide-response-extension',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * listRetentionRequests
+ */
+export const listRetentionRequests = <ThrowOnError extends boolean = false>(options?: Options<ListRetentionRequestsData, ThrowOnError>): RequestResult<ListRetentionRequestsResponses, ListRetentionRequestsErrors, ThrowOnError> => (options?.client ?? client).get<ListRetentionRequestsResponses, ListRetentionRequestsErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/queries/list-retention-requests',
+    ...options
+});
+
+/**
+ * getRetentionRequest
+ */
+export const getRetentionRequest = <ThrowOnError extends boolean = false>(options?: Options<GetRetentionRequestData, ThrowOnError>): RequestResult<GetRetentionRequestResponses, GetRetentionRequestErrors, ThrowOnError> => (options?.client ?? client).get<GetRetentionRequestResponses, GetRetentionRequestErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/queries/get-retention-request',
+    ...options
+});
+
+/**
+ * transitionRetentionRequest
+ */
+export const transitionRetentionRequest = <ThrowOnError extends boolean = false>(options: Options<TransitionRetentionRequestData, ThrowOnError>): RequestResult<TransitionRetentionRequestResponses, TransitionRetentionRequestErrors, ThrowOnError> => (options.client ?? client).post<TransitionRetentionRequestResponses, TransitionRetentionRequestErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/commands/transition-retention-request',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * listRecordClassSchedules
+ */
+export const listRecordClassSchedules = <ThrowOnError extends boolean = false>(options?: Options<ListRecordClassSchedulesData, ThrowOnError>): RequestResult<ListRecordClassSchedulesResponses, ListRecordClassSchedulesErrors, ThrowOnError> => (options?.client ?? client).get<ListRecordClassSchedulesResponses, ListRecordClassSchedulesErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/queries/list-record-class-schedules',
+    ...options
+});
+
+/**
+ * declareConflict
+ */
+export const declareConflict = <ThrowOnError extends boolean = false>(options: Options<DeclareConflictData, ThrowOnError>): RequestResult<DeclareConflictResponses, DeclareConflictErrors, ThrowOnError> => (options.client ?? client).post<DeclareConflictResponses, DeclareConflictErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/conflict-declarations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * withdrawConflict
+ */
+export const withdrawConflict = <ThrowOnError extends boolean = false>(options: Options<WithdrawConflictData, ThrowOnError>): RequestResult<WithdrawConflictResponses, WithdrawConflictErrors, ThrowOnError> => (options.client ?? client).post<WithdrawConflictResponses, WithdrawConflictErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/conflict-declarations/{declarationId}:withdraw',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * withdrawActionProposal
+ */
+export const withdrawActionProposal = <ThrowOnError extends boolean = false>(options: Options<WithdrawActionProposalData, ThrowOnError>): RequestResult<WithdrawActionProposalResponses, WithdrawActionProposalErrors, ThrowOnError> => (options.client ?? client).post<WithdrawActionProposalResponses, WithdrawActionProposalErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}:withdraw',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * withdrawActionDecision
+ */
+export const withdrawActionDecision = <ThrowOnError extends boolean = false>(options: Options<WithdrawActionDecisionData, ThrowOnError>): RequestResult<WithdrawActionDecisionResponses, WithdrawActionDecisionErrors, ThrowOnError> => (options.client ?? client).post<WithdrawActionDecisionResponses, WithdrawActionDecisionErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/action-proposals/{proposalId}/decisions/{decisionId}:withdraw',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * promoteResearchArtifactToEvidence
+ */
+export const promoteResearchArtifactToEvidence = <ThrowOnError extends boolean = false>(options: Options<PromoteResearchArtifactToEvidenceData, ThrowOnError>): RequestResult<PromoteResearchArtifactToEvidenceResponses, PromoteResearchArtifactToEvidenceErrors, ThrowOnError> => (options.client ?? client).post<PromoteResearchArtifactToEvidenceResponses, PromoteResearchArtifactToEvidenceErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/commands/promote-research-artifact-to-evidence',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * cancelAgentRun
+ */
+export const cancelAgentRun = <ThrowOnError extends boolean = false>(options: Options<CancelAgentRunData, ThrowOnError>): RequestResult<CancelAgentRunResponses, CancelAgentRunErrors, ThrowOnError> => (options.client ?? client).post<CancelAgentRunResponses, CancelAgentRunErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/agent-runs/{runId}:cancel',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * decideJourneyHandoff
+ */
+export const decideJourneyHandoff = <ThrowOnError extends boolean = false>(options: Options<DecideJourneyHandoffData, ThrowOnError>): RequestResult<DecideJourneyHandoffResponses, DecideJourneyHandoffErrors, ThrowOnError> => (options.client ?? client).post<DecideJourneyHandoffResponses, DecideJourneyHandoffErrors, ThrowOnError>({
+    security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
+    url: '/v1/internal/journey-handoffs/{handoffId}:decide',
     ...options,
     headers: {
         'Content-Type': 'application/json',

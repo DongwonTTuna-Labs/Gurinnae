@@ -1,0 +1,727 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+base_authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+rules:
+  - Every listed state and edge is closed; unlisted transitions are invalid.
+  - Every mutation uses the operation, capability, assurance, guards, expected version, event and receipt declared on its edge.
+  - Terminal state is immutable; a changed object creates a new version or linked aggregate.
+  - Machine and edge inventories are derived from the actual registry; historical 15/84 or intermediate 34/166 literals are non-normative and forbidden as completion gates.
+  - Every mutation has exactly one effect owner and one atomic transition group. An operation edge inherits both from addendum-command-semantics; an actor edge derives owner=actor and group=machine.edge ordinal unless explicitly overridden.
+
+registry_contract:
+  machine_count: derived as len(machines)
+  edge_count: derived as sum(len(machine.edges))
+  count_rule: validators calculate both values from the registry and compare cross-file coverage sets; no numeric count literal is authoritative
+  operation_disposition_count: derived as len(operation_dispositions)
+  immutable_fact_lifecycle_count: derived as len(immutable_fact_lifecycles)
+  edge_effect_owner:
+    operation_edge: specs/product/addendum-command-semantics.yaml#external_commands[operation].effect_owner
+    actor_edge: edge.effect_owner when present else edge.actor
+  edge_atomic_transition_group:
+    operation_edge: specs/product/addendum-command-semantics.yaml#external_commands[operation].atomic_transition_group
+    actor_edge: explicit edge.atomic_transition_group when cross-aggregate, otherwise machine name plus edge ordinal
+  closure: every additive command has exactly one operation_disposition; every event-producing actor is a logical component in addendum-event-contracts
+
+machines:
+  action_proposal:
+    states: [DRAFT, PENDING_QUORUM, APPROVED, REJECTED, CHANGES_REQUIRED, WITHDRAWN, EXPIRED, SUPERSEDED]
+    terminal: [APPROVED, REJECTED, CHANGES_REQUIRED, WITHDRAWN, EXPIRED, SUPERSEDED]
+    edges:
+      - {operation: createActionProposal, from: NONE, to: DRAFT, selector: origin-not-compensation, guard: typed-target-and-proposer-capability, event: action.proposal_created.v1}
+      - {operation: createActionProposal, from: NONE, to: DRAFT, selector: origin-compensation, guard: typed-target-and-proposer-capability-and-immutable-succeeded-predecessor-link, event: action.proposal_created.v1}
+      - {operation: updateActionDraft, from: DRAFT, to: SUPERSEDED+DRAFT_NEW_VERSION, guard: expected-version-and-content-digest, event: action.proposal_updated.v1}
+      - {operation: submitActionForReview, from: DRAFT, to: PENDING_QUORUM, guard: current-preview-policy-and-quorum-plan, event: action.review_requested.v1}
+      - {operation: submitActionDecision, from: PENDING_QUORUM, to: PENDING_QUORUM, selector: approve-counted-but-quorum-incomplete, guard: valid-independent-current-approve-decision, event: action.decision_recorded.v1}
+      - {operation: submitActionDecision, from: PENDING_QUORUM, to: APPROVED, guard: exact-quorum-counted-and-no-blocker, event: action.decision_recorded.v1, effect_owner: control-api.submitActionDecision.final-approve, atomic_transition_group: gurine.command.submitActionDecision.v1}
+      - {operation: submitActionDecision, from: PENDING_QUORUM, to: REJECTED, guard: first-committed-terminal-reject, event: action.decision_recorded.v1}
+      - {operation: submitActionDecision, from: PENDING_QUORUM, to: CHANGES_REQUIRED, guard: nonempty-owned-change-tasks, event: action.decision_recorded.v1}
+      - {operation: withdrawActionProposal, from: DRAFT|PENDING_QUORUM, to: WITHDRAWN, guard: exact-current-version-content-and-state-digest-no-execution-authorization-and-creator-or-current-owner, event: action.proposal_withdrawn.v1}
+      - {operation: withdrawActionDecision, from: PENDING_QUORUM, to: PENDING_QUORUM, guard: same-human-current-unwithdrawn-APPROVE-and-final-authorization-not-committed, event: action.decision_withdrawn.v1}
+      - {actor: expiry-worker, from: DRAFT|PENDING_QUORUM, to: EXPIRED, guard: expires-at-elapsed-and-version-current, event: action.proposal_updated.v1, receipt: ActionProposalExpiryReceiptV1}
+      - {actor: superseding-origin, from: DRAFT|PENDING_QUORUM, to: SUPERSEDED, guard: target-or-origin-version-changed, event: action.proposal_updated.v1}
+    lock_order: [action_proposals, action_proposal_versions, action_review_assignments, action_decisions, execution_authorizations]
+    race: first SERIALIZABLE terminal commit wins; losers receive ACTION_DECISION_CLOSED without mutation
+  action_review_assignment:
+    states: [VACANT, ASSIGNED, IN_PROGRESS, COMPLETED, RECUSED, CANCELLED]
+    terminal: [COMPLETED, RECUSED, CANCELLED]
+    edges:
+      - {operation: submitActionForReview, from: NONE, to: ASSIGNED, guard: immutable-quorum-slot, event: action.review_requested.v1}
+      - {operation: claimActionReview, from: ASSIGNED, to: IN_PROGRESS, guard: expected-assignment-version-and-slot-capability, event: action.review_claimed.v1}
+      - {operation: submitActionDecision, from: IN_PROGRESS, to: COMPLETED, guard: decision-variant-not-recuse, event: action.decision_recorded.v1}
+      - {operation: submitActionDecision, from: ASSIGNED|IN_PROGRESS, to: RECUSED, guard: typed-conflict-and-generation-plus-one-replacement-or-vacancy-created-atomically, event: action.decision_recorded.v1}
+      - {operation: withdrawActionDecision, from: NONE, to: VACANT|ASSIGNED, guard: prior-COMPLETED-generation-remains-immutable-and-generation-plus-one-uses-deterministic-current-eligibility, event: action.decision_withdrawn.v1}
+      - {actor: action-review-assignment-coordinator, from: VACANT, to: ASSIGNED, guard: fill_action_review_vacancy_v1-locks-current-vacancy-and-deterministic-current-eligible-independent-reviewer-and-same-slot-generation, event: action.review_vacancy_filled.v1}
+      - {actor: proposal-terminalizer, from: VACANT|ASSIGNED|IN_PROGRESS, to: CANCELLED, guard: proposal-terminal-or-superseded, caused_by_event: action.proposal_updated.v1|action.proposal_withdrawn.v1, event: NONE, receipt: ActionReviewAssignmentCancelledReceiptV1, audit: ACTION_REVIEW_ASSIGNMENT_CANCELLED}
+  action_execution:
+    states: [POLICY_BLOCKED, QUEUED, RUNNING, RETRYABLE_FAILED, CANCEL_REQUESTED, RECONCILIATION_REQUIRED, SUCCEEDED, PARTIALLY_SUCCEEDED, PERMANENT_FAILED, CANCELLED, EXPIRED]
+    terminal: [POLICY_BLOCKED, SUCCEEDED, PARTIALLY_SUCCEEDED, PERMANENT_FAILED, CANCELLED, EXPIRED]
+    edges:
+      - {operation: submitActionDecision, from: NONE, to: POLICY_BLOCKED, guard: final-approve-and-current-policy-blocked, event: operations.effect_policy_blocked.v1, effect_owner: control-api.submitActionDecision.final-approve, atomic_transition_group: gurine.command.submitActionDecision.v1}
+      - {operation: submitActionDecision, from: NONE, to: QUEUED, guard: final-approve-and-all-current-fences-pass, event: action.execution_authorized.v1, effect_owner: control-api.submitActionDecision.final-approve, atomic_transition_group: gurine.command.submitActionDecision.v1}
+      - {actor: execution-worker, from: QUEUED, to: RUNNING, guard: existing-generation-attempt-lease-claimed-under-effect-and-attempt-locks, event: NONE, receipt: ActionExecutionClaimReceiptV1, audit: ACTION_EXECUTION_CLAIMED}
+      - {actor: execution-worker, from: RUNNING, to: SUCCEEDED, guard: definitive-effect-and-complete-receipt, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: RUNNING, to: PARTIALLY_SUCCEEDED, guard: definitive-known-mixed-effects-with-complete-per-target-receipts-and-no-unknown-effect, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: RUNNING, to: RETRYABLE_FAILED, guard: definitive-not-accepted-and-safe-retry-proof-and-dispatch-attempt-count-below-3, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: RUNNING, to: PERMANENT_FAILED, guard: definitive-permanent-failure-or-definitive-not-accepted-at-dispatch-attempt-count-3, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: RUNNING, to: RECONCILIATION_REQUIRED, guard: any-possible-effect-without-definitive-proof, event: action.execution_completed.v1}
+      - {operation: cancelActionExecution, from: QUEUED|RETRYABLE_FAILED|RUNNING, to: CANCELLED, selector: locked-current-attempt-has-no-dispatch-ordinal, guard: effect-then-authorization-then-attempt-lock-wins-before-dispatch, event: action.execution_cancel_requested.v1}
+      - {operation: cancelActionExecution, from: RUNNING|RECONCILIATION_REQUIRED, to: CANCEL_REQUESTED, selector: locked-current-attempt-has-dispatch-ordinal-or-possible-effect, guard: dispatch-or-possible-effect-proof, event: action.execution_cancel_requested.v1}
+      - {actor: reconciliation-worker, from: CANCEL_REQUESTED, to: CANCELLED|SUCCEEDED|PERMANENT_FAILED|RECONCILIATION_REQUIRED, selector: provider-proof-resolution, guard: authenticated-current-provider-observation-or-bounded-ambiguity, event: action.execution_completed.v1}
+      - {operation: retryActionExecution, from: RETRYABLE_FAILED, to: QUEUED, guard: generation-increment-and-valid-safe-retry-proof, event: action.execution_retry_requested.v1}
+      - {actor: reconciliation-worker, from: RECONCILIATION_REQUIRED, to: SUCCEEDED|PARTIALLY_SUCCEEDED|PERMANENT_FAILED|RETRYABLE_FAILED|CANCELLED, guard: definitive-proof-and-retryable-only-below-dispatch-limit, event: action.execution_completed.v1}
+      - {actor: action-execution-worker, from: QUEUED|RETRYABLE_FAILED, to: EXPIRED, guard: authorization-expired-and-no-provider-attempt, event: action.execution_completed.v1}
+    invariants:
+      - POLICY_BLOCKED is terminal for the exact approved bytes; changed policy or content requires a new ActionProposal rather than retry.
+      - PARTIALLY_SUCCEEDED is a known-mixed terminal result and is never counted as success or paid value.
+      - Maximum effect attempts is 3 and a retry keeps contentDigest, approvalDigest, rendered bytes and provider idempotency key.
+      - Blind retry, silent fallback, lower-generation claim and synthetic terminal receipt are forbidden.
+      - Compensation creates a new linked ActionProposal and ExecutionAuthorization; the original SUCCEEDED execution remains immutable.
+      - getActionExecutionReceipt reads only the append-only stored receipt chain.
+      - The aggregate state is stored only in ops.in_flight_effects; authorization, attempt and receipt states have their own closed machines and are not copied enum-for-enum.
+      - Final APPROVE creates the effect exactly once inside submitActionDecision; execution workers cannot materialize an effect from an event replay.
+      - A third definitive failed dispatch terminalizes PERMANENT_FAILED in the same receipt transaction and cannot remain RETRYABLE_FAILED.
+  action_execution_attempt:
+    states: [QUEUED, CLAIMED, DISPATCHING, PROVIDER_ACCEPTED, SUCCEEDED, PARTIALLY_SUCCEEDED, RETRYABLE_FAILED, PERMANENT_FAILED, CANCEL_REQUESTED, CANCELLED, RECONCILIATION_REQUIRED]
+    terminal: [SUCCEEDED, PARTIALLY_SUCCEEDED, PERMANENT_FAILED, CANCELLED]
+    edges:
+      - {operation: submitActionDecision, from: NONE, to: QUEUED, guard: generation-one-authorization-created-in-final-approve-atomic-group, event: action.execution_authorized.v1, effect_owner: control-api.submitActionDecision.final-approve, atomic_transition_group: gurine.command.submitActionDecision.v1}
+      - {operation: retryActionExecution, from: NONE, to: QUEUED, guard: next-generation-authorization-and-safe-retry-proof, event: action.execution_retry_requested.v1}
+      - {actor: execution-worker, from: QUEUED, to: CLAIMED, guard: lease-and-fencing-token-CAS-under-effect-then-attempt-lock, event: NONE, receipt: ActionExecutionClaimReceiptV1, audit: ACTION_EXECUTION_CLAIMED}
+      - {actor: execution-worker, from: CLAIMED, to: DISPATCHING, guard: current-fencing-token-and-assign-next-unique-dispatch-ordinal-with-aggregate-count-increment-before-egress, event: NONE, receipt: ActionExecutionDispatchStartedReceiptV1, audit: ACTION_EXECUTION_DISPATCH_STARTED}
+      - {operation: cancelActionExecution, from: QUEUED|CLAIMED, to: CANCELLED, guard: locked-attempt-has-null-dispatch-ordinal-and-cancel-CAS-wins, event: action.execution_cancel_requested.v1}
+      - {operation: cancelActionExecution, from: DISPATCHING|PROVIDER_ACCEPTED|RECONCILIATION_REQUIRED, to: CANCEL_REQUESTED, guard: dispatch-ordinal-or-possible-acceptance-exists, event: action.execution_cancel_requested.v1}
+      - {actor: execution-worker, from: DISPATCHING, to: PROVIDER_ACCEPTED, guard: definitive-authenticated-provider-acceptance, event: NONE, receipt: ActionExecutionProviderAcceptedReceiptV1, audit: ACTION_EXECUTION_PROVIDER_ACCEPTED}
+      - {actor: execution-worker, from: DISPATCHING|PROVIDER_ACCEPTED, to: SUCCEEDED, guard: definitive-success-and-complete-cost-receipt, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: DISPATCHING|PROVIDER_ACCEPTED, to: PARTIALLY_SUCCEEDED, guard: definitive-known-mixed-per-target-results-complete-cost-and-no-unknown-effect, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: DISPATCHING, to: RETRYABLE_FAILED, guard: definitive-not-accepted-and-safe-proof-and-aggregate-dispatch-count-below-3, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: DISPATCHING|PROVIDER_ACCEPTED, to: PERMANENT_FAILED, guard: definitive-permanent-failure-or-definitive-not-accepted-at-count-3, event: action.execution_completed.v1}
+      - {actor: execution-worker, from: DISPATCHING|PROVIDER_ACCEPTED|CANCEL_REQUESTED, to: RECONCILIATION_REQUIRED, guard: possible-effect-without-definitive-proof, event: action.execution_completed.v1}
+      - {actor: reconciliation-worker, from: CANCEL_REQUESTED|RECONCILIATION_REQUIRED, to: SUCCEEDED|PARTIALLY_SUCCEEDED|PERMANENT_FAILED|RETRYABLE_FAILED|CANCELLED, guard: authenticated-definitive-proof-with-retryable-below-count-3-and-cancelled-only-not-accepted-or-provider-cancelled, event: action.execution_completed.v1}
+    invariants:
+      - One attempt row exists per authorized generation; lease reclamation changes only lease/fencing fields and appends a claim receipt.
+      - CLAIMED is not proof of egress. Dispatch exists only after dispatchOrdinal assignment and aggregate dispatchAttemptCount increment commit atomically.
+      - A stale fencing token, lower generation or cancelled lease cannot dispatch or append an observation.
+      - PROVIDER_ACCEPTED never becomes RETRYABLE_FAILED or CANCELLED without authenticated provider cancellation/non-acceptance proof.
+  task:
+    states: [OPEN, IN_PROGRESS, BLOCKED, DONE, CANCELLED]
+    terminal: [DONE, CANCELLED]
+    edges:
+      - {actor: action-execution-worker, private_command: private.CreateTaskFromApprovedAction, from: NONE, to: OPEN, guard: exact-current-TASK-execution-authorization-target-version-assignee-scope-and-effect-idempotency-binding, event: NONE, receipt: TaskExecutionReceiptV1, audit: ACTION_TASK_CREATED, effect_owner: action-execution-worker.task-executor, atomic_transition_group: gurine.private.CreateTaskFromApprovedAction.v1}
+    invariants: [Creation is owned only by the private executor; subsequent task lifecycle remains the typed base task authority, Exact replay returns the stored task receipt and creates no second task]
+  procurement_comparable_candidate:
+    states: [CANDIDATE]
+    terminal: [CANDIDATE]
+    edges:
+      - {actor: action-execution-worker, private_command: private.MaterializeComparableCandidate, from: NONE, to: CANDIDATE, guard: exact-current-COMPARABLE-execution-authorization-target-and-candidate-line-item-version-digest-and-comparability-evidence, event: NONE, receipt: ComparableExecutionReceiptV1, audit: PROCUREMENT_COMPARABLE_CANDIDATE_MATERIALIZED, effect_owner: action-execution-worker.comparable-executor, atomic_transition_group: gurine.private.MaterializeComparableCandidate.v1}
+    invariants: [A candidate is not a verified comparable fact, Physical target and candidate keys are owned by the procurement canonical contract]
+  kill_switch:
+    states: [INACTIVE, ACTIVE, EXPIRED_REVIEW_REQUIRED]
+    terminal: []
+    edges:
+      - {actor: action-execution-worker, private_command: private.ApplyKillSwitchCommand, from: INACTIVE|EXPIRED_REVIEW_REQUIRED, to: ACTIVE, selector: ACTIVATE, guard: exact-current-KILL_SWITCH-execution-authorization-and-expected-switch-generation, event: operations.kill_switch_activated.v1, receipt: KillSwitchExecutionReceiptV1, audit: KILL_SWITCH_ACTIVATED, effect_owner: action-execution-worker.kill-switch-executor, atomic_transition_group: gurine.private.ApplyKillSwitchCommand.v1}
+      - {actor: action-execution-worker, private_command: private.ApplyKillSwitchCommand, from: ACTIVE, to: INACTIVE, selector: DEACTIVATE, guard: exact-current-KILL_SWITCH-execution-authorization-and-expected-switch-generation, event: operations.kill_switch_deactivated.v1, receipt: KillSwitchExecutionReceiptV1, audit: KILL_SWITCH_DEACTIVATED, effect_owner: action-execution-worker.kill-switch-executor, atomic_transition_group: gurine.private.ApplyKillSwitchCommand.v1}
+      - {actor: action-execution-worker, private_command: private.ApplyKillSwitchCommand, from: ACTIVE, to: ACTIVE, selector: EXTEND, guard: exact-current-KILL_SWITCH-execution-authorization-later-expiry-and-expected-switch-generation, event: operations.kill_switch_extended.v1, receipt: KillSwitchExecutionReceiptV1, audit: KILL_SWITCH_EXTENDED, effect_owner: action-execution-worker.kill-switch-executor, atomic_transition_group: gurine.private.ApplyKillSwitchCommand.v1}
+      - {actor: kill-switch-expiry-worker, from: ACTIVE, to: EXPIRED_REVIEW_REQUIRED, guard: expires-at-elapsed, event: NONE, receipt: KillSwitchExpiryReviewReceiptV1, audit: KILL_SWITCH_EXPIRED_REVIEW_REQUIRED}
+    invariants: [Expiry never resumes work or deactivates a fence, Stale cache unknown target or unavailable authority fails closed]
+  commercial_control_projection:
+    states: [NORMAL, PAUSE_ACKNOWLEDGEMENT_PENDING, PAUSED, RESUME_ACKNOWLEDGEMENT_PENDING, RECONCILIATION_REQUIRED]
+    terminal: []
+    edges:
+      - {actor: action-execution-worker, private_command: private.ApplyCommercialControl, from: NORMAL, to: PAUSE_ACKNOWLEDGEMENT_PENDING, selector: PAUSE_OR_SUSPEND, guard: exact-current-COMMERCIAL_CONTROL-execution-authorization-and-product-fence-committed-before-external-import, event: commercial.control_execution_recorded.v1, effect_owner: action-execution-worker.commercial-control-executor, atomic_transition_group: gurine.private.ApplyCommercialControl.v1}
+      - {actor: action-execution-worker, private_command: private.ApplyCommercialControl, from: PAUSED, to: RESUME_ACKNOWLEDGEMENT_PENDING, selector: RESUME_OR_REACTIVATE, guard: exact-current-COMMERCIAL_CONTROL-execution-authorization-and-all-closure-rights-readiness-no-trigger-evidence-while-product-fence-remains-active, event: commercial.control_execution_recorded.v1, effect_owner: action-execution-worker.commercial-control-executor, atomic_transition_group: gurine.private.ApplyCommercialControl.v1}
+      - {actor: commercial-control-reconciliation-worker, from: PAUSE_ACKNOWLEDGEMENT_PENDING, to: PAUSED, guard: exact-external-import-and-distinct-matching-acknowledgement-receipts, event: commercial.control_external_effect_acknowledged.v1}
+      - {actor: commercial-control-reconciliation-worker, from: RESUME_ACKNOWLEDGEMENT_PENDING, to: NORMAL, guard: exact-external-import-and-distinct-matching-acknowledgement-receipts-then-release-product-fence-last, event: commercial.control_external_effect_acknowledged.v1}
+      - {actor: commercial-control-reconciliation-worker, from: PAUSE_ACKNOWLEDGEMENT_PENDING|RESUME_ACKNOWLEDGEMENT_PENDING, to: RECONCILIATION_REQUIRED, guard: partial-ambiguous-stale-or-mismatched-import-or-acknowledgement, event: commercial.control_reconciliation_required.v1}
+    invariants: [A trigger or metric cannot mutate this projection directly, External import and acknowledgement are distinct immutable receipts, Automatic expiry or resume is forbidden, Missing acknowledgement is never PAUSED NORMAL SUCCEEDED revenue qualification or paid value]
+  paid_evidence_packet:
+    states: [AWAITING_TERMINAL_BINDING, FINALIZED, INVALIDATED]
+    terminal: [FINALIZED, INVALIDATED]
+    edges:
+      - {actor: workflow-worker, private_command: private.MaterializePaidEvidencePacket, from: NONE, to: AWAITING_TERMINAL_BINDING, guard: claimed-source-event-exact-qualification-contract-subject-and-duplicate-free-typed-member-candidate-keys, event: product.paid_evidence_packet_subject_persisted.v1, effect_owner: workflow-worker.paid-evidence-packet-materializer, atomic_transition_group: gurine.private.MaterializePaidEvidencePacket.v1}
+      - {actor: paid-terminal-binding-worker, from: AWAITING_TERMINAL_BINDING, to: FINALIZED, guard: exactly-one-definitive-organization-decision-or-applied-delivered-read-terminal-binding-and-complete-final-digest, event: product.paid_terminal_receipt_bound.v1}
+      - {actor: paid-terminal-binding-worker, from: AWAITING_TERMINAL_BINDING, to: INVALIDATED, guard: qualification-contract-subject-or-member-candidate-definitively-invalid-before-terminal-binding, event: NONE, receipt: PaidEvidencePacketInvalidationReceiptV1, audit: PAID_EVIDENCE_PACKET_INVALIDATED}
+    invariants: [AI output proposal approval provider acceptance page view invoice and technical action success are never a paid terminal, Final packet digest is derived only after the one-way terminal binding and cannot reverse-reference an outcome fact]
+  communication_intent:
+    states: [CREATED, MATERIALIZED, POLICY_BLOCKED, CANCELLED]
+    terminal: [MATERIALIZED, POLICY_BLOCKED, CANCELLED]
+    edges:
+      - {actor: action-execution-worker, private_command: private.DispatchCommunicationIntent, from: NONE, to: CREATED, selector: all-current-communication-fences-pass, guard: exact-current-COMMUNICATION-execution-authorization-and-rendering-recipient-endpoint-provider-consent-suppression-policy-budget-bindings, event: communication.intent_created.v1, effect_owner: action-execution-worker.communication-executor, atomic_transition_group: gurine.private.DispatchCommunicationIntent.v1}
+      - {actor: action-execution-worker, private_command: private.DispatchCommunicationIntent, from: NONE, to: POLICY_BLOCKED, selector: definitive-pre-dispatch-policy-denial, guard: exact-current-COMMUNICATION-execution-authorization-and-one-typed-blocker-with-zero-egress, event: operations.effect_policy_blocked.v1, effect_owner: action-execution-worker.communication-executor, atomic_transition_group: gurine.private.DispatchCommunicationIntent.v1}
+      - {actor: policy-materializer, from: CREATED, to: MATERIALIZED, guard: exact-class-purpose-basis-policy, event: NONE, receipt: CommunicationIntentMaterializedReceiptV1, audit: COMMUNICATION_INTENT_MATERIALIZED}
+      - {actor: policy-materializer, from: CREATED, to: POLICY_BLOCKED, guard: any-missing-or-denied-policy-input, event: NONE, receipt: CommunicationIntentPolicyBlockedReceiptV1, audit: COMMUNICATION_INTENT_POLICY_BLOCKED}
+      - {actor: source-cancellation, from: CREATED, to: CANCELLED, guard: source-event-invalidated-before-materialization, event: NONE, receipt: CommunicationIntentCancelledReceiptV1, audit: COMMUNICATION_INTENT_CANCELLED}
+  communication_draft:
+    states: [DRAFT, AWAITING_APPROVAL, APPROVED, REJECTED, CHANGES_REQUIRED, EXPIRED, SUPERSEDED]
+    terminal: [APPROVED, REJECTED, CHANGES_REQUIRED, EXPIRED, SUPERSEDED]
+    edges:
+      - {actor: materializer, from: NONE, to: DRAFT, guard: rendering-complete, event: NONE, receipt: CommunicationDraftMaterializedReceiptV1, audit: COMMUNICATION_DRAFT_MATERIALIZED}
+      - {actor: policy-engine, from: DRAFT, to: APPROVED, guard: system-transactional-or-consented-subscription-with-source-decision, event: NONE, receipt: CommunicationDraftPolicyApprovalReceiptV1, audit: COMMUNICATION_DRAFT_POLICY_APPROVED}
+      - {operation: submitActionForReview, from: DRAFT, to: AWAITING_APPROVAL, guard: discretionary-external, event: action.review_requested.v1}
+      - {operation: submitActionDecision, from: AWAITING_APPROVAL, to: APPROVED|REJECTED|CHANGES_REQUIRED, guard: exact-communication-quorum, event: action.decision_recorded.v1}
+      - {actor: expiry-worker, from: DRAFT|AWAITING_APPROVAL, to: EXPIRED, guard: expires-at-elapsed, event: NONE, receipt: CommunicationDraftExpiryReceiptV1, audit: COMMUNICATION_DRAFT_EXPIRED}
+      - {actor: edit, from: DRAFT|AWAITING_APPROVAL, to: SUPERSEDED, guard: new-rendering-version, event: NONE, receipt: CommunicationDraftSupersedeReceiptV1, audit: COMMUNICATION_DRAFT_SUPERSEDED}
+  outbound_delivery:
+    states: [QUEUED, SENDING, PROVIDER_ACCEPTED, DELIVERED, READ, RETRY_SCHEDULED, FAILED_PERMANENT, RECONCILIATION_REQUIRED, SUPPRESSED, CANCELLED]
+    terminal: [READ, FAILED_PERMANENT, SUPPRESSED, CANCELLED]
+    provider_terminal_allowed: [PROVIDER_ACCEPTED, DELIVERED]
+    edges:
+      - {actor: delivery-materializer, from: NONE, to: QUEUED, guard: approved-draft-current-authorization-activation-budget-and-switch, event: communication.delivery_requested.v1}
+      - {actor: dispatch-worker, from: QUEUED, to: SENDING, guard: authorization-activation-budget-switch-rechecked, event: NONE, receipt: OutboundDeliveryDispatchClaimReceiptV1, audit: OUTBOUND_DELIVERY_DISPATCH_CLAIMED}
+      - {actor: dispatch-worker, private_command: private.RecordOutboundDeliveryObservation, from: QUEUED, to: SUPPRESSED|CANCELLED, guard: pre-dispatch-fence, event: communication.delivery_receipt_recorded.v1, effect_owner: notification-worker.communication-gateway, atomic_transition_group: gurine.private.recordOutboundDeliveryObservation.v1}
+      - {actor: adapter, private_command: private.RecordOutboundDeliveryObservation, from: SENDING, to: PROVIDER_ACCEPTED|RETRY_SCHEDULED|FAILED_PERMANENT|RECONCILIATION_REQUIRED, guard: adapter-specific-proof, event: communication.delivery_receipt_recorded.v1, effect_owner: notification-worker.communication-gateway, atomic_transition_group: gurine.private.recordOutboundDeliveryObservation.v1}
+      - {actor: retry-worker, from: RETRY_SCHEDULED, to: SENDING|SUPPRESSED|CANCELLED|FAILED_PERMANENT, guard: same-delivery-key-and-definite-not-accepted, event: communication.delivery_receipt_recorded.v1}
+      - {actor: callback-or-poll, private_command: private.RecordOutboundDeliveryObservation, from: PROVIDER_ACCEPTED, to: DELIVERED|READ|FAILED_PERMANENT, guard: authenticated-monotonic-proof, event: communication.delivery_receipt_recorded.v1, effect_owner: notification-worker.communication-gateway, atomic_transition_group: gurine.private.recordOutboundDeliveryObservation.v1}
+      - {actor: callback-or-poll, private_command: private.RecordOutboundDeliveryObservation, from: DELIVERED, to: READ, guard: authenticated-read-proof, event: communication.delivery_receipt_recorded.v1, effect_owner: notification-worker.communication-gateway, atomic_transition_group: gurine.private.recordOutboundDeliveryObservation.v1}
+      - {actor: ambiguous-outcome, private_command: private.RecordOutboundDeliveryObservation, from: SENDING|RETRY_SCHEDULED, to: RECONCILIATION_REQUIRED, guard: possible-effect-without-proof, event: communication.delivery_receipt_recorded.v1, effect_owner: notification-worker.communication-gateway, atomic_transition_group: gurine.private.recordOutboundDeliveryObservation.v1}
+      - {operation: reconcileCommunicationDelivery, from: RECONCILIATION_REQUIRED, to: RETRY_SCHEDULED|PROVIDER_ACCEPTED|DELIVERED|FAILED_PERMANENT, selector: {request_map: {NOT_TRANSMITTED: RETRY_SCHEDULED, PROVIDER_ACCEPTED: PROVIDER_ACCEPTED, DELIVERED: DELIVERED, FAILED_PERMANENT: FAILED_PERMANENT}, exact_destination: true}, guard: resolution-compatible-authenticated-proof-and-NOT_TRANSMITTED-safe-retry-proof, event: communication.delivery_receipt_recorded.v1}
+      - {operation: cancelCommunicationDelivery, from: QUEUED|RETRY_SCHEDULED, to: CANCELLED, selector: locked-attempt-has-no-dispatch-proof, guard: delivery-then-attempt-lock-cancel-wins-before-dispatch, event: communication.delivery_receipt_recorded.v1}
+      - {operation: cancelCommunicationDelivery, from: SENDING|PROVIDER_ACCEPTED|DELIVERED|RECONCILIATION_REQUIRED, to: SENDING|PROVIDER_ACCEPTED|DELIVERED|RECONCILIATION_REQUIRED, selector: destination-equals-locked-source-state, guard: append-cancel-request-receipt-and-set-cancelRequestedAt-without-state-regression, event: communication.delivery_receipt_recorded.v1}
+    invariants:
+      - Out-of-order evidence is stored but cannot regress state.
+      - Post-dispatch cancel is cancelRequestedAt until definitive proof and never labels CANCELLED by request alone.
+      - An adapter cannot exceed its declared highest proof state.
+  communication_endpoint:
+    states: [PENDING_VERIFICATION, ACTIVE, BOUNCED, SUPPRESSED, REVOKED]
+    terminal: [REVOKED]
+    edges:
+      - {operation: requestCommunicationEndpointLink, from: NONE, to: PENDING_VERIFICATION, guard: linking-consent-and-abuse-proof, event: communication.authorization_changed.v1}
+      - {operation: verifyCommunicationEndpointLink, from: PENDING_VERIFICATION, to: ACTIVE, guard: fresh-matching-proof, event: communication.authorization_changed.v1}
+      - {actor: expiry-or-cancel, from: PENDING_VERIFICATION, to: REVOKED, guard: challenge-expired-or-cancelled, event: communication.authorization_changed.v1}
+      - {actor: provider-proof, from: ACTIVE, to: BOUNCED|SUPPRESSED, guard: authenticated-proof, event: communication.authorization_changed.v1}
+      - {operation: unlinkCommunicationEndpoint, from: ACTIVE|BOUNCED|SUPPRESSED, to: REVOKED, guard: scoped-session-and-expected-version, event: communication.authorization_changed.v1}
+      - {actor: reenrollment, from: BOUNCED, to: PENDING_VERIFICATION, guard: new-challenge, event: communication.authorization_changed.v1}
+      - {actor: suppression-release, from: SUPPRESSED, to: ACTIVE, guard: reversible-cause-released-and-fresh-authorization, event: communication.authorization_changed.v1}
+    invariants: [USER_OPTOUT, ABUSE and LEGAL suppressions never auto-clear; revoked endpoint requires a new row]
+  capability_activation:
+    legal_states: [UNCONFIGURED, PENDING_REVIEW, APPROVED, SUSPENDED, EXPIRED]
+    operational_states: [DISABLED, UNCONFIGURED, PENDING_PROVIDER_APPROVAL, ACTIVE, SUSPENDED]
+    edges:
+      - {actor: configuration, from: DISABLED, to: UNCONFIGURED, guard: typed-config-created, event: NONE, receipt: CapabilityConfigurationReceiptV1, audit: CAPABILITY_CONFIGURATION_RECORDED}
+      - {operation: submitActionForReview, from: UNCONFIGURED|SUSPENDED, to: PENDING_PROVIDER_APPROVAL, guard: current-preflight-and-legal-evidence, event: governance.capability_activation_review_requested.v1}
+      - {actor: action-execution-worker, private_command: private.DecideCapabilityActivation, from: PENDING_PROVIDER_APPROVAL, to: ACTIVE, guard: exact-current-CAPABILITY_ACTIVATION-execution-authorization-and-legal-APPROVED+exact-config+preflight+routing+switch, event: governance.capability_activation_decided.v1, effect_owner: action-execution-worker.capability-activation-executor, atomic_transition_group: gurine.private.DecideCapabilityActivation.v1}
+      - {actor: explicit-disable, from: ACTIVE|UNCONFIGURED|PENDING_PROVIDER_APPROVAL|SUSPENDED, to: DISABLED, guard: authorized-disable, event: governance.capability_activation_decided.v1}
+      - {actor: drift-or-expiry, from: ACTIVE, to: SUSPENDED, guard: kill-drift-expiry-provider-or-legal-cause, event: governance.capability_activation_decided.v1}
+      - {actor: remediation, from: SUSPENDED, to: PENDING_PROVIDER_APPROVAL, guard: cause-resolved-and-new-review, event: governance.capability_activation_review_requested.v1}
+    invariants: [No direct SUSPENDED->ACTIVE edge, most restrictive legal/operational state wins, health or fixture success is never activation]
+  response_appeal:
+    states: [RECEIVED, REVIEW, RESOLVED, REJECTED, DUPLICATE, WITHDRAWN]
+    terminal: [RESOLVED, REJECTED, DUPLICATE, WITHDRAWN]
+    edges:
+      - {operation: createResponseAppeal, from: NONE, to: RECEIVED, guard: active-APPEAL_CREATE-exact-response-submission-request-receipt-version-digest-composite-and-window, event: response.appeal_created.v1, atomic_transition_group: gurine.command.createResponseAppeal.v1}
+      - {operation: transitionResponseAppeal, from: RECEIVED, to: REVIEW|REJECTED|DUPLICATE|WITHDRAWN, guard: expected-sequence-and-typed-reason, event: response.appeal_decision_recorded.v1}
+      - {operation: transitionResponseAppeal, from: REVIEW, to: RESOLVED|REJECTED|DUPLICATE|WITHDRAWN, guard: expected-sequence-and-required-evidence, event: response.appeal_decision_recorded.v1}
+  response_extension:
+    states: [SUBMITTED, APPROVED, REJECTED]
+    terminal: [APPROVED, REJECTED]
+    edges:
+      - {operation: requestResponseExtension, from: NONE, to: SUBMITTED, guard: scoped-active-response-session-open-request-new-due-after-current-and-idempotency, event: response.extension_request_submitted.v2}
+      - {operation: decideResponseExtension, from: SUBMITTED, to: APPROVED|REJECTED, selector: {decision: [APPROVE, REJECT], exact_destination: true}, guard: expected-version-current-calendar-policy-reason-and-step-up, event: response.extension_decided.v1}
+    invariants:
+      - A decision appends editorial.response_extension_decisions and never overwrites the submitted request.
+      - APPROVED requires a newDueAt later than the current due time and bound to the exact business-calendar version; REJECTED preserves the current due time.
+  response_request:
+    states: [DRAFT, SENT, VIEWED, SUBMITTED, CLOSED, EXPIRED]
+    terminal: [CLOSED, EXPIRED]
+    edges:
+      - {operation: createResponseRequest, from: NONE, to: DRAFT, guard: exact-case-version-party-scope-questions-due-policy-and-access-token-hash, event: response.request_created.v1}
+      - {operation: saveResponseRequestDraft, from: DRAFT, to: DRAFT, guard: expected-version-and-request-still-unsent, event: response.request_draft_updated.v1}
+      - {actor: response-request-materializer, private_command: materializeResponseRequestSent, from: DRAFT, to: SENT, guard: claimed-source-event-and-exact-request-intent-rendering-endpoint-provider-delivery-receipt-composite-with-authenticated-provider-acceptance, event: response.request_sent.v1, effect_owner: workflow-worker.response-request-materializer, atomic_transition_group: gurine.private.materializeResponseRequestSent.v1}
+      - {operation: verifyResponseAccess, from: SENT, to: VIEWED, guard: exact-request-scope-fresh-proof-and-session-rotation, event: NONE, receipt: ResponseRequestViewedReceiptV1, audit: RESPONSE_REQUEST_VIEWED}
+      - {operation: submitResponse, from: SENT|VIEWED, to: SUBMITTED, guard: active-response-session-current-request-version-clean-attachments-preview-digest-attestation-and-consent, event: response.submitted.v2}
+      - {actor: response-request-closure-worker, from: SUBMITTED, to: CLOSED, guard: accepted-terminal-editorial-processing-receipt, event: NONE, receipt: ResponseRequestClosedReceiptV1, audit: RESPONSE_REQUEST_CLOSED}
+      - {actor: response-expiry-worker, from: DRAFT|SENT|VIEWED, to: EXPIRED, guard: authoritative-current-delivery-clock-due-at-elapsed-and-version-current, event: response.request_expired.v1}
+    invariants:
+      - DRAFT cannot be viewed or submitted; SENT requires one exact outbound delivery binding and authenticated acceptance evidence; VIEWED is access proof, not response submission.
+      - SUBMITTED preserves the immutable response submission and cannot return to SENT or VIEWED; later editorial completion closes the request without rewriting the submission.
+      - The DRAFT to SENT materializer is a required named consumer/transaction contract and may not infer SENT from createResponseRequest alone.
+  response_submission_intake:
+    states: [UNMATERIALIZED, MATERIALIZED]
+    terminal: [MATERIALIZED]
+    edges:
+      - {actor: response-submission-materializer, private_command: materializeResponseSubmissionIntake, from: UNMATERIALIZED, to: MATERIALIZED, guard: claimed-workflow-response-submitted-v2-event-and-exact-reciprocal-submission-request-case-binding, event: editorial.response_materialized.v1, effect_owner: workflow-worker.response-submission-materializer, atomic_transition_group: gurine.private.materializeResponseSubmissionIntake.v1}
+    invariants: [Only workflow.response_submitted.v2 may materialize the owned editorial response, exact reciprocal replay writes zero domain rows, and one-sided or changed bindings are EVENT_EFFECT_CONFLICT]
+  correction:
+    states: [DRAFT, REVIEW, PUBLISHED, REJECTED]
+    terminal: [PUBLISHED, REJECTED]
+    edges:
+      - {operation: createCorrection, from: NONE, to: DRAFT, guard: exact-publication-source-revision-case-version-claims-and-replacement-content, event: correction.created.v1}
+      - {operation: updateCorrectionDraft, from: DRAFT, to: DRAFT, guard: expected-version-and-closed-replacement-content, event: correction.draft_updated.v1}
+      - {operation: assignCorrection, from: DRAFT|REVIEW, to: DRAFT|REVIEW, selector: destination-equals-source, guard: exact-assignee-capability-and-active-assignment-uniqueness, event: correction.assigned.v1}
+      - {operation: triageCorrection, from: DRAFT, to: REVIEW, selector: decision-ACCEPT, guard: expected-version-priority-reason-and-review-owner, event: correction.triaged.v1}
+      - {operation: triageCorrection, from: DRAFT, to: DRAFT, selector: decision-NEEDS_INFORMATION, guard: expected-version-and-owned-information-task, event: correction.triaged.v1}
+      - {operation: triageCorrection, from: DRAFT, to: REJECTED, selector: decision-REJECT-or-DUPLICATE, guard: expected-version-and-terminal-reason, event: correction.triaged.v1}
+      - {operation: resolveCorrectionRequest, from: REVIEW, to: PUBLISHED, selector: resolution-RESOLVED, guard: expected-version-publication-preview-gate-and-new-publication-revision-atomic, event: correction.resolved.v1, effect_owner: control-api.resolveCorrectionRequest, atomic_transition_group: gurine.command.resolveCorrectionRequest.publish.v1}
+      - {operation: resolveCorrectionRequest, from: REVIEW, to: REJECTED, selector: resolution-REJECTED-or-DUPLICATE-or-WITHDRAWN, guard: expected-version-and-terminal-reason, event: correction.resolved.v1}
+    invariants:
+      - PUBLISHED requires one new immutable editorial.publication_revisions row and public projection event in the same transaction; changing only editorial.corrections.status is forbidden.
+      - "The base resolution enum and physical status map are explicit: RESOLVED maps PUBLISHED; REJECTED, DUPLICATE and WITHDRAWN map REJECTED with distinct preserved reason codes."
+  publication:
+    states: [NEVER_PUBLISHED, PUBLISHED_ANOMALY, PUBLISHED_EXPLAINED, OFFICIALLY_CONFIRMED, CORRECTED, RETRACTED, TEMPORARILY_RESTRICTED]
+    terminal: [RETRACTED]
+    edges:
+      - {operation: publishCase, from: NEVER_PUBLISHED|PUBLISHED_ANOMALY|PUBLISHED_EXPLAINED|OFFICIALLY_CONFIRMED|CORRECTED, to: PUBLISHED_ANOMALY|PUBLISHED_EXPLAINED|OFFICIALLY_CONFIRMED, selector: intent-PUBLISH-and-exact-publication-payload-state, guard: PASS-publication-gate-and-one-new-immutable-revision, event: publication.revision_created.v1, atomic_transition_group: publish-case-gate-and-revision}
+      - {operation: resolveCorrectionRequest, from: PUBLISHED_ANOMALY|PUBLISHED_EXPLAINED|OFFICIALLY_CONFIRMED|CORRECTED, to: CORRECTED, selector: resolution-RESOLVED, guard: correction-PUBLISHED-and-new-publication-revision-projection-atomic, event: publication.revision_created.v1, effect_owner: control-api.resolveCorrectionRequest, atomic_transition_group: gurine.command.resolveCorrectionRequest.publish.v1}
+      - {actor: action-execution-worker, private_command: private.PublishRetraction, from: PUBLISHED_ANOMALY|PUBLISHED_EXPLAINED|OFFICIALLY_CONFIRMED|CORRECTED|TEMPORARILY_RESTRICTED, to: RETRACTED, guard: exact-current-RETRACTION-execution-authorization-and-approved-draft-snapshot-preview-tombstone-and-fresh-publication-gate, event: publication.revision_created.v1, effect_owner: action-execution-worker.retraction-executor, atomic_transition_group: gurine.private.PublishRetraction.v1}
+      - {operation: placeTemporaryRestriction, from: PUBLISHED_ANOMALY|PUBLISHED_EXPLAINED|OFFICIALLY_CONFIRMED|CORRECTED, to: TEMPORARILY_RESTRICTED, guard: exact-current-legal-rights-hold-or-safety-cause-decision-and-preserved-prior-state, event: publication.access_restricted.v1, effect_owner: control-api.placeTemporaryRestriction, atomic_transition_group: gurine.command.placeTemporaryRestriction.v1}
+      - {operation: publishCase, from: TEMPORARILY_RESTRICTED, to: PUBLISHED_ANOMALY|PUBLISHED_EXPLAINED|OFFICIALLY_CONFIRMED|CORRECTED, selector: intent-RESTORE_ACCESS-and-destination-equals-preserved-prior-state, guard: restricting-cause-release-receipt-and-full-fresh-publication-gate-revalidation, event: publication.revision_created.v1, effect_owner: control-api.publishCase, atomic_transition_group: gurine.command.publishCase.restore.v1}
+    invariants:
+      - Public state changes only by an immutable publication revision plus projection event; correction, retraction and access restriction never update published bytes in place.
+      - A temporarily restricted revision retains its prior public state and requires full gate revalidation before restoration.
+  privacy_request:
+    states: [RECEIVED, REVIEW, APPROVED, REJECTED, COMPLETED]
+    terminal: [REJECTED, COMPLETED]
+    edges:
+      - {operation: createPrivacyRequest, from: NONE, to: RECEIVED, guard: subject-proof-scope-consent-abuse-proof, event: privacy.request_created.v1}
+      - {operation: transitionRetentionRequest, from: RECEIVED, to: REVIEW, guard: expected-decision-version, event: privacy.request_decision_recorded.v1}
+      - {operation: transitionRetentionRequest, from: REVIEW, to: APPROVED|REJECTED, guard: policy-scope-hold-review, event: privacy.request_decision_recorded.v1}
+      - {operation: transitionRetentionRequest, from: APPROVED, to: COMPLETED, guard: all-location-receipt-and-zero-active-hold-coverage, event: retention.execution_completed.v1}
+  legal_hold_coverage:
+    states: [ACTIVE_COVERAGE, PARTIALLY_RELEASED, FULLY_RELEASED]
+    terminal: [FULLY_RELEASED]
+    edges:
+      - {operation: placeLegalHold, from: NONE, to: ACTIVE_COVERAGE, selector: closed-LegalHoldTargetBindingV1-case-or-noncase, guard: exact-concrete-target-version-digest-anchor-authority-scope-conflict-approval-and-step-up, event: legal_hold.placed.v1, effect_owner: control-api.placeLegalHold, atomic_transition_group: gurine.command.placeLegalHold.v2}
+      - {operation: releaseLegalHold, from: ACTIVE_COVERAGE|PARTIALLY_RELEASED, to: PARTIALLY_RELEASED|FULLY_RELEASED, guard: append-only-nonoverlapping-subset-and-independent-releaser, event: legal.hold_released.v1}
+      - {actor: expiry-review-worker, from: ACTIVE_COVERAGE|PARTIALLY_RELEASED, to: ACTIVE_COVERAGE|PARTIALLY_RELEASED, selector: destination-equals-locked-source-state, guard: review-due, event: legal.hold_review_due.v1}
+    coverage_formula: active coverage is original scope-atom x affected-ID cells minus union of valid release cells; effects of multiple holds are union
+    invariants: [Expiry never releases, update/delete of hold or release rows is forbidden]
+  dataset_snapshot:
+    states: [BUILDING, READY, FAILED]
+    terminal: [READY, FAILED]
+    edges:
+      - {actor: snapshot-producer, from: NONE, to: BUILDING, guard: unique-producer-digest, event: NONE, receipt: DatasetSnapshotBuildStartedReceiptV1, audit: DATASET_SNAPSHOT_BUILD_STARTED}
+      - {actor: snapshot-producer, from: BUILDING, to: READY, guard: repeatable-read-members-complete-and-digest-verified, event: dataset.snapshot_created.v1}
+      - {actor: snapshot-producer, from: BUILDING, to: FAILED, guard: typed-terminal-build-error, event: dataset.snapshot_created.v1}
+    retry: FAILED requires a new producerGeneration and new snapshot row
+  budget_reservation:
+    states: [RESERVED, SETTLED, RELEASED, RECONCILIATION_REQUIRED]
+    terminal: [SETTLED, RELEASED]
+    edges:
+      - {actor: pre-egress-reserver, from: NONE, to: RESERVED, guard: known-price-fx-and-all-ledgers-sufficient, event: budget.reservation_created.v1}
+      - {actor: accounting-worker, from: RESERVED|RECONCILIATION_REQUIRED, to: SETTLED, guard: provider-usage-and-billed-cost-proven, event: budget.reservation_settled.v1}
+      - {actor: accounting-worker, from: RESERVED|RECONCILIATION_REQUIRED, to: RELEASED, guard: no-acceptance-and-no-bill-proof, event: budget.reservation_released.v1}
+      - {actor: orphan-or-ambiguity-worker, from: RESERVED, to: RECONCILIATION_REQUIRED, guard: expiry-or-ambiguous-missing-usage-price-fx, event: budget.reservation_reconciliation_required.v1}
+    correction: terminal rows are immutable; correction is a signed AccountingCorrection fact
+  incident:
+    states: [DETECTED, TRIAGED, CONTAINED, RECOVERING, RESOLVED, POSTMORTEM_CLOSED]
+    terminal: [POSTMORTEM_CLOSED]
+    edges:
+      - {actor: incident-detector, from: NONE, to: DETECTED, guard: typed-detection-signal-severity-impact-owner-and-evidence, event: incident.state_changed.v1}
+      - {operation: triageIncident, from: DETECTED, to: TRIAGED, guard: owner-severity-impact-next-update-evidence, event: incident.state_changed.v1}
+      - {operation: containIncident, from: TRIAGED, to: CONTAINED, guard: actions-residual-impact-reconciliation-evidence, event: incident.state_changed.v1}
+      - {operation: startIncidentRecovery, from: CONTAINED, to: RECOVERING, guard: recovery-rollback-validation-plan, event: incident.state_changed.v1}
+      - {operation: resolveIncident, from: RECOVERING, to: RESOLVED, guard: no-unknown-sli-no-unreconciled-effect-ready-evidence, event: incident.state_changed.v1}
+      - {operation: closeIncidentPostmortem, from: RESOLVED, to: POSTMORTEM_CLOSED, guard: root-cause-actions-reviewer-digest, event: incident.state_changed.v1}
+    recurrence: creates a new linked DETECTED incident and never reopens a terminal row
+  communication_authorization:
+    states: [GRANTED, RESTRICTED, REVOKED, EXPIRED, SUPERSEDED]
+    terminal: [REVOKED, EXPIRED, SUPERSEDED]
+    edges:
+      - {actor: action-execution-worker, private_command: private.RecordCommunicationAuthorizationDecision, from: NONE, to: GRANTED|RESTRICTED, guard: exact-current-COMMUNICATION_AUTHORIZATION-execution-authorization-and-subject-endpoint-version-purpose-topic-basis-jurisdiction-policy-and-proof, event: communication.authorization_changed.v1, effect_owner: action-execution-worker.communication-authorization-executor, atomic_transition_group: gurine.private.RecordCommunicationAuthorizationDecision.v1}
+      - {actor: authorization-materializer, from: GRANTED|RESTRICTED, to: SUPERSEDED, guard: newer-append-only-authorization-event-for-same-scope, event: communication.authorization_changed.v1}
+      - {operation: unlinkCommunicationEndpoint, from: GRANTED|RESTRICTED, to: REVOKED, guard: endpoint-unlink-appends-revocation-for-every-active-scope, event: communication.authorization_changed.v1}
+      - {actor: authorization-expiry-worker, from: GRANTED|RESTRICTED, to: EXPIRED, guard: expires-at-elapsed-and-no-newer-event, event: communication.authorization_changed.v1}
+    invariants:
+      - Current authorization is derived from append-only events by subject, immutable endpoint version, purpose and topic-scope digest; mutable endpoint heads are never approval evidence.
+      - Consent, contract, legal obligation, public task and legitimate-interest bases remain distinct; a basis cannot be silently substituted.
+  communication_callback_request:
+    states: [COMMITTED]
+    terminal: [COMMITTED]
+    edges:
+      - {actor: callback-gateway, from: NONE, to: COMMITTED, guard: exact-raw-byte-authentication-freshness-closed-parse-and-request-identity-digest-claim, event: NONE, receipt: CommunicationCallbackRequestReceiptV1, audit: COMMUNICATION_CALLBACK_REQUEST_COMMITTED, effect_owner: notification-worker.callback-gateway, atomic_transition_group: callback-request-identity}
+    replay:
+      exact: return the stored request receipt byte-for-byte and append no request, item, delivery, audit or outbox row
+      changed_digest: CALLBACK_REPLAY_CONFLICT and zero writes
+      multi_item: one request row owns an ordered nonempty item receipt set; delivery transitions are folded once per distinct delivery
+  scoped_session:
+    states: [ACTIVE, CONSUMED, EXPIRED, REVOKED]
+    terminal: [CONSUMED, EXPIRED, REVOKED]
+    kinds: [RESPONSE_RECEIPT, APPEAL_CREATE, APPEAL_STATUS, COMMUNICATION_PROFILE, PRIVACY_REQUEST_RECEIPT]
+    edges:
+      - {actor: derived-session-broker, from: NONE, to: ACTIVE, selector: kind-APPEAL_CREATE-or-APPEAL_STATUS-or-COMMUNICATION_PROFILE, guard: exact-eligible-parent-kind-issuer-scope-lineage-version-expiry-issuance-digest-and-token-hash, event: NONE, receipt: DerivedSessionIssuanceReceiptV1, audit: DERIVED_SESSION_ISSUED}
+      - {operation: createResponseAppeal, from: ACTIVE, to: CONSUMED, selector: kind-APPEAL_CREATE, guard: appeal-created-and-APPEAL_STATUS-child-issued-in-same-atomic-group, event: response.appeal_created.v1, atomic_transition_group: gurine.command.createResponseAppeal.v1}
+      - {operation: exchangePrivacyRequestReceiptToken, from: NONE, to: ACTIVE, selector: kind-PRIVACY_REQUEST_RECEIPT, guard: fresh-one-time-token-browser-proof-and-request-binding, event: NONE, receipt: PrivacyRequestSessionReceiptV1, audit: PRIVACY_REQUEST_SESSION_ISSUED}
+      - {actor: derived-session-rotation, from: ACTIVE, to: REVOKED, selector: APPEAL_STATUS-reentry-or-COMMUNICATION_PROFILE-success, guard: replacement-child-created-under-identical-scope-and-higher-rotation-sequence-in-one-transaction, event: NONE, receipt: DerivedSessionRotationReceiptV1, audit: DERIVED_SESSION_ROTATED}
+      - {actor: session-expiry-worker, from: ACTIVE, to: EXPIRED, guard: expires-at-elapsed, event: NONE, receipt: DerivedSessionExpiryReceiptV1, audit: DERIVED_SESSION_EXPIRED}
+      - {actor: session-revoker, from: ACTIVE, to: REVOKED, guard: parent-subject-request-policy-or-abuse-revocation, event: NONE, receipt: DerivedSessionRevocationReceiptV1, audit: DERIVED_SESSION_REVOKED}
+    invariants:
+      - RESPONSE_RECEIPT is read-only and authorizes getResponseReceipt only; APPEAL_CREATE and APPEAL_STATUS are new child rows, never widened parent rows.
+      - APPEAL_CREATE is one-shot, 900 seconds, RESPONSE_SUBMISSION-scoped and authorizes only createResponseAppeal; success consumes it and issues one 1800-second read-only APPEAL_STATUS child scoped to the new appeal.
+      - APPEAL_STATUS authorizes only getResponseAppeal. Re-entry re-establishes the RESPONSE_RECEIPT composite, revokes only the prior status child for that appeal and inserts a replacement.
+      - COMMUNICATION_PROFILE is 1800 seconds, COMMUNICATION_SUBJECT-scoped and authorizes only endpoint link, verify and unlink; every success rotates under the identical subject/origin binding.
+      - Finalized exact command replay is checked before ACTIVE-state validation and returns stored bytes after consumption/rotation with zero second mutation; changed request is IDEMPOTENCY_CONFLICT.
+      - Session tokens are 32-byte base64url BFF-only values, SHA-256-only at rest, sealed in host-only HttpOnly SameSite=Lax path cookies and absent from URL, DOM, storage, audit, outbox, events, receipts and observability.
+  one_time_receipt_token:
+    states: [FRESH, CONSUMED, EXPIRED, REVOKED]
+    terminal: [CONSUMED, EXPIRED, REVOKED]
+    edges:
+      - {operation: createPrivacyRequest, from: NONE, to: FRESH, guard: privacy-request-created-and-token-HMAC-persisted-before-one-time-plaintext-return, event: privacy.request_created.v1}
+      - {operation: exchangePrivacyRequestReceiptToken, from: FRESH, to: CONSUMED, guard: token-HMAC-match-fresh-browser-proof-and-session-created-atomically, event: identity.session_created.v1}
+      - {actor: token-expiry-worker, from: FRESH, to: EXPIRED, guard: expires-at-elapsed, event: NONE, receipt: OneTimeReceiptTokenExpiryReceiptV1, audit: ONE_TIME_RECEIPT_TOKEN_EXPIRED}
+      - {actor: token-revoker, from: FRESH, to: REVOKED, guard: request-withdrawn-abuse-or-policy-revocation, event: NONE, receipt: OneTimeReceiptTokenRevocationReceiptV1, audit: ONE_TIME_RECEIPT_TOKEN_REVOKED}
+    invariants: [Exactly one consume winner, plaintext is never persisted, replay returns TOKEN_REPLAYED without creating a session]
+  response_delivery_clock:
+    states: [EVIDENCE_PENDING, STARTED, EXTENDED, EXPIRED, CLOSED]
+    terminal: [EXPIRED, CLOSED]
+    edges:
+      - {actor: response-request-materializer, from: NONE, to: EVIDENCE_PENDING, guard: response-request-created, event: response.request_created.v1}
+      - {actor: response-clock-worker, from: EVIDENCE_PENDING, to: STARTED, guard: exact-request-intent-delivery-receipt-rendering-endpoint-provider-composite-and-current-calendar, event: response.delivery_clock_started.v1}
+      - {operation: decideResponseExtension, from: STARTED|EXTENDED, to: EXTENDED, selector: decision-APPROVE, guard: immutable-extension-decision-and-new-due-later-than-current, event: response.extension_decided.v1}
+      - {actor: response-expiry-worker, from: STARTED|EXTENDED, to: EXPIRED, guard: current-due-at-elapsed-and-version-current, event: response.request_expired.v1}
+      - {actor: response-submission-worker, from: STARTED|EXTENDED, to: CLOSED, guard: accepted-response-before-effective-due-or-authorized-timely-extension-and-terminal-receipt, event: response.submitted.v2}
+    invariants:
+      - Delivery evidence binds one exact response request/version, communication intent, outbound delivery, delivery receipt, rendering digest, endpoint identity hash and provider identity hash.
+      - Authenticated delivery evidence cannot be reused across response requests or intents.
+  record_class_schedule:
+    states: [FUTURE, CURRENT, REVIEW_EXPIRED, SUPERSEDED]
+    terminal: [REVIEW_EXPIRED, SUPERSEDED]
+    edges:
+      - {actor: action-execution-worker, private_command: private.CreateRecordClassScheduleRevision, from: NONE, to: FUTURE|CURRENT, guard: exact-current-RETENTION_SCHEDULE-execution-authorization-and-nonoverlapping-effective-interval, event: retention.schedule_revised.v1, effect_owner: action-execution-worker.record-class-schedule-executor, atomic_transition_group: gurine.private.CreateRecordClassScheduleRevision.v1}
+      - {actor: schedule-activation-worker, from: FUTURE, to: CURRENT, guard: effective-at-reached-and-no-conflicting-current-revision, event: retention.schedule_revised.v1}
+      - {actor: action-execution-worker, private_command: private.CreateRecordClassScheduleRevision, from: CURRENT|FUTURE, to: SUPERSEDED, guard: same-transaction-newer-approved-revision-effective, event: retention.schedule_revised.v1, effect_owner: action-execution-worker.record-class-schedule-executor, atomic_transition_group: gurine.private.CreateRecordClassScheduleRevision.v1}
+      - {actor: schedule-review-worker, from: CURRENT, to: REVIEW_EXPIRED, guard: review-expires-at-elapsed-without-new-approved-revision, event: retention.schedule_revised.v1}
+    invariants: [Expired review fails closed for purge, holds always pause destructive actions, schedule rows are append-only revisions]
+  restoration_suppression:
+    states: [ACTIVE, EXPIRED, SUPERSEDED]
+    terminal: [EXPIRED, SUPERSEDED]
+    edges:
+      - {actor: retention-worker, from: NONE, to: ACTIVE, guard: completed-destructive-or-restrictive-decision-and-subject-scope-digest, event: retention.restoration_suppression_created.v1}
+      - {actor: suppression-expiry-worker, from: ACTIVE, to: EXPIRED, guard: expires-at-elapsed-and-policy-allows-expiry, event: NONE, receipt: RestorationSuppressionExpiryReceiptV1, audit: RESTORATION_SUPPRESSION_EXPIRED}
+      - {actor: retention-worker, from: ACTIVE, to: SUPERSEDED, guard: newer-authoritative-suppression-for-same-scope, event: retention.restoration_suppression_created.v1}
+    invariants: [Restore evaluates the active suppression union before materialization, backup restoration cannot silently resurrect suppressed data]
+  agent_run:
+    states: [QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED, BUDGET_BLOCKED, POLICY_BLOCKED]
+    terminal: [SUCCEEDED, FAILED, CANCELLED, BUDGET_BLOCKED, POLICY_BLOCKED]
+    edges:
+      - {operation: startAgentRun, from: NONE, to: QUEUED, guard: exact-case-snapshot-agent-policy-provider-budget-and-idempotency-binding, event: NONE, receipt: AgentRunQueuedReceiptV1, audit: AGENT_RUN_QUEUED}
+      - {actor: analysis-worker, from: QUEUED, to: RUNNING, guard: durable-lease-current-snapshot-and-budget-reservation, event: NONE, receipt: AgentRunClaimReceiptV1, audit: AGENT_RUN_CLAIMED}
+      - {actor: analysis-worker, from: RUNNING, to: SUCCEEDED, guard: all-provider-turns-and-tool-calls-terminal-plus-closed-output-schema-valid-citation-joins-complete-and-budget-settled, event: agent.run_control_changed.v2}
+      - {actor: analysis-worker, from: QUEUED|RUNNING, to: FAILED, guard: typed-definitive-terminal-error-and-no-possible-provider-effect-and-budget-resolved, event: agent.run_control_changed.v2}
+      - {actor: analysis-worker, from: RUNNING, to: RUNNING, guard: possible-provider-effect-or-usage-without-definitive-receipt-moves-control-axis-to-RECONCILIATION_REQUIRED, event: agent.run_control_changed.v2}
+      - {private_operation: reconcileAgentRun, from: RUNNING, to: RUNNING, selector: SAFE_RETRY_AUTHORIZED|NO_CHANGE, guard: authenticated-run-bound-proof-updates-only-control-axis, event: agent.run_control_changed.v2}
+      - {private_operation: reconcileAgentRun, from: RUNNING, to: SUCCEEDED|FAILED|CANCELLED, selector: DEFINITIVE_TERMINAL, guard: authenticated-provider-tool-usage-output-and-budget-proof, event: agent.run_control_changed.v2}
+      - {operation: cancelAgentRun, from: QUEUED, to: CANCELLED, guard: no-worker-claim-provider-dispatch-or-tool-effect-and-definitive-no-dispatch-proof, event: agent.run_control_changed.v2}
+      - {operation: cancelAgentRun, from: RUNNING, to: RUNNING, guard: append-CANCEL_REQUESTED-control-without-claiming-terminal-cancellation, event: agent.run_control_changed.v2}
+      - {actor: analysis-worker, from: QUEUED|RUNNING, to: BUDGET_BLOCKED|POLICY_BLOCKED, guard: definitive-pre-dispatch-current-budget-or-policy-denial-and-zero-possible-effect, event: agent.run_control_changed.v2}
+    invariants: [Run status uses exactly the seven persisted searchable values while execution control uses the separate five-value agent_run_control axis, A successful run references one immutable dataset snapshot every provider turn and tool call one output validation and exact cost facts, possible effect is never mapped to CANCELLED FAILED BUDGET_BLOCKED or POLICY_BLOCKED]
+  agent_run_control:
+    states: [NONE, ACTIVE, CANCEL_REQUESTED, RECONCILIATION_REQUIRED, SETTLED]
+    terminal: [SETTLED]
+    edges:
+      - {operation: startAgentRun, from: NONE, to: NONE, guard: queued-without-worker-claim, event: NONE, receipt: AgentRunQueuedReceiptV1, audit: AGENT_RUN_QUEUED}
+      - {actor: analysis-worker, from: NONE, to: ACTIVE, guard: durable-current-run-claim, event: agent.run_control_changed.v2}
+      - {operation: cancelAgentRun, from: NONE, to: SETTLED, guard: definitive-no-claim-no-dispatch-and-budget-release-complete, event: agent.run_control_changed.v2}
+      - {operation: cancelAgentRun, from: ACTIVE|RECONCILIATION_REQUIRED, to: CANCEL_REQUESTED, guard: provider-or-tool-effect-may-exist, event: agent.run_control_changed.v2}
+      - {actor: analysis-worker, from: ACTIVE|CANCEL_REQUESTED, to: RECONCILIATION_REQUIRED, guard: outcome-or-usage-ambiguous-with-run-bound-evidence, event: agent.run_control_changed.v2}
+      - {private_operation: reconcileAgentRun, from: RECONCILIATION_REQUIRED, to: ACTIVE, selector: SAFE_RETRY_AUTHORIZED, guard: authenticated-run-bound-definitive-no-dispatch-proof, event: agent.run_control_changed.v2}
+      - {private_operation: reconcileAgentRun, from: CANCEL_REQUESTED|RECONCILIATION_REQUIRED, to: SETTLED, selector: DEFINITIVE_TERMINAL, guard: authenticated-current-provider-tool-and-usage-proof, event: agent.run_control_changed.v2}
+      - {private_operation: reconcileAgentRun, from: CANCEL_REQUESTED|RECONCILIATION_REQUIRED, to: CANCEL_REQUESTED|RECONCILIATION_REQUIRED, selector: NO_CHANGE, guard: fresh-proof-remains-ambiguous, event: agent.run_control_changed.v2}
+      - {actor: analysis-worker, from: ACTIVE, to: SETTLED, guard: definitive-terminal-run-status-and-budget-settlement, event: agent.run_control_changed.v2}
+    invariants: [Terminal run status iff control state SETTLED, safe retry exists only from RECONCILIATION_REQUIRED, exact replay appends no receipt, CANCEL_REQUESTED never returns directly to ACTIVE]
+  research_artifact_promotion:
+    states: [PROMOTED]
+    terminal: [PROMOTED]
+    edges:
+      - {operation: promoteResearchArtifactToEvidence, from: NONE, to: PROMOTED, guard: exact-clean-artifact-current-rights-pinned-parser-contiguous-selected-segments-and-human-case-scope, event: research.artifact_promoted.v1}
+    invariants: [The research artifact remains immutable and non-authoritative; one promotion atomically creates revision-fixed source document and Evidence segments with exact locators and digest chain]
+  agent_provider_turn:
+    states: [QUEUED, CLAIMED, DISPATCHING, PROVIDER_ACCEPTED, COMPLETED, RETRYABLE_FAILED, PERMANENT_FAILED, RECONCILIATION_REQUIRED, CANCELLED]
+    terminal: [COMPLETED, PERMANENT_FAILED, CANCELLED]
+    edges:
+      - {actor: analysis-worker, from: NONE, to: QUEUED, guard: typed-provider-request-tool-policy-rights-budget-and-idempotency-binding, event: NONE, receipt: AgentProviderTurnQueuedReceiptV1, audit: AGENT_PROVIDER_TURN_QUEUED}
+      - {actor: analysis-worker, from: QUEUED, to: CLAIMED, guard: current-lease-and-generation, event: NONE, receipt: AgentProviderTurnClaimReceiptV1, audit: AGENT_PROVIDER_TURN_CLAIMED}
+      - {actor: analysis-worker, from: CLAIMED, to: DISPATCHING, guard: dispatch-ordinal-and-budget-reservation-committed-before-egress, event: NONE, receipt: AgentProviderTurnDispatchReceiptV1, audit: AGENT_PROVIDER_TURN_DISPATCHING}
+      - {actor: analysis-worker, from: DISPATCHING, to: PROVIDER_ACCEPTED|COMPLETED|RETRYABLE_FAILED|PERMANENT_FAILED|RECONCILIATION_REQUIRED, guard: authenticated-provider-proof-and-third-definitive-failure-terminal, event: NONE, receipt: AgentProviderTurnObservationReceiptV1, audit: AGENT_PROVIDER_TURN_OBSERVED}
+      - {actor: agent-reconciliation-worker, from: PROVIDER_ACCEPTED|RECONCILIATION_REQUIRED, to: COMPLETED|PERMANENT_FAILED|CANCELLED, guard: authenticated-terminal-output-and-usage-proof, event: NONE, receipt: AgentProviderTurnReconciliationReceiptV1, audit: AGENT_PROVIDER_TURN_RECONCILED}
+    invariants: [Possible acceptance never retries blindly, provider idempotency identity is stable across safe retries, usage/cost ambiguity blocks terminal success]
+  agent_tool_call:
+    states: [REQUESTED, RUNNING, SUCCEEDED, FAILED, DENIED]
+    terminal: [SUCCEEDED, FAILED, DENIED]
+    edges:
+      - {actor: analysis-worker, from: NONE, to: REQUESTED, guard: allowlisted-typed-tool-schema-rights-scope-and-budget, event: NONE, receipt: AgentToolCallRequestedReceiptV1, audit: AGENT_TOOL_CALL_REQUESTED}
+      - {actor: analysis-worker, from: REQUESTED, to: RUNNING, guard: sandbox-capability-and-input-digest, event: NONE, receipt: AgentToolCallClaimReceiptV1, audit: AGENT_TOOL_CALL_CLAIMED}
+      - {actor: analysis-worker, from: RUNNING, to: SUCCEEDED|FAILED, guard: closed-result-or-typed-error-digest-and-cost-fact, event: agent.tool_call_completed.v1}
+      - {actor: tool-policy, from: REQUESTED, to: DENIED, guard: rights-capability-scope-budget-or-network-policy-denial, event: agent.tool_call_completed.v1}
+    invariants: [Tool input/output uses a tool-specific closed schema, generic arbitrary JSON tools are forbidden]
+  agent_output_validation:
+    states: [PENDING, VALID, INVALID]
+    terminal: [VALID, INVALID]
+    edges:
+      - {actor: analysis-worker, from: NONE, to: PENDING, guard: provider-output-digest-and-pinned-schema-version, event: NONE, receipt: AgentOutputValidationStartedReceiptV1, audit: AGENT_OUTPUT_VALIDATION_STARTED}
+      - {actor: analysis-worker, from: PENDING, to: VALID, guard: closed-schema-valid-citations-resolve-rights-pass-and-proposals-typed, event: agent.output_validated.v1}
+      - {actor: analysis-worker, from: PENDING, to: INVALID, guard: typed-validation-errors-and-no-proposal-materialization, event: agent.output_validated.v1}
+    invariants: [Only VALID output can create AgentProposal, invalid raw output is never rendered as trusted analysis]
+  agent_proposal:
+    states: [PENDING_REVIEW, ACCEPTED, REJECTED, EXPIRED, SUPERSEDED]
+    terminal: [ACCEPTED, REJECTED, EXPIRED, SUPERSEDED]
+    edges:
+      - {actor: agent-proposal-materializer, from: NONE, to: PENDING_REVIEW, guard: valid-output-snapshot-citation-join-and-expiry, event: agent.proposal_created.v2}
+      - {operation: acceptAgentSuggestion, from: PENDING_REVIEW, to: ACCEPTED, guard: human-capability-current-snapshot-and-exact-payload-digest, event: agent.suggestion_accepted.v1}
+      - {operation: rejectAgentSuggestion, from: PENDING_REVIEW, to: REJECTED, guard: human-capability-and-typed-reason, event: agent.suggestion_rejected.v1}
+      - {actor: proposal-expiry-worker, from: PENDING_REVIEW, to: EXPIRED, guard: expires-at-elapsed, event: NONE, receipt: AgentProposalExpiryReceiptV1, audit: AGENT_PROPOSAL_EXPIRED}
+      - {actor: snapshot-supersession-worker, from: PENDING_REVIEW, to: SUPERSEDED, guard: bound-snapshot-or-source-revision-invalidated, event: NONE, receipt: AgentProposalSupersessionReceiptV1, audit: AGENT_PROPOSAL_SUPERSEDED}
+    invariants: [Acceptance creates a human-owned ActionProposal or typed domain command; it never silently executes agent output]
+  conflict_declaration:
+    states: [ACTIVE, EXPIRED, WITHDRAWN, SUPERSEDED]
+    terminal: [EXPIRED, WITHDRAWN, SUPERSEDED]
+    edges:
+      - {operation: declareConflict, from: NONE, to: ACTIVE, selector: first-PRESENT-or-UNKNOWN-fact, guard: exact-subject-target-version-digest-policy-evidence-shape-and-expected-prior-sequence-zero, event: governance.conflict_declared.v1}
+      - {operation: declareConflict, from: ACTIVE, to: SUPERSEDED+ACTIVE_NEW_FACT, selector: changed-PRESENT-or-UNKNOWN-fact, guard: exact-subject-target-version-digest-policy-evidence-shape-and-prior-sequence-digest, event: governance.conflict_declared.v1}
+      - {actor: conflict-expiry-worker, from: ACTIVE, to: EXPIRED, guard: expires-at-elapsed-and-still-current-series-head, event: governance.conflict_expired.v1, effect_owner: scheduler.conflict-expiry-worker, atomic_transition_group: gurine.worker.conflictExpiry.v1}
+      - {operation: withdrawConflict, from: ACTIVE, to: WITHDRAWN, guard: exact-prior-sequence-digest-policy-self-or-independent-oversight-authority-and-no-history-rewrite, event: governance.conflict_withdrawn.v1}
+    invariants: [Declarations are append-only and feed a frozen conflict snapshot; withdrawal never erases historical exclusion]
+  conflict_snapshot:
+    states: [CURRENT, SUPERSEDED]
+    terminal: [SUPERSEDED]
+    edges:
+      - {actor: conflict-snapshot-worker, from: NONE, to: CURRENT, guard: deterministic-active-declaration-set-and-policy-digest, event: NONE, receipt: ConflictSnapshotReceiptV1, audit: CONFLICT_SNAPSHOT_CREATED}
+      - {actor: conflict-snapshot-worker, from: CURRENT, to: SUPERSEDED, guard: declaration-or-policy-set-changed-and-new-snapshot-created, event: NONE, receipt: ConflictSnapshotSupersessionReceiptV1, audit: CONFLICT_SNAPSHOT_SUPERSEDED}
+    invariants: [Approval and publication bind the exact immutable snapshot digest; current-head lookup cannot replace the bound snapshot]
+  asset_rights_decision:
+    states: [CURRENT, EXPIRED, SUPERSEDED]
+    terminal: [EXPIRED, SUPERSEDED]
+    edges:
+      - {actor: action-execution-worker, private_command: private.ReviseAssetRightsDecision, from: NONE, to: CURRENT, guard: exact-current-ASSET_RIGHTS_DECISION-execution-authorization-and-exact-asset-digest, event: rights.asset_decided.v1, effect_owner: action-execution-worker.asset-rights-executor, atomic_transition_group: gurine.private.ReviseAssetRightsDecision.v1}
+      - {actor: action-execution-worker, private_command: private.ReviseAssetRightsDecision, from: CURRENT, to: SUPERSEDED, guard: same-transaction-newer-approved-decision-for-same-asset-dimensions, event: rights.asset_decided.v1, effect_owner: action-execution-worker.asset-rights-executor, atomic_transition_group: gurine.private.ReviseAssetRightsDecision.v1}
+      - {actor: rights-expiry-worker, from: CURRENT, to: EXPIRED, guard: expires-at-elapsed, event: rights.asset_decided.v1}
+    invariants: [STORE, PARSE, MODEL_USE, INTERNAL_DISPLAY, PUBLICATION and EXTERNAL_SHARE decisions are independent dimensions; most restrictive applies]
+  publication_gate_decision:
+    states: [PASS, BLOCKED, SUPERSEDED]
+    terminal: [PASS, BLOCKED, SUPERSEDED]
+    edges:
+      - {operation: publishCase, from: NONE, to: PASS|BLOCKED, guard: exact-case-version-snapshot-preview-claim-evidence-response-rights-conflict-funding-hold-activation-switch-and-copy-safety, event: publication.gate_decided.v1, atomic_transition_group: publish-case-gate-and-revision}
+    invariants:
+      - BLOCKED writes zero publication revisions; PASS inserts exactly one revision in the same SERIALIZABLE transaction.
+      - Changed gate input creates a new decision; no terminal decision row is updated.
+  funding_disclosure_revision:
+    states: [FUTURE, CURRENT, SUPERSEDED]
+    terminal: [SUPERSEDED]
+    edges:
+      - {actor: action-execution-worker, private_command: private.PublishFundingDisclosureRevision, from: NONE, to: FUTURE|CURRENT, guard: exact-current-FUNDING_DISCLOSURE-execution-authorization-snapshot-and-threshold-review, event: governance.funding_disclosure_published.v1, effect_owner: action-execution-worker.funding-disclosure-executor, atomic_transition_group: gurine.private.PublishFundingDisclosureRevision.v1}
+      - {actor: disclosure-activation-worker, from: FUTURE, to: CURRENT, guard: effective-at-reached, event: governance.funding_disclosure_published.v1}
+      - {actor: action-execution-worker, private_command: private.PublishFundingDisclosureRevision, from: CURRENT|FUTURE, to: SUPERSEDED, guard: same-transaction-newer-approved-revision-effective, event: governance.funding_disclosure_published.v1, effect_owner: action-execution-worker.funding-disclosure-executor, atomic_transition_group: gurine.private.PublishFundingDisclosureRevision.v1}
+    invariants: [Revision and entry set are immutable, source snapshot and review receipts remain traceable, public projection reads only current approved revision]
+  business_calendar_version:
+    states: [FUTURE, CURRENT, REVIEW_EXPIRED, SUPERSEDED]
+    terminal: [REVIEW_EXPIRED, SUPERSEDED]
+    edges:
+      - {actor: action-execution-worker, private_command: private.CreateBusinessCalendarVersion, from: NONE, to: FUTURE|CURRENT, guard: exact-current-RESPONSE_POLICY_CALENDAR-execution-authorization-and-valid-timezone-weekend-holiday-policy, event: governance.business_calendar_revised.v1, effect_owner: action-execution-worker.business-calendar-executor, atomic_transition_group: gurine.private.CreateBusinessCalendarVersion.v1}
+      - {actor: calendar-activation-worker, from: FUTURE, to: CURRENT, guard: effective-at-reached-and-no-overlap, event: governance.business_calendar_revised.v1}
+      - {actor: action-execution-worker, private_command: private.CreateBusinessCalendarVersion, from: CURRENT|FUTURE, to: SUPERSEDED, guard: same-transaction-newer-approved-version-effective, event: governance.business_calendar_revised.v1, effect_owner: action-execution-worker.business-calendar-executor, atomic_transition_group: gurine.private.CreateBusinessCalendarVersion.v1}
+      - {actor: calendar-review-worker, from: CURRENT, to: REVIEW_EXPIRED, guard: review-expires-at-elapsed, event: governance.business_calendar_revised.v1}
+    invariants: [A response due time binds the exact calendar version/digest; DST, holidays and weekend rules are never recomputed from a mutable head]
+  journey_instance:
+    states: [ACTIVE, WAITING_ACK, BLOCKED, RECONCILIATION_REQUIRED, COMPLETED, CANCELLED, EXPIRED, REJECTED]
+    terminal: [COMPLETED, CANCELLED, EXPIRED, REJECTED]
+    edges:
+      - {actor: journey-coordinator, from: NONE, to: ACTIVE, guard: exact-compiled-J01-through-J12-entry-root-object-owner-and-SLA-binding, event: journey.instance_started.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_INSTANCE_STARTED}
+      - {actor: journey-coordinator, from: ACTIVE|BLOCKED|RECONCILIATION_REQUIRED, to: WAITING_ACK, guard: exact-compiled-edge-current-object-one-pending-generation-receiver-capability-authority-and-due-policy, event: journey.handoff_requested.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_REQUESTED}
+      - {operation: decideJourneyHandoff, from: WAITING_ACK, to: ACTIVE, selector: ACKNOWLEDGE, guard: exact-receiver-capability-object-scope-assurance-binding-unexpired-and-domain-adapter-success, event: journey.handoff_decided.v1}
+      - {operation: decideJourneyHandoff, from: WAITING_ACK, to: ACTIVE|BLOCKED, selector: DECLINE, guard: exact-receiver-and-closed-reason-with-compiled-deterministic-replacement-or-blocked-policy, event: journey.handoff_decided.v1}
+      - {actor: journey-handoff-scheduler, from: WAITING_ACK, to: WAITING_ACK, guard: authoritative-clock-due-and-monotonic-NOT_DUE-to-DUE-or-DUE-to-ESCALATED-without-owner-change, event: journey.handoff_escalated.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_ESCALATED}
+      - {actor: journey-handoff-scheduler, from: WAITING_ACK, to: ACTIVE|BLOCKED|EXPIRED, guard: authoritative-clock-expired-and-compiled-replacement-or-terminal-policy-with-one-race-winner, event: journey.handoff_expired.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_EXPIRED}
+      - {actor: journey-coordinator, from: ACTIVE|BLOCKED|RECONCILIATION_REQUIRED|WAITING_ACK, to: ACTIVE|BLOCKED|RECONCILIATION_REQUIRED|COMPLETED|CANCELLED|EXPIRED|REJECTED, guard: exact-registered-definitive-subject-effect-and-outcome-class; no pending handoff unless the compiled terminal policy first appends HANDOFF_CANCELLED in the same two-step transaction, event: journey.outcome_recorded.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_OUTCOME_RECORDED}
+    compound_branches:
+      decline_with_replacement:
+        selector: DECLINE with exact compiled replacement policy
+        step_1: {parent_from: WAITING_ACK, parent_to: ACTIVE, handoff_from: PENDING_ACK, handoff_to: DECLINED, receipt: HANDOFF_DECLINED, escalation_to: RESOLVED, clear_active_handoff: true, clear_next_owner: true, preserve_current_owner: true, due_at: compiled replacement-origin node SLA checkpoint}
+        step_2: {parent_from: ACTIVE, parent_to: WAITING_ACK, handoff_from: NONE, handoff_to: PENDING_ACK, receipt: HANDOFF_REQUESTED, escalation_to: NOT_DUE, generation_delta: 1, set_active_handoff: true, set_next_owner: true, due_at: first escalation threshold or immutable hard expiry}
+      expiry_with_replacement:
+        selector: database clock at or after immutable hard expiry with exact compiled replacement policy
+        step_1: {parent_from: WAITING_ACK, parent_to: ACTIVE, handoff_from: PENDING_ACK, handoff_to: EXPIRED, receipt: HANDOFF_EXPIRED, escalation_to: RESOLVED, clear_active_handoff: true, clear_next_owner: true, preserve_current_owner: true, due_at: compiled replacement-origin node SLA checkpoint}
+        step_2: {parent_from: ACTIVE, parent_to: WAITING_ACK, handoff_from: NONE, handoff_to: PENDING_ACK, receipt: HANDOFF_REQUESTED, escalation_to: NOT_DUE, generation_delta: 1, set_active_handoff: true, set_next_owner: true, due_at: first escalation threshold or immutable hard expiry}
+      supersession_with_replacement:
+        selector: exact compiled supersession policy only
+        step_1: {parent_from: WAITING_ACK, parent_to: ACTIVE, handoff_from: PENDING_ACK, handoff_to: SUPERSEDED, receipt: HANDOFF_SUPERSEDED, escalation_to: RESOLVED, clear_active_handoff: true, clear_next_owner: true, preserve_current_owner: true, due_at: compiled replacement-origin node SLA checkpoint}
+        step_2: {parent_from: ACTIVE, parent_to: WAITING_ACK, handoff_from: NONE, handoff_to: PENDING_ACK, receipt: HANDOFF_REQUESTED, escalation_to: NOT_DUE, generation_delta: 1, set_active_handoff: true, set_next_owner: true, due_at: first escalation threshold or immutable hard expiry}
+      terminal_outcome_with_cancellation:
+        selector: exact compiled terminal outcome cancellation policy only
+        step_1: {parent_from: WAITING_ACK, parent_to: ACTIVE, handoff_from: PENDING_ACK, handoff_to: CANCELLED, receipt: HANDOFF_CANCELLED, escalation_to: RESOLVED, clear_active_handoff: true, clear_next_owner: true, preserve_current_owner: true, due_at: compiled destination-node or terminal-policy SLA}
+        step_2: {parent_from: ACTIVE, parent_to: exact compiled outcome state, receipt: OUTCOME_RECORDED, active_handoff: null, next_owner: null, due_at: same as step-1 resulting_due_at}
+      shared_invariants:
+        - each step advances parent version and receipt sequence by exactly one and independently satisfies parent and receipt checks
+        - receipt prior_due_at equals the immediately prior parent due_at and receipt resulting_due_at equals that step persisted parent due_at
+        - both steps occur in one SERIALIZABLE transaction and one atomic transition group
+    invariants:
+      - current owner changes only on the ACKNOWLEDGE edge and equals the persisted receiver binding; decline, escalation and expiry never silently transfer ownership.
+      - exactly one immutable transition receipt advances each version and the parent receipt head, receipt sequence and digest match before commit.
+      - HTTP success, queued work, provider acceptance, AI output, synthetic fixture or an unverified projection is never a durable journey outcome.
+      - every edge, object kind, node, receiver, capability, assurance, SLA and adapter is compiled from the canonical journey and twenty-row handoff registry; regex is shape-only.
+      - deterministic decline or expiry replacement consumes two consecutive parent versions and receipts in one transaction: terminal old generation first, then HANDOFF_REQUESTED for generation+1; the final parent head is the request receipt.
+      - compiled supersession and terminal-outcome cancellation use the same two-step rule with HANDOFF_SUPERSEDED or HANDOFF_CANCELLED first; no other branch may advance by two.
+  journey_handoff:
+    states: [PENDING_ACK, ACKNOWLEDGED, DECLINED, EXPIRED, CANCELLED, SUPERSEDED]
+    terminal: [ACKNOWLEDGED, DECLINED, EXPIRED, CANCELLED, SUPERSEDED]
+    edges:
+      - {actor: journey-coordinator, from: NONE, to: PENDING_ACK, guard: exact-compiled-binding-and-generation-plus-one-with-one-pending-unique-constraint, event: journey.handoff_requested.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_REQUESTED}
+      - {operation: decideJourneyHandoff, from: PENDING_ACK, to: ACKNOWLEDGED, selector: ACKNOWLEDGE, guard: exact-current-version-binding-receiver-capability-scope-assurance-unexpired-and-null-reason, event: journey.handoff_decided.v1}
+      - {operation: decideJourneyHandoff, from: PENDING_ACK, to: DECLINED, selector: DECLINE, guard: exact-current-version-binding-receiver-capability-scope-assurance-unexpired-and-encrypted-closed-reason, event: journey.handoff_decided.v1}
+      - {actor: journey-handoff-scheduler, from: PENDING_ACK, to: PENDING_ACK, guard: monotonic-due-or-escalated-receipt-with-no-owner-or-binding-change, event: journey.handoff_escalated.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_ESCALATED}
+      - {actor: journey-handoff-scheduler, from: PENDING_ACK, to: EXPIRED, guard: database-clock-expired-and-human-decision-race-lost, event: journey.handoff_expired.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_EXPIRED}
+      - {actor: journey-coordinator, from: PENDING_ACK, to: CANCELLED, guard: source-terminal-or-explicit-registered-cancellation-before-acknowledgement, event: NONE, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_CANCELLED}
+      - {actor: journey-coordinator, from: PENDING_ACK, to: SUPERSEDED, guard: generation-plus-one-replacement-created-only-by-the-exact-compiled-supersession-policy, event: NONE, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_SUPERSEDED}
+    invariants:
+      - immutable routing and subject columns never change; a replacement is a new generation rather than an update of a terminal handoff.
+      - PENDING_ACK has no decision fields, ACKNOWLEDGED has no reason, DECLINED has encrypted reason plus digest, and system terminal states use only exact system reason codes.
+      - an exact idempotent replay returns the stored receipt and changed bytes, stale version, stale digest, wrong receiver, expiry or terminal state write zero rows.
+  journey_escalation:
+    states: [NOT_DUE, DUE, ESCALATED, RESOLVED]
+    terminal: [RESOLVED]
+    identity: journey_instance_id+handoff_generation
+    edges:
+      - {id: JE-01, actor: journey-coordinator, from: NONE, to: NOT_DUE, guard: exact-new-pending-handoff-generation-and-compiled-due-policy, event: journey.handoff_requested.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_REQUESTED, atomic_transition_group: same-as-owning-handoff-request-step}
+      - {id: JE-02, actor: journey-handoff-scheduler, from: NOT_DUE, to: DUE, guard: locked-current-pending-generation-and-database-clock-at-or-after-first-escalation-threshold-and-before-hard-expiry, event: journey.handoff_escalated.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_ESCALATED, atomic_transition_group: journey-handoff-first-escalation}
+      - {id: JE-03, actor: journey-handoff-scheduler, from: DUE, to: ESCALATED, guard: locked-current-pending-generation-and-database-clock-at-or-after-second-escalation-threshold-and-before-hard-expiry, event: journey.handoff_escalated.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_ESCALATED, atomic_transition_group: journey-handoff-second-escalation}
+      - {id: JE-04, operation: decideJourneyHandoff, from: NOT_DUE|DUE|ESCALATED, to: RESOLVED, selector: ACKNOWLEDGE|DECLINE, guard: same-locked-generation-as-the-terminal-decision-receipt, event: journey.handoff_decided.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_DECIDED, atomic_transition_group: journey-handoff-decision}
+      - {id: JE-05, actor: journey-handoff-scheduler, from: NOT_DUE|DUE|ESCALATED, to: RESOLVED, guard: same-locked-generation-as-the-HANDOFF_EXPIRED-receipt, event: journey.handoff_expired.v1, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_EXPIRED, atomic_transition_group: journey-handoff-expiry}
+      - {id: JE-06, actor: journey-coordinator, from: NOT_DUE|DUE|ESCALATED, to: RESOLVED, guard: same-locked-generation-as-the-HANDOFF_CANCELLED-receipt, event: NONE, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_CANCELLED, atomic_transition_group: same-as-terminal-outcome-step}
+      - {id: JE-07, actor: journey-coordinator, from: NOT_DUE|DUE|ESCALATED, to: RESOLVED, guard: same-locked-generation-as-the-HANDOFF_SUPERSEDED-receipt, event: NONE, receipt: JourneyTransitionReceiptV1, audit: JOURNEY_HANDOFF_SUPERSEDED, atomic_transition_group: same-as-replacement-request-step}
+    invariants:
+      - no escalation edge changes current owner or the immutable handoff binding.
+      - DUE and ESCALATED each occur at most once per handoff generation.
+      - every terminal handoff receipt resolves that exact generation; a replacement starts a new NOT_DUE identity and never reopens RESOLVED.
+
+  supplier_identity_resolution:
+    states: [CANDIDATE, RESOLVED_APPEND_ONLY]
+    terminal: [RESOLVED_APPEND_ONLY]
+    edges:
+      - {operation: recordSupplierIdentityResolution, from: CANDIDATE, to: RESOLVED_APPEND_ONLY, guard: expected-candidate-set-prior-decision-and-evidence-digests-plus-human-actor, event: supplier.identity_resolution_recorded.v1, receipt: SupplierIdentityResolutionReceiptV1, audit: SUPPLIER_IDENTITY_RESOLUTION_RECORDED}
+    invariants: [supplier identifiers are HMAC digests only, MERGE and SPLIT cardinalities are closed, no automatic merge, all revisions and candidates remain immutable]
+  supplier_relationship_assertion:
+    states: [NONE, PENDING, VERIFIED, REJECTED, CONFLICTED, SUPERSEDED]
+    terminal: [VERIFIED, REJECTED, CONFLICTED, SUPERSEDED]
+    edges:
+      - {operation: recordSupplierRelationshipAssertion, from: NONE, to: PENDING, guard: exact-candidate-and-evidence-revisions-and-idempotency, event: supplier.relationship_assertion_created.v1, receipt: SupplierRelationshipAssertionReceiptV1, audit: SUPPLIER_RELATIONSHIP_ASSERTION_CREATED}
+      - {operation: decideSupplierRelationshipAssertion, from: PENDING, to: VERIFIED, selector: VERIFY, guard: independent-human-and-expected-revision-evidence-digest, event: supplier.relationship_assertion_decided.v1, receipt: SupplierRelationshipAssertionReceiptV1, audit: SUPPLIER_RELATIONSHIP_ASSERTION_DECIDED}
+      - {operation: decideSupplierRelationshipAssertion, from: PENDING, to: REJECTED|CONFLICTED|SUPERSEDED, selector: REJECT|MARK_CONFLICT|SUPERSEDE, guard: independent-human-and-expected-revision-evidence-digest, event: supplier.relationship_assertion_decided.v1, receipt: SupplierRelationshipAssertionReceiptV1, audit: SUPPLIER_RELATIONSHIP_ASSERTION_DECIDED}
+    invariants: [creation always PENDING, verifiedBy and verifiedAt are null until independent decision, stale decisions mutate nothing, prior revisions remain immutable]
+
+operation_dispositions:
+  createActionProposal: [action_proposal]
+  updateActionDraft: [action_proposal]
+  previewActionDraft: [action_proposal.NON_STATE_MUTATION_PREVIEW_APPEND]
+  submitActionForReview: [action_proposal, action_review_assignment]
+  claimActionReview: [action_review_assignment]
+  submitActionDecision: [action_review_assignment, action_proposal, action_execution, action_execution_attempt]
+  cancelActionExecution: [action_execution, action_execution_attempt]
+  retryActionExecution: [action_execution, action_execution_attempt]
+  releaseLegalHold: [legal_hold_coverage]
+  createResponseAppeal: [response_appeal, scoped_session.APPEAL_CREATE_CONSUMED_AND_APPEAL_STATUS_ISSUED]
+  reconcileCommunicationDelivery: [outbound_delivery]
+  cancelCommunicationDelivery: [outbound_delivery.CONDITIONAL_STATE_OR_SAME_STATE_CANCEL_REQUEST]
+  triageIncident: [incident]
+  containIncident: [incident]
+  startIncidentRecovery: [incident]
+  resolveIncident: [incident]
+  closeIncidentPostmortem: [incident]
+  transitionResponseAppeal: [response_appeal]
+  decideResponseExtension: [response_extension, response_delivery_clock]
+  transitionRetentionRequest: [privacy_request]
+  requestCommunicationEndpointLink: [communication_endpoint, scoped_session.COMMUNICATION_PROFILE_ROTATION]
+  verifyCommunicationEndpointLink: [communication_endpoint, scoped_session.COMMUNICATION_PROFILE_ROTATION]
+  unlinkCommunicationEndpoint: [communication_endpoint, communication_authorization, scoped_session.COMMUNICATION_PROFILE_ROTATION]
+  createPrivacyRequest: [privacy_request, one_time_receipt_token]
+  exchangePrivacyRequestReceiptToken: [one_time_receipt_token, scoped_session.NON_DOMAIN_STATE_MUTATION]
+  declareConflict: [conflict_declaration]
+  withdrawConflict: [conflict_declaration]
+  withdrawActionProposal: [action_proposal, action_review_assignment]
+  withdrawActionDecision: [action_proposal, action_review_assignment]
+  promoteResearchArtifactToEvidence: [research_artifact_promotion]
+  cancelAgentRun: [agent_run, agent_run_control]
+  decideJourneyHandoff: [journey_instance, journey_handoff, journey_escalation]
+  recordSupplierIdentityResolution: [supplier_identity_resolution]
+  recordSupplierRelationshipAssertion: [supplier_relationship_assertion]
+  decideSupplierRelationshipAssertion: [supplier_relationship_assertion]
+
+base_operation_lifecycle_bindings:
+  source: derived as the set of machine edge.operation values present in specs/api/operation-contracts.yaml
+  validation: every referenced base operation exists exactly once in the base operation catalog and every state-mutating base command used by an expanded lifecycle has at least one edge or an explicit required_operation_registry blocker
+  current_bindings:
+    startAgentRun: [agent_run]
+    acceptAgentSuggestion: [agent_proposal]
+    rejectAgentSuggestion: [agent_proposal]
+    requestResponseExtension: [response_extension]
+    createResponseRequest: [response_request]
+    saveResponseRequestDraft: [response_request]
+    verifyResponseAccess: [response_request]
+    submitResponse: [response_request]
+    createCorrection: [correction]
+    updateCorrectionDraft: [correction]
+    assignCorrection: [correction]
+    triageCorrection: [correction]
+    resolveCorrectionRequest: [correction, publication]
+    publishCase: [publication_gate_decision, publication, publication.RESTORE_ACCESS]
+    placeTemporaryRestriction: [publication.TEMPORARILY_RESTRICTED]
+    placeLegalHold: [legal_hold_coverage.CASE_OR_NONCASE_TARGET]
+
+private_application_lifecycle_bindings:
+  source: specs/product/addendum-command-semantics.yaml#private_application_commands
+  validation: every private_command on a machine edge is set-equal to this registry and has exact persistence, error, audit, outbox, receipt, effect-owner and atomic-group contracts
+  current_bindings:
+    private.RecordOutboundDeliveryObservation: [outbound_delivery.MONOTONIC_OBSERVATION]
+    materializeResponseRequestSent: [response_request.DRAFT_TO_SENT]
+    materializeResponseSubmissionIntake: [response_submission_intake.UNMATERIALIZED_TO_MATERIALIZED]
+    private.PublishRetraction: [publication.TO_RETRACTED]
+    private.CreateTaskFromApprovedAction: [task.NONE_TO_OPEN]
+    private.MaterializeComparableCandidate: [procurement_comparable_candidate.NONE_TO_CANDIDATE]
+    private.DispatchCommunicationIntent: [communication_intent.NONE_TO_CREATED_OR_POLICY_BLOCKED]
+    private.ApplyKillSwitchCommand: [kill_switch.ACTIVATE_OR_DEACTIVATE_OR_EXTEND]
+    private.RecordCommunicationAuthorizationDecision: [communication_authorization.APPEND_DECISION]
+    private.ReviseAssetRightsDecision: [asset_rights_decision.APPEND_REVISION]
+    private.CreateRecordClassScheduleRevision: [record_class_schedule.APPEND_REVISION]
+    private.PublishFundingDisclosureRevision: [funding_disclosure_revision.APPEND_REVISION]
+    private.DecideCapabilityActivation: [capability_activation.APPEND_DECISION]
+    private.CreateBusinessCalendarVersion: [business_calendar_version.APPEND_VERSION]
+    private.ApplyCommercialControl: [commercial_control_projection.APPLY]
+    private.MaterializePaidEvidencePacket: [paid_evidence_packet.AWAITING_TERMINAL_BINDING]
+
+private_control_lifecycle_bindings:
+  source: specs/product/owner-addendum-2026-07-14.yaml#private_control_service_operations
+  validation: every private control operation is service-assertion-only, has an exact command/persistence contract, and appears on at least one private_operation edge
+  current_bindings:
+    reconcileAgentRun: [agent_run, agent_run_control]
+
+resolved_required_operation_decisions:
+  materializeResponseRequestSent: NEW_PRIVATE_APPLICATION_COMMAND
+  publishCorrectionRevision: EXTEND_BASE_resolveCorrectionRequest
+  declareConflict: NEW_ADDITIVE_CONTROL_COMMAND
+  withdrawConflict: NEW_ADDITIVE_CONTROL_COMMAND
+  restrictPublicationAccess: EXTEND_BASE_placeTemporaryRestriction
+  restorePublicationAccess: EXTEND_BASE_publishCase_RESTORE_ACCESS_BRANCH
+  executeApprovedRetraction: NEW_PRIVATE_APPLICATION_COMMAND_private.PublishRetraction
+  placeNonCaseLegalHold: EXTEND_BASE_placeLegalHold_WITH_CLOSED_TARGET_UNION
+  set_equality: keys are exactly the previously audited required_operation_registry gap keys; each value resolves to one owned command contract and none is merely waived
+
+required_operation_registry:
+  status: CLOSED_CURRENT_TRUTH
+  count: derived as len(required_operations)
+  required_operations: {}
+  hard_gate: len(required_operations) must be zero and resolved_required_operation_decisions must remain set-equal to the audited former gap set with each decision covered by operation/resource/error/persistence/command/event contracts; runtime and acceptance evidence remain independent FINAL gates
+
+expanded_registry_set_equality:
+  machine_count: derived len(machines)
+  edge_count: derived sum(len(machine.edges))
+  additive_operation_set: set(operation_dispositions) equals addendum-operation-contracts operations where kind COMMAND
+  private_control_operation_set: set(private_control_lifecycle_bindings.current_bindings) equals owner-addendum private_control_service_operations
+  base_operation_set: set(base_operation_lifecycle_bindings.current_bindings) equals machine-referenced base operations that mutate expanded lifecycles
+  required_gap_set: set(required_operation_registry.required_operations) is empty and set(resolved_required_operation_decisions except set_equality) is set-equal to the audited former eight-gap inventory
+  event_set: every edge event is NONE or belongs to immutable base event catalog union additive event registry
+  no_magic_inventory: historical machine/edge counts are forbidden validator inputs
+
+immutable_fact_lifecycles:
+  evidence.segment_created.v1: append-only evidence segment identity plus immutable source asset revision and locator/content digests
+  source.page_reconciled.v1: append-only page receipt identity; duplicate ordinal/digest is replay and changed digest is conflict
+  operations.sli_window_closed.v1: immutable closed interval fact; corrections append a new identified evaluation fact
+  cost.allocation_period_closed.v1: immutable period allocation fact; never overwrite a closed allocation
+  cost.fx_rate_recorded.v1: immutable signed import with source/time/rate identity
+  accounting.correction_recorded.v1: append-only correction linked to the exact prior fact
+  product.fact_recorded.v1: append-only terminal-receipt-derived fact
+  product.fact_corrected.v1: inverse or superseding fact; original remains immutable
+  commercial.contract_period_recorded.v1: append-only effective interval import with overlap rejection
+  commercial.tariff_version_activated.v1: append-only effective tariff version with nonoverlapping interval
+  commercial.usage_fact_recorded.v1: append-only metered fact; corrections use predecessor/inverse revision
+  commercial.discount_decided.v1: append-only approved effective interval
+  commercial.invoice_reconciled.v1: immutable provider reconciliation fact and line-set digest
+  commercial.revenue_fact_recorded.v1: immutable recognition fact linked to contract and invoice
+  governance.funding_snapshot_created.v1: immutable signed funding snapshot batch
+  commercial.sku_readiness_evaluated.v1: immutable evaluation and item-set digest; a new run creates a new evaluation

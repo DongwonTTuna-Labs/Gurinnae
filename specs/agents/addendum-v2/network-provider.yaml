@@ -1,0 +1,170 @@
+schema_version: 1
+specification_version: 13.0.0+agent-multimodal.1
+status: REVIEW_REQUIRED
+decision_state: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+implementation_state: OPEN_IMPLEMENTATION
+
+default: DENY
+
+external_network:
+  sole_path: analysis-worker -> egress-gateway -> approved destination
+  direct_dns_or_socket_from_analysis_worker: forbidden
+  methods: [GET, HEAD]
+  schemes: [https]
+  url_rules:
+    - Reject credentials, fragments, noncanonical ports, IP-literal hosts, localhost, dotless hosts, invalid IDNA, mixed-script confusables, and URLs longer than 4096 bytes.
+    - Resolve through the gateway and reject loopback, link-local, private, carrier-grade NAT, multicast, documentation, benchmark, reserved, metadata-service, and organization-internal ranges for every A/AAAA answer.
+    - Pin the validated address set for each connection; TLS SNI and certificate host must equal the canonical host.
+    - Revalidate scheme, host policy, DNS/IP set, source rights, and byte budget at every redirect; maximum redirects is 5.
+    - Do not send browser cookies, ambient credentials, authorization headers, referrers, user-agent identifiers tied to a person, or source-system secrets.
+    - Static fetch never executes JavaScript, CSS, active content, embedded resources, forms, downloads triggered by markup, or instructions in the page.
+  destination_policy:
+    modes: [OFFICIAL_ALLOWLIST, PUBLIC_RESEARCH]
+    OFFICIAL_ALLOWLIST: exact activated host and path-prefix policy version is required
+    PUBLIC_RESEARCH: a current jurisdiction/source-access capability decision and robots/rate policy receipt are required
+    deny_precedence: explicit legal, privacy, rights, incident, source, domain, or global kill switch always wins
+  bounds:
+    connect_timeout_ms: 5000
+    total_timeout_ms: 15000
+    max_redirects: 5
+    max_response_bytes: 26214400
+    max_search_results: 20
+    per_host_concurrency: 2
+    per_host_requests_per_minute: 30
+  response_handling:
+    safe_headers_allowlist: [content-type,content-length,content-language,etag,last-modified,cache-control,date,location]
+    stripped_headers: [set-cookie,authorization,proxy-authorization,www-authenticate,proxy-authenticate]
+    decompression: Stream with compressed and expanded byte counters; abort if either bound or ratio 100 is exceeded.
+    media_sniff: Magic bytes and parser media allowlist override extension; mismatch is recorded and may quarantine.
+    html: Persist exact raw bytes and static extraction; a page requiring script is RENDER_REQUIRED, never a silently incomplete success.
+    object_storage: Parent service stores immutable bytes by digest; provider/tool responses contain only safe typed metadata and artifact identity.
+
+source_fetch_adapter:
+  exact_adapter_id: SourceFetchEgressGatewayAdapterV2
+  tool_id: source.fetch
+  request_schema: tools/source-fetch.request.schema.json
+  response_schema: tools/source-fetch.response.schema.json
+  ownership: analysis-worker claims/persists ToolCall and SourceUse; egress-gateway alone resolves/connects/fetches; object-store-gateway writes immutable bytes; scanner supplies content-safety receipt
+  phases:
+    - Atomically claim `(agentRunId,callId)`, validate the exact request schema/snapshot/rights/policy/budget and persist request digest plus gateway replay key before egress.
+    - Send only a typed gateway capsule containing canonical method/URL policy/byte/time/media bounds and HMAC-scoped replay identity; prompt text, provider credentials and unrestricted headers are absent.
+    - Gateway validates every DNS answer and redirect, streams bounded bytes, computes content/header/redirect/request/receipt digests and returns a typed authenticated receipt; HTTP success alone is nonterminal.
+    - Object-store write, scan receipt, ResearchArtifactV2, TOOL_RESULT SourceUseV2, ToolCallV2 terminal adapter receipt and verified metered cost commit atomically after immutable object identity is known.
+  ambiguity: A possible gateway dispatch without a definitive authenticated fetch/no-dispatch lookup remains RUNNING/RECONCILIATION_REQUIRED and reuses the same replay key; a new URL request or blind fetch is forbidden.
+  separation_rule: Search-provider discovery metadata is not model-provider evidence or a ResearchArtifact until exact bytes are fetched and stored. Model ProviderReceiptV2 never substitutes for the gateway/tool receipt, and vice versa.
+
+search_discovery_provider_registry:
+  exact_count: 1
+  default_provider_id: BRAVE_SEARCH_WEB_V1
+  no_generic_fallback: true
+  providers:
+    - provider_id: BRAVE_SEARCH_WEB_V1
+      adapter_id: BraveSearchWebAdapterV1
+      adapter_version: 1
+      protocol:
+        method: GET
+        origin: https://api.search.brave.com
+        path: /res/v1/web/search
+        query_mapping:
+          q: request.query exact UTF-8
+          count: request.resultLimit
+          offset: 0
+          country: lowercase request.country
+          search_lang: request.locale language subtag
+          ui_lang: request.locale
+          freshness: null when recencyDays is null; otherwise adapter maps the closed day interval to the narrowest supported freshness token and applies the exact recency cutoff locally before returning results
+          safesearch: strict
+          spellcheck: false
+          text_decorations: false
+        request_headers_allowlist:
+          Accept: application/json
+          Accept-Encoding: gzip
+          X-Subscription-Token: secret reference BRAVE_SEARCH_API_KEY only; the value is never present in an analysis-worker capsule, receipt, log, trace, metric or error
+        forbidden_headers: [Cookie,Authorization,Proxy-Authorization,Referer,Origin,User-Agent,X-Forwarded-For,X-Real-IP]
+        response_mapping:
+          source_array: web.results
+          required_fields: [title,url]
+          optional_fields: [description,age]
+          ignored_provider_fields: all other fields are rejected by the adapter-version fixture until explicitly reviewed; provider schema drift is PROVIDER_SCHEMA_DRIFT, not an empty result
+          url_rule: canonicalize and re-run the full PUBLIC_RESEARCH URL/DNS policy before returning discovery metadata
+          snippet_rule: description is untrusted discovery text, max 1000 Unicode scalar values, never evidence or model input until its selected URL is separately fetched
+      pagination:
+        tool_call_pages: exactly 1
+        offset: 0
+        result_limit: 1..20
+        truncation: provider more-results signal or validated result count greater than resultLimit sets truncated=true; the model must issue a separately budgeted request to change query or page policy
+      ranking:
+        order: provider array ordinal ASC after policy rejection and canonical-URL deduplication
+        duplicate_rule: first canonical URL wins and preserves its provider ordinal; returned rank is contiguous 1..N while provider ordinal is bound inside discovery receipt digest
+        local_rerank: forbidden
+      rate_and_cost:
+        request_units: exactly 1 per definitive provider dispatch
+        reservation: reserve the activated immutable price-schedule worst-case micro-KRW before gateway dispatch
+        settlement: compute integer micro-KRW locally from one request unit, activated price version and exact FX fact; provider cost text is ignored
+        limits: activated provider-config daily/monthly quotas plus external_network per-host limits; missing quota or price fact is POLICY_BLOCKED with zero dispatch
+      replay_and_reconciliation:
+        identity: SHA-256 of RFC8785 JCS over provider/config/version, normalized request mapping, source policy, price/FX, run, call and gateway replay key
+        terminal_cache: egress-gateway persists the authenticated local discovery receipt and bounded provider response bytes by replay identity before replying
+        exact_replay: returns the stored parsed result and receipt with zero provider request and zero second cost
+        possible_send: no provider fallback or blind retry; lookup the same gateway replay identity and remain RECONCILIATION_REQUIRED until a definitive cached result or definitive no-dispatch proof exists
+      receipt:
+        schema: SourceFetchResponseV2.discoveryReceipt
+        proof: gateway mTLS identity plus exact TLS peer/origin, canonical request digest, response-body digest, HTTP status, result ordinals, configuration, rate-limit observation, price/FX calculation and gateway receipt digest
+        raw_query_or_provider_identifier: forbidden
+      activation:
+        initial_state: UNCONFIGURED
+        required:
+          - exact provider/configuration ID, version and digest with this adapter version
+          - secret catalog reference BRAVE_SEARCH_API_KEY present only in egress-gateway
+          - reviewed provider terms, privacy/data-processing and jurisdiction decision
+          - activated source-access/robots/rate policy and PUBLIC_RESEARCH capability decision
+          - immutable micro-KRW price schedule, FX source, daily/monthly quota and cost kill switch
+          - destination allowlist for api.search.brave.com plus certificate/DNS policy
+          - live preflight that validates one synthetic non-sensitive query, schema mapping, terminal replay, zero secret leakage and budget settlement
+        missing_or_stale: UNCONFIGURED or POLICY_BLOCKED; never silently substitute model search, browser search, an unofficial scraper or a canned result
+
+model_provider:
+  external_classifications: [PUBLIC, INTERNAL]
+  forbidden_external_classifications: [RESTRICTED, PERSONAL_DATA, LEGAL_HOLD]
+  activation_required:
+    - current MODEL_EGRESS capability decision
+    - provider configuration/version and model exact ID
+    - processor DPA and transfer mechanism when applicable
+    - model terms and source asset model-use rights
+    - region, retention, training-use, deletion, and logging policy
+    - live preflight receipt and healthy kill-switch state
+  source_rights_required: [accessRight, modelEgressRight, modelUseRight, derivativeCreationRight]
+  dispatch:
+    - Construct the provider request only from stored authorized segments and typed instructions; tool/page content remains delimited untrusted data.
+    - Hash and persist the redacted semantic request before egress; reserve worst-case cost atomically.
+    - Use one stored provider idempotency key per semantic attempt; fallback changes candidate only and never snapshot, prompt, schema, tools, content, or transcript.
+    - Verify the response envelope and provider receipt before accepting usage, tool call, or final output.
+  provider_receipt_schema: schemas/provider-receipt.schema.json
+  no_silent_downgrade: A missing requested model, region, rights, capacity, or activation yields typed fallback according to the pinned routing policy or explicit abstention; it never changes quality tier silently.
+
+provider_receipt:
+  authority: Persist the exact normalized receipt and its digest; logs, HTTP success, or provider text are not receipt authority.
+  proof_kinds: [AUTHENTICATED_RESPONSE_HEADERS, SIGNED_PROVIDER_RECEIPT, IDEMPOTENCY_LOOKUP, USAGE_LOOKUP, DEFINITIVE_NO_DISPATCH]
+  verification:
+    - Adapter-specific parser validates provider request ID shape, status, date/nonce where supplied, signature/MAC when supplied, and current provider configuration.
+    - Store only provider request ID HMAC/hash, never the raw ID when it is credential-like or permits cross-account lookup.
+    - Usage and cost are integer units and micro-KRW tied to the activated price/FX version; estimates are labelled and cannot settle a reservation.
+    - Receipt digest binds semantic request, provider candidate/model/configuration, idempotency key hash, outcome, usage, cost, region, retention/training policy, timestamps, and proof digest.
+    - An unverifiable, partial, timed-out-after-send, or contradictory receipt is OUTCOME_UNKNOWN and enters reconciliation.
+    - Provider-reported token counts, prices, currency conversion and cost are untrusted inputs. The adapter validates unit kinds/ranges, applies the activated immutable price schedule and FX fact locally, persists the calculation digest, and settles only when usage evidence and arithmetic reconcile; otherwise cost remains RECONCILIATION_REQUIRED.
+
+observability_and_privacy:
+  metrics_allowed: [provider_candidate_code,model_code,outcome,latency_bucket,input_unit_bucket,output_unit_bucket,cost_bucket,retry_count,classification]
+  logs_allowed: [run_id,turn_id,tool_call_id,request_digest,receipt_digest,error_code,trace_id]
+  prohibited: [prompt_bytes,source_text,raw_url_query,raw_provider_request_id,token,cookie,authorization_header,person_identifier,attachment_filename,hidden_reasoning]
+  audit: Every allow/deny, destination, rights, classification, provider selection, fallback, receipt validation, cancel, and reconciliation decision has a typed code and digest.
+
+acceptance:
+  - Direct analysis-worker DNS/socket egress fails while the exact gateway route succeeds.
+  - Redirect to private/metadata/mixed-policy destination is blocked before request and stores no artifact.
+  - Cookies, authorization, credentials, and unsafe response headers never cross or persist.
+  - Changed model, region, retention, rights, activation, price, or routing digest invalidates dispatch.
+  - Valid response, rate limit, definitive rejection, timeout before send, timeout after possible send, malformed receipt, and contradictory usage each produce their exact state and budget disposition.
+  - Provider receipt round-trips byte-equivalently and a one-byte semantic request or proof change changes the receipt digest.
+  - SEARCH_PUBLIC_WEB uses only BRAVE_SEARCH_WEB_V1 through the gateway; missing activation dispatches zero requests, exact replay dispatches zero second request, and possible-send ambiguity never falls back or double-settles cost.
+  - A discovery snippet alone creates zero ResearchArtifact, Evidence, citation or model SourceUse; only a separate policy-approved FETCH_URL whose raw bytes, scan, immutable object and fetch receipt all agree may create one.

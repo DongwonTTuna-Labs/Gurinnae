@@ -233,7 +233,7 @@ pub async fn object_store(
 ) -> HttpResponse {
     if !matches!(
         caller(&request),
-        Some("submission-api" | "workflow-worker" | "document-extractor")
+        Some("submission-api" | "workflow-worker" | "document-extractor" | "analysis-worker")
     ) {
         return problem("EGRESS_CALLER_DENIED", 403);
     }

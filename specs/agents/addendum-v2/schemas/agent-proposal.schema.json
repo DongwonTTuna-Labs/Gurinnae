@@ -1,0 +1,860 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/agent-proposal.json",
+  "title": "AgentProposalV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "proposalId",
+    "proposalContractVersion",
+    "agentRunId",
+    "caseId",
+    "proposalType",
+    "targetSchemaVersion",
+    "payload",
+    "payloadSha256",
+    "inputSnapshotSha256",
+    "citationValidationId",
+    "citationBindings",
+    "status",
+    "version",
+    "expiresAt",
+    "decision",
+    "materializedTarget",
+    "materializationReceiptSha256",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "agent-proposal.v2"
+    },
+    "proposalId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "proposalContractVersion": {
+      "const": 2
+    },
+    "agentRunId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "caseId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "proposalType": {
+      "enum": [
+        "HYPOTHESIS",
+        "CLAIM",
+        "TASK",
+        "COMPARABLE",
+        "COMMUNICATION"
+      ]
+    },
+    "targetSchemaVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "payload": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hypothesis"
+        },
+        {
+          "$ref": "#/$defs/claim"
+        },
+        {
+          "$ref": "#/$defs/task"
+        },
+        {
+          "$ref": "#/$defs/comparable"
+        },
+        {
+          "$ref": "#/$defs/communication"
+        }
+      ]
+    },
+    "payloadSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "inputSnapshotSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "citationValidationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "citationBindings": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "citationId",
+          "citationSha256"
+        ],
+        "properties": {
+          "citationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "citationSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "status": {
+      "enum": [
+        "PENDING",
+        "ACCEPTED",
+        "REJECTED",
+        "SUPERSEDED",
+        "EXPIRED"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decision": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "decisionKind",
+            "reason",
+            "decidedBy",
+            "decidedAt",
+            "auditEventId",
+            "decisionSha256"
+          ],
+          "properties": {
+            "decisionKind": {
+              "enum": [
+                "ACCEPT",
+                "REJECT",
+                "SUPERSEDE",
+                "EXPIRE"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "decidedBy": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "decidedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "auditEventId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "decisionSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "materializedTarget": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "targetType",
+            "targetId",
+            "targetVersion",
+            "targetDigest"
+          ],
+          "properties": {
+            "targetType": {
+              "const": "ACTION_PROPOSAL_DRAFT"
+            },
+            "targetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "targetVersion": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "targetDigest": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "materializationReceiptSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "proposalType": {
+            "const": "HYPOTHESIS"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/hypothesis"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "proposalType": {
+            "const": "CLAIM"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/claim"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "proposalType": {
+            "const": "TASK"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/task"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "proposalType": {
+            "const": "COMPARABLE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/comparable"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "proposalType": {
+            "const": "COMMUNICATION"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/communication"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "PENDING"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "type": "null"
+          },
+          "materializedTarget": {
+            "type": "null"
+          },
+          "materializationReceiptSha256": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ACCEPTED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "decisionKind": {
+                "const": "ACCEPT"
+              }
+            },
+            "required": [
+              "decisionKind"
+            ],
+            "not": {
+              "type": "null"
+            }
+          },
+          "materializedTarget": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "materializationReceiptSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "REJECTED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "decisionKind": {
+                "const": "REJECT"
+              }
+            },
+            "required": [
+              "decisionKind"
+            ],
+            "not": {
+              "type": "null"
+            }
+          },
+          "materializedTarget": {
+            "type": "null"
+          },
+          "materializationReceiptSha256": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "SUPERSEDED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "decisionKind": {
+                "const": "SUPERSEDE"
+              }
+            },
+            "required": [
+              "decisionKind"
+            ],
+            "not": {
+              "type": "null"
+            }
+          },
+          "materializedTarget": {
+            "type": "null"
+          },
+          "materializationReceiptSha256": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "EXPIRED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "properties": {
+              "decisionKind": {
+                "const": "EXPIRE"
+              }
+            },
+            "required": [
+              "decisionKind"
+            ],
+            "not": {
+              "type": "null"
+            }
+          },
+          "materializedTarget": {
+            "type": "null"
+          },
+          "materializationReceiptSha256": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ACCEPTED"
+          },
+          "proposalType": {
+            "const": "HYPOTHESIS"
+          }
+        },
+        "required": [
+          "status",
+          "proposalType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "materializedTarget": {
+            "properties": {
+              "targetType": {
+                "const": "ACTION_PROPOSAL_DRAFT"
+              }
+            },
+            "required": [
+              "targetType"
+            ],
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ACCEPTED"
+          },
+          "proposalType": {
+            "const": "CLAIM"
+          }
+        },
+        "required": [
+          "status",
+          "proposalType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "materializedTarget": {
+            "properties": {
+              "targetType": {
+                "const": "ACTION_PROPOSAL_DRAFT"
+              }
+            },
+            "required": [
+              "targetType"
+            ],
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ACCEPTED"
+          },
+          "proposalType": {
+            "const": "TASK"
+          }
+        },
+        "required": [
+          "status",
+          "proposalType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "materializedTarget": {
+            "properties": {
+              "targetType": {
+                "const": "ACTION_PROPOSAL_DRAFT"
+              }
+            },
+            "required": [
+              "targetType"
+            ],
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ACCEPTED"
+          },
+          "proposalType": {
+            "const": "COMPARABLE"
+          }
+        },
+        "required": [
+          "status",
+          "proposalType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "materializedTarget": {
+            "properties": {
+              "targetType": {
+                "const": "ACTION_PROPOSAL_DRAFT"
+              }
+            },
+            "required": [
+              "targetType"
+            ],
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ACCEPTED"
+          },
+          "proposalType": {
+            "const": "COMMUNICATION"
+          }
+        },
+        "required": [
+          "status",
+          "proposalType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "materializedTarget": {
+            "properties": {
+              "targetType": {
+                "const": "ACTION_PROPOSAL_DRAFT"
+              }
+            },
+            "required": [
+              "targetType"
+            ],
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "citationIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "statement",
+        "supportingCitationIds",
+        "contradictingCitationIds",
+        "unknowns",
+        "limitations"
+      ],
+      "properties": {
+        "kind": {
+          "const": "HYPOTHESIS"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "supportingCitationIds": {
+          "$ref": "#/$defs/citationIds"
+        },
+        "contradictingCitationIds": {
+          "$ref": "#/$defs/citationIds"
+        },
+        "unknowns": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "supportingCitationIds": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "properties": {
+            "contradictingCitationIds": {
+              "minItems": 1
+            }
+          }
+        }
+      ]
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "claimType",
+        "text",
+        "citationIds",
+        "limitations",
+        "responseContext"
+      ],
+      "properties": {
+        "kind": {
+          "const": "CLAIM"
+        },
+        "claimType": {
+          "enum": [
+            "FACT",
+            "CALCULATION",
+            "INFERENCE",
+            "LIMITATION",
+            "OFFICIAL_OUTCOME"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000
+        },
+        "citationIds": {
+          "$ref": "#/$defs/citationIds",
+          "minItems": 1
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "responseContext": {
+          "enum": [
+            "NO_REQUEST",
+            "REQUEST_PENDING",
+            "RESPONSE_RECEIVED",
+            "NO_RESPONSE_RECORDED_WITHOUT_INFERENCE"
+          ]
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "title",
+        "description",
+        "priority",
+        "duePolicy",
+        "citationIds"
+      ],
+      "properties": {
+        "kind": {
+          "const": "TASK"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "priority": {
+          "enum": [
+            "LOW",
+            "NORMAL",
+            "HIGH",
+            "URGENT"
+          ]
+        },
+        "duePolicy": {
+          "enum": [
+            "NONE",
+            "WITHIN_24_HOURS",
+            "WITHIN_3_DAYS",
+            "WITHIN_7_DAYS"
+          ]
+        },
+        "citationIds": {
+          "$ref": "#/$defs/citationIds",
+          "minItems": 1
+        }
+      }
+    },
+    "comparable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subjectContractId",
+        "candidateContractId",
+        "comparisonBasis",
+        "materialDifferences",
+        "citationIds",
+        "verificationState"
+      ],
+      "properties": {
+        "kind": {
+          "const": "COMPARABLE"
+        },
+        "subjectContractId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "candidateContractId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "comparisonBasis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "materialDifferences": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "citationIds": {
+          "$ref": "#/$defs/citationIds",
+          "minItems": 1
+        },
+        "verificationState": {
+          "const": "UNVERIFIED_CANDIDATE"
+        }
+      }
+    },
+    "communication": {
+      "$ref": "https://gurinnae.invalid/schemas/agents/v2/communication-proposal-payload.json"
+    }
+  },
+  "x-gurinnae-invariants": [
+    "citationBindings is sorted by citationId, has no duplicate citationId, and is set-equal to every citation ID named by the typed payload.",
+    "Every citation row belongs to this proposal, run, validation, and input snapshot and has a VALID citation/source-use/rights result.",
+    "expiresAt is later than createdAt; PENDING at or after expiresAt transitions once to EXPIRED with decisionKind EXPIRE.",
+    "Only PENDING may transition; terminal proposal rows and their payload/citation bindings are immutable.",
+    "ACCEPTED creates exactly one ACTION_PROPOSAL_DRAFT bound to the source proposal in the same transaction; every other state creates zero targets, and no agent-proposal decision directly creates a domain object or effect."
+  ]
+}

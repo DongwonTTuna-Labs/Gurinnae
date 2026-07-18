@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use actix_web::{HttpRequest, HttpResponse, http::StatusCode, web};
-use gurine_api_contracts::{OperationSpec, submission_api::OPERATIONS};
+use gurine_api_contracts::{OperationSpec, addendum, submission_api::OPERATIONS};
 use gurine_application::idempotency;
 use gurine_auth::assertion::{
     AssertionError, BoundRequest,
@@ -19,7 +19,10 @@ use crate::state::AppState;
 
 pub fn configure(config: &mut web::ServiceConfig) {
     let mut by_path = BTreeMap::<&str, Vec<OperationSpec>>::new();
-    for operation in OPERATIONS {
+    for operation in OPERATIONS
+        .iter()
+        .chain(addendum::SUBMISSION_OPERATIONS.iter())
+    {
         by_path.entry(operation.path).or_default().push(*operation);
     }
     let mut resources = by_path.into_iter().collect::<Vec<_>>();
@@ -68,59 +71,11 @@ pub async fn upload_attachment(
     if body.is_empty() || body.len() > state.max_upload_bytes {
         return problem("PAYLOAD_TOO_LARGE", 413, &request_id);
     }
-    let scoped: Result<serde_json::Value, _> = match caller.iss.as_str() {
-        "public-web" => {
-            sqlx::query_scalar("SELECT intake.get_correction_draft_preview_session($1,$2)")
-                .bind(sha256_hex(session_token.as_bytes()))
-                .bind(&caller.iss)
-                .fetch_one(&state.pool)
-                .await
-        }
-        "response-portal" => {
-            sqlx::query_scalar("SELECT intake.get_response_preview_session($1,$2)")
-                .bind(sha256_hex(session_token.as_bytes()))
-                .bind(&caller.iss)
-                .fetch_one(&state.pool)
-                .await
-        }
-        _ => return problem("BFF_CALLER_DENIED", 403, &request_id),
-    };
-    let scoped = match scoped {
-        Ok(value) => value,
-        Err(_) => return problem("ATTACHMENT_UPLOAD_TARGET_INVALID", 404, &request_id),
-    };
-    let attachment_id_text = attachment_id.to_string();
-    let Some(target) = scoped
-        .get("attachments")
-        .and_then(serde_json::Value::as_array)
-        .and_then(|attachments| {
-            attachments.iter().find(|attachment| {
-                attachment.get("id").and_then(serde_json::Value::as_str)
-                    == Some(attachment_id_text.as_str())
-            })
-        })
-    else {
-        return problem("ATTACHMENT_UPLOAD_TARGET_INVALID", 404, &request_id);
-    };
-    if target
-        .get("upload_status")
-        .and_then(serde_json::Value::as_str)
-        != Some("PENDING")
-    {
-        return problem("ATTACHMENT_UPLOAD_TARGET_INVALID", 409, &request_id);
-    }
-    let object_key = match target.get("object_key").and_then(serde_json::Value::as_str) {
-        Some(value) => value.to_owned(),
-        None => return problem("DEPENDENCY_UNAVAILABLE", 503, &request_id),
-    };
-    let expected_size = match target.get("size_bytes").and_then(serde_json::Value::as_i64) {
-        Some(value) => value,
-        None => return problem("DEPENDENCY_UNAVAILABLE", 503, &request_id),
-    };
-    let expected_sha256 = match target.get("sha256").and_then(serde_json::Value::as_str) {
-        Some(value) => value.trim().to_owned(),
-        None => return problem("DEPENDENCY_UNAVAILABLE", 503, &request_id),
-    };
+    let (object_key, expected_size, expected_sha256) =
+        match scoped_attachment(state.get_ref(), &caller, session_token, attachment_id).await {
+            Ok(value) => value,
+            Err(status) => return problem(status.0, status.1, &request_id),
+        };
     let actual_size = match i64::try_from(body.len()) {
         Ok(value) => value,
         Err(_) => return problem("PAYLOAD_TOO_LARGE", 413, &request_id),
@@ -145,6 +100,65 @@ pub async fn upload_attachment(
     response.finish()
 }
 
+async fn scoped_attachment(
+    state: &AppState,
+    caller: &ServiceClaims,
+    session_token: &str,
+    attachment_id: Uuid,
+) -> Result<(String, i64, String), (&'static str, u16)> {
+    let scoped: Result<serde_json::Value, _> = match caller.iss.as_str() {
+        "public-web" => {
+            sqlx::query_scalar("SELECT intake.get_correction_draft_preview_session($1,$2)")
+                .bind(sha256_hex(session_token.as_bytes()))
+                .bind(&caller.iss)
+                .fetch_one(&state.pool)
+                .await
+        }
+        "response-portal" => {
+            sqlx::query_scalar("SELECT intake.get_response_preview_session_v2($1,$2)")
+                .bind(sha256_hex(session_token.as_bytes()))
+                .bind(&caller.iss)
+                .fetch_one(&state.pool)
+                .await
+        }
+        _ => return Err(("BFF_CALLER_DENIED", 403)),
+    };
+    let scoped = scoped.map_err(|_| ("ATTACHMENT_UPLOAD_TARGET_INVALID", 404))?;
+    let id = attachment_id.to_string();
+    let target = scoped
+        .get("attachments")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|items| {
+            items.iter().find(|item| {
+                item.get("id").and_then(serde_json::Value::as_str) == Some(id.as_str())
+            })
+        })
+        .ok_or(("ATTACHMENT_UPLOAD_TARGET_INVALID", 404))?;
+    if target
+        .get("upload_status")
+        .and_then(serde_json::Value::as_str)
+        != Some("PENDING")
+    {
+        return Err(("ATTACHMENT_UPLOAD_TARGET_INVALID", 409));
+    }
+    let object_key = target
+        .get("object_key")
+        .and_then(serde_json::Value::as_str)
+        .ok_or(("DEPENDENCY_UNAVAILABLE", 503))?
+        .to_owned();
+    let expected_size = target
+        .get("size_bytes")
+        .and_then(serde_json::Value::as_i64)
+        .ok_or(("DEPENDENCY_UNAVAILABLE", 503))?;
+    let expected_sha256 = target
+        .get("sha256")
+        .and_then(serde_json::Value::as_str)
+        .ok_or(("DEPENDENCY_UNAVAILABLE", 503))?
+        .trim()
+        .to_owned();
+    Ok((object_key, expected_size, expected_sha256))
+}
+
 async fn handle(
     operation: OperationSpec,
     request: HttpRequest,
@@ -160,30 +174,20 @@ async fn handle(
         return problem("BFF_CALLER_DENIED", 403, &request_id);
     }
     let session_token = header(&request, "x-gurine-submission-session").map(str::to_owned);
-    if operation.auth.contains("scoped-submission-session") {
-        let Some(token) = session_token.as_deref() else {
-            return problem("SUBMISSION_SESSION_REQUIRED", 401, &request_id);
-        };
-        if let Err(response) = validate_session(
-            &state,
-            token,
-            &caller.iss,
-            allowed_session_kinds(operation.id),
-            &request_id,
-        )
-        .await
-        {
-            return response;
-        }
+    if let Err(response) = validate_operation_session(
+        &operation,
+        session_token.as_deref(),
+        &caller.iss,
+        &state,
+        &request_id,
+    )
+    .await
+    {
+        return response;
     }
-    let attachment_id = request
-        .match_info()
-        .get("attachmentId")
-        .map(Uuid::parse_str)
-        .transpose();
-    let attachment_id = match attachment_id {
+    let attachment_id = match parse_attachment_id(request.match_info().get("attachmentId")) {
         Ok(value) => value,
-        Err(_) => return problem("INVALID_PARAMETER", 400, &request_id),
+        Err(()) => return problem("INVALID_PARAMETER", 400, &request_id),
     };
     let idempotency = if operation.idempotency_required {
         match prepare_idempotency(&operation, &request, &body, &state, &request_id).await {
@@ -224,24 +228,16 @@ async fn handle(
             return service_problem(error, &request_id);
         }
     };
-    if let Some(prepared) = idempotency {
-        let stored = StoredResponse {
-            status: i32::from(operation.success_status),
-            body: output.clone(),
-        };
-        if !matches!(
-            complete(
-                &state.pool,
-                &prepared.scope,
-                &prepared.key_hash,
-                &prepared.request_hash,
-                &stored,
-            )
-            .await,
-            Ok(true)
-        ) {
-            return problem("IDEMPOTENCY_COMPLETION_FAILED", 503, &request_id);
-        }
+    if let Err(response) = complete_idempotency(
+        &state,
+        operation.success_status,
+        idempotency,
+        &output,
+        &request_id,
+    )
+    .await
+    {
+        return response;
     }
     response(
         operation.success_status,
@@ -249,6 +245,64 @@ async fn handle(
         output,
         &request_id,
     )
+}
+
+fn parse_attachment_id(value: Option<&str>) -> Result<Option<Uuid>, ()> {
+    value.map(Uuid::parse_str).transpose().map_err(|_| ())
+}
+
+async fn complete_idempotency(
+    state: &AppState,
+    success_status: u16,
+    idempotency: Option<idempotency::IdempotencyRequest>,
+    output: &serde_json::Value,
+    request_id: &str,
+) -> Result<(), HttpResponse> {
+    let Some(prepared) = idempotency else {
+        return Ok(());
+    };
+    let stored = StoredResponse {
+        status: i32::from(success_status),
+        body: output.clone(),
+    };
+    if matches!(
+        complete(
+            &state.pool,
+            &prepared.scope,
+            &prepared.key_hash,
+            &prepared.request_hash,
+            &stored
+        )
+        .await,
+        Ok(true)
+    ) {
+        Ok(())
+    } else {
+        Err(problem("IDEMPOTENCY_COMPLETION_FAILED", 503, request_id))
+    }
+}
+
+async fn validate_operation_session(
+    operation: &OperationSpec,
+    session_token: Option<&str>,
+    issuer: &str,
+    state: &AppState,
+    request_id: &str,
+) -> Result<(), HttpResponse> {
+    if !operation.auth.contains("scoped-submission-session") {
+        return Ok(());
+    }
+    let Some(token) = session_token else {
+        return Err(problem("SUBMISSION_SESSION_REQUIRED", 401, request_id));
+    };
+    validate_session(
+        state,
+        token,
+        issuer,
+        allowed_session_kinds(operation.id),
+        request_id,
+    )
+    .await
 }
 
 async fn authorize(

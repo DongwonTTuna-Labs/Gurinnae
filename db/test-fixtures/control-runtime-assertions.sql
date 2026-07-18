@@ -6,6 +6,13 @@ BEGIN
   IF actual <> 14 THEN RAISE EXCEPTION 'case canonical version %, expected 14', actual; END IF;
   SELECT version INTO actual FROM core.anomaly_signals WHERE id='641fc905-1d30-5062-b0e6-9fbb468502c4';
   IF actual <> 5 THEN RAISE EXCEPTION 'signal canonical version %, expected 5', actual; END IF;
+  SELECT count(*) INTO actual FROM ops.signal_triages
+   WHERE signal_id='641fc905-1d30-5062-b0e6-9fbb468502c4'
+     AND result='PROMOTE_TO_CASE' AND prior_version >= 1
+     AND resulting_version = prior_version + 1
+     AND reason_digest ~ '^[0-9a-f]{64}$'
+     AND receipt_digest ~ '^[0-9a-f]{64}$';
+  IF actual < 1 THEN RAISE EXCEPTION 'typed signal triage receipts %, expected at least 1', actual; END IF;
   SELECT row_version INTO actual FROM core.rule_versions WHERE id='b821788c-164c-5da0-8571-74b7ef417538';
   IF actual <> 1 THEN RAISE EXCEPTION 'evaluation rule canonical version %, expected 1', actual; END IF;
   SELECT count(*) INTO actual FROM core.rule_versions
@@ -248,6 +255,17 @@ BEGIN
   SELECT count(*) INTO actual FROM editorial.publication_revisions
    WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410';
   IF actual <> 2 THEN RAISE EXCEPTION 'publication revisions %, expected 2', actual; END IF;
+  IF (SELECT public_payload->'agencyIds' FROM editorial.publication_revisions
+      WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410'
+      ORDER BY revision DESC LIMIT 1) <> '["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]'::jsonb
+     OR (SELECT public_payload->'supplierIds' FROM editorial.publication_revisions
+         WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410'
+         ORDER BY revision DESC LIMIT 1) <> '["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"]'::jsonb
+     OR (SELECT public_payload->'ruleIds' FROM editorial.publication_revisions
+         WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410'
+         ORDER BY revision DESC LIMIT 1) <> '["control-fixture-rule"]'::jsonb THEN
+    RAISE EXCEPTION 'publication relation keys were not derived from the linked contract signal';
+  END IF;
 
   SELECT count(*) INTO actual FROM ops.audit_exports;
   IF actual <> 2 THEN RAISE EXCEPTION 'audit export rows %, expected 2', actual; END IF;

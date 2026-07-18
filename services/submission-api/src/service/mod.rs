@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::state::AppState;
 
+mod addendum;
 mod anonymous;
 mod common;
 mod correction;
@@ -47,19 +48,15 @@ pub enum ServiceError {
     Cryptography,
 }
 
+#[rustfmt::skip]
 pub async fn execute(context: RequestContext<'_>) -> Result<Value, ServiceError> {
+    if gurine_api_contracts::addendum::is_submission_operation(context.operation) {
+        return addendum::execute(&context).await;
+    }
     match context.operation {
         "createContactRequest" => anonymous::create_contact(&context).await,
         "createDatasetExport" => anonymous::create_dataset_export(&context).await,
-        "createCorrectionRequestDraft" => {
-            create_correction_session(
-                context.body,
-                context.issuer,
-                context.request_id,
-                context.state,
-            )
-            .await
-        }
+        "createCorrectionRequestDraft" => create_correction_session(context.body, context.issuer, context.request_id, context.state).await,
         "getCorrectionRequestDraft" => correction::get_draft(&context).await,
         "saveCorrectionRequestDraft" => correction::save_draft(&context).await,
         "deleteCorrectionRequestDraft" => correction::delete_draft(&context).await,
@@ -87,50 +84,10 @@ pub async fn execute(context: RequestContext<'_>) -> Result<Value, ServiceError>
         "getSubscription" => subscription::get(&context).await,
         "updateSubscription" => subscription::update(&context).await,
         "unsubscribe" => subscription::unsubscribe(&context).await,
-        "exchangeResponseAccessToken" => {
-            exchange(
-                context.body,
-                context.issuer,
-                "RESPONSE_PENDING",
-                "intake.exchange_response_magic_token",
-                context.request_id,
-                context.state,
-            )
-            .await
-        }
-        "exchangeResponseReceiptToken" => {
-            exchange(
-                context.body,
-                context.issuer,
-                "RESPONSE_RECEIPT",
-                "intake.exchange_response_receipt_token",
-                context.request_id,
-                context.state,
-            )
-            .await
-        }
-        "exchangeCorrectionReceiptToken" => {
-            exchange(
-                context.body,
-                context.issuer,
-                "CORRECTION_RECEIPT",
-                "intake.exchange_correction_receipt_token",
-                context.request_id,
-                context.state,
-            )
-            .await
-        }
-        "exchangeSubscriptionManagementToken" => {
-            exchange(
-                context.body,
-                context.issuer,
-                "SUBSCRIPTION_MANAGEMENT",
-                "intake.exchange_subscription_management_token",
-                context.request_id,
-                context.state,
-            )
-            .await
-        }
+        "exchangeResponseAccessToken" => exchange(context.body, context.issuer, "RESPONSE_PENDING", "intake.exchange_response_magic_token_v2", context.request_id, context.state).await,
+        "exchangeResponseReceiptToken" => exchange(context.body, context.issuer, "RESPONSE_RECEIPT", "intake.exchange_response_receipt_token", context.request_id, context.state).await,
+        "exchangeCorrectionReceiptToken" => exchange(context.body, context.issuer, "CORRECTION_RECEIPT", "intake.exchange_correction_receipt_token", context.request_id, context.state).await,
+        "exchangeSubscriptionManagementToken" => exchange(context.body, context.issuer, "SUBSCRIPTION_MANAGEMENT", "intake.exchange_subscription_management_token", context.request_id, context.state).await,
         _ => Err(ServiceError::InvalidRequest),
     }
 }
@@ -209,8 +166,8 @@ async fn exchange(
             Duration::minutes(30)
         };
     let sql = match function {
-        "intake.exchange_response_magic_token" => {
-            "SELECT intake.exchange_response_magic_token($1,$2,$3,$4) AS session_id"
+        "intake.exchange_response_magic_token_v2" => {
+            "SELECT session_id FROM intake.exchange_response_magic_token_v2($1,$2,$3,$4)"
         }
         "intake.exchange_response_receipt_token" => {
             "SELECT intake.exchange_response_receipt_token($1,$2,$3,$4) AS session_id"

@@ -18,11 +18,40 @@ import SignalTriagePanel from "./sections/SignalTriagePanel.svelte";
 import StatusAndRevisionHeader from "./sections/StatusAndRevisionHeader.svelte";
 import StructuredContentSection from "./sections/StructuredContentSection.svelte";
 import UnifiedSearch from "./sections/UnifiedSearch.svelte";
+import ResponseJourneySection from "./sections/ResponseJourneySection.svelte";
+import BusinessHealthPanel from "./sections/BusinessHealthPanel.svelte";
+import SemanticSection from "./sections/SemanticSection.svelte";
+import OmnichannelApprovalPanel from "./sections/OmnichannelApprovalPanel.svelte";
+import CheckAnswers from "./sections/CheckAnswers.svelte";
+import PageHeader from "./sections/PageHeader.svelte";
+import SensitiveDataNotice from "./sections/SensitiveDataNotice.svelte";
+import StepIndicator from "./sections/StepIndicator.svelte";
+import SaveStatus from "./sections/SaveStatus.svelte";
+import NotificationBanner from "./sections/NotificationBanner.svelte";
+import FileUploadQueue from "./sections/FileUploadQueue.svelte";
+import DecisionReceipt from "./sections/DecisionReceipt.svelte";
+import GateChecklist from "./sections/GateChecklist.svelte";
+import MetricWithContext from "./sections/MetricWithContext.svelte";
+import { typedScreenViewModel } from "../screen-contract";
 
 let props: ScreenSectionProps = $props();
+const contract = $derived(typedScreenViewModel(props.screen));
 </script>
 
-{#if props.section.component === "AccessManagementPanel"}<AccessManagementPanel {...props} />
+{#if contract.journey === "J-03" && props.screen.id.startsWith("RSP-") && props.section.component === "ResponseJourneySection"}<ResponseJourneySection {...props} />
+{:else if props.section.component === "BusinessHealthPanel"}<BusinessHealthPanel {...props} />
+{:else if props.section.component === "OmnichannelApprovalPanel"}<OmnichannelApprovalPanel {...props} />
+{:else if props.section.component === "CheckAnswers"}<CheckAnswers {...props} />
+{:else if props.section.component === "AccessManagementPanel"}<AccessManagementPanel {...props} />
+{:else if props.section.component === "PageHeader"}<PageHeader {...props} />
+{:else if props.section.component === "SensitiveDataNotice"}<SensitiveDataNotice {...props} />
+{:else if props.section.component === "StepIndicator"}<StepIndicator {...props} />
+{:else if props.section.component === "SaveStatus"}<SaveStatus {...props} />
+{:else if props.section.component === "NotificationBanner"}<NotificationBanner {...props} />
+{:else if props.section.component === "FileUploadQueue"}<FileUploadQueue {...props} />
+{:else if props.section.component === "DecisionReceipt"}<DecisionReceipt {...props} />
+{:else if props.section.component === "GateChecklist"}<GateChecklist {...props} />
+{:else if props.section.component === "MetricWithContext"}<MetricWithContext {...props} />
 {:else if props.section.component === "AgentSuggestionPanel"}<AgentSuggestionPanel {...props} />
 {:else if props.section.component === "ClaimWorkbench"}<ClaimWorkbench {...props} />
 {:else if props.section.component === "ComparisonWorkbench"}<ComparisonWorkbench {...props} />
@@ -40,4 +69,4 @@ let props: ScreenSectionProps = $props();
 {:else if props.section.component === "StatusAndRevisionHeader"}<StatusAndRevisionHeader {...props} />
 {:else if props.section.component === "StructuredContentSection"}<StructuredContentSection {...props} />
 {:else if props.section.component === "UnifiedSearch"}<UnifiedSearch {...props} />
-{:else}<StructuredContentSection {...props} />{/if}
+{:else}<SemanticSection {...props} />{/if}

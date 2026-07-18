@@ -181,77 +181,16 @@ pub async fn submit(context: &RequestContext<'_>) -> Result<Value, ServiceError>
     )?;
     let session_token = common::random_token()?;
     let expires_at = OffsetDateTime::now_utc() + Duration::minutes(30);
-    let mut transaction = context
-        .state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| ServiceError::Persistence)?;
-    let row = sqlx::query(
-        "SELECT request_id,receipt_session_id FROM intake.submit_correction_draft_session($1,$2,$3,$4,$5,$6,$7,$8)",
-    )
-    .bind(sha256_hex(common::session(context)?.as_bytes()))
-    .bind(context.issuer)
-    .bind(expected_version)
-    .bind(attestation)
-    .bind(privacy)
-    .bind(common::token_hmac(
-        &context.state.token_hmac_key,
+    let persisted = persist_submission(
+        context,
+        expected_version,
+        attestation,
+        privacy,
         &receipt_token,
-    )?)
-    .bind(sha256_hex(session_token.as_bytes()))
-    .bind(expires_at)
-    .fetch_one(&mut *transaction)
-    .await
-    .map_err(common::database_error)?;
-    let persisted: Uuid = row
-        .try_get("request_id")
-        .map_err(|_| ServiceError::Persistence)?;
-    let aggregate_id = persisted.to_string();
-    let occurred_at = OffsetDateTime::now_utc();
-    let occurred_text = common::timestamp(occurred_at)?;
-    let domain_payload = serde_json::json!({
-        "actor_id":context.issuer,
-        "occurred_at":occurred_text,
-        "operation_id":context.operation,
-        "request_id":context.request_id
-    });
-    append(
-        &mut transaction,
-        &OutboxEvent {
-            aggregate_type: "correctionRequest",
-            aggregate_id: &aggregate_id,
-            aggregate_version: 1,
-            event_type: "correction.request_submitted.v1",
-            payload: &domain_payload,
-            occurred_at,
-        },
+        &session_token,
+        expires_at,
     )
-    .await
-    .map_err(|_| ServiceError::Persistence)?;
-    let notification_payload = serde_json::json!({
-        "actor_id":context.issuer,
-        "occurred_at":occurred_text,
-        "operation_id":context.operation,
-        "request_id":context.request_id
-    });
-    append(
-        &mut transaction,
-        &OutboxEvent {
-            aggregate_type: "correctionRequest",
-            aggregate_id: &aggregate_id,
-            aggregate_version: 1,
-            event_type: "notification.correction_received.v1",
-            payload: &notification_payload,
-            occurred_at,
-        },
-    )
-    .await
-    .map_err(|_| ServiceError::Persistence)?;
-    transaction
-        .commit()
-        .await
-        .map_err(|_| ServiceError::Persistence)?;
+    .await?;
     let mut receipt =
         common::command_receipt(context.operation, context.request_id, persisted, None)?;
     receipt["receiptSession"] = common::descriptor(
@@ -262,6 +201,79 @@ pub async fn submit(context: &RequestContext<'_>) -> Result<Value, ServiceError>
         1,
     )?;
     Ok(receipt)
+}
+
+async fn persist_submission(
+    context: &RequestContext<'_>,
+    expected_version: i64,
+    attestation: bool,
+    privacy: bool,
+    receipt_token: &str,
+    session_token: &str,
+    expires_at: OffsetDateTime,
+) -> Result<Uuid, ServiceError> {
+    let mut transaction = context
+        .state
+        .pool
+        .begin()
+        .await
+        .map_err(|_| ServiceError::Persistence)?;
+    let row = sqlx::query(
+        "SELECT request_id FROM intake.submit_correction_draft_session($1,$2,$3,$4,$5,$6,$7,$8)",
+    )
+    .bind(sha256_hex(common::session(context)?.as_bytes()))
+    .bind(context.issuer)
+    .bind(expected_version)
+    .bind(attestation)
+    .bind(privacy)
+    .bind(common::token_hmac(
+        &context.state.token_hmac_key,
+        receipt_token,
+    )?)
+    .bind(sha256_hex(session_token.as_bytes()))
+    .bind(expires_at)
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(common::database_error)?;
+    let id: Uuid = row
+        .try_get("request_id")
+        .map_err(|_| ServiceError::Persistence)?;
+    append_submission_events(context, &mut transaction, id).await?;
+    transaction
+        .commit()
+        .await
+        .map_err(|_| ServiceError::Persistence)?;
+    Ok(id)
+}
+
+async fn append_submission_events(
+    context: &RequestContext<'_>,
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    id: Uuid,
+) -> Result<(), ServiceError> {
+    let aggregate_id = id.to_string();
+    let occurred_at = OffsetDateTime::now_utc();
+    let occurred_text = common::timestamp(occurred_at)?;
+    for event_type in [
+        "correction.request_submitted.v1",
+        "notification.correction_received.v1",
+    ] {
+        let payload = serde_json::json!({"actor_id":context.issuer,"occurred_at":occurred_text,"operation_id":context.operation,"request_id":context.request_id});
+        append(
+            transaction,
+            &OutboxEvent {
+                aggregate_type: "correctionRequest",
+                aggregate_id: &aggregate_id,
+                aggregate_version: 1,
+                event_type,
+                payload: &payload,
+                occurred_at,
+            },
+        )
+        .await
+        .map_err(|_| ServiceError::Persistence)?;
+    }
+    Ok(())
 }
 
 pub async fn get_receipt(context: &RequestContext<'_>) -> Result<Value, ServiceError> {

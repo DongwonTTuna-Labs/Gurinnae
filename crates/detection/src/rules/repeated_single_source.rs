@@ -20,6 +20,45 @@ pub fn evaluate(input: &Value) -> Result<Value, EvaluationError> {
         return blocked("REQUIRED_FIELD_MISSING", input);
     }
     let contracts = unique_contracts(&input["contracts"])?;
+    if has_missing_fields(&contracts) {
+        return blocked("REQUIRED_FIELD_MISSING", input);
+    }
+    let window_days = integer(&input["window_days"])?;
+    let groups = candidate_groups(&contracts)?;
+    let (matched, greatest_total) = matching_ids(groups, window_days)?;
+    let matched_set: BTreeSet<_> = matched.iter().cloned().collect();
+    let excluded = contracts
+        .iter()
+        .filter_map(|contract| contract["id"].as_str())
+        .filter(|id| !matched_set.contains(*id))
+        .map(ToOwned::to_owned)
+        .collect();
+    let mut metrics = Map::new();
+    metrics.insert(
+        "matched_contract_count".to_owned(),
+        (matched_set.len() as u64).into(),
+    );
+    metrics.insert(
+        "matched_total_amount".to_owned(),
+        greatest_total.to_string().into(),
+    );
+    finish(
+        Evaluation {
+            outcome: if matched.is_empty() {
+                "NO_SIGNAL"
+            } else {
+                "SIGNAL"
+            },
+            blockers: Vec::new(),
+            metrics,
+            included_ids: matched,
+            excluded_ids: excluded,
+        },
+        input,
+    )
+}
+
+fn has_missing_fields(contracts: &[&Map<String, Value>]) -> bool {
     let required = [
         "agency_id",
         "supplier_id",
@@ -28,16 +67,18 @@ pub fn evaluate(input: &Value) -> Result<Value, EvaluationError> {
         "amount",
         "method",
     ];
-    if contracts.iter().any(|contract| {
+    contracts.iter().any(|contract| {
         required
             .iter()
             .any(|field| contract.get(*field).is_none_or(Value::is_null))
-    }) {
-        return blocked("REQUIRED_FIELD_MISSING", input);
-    }
-    let window_days = integer(&input["window_days"])?;
-    let mut groups: BTreeMap<ContractGroupKey, ContractGroup<'_>> = BTreeMap::new();
-    for contract in &contracts {
+    })
+}
+
+fn candidate_groups<'a>(
+    contracts: &'a [&'a Map<String, Value>],
+) -> Result<BTreeMap<ContractGroupKey, ContractGroup<'a>>, EvaluationError> {
+    let mut groups: BTreeMap<ContractGroupKey, ContractGroup<'a>> = BTreeMap::new();
+    for contract in contracts {
         if string(&contract["method"])? == "SINGLE_SOURCE" {
             groups
                 .entry((
@@ -49,6 +90,13 @@ pub fn evaluate(input: &Value) -> Result<Value, EvaluationError> {
                 .push(contract);
         }
     }
+    Ok(groups)
+}
+
+fn matching_ids(
+    mut groups: BTreeMap<ContractGroupKey, ContractGroup<'_>>,
+    window_days: i64,
+) -> Result<(Vec<String>, Decimal), EvaluationError> {
     let mut matched = Vec::new();
     let mut greatest_total = Decimal::ZERO;
     for group in groups.values_mut() {
@@ -84,36 +132,7 @@ pub fn evaluate(input: &Value) -> Result<Value, EvaluationError> {
             greatest_total = greatest_total.max(total);
         }
     }
-    let matched_set: BTreeSet<_> = matched.iter().cloned().collect();
-    let excluded = contracts
-        .iter()
-        .filter_map(|contract| contract["id"].as_str())
-        .filter(|id| !matched_set.contains(*id))
-        .map(ToOwned::to_owned)
-        .collect();
-    let mut metrics = Map::new();
-    metrics.insert(
-        "matched_contract_count".to_owned(),
-        (matched_set.len() as u64).into(),
-    );
-    metrics.insert(
-        "matched_total_amount".to_owned(),
-        greatest_total.to_string().into(),
-    );
-    finish(
-        Evaluation {
-            outcome: if matched.is_empty() {
-                "NO_SIGNAL"
-            } else {
-                "SIGNAL"
-            },
-            blockers: Vec::new(),
-            metrics,
-            included_ids: matched,
-            excluded_ids: excluded,
-        },
-        input,
-    )
+    Ok((matched, greatest_total))
 }
 
 fn parse_date(value: &str) -> Result<Date, EvaluationError> {

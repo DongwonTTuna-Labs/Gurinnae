@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/specs/acceptance/runtime-layer-receipt-v1.schema.json",
+  "title": "Gurinnae acceptance runtime layer receipt v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "receipt_kind",
+    "scenario_id",
+    "runtime_profile_id",
+    "runtime_profile_sha256",
+    "layer_id",
+    "layer_contract_sha256",
+    "probe_kind",
+    "status",
+    "started_at",
+    "duration_ms",
+    "environment_digest",
+    "oracle_contracts",
+    "oracle_layer_contracts",
+    "probe_argv",
+    "probe_argv_sha256",
+    "probe_facts",
+    "probe_facts_sha256",
+    "probe_exit_code",
+    "probe_stdout_sha256",
+    "probe_stderr_sha256",
+    "probe_stdout_artifact",
+    "probe_stderr_artifact",
+    "raw_probe_artifact",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "receipt_kind": { "const": "ACCEPTANCE_RUNTIME_LAYER_V2" },
+    "scenario_id": {
+      "type": "string",
+      "pattern": "^AC-[A-Z0-9_]+(?:-[A-Z0-9_]+)*-[0-9]{3}$"
+    },
+    "runtime_profile_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+_V1$"
+    },
+    "runtime_profile_sha256": { "$ref": "#/$defs/sha256" },
+    "layer_id": {
+      "enum": [
+        "rust-1.97.0-domain-application",
+        "postgresql-18.4-real-migrations",
+        "docker-compose-production-topology",
+        "sveltekit-ssr-browser",
+        "provider-double-at-external-boundary",
+        "parser-golden-bytes",
+        "production-ledger-projection",
+        "koneps-synthetic-source-boundary"
+      ]
+    },
+    "layer_contract_sha256": { "$ref": "#/$defs/sha256" },
+    "probe_kind": {
+      "enum": [
+        "RUST_TOOLCHAIN_AND_BINARY",
+        "POSTGRESQL_CATALOG",
+        "COMPOSE_TOPOLOGY",
+        "PLAYWRIGHT_BROWSER_TRACE",
+        "PROVIDER_BOUNDARY_LOG",
+        "PARSER_GOLDEN",
+        "PROJECTION_DIGEST",
+        "SOURCE_BOUNDARY_LOG"
+      ]
+    },
+    "status": { "const": "PASSED" },
+    "started_at": { "$ref": "#/$defs/timestamp" },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "environment_digest": { "$ref": "#/$defs/sha256" },
+    "oracle_contracts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/digest_pair" }
+    },
+    "oracle_layer_contracts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/digest_pair" }
+    },
+    "probe_argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "probe_argv_sha256": { "$ref": "#/$defs/sha256" },
+    "probe_facts": {
+      "oneOf": [
+        { "$ref": "#/$defs/rust_probe" },
+        { "$ref": "#/$defs/postgresql_probe" },
+        { "$ref": "#/$defs/compose_probe" },
+        { "$ref": "#/$defs/browser_probe" },
+        { "$ref": "#/$defs/provider_probe" },
+        { "$ref": "#/$defs/parser_probe" },
+        { "$ref": "#/$defs/projection_probe" },
+        { "$ref": "#/$defs/source_probe" }
+      ]
+    },
+    "probe_facts_sha256": { "$ref": "#/$defs/sha256" },
+    "probe_exit_code": { "const": 0 },
+    "probe_stdout_sha256": { "$ref": "#/$defs/sha256" },
+    "probe_stderr_sha256": { "$ref": "#/$defs/sha256" },
+    "probe_stdout_artifact": { "$ref": "#/$defs/artifact" },
+    "probe_stderr_artifact": { "$ref": "#/$defs/artifact" },
+    "raw_probe_artifact": { "$ref": "#/$defs/artifact" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/artifact" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "safe_text": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "safe_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    },
+    "digest_pair": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "string", "minLength": 1 },
+        { "$ref": "#/$defs/sha256" }
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "size", "media_type"],
+      "properties": {
+        "path": { "$ref": "#/$defs/safe_path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size": { "type": "integer", "minimum": 1 },
+        "media_type": {
+          "type": "string",
+          "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"
+        }
+      }
+    },
+    "rust_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "rustc_version", "rustc_verbose_sha256", "cargo_metadata_sha256",
+        "test_binary_sha256", "test_target", "test_identity", "effect_receipt_sha256"
+      ],
+      "properties": {
+        "kind": { "const": "RUST_TOOLCHAIN_AND_BINARY" },
+        "rustc_version": { "type": "string", "pattern": "^rustc 1\\.97\\.0(?:[ (].*)?$" },
+        "rustc_verbose_sha256": { "$ref": "#/$defs/sha256" },
+        "cargo_metadata_sha256": { "$ref": "#/$defs/sha256" },
+        "test_binary_sha256": { "$ref": "#/$defs/sha256" },
+        "test_target": { "$ref": "#/$defs/safe_text" },
+        "test_identity": { "$ref": "#/$defs/safe_text" },
+        "effect_receipt_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "postgresql_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "server_version_num", "migration_count", "migration_set_sha256",
+        "session_role", "catalog_snapshot_sha256", "transaction_receipt_sha256",
+        "effect_receipt_sha256"
+      ],
+      "properties": {
+        "kind": { "const": "POSTGRESQL_CATALOG" },
+        "server_version_num": { "const": 180004 },
+        "migration_count": { "const": 30 },
+        "migration_set_sha256": { "$ref": "#/$defs/sha256" },
+        "session_role": { "$ref": "#/$defs/safe_text" },
+        "catalog_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "transaction_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "effect_receipt_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "compose_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "service_count", "config_sha256", "image_set_sha256",
+        "network_set_sha256", "health_snapshot_sha256"
+      ],
+      "properties": {
+        "kind": { "const": "COMPOSE_TOPOLOGY" },
+        "service_count": { "const": 20 },
+        "config_sha256": { "$ref": "#/$defs/sha256" },
+        "image_set_sha256": { "$ref": "#/$defs/sha256" },
+        "network_set_sha256": { "$ref": "#/$defs/sha256" },
+        "health_snapshot_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "browser_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "project", "browser_name", "browser_version", "route",
+        "ssr_status", "ssr_html_sha256", "trace_sha256", "screenshot_sha256",
+        "accessibility_snapshot_sha256"
+      ],
+      "properties": {
+        "kind": { "const": "PLAYWRIGHT_BROWSER_TRACE" },
+        "project": { "const": "chromium" },
+        "browser_name": { "const": "chromium" },
+        "browser_version": { "$ref": "#/$defs/safe_text" },
+        "route": { "type": "string", "pattern": "^/" },
+        "ssr_status": { "const": 200 },
+        "ssr_html_sha256": { "$ref": "#/$defs/sha256" },
+        "trace_sha256": { "$ref": "#/$defs/sha256" },
+        "screenshot_sha256": { "$ref": "#/$defs/sha256" },
+        "accessibility_snapshot_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "provider_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "adapter_id", "request_sha256", "response_sha256",
+        "gateway_log_sha256", "direct_egress_denial_sha256",
+        "direct_egress_denied", "effect_writer_count"
+      ],
+      "properties": {
+        "kind": { "const": "PROVIDER_BOUNDARY_LOG" },
+        "adapter_id": { "$ref": "#/$defs/safe_text" },
+        "request_sha256": { "$ref": "#/$defs/sha256" },
+        "response_sha256": { "$ref": "#/$defs/sha256" },
+        "gateway_log_sha256": { "$ref": "#/$defs/sha256" },
+        "direct_egress_denial_sha256": { "$ref": "#/$defs/sha256" },
+        "direct_egress_denied": { "const": true },
+        "effect_writer_count": { "const": 0 }
+      }
+    },
+    "parser_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "parser_id", "parser_version", "input_sha256", "output_sha256",
+        "golden_sha256", "golden_match", "locator_count", "effect_writer_count"
+      ],
+      "properties": {
+        "kind": { "const": "PARSER_GOLDEN" },
+        "parser_id": { "$ref": "#/$defs/safe_text" },
+        "parser_version": { "$ref": "#/$defs/safe_text" },
+        "input_sha256": { "$ref": "#/$defs/sha256" },
+        "output_sha256": { "$ref": "#/$defs/sha256" },
+        "golden_sha256": { "$ref": "#/$defs/sha256" },
+        "golden_match": { "const": true },
+        "locator_count": { "type": "integer", "minimum": 1 },
+        "effect_writer_count": { "const": 0 }
+      }
+    },
+    "projection_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "source_event_sha256", "consumer_sha256", "writer_sha256",
+        "projection_row_sha256", "audit_event_sha256", "outbox_event_sha256",
+        "fixture_effect_write_count"
+      ],
+      "properties": {
+        "kind": { "const": "PROJECTION_DIGEST" },
+        "source_event_sha256": { "$ref": "#/$defs/sha256" },
+        "consumer_sha256": { "$ref": "#/$defs/sha256" },
+        "writer_sha256": { "$ref": "#/$defs/sha256" },
+        "projection_row_sha256": { "$ref": "#/$defs/sha256" },
+        "audit_event_sha256": { "$ref": "#/$defs/sha256" },
+        "outbox_event_sha256": { "$ref": "#/$defs/sha256" },
+        "fixture_effect_write_count": { "const": 0 }
+      }
+    },
+    "source_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind", "fixture_input_sha256", "adapter_sha256", "source_run_sha256",
+        "revision_sha256", "normalization_sha256", "effect_writer_count"
+      ],
+      "properties": {
+        "kind": { "const": "SOURCE_BOUNDARY_LOG" },
+        "fixture_input_sha256": { "$ref": "#/$defs/sha256" },
+        "adapter_sha256": { "$ref": "#/$defs/sha256" },
+        "source_run_sha256": { "$ref": "#/$defs/sha256" },
+        "revision_sha256": { "$ref": "#/$defs/sha256" },
+        "normalization_sha256": { "$ref": "#/$defs/sha256" },
+        "effect_writer_count": { "const": 0 }
+      }
+    }
+  }
+}

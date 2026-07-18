@@ -30,12 +30,12 @@ VALUES('61000000-0000-4000-8000-000000000001','negative-runtime','negative@examp
 INSERT INTO editorial.cases(id,title,investigation_state,publication_state,summary)
 VALUES('61000000-0000-4000-8000-000000000002','Negative runtime case','INVESTIGATING','NEVER_PUBLISHED','Negative gates');
 INSERT INTO raw.source_documents(id,source_id,external_id,retrieved_at,content_type,content_sha256,
-  content_size_bytes,object_key,status,parser_name,parser_version,prompt_injection_flags,updated_at)
+  content_size_bytes,object_key,status,parser_name,parser_version,prompt_injection_flags,updated_at,asset_id,asset_revision)
 VALUES
  ('61000000-0000-4000-8000-000000000003','negative-source','safe','2026-07-12T00:00:00Z','application/json',
-  repeat('a',64),128,'raw/safe.json','PARSED','json','runtime-v1','[]','2026-07-12T00:00:00Z'),
+  repeat('a',64),128,'raw/safe.json','PARSED','json','runtime-v1','[]','2026-07-12T00:00:00Z','61000000-0000-4000-8000-000000000003',1),
  ('61000000-0000-4000-8000-000000000004','negative-source','untrusted','2026-07-12T00:00:00Z','application/json',
-  repeat('b',64),128,'raw/untrusted.json','PARSED','json','runtime-v1','["ignore_previous"]','2026-07-12T00:00:00Z');
+  repeat('b',64),128,'raw/untrusted.json','PARSED','json','runtime-v1','["ignore_previous"]','2026-07-12T00:00:00Z','61000000-0000-4000-8000-000000000004',1);
 INSERT INTO editorial.evidence(id,case_id,evidence_type,title,source_document_id,source_locator,
   content_sha256,verification_status,verified_by,verified_at,created_by,updated_at)
 VALUES

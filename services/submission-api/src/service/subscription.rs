@@ -40,62 +40,19 @@ pub async fn create(context: &RequestContext<'_>) -> Result<Value, ServiceError>
         email.as_bytes(),
     )?;
 
-    let mut transaction = context
-        .state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| ServiceError::Persistence)?;
-    let row = sqlx::query(
-        "SELECT subscription_id,session_id FROM intake.create_subscription_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-    )
-    .bind(common::token_hmac(&context.state.token_hmac_key, &email)?)
-    .bind(email_encrypted)
-    .bind(&topics)
-    .bind(frequency)
-    .bind(locale)
-    .bind(common::token_hmac(
-        &context.state.token_hmac_key,
+    let persisted = persist_subscription(
+        context,
+        &email,
+        email_encrypted,
+        &topics,
+        frequency,
+        locale,
         &verification_token,
-    )?)
-    .bind(common::token_hmac(
-        &context.state.token_hmac_key,
         &management_token,
-    )?)
-    .bind(pending_token_hash)
-    .bind(context.issuer)
-    .bind(expires_at)
-    .fetch_one(&mut *transaction)
-    .await
-    .map_err(common::database_error)?;
-    let persisted: Uuid = row
-        .try_get("subscription_id")
-        .map_err(|_| ServiceError::Persistence)?;
-    let occurred_at = common::timestamp_now()?;
-    let payload = serde_json::json!({
-        "actor_id": context.issuer,
-        "occurred_at": occurred_at,
-        "operation_id": context.operation,
-        "request_id": context.request_id,
-    });
-    let aggregate_id = persisted.to_string();
-    append(
-        &mut transaction,
-        &OutboxEvent {
-            aggregate_type: "subscription",
-            aggregate_id: &aggregate_id,
-            aggregate_version: 1,
-            event_type: "notification.subscription_verification_requested.v1",
-            payload: &payload,
-            occurred_at: OffsetDateTime::now_utc(),
-        },
+        pending_token_hash,
+        expires_at,
     )
-    .await
-    .map_err(|_| ServiceError::Persistence)?;
-    transaction
-        .commit()
-        .await
-        .map_err(|_| ServiceError::Persistence)?;
+    .await?;
 
     let mut receipt =
         common::command_receipt(context.operation, context.request_id, persisted, Some(1))?;
@@ -108,6 +65,58 @@ pub async fn create(context: &RequestContext<'_>) -> Result<Value, ServiceError>
         1,
     )?;
     Ok(receipt)
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "subscription persistence binds encrypted destination and consent provenance"
+)]
+async fn persist_subscription(
+    context: &RequestContext<'_>,
+    email: &str,
+    email_encrypted: Vec<u8>,
+    topics: &Value,
+    frequency: &str,
+    locale: &str,
+    verification_token: &str,
+    management_token: &str,
+    pending_token_hash: String,
+    expires_at: OffsetDateTime,
+) -> Result<Uuid, ServiceError> {
+    let mut transaction = context
+        .state
+        .pool
+        .begin()
+        .await
+        .map_err(|_| ServiceError::Persistence)?;
+    let row = sqlx::query("SELECT subscription_id FROM intake.create_subscription_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)")
+        .bind(common::token_hmac(&context.state.token_hmac_key, email)?).bind(email_encrypted).bind(topics).bind(frequency).bind(locale)
+        .bind(common::token_hmac(&context.state.token_hmac_key, verification_token)?).bind(common::token_hmac(&context.state.token_hmac_key, management_token)?)
+        .bind(pending_token_hash).bind(context.issuer).bind(expires_at).fetch_one(&mut *transaction).await.map_err(common::database_error)?;
+    let id: Uuid = row
+        .try_get("subscription_id")
+        .map_err(|_| ServiceError::Persistence)?;
+    let aggregate_id = id.to_string();
+    let occurred_at = OffsetDateTime::now_utc();
+    let payload = serde_json::json!({"actor_id":context.issuer,"occurred_at":common::timestamp(occurred_at)?,"operation_id":context.operation,"request_id":context.request_id});
+    append(
+        &mut transaction,
+        &OutboxEvent {
+            aggregate_type: "subscription",
+            aggregate_id: &aggregate_id,
+            aggregate_version: 1,
+            event_type: "notification.subscription_verification_requested.v1",
+            payload: &payload,
+            occurred_at,
+        },
+    )
+    .await
+    .map_err(|_| ServiceError::Persistence)?;
+    transaction
+        .commit()
+        .await
+        .map_err(|_| ServiceError::Persistence)?;
+    Ok(id)
 }
 
 pub async fn verify(context: &RequestContext<'_>) -> Result<Value, ServiceError> {

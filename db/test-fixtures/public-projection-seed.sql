@@ -54,9 +54,9 @@ INSERT INTO public.case_revisions(
 ) VALUES (
   'dddddddd-dddd-4ddd-8ddd-dddddddddddd',1,'PUBLISHED_ANOMALY',
   '{
-    "agencyId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    "supplierId":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    "ruleId":"unit-price-ratio",
+    "agencyIds":["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
+    "supplierIds":["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+    "ruleIds":["unit-price-ratio"],
     "confirmedFacts":[],"criticalUnknowns":[],"partyResponses":[],"signals":[],
     "counterEvidence":[],"claims":[],"evidence":[],"timeline":[],"corrections":[],"limitations":[],
     "content":{"case":{"slug":"integration-case","title":"통합테스트 공개 사례","publicState":"PUBLISHED_ANOMALY","summary":"비교군 대비 가격 차이","revision":1,"updatedAt":"2026-07-12T00:00:00Z","href":"/cases/integration-case"},"confirmedFacts":[],"criticalUnknowns":[],"partyResponses":[],"signals":[],"counterEvidence":[],"claims":[],"evidence":[],"timeline":[],"corrections":[],"freshness":{"asOf":"2026-07-12T00:00:00Z","status":"CURRENT"},"limitations":[]},
