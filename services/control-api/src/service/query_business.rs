@@ -8,9 +8,9 @@ pub(super) async fn business_health_query(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let data: Value = sqlx::query_scalar("SELECT ops.read_business_health_projection_v1()")
-    .fetch_one(pool)
-    .await
-    .map_err(db)?;
+        .fetch_one(pool)
+        .await
+        .map_err(db)?;
     let status = data
         .get("summary")
         .and_then(|summary| summary.get("status"))
@@ -88,6 +88,43 @@ pub(super) async fn cost_export_query(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
+    let params = parse_cost_export_parameters(parameters)?;
+    let rows: Value = sqlx::query_scalar(
+        // The contract is an explicit half-open window [from,to).  Do not
+        // widen a caller's upper bound by converting it to a date and adding
+        // a day; that silently exports rows outside the requested snapshot.
+        "SELECT ops.read_cost_export_projection_v1($1::timestamptz, $2::timestamptz, $3)",
+    )
+    .bind(&params.from)
+    .bind(&params.to)
+    .bind(&params.group_by)
+    .fetch_one(pool)
+    .await
+    .map_err(db)?;
+    let digest_input = serde_json::json!({
+        "from": params.from, "to": params.to, "groupBy": params.group_by,
+        "format": params.format, "rows": rows
+    });
+    let digest = sha256(&serde_json::to_vec(&digest_input).map_err(|_| ServiceError::Persistence)?);
+    let payload = render_cost_export_payload(&rows, &params)?;
+    Ok(cost_export_document(
+        &params,
+        &digest,
+        &rows,
+        payload.as_bytes(),
+    ))
+}
+
+struct CostExportParameters {
+    from: String,
+    to: String,
+    group_by: String,
+    format: String,
+}
+
+fn parse_cost_export_parameters(
+    parameters: &BTreeMap<String, String>,
+) -> Result<CostExportParameters, ServiceError> {
     let from = parameters.get("from").ok_or(ServiceError::InvalidRequest)?;
     let to = parameters.get("to").ok_or(ServiceError::InvalidRequest)?;
     let group_by = parameters
@@ -100,72 +137,82 @@ pub(super) async fn cost_export_query(
         .ok_or(ServiceError::InvalidRequest)?;
     let date_format = time::format_description::parse("[year]-[month]-[day]")
         .map_err(|_| ServiceError::Persistence)?;
-    let from_date = Date::parse(from, &date_format)
-        .map_err(|_| ServiceError::InvalidRequest)?;
-    let to_date = Date::parse(to, &date_format)
-        .map_err(|_| ServiceError::InvalidRequest)?;
+    let from_date = Date::parse(from, &date_format).map_err(|_| ServiceError::InvalidRequest)?;
+    let to_date = Date::parse(to, &date_format).map_err(|_| ServiceError::InvalidRequest)?;
     if from_date >= to_date {
         return Err(ServiceError::InvalidRequest);
     }
-    let rows: Value = sqlx::query_scalar(
-        // The contract is an explicit half-open window [from,to).  Do not
-        // widen a caller's upper bound by converting it to a date and adding
-        // a day; that silently exports rows outside the requested snapshot.
-        "SELECT ops.read_cost_export_projection_v1($1::timestamptz, $2::timestamptz, $3)",
-    )
-    .bind(from)
-    .bind(to)
-    .bind(group_by)
-    .fetch_one(pool)
-    .await
-    .map_err(db)?;
-    let digest_input =
-        serde_json::json!({"from":from,"to":to,"groupBy":group_by,"format":format,"rows":rows});
-    let digest = sha256(&serde_json::to_vec(&digest_input).map_err(|_| ServiceError::Persistence)?);
+    Ok(CostExportParameters {
+        from: from.clone(),
+        to: to.clone(),
+        group_by: group_by.clone(),
+        format: format.clone(),
+    })
+}
+
+fn render_cost_export_payload(
+    rows: &Value,
+    params: &CostExportParameters,
+) -> Result<String, ServiceError> {
+    if params.format == "JSON" {
+        return serde_json::to_string(
+            &json!({"rows":rows,"from":params.from,"to":params.to,"groupBy":params.group_by}),
+        )
+        .map_err(|_| ServiceError::Persistence);
+    }
+    let mut csv = String::from(
+        "group,amount,currency,rowCount,reservationSettled,reservationReserved,state,unknownReason\n",
+    );
+    for item in rows
+        .get("rows")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        csv.push_str(&format!(
+            "{},{},{},{},{},{},{},{}\n",
+            item.get("key").and_then(Value::as_str).unwrap_or("UNKNOWN"),
+            item.get("amount").and_then(Value::as_str).unwrap_or(""),
+            item.get("currency")
+                .and_then(Value::as_str)
+                .unwrap_or("UNKNOWN"),
+            item.get("rowCount").and_then(Value::as_i64).unwrap_or(0),
+            item.get("reservationSettled")
+                .and_then(Value::as_str)
+                .unwrap_or(""),
+            item.get("reservationReserved")
+                .and_then(Value::as_str)
+                .unwrap_or(""),
+            item.get("state")
+                .and_then(Value::as_str)
+                .unwrap_or("UNKNOWN"),
+            item.get("unknownReason")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+        ));
+    }
+    Ok(csv)
+}
+
+fn cost_export_document(
+    params: &CostExportParameters,
+    digest: &str,
+    rows: &Value,
+    bytes: &[u8],
+) -> Value {
+    let content_sha256 = sha256(bytes);
+    let content_base64 = BASE64.encode(bytes);
     let row_count = rows
         .get("rows")
         .and_then(Value::as_array)
-        .map(|items| items.len() as i64)
-        .unwrap_or(0);
-    let payload = if format == "CSV" {
-        let mut csv = String::from("group,amount,currency,rowCount,reservationSettled,reservationReserved,state,unknownReason\n");
-        if let Some(items) = rows.get("rows").and_then(Value::as_array) {
-            for item in items {
-                csv.push_str(&format!("{},{},{},{},{},{},{},{}\n",
-                    item.get("key").and_then(Value::as_str).unwrap_or("UNKNOWN"),
-                    item.get("amount").and_then(Value::as_str).unwrap_or(""),
-                    item.get("currency").and_then(Value::as_str).unwrap_or("UNKNOWN"),
-                    item.get("rowCount").and_then(Value::as_i64).unwrap_or(0),
-                    item.get("reservationSettled").and_then(Value::as_str).unwrap_or(""),
-                    item.get("reservationReserved").and_then(Value::as_str).unwrap_or(""),
-                    item.get("state").and_then(Value::as_str).unwrap_or("UNKNOWN"),
-                    item.get("unknownReason").and_then(Value::as_str).unwrap_or("")));
-            }
-        }
-        csv
-    } else {
-        serde_json::to_string(&json!({"rows":rows,"from":from,"to":to,"groupBy":group_by})).map_err(|_| ServiceError::Persistence)?
-    };
-    let bytes = payload.as_bytes();
-    let content_sha256 = sha256(bytes);
-    let content_base64 = BASE64.encode(bytes);
-    Ok(json!({
-        "id":stable_uuid("cost-export",&digest),
-        "status":if row_count > 0 { "READY" } else { "EMPTY" },
-        "version":1,
-        "format":format,
-        "rowCount":row_count,
-        "byteLength":bytes.len(),
-        "contentSha256":content_sha256,
-        "contentBase64":content_base64,
-        "binary":content_base64,
-        "filename":format!("gurinnae-cost-report-{}.{}", from, if format == "CSV" { "csv" } else { "json" }),
-        "mediaType":if format == "CSV" { "text/csv; charset=utf-8" } else { "application/json" },
-        "receiptSha256":sha256(format!("cost-export-receipt:{}:{}:{}", digest, content_sha256, bytes.len()).as_bytes()),
-        "from":from,
-        "to":to,
-        "groupBy":group_by
-    }))
+        .map_or(0, |items| items.len());
+    json!({"id":stable_uuid("cost-export",digest),"status":if row_count > 0 { "READY" } else { "EMPTY" },"version":1,
+      "format":params.format,"rowCount":row_count,"byteLength":bytes.len(),"contentSha256":content_sha256,
+      "contentBase64":content_base64,"binary":content_base64,
+      "filename":format!("gurinnae-cost-report-{}.{}",params.from,if params.format == "CSV" { "csv" } else { "json" }),
+      "mediaType":if params.format == "CSV" { "text/csv; charset=utf-8" } else { "application/json" },
+      "receiptSha256":sha256(format!("cost-export-receipt:{}:{}:{}",digest,content_sha256,bytes.len()).as_bytes()),
+      "from":params.from,"to":params.to,"groupBy":params.group_by})
 }
 
 pub(super) fn query_date(

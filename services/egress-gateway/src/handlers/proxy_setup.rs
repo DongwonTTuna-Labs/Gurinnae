@@ -17,7 +17,7 @@ async fn proxy(
     if !allowed_method(channel, request.method().as_str()) {
         return problem("EGRESS_METHOD_DENIED", 405);
     }
-    let mut target = match validate_target(channel, target, state).await {
+    let target = match validate_target(channel, target, state).await {
         Ok(value) => value,
         Err(code) => return problem(code, 403),
     };
@@ -35,24 +35,56 @@ async fn proxy(
         replay.insert_header(("x-gurine-egress-replayed", "true"));
         return replay.body(cached.body);
     }
-    let mut redirects = 0_u8;
-    let requested_limit = match header(&request, "x-gurine-source-fetch-max-bytes") {
-        Some(value) => match value.parse::<usize>() { Ok(value) => value, Err(_) => return problem("EGRESS_LIMIT_INVALID", 400) },
+    let (requested_limit, expected_media_types, request_digest, allow_redirects) =
+        match proxy_request_options(channel, &request) {
+            Ok(value) => value,
+            Err(response) => return response,
+        };
+    proxy_upstream(
+        channel, request, body, state, target, target_for_receipt, receipt_key,
+        requested_limit, expected_media_types, request_digest, allow_redirects,
+    ).await
+}
+
+fn proxy_request_options(
+    channel: Channel,
+    request: &HttpRequest,
+) -> Result<(usize, Vec<String>, String, bool), HttpResponse> {
+    let requested_limit = match header(request, "x-gurine-source-fetch-max-bytes") {
+        Some(value) => match value.parse::<usize>() { Ok(value) => value, Err(_) => return Err(problem("EGRESS_LIMIT_INVALID", 400)) },
         None => response_limit(channel),
     }.min(response_limit(channel));
-    if requested_limit == 0 { return problem("EGRESS_LIMIT_INVALID", 400); }
-    let expected_media_types: Vec<String> = match header(&request, "x-gurine-source-fetch-expected-media-types") {
-        Some(value) => match serde_json::from_str(value) { Ok(value) => value, Err(_) => return problem("EGRESS_MEDIA_TYPES_INVALID", 400) },
+    if requested_limit == 0 { return Err(problem("EGRESS_LIMIT_INVALID", 400)); }
+    let expected_media_types = match header(request, "x-gurine-source-fetch-expected-media-types") {
+        Some(value) => match serde_json::from_str(value) { Ok(value) => value, Err(_) => return Err(problem("EGRESS_MEDIA_TYPES_INVALID", 400)) },
         None => Vec::new(),
     };
-    let request_digest = header(&request, "x-gurine-source-fetch-request-sha256")
+    let request_digest = header(request, "x-gurine-source-fetch-request-sha256")
         .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
-        .unwrap_or("");
+        .unwrap_or("")
+        .to_owned();
     if matches!(channel, Channel::Source | Channel::Ai) && request_digest.is_empty() {
-        return problem("EGRESS_REQUEST_DIGEST_REQUIRED", 400);
+        return Err(problem("EGRESS_REQUEST_DIGEST_REQUIRED", 400));
     }
-    let allow_redirects = header(&request, "x-gurine-allow-redirects")
-        .is_some_and(|value| value.eq_ignore_ascii_case("true"));
+    let allow_redirects = header(request, "x-gurine-allow-redirects").is_some_and(|value| value.eq_ignore_ascii_case("true"));
+    Ok((requested_limit, expected_media_types, request_digest, allow_redirects))
+}
+
+#[expect(clippy::too_many_arguments, reason = "the proxy binds the complete receipt context")]
+async fn proxy_upstream(
+    channel: Channel,
+    request: HttpRequest,
+    body: web::Bytes,
+    state: &GatewayState,
+    mut target: Url,
+    target_for_receipt: String,
+    receipt_key: String,
+    requested_limit: usize,
+    expected_media_types: Vec<String>,
+    request_digest: String,
+    allow_redirects: bool,
+) -> HttpResponse {
+    let mut redirects = 0_u8;
     let mut redirect_chain: Vec<serde_json::Value> = Vec::new();
     let response = loop {
         let hop_from = target.to_string();
@@ -62,14 +94,8 @@ async fn proxy(
             Err(code) => return problem(code, if code == "EGRESS_UPSTREAM_UNAVAILABLE" { 502 } else { 403 }),
         };
         if !response.status().is_redirection() {
-            if !expected_media_types.is_empty() {
-                let actual = response.headers().get(reqwest::header::CONTENT_TYPE)
-                    .and_then(|value| value.to_str().ok())
-                    .map(|value| value.split(';').next().unwrap_or(value).trim().to_ascii_lowercase())
-                    .unwrap_or_default();
-                if !expected_media_types.iter().any(|expected| expected == &actual) {
-                    return problem("EGRESS_MEDIA_TYPE_DENIED", 403);
-                }
+            if !expected_media_types.is_empty() && !response_media_type_allowed(&response, &expected_media_types) {
+                return problem("EGRESS_MEDIA_TYPE_DENIED", 403);
             }
             break response;
         }
@@ -79,37 +105,43 @@ async fn proxy(
             return problem("EGRESS_REDIRECT_INVALID", 502);
         };
         let next = match target.join(location) { Ok(value) => value, Err(_) => return problem("EGRESS_REDIRECT_INVALID", 502) };
-        target = match validate_target(channel, next.as_str(), state).await { Ok(value) => value, Err(code) => return problem(code, 403) };
-        let hop_to = target.to_string();
-        let to_origin = origin_of(&target);
-        let (from_dns, from_policy) = match target_decision_digests(&hop_from, channel).await {
+        let hop_to = match validate_target(channel, next.as_str(), state).await {
             Ok(value) => value,
             Err(code) => return problem(code, 403),
         };
-        let (to_dns, to_policy) = match target_decision_digests(&hop_to, channel).await {
+        redirect_chain.push(match redirect_receipt(&hop_from, &from_origin, &hop_to, response.status().as_u16(), redirects, channel).await {
             Ok(value) => value,
             Err(code) => return problem(code, 403),
-        };
-        redirect_chain.push(serde_json::json!({
-            "ordinal": redirects as u16 + 1,
-            "fromOrigin": from_origin,
-            "toOrigin": to_origin,
-            "status": response.status().as_u16(),
-            "dnsDecisionSha256": sha256_hex(format!("{}:{}", from_dns, to_dns).as_bytes()),
-            "policyDecisionSha256": sha256_hex(format!("{}:{}:{}", from_policy, to_policy, channel_name(channel)).as_bytes())
-        }));
+        });
+        target = hop_to;
         redirects += 1;
     };
-    proxy_response(
-        response,
-        requested_limit,
-        &target_for_receipt,
-        &receipt_key,
-        request_digest,
-        &serde_json::to_string(&redirect_chain).unwrap_or_else(|_| "[]".to_owned()),
-        state,
-    )
-    .await
+    proxy_response(response, requested_limit, &target_for_receipt, &receipt_key, &request_digest,
+        &serde_json::to_string(&redirect_chain).unwrap_or_else(|_| "[]".to_owned()), state).await
+}
+
+fn response_media_type_allowed(response: &reqwest::Response, expected: &[String]) -> bool {
+    let actual = response.headers().get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.split(';').next().unwrap_or(value).trim().to_ascii_lowercase())
+        .unwrap_or_default();
+    expected.iter().any(|value| value == &actual)
+}
+
+async fn redirect_receipt(
+    from: &str,
+    from_origin: &str,
+    to: &Url,
+    status: u16,
+    ordinal: u8,
+    channel: Channel,
+) -> Result<serde_json::Value, &'static str> {
+    let (from_dns, from_policy) = target_decision_digests(from, channel).await?;
+    let hop_to = to.to_string();
+    let (to_dns, to_policy) = target_decision_digests(&hop_to, channel).await?;
+    Ok(serde_json::json!({"ordinal":ordinal as u16 + 1,"fromOrigin":from_origin,"toOrigin":origin_of(to),"status":status,
+      "dnsDecisionSha256":sha256_hex(format!("{}:{}",from_dns,to_dns).as_bytes()),
+      "policyDecisionSha256":sha256_hex(format!("{}:{}:{}",from_policy,to_policy,channel_name(channel)).as_bytes())}))
 }
 
 fn origin_of(url: &Url) -> String {

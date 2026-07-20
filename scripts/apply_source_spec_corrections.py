@@ -24,29 +24,34 @@ def main() -> None:
     path = ROOT / "specs/generated/control-api.openapi.json"
     document = json.loads(path.read_text())
     schemas = document["components"]["schemas"]
-    schemas["BackfillEstimate"] = {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "sourceId": {"type": "string"},
-            "from": {"type": "string", "format": "date"},
-            "to": {"type": "string", "format": "date"},
-            "estimatedRecords": {"type": "integer", "format": "int64", "minimum": 0},
-            "estimatedJobs": {"type": "integer", "format": "int64", "minimum": 0},
-            "estimatedCostKrw": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
-            "estimatedDurationSeconds": {"type": "integer", "format": "int64", "minimum": 0},
-            "dedupeStrategy": {"type": "string"},
-            "downstreamEffects": {"type": "array", "items": {"type": "string"}},
-        },
-        "required": [
-            "sourceId", "from", "to", "estimatedRecords", "estimatedJobs",
-            "estimatedCostKrw", "estimatedDurationSeconds", "dedupeStrategy",
-            "downstreamEffects",
-        ],
-    }
-    schemas["estimateBackfillReceipt"]["properties"]["data"] = {
-        "$ref": "#/components/schemas/BackfillEstimate"
-    }
+    data = schemas.get("estimateBackfillReceipt", {}).get("properties", {}).get("data")
+    # The v13 source contract now materializes this finite estimate object
+    # directly.  Preserve the legacy correction only for older source JSON
+    # that still carries the recursive envelope reference.
+    if isinstance(data, dict) and data.get("$ref") == "#/components/schemas/estimateBackfillReceipt":
+        schemas["BackfillEstimate"] = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "sourceId": {"type": "string"},
+                "from": {"type": "string", "format": "date"},
+                "to": {"type": "string", "format": "date"},
+                "estimatedRecords": {"type": "integer", "format": "int64", "minimum": 0},
+                "estimatedJobs": {"type": "integer", "format": "int64", "minimum": 0},
+                "estimatedCostKrw": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                "estimatedDurationSeconds": {"type": "integer", "format": "int64", "minimum": 0},
+                "dedupeStrategy": {"type": "string"},
+                "downstreamEffects": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": [
+                "sourceId", "from", "to", "estimatedRecords", "estimatedJobs",
+                "estimatedCostKrw", "estimatedDurationSeconds", "dedupeStrategy",
+                "downstreamEffects",
+            ],
+        }
+        schemas["estimateBackfillReceipt"]["properties"]["data"] = {
+            "$ref": "#/components/schemas/BackfillEstimate"
+        }
     path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n")
     print("applied BackfillEstimate finite-schema correction")
 

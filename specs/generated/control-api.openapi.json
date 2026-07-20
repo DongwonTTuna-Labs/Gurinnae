@@ -41621,7 +41621,53 @@
             "type": "string"
           },
           "data": {
-            "$ref": "#/components/schemas/BackfillEstimate"
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "from": {
+                "type": "string",
+                "format": "date"
+              },
+              "to": {
+                "type": "string",
+                "format": "date"
+              },
+              "estimatedRecords": {
+                "type": "integer"
+              },
+              "estimatedJobs": {
+                "type": "integer"
+              },
+              "estimatedCostKrw": {
+                "type": "string"
+              },
+              "estimatedDurationSeconds": {
+                "type": "integer"
+              },
+              "dedupeStrategy": {
+                "type": "string"
+              },
+              "downstreamEffects": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "sourceId",
+              "from",
+              "to",
+              "estimatedRecords",
+              "estimatedJobs",
+              "estimatedCostKrw",
+              "estimatedDurationSeconds",
+              "dedupeStrategy",
+              "downstreamEffects"
+            ]
           },
           "links": {
             "type": "array",
@@ -58312,62 +58358,6 @@
               "resumeEvidenceSetDigest"
             ]
           }
-        ]
-      },
-      "BackfillEstimate": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "sourceId": {
-            "type": "string"
-          },
-          "from": {
-            "type": "string",
-            "format": "date"
-          },
-          "to": {
-            "type": "string",
-            "format": "date"
-          },
-          "estimatedRecords": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "estimatedJobs": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "estimatedCostKrw": {
-            "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
-          },
-          "estimatedDurationSeconds": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "dedupeStrategy": {
-            "type": "string"
-          },
-          "downstreamEffects": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "sourceId",
-          "from",
-          "to",
-          "estimatedRecords",
-          "estimatedJobs",
-          "estimatedCostKrw",
-          "estimatedDurationSeconds",
-          "dedupeStrategy",
-          "downstreamEffects"
         ]
       }
     }
