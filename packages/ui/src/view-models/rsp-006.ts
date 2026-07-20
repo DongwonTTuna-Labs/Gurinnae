@@ -18,21 +18,34 @@ export type Rsp006ViewModel = {
 };
 
 const record = (value: unknown): Record<string, unknown> | null =>
-  typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : null;
-const text = (value: unknown): string | null => typeof value === "string" && value.trim() ? value : null;
-const integer = (value: unknown): number | null => typeof value === "number" && Number.isInteger(value) ? value : null;
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+const text = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() ? value : null;
+const integer = (value: unknown): number | null =>
+  typeof value === "number" && Number.isInteger(value) ? value : null;
 
-export function toRsp006ViewModel(data: Record<string, unknown>): Rsp006ViewModel {
+export function toRsp006ViewModel(
+  data: Record<string, unknown>,
+): Rsp006ViewModel {
   const response = record(data.getResponseReceipt) ?? {};
   const submitted = record(response.data) ?? {};
   const answers = Array.isArray(submitted.answers) ? submitted.answers : [];
-  const attachments = Array.isArray(submitted.attachments) ? submitted.attachments : [];
+  const attachments = Array.isArray(submitted.attachments)
+    ? submitted.attachments
+    : [];
   const consent = record(submitted.publicationConsent);
-  const links = Array.isArray(response.links) ? response.links.map(record).filter((item): item is Record<string, unknown> => item !== null).flatMap((item) => {
-    const href = text(item.href);
-    const label = text(item.label);
-    return href && label ? [{ href, label, rel: text(item.rel) }] : [];
-  }) : [];
+  const links = Array.isArray(response.links)
+    ? response.links
+        .map(record)
+        .filter((item): item is Record<string, unknown> => item !== null)
+        .flatMap((item) => {
+          const href = text(item.href);
+          const label = text(item.label);
+          return href && label ? [{ href, label, rel: text(item.rel) }] : [];
+        })
+    : [];
   return {
     receiptId: text(response.id),
     receiptTitle: text(response.title),

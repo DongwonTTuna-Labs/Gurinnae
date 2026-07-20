@@ -4,15 +4,118 @@
   "title": "ResponseReadResponseV2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "response", "sections", "attachments", "truncated", "sourceUseId", "sourceUseSha256"],
+  "required": [
+    "schemaVersion",
+    "response",
+    "sections",
+    "attachments",
+    "truncated",
+    "sourceUseId",
+    "sourceUseSha256"
+  ],
   "properties": {
-    "schemaVersion": {"const": "response.read.response.v2"},
-    "response": {"type": "object", "additionalProperties": false, "required": ["responseId", "responseVersion", "responseContentSha256", "caseId", "responseRequestId", "submittedAt", "editorialStatus", "publicationConsentSha256", "snapshotMemberId", "snapshotMemberDigest"], "properties": {"responseId": {"type": "string", "format": "uuid"}, "responseVersion": {"type": "integer", "minimum": 1}, "responseContentSha256": {"$ref": "#/$defs/sha256"}, "caseId": {"type": "string", "format": "uuid"}, "responseRequestId": {"type": "string", "format": "uuid"}, "submittedAt": {"type": "string", "format": "date-time"}, "editorialStatus": {"enum": ["RECEIVED", "UNDER_REVIEW", "INCORPORATED", "PARTIALLY_INCORPORATED", "NOT_INCORPORATED", "WITHDRAWN"]}, "publicationConsentSha256": {"$ref": "#/$defs/sha256"}, "snapshotMemberId": {"type": "string", "format": "uuid"}, "snapshotMemberDigest": {"$ref": "#/$defs/sha256"}}},
-    "sections": {"type": "array", "maxItems": 200, "items": {"type": "object", "additionalProperties": false, "required": ["sectionId", "questionId", "heading", "text", "textSha256", "locator"], "properties": {"sectionId": {"type": "string", "format": "uuid"}, "questionId": {"type": ["string", "null"], "format": "uuid"}, "heading": {"type": ["string", "null"], "maxLength": 255}, "text": {"type": "string", "minLength": 1, "maxLength": 50000}, "textSha256": {"$ref": "#/$defs/sha256"}, "locator": {"type": "object", "additionalProperties": false, "required": ["kind", "value", "locatorSha256"], "properties": {"kind": {"const": "TEXT_RANGE"}, "value": {"type": "string", "pattern": "^utf16:[0-9]+-[0-9]+$"}, "locatorSha256": {"$ref": "#/$defs/sha256"}}}}}},
-    "attachments": {"type": "array", "maxItems": 100, "items": {"type": "object", "additionalProperties": false, "required": ["attachmentId", "sourceDocumentId", "assetId", "assetRevision", "contentSha256", "mediaType", "scanState", "rightsState"], "properties": {"attachmentId": {"type": "string", "format": "uuid"}, "sourceDocumentId": {"type": "string", "format": "uuid"}, "assetId": {"type": "string", "format": "uuid"}, "assetRevision": {"type": "integer", "minimum": 1}, "contentSha256": {"$ref": "#/$defs/sha256"}, "mediaType": {"type": "string", "minLength": 3, "maxLength": 128}, "scanState": {"enum": ["CLEAN", "FLAGGED", "QUARANTINED"]}, "rightsState": {"enum": ["ALLOW", "DENY", "UNKNOWN"]}}}},
-    "truncated": {"type": "boolean"},
-    "sourceUseId": {"type": "string", "format": "uuid"},
-    "sourceUseSha256": {"$ref": "#/$defs/sha256"}
+    "schemaVersion": { "const": "response.read.response.v2" },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "responseId",
+        "responseVersion",
+        "responseContentSha256",
+        "caseId",
+        "responseRequestId",
+        "submittedAt",
+        "editorialStatus",
+        "publicationConsentSha256",
+        "snapshotMemberId",
+        "snapshotMemberDigest"
+      ],
+      "properties": {
+        "responseId": { "type": "string", "format": "uuid" },
+        "responseVersion": { "type": "integer", "minimum": 1 },
+        "responseContentSha256": { "$ref": "#/$defs/sha256" },
+        "caseId": { "type": "string", "format": "uuid" },
+        "responseRequestId": { "type": "string", "format": "uuid" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "editorialStatus": {
+          "enum": [
+            "RECEIVED",
+            "UNDER_REVIEW",
+            "INCORPORATED",
+            "PARTIALLY_INCORPORATED",
+            "NOT_INCORPORATED",
+            "WITHDRAWN"
+          ]
+        },
+        "publicationConsentSha256": { "$ref": "#/$defs/sha256" },
+        "snapshotMemberId": { "type": "string", "format": "uuid" },
+        "snapshotMemberDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sectionId",
+          "questionId",
+          "heading",
+          "text",
+          "textSha256",
+          "locator"
+        ],
+        "properties": {
+          "sectionId": { "type": "string", "format": "uuid" },
+          "questionId": { "type": ["string", "null"], "format": "uuid" },
+          "heading": { "type": ["string", "null"], "maxLength": 255 },
+          "text": { "type": "string", "minLength": 1, "maxLength": 50000 },
+          "textSha256": { "$ref": "#/$defs/sha256" },
+          "locator": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "value", "locatorSha256"],
+            "properties": {
+              "kind": { "const": "TEXT_RANGE" },
+              "value": { "type": "string", "pattern": "^utf16:[0-9]+-[0-9]+$" },
+              "locatorSha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attachmentId",
+          "sourceDocumentId",
+          "assetId",
+          "assetRevision",
+          "contentSha256",
+          "mediaType",
+          "scanState",
+          "rightsState"
+        ],
+        "properties": {
+          "attachmentId": { "type": "string", "format": "uuid" },
+          "sourceDocumentId": { "type": "string", "format": "uuid" },
+          "assetId": { "type": "string", "format": "uuid" },
+          "assetRevision": { "type": "integer", "minimum": 1 },
+          "contentSha256": { "$ref": "#/$defs/sha256" },
+          "mediaType": { "type": "string", "minLength": 3, "maxLength": 128 },
+          "scanState": { "enum": ["CLEAN", "FLAGGED", "QUARANTINED"] },
+          "rightsState": { "enum": ["ALLOW", "DENY", "UNKNOWN"] }
+        }
+      }
+    },
+    "truncated": { "type": "boolean" },
+    "sourceUseId": { "type": "string", "format": "uuid" },
+    "sourceUseSha256": { "$ref": "#/$defs/sha256" }
   },
-  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
 }

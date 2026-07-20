@@ -40,10 +40,10 @@ REVOKE ALL ON FUNCTION editorial.conflict_blocker_array_is_canonical(text[]) FRO
 CREATE OR REPLACE FUNCTION editorial.conflict_finding_set_is_valid(jsonb) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $1 IS NOT NULL AND jsonb_typeof($1) = 'object' $$;
 ALTER FUNCTION editorial.conflict_finding_set_is_valid(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION editorial.conflict_finding_set_is_valid(jsonb) FROM PUBLIC;
-CREATE OR REPLACE FUNCTION editorial.conflict_evidence_ref_array_is_valid(jsonb) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $1 IS NOT NULL AND jsonb_typeof($1) = 'object' $$;
+CREATE OR REPLACE FUNCTION editorial.conflict_evidence_ref_array_is_valid(jsonb) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $1 IS NOT NULL AND jsonb_typeof($1) = 'array' $$;
 ALTER FUNCTION editorial.conflict_evidence_ref_array_is_valid(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION editorial.conflict_evidence_ref_array_is_valid(jsonb) FROM PUBLIC;
-CREATE OR REPLACE FUNCTION ops.incident_evidence_ref_array_is_valid(jsonb) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $1 IS NOT NULL AND jsonb_typeof($1) = 'object' $$;
+CREATE OR REPLACE FUNCTION ops.incident_evidence_ref_array_is_valid(jsonb) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $1 IS NOT NULL AND jsonb_typeof($1) = 'array' $$;
 ALTER FUNCTION ops.incident_evidence_ref_array_is_valid(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.incident_evidence_ref_array_is_valid(jsonb) FROM PUBLIC;
 CREATE OR REPLACE FUNCTION ops.incident_transition_detail_is_valid(text,jsonb) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $2 IS NOT NULL AND jsonb_typeof($2) = 'object' $$;

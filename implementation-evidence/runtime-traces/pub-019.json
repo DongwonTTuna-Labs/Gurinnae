@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-019",
+  "route": "/corrections/{correctionId}",
+  "url": "http://127.0.0.1:29101/corrections/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:28.603Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-019",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "status",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "target",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "before-after",
+        "component": "ComparisonWorkbench",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "reason",
+        "component": "EvidenceLedger",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "impact",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "review",
+        "component": "DecisionReviewPanel",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

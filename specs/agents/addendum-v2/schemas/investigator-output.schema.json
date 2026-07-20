@@ -22,10 +22,7 @@
       "const": "investigator-output.v2"
     },
     "outcome": {
-      "enum": [
-        "COMPLETED",
-        "ABSTAINED"
-      ]
+      "enum": ["COMPLETED", "ABSTAINED"]
     },
     "summary": {
       "type": "string",
@@ -113,9 +110,7 @@
             "const": "COMPLETED"
           }
         },
-        "required": [
-          "outcome"
-        ]
+        "required": ["outcome"]
       },
       "then": {
         "properties": {
@@ -132,9 +127,7 @@
             "const": "ABSTAINED"
           }
         },
-        "required": [
-          "outcome"
-        ]
+        "required": ["outcome"]
       },
       "then": {
         "properties": {
@@ -162,11 +155,7 @@
     "locator": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "value",
-        "locatorSha256"
-      ],
+      "required": ["kind", "value", "locatorSha256"],
       "properties": {
         "kind": {
           "enum": [
@@ -229,12 +218,7 @@
     "investigation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "toolId",
-        "objective",
-        "resultSummary",
-        "toolResultSha256"
-      ],
+      "required": ["toolId", "objective", "resultSummary", "toolResultSha256"],
       "properties": {
         "toolId": {
           "enum": [
@@ -363,11 +347,7 @@
           "maxLength": 4000
         },
         "assessment": {
-          "enum": [
-            "SUPPORTED",
-            "CONTRADICTED",
-            "UNRESOLVED"
-          ]
+          "enum": ["SUPPORTED", "CONTRADICTED", "UNRESOLVED"]
         },
         "supportingCitationIndexes": {
           "$ref": "#/$defs/citationIndexes"
@@ -435,7 +415,12 @@
           "enum": ["LOW", "NORMAL", "HIGH", "URGENT"]
         },
         "duePolicy": {
-          "enum": ["WITHIN_24_HOURS", "WITHIN_3_DAYS", "WITHIN_7_DAYS", "BEFORE_PUBLICATION"]
+          "enum": [
+            "WITHIN_24_HOURS",
+            "WITHIN_3_DAYS",
+            "WITHIN_7_DAYS",
+            "BEFORE_PUBLICATION"
+          ]
         },
         "citationIndexes": {
           "$ref": "#/$defs/nonEmptyCitationIndexes"
@@ -445,12 +430,7 @@
     "counterEvidenceItem": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "summary",
-        "impact",
-        "citationIndexes"
-      ],
+      "required": ["kind", "summary", "impact", "citationIndexes"],
       "properties": {
         "kind": {
           "const": "COUNTER_EVIDENCE"
@@ -461,11 +441,7 @@
           "maxLength": 2000
         },
         "impact": {
-          "enum": [
-            "WEAKENS",
-            "CONTRADICTS",
-            "CONTEXT_ONLY"
-          ]
+          "enum": ["WEAKENS", "CONTRADICTS", "CONTEXT_ONLY"]
         },
         "citationIndexes": {
           "$ref": "#/$defs/nonEmptyCitationIndexes"

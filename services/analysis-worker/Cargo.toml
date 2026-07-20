@@ -14,6 +14,7 @@ gurine-persistence-postgres = { path = "../../crates/persistence-postgres" }
 reqwest.workspace = true
 rust_decimal.workspace = true
 serde_json.workspace = true
+serde.workspace = true
 sha2.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true

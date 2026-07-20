@@ -1,12 +1,23 @@
-/// The HTTP gateway is the transport boundary.  The bridge decodes the
+mod analysis_source_fetch;
+mod analysis_tool_persistence;
+use analysis_source_fetch::{dispatch_source_fetch, persist_research_fetch, PendingSourceFetch};
+
+/// The HTTP gateway is the transport boundary. The bridge decodes the
 /// provider envelope into the closed Rust runtime types and executes internal
 /// tools against the same immutable evidence snapshot used by the request.
-fn validate_typed_provider_output(
+async fn validate_typed_provider_output(
+    state: &State,
     turn: &ProviderTurnIdentity,
     output: &Value,
     actual_cost_krw: i64,
 ) -> Result<(), Failure> {
-    let final_output = typed_final_output(output)?;
+    let binding = SnapshotBinding {
+        run_id: turn.run_id,
+        input_snapshot_id: resolve_snapshot_id(state, turn).await?,
+        input_snapshot_sha256: turn.input_snapshot_sha256.clone(),
+    };
+    let snapshot = analysis_runtime_snapshot::load_tool_snapshot(state, turn, binding).await?;
+    let final_output = typed_final_output(output, &snapshot.evidence)?;
     let cost_micros = u64::try_from(actual_cost_krw)
         .ok()
         .and_then(|value| value.checked_mul(1_000_000))
@@ -15,14 +26,27 @@ fn validate_typed_provider_output(
         output: final_output,
         cost_micros,
     };
+    if provider.output.citations.iter().any(|citation| {
+        !snapshot.evidence.iter().any(|evidence| {
+            evidence.source_use_id == citation.source_use_id
+                && evidence.selected_content_sha256 == citation.selected_content_sha256
+        })
+    }) {
+        return Err(Failure::Terminal(
+            "AGENT_RUNTIME_INVALID",
+            "citation is not present in the repeatable-read source snapshot".into(),
+        ));
+    }
+    let dispatcher = TypedDispatcher::from_snapshot(snapshot);
     let runtime = MultiTurnRuntime {
         provider,
-        tools: TypedDispatcher::new(),
+        tools: dispatcher,
     };
     let budget = cost_micros.max(1);
+    let (max_provider_turns, max_tool_calls) = runtime_bounds(&turn.output_schema_id);
     let config = MultiTurnConfig {
-        max_provider_turns: 1,
-        max_tool_calls: 0,
+        max_provider_turns,
+        max_tool_calls,
         budget_micros_krw: budget,
         worst_case_turn_cost_micros_krw: budget,
     };
@@ -47,9 +71,25 @@ fn validate_typed_provider_output(
         }
     }
 }
-
-fn typed_final_output(value: &Value) -> Result<AgentFinalOutput, Failure> {
-    let status = match value.get("status").and_then(Value::as_str) {
+fn runtime_bounds(output_schema_id: &str) -> (u16, u16) {
+    match output_schema_id {
+        "MarketResearchOutputV2" => (12, 11),
+        "InvestigatorOutputV2" => (16, 15),
+        "SkepticOutputV2" => (12, 11),
+        "ClaimDraftOutputV2" => (8, 7),
+        "CitationVerificationOutputV2" => (10, 9),
+        _ => (1, 0),
+    }
+}
+fn typed_final_output(
+    value: &Value,
+    evidence: &[gurine_agent_orchestration::runtime::EvidenceRecord],
+) -> Result<AgentFinalOutput, Failure> {
+    let status = match value
+        .get("status")
+        .or_else(|| value.get("outcome"))
+        .and_then(Value::as_str)
+    {
         Some("COMPLETED") => FinalStatus::Completed,
         Some("ABSTAINED" | "POLICY_BLOCKED" | "BUDGET_BLOCKED") => FinalStatus::Abstained,
         _ => return Err(Failure::Terminal("AGENT_RUNTIME_INVALID", "status".into())),
@@ -63,42 +103,52 @@ fn typed_final_output(value: &Value) -> Result<AgentFinalOutput, Failure> {
     Ok(AgentFinalOutput {
         status,
         summary,
-        citations: typed_citations(value),
+        citations: typed_citations(value, evidence)?,
     })
 }
-
-fn typed_citations(value: &Value) -> Vec<gurine_agent_orchestration::runtime::Citation> {
+fn typed_citations(
+    value: &Value,
+    evidence: &[gurine_agent_orchestration::runtime::EvidenceRecord],
+) -> Result<Vec<gurine_agent_orchestration::runtime::Citation>, Failure> {
     value
         .get("citations")
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|item| {
+        .map(|item| {
             let source_use_id = item
                 .get("source_use_id")
                 .or_else(|| item.get("sourceUseId"))
                 .and_then(Value::as_str)
-                .and_then(|value| Uuid::parse_str(value).ok())?;
+                .and_then(|value| Uuid::parse_str(value).ok())
+                .or_else(|| {
+                    item.get("sourceUseSha256")
+                        .or_else(|| item.get("source_use_sha256"))
+                        .and_then(Value::as_str)
+                        .and_then(|sha| evidence.iter().find(|row| row.source_use_sha256 == sha))
+                        .map(|row| row.source_use_id)
+                })
+                .ok_or_else(|| Failure::Terminal("AGENT_RUNTIME_INVALID", "citation sourceUseSha256".into()))?;
             let selected_content_sha256 = item
                 .get("selected_content_sha256")
                 .or_else(|| item.get("selectedContentSha256"))
                 .and_then(Value::as_str)
-                .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))?
+                .filter(|value| is_sha256_text(value))
+                .ok_or_else(|| Failure::Terminal("AGENT_RUNTIME_INVALID", "citation selectedContentSha256".into()))?
                 .to_owned();
-            Some(gurine_agent_orchestration::runtime::Citation {
+            Ok(gurine_agent_orchestration::runtime::Citation {
                 source_use_id,
                 selected_content_sha256,
             })
         })
         .collect()
 }
-
 struct ExternalFinalProvider {
     output: AgentFinalOutput,
     cost_micros: u64,
 }
-
-fn parse_tool_call(
+async fn parse_tool_call(
+    state: &State,
     body: &Value,
     turn: &ProviderTurnIdentity,
     _evidence: &Value,
@@ -126,19 +176,24 @@ fn parse_tool_call(
         .or_else(|| object.get("arguments"))
         .cloned()
         .ok_or_else(|| Failure::Terminal("PROVIDER_TOOL_CALL_INVALID", "request".into()))?;
+    // The provider digest is over the exact flat V2 wire request.  The
+    // runtime binding is an internal field and must not alter that digest.
+    let provider_arguments = arguments.clone();
+    let input_snapshot_id = resolve_snapshot_id(state, turn).await?;
     let binding = json!({
         "run_id": turn.run_id,
-        "input_snapshot_id": stable_uuid(turn.input_snapshot_sha256.as_bytes()),
+        "input_snapshot_id": input_snapshot_id,
         "input_snapshot_sha256": turn.input_snapshot_sha256
     });
     if let Some(map) = arguments.as_object_mut() {
         map.insert("binding".to_owned(), binding);
     }
     let request = decode_tool_request(tool_id, arguments)?;
-    let request_sha256 = sha256(
-        &serde_json::to_vec(&request)
-            .map_err(|error| Failure::Terminal("PROVIDER_TOOL_CALL_INVALID", error.to_string()))?,
-    );
+    // The provider receipt binds the exact closed V2 wire request.  Hashing
+    // the projected legacy Rust value would silently change field names and
+    // omit authority-required fields, so every tool uses RFC8785/JCS bytes of
+    // the original payload (without the internal binding member).
+    let request_sha256 = sha256(&canonical_bytes(&provider_arguments)?);
     if let Some(expected) = object
         .get("requestSha256")
         .or_else(|| object.get("argumentsSha256"))
@@ -154,62 +209,63 @@ fn parse_tool_call(
     })
 }
 
-fn decode_tool_request(
-    tool_id: &str,
-    arguments: Value,
-) -> Result<gurine_agent_orchestration::runtime::ToolRequest, Failure> {
-    macro_rules! decode { ($variant:ident) => { serde_json::from_value(arguments).map(gurine_agent_orchestration::runtime::ToolRequest::$variant).map_err(tool_decode) }; }
-    match tool_id {
-        "claim.language_check" => decode!(ClaimLanguageCheck),
-        "contract.find_comparables" => decode!(ContractFindComparables),
-        "entity.lookup" => decode!(EntityLookup),
-        "evidence.read" => decode!(EvidenceRead),
-        "evidence.search" => decode!(EvidenceSearch),
-        "response.read" => decode!(ResponseRead),
-        "rule.reproduce" => decode!(RuleReproduce),
-        "source.fetch" => decode!(SourceFetch),
-        "source.locator_verify" => decode!(SourceLocatorVerify),
-        _ => Err(Failure::Terminal("PROVIDER_TOOL_CALL_INVALID", "toolId".into())),
-    }
-}
-
-fn tool_decode(error: serde_json::Error) -> Failure {
-    Failure::Terminal("PROVIDER_TOOL_CALL_INVALID", error.to_string())
-}
-
 async fn dispatch_tool_call(
     state: &State,
     turn: &ProviderTurnIdentity,
     agent_type: &str,
     call: gurine_agent_orchestration::runtime::ToolCall,
     receipt: &Value,
+    receipt_id: Uuid,
 ) -> Result<(Value, String), Failure> {
-    use gurine_agent_orchestration::runtime::{
-        ComparableRecord, EntityRecord, ResponseRecord, RuleRecord,
-        SourceArtifactRecord, SnapshotBinding, ToolSnapshot, TypedDispatcher,
-    };
+    use gurine_agent_orchestration::runtime::{SnapshotBinding, TypedDispatcher};
     let binding = SnapshotBinding {
         run_id: turn.run_id,
-        input_snapshot_id: stable_uuid(turn.input_snapshot_sha256.as_bytes()),
+        input_snapshot_id: resolve_snapshot_id(state, turn).await?,
         input_snapshot_sha256: turn.input_snapshot_sha256.clone(),
     };
-    let evidence = evidence_records(state, turn).await?;
-    let dispatcher = TypedDispatcher::from_snapshot(ToolSnapshot {
-        binding,
-        evidence,
-        responses: Vec::<ResponseRecord>::new(),
-        comparables: Vec::<ComparableRecord>::new(),
-        entities: Vec::<EntityRecord>::new(),
-        rules: Vec::<RuleRecord>::new(),
-        source_artifacts: Vec::<SourceArtifactRecord>::new(),
-    });
-    let response = dispatcher
-        .dispatch(agent_type, &call.request)
-        .map_err(|error| Failure::Terminal("AGENT_TOOL_DENIED", error.to_string()))?;
-    let response_json = serde_json::to_value(&response)
-        .map_err(|error| Failure::Terminal("AGENT_TOOL_RESULT_INVALID", error.to_string()))?;
+    let snapshot = analysis_runtime_snapshot::load_tool_snapshot(state, turn, binding).await?;
+    let dispatcher = TypedDispatcher::from_snapshot(snapshot);
+    // Claim is durable before any tool code runs.  A crash or cancellation
+    // therefore leaves a CLAIMED lease that reconciliation can settle instead
+    // of an untracked external side effect.
+    let tool_call_id = claim_tool_call(state, turn, agent_type, &call).await?;
+    let (response_json, pending_source_fetch) = if let gurine_agent_orchestration::runtime::ToolRequest::SourceFetch(request) = &call.request {
+        let (response, pending) = dispatch_source_fetch(state, turn, &call, request).await?;
+        let typed: gurine_agent_orchestration::runtime::SourceFetchResponseV2 =
+            serde_json::from_value(response.clone())
+                .map_err(|error| Failure::Terminal("SOURCE_FETCH_RESPONSE_INVALID", error.to_string()))?;
+        let expected_kind = match request.request_kind {
+            gurine_agent_orchestration::runtime::SourceRequestKind::SearchPublicWeb => "SEARCH_PUBLIC_WEB",
+            gurine_agent_orchestration::runtime::SourceRequestKind::FetchUrl => "FETCH_URL",
+        };
+        if typed.schema_version != "source.fetch.response.v2"
+            || typed.request_kind != expected_kind
+            || typed.gateway_decision.decision != "ALLOW"
+            || typed.gateway_decision.policy_version != "source-policy-v2"
+            || !is_sha256_text(&typed.fetch_receipt_sha256)
+            || !is_sha256_text(&typed.gateway_decision.policy_sha256)
+            || !is_sha256_text(&typed.gateway_decision.decision_sha256)
+            || typed.artifacts.iter().any(|artifact| {
+                !is_sha256_text(&artifact.content_sha256)
+                    || !is_sha256_text(&artifact.artifact_sha256)
+                    || !is_sha256_text(&artifact.response_headers_sha256)
+                    || !is_sha256_text(&artifact.content_safety_receipt_sha256)
+                    || !is_sha256_text(&artifact.source_use_sha256)
+                    || artifact.content_media_type.contains(';')
+            })
+        {
+            return Err(Failure::Terminal("SOURCE_FETCH_RESPONSE_INVALID", "binding".into()));
+        }
+        (response, pending)
+    } else {
+        let response = dispatcher
+            .dispatch(agent_type, &call.request)
+            .map_err(|error| Failure::Terminal("AGENT_TOOL_DENIED", error.to_string()))?;
+        (serde_json::to_value(&response)
+            .map_err(|error| Failure::Terminal("AGENT_TOOL_RESULT_INVALID", error.to_string()))?, None)
+    };
     let result_sha256 = sha256(
-        &serde_json::to_vec(&response)
+        &serde_json::to_vec(&response_json)
             .map_err(|error| Failure::Terminal("AGENT_TOOL_RESULT_INVALID", error.to_string()))?,
     );
     let transcript = json!({
@@ -226,53 +282,42 @@ async fn dispatch_tool_call(
         "response": response_json,
         "responseSha256": result_sha256,
     });
-    persist_tool_call(state, turn, agent_type, &call, &result, &transcript_sha256).await?;
+    analysis_tool_persistence::persist_tool_call(
+        state,
+        turn,
+        agent_type,
+        tool_call_id,
+        &call,
+        &result,
+        &transcript_sha256,
+        receipt_id,
+        pending_source_fetch.as_ref(),
+    )
+    .await?;
     Ok((result, transcript_sha256))
 }
 
-async fn evidence_records(state: &State, turn: &ProviderTurnIdentity) -> Result<Vec<gurine_agent_orchestration::runtime::EvidenceRecord>, Failure> {
-    let rows = sqlx::query(
-        "SELECT e.id, su.source_use_id, btrim(su.selected_content_sha256::text) AS selected_sha, COALESCE(su.locator_value,e.source_locator) AS locator
-           FROM editorial.evidence e
-           JOIN ops.agent_source_uses su ON su.agent_run_id=$1 AND su.use_kind='TOOL_QUERY' AND su.source_kind='DATASET_MEMBER'
-          WHERE e.verification_status='VERIFIED' AND su.selected_content_sha256 IS NOT NULL
-          ORDER BY e.id, su.source_use_id",
-    )
-    .bind(turn.run_id)
-    .fetch_all(&state.pool)
-    .await
-    .map_err(database)?;
-    rows.into_iter()
-        .map(|row| Ok(gurine_agent_orchestration::runtime::EvidenceRecord {
-            evidence_id: row.try_get("id").map_err(database)?,
-            source_use_id: row.try_get("source_use_id").map_err(database)?,
-            selected_content_sha256: row.try_get("selected_sha").map_err(database)?,
-            locator: row.try_get("locator").map_err(database)?,
-        }))
-        .collect()
+fn is_sha256_text(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
 }
 
-async fn persist_tool_call(
+async fn claim_tool_call(
     state: &State,
     turn: &ProviderTurnIdentity,
     agent_type: &str,
     call: &gurine_agent_orchestration::runtime::ToolCall,
-    result: &Value,
-    transcript_sha256: &str,
-) -> Result<(), Failure> {
+) -> Result<Uuid, Failure> {
     let request = serde_json::to_value(&call.request)
         .map_err(|error| Failure::Terminal("AGENT_TOOL_REQUEST_INVALID", error.to_string()))?;
-    let request_canonical = serde_json::to_vec(&request)
-        .map_err(|error| Failure::Terminal("AGENT_TOOL_REQUEST_INVALID", error.to_string()))?;
-    let result_canonical = canonical_bytes(result)?;
+    let request_canonical = canonical_bytes(&request)?;
     let request_sha256 = sha256(&request_canonical);
-    let result_sha256 = sha256(&result_canonical);
     let tool_id = call.request.tool_id().wire_name();
     let (request_schema_sha256, response_schema_sha256) = tool_schema_hashes(tool_id);
     let call_text = call.call_id.to_string();
     let tool_call_id = Uuid::new_v4();
-    let now = time::OffsetDateTime::now_utc();
-    let lease_expires = now + time::Duration::seconds(60);
     sqlx::query(
         "INSERT INTO ops.agent_tool_calls(
            tool_call_id,agent_run_id,provider_turn_id,call_id,input_snapshot_sha256,
@@ -280,14 +325,14 @@ async fn persist_tool_call(
            request_schema_id,request_schema_version,request_schema_sha256,response_schema_id,
            response_schema_version,response_schema_sha256,timeout_ms,max_results,request_sha256,
            request_redacted,request_canonical,allowlist_decision_sha256,scope_decision_sha256,
-           rights_decision_sha256,classification,status,result_kind,result_sha256,result_redacted,
-           result_canonical,response_validation_sha256,result_transcript_sha256,source_use_count,
-           source_use_set_sha256,latency_ms,claim_generation,lease_token_sha256,lease_expires_at,
-           version,started_at,terminal_at)
+           rights_decision_sha256,classification,status,source_use_count,
+           source_use_set_sha256,claim_generation,lease_token_sha256,lease_expires_at,
+           version,started_at)
          VALUES($1,$2,$3,$4,$5,$6,$7,'13.0.0+agent-multimodal.1',$8,
-           $9,'2',$10,$11,'2',$12,30000,50,$13,$14,$15,$16,$17,$18,'INTERNAL',
-           'SUCCEEDED','TOOL_RESULT',$19,$20,$21,$22,$23,0,
-           '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',0,1,$24,$25,1,$26,$26)
+           $9,'2',$10,$11,'2',$12,8000,50,$13,$14,$15,$16,$17,$18,'INTERNAL',
+           'CLAIMED',0,
+           '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',1,$19,
+           clock_timestamp() + interval '60 seconds',1,clock_timestamp())
          ON CONFLICT(agent_run_id,call_id) DO NOTHING",
     )
     .bind(tool_call_id)
@@ -308,36 +353,19 @@ async fn persist_tool_call(
     .bind(sha256(format!("allowlist:{agent_type}").as_bytes()))
     .bind(sha256(b"snapshot-scope"))
     .bind(sha256(b"rights-allow"))
-    .bind(&result_sha256)
-    .bind(result)
-    .bind(result_canonical)
-    .bind(sha256(b"response-valid"))
-    .bind(transcript_sha256)
     .bind(sha256(call_text.as_bytes()))
-    .bind(lease_expires)
-    .bind(now)
     .execute(&state.pool)
     .await
     .map_err(database)?;
-    insert_tool_result_source_uses(state, turn, tool_call_id, tool_id, result_sha256.as_str()).await?;
-    let summary = sqlx::query(
-        "SELECT count(*)::int AS count, encode(extensions.digest(convert_to(array_to_string(array_agg(source_use_sha256::text ORDER BY source_use_sha256),','),'UTF8'),'sha256'),'hex') AS digest\n         FROM ops.agent_source_uses WHERE agent_run_id=$1 AND tool_call_id=$2 AND use_kind='TOOL_RESULT'",
+    let existing: Uuid = sqlx::query_scalar(
+        "SELECT tool_call_id FROM ops.agent_tool_calls WHERE agent_run_id=$1 AND call_id=$2",
     )
     .bind(turn.run_id)
-    .bind(tool_call_id)
+    .bind(&call_text)
     .fetch_one(&state.pool)
     .await
     .map_err(database)?;
-    let source_use_count: i32 = summary.try_get("count").map_err(database)?;
-    let source_use_set_sha256: String = summary.try_get("digest").map_err(database)?;
-    sqlx::query("SELECT ops.finalize_agent_tool_call_source_uses($1,$2,CAST($3 AS char(64)))")
-        .bind(tool_call_id)
-        .bind(source_use_count)
-        .bind(source_use_set_sha256)
-        .execute(&state.pool)
-        .await
-        .map_err(database)?;
-    Ok(())
+    Ok(existing)
 }
 
 /// A tool result is a provenance edge from every source selected by the
@@ -345,11 +373,12 @@ async fn persist_tool_call(
 /// locator and rights tuple and adds the provider turn/tool-call binding; no
 /// source identity is reconstructed from an editorial evidence row.
 async fn insert_tool_result_source_uses(
-    state: &State,
+    executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
     tool_call_id: Uuid,
     tool_id: &str,
     result_sha256: &str,
+    provider_receipt_id: Option<Uuid>,
 ) -> Result<(), Failure> {
     sqlx::query(
         r#"
@@ -369,11 +398,11 @@ async fn insert_tool_result_source_uses(
             'selectedContentSha256',btrim(i.selected_content_sha256::text),
             'locator',jsonb_build_object('kind',i.locator_kind,'value',i.locator_value,'locatorSha256',btrim(i.locator_sha256::text)),
             'classification',i.classification,
-            'providerReceiptId',NULL,'occurredAt',i.new_occurred_at
+            'providerReceiptId',$6,'occurredAt',i.new_occurred_at
           ) AS payload
           FROM identities i
         ), payloads AS (
-          SELECT u.*, encode(extensions.digest(convert_to(u.payload::text,'UTF8'),'sha256'),'hex') AS digest
+          SELECT u.*, encode(extensions.digest(ops.canonical_jsonb_v1(u.payload),'sha256'),'hex') AS digest
             FROM unsigned u
         )
         INSERT INTO ops.agent_source_uses(
@@ -404,8 +433,8 @@ async fn insert_tool_result_source_uses(
           p.asset_rights_decision_sha256,p.rights_effective_at,p.rights_expires_at,p.access_right,p.private_storage_right,
           p.model_egress_right,p.model_use_right,p.derivative_creation_right,p.excerpt_right,p.redistribution_right,
           p.commercial_use_right,p.public_display_right,p.rights_policy_version,p.rights_policy_sha256,
-          NULL,NULL,p.new_occurred_at,
-          convert_to((p.payload || jsonb_build_object('sourceUseSha256',p.digest))::text,'UTF8'),p.digest
+          $6,CASE WHEN $6 IS NULL THEN NULL ELSE (SELECT btrim(provider_receipt_sha256::text) FROM ops.agent_provider_turns WHERE provider_turn_id=$2) END,p.new_occurred_at,
+          ops.canonical_jsonb_v1(p.payload || jsonb_build_object('sourceUseSha256',p.digest)),p.digest
         FROM payloads p
         ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING
         "#,
@@ -415,7 +444,8 @@ async fn insert_tool_result_source_uses(
     .bind(tool_call_id)
     .bind(tool_id)
     .bind(result_sha256)
-    .execute(&state.pool)
+    .bind(provider_receipt_id)
+    .execute(&mut *executor)
     .await
     .map_err(database)?;
     Ok(())
@@ -433,6 +463,29 @@ fn tool_schema_hashes(tool_id: &str) -> (&'static str, &'static str) {
         "source.fetch" => ("8a6083ee948e416f71d7ee7e34ddb6ca41e84a8e3a2d1be53c4900605dc80c67", "42e59f2ddbe8bf2c58e61451cd698e388463f42bcdc13394bb6bf5140ca5912e"),
         _ => ("3470624bf89ed5d2116d7ef365b4dd017e822736f5b8d71189c7312653a5512f", "d8ddd0649eb49c0f0d8bc9490fb48134cb383cfa671d53d6ad710be39bd998ad"),
     }
+}
+
+async fn resolve_snapshot_id(
+    state: &State,
+    turn: &ProviderTurnIdentity,
+) -> Result<Uuid, Failure> {
+    sqlx::query_scalar(
+        "SELECT id FROM core.dataset_snapshots
+          WHERE snapshot_sha256=CAST($1 AS char(64)) AND snapshot_kind='AGENT_CASE' AND state='READY'
+          ORDER BY ready_at DESC NULLS LAST, id LIMIT 1",
+    )
+    .bind(&turn.input_snapshot_sha256)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(database)?
+    .ok_or_else(|| Failure::Terminal("AGENT_EVIDENCE_SCOPE_INVALID", "snapshot identity".into()))
+}
+
+async fn resolve_snapshot_id_for_dispatch(
+    state: &State,
+    turn: &ProviderTurnIdentity,
+) -> Result<Uuid, Failure> {
+    resolve_snapshot_id(state, turn).await
 }
 
 fn stable_uuid(seed: &[u8]) -> Uuid {

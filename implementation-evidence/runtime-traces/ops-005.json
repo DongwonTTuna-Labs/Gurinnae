@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "OPS-005",
+  "route": "/internal/operations/providers",
+  "url": "http://127.0.0.1:29102/internal/operations/providers",
+  "observedAt": "2026-07-19T15:35:51.853Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "OPS-005",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "status",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "quotas",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "latency",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "privacy",
+        "component": "LongFormArticle",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "fallback",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "incidents",
+        "component": "OperationsStatusPanel",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

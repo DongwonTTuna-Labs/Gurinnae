@@ -287,76 +287,159 @@ fn blocked_output(status: &str, reason: &str) -> Value {
 /// environments. It supplies a complete provider-shaped result so policy
 /// checks (prompt-injection, citation scope, and budget fences) can be tested
 /// without pretending that a real external model was called.
-fn deterministic_output(evidence: &Value) -> Value {
+fn deterministic_output(agent_type: &str, evidence: &Value) -> Value {
     let Some(first) = evidence.as_array().and_then(|items| items.first()) else {
         return blocked_output("ABSTAINED", "EVIDENCE_REQUIRED");
     };
-    json!({
-        "status":"COMPLETED",
-        "summary":"검증된 편집 근거 snapshot을 읽기 전용으로 확인했습니다. 사람의 독립 검토가 필요합니다.",
-        "citations":[{"evidence_id":first["id"],"locator":first["locator"],"supports":"검토 대상 근거 snapshot"}],
-        "unknowns":[],"abstention_reasons":[],"recommended_actions":[]
-    })
+    let path = format!(
+        "{}/../../specs/agents/fixtures/{agent_type}/{agent_type}-01-valid/provider-response.json",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let Ok(bytes) = std::fs::read(path) else {
+        return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_FIXTURE_MISSING");
+    };
+    let Ok(legacy) = serde_json::from_slice::<Value>(&bytes) else {
+        return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_FIXTURE_INVALID");
+    };
+    let Some(source_use) = first.get("sourceUses").and_then(Value::as_array).and_then(|items| items.first()) else {
+        return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_FIXTURE_CITATION_MISSING");
+    };
+    let source_use_id = source_use.get("sourceUseId").cloned().unwrap_or(Value::Null);
+    let source_use_sha = source_use.get("sourceUseSha256").cloned().unwrap_or(Value::String(sha256(b"deterministic-source-use")));
+    let selected_sha = source_use.get("selectedContentSha256").cloned().unwrap_or(Value::String(sha256(b"deterministic-content")));
+    let locator = source_use.get("locator").cloned().unwrap_or_else(|| json!({"kind":"TEXT","value":"snapshot"}));
+    let citation = json!({
+        "sourceUseId": source_use_id,
+        "sourceUseSha256": source_use_sha,
+        "selectedContentSha256": selected_sha,
+        "locator": locator,
+        "supports": "검토 대상 근거 snapshot"
+    });
+    let summary = legacy.get("summary").and_then(Value::as_str).unwrap_or("결정적 provider double 결과");
+    let unknowns = legacy.get("unknowns").cloned().unwrap_or_else(|| json!([]));
+    let base = json!({
+        "outcome":"COMPLETED", "summary":summary,
+        "investigationsPerformed":[], "citations":[citation],
+        "unknowns":unknowns, "nextActions":[], "abstentionReasons":[]
+    });
+    let mut output = base;
+    let object = output.as_object_mut().expect("base object");
+    match agent_type {
+        "market-researcher" => {
+            object.insert("schemaVersion".into(), json!("market-research-output.v2"));
+            object.insert("comparables".into(), json!([{"proposalKind":"COMPARABLE","proposalState":"PROPOSAL_ONLY","subjectDescription":"대상 시장","candidateDescription":"비교 후보","sourceUrl":"https://example.invalid/source","observedAt":"2026-07-20","unit":"건","unitPriceDecimal":"0","currencyCode":"KRW","compatibility":"UNKNOWN","comparisonBasis":"동일한 authority snapshot 범위","materialDifferences":[],"limitations":[],"citationIndexes":[0]}]));
+        }
+        "investigator" => {
+            object.insert("schemaVersion".into(), json!("investigator-output.v2"));
+            object.insert("hypotheses".into(), json!([{"proposalKind":"HYPOTHESIS","proposalState":"PROPOSAL_ONLY","statement":"검토 대상의 원인을 추가 확인한다.","assessment":"UNRESOLVED","supportingCitationIndexes":[0],"contradictingCitationIndexes":[],"unknowns":[]}]));
+            object.insert("counterEvidence".into(), json!([])); object.insert("tasks".into(), json!([]));
+        }
+        "skeptic" => {
+            object.insert("schemaVersion".into(), json!("skeptic-output.v2"));
+            object.insert("challenges".into(), json!([{"kind":"CHALLENGE","claimOrHypothesis":"현재 결론","challenge":"추가 반증 자료가 필요하다.","challengeType":"ALTERNATIVE_EXPLANATION","citationIndexes":[0],"severity":"INFO"}]));
+        }
+        "claim-drafter" => {
+            object.insert("schemaVersion".into(), json!("claim-draft-output.v2"));
+            object.insert("claims".into(), json!([{"proposalKind":"CLAIM","proposalState":"PROPOSAL_ONLY","claimType":"ASSESSMENT","text":"현재 근거 범위에서 추가 확인이 필요하다.","citationIndexes":[0],"limitations":[],"responseContext":"NO_REQUEST","languageCheckResponseSha256":sha256(b"language-check")} ]));
+            object.insert("communications".into(), json!([]));
+        }
+        "citation-verifier" => {
+            object.insert("schemaVersion".into(), json!("citation-verification-output.v2"));
+            object.insert("claimResults".into(), json!([{"claimIndex":0,"status":"VERIFIED","verifiedCitationIndexes":[0],"unsupportedFragments":[]} ]));
+        }
+        _ => return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_AGENT_UNKNOWN"),
+    }
+    output
 }
 
-fn validate_agent_output(value: &Value) -> Result<(), Failure> {
-    const REQUIRED: &[&str] = &[
-        "status",
-        "summary",
-        "citations",
-        "unknowns",
-        "abstention_reasons",
-    ];
-    const ALLOWED: &[&str] = &[
-        "status",
-        "summary",
-        "citations",
-        "unknowns",
-        "abstention_reasons",
-        "recommended_actions",
-        "comparables",
-        "hypotheses",
-        "alternative_explanations",
-        "draft_claims",
-        "verification_results",
-    ];
-    validate_object(
-        value,
-        ObjectSchema {
-            required: REQUIRED,
-            allowed: ALLOWED,
-        },
-    )
-    .map_err(|error| Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", error.to_string()))?;
-    let status = value.get("status").and_then(Value::as_str);
-    if !matches!(
-        status,
-        Some("COMPLETED" | "ABSTAINED" | "POLICY_BLOCKED" | "BUDGET_BLOCKED")
-    ) || value.get("summary").and_then(Value::as_str).is_none()
-        || value.get("citations").and_then(Value::as_array).is_none()
-        || value.get("unknowns").and_then(Value::as_array).is_none()
-        || value
-            .get("abstention_reasons")
-            .and_then(Value::as_array)
-            .is_none()
-    {
+fn blocked_output_for(agent_type: &str, _status: &str, reason: &str) -> Value {
+    let (schema, field) = match agent_type {
+        "market-researcher" => ("market-research-output.v2", "comparables"),
+        "investigator" => ("investigator-output.v2", "hypotheses"),
+        "skeptic" => ("skeptic-output.v2", "challenges"),
+        "claim-drafter" => ("claim-draft-output.v2", "claims"),
+        "citation-verifier" => ("citation-verification-output.v2", "claimResults"),
+        _ => return blocked_output("ABSTAINED", reason),
+    };
+    let mut output = json!({
+        "schemaVersion": schema,
+        "outcome": "ABSTAINED",
+        "summary": "정책 또는 검증 조건을 충족하지 못해 결론을 생성하지 않았습니다.",
+        "investigationsPerformed": [],
+        "citations": [],
+        "unknowns": [],
+        "nextActions": [],
+        "abstentionReasons": [reason],
+        field: []
+    });
+    if agent_type == "investigator" {
+        output["counterEvidence"] = json!([]);
+        output["tasks"] = json!([]);
+    }
+    if agent_type == "claim-drafter" {
+        output["communications"] = json!([]);
+    }
+    output
+}
+
+fn validate_agent_output_for(agent_type: Option<&str>, value: &Value) -> Result<(), Failure> {
+    if value.get("schemaVersion").is_none() {
         return Err(Failure::Terminal(
             "AGENT_OUTPUT_SCHEMA_INVALID",
-            "field type".into(),
+            "schemaVersion missing; legacy generic envelope is forbidden".into(),
         ));
     }
-    for citation in value["citations"].as_array().into_iter().flatten() {
-        if citation
-            .get("evidence_id")
-            .and_then(Value::as_str)
-            .is_none()
-            || citation.get("locator").and_then(Value::as_str).is_none()
-            || citation.get("supports").and_then(Value::as_str).is_none()
-        {
-            return Err(Failure::Terminal(
-                "AGENT_OUTPUT_SCHEMA_INVALID",
-                "citation".into(),
-            ));
+    let schema = value
+        .get("schemaVersion")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "schemaVersion".into()))?;
+    let expected = match agent_type {
+        Some("market-researcher") => "market-research-output.v2",
+        Some("investigator") => "investigator-output.v2",
+        Some("skeptic") => "skeptic-output.v2",
+        Some("claim-drafter") => "claim-draft-output.v2",
+        Some("citation-verifier") => "citation-verification-output.v2",
+        Some(_) => return Err(Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "agent".into())),
+        None => schema,
+    };
+    if schema != expected {
+        return Err(Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", format!("schemaVersion:{schema}")));
+    }
+    let required: &[&str] = match schema {
+        "market-research-output.v2" => &["schemaVersion", "outcome", "summary", "investigationsPerformed", "citations", "unknowns", "nextActions", "abstentionReasons", "comparables"],
+        "investigator-output.v2" => &["schemaVersion", "outcome", "summary", "investigationsPerformed", "citations", "unknowns", "nextActions", "abstentionReasons", "hypotheses", "counterEvidence", "tasks"],
+        "skeptic-output.v2" => &["schemaVersion", "outcome", "summary", "investigationsPerformed", "citations", "unknowns", "nextActions", "abstentionReasons", "challenges"],
+        "claim-draft-output.v2" => &["schemaVersion", "outcome", "summary", "investigationsPerformed", "citations", "unknowns", "nextActions", "abstentionReasons", "claims", "communications"],
+        "citation-verification-output.v2" => &["schemaVersion", "outcome", "summary", "investigationsPerformed", "citations", "unknowns", "nextActions", "abstentionReasons", "claimResults"],
+        _ => return Err(Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "schema".into())),
+    };
+    validate_object(value, ObjectSchema { required, allowed: required })
+        .map_err(|error| Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", error.to_string()))?;
+    if !matches!(value.get("outcome").and_then(Value::as_str), Some("COMPLETED" | "ABSTAINED"))
+        || value.get("summary").and_then(Value::as_str).is_none_or(|text| text.trim().is_empty())
+    {
+        return Err(Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "envelope".into()));
+    }
+    if let Some(object) = value.as_object() {
+        non_empty_field(object, "summary")?;
+    }
+    for field in &required[3..] {
+        if value.get(*field).and_then(Value::as_array).is_none() {
+            return Err(Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", (*field).into()));
+        }
+    }
+    let item_schema = schema;
+    let agent_field = match schema {
+        "market-research-output.v2" => "comparables",
+        "investigator-output.v2" => "hypotheses",
+        "skeptic-output.v2" => "challenges",
+        "claim-draft-output.v2" => "claims",
+        "citation-verification-output.v2" => "claimResults",
+        _ => "",
+    };
+    if let Some(items) = value.get(agent_field).and_then(Value::as_array) {
+        for item in items {
+            validate_agent_item(item_schema, item)?;
         }
     }
     Ok(())
@@ -389,80 +472,6 @@ fn json_uuids(value: Value) -> Result<Vec<Uuid>, Failure> {
                 .and_then(|value| Uuid::parse_str(value).ok())
                 .ok_or_else(|| Failure::Terminal("AGENT_EVIDENCE_SCOPE_INVALID", "uuid".into()))
         })
-        .collect()
-}
-
-/// RFC 8785-compatible canonical JSON for the value shapes used by the
-/// provider/addendum contracts.  Objects are sorted by UTF-16 code units and
-/// numbers are kept in serde_json's lossless representation; provider
-/// contracts only admit integer quantities, so no binary floating point
-/// normalization is necessary here.
-fn canonical_bytes(value: &Value) -> Result<Vec<u8>, Failure> {
-    let mut out = String::new();
-    write_jcs(value, &mut out)?;
-    Ok(out.into_bytes())
-}
-
-fn write_jcs(value: &Value, out: &mut String) -> Result<(), Failure> {
-    match value {
-        Value::Null => out.push_str("null"),
-        Value::Bool(value) => out.push_str(if *value { "true" } else { "false" }),
-        Value::Number(value) => {
-            if !value.is_i64() && !value.is_u64() {
-                return Err(Failure::Terminal(
-                    "JSON_SERIALIZATION_FAILED",
-                    "provider canonical JSON does not accept non-integer numbers".into(),
-                ));
-            }
-            out.push_str(&value.to_string());
-        }
-        Value::String(value) => {
-            let encoded = serde_json::to_string(value)
-                .map_err(|error| Failure::Terminal("JSON_SERIALIZATION_FAILED", error.to_string()))?;
-            out.push_str(&encoded);
-        }
-        Value::Array(values) => {
-            out.push('[');
-            for (index, value) in values.iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
-                write_jcs(value, out)?;
-            }
-            out.push(']');
-        }
-        Value::Object(values) => {
-            let mut keys = values.keys().collect::<Vec<_>>();
-            keys.sort_by(|left, right| {
-                left.encode_utf16().cmp(right.encode_utf16())
-            });
-            out.push('{');
-            for (index, key) in keys.iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
-                let encoded = serde_json::to_string(key)
-                    .map_err(|error| Failure::Terminal("JSON_SERIALIZATION_FAILED", error.to_string()))?;
-                out.push_str(&encoded);
-                out.push(':');
-                let Some(value) = values.get(*key) else {
-                    return Err(Failure::Terminal(
-                        "JSON_SERIALIZATION_FAILED",
-                        "object key disappeared during canonicalization".into(),
-                    ));
-                };
-                write_jcs(value, out)?;
-            }
-            out.push('}');
-        }
-    }
-    Ok(())
-}
-
-fn sha256(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
         .collect()
 }
 

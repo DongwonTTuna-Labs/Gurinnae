@@ -1,9 +1,10 @@
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use gurine_agent_orchestration::{
     policy::{self, EvaluationContext},
     runtime::{
         AgentFinalOutput, FinalStatus, MultiTurnConfig, MultiTurnRuntime, ProviderAdapter,
         ProviderEnvelope, ProviderOutcome, ProviderReceipt, ProviderReply, ProviderRequest,
-        ProviderRuntimeError, ToolCall, TypedDispatcher, provider_receipt_sha256,
+        ProviderRuntimeError, SnapshotBinding, ToolCall, TypedDispatcher, provider_receipt_sha256,
         provider_request_sha256,
     },
     schema_validation::{ObjectSchema, validate_object},
@@ -11,7 +12,6 @@ use gurine_agent_orchestration::{
 use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_object_store::gateway::GatewayObjectStore;
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
-use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use reqwest::Client;
 use rust_decimal::Decimal;
 use serde_json::{Value, json};
@@ -21,6 +21,9 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::config::Config;
+
+#[path = "analysis_runtime_snapshot.rs"]
+mod analysis_runtime_snapshot;
 
 struct State {
     pool: PgPool,
@@ -38,7 +41,7 @@ pub enum WorkerError {
     Job(#[source] JobError),
 }
 
-enum Failure {
+pub(crate) enum Failure {
     Terminal(&'static str, String),
     Retryable(&'static str, String),
 }
@@ -260,13 +263,17 @@ async fn handle(state: &State, job: &ClaimedJob) -> Result<Value, Failure> {
 }
 
 include!("analysis_jobs.rs");
+include!("analysis_job_persistence.rs");
 include!("analysis_context.rs");
 include!("analysis_source_use_roots.rs");
 include!("analysis_provider_connection.rs");
 include!("analysis_provider.rs");
+include!("analysis_provider_types.rs");
 include!("analysis_provider_persistence.rs");
 include!("analysis_provider_receipt.rs");
 include!("analysis_provider_completion.rs");
 include!("analysis_provider_owner.rs");
+include!("analysis_tool_decode.rs");
 include!("analysis_runtime_bridge.rs");
+include!("analysis_validation_helpers.rs");
 include!("analysis_helpers.rs");

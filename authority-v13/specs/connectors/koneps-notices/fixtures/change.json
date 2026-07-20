@@ -1,0 +1,23 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-notices",
+  "kind": "change",
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "CHANGE"
+    },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 1,
+      "items": [
+        {
+          "externalId": "koneps-notices-SYN-001",
+          "revision": "2",
+          "deleted": false
+        }
+      ]
+    }
+  }
+}

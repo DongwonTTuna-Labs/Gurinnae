@@ -1,0 +1,43 @@
+version: 3
+specification_version: 13.0.0
+status: FINAL
+layers:
+  domain:
+  - crates/domain
+  application:
+  - crates/application
+  - crates/publication-policy
+  ports_and_adapters:
+  - crates/persistence-postgres
+  - crates/ingestion
+  - crates/normalization
+  - crates/identity-resolution
+  - crates/detection
+  - crates/jobs
+  - crates/object-store
+  - crates/email
+  - crates/auth
+  - crates/source-connectors
+  - crates/agent-orchestration
+  - crates/observability
+  composition:
+  - services/analysis-worker
+  - services/control-api
+  - services/document-extractor
+  - services/egress-gateway
+  - services/ingest-worker
+  - services/migrator
+  - services/notification-worker
+  - services/oidc-test-provider
+  - services/projection-worker
+  - services/public-api
+  - services/scheduler
+  - services/submission-api
+  - services/workflow-worker
+forbidden:
+- domain -> Actix/SQLx/provider SDK/environment
+- public-api -> editorial write repository
+- browser bundle -> control/submission generated client or secret
+- service -> another service database role
+- first-party unsafe Rust or direct FFI
+- cyclic crate dependencies

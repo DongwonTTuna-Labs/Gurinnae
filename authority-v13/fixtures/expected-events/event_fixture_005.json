@@ -1,0 +1,16 @@
+{
+  "event_id": "event_fixture_005",
+  "event_type": "review.snapshot.created.v1",
+  "event_version": 1,
+  "occurred_at": "2026-01-15T05:00:00Z",
+  "aggregate_type": "INVESTIGATION_CASE",
+  "aggregate_id": "case_fixture_price_target",
+  "aggregate_version": 12,
+  "correlation_id": "correlation_fixture_price_flow",
+  "causation_id": "event_fixture_004",
+  "trace_id": "8d8e7ed480797c74c1cce49fe816328f",
+  "classification": "INTERNAL",
+  "payload": {
+    "review_snapshot_hash": "7595d097275b7a8e047ae81f816d89930630097e7d41ec53ee9a1be7c5dea390"
+  }
+}

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { invokeSubmissionOperation } from "@gurine/api-client-submission";
 import {
   formPayload,
@@ -36,6 +36,16 @@ import {
   rotateSubmissionCsrf,
 } from "./submission-cookie";
 
+function csrfMatches(
+  candidate: FormDataEntryValue | null,
+  expected: string,
+): boolean {
+  if (typeof candidate !== "string") return false;
+  const actual = Buffer.from(candidate, "utf8");
+  const target = Buffer.from(expected, "utf8");
+  return actual.length === target.length && timingSafeEqual(actual, target);
+}
+
 export function screenActions(screen: ScreenViewModel): Actions {
   const actions: Actions = Object.fromEntries(
     screen.actions.map((action) => [
@@ -58,7 +68,8 @@ async function uploadResponseAttachment(event: RequestEvent) {
     const session = readSubmissionSession(event);
     if (session?.sessionKind !== "RESPONSE_ACTIVE")
       return fail(401, { message: "활성 소명 제출 세션이 필요합니다." });
-    if (form.get("csrfToken") !== session.csrfToken)
+    if (!sameOrigin(event)) return fail(403, { message: "CSRF_ORIGIN_DENIED" });
+    if (!csrfMatches(form.get("csrfToken"), session.csrfToken))
       return fail(403, { message: "CSRF_TOKEN_STALE" });
     const idempotencyKey = formIdempotencyKey(form);
     const file = form.get("attachment");
@@ -206,15 +217,18 @@ async function runAction(
   if (!operationId) throw redirect(303, screen.route);
   const indexed = operations.get(operationId);
   if (!indexed) return fail(500, { message: "operation contract missing" });
+  let submittedFormData: Record<string, unknown> = {};
   try {
     const form = await event.request.formData();
     const session = readSubmissionSession(event);
     if (session) {
-      if (form.get("csrfToken") !== session.csrfToken)
-        return fail(403, { message: "CSRF_TOKEN_STALE" });
+      if (!sameOrigin(event))
+        return fail(403, { message: "CSRF_ORIGIN_DENIED" });
     } else if (!sameOrigin(event)) {
       return fail(403, { message: "CSRF_ORIGIN_DENIED" });
     }
+    if (!session || !csrfMatches(form.get("csrfToken"), session.csrfToken))
+      return fail(403, { message: "CSRF_TOKEN_STALE" });
     const idempotencyKey = formIdempotencyKey(form);
     const path = operationFormPathParams(indexed.path, event.params, form);
     const routeValues = {
@@ -232,6 +246,7 @@ async function runAction(
       normalize(formPayload(form, fields, recordProperty(action, "preset"))),
       event.params,
     );
+    submittedFormData = body;
     const result = await invokeSubmissionOperation({
       operationId,
       baseUrl: requiredServerValue(env, "SUBMISSION_API_INTERNAL_URL"),
@@ -264,6 +279,7 @@ async function runAction(
     if (!response.ok)
       return fail(response.status, {
         message: problemTitle(value, response.status),
+        formData: submittedFormData,
       });
     const expectedKinds = sessionKindsForOperation(operationId, value);
     if (operationId === "verifyResponseAccess" && !expectedKinds) {
@@ -303,6 +319,7 @@ async function runAction(
     return fail(400, {
       message:
         error instanceof Error ? error.message : "요청을 처리하지 못했습니다.",
+      formData: submittedFormData,
     });
   }
 }

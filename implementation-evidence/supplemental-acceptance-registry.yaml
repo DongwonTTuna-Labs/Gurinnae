@@ -62,8 +62,8 @@
     },
     {
       "path": "Makefile",
-      "sha256": "4986e302686fdea232ca24e9489bd1c188e12134844caae9f4e60901bf855be5",
-      "size": 10103
+      "sha256": "03d0a02b317afd07b72ec727b7b3eca3ca1c656e8f539b9c2d508b4eee9207cb",
+      "size": 10313
     },
     {
       "path": "crates/test-support/Cargo.toml",
@@ -77,8 +77,8 @@
     },
     {
       "path": "crates/test-support/src/lib.rs",
-      "sha256": "62d6df216651c3b1c623b613db3e57ba2922997f5a861cc88abb6851cf7f01d9",
-      "size": 153
+      "sha256": "01d1757f70c224ed23109b9699dc765380b851dd7413f2fd8ef2cb4e9b137be1",
+      "size": 240
     },
     {
       "path": "infra/docker/dev/Dockerfile",
@@ -87,8 +87,8 @@
     },
     {
       "path": "infra/docker/rust-service/Dockerfile",
-      "sha256": "b5159dc2d34f5ae9f20129a715bd29553b79d24688b0e85ac2edefb3696cb8e4",
-      "size": 10397
+      "sha256": "67a5970d7aa3b3392e3f89534454aebfaa0a31d62c147090903d8ae18185be2f",
+      "size": 13650
     },
     {
       "path": "infra/images.lock",
@@ -97,8 +97,8 @@
     },
     {
       "path": "scripts/create_source_archive.py",
-      "sha256": "0efc67b18c505837a1c5cb6efc5c29b51394f4f350e86863f8ac8b2e6cf5d9d5",
-      "size": 3857
+      "sha256": "e562aa4ea1579eee4dc3593a7b91e0e7ad1d249cc3f6400b0515b76120ab7cf8",
+      "size": 3888
     },
     {
       "path": "scripts/design_bundle_digest.py",
@@ -142,8 +142,8 @@
     },
     {
       "path": "scripts/verify_source_archive.py",
-      "sha256": "947b291dbdb02af28500f75aafae73bf734b5f2b813a182ef35f9397239cdcca",
-      "size": 3824
+      "sha256": "19d91f03ec806a11a630e58c67a64d7af791852c94505e786cf333e2b00397bf",
+      "size": 4260
     }
   ],
   "registry_kind": "SUPPLEMENTAL_ACCEPTANCE_DESIGN_REGISTRY",
@@ -176,8 +176,8 @@
   "schemas": [
     {
       "path": "specs/acceptance/execution-receipt-v3.schema.json",
-      "sha256": "6c845c9c22258417a4dacd9bd6ef0b598f648fa5b83612b61298a5bad5dd1b9c",
-      "size": 8574
+      "sha256": "ad8fcfbed3aaf0d8a1dcebb153cd7a46e2f79e74367819a04e35b9129c2a93cf",
+      "size": 8550
     },
     {
       "path": "specs/acceptance/extraction-receipt-v1.schema.json",
@@ -186,13 +186,13 @@
     },
     {
       "path": "specs/acceptance/run-index-v1.schema.json",
-      "sha256": "b051a5839cd8fff95a48a3451535602bb3bba730c3c2f641469b14c67bcc5d0c",
-      "size": 3775
+      "sha256": "4d58dc276ea305fde670f88ccc998a6f74fefb79163ea01009cdcc7e78f699d4",
+      "size": 3819
     },
     {
       "path": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
-      "sha256": "d674e731d083e5dc55792e266537a096bbeb0abbb2f220681383960104a10eba",
-      "size": 10838
+      "sha256": "01f07ac725232cd43c6cc6253c8b08434678054a91a3728989ab0899a07d8bdb",
+      "size": 11218
     }
   ],
   "specification_version": "13.0.0",

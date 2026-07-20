@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0.0",
+  "contract_id": "contract_fixture_bundle_explained",
+  "source_document_ids": [
+    "srcdoc_fixture_bundle_explained"
+  ],
+  "contract_number": "SYN-BUNDLE-EXPLAINED",
+  "notice_id": "notice_fixture_bundle_explained",
+  "award_id": "award_fixture_bundle_explained",
+  "agency": {
+    "agency_id": "agency_fixture_hangang",
+    "name": "가상한강구청",
+    "identity_status": "VERIFIED"
+  },
+  "supplier": {
+    "supplier_id": "supplier_fixture_beta",
+    "name": "가상베타서비스",
+    "entity_type": "CORPORATION",
+    "identity_status": "VERIFIED",
+    "business_number_last4": "0001"
+  },
+  "contract_type": "GOODS",
+  "method": "OPEN_COMPETITION",
+  "method_basis": "합성 fixture의 계약 방법 설명",
+  "signed_at": "2025-07-01",
+  "starts_at": "2025-07-01",
+  "ends_at": "2026-05-31",
+  "status": "ACTIVE",
+  "amounts": {
+    "original": {
+      "currency": "KRW",
+      "amount_minor": 25000000,
+      "vat_basis": "INCLUDED"
+    },
+    "current": {
+      "currency": "KRW",
+      "amount_minor": 25000000,
+      "vat_basis": "INCLUDED"
+    }
+  },
+  "line_items": [
+    {
+      "line_item_id": "line_fixture_bundle_explained_1",
+      "line_number": 1,
+      "raw_description": "합성 안전 단말기 및 3년 통합운영 패키지",
+      "category_code": "SYNTH-SAFETY-DEVICE",
+      "manufacturer": "가상제조사",
+      "model": "S1",
+      "variant": null,
+      "quantity": "10",
+      "unit_code": "EA",
+      "unit_price": {
+        "currency": "KRW",
+        "amount_minor": 2500000,
+        "vat_basis": "INCLUDED"
+      },
+      "total_price": {
+        "currency": "KRW",
+        "amount_minor": 25000000,
+        "vat_basis": "INCLUDED"
+      },
+      "vat_basis": "INCLUDED",
+      "bundle_status": "KNOWN_BUNDLE",
+      "specification": {
+        "grade": "S1",
+        "maintenance_months": 36,
+        "onsite_training_days": 5,
+        "synthetic": true
+      },
+      "included_services": [
+        "INSTALLATION",
+        "TRAINING",
+        "MAINTENANCE",
+        "WARRANTY"
+      ],
+      "normalization_confidence": 0.99
+    }
+  ],
+  "field_provenance": {
+    "contract_number": {
+      "source_document_id": "srcdoc_fixture_bundle_explained",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.contractNumber"
+      },
+      "raw_value_hash": "3ae7afd4444ed69fe9c491faa51850734ea4c00cf33a337d9ab3dcb3577c6985",
+      "raw_value_preview": "SYN-BUNDLE-EXPLAINED",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "agency.name": {
+      "source_document_id": "srcdoc_fixture_bundle_explained",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.agencyName"
+      },
+      "raw_value_hash": "547e6f96d77a13910bf00002f00442b401782d82e63beda827357fea7e0e9070",
+      "raw_value_preview": "가상한강구청",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "supplier.name": {
+      "source_document_id": "srcdoc_fixture_bundle_explained",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.supplierName"
+      },
+      "raw_value_hash": "e0ba25757e6439bb51940b06928d3d9f1084a1946f044f988d3b668dff376aa7",
+      "raw_value_preview": "가상베타서비스",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "amounts.current": {
+      "source_document_id": "srcdoc_fixture_bundle_explained",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.amount"
+      },
+      "raw_value_hash": "605be2e62e451d61d51cecf225a0c361c18c30a65309065270bf1488342b9cd3",
+      "raw_value_preview": "25000000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].quantity": {
+      "source_document_id": "srcdoc_fixture_bundle_explained",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].quantity"
+      },
+      "raw_value_hash": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+      "raw_value_preview": "10",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].unit_price": {
+      "source_document_id": "srcdoc_fixture_bundle_explained",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].unitPrice"
+      },
+      "raw_value_hash": "35a1258e0586462f4d84193a0705d4051426033779bb22ccbc5182186900400a",
+      "raw_value_preview": "2500000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].vat_basis": {
+      "source_document_id": "srcdoc_fixture_bundle_explained",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].vatBasis"
+      },
+      "raw_value_hash": "c77a4910d506fabde27cc281a5a48ed9e9a8f75f721eac77918ab30a3181b2be",
+      "raw_value_preview": "INCLUDED",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    }
+  },
+  "normalization_version": "1.0.0",
+  "normalized_at": "2026-01-15T04:00:00Z"
+}

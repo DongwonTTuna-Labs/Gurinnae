@@ -6,6 +6,7 @@ use gurine_auth::assertion::{
     canonical::canonical_request_digest,
 };
 use gurine_persistence_postgres::assertions::{AssertionConsumption, consume};
+use serde_json::Value;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -23,17 +24,40 @@ pub fn configure(config: &mut web::ServiceConfig) {
     } else {
         tracing::error!("generated Control operation catalog is missing saved-view routes");
     }
-    for dynamic in [false, true] {
-        for operation in OPERATIONS
-            .iter()
-            .chain(addendum::CONTROL_OPERATIONS.iter())
-            .filter(|operation| {
-                !operation.path.starts_with("/v1/internal/saved-views")
-                    && operation.path.contains('{') == dynamic
-            })
-        {
-            register(config, *operation);
+    // Several operations intentionally share a path (for example GET/POST on
+    // the action-proposal queue).  Group methods into one Actix resource so a
+    // first resource cannot shadow subsequent methods with a 405.
+    let mut grouped: std::collections::BTreeMap<&'static str, Vec<OperationSpec>> =
+        std::collections::BTreeMap::new();
+    for operation in OPERATIONS
+        .iter()
+        .chain(addendum::CONTROL_OPERATIONS.iter())
+        .chain(addendum::PRIVATE_CONTROL_OPERATIONS.iter())
+        .filter(|operation| !operation.path.starts_with("/v1/internal/saved-views"))
+    {
+        grouped.entry(operation.path).or_default().push(*operation);
+    }
+    let mut grouped: Vec<_> = grouped.into_iter().collect();
+    // Register longer/more-specific patterns first; otherwise Actix's
+    // parameterized `/.../{id}` resource captures `/:preview` command paths
+    // and returns a misleading 405 before the specific handler is reached.
+    grouped.sort_by_key(|(path, _)| std::cmp::Reverse(path.len()));
+    for (path, operations) in grouped {
+        let mut resource = web::resource(path);
+        for operation in operations {
+            resource = match operation.method {
+                "GET" => resource.route(web::get().to(move |r, b, s| handle(operation, r, b, s))),
+                "POST" => resource.route(web::post().to(move |r, b, s| handle(operation, r, b, s))),
+                "PATCH" => {
+                    resource.route(web::patch().to(move |r, b, s| handle(operation, r, b, s)))
+                }
+                "DELETE" => {
+                    resource.route(web::delete().to(move |r, b, s| handle(operation, r, b, s)))
+                }
+                _ => resource,
+            };
         }
+        config.service(resource);
     }
     let update_saved = spec("updateSavedView");
     let delete_saved = spec("deleteSavedView");
@@ -57,6 +81,10 @@ fn spec(id: &str) -> Option<OperationSpec> {
         .copied()
 }
 
+#[expect(
+    dead_code,
+    reason = "kept as the generated operation registration fallback"
+)]
 fn register(config: &mut web::ServiceConfig, operation: OperationSpec) {
     let resource = web::resource(operation.path).name(operation.id);
     let resource = match operation.method {
@@ -150,6 +178,7 @@ async fn authorize(
             .get("idempotency-key")
             .and_then(|value| value.to_str().ok()),
     };
+    let assurance = effective_assurance(operation, body);
     let claims = verify_claims(
         token,
         &state.assertion_keys,
@@ -157,7 +186,7 @@ async fn authorize(
         ActorExpectation {
             operation: operation.id,
             capability: operation.capability,
-            assurance: operation.assurance_level,
+            assurance,
             now: OffsetDateTime::now_utc().unix_timestamp(),
         },
     )
@@ -180,6 +209,28 @@ async fn authorize(
         return Err(problem("ACTOR_ASSERTION_REPLAYED", 409));
     }
     Ok(claims)
+}
+
+fn effective_assurance(operation: &OperationSpec, body: &[u8]) -> &'static str {
+    if operation.assurance_level != "conditional-by-action-and-decision" {
+        return operation.assurance_level;
+    }
+    let Ok(payload) = serde_json::from_slice::<Value>(body) else {
+        return "ACTIVE_SESSION";
+    };
+    let action_kind = payload.get("actionKind").and_then(Value::as_str);
+    let decision_kind = payload
+        .get("decision")
+        .and_then(Value::as_object)
+        .and_then(|decision| decision.get("kind"))
+        .and_then(Value::as_str);
+    if decision_kind == Some("APPROVE")
+        && matches!(action_kind, Some("HYPOTHESIS" | "COMMERCIAL_CONTROL"))
+    {
+        "STEP_UP"
+    } else {
+        "ACTIVE_SESSION"
+    }
 }
 
 fn assertion_problem(error: AssertionError) -> HttpResponse {

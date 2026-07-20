@@ -26,6 +26,17 @@ bash scripts/wait-postgres-container.sh "$container" "$database"
 for migration in db/migrations/*.sql; do docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null; done
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/reference-seed.sql >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-runtime-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-research-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-retry-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-legal-hold-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-retention-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-communication-seed.sql >/dev/null
+journey_handoff_fixture="$(docker exec "$container" psql -At -F '|' -U postgres -d "$database" -c "SELECT id,binding_digest,version FROM ops.journey_handoffs WHERE journey_code='J-01' AND edge_id='J-01-E01' AND state='PENDING_ACK' ORDER BY requested_at DESC LIMIT 1")"
+IFS='|' read -r journey_handoff_id journey_handoff_binding journey_handoff_version <<<"$journey_handoff_fixture"
+if [[ -z "$journey_handoff_id" || -z "$journey_handoff_binding" || -z "$journey_handoff_version" ]]; then
+  echo "control-flow handoff fixture missing" >&2
+  exit 1
+fi
 docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" -c "ALTER ROLE gurine_control_api LOGIN PASSWORD 'control_test';" >/dev/null
 postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"
 raw_key="01234567890123456789012345678901"
@@ -35,5 +46,5 @@ control_pid=$!
 for _ in $(seq 1 60); do if curl --fail --silent --show-error "http://127.0.0.1:${control_port}/health/ready" >/dev/null 2>&1; then break; fi; sleep 0.5; done
 curl --fail --silent --show-error "http://127.0.0.1:${control_port}/health/ready" >/dev/null
 kill -0 "$control_pid"
-PYTHONDONTWRITEBYTECODE=1 CONTROL_TEST_BASE_URL="http://127.0.0.1:${control_port}" CONTROL_ASSERTION_KEY="$test_key" python3 tests/integration/control-flow.py
+PYTHONDONTWRITEBYTECODE=1 CONTROL_TEST_BASE_URL="http://127.0.0.1:${control_port}" CONTROL_ASSERTION_KEY="$test_key" CONTROL_JOURNEY_HANDOFF_ID="$journey_handoff_id" CONTROL_JOURNEY_HANDOFF_BINDING="$journey_handoff_binding" CONTROL_JOURNEY_HANDOFF_VERSION="$journey_handoff_version" python3 tests/integration/control-flow.py
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-runtime-assertions.sql >/dev/null

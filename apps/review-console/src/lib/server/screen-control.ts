@@ -44,7 +44,12 @@ export async function controlRequest(
     const { request, rawQuery: canonicalRawQuery } =
       canonicalizeRequestQuery(original);
     const url = new URL(request.url);
-    if (url.pathname !== path)
+    // URL construction percent-encodes the literal colon used by addendum
+    // command paths (`{id}:decide`, `:claim-review`, ...).  Compare the
+    // decoded pathname to the already-bound contract path so this integrity
+    // check does not reject a valid generated request before it reaches the
+    // downstream API.
+    if (decodeURIComponent(url.pathname) !== path)
       throw new Error(
         "generated Control path does not match the bound action path",
       );

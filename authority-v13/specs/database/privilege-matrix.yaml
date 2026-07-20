@@ -1,0 +1,247 @@
+schema_version: 5
+specification_version: 13.0.0
+status: FINAL
+source_of_truth: migrations 0001 through 0024 plus PostgreSQL 18.4 runtime-security and catalog-aware concurrency canaries
+principles:
+- Runtime LOGIN roles inherit one NOLOGIN privilege role only.
+- No service role owns schema objects or has BYPASSRLS.
+- Public API reads only public projection.
+- Submission API mutates intake only through token-scoped SECURITY DEFINER procedures; direct intake writes are revoked.
+- Audit and outbox rows are append-only through database-owned functions.
+- Review snapshots, decisions and publication revisions are insert-only and trigger-protected.
+- Every new migration must update the final privilege closure and negative runtime tests.
+roles:
+  gurine_public_api:
+    schemas:
+    - public
+    table_access:
+    - SELECT public.*
+    functions: []
+    denies:
+    - raw.*
+    - core.*
+    - editorial.*
+    - intake.*
+    - ops.*
+    - all writes
+  gurine_submission_api:
+    schemas:
+    - intake
+    - editorial
+    - ops
+    table_access:
+    - SELECT intake.response_access_tokens
+    - SELECT intake.submission_sessions through token-scoped SECURITY DEFINER procedures only
+    - SELECT/INSERT/UPDATE ops.idempotency_keys
+    functions:
+    - intake token-exchange and scoped response/correction/subscription/contact/export procedures
+    - ops.consume_assertion_jti
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    denies:
+    - direct intake mutation outside exact procedures
+    - cross-session response/correction/subscription access
+    - editorial mutation
+    - public mutation
+    - audit/outbox direct writes
+  gurine_control_api:
+    schemas:
+    - core
+    - editorial
+    - intake
+    - ops
+    table_access:
+    - SELECT authorized core/editorial/intake/ops tables
+    - typed INSERT/UPDATE/DELETE listed in migration 0013
+    - INSERT-only immutable review/publication tables
+    - SELECT/INSERT ops.audit_exports
+    functions:
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    - ops.consume_assertion_jti
+    denies:
+    - audit/outbox direct mutation
+    - immutable update/delete
+    - raw payload mutation
+    - direct mutation of ops.assertion_replay_guard
+  gurine_ingest_worker:
+    schemas:
+    - raw
+    - core
+    - ops
+    table_access:
+    - raw ingestion lifecycle
+    - normalized core procurement records
+    - source/job operations
+    functions:
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    denies:
+    - editorial.*
+    - intake.*
+    - public.*
+  gurine_analysis_worker:
+    schemas:
+    - raw
+    - core
+    - editorial
+    - ops
+    table_access:
+    - read evidence-scoped raw/core/editorial
+    - write rule evaluation/run/signal and agent/job/cost records
+    functions:
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    denies:
+    - publication decision
+    - public projection direct write
+    - intake mutation
+  gurine_public_projector:
+    schemas:
+    - core
+    - editorial
+    - ops
+    - public
+    table_access:
+    - read approved publication inputs and projection events
+    - write public.*
+    - write projector inbox
+    functions:
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    denies:
+    - intake.*
+    - raw payload
+    - review/publication mutation
+  gurine_notification_worker:
+    schemas:
+    - intake
+    - editorial
+    - ops
+    table_access:
+    - read subscription/approved notification inputs
+    - write email delivery/job/inbox
+    functions:
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    denies:
+    - raw.*
+    - core.*
+    - public mutation
+    - unapproved private response plaintext
+  gurine_workflow_worker:
+    schemas:
+    - intake
+    - editorial
+    - ops
+    table_access:
+    - bounded workflow/job tables and approved response promotion
+    - SELECT/UPDATE ops.audit_exports
+    functions:
+    - token-independent worker procedures
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    - ops.record_audit_chain_checkpoint
+    denies:
+    - publication decision
+    - audit/outbox direct mutation
+  gurine_document_extractor:
+    schemas:
+    - raw
+    - core
+    - ops
+    table_access:
+    - read source documents/parser versions
+    - write parser runs/jobs/inbox
+    functions:
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    denies:
+    - editorial.*
+    - intake.*
+    - public.*
+  gurine_scheduler:
+    schemas:
+    - core
+    - ops
+    table_access:
+    - read active rules
+    - schedule jobs/source runs
+    functions:
+    - ops.append_audit_event
+    - ops.enqueue_outbox
+    denies:
+    - raw.*
+    - editorial.*
+    - intake.*
+    - public.*
+  gurine_auditor:
+    schemas:
+    - ops
+    table_access:
+    - SELECT audit events, heads, checkpoints and verification runs
+    - SELECT ops.audit_exports
+    functions: []
+    denies:
+    - all writes
+  gurine_identity_api:
+    schemas:
+    - ops
+    table_access:
+    - OIDC transaction lifecycle
+    - opaque session lifecycle
+    - bounded step-up authorization lifecycle
+    - OIDC subject-to-user mapping
+    - idempotency receipts
+    functions:
+    - ops.append_audit_event
+    - ops.claim_step_up_authorization
+    - ops.close_step_up_authorization
+    - ops.consume_assertion_jti
+    - ops.create_step_up_authorization
+    denies:
+    - raw.*
+    - core.*
+    - editorial.*
+    - intake.*
+    - public.*
+    - publication decisions
+    - role grants
+    - direct mutation of ops.assertion_replay_guard
+rls_relations:
+- intake.correction_request_drafts
+- intake.dataset_export_requests
+- intake.response_attachments
+- intake.response_drafts
+- intake.response_submissions
+immutable_relations:
+- ops.audit_events
+- ops.audit_chain_checkpoints
+- editorial.review_snapshots
+- editorial.review_decisions
+- editorial.publication_revisions
+- raw.parsed_records
+lifecycle_guarded_relations:
+- raw.source_documents
+- core.rule_runs
+negative_runtime_tests:
+- public role cannot access private schemas
+- submission role cannot directly mutate intake
+- cross-token response/correction access denied
+- audit/outbox update/delete/insert denied
+- immutable update/delete denied
+- source-document invalid transition denied
+- rule-run terminal mutation denied
+- SECURITY DEFINER search_path cannot be hijacked
+- runtime roles have rolbypassrls=false and rolsuper=false
+- new tables are inaccessible until explicitly granted
+- service assertion JTI can be consumed exactly once
+- actor assertion JTI can be consumed exactly once
+- assertion replay guard cannot be directly mutated by service roles
+- all optimistic-concurrency relations and predicate columns resolve in pg_catalog
+- Control API cannot claim or close step-up authorization tokens
+- step-up authorization issue count is capped at three and close is terminal
+restricted_relations:
+- ops.assertion_replay_guard
+- ops.step_up_authorizations
+- ops.assertion_replay_guard

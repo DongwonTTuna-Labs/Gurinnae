@@ -1,0 +1,33 @@
+schema_version: 2
+specification_version: 13.0.0
+id: local-finance
+display_name: 지방재정365 공식 링크 자료
+status: FINAL
+source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+official_references:
+- https://www.data.go.kr/data/15138709/openapi.do
+- https://www.data.go.kr/data/15138713/openapi.do
+manifest_url_env: LOCAL_FINANCE_OFFICIAL_MANIFEST_URL
+credential_env: null
+formats:
+- json-manifest
+- pdf
+- xlsx
+- csv
+- xml
+- html-link
+network: egress-gateway-only
+schedule: ops.source_registry
+activation:
+  requires_configured_manifest_or_fixed_link: true
+  requires_https_and_host_allowlist: true
+  requires_manifest_schema_validation: true
+  requires_recorded_response_fingerprint: true
+  requires_terms_review: true
+  failure_mode: connector remains DISABLED
+operations:
+- local-finance-disclosures
+- local-finance-subsidies
+- local-finance-statistics
+activation_mode: OFFICIAL_FIXED_LINK_OR_KEY
+operator_responsibility: provide credential/config and pass live preflight

@@ -67,31 +67,16 @@
       "$ref": "#/$defs/sha256"
     },
     "validationStatus": {
-      "enum": [
-        "VALID",
-        "INVALID"
-      ]
+      "enum": ["VALID", "INVALID"]
     },
     "schemaStatus": {
-      "enum": [
-        "PASS",
-        "FAIL",
-        "NOT_RUN"
-      ]
+      "enum": ["PASS", "FAIL", "NOT_RUN"]
     },
     "citationStatus": {
-      "enum": [
-        "PASS",
-        "FAIL",
-        "NOT_RUN"
-      ]
+      "enum": ["PASS", "FAIL", "NOT_RUN"]
     },
     "policyStatus": {
-      "enum": [
-        "PASS",
-        "FAIL",
-        "NOT_RUN"
-      ]
+      "enum": ["PASS", "FAIL", "NOT_RUN"]
     },
     "runTerminalStatus": {
       "enum": [
@@ -112,10 +97,7 @@
       ]
     },
     "failureCode": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "enum": [
         null,
         "OUTPUT_SCHEMA_INVALID",
@@ -140,12 +122,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "stage",
-          "code",
-          "jsonPointer",
-          "detailSha256"
-        ],
+        "required": ["stage", "code", "jsonPointer", "detailSha256"],
         "properties": {
           "stage": {
             "enum": [
@@ -297,46 +274,81 @@
           }
         },
         "anyOf": [
-          {"properties": {"schemaStatus": {"const": "FAIL"}}},
-          {"properties": {"citationStatus": {"const": "FAIL"}}},
-          {"properties": {"policyStatus": {"const": "FAIL"}}}
+          { "properties": { "schemaStatus": { "const": "FAIL" } } },
+          { "properties": { "citationStatus": { "const": "FAIL" } } },
+          { "properties": { "policyStatus": { "const": "FAIL" } } }
         ]
       }
     },
     {
       "if": {
-        "properties": {"validationStatus": {"const": "VALID"}, "outputStatus": {"const": "COMPLETED"}},
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "COMPLETED" }
+        },
         "required": ["validationStatus", "outputStatus"]
       },
       "then": {
-        "properties": {"runTerminalStatus": {"const": "SUCCEEDED"}, "validatedOutcome": {"properties": {"status": {"const": "COMPLETED"}}}}
+        "properties": {
+          "runTerminalStatus": { "const": "SUCCEEDED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "COMPLETED" } }
+          }
+        }
       }
     },
     {
       "if": {
-        "properties": {"validationStatus": {"const": "VALID"}, "outputStatus": {"const": "ABSTAINED"}},
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "ABSTAINED" }
+        },
         "required": ["validationStatus", "outputStatus"]
       },
       "then": {
-        "properties": {"runTerminalStatus": {"const": "SUCCEEDED"}, "validatedOutcome": {"properties": {"status": {"const": "ABSTAINED"}}}, "proposalCount": {"const": 0}}
+        "properties": {
+          "runTerminalStatus": { "const": "SUCCEEDED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "ABSTAINED" } }
+          },
+          "proposalCount": { "const": 0 }
+        }
       }
     },
     {
       "if": {
-        "properties": {"validationStatus": {"const": "VALID"}, "outputStatus": {"const": "POLICY_BLOCKED"}},
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "POLICY_BLOCKED" }
+        },
         "required": ["validationStatus", "outputStatus"]
       },
       "then": {
-        "properties": {"runTerminalStatus": {"const": "POLICY_BLOCKED"}, "validatedOutcome": {"properties": {"status": {"const": "POLICY_BLOCKED"}}}, "proposalCount": {"const": 0}}
+        "properties": {
+          "runTerminalStatus": { "const": "POLICY_BLOCKED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "POLICY_BLOCKED" } }
+          },
+          "proposalCount": { "const": 0 }
+        }
       }
     },
     {
       "if": {
-        "properties": {"validationStatus": {"const": "VALID"}, "outputStatus": {"const": "BUDGET_BLOCKED"}},
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "BUDGET_BLOCKED" }
+        },
         "required": ["validationStatus", "outputStatus"]
       },
       "then": {
-        "properties": {"runTerminalStatus": {"const": "BUDGET_BLOCKED"}, "validatedOutcome": {"properties": {"status": {"const": "BUDGET_BLOCKED"}}}, "proposalCount": {"const": 0}}
+        "properties": {
+          "runTerminalStatus": { "const": "BUDGET_BLOCKED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "BUDGET_BLOCKED" } }
+          },
+          "proposalCount": { "const": 0 }
+        }
       }
     }
   ],
@@ -363,12 +375,7 @@
           "const": "agent-validated-outcome.v2"
         },
         "status": {
-          "enum": [
-            "COMPLETED",
-            "ABSTAINED",
-            "POLICY_BLOCKED",
-            "BUDGET_BLOCKED"
-          ]
+          "enum": ["COMPLETED", "ABSTAINED", "POLICY_BLOCKED", "BUDGET_BLOCKED"]
         },
         "answerFirstSummary": {
           "type": "string",
@@ -390,11 +397,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "method",
-              "resultSummary",
-              "toolCallIds"
-            ],
+            "required": ["method", "resultSummary", "toolCallIds"],
             "properties": {
               "method": {
                 "type": "string",
@@ -424,11 +427,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "actionType",
-              "reason",
-              "requiresHumanDecision"
-            ],
+            "required": ["actionType", "reason", "requiresHumanDecision"],
             "properties": {
               "actionType": {
                 "enum": [
@@ -459,10 +458,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "citationId",
-              "citationSha256"
-            ],
+            "required": ["citationId", "citationSha256"],
             "properties": {
               "citationId": {
                 "type": "string",
@@ -480,10 +476,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "proposalId",
-              "payloadSha256"
-            ],
+            "required": ["proposalId", "payloadSha256"],
             "properties": {
               "proposalId": {
                 "type": "string",

@@ -1,0 +1,27 @@
+
+  configuration:
+    --disable-everything
+    --disable-autodetect
+    --disable-network
+    --disable-gpl
+    --disable-version3
+    --disable-nonfree
+    --disable-doc
+    --disable-debug
+    --disable-devices
+    --disable-avdevice
+    --enable-small
+    --enable-static
+    --disable-shared
+    --enable-ffmpeg
+    --enable-ffprobe
+    --enable-protocol=pipe
+    --enable-demuxer='matroska,wav'
+    --enable-decoder='opus,pcm_s16le,vorbis,vp8'
+    --enable-parser='opus,vorbis,vp8'
+    --enable-encoder='pcm_s16le,rawvideo'
+    --enable-muxer='rawvideo,s16le'
+    --enable-swresample
+    --enable-swscale
+
+Exiting with exit code 0

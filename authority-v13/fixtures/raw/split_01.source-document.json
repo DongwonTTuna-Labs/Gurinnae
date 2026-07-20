@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "source_document_id": "srcdoc_fixture_split_01",
+  "source_id": "pps_g2b_contracts",
+  "remote_record_id": "synthetic-split_01",
+  "remote_version": "v1",
+  "source_url": "https://fixtures.gurine.invalid/split_01",
+  "published_at": "2025-08-03T00:00:00Z",
+  "effective_at": "2025-08-03T00:00:00Z",
+  "retrieved_at": "2026-01-15T03:10:00Z",
+  "content_sha256": "1dae6ad1fab7cdf4608291827406b9955605b96c6ad45d695ce2dbb452be3b49",
+  "schema_fingerprint": "fde483096a6cf4991b0dea6cc4b05650606c35716573a8d4f9fc790ae010bb94",
+  "raw_object": {
+    "raw_object_id": "raw_fixture_split_01",
+    "byte_size": 669,
+    "mime_declared": "application/json",
+    "mime_detected": "application/json",
+    "storage_class": "RAW_PRIVATE",
+    "malware_scan_status": "CLEAN"
+  },
+  "license_status": "REVIEWED",
+  "contains_personal_data": "NO",
+  "fetch_attempt_id": "fetch_fixture_split_01",
+  "metadata": {
+    "synthetic": true,
+    "fixture_name": "split_01",
+    "payload_file": "split_01.payload.json"
+  },
+  "processing_status": "PARSED",
+  "record_status": "CURRENT"
+}

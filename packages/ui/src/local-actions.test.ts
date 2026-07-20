@@ -31,15 +31,14 @@ describe("local action destinations", () => {
     ).toBe("/cases");
   });
 
-  it("uses the selected projection href for record navigation", () => {
+  it("uses a server-owned destination for record navigation", () => {
     expect(
       localActionHref(
         screen("PUB-011", "/contracts"),
-        runtime({
-          listContracts: {
-            items: [{ id: "contract-1", href: "/contracts/contract-1" }],
-          },
-        }),
+        {
+          ...runtime(),
+          destinations: { "open-contract": "/contracts/contract-1" },
+        },
         { id: "open-contract", label: "계약 보기" },
       ),
     ).toBe("/contracts/contract-1");
@@ -68,7 +67,10 @@ describe("local action destinations", () => {
     expect(
       localActionHref(
         screen("PUB-011", "/contracts"),
-        runtime({ href: "//untrusted.example/contracts/1" }),
+        {
+          ...runtime(),
+          destinations: { "open-contract": "//untrusted.example/contracts/1" },
+        },
         { id: "open-contract", label: "계약 보기" },
       ),
     ).toBeUndefined();
@@ -113,10 +115,10 @@ describe("local action destinations", () => {
     expect(
       localActionHref(
         screen("PUB-008", "/agencies/agency-1"),
-        runtime({
-          id: "agency-id",
-          contracts: [{ contractId: "contract-1" }],
-        }),
+        {
+          ...runtime(),
+          destinations: { "view-contract": "/contracts/contract-1" },
+        },
         { id: "view-contract", label: "계약 보기" },
       ),
     ).toBe("/contracts/contract-1");
@@ -127,8 +129,9 @@ describe("local action destinations", () => {
       localActionHref(
         screen("RULE-001", "/internal/rules"),
         {
-          ...runtime({ ruleId: "rule-1", version: 3 }),
+          ...runtime(),
           pathname: "/internal/rules",
+          destinations: { "open-rule": "/internal/rules/rule-1/versions/3" },
         },
         { id: "open-rule", label: "규칙 보기" },
       ),
@@ -137,8 +140,11 @@ describe("local action destinations", () => {
       localActionHref(
         screen("CAS-010", "/internal/cases/case-1/agent-runs"),
         {
-          ...runtime({ runId: "run-1" }),
+          ...runtime(),
           pathname: "/internal/cases/case-1/agent-runs",
+          destinations: {
+            "open-run": "/internal/cases/case-1/agent-runs/run-1",
+          },
         },
         { id: "open-run", label: "실행 상세" },
       ),

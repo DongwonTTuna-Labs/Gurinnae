@@ -96,19 +96,13 @@
           "maxLength": 128
         },
         "kind": {
-          "enum": [
-            "NAVIGATION",
-            "COMMAND"
-          ]
+          "enum": ["NAVIGATION", "COMMAND"]
         },
         "enabled": {
           "type": "boolean"
         },
         "blockedReason": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 1000
         },
         "consequence": {
@@ -117,16 +111,10 @@
           "maxLength": 1000
         },
         "assurance": {
-          "enum": [
-            "NONE",
-            "ACTIVE_SESSION"
-          ]
+          "enum": ["NONE", "ACTIVE_SESSION"]
         },
         "operationId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 128
         }
       }
@@ -193,17 +181,11 @@
           ]
         },
         "startedAt": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "format": "date-time"
         },
         "completedAt": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "format": "date-time"
         },
         "snapshotAsOf": {
@@ -217,12 +199,7 @@
         "proposalSummary": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "pending",
-            "accepted",
-            "rejected",
-            "expired"
-          ],
+          "required": ["pending", "accepted", "rejected", "expired"],
           "properties": {
             "pending": {
               "type": "integer",
@@ -243,10 +220,7 @@
           }
         },
         "costMicrosKrw": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "minimum": 0
         },
         "currency": {
@@ -258,10 +232,7 @@
           "maxLength": 1000
         },
         "highestPriorityUnknown": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 1000
         },
         "href": {
@@ -315,23 +286,14 @@
         "freshness": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "asOf",
-            "state",
-            "source"
-          ],
+          "required": ["asOf", "state", "source"],
           "properties": {
             "asOf": {
               "type": "string",
               "format": "date-time"
             },
             "state": {
-              "enum": [
-                "CURRENT",
-                "STALE",
-                "PARTIAL",
-                "UNAVAILABLE"
-              ]
+              "enum": ["CURRENT", "STALE", "PARTIAL", "UNAVAILABLE"]
             },
             "source": {
               "type": "string",
@@ -343,12 +305,7 @@
         "filters": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "agentTypes",
-            "statuses",
-            "proposalStates",
-            "sort"
-          ],
+          "required": ["agentTypes", "statuses", "proposalStates", "sort"],
           "properties": {
             "agentTypes": {
               "type": "array",
@@ -392,12 +349,7 @@
               }
             },
             "sort": {
-              "enum": [
-                "NEWEST",
-                "OLDEST",
-                "COST_DESC",
-                "STATUS"
-              ]
+              "enum": ["NEWEST", "OLDEST", "COST_DESC", "STATUS"]
             }
           }
         },
@@ -442,12 +394,7 @@
               "minimum": 0
             },
             "state": {
-              "enum": [
-                "AVAILABLE",
-                "LOW",
-                "BLOCKED",
-                "RECONCILIATION_REQUIRED"
-              ]
+              "enum": ["AVAILABLE", "LOW", "BLOCKED", "RECONCILIATION_REQUIRED"]
             }
           }
         },
@@ -465,10 +412,7 @@
           "$ref": "visualization-vm.schema.json"
         },
         "supportReference": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 128
         },
         "viewModelSha256": {
@@ -527,32 +471,17 @@
           ]
         },
         "rightsState": {
-          "enum": [
-            "ALLOWED",
-            "BLOCKED",
-            "EXPIRED",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOWED", "BLOCKED", "EXPIRED", "UNKNOWN"]
         },
         "freshnessState": {
-          "enum": [
-            "CURRENT",
-            "STALE",
-            "UNKNOWN"
-          ]
+          "enum": ["CURRENT", "STALE", "UNKNOWN"]
         },
         "locatorLabel": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 255
         },
         "href": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "pattern": "^/",
           "maxLength": 1024
         }
@@ -671,17 +600,11 @@
               "format": "date-time"
             },
             "startedAt": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "format": "date-time"
             },
             "completedAt": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "format": "date-time"
             },
             "snapshotAsOf": {
@@ -804,10 +727,7 @@
               ]
             },
             "answerFirstSummary": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "maxLength": 6000
             },
             "hypotheses": {
@@ -816,12 +736,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "statement",
-                  "state",
-                  "citationIds",
-                  "unknowns"
-                ],
+                "required": ["statement", "state", "citationIds", "unknowns"],
                 "properties": {
                   "statement": {
                     "type": "string",
@@ -861,11 +776,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "summary",
-                  "citationIds",
-                  "impact"
-                ],
+                "required": ["summary", "citationIds", "impact"],
                 "properties": {
                   "summary": {
                     "type": "string",
@@ -882,11 +793,7 @@
                     }
                   },
                   "impact": {
-                    "enum": [
-                      "WEAKENS",
-                      "CONTRADICTS",
-                      "CONTEXT_ONLY"
-                    ]
+                    "enum": ["WEAKENS", "CONTRADICTS", "CONTEXT_ONLY"]
                   }
                 }
               }
@@ -906,11 +813,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "method",
-                  "result",
-                  "toolCallIds"
-                ],
+                "required": ["method", "result", "toolCallIds"],
                 "properties": {
                   "method": {
                     "type": "string",
@@ -960,10 +863,7 @@
                     "type": "boolean"
                   },
                   "proposalId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "uuid"
                   }
                 }
@@ -982,45 +882,23 @@
               ],
               "properties": {
                 "schema": {
-                  "enum": [
-                    "PASS",
-                    "FAIL",
-                    "NOT_RUN"
-                  ]
+                  "enum": ["PASS", "FAIL", "NOT_RUN"]
                 },
                 "citations": {
-                  "enum": [
-                    "PASS",
-                    "FAIL",
-                    "NOT_RUN"
-                  ]
+                  "enum": ["PASS", "FAIL", "NOT_RUN"]
                 },
                 "rights": {
-                  "enum": [
-                    "PASS",
-                    "FAIL",
-                    "NOT_RUN"
-                  ]
+                  "enum": ["PASS", "FAIL", "NOT_RUN"]
                 },
                 "policy": {
-                  "enum": [
-                    "PASS",
-                    "FAIL",
-                    "NOT_RUN"
-                  ]
+                  "enum": ["PASS", "FAIL", "NOT_RUN"]
                 },
                 "failureLabel": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
+                  "type": ["string", "null"],
                   "maxLength": 1000
                 },
                 "validationSha256": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
+                  "type": ["string", "null"],
                   "pattern": "^[0-9a-f]{64}$"
                 }
               }
@@ -1050,10 +928,7 @@
                 "format": "uuid"
               },
               "sourceKind": {
-                "enum": [
-                  "EVIDENCE_SEGMENT",
-                  "RUN_TOOL_ARTIFACT"
-                ]
+                "enum": ["EVIDENCE_SEGMENT", "RUN_TOOL_ARTIFACT"]
               },
               "sourceLabel": {
                 "type": "string",
@@ -1105,35 +980,16 @@
           ],
           "properties": {
             "promptInjectionState": {
-              "enum": [
-                "CLEAR",
-                "FLAGGED",
-                "BLOCKED",
-                "NOT_RUN"
-              ]
+              "enum": ["CLEAR", "FLAGGED", "BLOCKED", "NOT_RUN"]
             },
             "personalDataState": {
-              "enum": [
-                "CLEAR",
-                "REDACTED",
-                "BLOCKED",
-                "NOT_RUN"
-              ]
+              "enum": ["CLEAR", "REDACTED", "BLOCKED", "NOT_RUN"]
             },
             "rightsState": {
-              "enum": [
-                "ALLOWED",
-                "PARTIAL",
-                "BLOCKED",
-                "UNKNOWN"
-              ]
+              "enum": ["ALLOWED", "PARTIAL", "BLOCKED", "UNKNOWN"]
             },
             "classificationState": {
-              "enum": [
-                "ALLOWED",
-                "LOCAL_ONLY",
-                "BLOCKED"
-              ]
+              "enum": ["ALLOWED", "LOCAL_ONLY", "BLOCKED"]
             },
             "blockedReasons": {
               "type": "array",
@@ -1191,31 +1047,19 @@
                 ]
               },
               "decisionReason": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "maxLength": 2000
               },
               "decidedByLabel": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "maxLength": 255
               },
               "decidedAt": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "format": "date-time"
               },
               "materializedTargetHref": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "pattern": "^/",
                 "maxLength": 1024
               }
@@ -1291,10 +1135,7 @@
           "$ref": "provenance-graph.schema.json"
         },
         "supportReference": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 128
         },
         "viewModelSha256": {

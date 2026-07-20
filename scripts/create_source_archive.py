@@ -24,6 +24,7 @@ EXCLUDED_DIRECTORIES = {
     "target",
     "test-results",
     "__pycache__",
+    ".authority-readonly-v13",
 }
 EXCLUDED_FILES = {
     ".env",

@@ -1,0 +1,27 @@
+{
+  "event_id": "event:043",
+  "event_type": "job.cancelled.v1",
+  "event_version": 1,
+  "occurred_at": "2026-07-11T00:00:00Z",
+  "aggregate_type": "SYNTHETIC",
+  "aggregate_id": "aggregate:043",
+  "aggregate_version": 1,
+  "trace_id": "synthetic-trace-043",
+  "causation_id": null,
+  "correlation_id": null,
+  "actor": null,
+  "payload": {
+    "actor_id": "synthetic",
+    "jobId": "synthetic",
+    "occurred_at": "2026-07-11T00:00:00Z",
+    "operation_id": "synthetic",
+    "request_id": "synthetic"
+  },
+  "recorded_at": "2026-07-11T00:00:00Z",
+  "idempotency_key": "synthetic-idempotency-043",
+  "producer": {
+    "service": "synthetic-validator",
+    "instance_id": "spec"
+  },
+  "classification": "INTERNAL"
+}

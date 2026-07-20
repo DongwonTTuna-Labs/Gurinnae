@@ -8,6 +8,7 @@ import {
   equal,
   hashField,
   invoke,
+  numberField,
   scanPending,
   sessionToken,
   sha256,

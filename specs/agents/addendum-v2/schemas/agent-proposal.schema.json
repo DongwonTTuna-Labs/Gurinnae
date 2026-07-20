@@ -45,13 +45,7 @@
       "format": "uuid"
     },
     "proposalType": {
-      "enum": [
-        "HYPOTHESIS",
-        "CLAIM",
-        "TASK",
-        "COMPARABLE",
-        "COMMUNICATION"
-      ]
+      "enum": ["HYPOTHESIS", "CLAIM", "TASK", "COMPARABLE", "COMMUNICATION"]
     },
     "targetSchemaVersion": {
       "type": "string",
@@ -93,10 +87,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "citationId",
-          "citationSha256"
-        ],
+        "required": ["citationId", "citationSha256"],
         "properties": {
           "citationId": {
             "type": "string",
@@ -111,13 +102,7 @@
       "uniqueItems": true
     },
     "status": {
-      "enum": [
-        "PENDING",
-        "ACCEPTED",
-        "REJECTED",
-        "SUPERSEDED",
-        "EXPIRED"
-      ]
+      "enum": ["PENDING", "ACCEPTED", "REJECTED", "SUPERSEDED", "EXPIRED"]
     },
     "version": {
       "type": "integer",
@@ -145,12 +130,7 @@
           ],
           "properties": {
             "decisionKind": {
-              "enum": [
-                "ACCEPT",
-                "REJECT",
-                "SUPERSEDE",
-                "EXPIRE"
-              ]
+              "enum": ["ACCEPT", "REJECT", "SUPERSEDE", "EXPIRE"]
             },
             "reason": {
               "type": "string",
@@ -343,9 +323,7 @@
                 "const": "ACCEPT"
               }
             },
-            "required": [
-              "decisionKind"
-            ],
+            "required": ["decisionKind"],
             "not": {
               "type": "null"
             }
@@ -377,9 +355,7 @@
                 "const": "REJECT"
               }
             },
-            "required": [
-              "decisionKind"
-            ],
+            "required": ["decisionKind"],
             "not": {
               "type": "null"
             }
@@ -409,9 +385,7 @@
                 "const": "SUPERSEDE"
               }
             },
-            "required": [
-              "decisionKind"
-            ],
+            "required": ["decisionKind"],
             "not": {
               "type": "null"
             }
@@ -441,9 +415,7 @@
                 "const": "EXPIRE"
               }
             },
-            "required": [
-              "decisionKind"
-            ],
+            "required": ["decisionKind"],
             "not": {
               "type": "null"
             }
@@ -467,10 +439,7 @@
             "const": "HYPOTHESIS"
           }
         },
-        "required": [
-          "status",
-          "proposalType"
-        ]
+        "required": ["status", "proposalType"]
       },
       "then": {
         "properties": {
@@ -480,9 +449,7 @@
                 "const": "ACTION_PROPOSAL_DRAFT"
               }
             },
-            "required": [
-              "targetType"
-            ],
+            "required": ["targetType"],
             "not": {
               "type": "null"
             }
@@ -500,10 +467,7 @@
             "const": "CLAIM"
           }
         },
-        "required": [
-          "status",
-          "proposalType"
-        ]
+        "required": ["status", "proposalType"]
       },
       "then": {
         "properties": {
@@ -513,9 +477,7 @@
                 "const": "ACTION_PROPOSAL_DRAFT"
               }
             },
-            "required": [
-              "targetType"
-            ],
+            "required": ["targetType"],
             "not": {
               "type": "null"
             }
@@ -533,10 +495,7 @@
             "const": "TASK"
           }
         },
-        "required": [
-          "status",
-          "proposalType"
-        ]
+        "required": ["status", "proposalType"]
       },
       "then": {
         "properties": {
@@ -546,9 +505,7 @@
                 "const": "ACTION_PROPOSAL_DRAFT"
               }
             },
-            "required": [
-              "targetType"
-            ],
+            "required": ["targetType"],
             "not": {
               "type": "null"
             }
@@ -566,10 +523,7 @@
             "const": "COMPARABLE"
           }
         },
-        "required": [
-          "status",
-          "proposalType"
-        ]
+        "required": ["status", "proposalType"]
       },
       "then": {
         "properties": {
@@ -579,9 +533,7 @@
                 "const": "ACTION_PROPOSAL_DRAFT"
               }
             },
-            "required": [
-              "targetType"
-            ],
+            "required": ["targetType"],
             "not": {
               "type": "null"
             }
@@ -599,10 +551,7 @@
             "const": "COMMUNICATION"
           }
         },
-        "required": [
-          "status",
-          "proposalType"
-        ]
+        "required": ["status", "proposalType"]
       },
       "then": {
         "properties": {
@@ -612,9 +561,7 @@
                 "const": "ACTION_PROPOSAL_DRAFT"
               }
             },
-            "required": [
-              "targetType"
-            ],
+            "required": ["targetType"],
             "not": {
               "type": "null"
             }
@@ -777,20 +724,10 @@
           "maxLength": 4000
         },
         "priority": {
-          "enum": [
-            "LOW",
-            "NORMAL",
-            "HIGH",
-            "URGENT"
-          ]
+          "enum": ["LOW", "NORMAL", "HIGH", "URGENT"]
         },
         "duePolicy": {
-          "enum": [
-            "NONE",
-            "WITHIN_24_HOURS",
-            "WITHIN_3_DAYS",
-            "WITHIN_7_DAYS"
-          ]
+          "enum": ["NONE", "WITHIN_24_HOURS", "WITHIN_3_DAYS", "WITHIN_7_DAYS"]
         },
         "citationIds": {
           "$ref": "#/$defs/citationIds",

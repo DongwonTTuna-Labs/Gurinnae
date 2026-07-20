@@ -1,8 +1,12 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import type { ScreenRuntime, ScreenViewModel } from "../index";
-import { display, semanticRecords } from "../data";
-import { stateLabel, typedScreenViewModel } from "../screen-contract";
+import {
+  formFieldId,
+  stateLabel,
+  typedScreenViewModel,
+} from "../screen-contract";
+import { projectScreen } from "../screen-projection";
 import InternalSidebar from "./InternalSidebar.svelte";
 import PublicHeader from "./PublicHeader.svelte";
 import ResponseHeader from "./ResponseHeader.svelte";
@@ -12,6 +16,7 @@ import ScreenSection from "./ScreenSection.svelte";
 let { screen, runtime }: { screen: ScreenViewModel; runtime: ScreenRuntime } =
   $props();
 const contract = $derived(typedScreenViewModel(screen));
+const projection = $derived(projectScreen(screen, runtime));
 const surface = $derived(
   screen.id.startsWith("PUB-")
     ? "public"
@@ -27,35 +32,59 @@ const workspace = $derived(
     screen.id === "INT-002" ||
     (runtime.pathname ?? "").startsWith("/internal/cases/"),
 );
-const responseStep = $derived(
-  Math.min(4, Math.max(1, Number(screen.id.slice(-3)) || 1)),
-);
-const recordCount = $derived(
-  Object.values(runtime.data).reduce<number>(
-    (sum, value) =>
-      sum +
-      (isRecord(value) && Array.isArray(value.items) ? value.items.length : 0),
-    0,
-  ),
-);
-const publicRecords = $derived(semanticRecords(runtime).slice(0, 4));
+const responseStep = $derived(responseStepForScreen(screen.id));
 const primaryActionAllowed = $derived(
   contract.primaryActionId !== null &&
-  (!runtime.allowedActionIds || runtime.allowedActionIds.includes(contract.primaryActionId)),
+    (!runtime.allowedActionIds ||
+      runtime.allowedActionIds.includes(contract.primaryActionId)),
 );
-const busy = $derived(["loading", "refreshing", "saving", "submitting"].includes(runtime.state));
+const busy = $derived(
+  ["loading", "initial-loading", "refreshing", "saving", "submitting"].includes(
+    runtime.state,
+  ),
+);
+const evidenceLanding = $derived(screen.archetype === "EVIDENCE_LANDING");
+const statusSectionId = $derived(
+  screen.sections.some((section) => section.id === "status") ? "status" : null,
+);
+const caseTaskLinks = $derived.by(() => {
+  const match = (runtime.pathname ?? "").match(/^\/internal\/cases\/([^/]+)/);
+  if (!match?.[1]) return [] as const;
+  const prefix = `/internal/cases/${match[1]}`;
+  return [
+    { label: "개요", href: `${prefix}/overview` },
+    { label: "증거", href: `${prefix}/evidence` },
+    { label: "주장", href: `${prefix}/claims` },
+    { label: "Agent 실행", href: `${prefix}/agent-runs` },
+    { label: "응답", href: `${prefix}/responses` },
+    { label: "타임라인", href: `${prefix}/timeline` },
+  ];
+});
 let activeSection = $state("");
 let lastErrorCount = $state(0);
 $effect(() => {
-  if (runtime.errors.length > 0 && runtime.errors.length !== lastErrorCount && typeof document !== "undefined") {
+  if (
+    runtime.errors.length > 0 &&
+    runtime.errors.length !== lastErrorCount &&
+    typeof document !== "undefined"
+  ) {
     lastErrorCount = runtime.errors.length;
-    requestAnimationFrame(() => document.querySelector<HTMLElement>(".error-summary")?.focus());
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(".error-summary")?.focus();
+    });
   }
 });
 onMount(() => {
   const update = () => {
     const hash = window.location.hash.replace(/^#/, "");
-    if (hash && screen.sections.some((section) => section.id === hash)) activeSection = hash;
+    if (hash && screen.sections.some((section) => section.id === hash)) {
+      activeSection = hash;
+      requestAnimationFrame(() => {
+        const target = document.getElementById(hash);
+        target?.focus({ preventScroll: true });
+        target?.scrollIntoView({ block: "start" });
+      });
+    }
   };
   activeSection = screen.sections[0]?.id ?? "";
   update();
@@ -65,8 +94,100 @@ onMount(() => {
 const headingTestId = $derived(`${screen.id.toLowerCase()}__heading`);
 const errorTestId = $derived(`${screen.id.toLowerCase()}__error_summary`);
 const stateTestId = $derived(`${screen.id.toLowerCase()}__state_live`);
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+const primaryTarget = $derived(
+  contract.primaryActionId
+    ? `#action-${contract.primaryActionId}`
+    : `#page-actions`,
+);
+function responseStepForScreen(screenId: string): number {
+  const steps: Record<string, number> = {
+    "RSP-001": 1,
+    "RSP-002": 1,
+    "RSP-003": 2,
+    "RSP-004": 3,
+    "RSP-005": 4,
+    "RSP-006": 4,
+    "RSP-007": 2,
+    "RSP-008": 1,
+  };
+  return steps[screenId] ?? 1;
+}
+
+function sourceSection(sectionId: string): ScreenViewModel["sections"][number] {
+  const source = screen.sections.find((section) => section.id === sectionId);
+  if (!source)
+    throw new Error(
+      `screen section contract missing: ${screen.id}.${sectionId}`,
+    );
+  return source;
+}
+
+function errorTarget(message: string): string | null {
+  const haystack = message.toLocaleLowerCase();
+  for (const action of screen.actions) {
+    for (const field of runtime.forms[action.id] ?? []) {
+      if (field.readonly) continue;
+      const tokens = [field.name, field.label]
+        .filter(Boolean)
+        .map((token) => token.toLocaleLowerCase());
+      if (tokens.some((token) => haystack.includes(token))) {
+        const base = formFieldId(screen.id, action.id, field.name);
+        if (field.name === "answers") return `${base}-answer-1`;
+        if (field.name.toLowerCase().includes("consent"))
+          return `${base}-body-consent`;
+        return base;
+      }
+    }
+  }
+  return null;
+}
+
+function stateTone(
+  state: ScreenRuntime["state"],
+): "neutral" | "info" | "caution" | "status-alert" {
+  if (
+    [
+      "error",
+      "server-error",
+      "forbidden",
+      "unauthorized",
+      "conflict",
+      "partial-failure",
+      "incident",
+      "unauthenticated",
+    ].includes(state)
+  )
+    return "status-alert";
+  if (
+    [
+      "stale",
+      "partial",
+      "offline",
+      "maintenance",
+      "invalid-filter",
+      "validation-error",
+      "session-expiring",
+      "session-expired",
+      "blocked",
+      "degraded",
+      "telemetry-gap",
+      "reauth-required",
+    ].includes(state)
+  )
+    return "caution";
+  if (
+    [
+      "success",
+      "saved",
+      "current",
+      "healthy",
+      "ready",
+      "receipt",
+      "terminal",
+    ].includes(state)
+  )
+    return "info";
+  return "neutral";
 }
 </script>
 
@@ -75,15 +196,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 {#snippet stateSummary()}
   {#if runtime.notice}<p class="notice" role="status">{runtime.notice}</p>{/if}
   {#if runtime.errors.length > 0}
-    <div class="error-summary" role="alert" tabindex="-1" data-testid={errorTestId}><h2>요청을 완료하지 못했습니다</h2><ul>{#each runtime.errors as error}<li>{error}</li>{/each}</ul></div>
+    <div id={projection.focus.errorSummary} class="error-summary" role="alert" tabindex="-1" data-testid={errorTestId} data-focus-target={projection.focus.errorSummary}><h2>요청을 완료하지 못했습니다</h2><ul>{#each runtime.errors as error, index}<li>{#if errorTarget(error)}<a href={`#${errorTarget(error)}`}>오류 {index + 1}: {error}</a>{:else}{error}{/if}</li>{/each}</ul></div>
   {/if}
 {/snippet}
 
-{#snippet sections()}
-  {#each screen.sections as section, index (section.id)}
-    <section id={section.id} data-testid={section.test_id} data-component={section.component} class="section" class:primary={index === 0}>
-      <div class="section-content"><ScreenSection {section} {screen} {runtime} {index} /></div>
-    </section>
+{#snippet sections(skipStatus = false)}
+  {#each contract.sections as typedSection, index (typedSection.id)}
+    {@const section = sourceSection(typedSection.id)}
+    {#if !(skipStatus && typedSection.id === statusSectionId)}
+      <section id={typedSection.id} tabindex="-1" aria-labelledby={`section-${typedSection.id}-heading`} data-testid={typedSection.testId} data-focus-target={projection.sections[typedSection.id]?.focusTarget} data-component={typedSection.component} data-projection-state={projection.sections[typedSection.id]?.state} class="section" class:primary={typedSection.region === "priority"}>
+        <div class="section-content"><ScreenSection {section} {screen} {runtime} {index} projection={projection.sections[typedSection.id]} /></div>
+      </section>
+    {/if}
   {/each}
   <ScreenActions {screen} {runtime} />
 {/snippet}
@@ -91,62 +215,68 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 {#if surface === "public"}
   <div class="shell public-shell">
     <PublicHeader {runtime} />
-    <main id="main-content" class="main public-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
+            <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="main public-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
+      {#if evidenceLanding && statusSectionId}
+        {@const statusSection = sourceSection(statusSectionId)}
+        <section id={statusSection.id} tabindex="-1" aria-labelledby={`section-${statusSection.id}-heading`} data-testid={statusSection.test_id} data-focus-target={projection.sections[statusSection.id]?.focusTarget} data-component={statusSection.component} data-projection-state={projection.sections[statusSection.id]?.state} class="section pre-title-status">
+          <div class="section-content"><ScreenSection section={statusSection} {screen} {runtime} index={0} projection={projection.sections[statusSection.id]} /></div>
+        </section>
+      {/if}
+      {#if evidenceLanding}<p id={projection.focus.stateLive} class={`state badge ${stateTone(runtime.state)}`} data-state={runtime.state} data-testid={stateTestId} data-focus-target={projection.focus.stateLive} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>{@render stateSummary()}{/if}
       {#if home}
         <header class="hero">
           <div class="hero-copy">
             <p class="eyebrow">공개자료를 근거로, 설명이 필요한 차이를 찾습니다</p>
-            <h1 id={headingTestId}>공공의 돈을<br />근거로 읽는 법</h1>
+            <h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>공공의 돈을<br />근거로 읽는 법</h1>
             <p class="lead">구린네는 계약·예산 공개자료에서 조사할 가치가 있는 이상 징후를 찾고, 확인된 사실과 중요한 미확인, 당사자 소명, 원본 근거를 함께 보여줍니다.</p>
             <p class="hero-note">자동 부패 판정기가 아닙니다. 가격 차이나 반복 계약은 조사 신호일 뿐이며 위법·비리를 의미하지 않습니다.</p>
           </div>
-          <aside class="hero-board" aria-label="현재 공개 데이터 상태">
-            <p class="board-label">현재 화면의 공개 계약</p>
-            {#if publicRecords.length > 0}
-              {#each publicRecords as item, index}<div class="board-record"><strong>{display(item.record.title ?? item.record.summary ?? `공개 기록 ${index + 1}`)}</strong><span class="board-meta"><span>현재 상태</span><span class="board-state">{display(item.record.status ?? stateLabel(runtime.state))}</span></span></div>{/each}
-            {:else}<div class="board-record"><strong>공개 기록 없음</strong><span class="board-meta"><span>현재 상태</span><span class="board-state">{stateLabel(runtime.state)}</span></span></div>{/if}
+          <aside class="hero-board" aria-label="현재 공개자료 상태">
+            <p class="board-label">현재 공개자료 상태</p>
+            <div class="board-record"><strong>{stateLabel(runtime.state)}</strong><span class="board-meta"><span>다음</span><span class="board-state">{contract.primaryActionLabel ?? "자료 탐색"}</span></span></div>
           </aside>
         </header>
       {:else}
-        <header class="page-heading"><nav class="breadcrumb" aria-label="현재 위치"><a href="/">홈</a><span aria-hidden="true">/</span><span>{screen.title}</span></nav><p class="eyebrow">{contract.journey} · {contract.persona}</p><h1 id={headingTestId}>{screen.title}</h1><p class="lead">{contract.answerFirst}</p></header>
+        <header class="page-heading"><nav class="breadcrumb" aria-label="현재 위치"><a href="/">홈</a><span aria-hidden="true">/</span><span>{screen.title}</span></nav><p class="eyebrow">{contract.journey} · {contract.persona}</p><h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{screen.title}</h1><p class="lead">{contract.answerFirst}</p></header>
       {/if}
-      <p class="state badge neutral" class:status-alert={runtime.state === "error" || runtime.state === "forbidden" || runtime.state === "conflict"} data-state={runtime.state} data-testid={stateTestId} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>
-      {@render stateSummary()}{@render sections()}
+      {#if !evidenceLanding}<p id={projection.focus.stateLive} class={`state badge ${stateTone(runtime.state)}`} data-state={runtime.state} data-testid={stateTestId} data-focus-target={projection.focus.stateLive} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>{@render stateSummary()}{/if}
+      {@render sections(evidenceLanding)}
     </main>
     <footer class="footer"><div class="footer-inner"><p>구린네는 자동 분석 결과를 범죄 또는 비리의 확정 판단으로 표현하지 않습니다.</p><p><a href="/editorial-policy">편집 정책</a> · <a href="/corrections">정정</a></p></div></footer>
   </div>
 {:else if surface === "response"}
   <div class="form-shell">
     <ResponseHeader requestLabel={contract.objectLabel} />
-    <main id="main-content" class="form-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
-      <div class="progress" aria-label={`4단계 중 ${responseStep}단계`}>{#each [1, 2, 3, 4] as step}<span class:active={step <= responseStep}></span>{/each}</div>
-      <header class="page-heading"><p class="eyebrow">{responseStep} / 4 · 보호된 소명 절차</p><h1 id={headingTestId}>{screen.title}</h1><p class="lead">{contract.answerFirst}</p></header>
+    <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="form-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
+      <div class="progress" role="progressbar" aria-label="보호된 소명 절차 진행률" aria-valuemin="1" aria-valuemax="4" aria-valuenow={responseStep} aria-valuetext={`${responseStep}단계 / 4단계`}>{#each [1, 2, 3, 4] as step}<span class:active={step <= responseStep} aria-hidden="true"></span>{/each}</div>
+      <header class="page-heading"><p class="eyebrow">{responseStep} / 4 · 보호된 소명 절차</p><h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{screen.title}</h1><p class="lead">{contract.answerFirst}</p></header>
       <div class="request-summary"><strong>{contract.objectLabel}</strong><span>세션·권한·기한은 제출 단계마다 서버가 다시 확인합니다.</span></div>
-      <p class="state badge neutral" class:status-alert={runtime.state === "error" || runtime.state === "forbidden" || runtime.state === "conflict"} data-state={runtime.state} data-testid={stateTestId} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>{@render stateSummary()}
+      <p id={projection.focus.stateLive} class={`state badge ${stateTone(runtime.state)}`} data-state={runtime.state} data-testid={stateTestId} data-focus-target={projection.focus.stateLive} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>{@render stateSummary()}
       <div class="form-card">{@render sections()}</div>
     </main>
   </div>
 {:else if surface === "auth"}
   <div class="form-shell auth-shell">
     <ResponseHeader requestLabel="내부 인증" />
-    <main id="main-content" class="form-main auth-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
-      <header class="page-heading"><p class="eyebrow">보호된 내부 접근</p><h1 id={headingTestId}>{screen.title}</h1><p class="lead">{screen.sections[0]?.purpose ?? "조직 계정과 현재 보안 상태를 확인합니다."}</p></header>
-      <p class="state badge neutral" class:status-alert={runtime.state === "error" || runtime.state === "forbidden" || runtime.state === "conflict"} data-state={runtime.state} data-testid={stateTestId} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>{@render stateSummary()}<div class="form-card">{@render sections()}</div>
+    <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="form-main auth-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
+      <header class="page-heading"><p class="eyebrow">보호된 내부 접근</p><h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{screen.title}</h1><p class="lead">{screen.sections[0]?.purpose ?? "조직 계정과 현재 보안 상태를 확인합니다."}</p></header>
+      <p id={projection.focus.stateLive} class={`state badge ${stateTone(runtime.state)}`} data-state={runtime.state} data-testid={stateTestId} data-focus-target={projection.focus.stateLive} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>{@render stateSummary()}<div class="form-card">{@render sections()}</div>
     </main>
   </div>
 {:else}
   <div class="internal-shell">
     <InternalSidebar pathname={runtime.pathname ?? ""} actorLabel={runtime.actorDisplayName ?? "로그인 필요"} />
     <div class="internal-content">
-      <header class="internal-topbar"><div><span>내부 작업</span> <strong>{screen.title}</strong></div><span class="badge caution">{stateLabel(runtime.state)}</span></header>
-      <main id="main-content" class="internal-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
-        <header class="workspace-head"><div class="workspace-head-row"><div><div class="badges"><span class="badge info">{contract.journey}</span><span class="badge neutral">{contract.persona}</span></div><h1 id={headingTestId}>{screen.title}</h1><div class="workspace-meta"><span>서버 상태 {stateLabel(runtime.state)}</span><span>확인된 기록 {recordCount}건</span><span>연결된 자료 {screen.dataOperations.length}개</span></div></div>{#if primaryActionAllowed}<a class="primary-button" href="#page-actions">{contract.primaryActionLabel ?? "다음 단계 열기"}</a>{:else if contract.primaryActionId}<span class="primary-button disabled" aria-disabled="true">권한 또는 상태 확인 필요</span>{/if}</div></header>
+      <header class="internal-topbar"><div><span>내부 작업</span> <strong>{screen.title}</strong></div><span class={`badge ${stateTone(runtime.state)}`}>{stateLabel(runtime.state)}</span></header>
+      <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="internal-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
+        <header class="workspace-head"><div class="workspace-head-row"><div><div class="badges"><span class="badge info">{contract.journey}</span><span class="badge neutral">{contract.persona}</span></div><h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{screen.title}</h1><div class="workspace-meta"><span>대상 {contract.objectLabel}</span><span>현재 상태 {stateLabel(runtime.state)}</span><span>다음 행동 {contract.primaryActionLabel ?? "확인 필요"}</span></div></div>{#if primaryActionAllowed && contract.primaryActionId}<a class="primary-button" href={primaryTarget}>{contract.primaryActionLabel ?? "다음 단계 열기"}</a>{:else if contract.primaryActionId}<span class="primary-button disabled" aria-disabled="true">권한 또는 상태 확인 필요</span>{/if}</div></header>
         {@render stateSummary()}
         {#if workspace}
           <div class="workspace-grid">
-            <nav class="task-rail" aria-label="현재 화면 영역">{#each screen.sections as section, index}<a class:active={activeSection === section.id} href={`#${section.id}`} onclick={() => activeSection = section.id}><span>{section.title}</span><span class="task-count">{index + 1}</span></a>{/each}</nav>
+            <nav class="task-rail" aria-label="현재 화면 영역">{#each screen.sections as section, index}<a class:active={activeSection === section.id} href={`#${section.id}`} onclick={() => activeSection = section.id}><span>{section.title}</span><span class="task-count">{index + 1}</span></a>{/each}{#if caseTaskLinks.length > 0}<div class="task-rail-siblings" aria-label="케이스 작업 이동"><span>케이스 작업</span>{#each caseTaskLinks as link}<a href={link.href} class:active={runtime.pathname === link.href}>{link.label}</a>{/each}</div>{/if}</nav>
+            <label class="compact-task-selector" for={`compact-task-${screen.id.toLowerCase()}`}>화면 영역<select id={`compact-task-${screen.id.toLowerCase()}`} value={activeSection} onchange={(event) => { const value = (event.currentTarget as HTMLSelectElement).value; if (value) window.location.hash = value; }}>{#each screen.sections as section}<option value={section.id}>{section.title}</option>{/each}</select></label>
             <div class="workspace-panel">{@render sections()}</div>
-            <aside class="context-rail" aria-label="작업 맥락"><div class="context-section"><h2>결정 전 확인</h2><div class="blocker">현재 권한·갱신 시각·버전을 서버에서 재검증합니다.</div></div><div class="context-section"><h2>현재 상태</h2><p>{stateLabel(runtime.state)}</p><p>오류 {runtime.errors.length}건</p></div><div class="context-section"><h2>연결 자료</h2><p>{screen.dataOperations.length}개 자료</p></div></aside>
+            <aside class="context-rail" aria-label="작업 맥락"><div class="context-section"><h2>결정 전 확인</h2><div class="blocker">{runtime.state === "unauthenticated" || runtime.state === "unauthorized" || runtime.state === "forbidden" ? "접근 권한을 확인한 뒤 다음 행동을 진행하세요." : runtime.errors.length > 0 ? "오류 원인을 확인하고 다시 시도하세요." : "서버가 최신 상태·권한·버전을 확인했습니다."}</div></div><div class="context-section"><h2>현재 상태</h2><p>{stateLabel(runtime.state)}</p><p>오류 {runtime.errors.length}건</p><p>세션 {runtime.sessionExpiresAt ?? "확인 필요"}</p></div><div class="context-section"><h2>연결 자료</h2><p>{screen.dataOperations.length}개 자료</p><p>다음 행동: {contract.primaryActionLabel ?? "확인 필요"}</p></div></aside>
           </div>
         {:else}<div class="workspace-panel operation-panel">{@render sections()}</div>{/if}
       </main>

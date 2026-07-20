@@ -8,6 +8,21 @@ import type { ScreenViewModel } from "@gurine/ui";
 import type { RequestEvent } from "@sveltejs/kit";
 import { readInternalSession } from "./cookies";
 import { operations } from "./screen-contract";
+
+/** Browser forms do not receive a synchronizer token.  The encrypted
+ * HttpOnly session cookie plus an explicit same-origin check is the BFF CSRF
+ * boundary; the token itself never enters the screen projection or DOM. */
+export function sameOrigin(event: RequestEvent): boolean {
+  const origin = event.request.headers.get("origin");
+  if (origin) return origin === event.url.origin;
+  const referer = event.request.headers.get("referer");
+  if (!referer) return true;
+  try {
+    return new URL(referer).origin === event.url.origin;
+  } catch {
+    return false;
+  }
+}
 export function formsFor(
   screen: ScreenViewModel,
   event: RequestEvent,
@@ -55,15 +70,69 @@ export function formsFor(
                   : {}),
               }
             : {};
+        const journeyTarget =
+          operationId === "decideJourneyHandoff"
+            ? {
+                ...(typeof selectedTarget.handoffId === "string"
+                  ? { handoffId: selectedTarget.handoffId }
+                  : {}),
+                ...(typeof selectedTarget.expectedHandoffVersion === "number"
+                  ? {
+                      expectedHandoffVersion:
+                        selectedTarget.expectedHandoffVersion,
+                    }
+                  : {}),
+                ...(typeof selectedTarget.expectedBindingDigest === "string"
+                  ? {
+                      expectedBindingDigest:
+                        selectedTarget.expectedBindingDigest,
+                    }
+                  : {}),
+              }
+            : {};
         const preset = {
           ...(expectedVersion !== undefined ? { expectedVersion } : {}),
           ...approvalTarget,
+          ...journeyTarget,
           ...explicit,
         };
-        return [
-          action.id,
-          indexed ? operationFields(indexed, event.params, preset) : [],
-        ];
+        const fields = indexed
+          ? operationFields(indexed, event.params, preset)
+              .map((field) =>
+                operationId === "decideJourneyHandoff" &&
+                field.name === "reasonCode"
+                  ? {
+                      ...field,
+                      // The authority request marks reasonCode as nullable but
+                      // required: ACKNOWLEDGE sends null, DECLINE sends the
+                      // controlled code.  Keep the runtime field optional so
+                      // the empty ACK path is serialized as an omitted/null
+                      // value instead of being rejected by the generic form
+                      // parser before the control API can validate it.
+                      required: false,
+                      type: "text" as const,
+                      options: [
+                        "CAPABILITY_UNAVAILABLE",
+                        "OBJECT_SCOPE_MISMATCH",
+                        "CONFLICT_OF_INTEREST",
+                        "WORKLOAD_CAPACITY",
+                        "DEPENDENCY_BLOCKED",
+                        "SUBJECT_INVALID",
+                        "OWNER_UNAVAILABLE",
+                        "POLICY_BLOCKED",
+                        "RECEIVER_DECLINED",
+                      ],
+                    }
+                  : field,
+              )
+              .map((field) =>
+                operationId === "decideJourneyHandoff" &&
+                field.name === "reason"
+                  ? { ...field, required: false }
+                  : field,
+              )
+          : [];
+        return [action.id, fields];
       }),
   );
 }

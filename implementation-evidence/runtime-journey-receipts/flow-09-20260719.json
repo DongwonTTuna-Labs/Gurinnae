@@ -1,0 +1,409 @@
+{
+  "schemaVersion": 4,
+  "evidenceKind": "LIVE_POSTGRES_SUBSCRIPTION_FLOW",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "flowId": "FLOW-09",
+  "flowName": "SUBSCRIPTION_MANAGEMENT",
+  "operationId": "activateSubscription",
+  "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "normal": {
+    "pass": true,
+    "negative": "28000:subscription_verification_invalid",
+    "operations": [
+      {
+        "links": [],
+        "status": "PENDING",
+        "requestId": "e6e8f257-1520-4002-94fc-ffc386e0fc7a",
+        "acceptedAt": "2026-07-20T19:38:08.152146+00:00",
+        "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "operationId": "createSubscription",
+        "safePayload": {
+          "issuer": "public-web",
+          "locale": "ko",
+          "topics": [
+            {
+              "topic": "correction"
+            }
+          ],
+          "expiresAt": "2026-07-20T20:38:08.145288+00:00",
+          "frequency": "DAILY",
+          "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "expectedVersion": 0
+        },
+        "auditEventId": "9372b916-4eca-40a4-a574-bc360b9b55a3",
+        "receiptDigest": "6587b2a3deb51874a382884854bec02ab1eeefcf4d98eb8644fe70a82afbfc21",
+        "emittedEventIds": [
+          "828b6bdc-d934-4c34-b3e8-41dbb556db52"
+        ],
+        "aggregateVersion": 1,
+        "ownerResultDigest": "ab0eafc4e380c02c8262ff782eae54fdbfe38e5695099e0a28608d45565cdf28",
+        "ownerAuditReadback": {
+          "id": "9372b916-4eca-40a4-a574-bc360b9b55a3",
+          "action": "command.createSubscription",
+          "outcome": "SUCCESS",
+          "requestId": "e6e8f257-1520-4002-94fc-ffc386e0fc7a"
+        },
+        "ownerOutboxReadback": {
+          "id": "828b6bdc-d934-4c34-b3e8-41dbb556db52",
+          "eventType": "control.addendum_command_applied.v1",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "aggregateType": "subscription",
+          "aggregateVersion": 1
+        },
+        "ownerReceiptDurable": true,
+        "ownerReceiptReadback": {
+          "links": [],
+          "status": "PENDING",
+          "requestId": "e6e8f257-1520-4002-94fc-ffc386e0fc7a",
+          "acceptedAt": "2026-07-20T19:38:08.152146+00:00",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "operationId": "createSubscription",
+          "safePayload": {
+            "issuer": "public-web",
+            "locale": "ko",
+            "topics": [
+              {
+                "topic": "correction"
+              }
+            ],
+            "expiresAt": "2026-07-20T20:38:08.145288+00:00",
+            "frequency": "DAILY",
+            "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "expectedVersion": 0
+          },
+          "auditEventId": "9372b916-4eca-40a4-a574-bc360b9b55a3",
+          "receiptDigest": "6587b2a3deb51874a382884854bec02ab1eeefcf4d98eb8644fe70a82afbfc21",
+          "emittedEventIds": [
+            "828b6bdc-d934-4c34-b3e8-41dbb556db52"
+          ],
+          "aggregateVersion": 1
+        }
+      },
+      {
+        "links": [],
+        "status": "ACTIVE",
+        "requestId": "91006e7d-76d9-440f-82bf-200668634f13",
+        "acceptedAt": "2026-07-20T19:38:08.159573+00:00",
+        "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "operationId": "verifySubscription",
+        "safePayload": {
+          "issuer": "public-web",
+          "expiresAt": "2026-07-20T20:38:08.158123+00:00",
+          "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "expectedVersion": 1
+        },
+        "auditEventId": "34aeb792-7bf2-4072-b4e3-e8a74e053064",
+        "receiptDigest": "8b9bc2d92ddbba512f3145a9b30dc485a163bf8864e962f820dfe4e999b43010",
+        "emittedEventIds": [
+          "d4caa40b-60e4-4c95-8e83-c6d360fb9d58"
+        ],
+        "aggregateVersion": 2,
+        "ownerResultDigest": "44db3ac7457967abb01024f990e1c536bdafd2cc783165a3c5ffb3ffb4a5abf3",
+        "ownerAuditReadback": {
+          "id": "34aeb792-7bf2-4072-b4e3-e8a74e053064",
+          "action": "command.verifySubscription",
+          "outcome": "SUCCESS",
+          "requestId": "91006e7d-76d9-440f-82bf-200668634f13"
+        },
+        "ownerOutboxReadback": {
+          "id": "d4caa40b-60e4-4c95-8e83-c6d360fb9d58",
+          "eventType": "control.addendum_command_applied.v1",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "aggregateType": "subscription",
+          "aggregateVersion": 2
+        },
+        "ownerReceiptDurable": true,
+        "ownerReceiptReadback": {
+          "links": [],
+          "status": "ACTIVE",
+          "requestId": "91006e7d-76d9-440f-82bf-200668634f13",
+          "acceptedAt": "2026-07-20T19:38:08.159573+00:00",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "operationId": "verifySubscription",
+          "safePayload": {
+            "issuer": "public-web",
+            "expiresAt": "2026-07-20T20:38:08.158123+00:00",
+            "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "expectedVersion": 1
+          },
+          "auditEventId": "34aeb792-7bf2-4072-b4e3-e8a74e053064",
+          "receiptDigest": "8b9bc2d92ddbba512f3145a9b30dc485a163bf8864e962f820dfe4e999b43010",
+          "emittedEventIds": [
+            "d4caa40b-60e4-4c95-8e83-c6d360fb9d58"
+          ],
+          "aggregateVersion": 2
+        }
+      },
+      {
+        "links": [],
+        "status": "SESSION_ISSUED",
+        "requestId": "3257e52a-9338-4c45-8872-36e1cadca88d",
+        "acceptedAt": "2026-07-20T19:38:08.161857+00:00",
+        "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "operationId": "exchangeSubscriptionManagementToken",
+        "safePayload": {
+          "issuer": "public-web",
+          "expiresAt": "2026-07-20T20:38:08.160709+00:00",
+          "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "expectedVersion": 2
+        },
+        "auditEventId": "af1826d4-a58d-4b12-b396-9ad9c020ee2b",
+        "receiptDigest": "e1ecfa9ffa601b021cfc5bb65d3ccdc1e3eece060fc520f0c4509f6689f649d4",
+        "emittedEventIds": [
+          "ab345024-80ef-4c0a-a4a2-8533469978d9"
+        ],
+        "aggregateVersion": 3,
+        "ownerResultDigest": "c7f32846e994ec6db9283b5940bdc33ffd5af488205b2fb514979f6f7eebf4e4",
+        "ownerAuditReadback": {
+          "id": "af1826d4-a58d-4b12-b396-9ad9c020ee2b",
+          "action": "command.exchangeSubscriptionManagementToken",
+          "outcome": "SUCCESS",
+          "requestId": "3257e52a-9338-4c45-8872-36e1cadca88d"
+        },
+        "ownerOutboxReadback": {
+          "id": "ab345024-80ef-4c0a-a4a2-8533469978d9",
+          "eventType": "control.addendum_command_applied.v1",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "aggregateType": "subscription",
+          "aggregateVersion": 3
+        },
+        "ownerReceiptDurable": true,
+        "ownerReceiptReadback": {
+          "links": [],
+          "status": "SESSION_ISSUED",
+          "requestId": "3257e52a-9338-4c45-8872-36e1cadca88d",
+          "acceptedAt": "2026-07-20T19:38:08.161857+00:00",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "operationId": "exchangeSubscriptionManagementToken",
+          "safePayload": {
+            "issuer": "public-web",
+            "expiresAt": "2026-07-20T20:38:08.160709+00:00",
+            "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "expectedVersion": 2
+          },
+          "auditEventId": "af1826d4-a58d-4b12-b396-9ad9c020ee2b",
+          "receiptDigest": "e1ecfa9ffa601b021cfc5bb65d3ccdc1e3eece060fc520f0c4509f6689f649d4",
+          "emittedEventIds": [
+            "ab345024-80ef-4c0a-a4a2-8533469978d9"
+          ],
+          "aggregateVersion": 3
+        }
+      },
+      {
+        "links": [],
+        "status": "READ",
+        "requestId": "0b76bde4-febc-456c-bf2f-1e5b0ca648fa",
+        "acceptedAt": "2026-07-20T19:38:08.163971+00:00",
+        "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "operationId": "getSubscription",
+        "safePayload": {
+          "issuer": "public-web",
+          "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "expectedVersion": 3
+        },
+        "auditEventId": "bbf2e4e1-dcc7-49a4-9750-e4804d50468c",
+        "receiptDigest": "2eb979be768e9be65d913f25957bac4fdd7d23379d1fd93f7383056ab68f0077",
+        "emittedEventIds": [
+          "6a1db54a-2d21-4edf-8967-0f2fd490736a"
+        ],
+        "aggregateVersion": 4,
+        "ownerResultDigest": "f9a83a67f2c5bb9a7da0c7344e5560e25c69622af0f3b5c92e14aa1fc5b6d5a3",
+        "ownerAuditReadback": {
+          "id": "bbf2e4e1-dcc7-49a4-9750-e4804d50468c",
+          "action": "command.getSubscription",
+          "outcome": "SUCCESS",
+          "requestId": "0b76bde4-febc-456c-bf2f-1e5b0ca648fa"
+        },
+        "ownerOutboxReadback": {
+          "id": "6a1db54a-2d21-4edf-8967-0f2fd490736a",
+          "eventType": "control.addendum_command_applied.v1",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "aggregateType": "subscription",
+          "aggregateVersion": 4
+        },
+        "ownerReceiptDurable": true,
+        "ownerReceiptReadback": {
+          "links": [],
+          "status": "READ",
+          "requestId": "0b76bde4-febc-456c-bf2f-1e5b0ca648fa",
+          "acceptedAt": "2026-07-20T19:38:08.163971+00:00",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "operationId": "getSubscription",
+          "safePayload": {
+            "issuer": "public-web",
+            "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "expectedVersion": 3
+          },
+          "auditEventId": "bbf2e4e1-dcc7-49a4-9750-e4804d50468c",
+          "receiptDigest": "2eb979be768e9be65d913f25957bac4fdd7d23379d1fd93f7383056ab68f0077",
+          "emittedEventIds": [
+            "6a1db54a-2d21-4edf-8967-0f2fd490736a"
+          ],
+          "aggregateVersion": 4
+        }
+      },
+      {
+        "links": [],
+        "status": "ACTIVE",
+        "requestId": "5ead7139-715c-443f-8e35-d712ebab6377",
+        "acceptedAt": "2026-07-20T19:38:08.165954+00:00",
+        "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "operationId": "updateSubscription",
+        "safePayload": {
+          "issuer": "public-web",
+          "status": "ACTIVE",
+          "topics": [
+            {
+              "topic": "retraction"
+            }
+          ],
+          "frequency": "IMMEDIATE",
+          "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "expectedVersion": 4
+        },
+        "auditEventId": "f0de0c61-4874-476a-b7a7-a831faa51a8b",
+        "receiptDigest": "99f24765ef5c272612329b0618bf5c39e72f33743ab97f591727d5bc8e303e62",
+        "emittedEventIds": [
+          "a9dc09aa-d5cf-479a-ba46-2e8e3ec6ad79"
+        ],
+        "aggregateVersion": 5,
+        "ownerResultDigest": "73b0febffec2e07d29bc1b0c3287856e5a9865f63cd9b400d1c2441620ca58c7",
+        "ownerAuditReadback": {
+          "id": "f0de0c61-4874-476a-b7a7-a831faa51a8b",
+          "action": "command.updateSubscription",
+          "outcome": "SUCCESS",
+          "requestId": "5ead7139-715c-443f-8e35-d712ebab6377"
+        },
+        "ownerOutboxReadback": {
+          "id": "a9dc09aa-d5cf-479a-ba46-2e8e3ec6ad79",
+          "eventType": "control.addendum_command_applied.v1",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "aggregateType": "subscription",
+          "aggregateVersion": 5
+        },
+        "ownerReceiptDurable": true,
+        "ownerReceiptReadback": {
+          "links": [],
+          "status": "ACTIVE",
+          "requestId": "5ead7139-715c-443f-8e35-d712ebab6377",
+          "acceptedAt": "2026-07-20T19:38:08.165954+00:00",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "operationId": "updateSubscription",
+          "safePayload": {
+            "issuer": "public-web",
+            "status": "ACTIVE",
+            "topics": [
+              {
+                "topic": "retraction"
+              }
+            ],
+            "frequency": "IMMEDIATE",
+            "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "expectedVersion": 4
+          },
+          "auditEventId": "f0de0c61-4874-476a-b7a7-a831faa51a8b",
+          "receiptDigest": "99f24765ef5c272612329b0618bf5c39e72f33743ab97f591727d5bc8e303e62",
+          "emittedEventIds": [
+            "a9dc09aa-d5cf-479a-ba46-2e8e3ec6ad79"
+          ],
+          "aggregateVersion": 5
+        }
+      },
+      {
+        "links": [],
+        "status": "UNSUBSCRIBED",
+        "requestId": "c31b1fee-c659-49cf-b77c-565d0636e6f4",
+        "acceptedAt": "2026-07-20T19:38:08.167959+00:00",
+        "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "operationId": "unsubscribe",
+        "safePayload": {
+          "issuer": "public-web",
+          "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "expectedVersion": 5
+        },
+        "auditEventId": "8ac2f6aa-4fdf-4516-8e49-ea7c2ce574a8",
+        "receiptDigest": "3642147efcf6e642427ab2a491ce694d0aa599d30891fb2ab78b3319fef8e4b9",
+        "emittedEventIds": [
+          "9e2bfa5c-8bdf-4869-aea6-380bde89d737"
+        ],
+        "aggregateVersion": 6,
+        "ownerResultDigest": "9d5d1f98b547b33a0dc6bbe888e65f6745047570b6b2fa8f6ebb2ce1b40583a0",
+        "ownerAuditReadback": {
+          "id": "8ac2f6aa-4fdf-4516-8e49-ea7c2ce574a8",
+          "action": "command.unsubscribe",
+          "outcome": "SUCCESS",
+          "requestId": "c31b1fee-c659-49cf-b77c-565d0636e6f4"
+        },
+        "ownerOutboxReadback": {
+          "id": "9e2bfa5c-8bdf-4869-aea6-380bde89d737",
+          "eventType": "control.addendum_command_applied.v1",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "aggregateType": "subscription",
+          "aggregateVersion": 6
+        },
+        "ownerReceiptDurable": true,
+        "ownerReceiptReadback": {
+          "links": [],
+          "status": "UNSUBSCRIBED",
+          "requestId": "c31b1fee-c659-49cf-b77c-565d0636e6f4",
+          "acceptedAt": "2026-07-20T19:38:08.167959+00:00",
+          "aggregateId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "operationId": "unsubscribe",
+          "safePayload": {
+            "issuer": "public-web",
+            "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "expectedVersion": 5
+          },
+          "auditEventId": "8ac2f6aa-4fdf-4516-8e49-ea7c2ce574a8",
+          "receiptDigest": "3642147efcf6e642427ab2a491ce694d0aa599d30891fb2ab78b3319fef8e4b9",
+          "emittedEventIds": [
+            "9e2bfa5c-8bdf-4869-aea6-380bde89d737"
+          ],
+          "aggregateVersion": 6
+        }
+      }
+    ],
+    "finalStatus": "UNSUBSCRIBED",
+    "subscriptionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "negativeMutationProof": {
+      "auditAfter": 67,
+      "auditBefore": 67,
+      "outboxAfter": 55,
+      "outboxBefore": 55,
+      "receiptsAfter": 6,
+      "receiptsBefore": 6
+    },
+    "requestOperationBindings": {
+      "unsubscribe": "c31b1fee-c659-49cf-b77c-565d0636e6f4",
+      "getSubscription": "0b76bde4-febc-456c-bf2f-1e5b0ca648fa",
+      "createSubscription": "e6e8f257-1520-4002-94fc-ffc386e0fc7a",
+      "updateSubscription": "5ead7139-715c-443f-8e35-d712ebab6377",
+      "verifySubscription": "91006e7d-76d9-440f-82bf-200668634f13",
+      "exchangeSubscriptionManagementToken": "3257e52a-9338-4c45-8872-36e1cadca88d"
+    }
+  },
+  "negative": {
+    "expectedError": {
+      "sqlstate": "28000",
+      "message": "subscription_verification_invalid"
+    },
+    "observedError": "28000:subscription_verification_invalid",
+    "forbiddenMutationCount": 0,
+    "mutationProof": {
+      "auditAfter": 67,
+      "auditBefore": 67,
+      "outboxAfter": 55,
+      "outboxBefore": 55,
+      "receiptsAfter": 6,
+      "receiptsBefore": 6
+    },
+    "pass": true
+  },
+  "sourceTreeDigest": "9ecdfa4c56c7fa04cb9808cef46b0b1bb2b2edbdfc521c3a6a453c419827a190",
+  "pass": true
+}

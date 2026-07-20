@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-021",
+  "route": "/api",
+  "url": "http://127.0.0.1:29101/api",
+  "observedAt": "2026-07-19T15:35:29.347Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-021",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "getting-started",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "resources",
+        "component": "RevisionAndCorrectionPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "pagination",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "errors",
+        "component": "AgentSuggestionPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "versioning",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "download",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

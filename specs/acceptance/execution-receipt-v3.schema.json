@@ -30,12 +30,18 @@
   "properties": {
     "schema_version": { "const": 3 },
     "receipt_kind": { "const": "ACCEPTANCE_SCENARIO_EXECUTION" },
-    "receipt_id": { "type": "string", "pattern": "^ACR-[A-Za-z0-9._-]+-AC-[A-Z0-9_-]+-[0-9]{3}$" },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^ACR-[A-Za-z0-9._-]+-AC-[A-Z0-9_-]+-[0-9]{3}$"
+    },
     "run_id": { "$ref": "#/$defs/run_id" },
     "attempt": { "const": 1 },
     "status": { "const": "PASSED" },
     "origin": { "enum": ["BASE_V13", "SUPPLEMENTAL_V1"] },
-    "scenario_id": { "type": "string", "pattern": "^AC-[A-Z0-9_]+(?:-[A-Z0-9_]+)*-[0-9]{3}$" },
+    "scenario_id": {
+      "type": "string",
+      "pattern": "^AC-[A-Z0-9_]+(?:-[A-Z0-9_]+)*-[0-9]{3}$"
+    },
     "feature_file": { "$ref": "#/$defs/repository_path" },
     "scenario_title": { "type": "string", "minLength": 1 },
     "bindings": { "$ref": "#/$defs/bindings" },
@@ -111,7 +117,10 @@
   },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$"
+    },
     "timestamp": { "type": "string", "format": "date-time" },
     "repository_path": {
       "type": "string",
@@ -173,17 +182,11 @@
         "clause_sha256": { "$ref": "#/$defs/sha256" },
         "example_id": { "type": "string", "minLength": 1 },
         "example_sha256": {
-          "oneOf": [
-            { "$ref": "#/$defs/sha256" },
-            { "type": "null" }
-          ]
+          "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
         },
         "phase": { "enum": ["GIVEN", "WHEN", "THEN"] },
         "oracle_contract": {
-          "oneOf": [
-            { "$ref": "#/$defs/digest_pair" },
-            { "type": "null" }
-          ]
+          "oneOf": [{ "$ref": "#/$defs/digest_pair" }, { "type": "null" }]
         }
       },
       "allOf": [

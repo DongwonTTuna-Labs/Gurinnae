@@ -1,0 +1,1031 @@
+{
+  "schemaVersion": 3,
+  "evidenceKind": "LIVE_POSTGRES_FLOW_RECEIPT_CHAIN",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "flowId": "FLOW-02",
+  "flowName": "JOURNALIST_REPRODUCTION",
+  "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+  "operationId": "getCaseReproducibility",
+  "branchId": {
+    "normal": "normal",
+    "negative": "stale-expected-version"
+  },
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "normal": {
+    "stageCount": 5,
+    "stages": [
+      {
+        "pass": true,
+        "edgeId": "J-02-E01",
+        "eventType": "journey.handoff_decided.v1",
+        "handoffId": "b531ca13-8398-4501-bbcf-74c527de8ba4",
+        "receiptId": "d3132bc8-aee8-4558-90ad-923df3acfc34",
+        "observedAt": "2026-07-20T19:38:01.334193+00:00",
+        "stageIndex": 1,
+        "auditAction": "JOURNEY_HANDOFF_DECIDED",
+        "journeyCode": "J-02",
+        "auditEventId": "bade822a-88fb-4939-ac01-7ba1293a4fee",
+        "auditOutcome": "SUCCESS",
+        "outboxEventId": "85667d4c-cd70-4cd2-b98e-eb468680f04c",
+        "receiptDigest": "070ace238812e1557e9f56b7d3a37044b3c223c4562ec32eb568b68a607dfb84",
+        "resultingState": "ACTIVE",
+        "destinationNode": "PUB-005",
+        "receiverRefHmac": "f46c71d7d356a037739779f9a157b4e46717a9859b7f125fcafb3ec1c0e460f1",
+        "receiverFunction": "journey.J-02.J-02-E01",
+        "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+        "operationResponse": {
+          "links": [],
+          "status": "COMPLETED",
+          "decidedAt": "2026-07-20T19:38:01.334193+00:00",
+          "requestId": "4ead42f4-8656-42e4-8c06-c39f40ef51f8",
+          "acceptedAt": "2026-07-20T19:38:01.32846+00:00",
+          "aggregateId": "b531ca13-8398-4501-bbcf-74c527de8ba4",
+          "finalParent": {
+            "dueAt": "2026-07-20T20:38:01.317289+00:00",
+            "state": "ACTIVE",
+            "version": 3,
+            "headReceiptId": "d3132bc8-aee8-4558-90ad-923df3acfc34",
+            "activeHandoffId": null,
+            "escalationState": "RESOLVED",
+            "headReceiptDigest": "070ace238812e1557e9f56b7d3a37044b3c223c4562ec32eb568b68a607dfb84",
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "activeHandoffState": null,
+            "nextOwnerBindingDigest": null,
+            "activeHandoffGeneration": null,
+            "currentOwnerBindingDigest": "f46c71d7d356a037739779f9a157b4e46717a9859b7f125fcafb3ec1c0e460f1"
+          },
+          "operationId": "getCaseReproducibility",
+          "replacement": null,
+          "auditEventId": "bade822a-88fb-4939-ac01-7ba1293a4fee",
+          "effectDigest": "6bea49a356fde606419f187b53773cbb3a2cde8639fa2a901b5a39d44964bda6",
+          "receiptDigest": "6bea49a356fde606419f187b53773cbb3a2cde8639fa2a901b5a39d44964bda6",
+          "decisionReceipt": {
+            "decision": "ACKNOWLEDGE",
+            "handoffId": "b531ca13-8398-4501-bbcf-74c527de8ba4",
+            "receiptId": "d3132bc8-aee8-4558-90ad-923df3acfc34",
+            "generation": 1,
+            "handoffKind": "HS-03-CASE_OWNERSHIP",
+            "auditEventId": "bade822a-88fb-4939-ac01-7ba1293a4fee",
+            "outboxEventId": "85667d4c-cd70-4cd2-b98e-eb468680f04c",
+            "receiptDigest": "070ace238812e1557e9f56b7d3a37044b3c223c4562ec32eb568b68a607dfb84",
+            "handoffVersion": 2,
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "resultingHandoffState": "ACKNOWLEDGED",
+            "resultingJourneyState": "ACTIVE",
+            "journeyInstanceVersion": 3,
+            "nextOwnerBindingDigest": null,
+            "currentOwnerBindingDigest": "f46c71d7d356a037739779f9a157b4e46717a9859b7f125fcafb3ec1c0e460f1"
+          },
+          "emittedEventIds": [
+            "85667d4c-cd70-4cd2-b98e-eb468680f04c"
+          ],
+          "aggregateVersion": 3,
+          "navigationOperationId": "decideJourneyHandoff",
+          "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "owner": "public-api"
+        },
+        "currentObjectDigest": "d01acbe5753637f26ae30926c339a73fbf5a53cc48cdc33afb3ce2a36dcb8d89",
+        "operationIdPersisted": true,
+        "persistedOperationId": "getCaseReproducibility",
+        "resultingHandoffState": "ACKNOWLEDGED",
+        "journeyInstanceVersion": 3,
+        "destinationReadbackDigest": "e3525116ce7c7a094d001e755466e315bf80de970a17a7a2fea29c5a0e644bb1",
+        "flowId": "FLOW-02",
+        "authorityStage": "J-02-E01",
+        "operationId": "getCaseReproducibility",
+        "navigationPersistedOperationId": "decideJourneyHandoff",
+        "operationBinding": {
+          "expectedOperationId": "getCaseReproducibility",
+          "persistedOperationId": "getCaseReproducibility",
+          "authorityTransitionOperationId": "decideJourneyHandoff",
+          "navigationPersistedOperationId": "decideJourneyHandoff",
+          "navigationBindingVerified": true,
+          "semanticOperationId": "getCaseReproducibility",
+          "semanticReceiptDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "receiverFunction": "journey.J-02.J-02-E01",
+          "auditEventId": "bade822a-88fb-4939-ac01-7ba1293a4fee",
+          "outboxEventId": "85667d4c-cd70-4cd2-b98e-eb468680f04c",
+          "bindingDigest": "f46c71d7d356a037739779f9a157b4e46717a9859b7f125fcafb3ec1c0e460f1",
+          "bindingVerified": true
+        }
+      },
+      {
+        "pass": true,
+        "edgeId": "J-02-E02",
+        "eventType": "journey.handoff_decided.v1",
+        "handoffId": "07684b0c-8175-4ad8-a8b2-f17740e707ae",
+        "receiptId": "9a62f60f-5310-43d2-87f5-37dfeff83396",
+        "observedAt": "2026-07-20T19:38:01.772609+00:00",
+        "stageIndex": 2,
+        "auditAction": "JOURNEY_HANDOFF_DECIDED",
+        "journeyCode": "J-02",
+        "auditEventId": "6511cb99-aff9-4534-8a9b-657983c21fe6",
+        "auditOutcome": "SUCCESS",
+        "outboxEventId": "604d847a-659f-498d-9081-86f0502c145f",
+        "receiptDigest": "e9b97f44e989fb684953fabea24a3835d2b4b0d34d862c00a286a17c8ef224fb",
+        "resultingState": "ACTIVE",
+        "destinationNode": "PUB-006",
+        "receiverRefHmac": "63354c869c85c87fda6e45e507d0c9616935bbf67616b69c97adfa77a932d455",
+        "receiverFunction": "journey.J-02.J-02-E02",
+        "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+        "operationResponse": {
+          "links": [],
+          "status": "COMPLETED",
+          "decidedAt": "2026-07-20T19:38:01.772609+00:00",
+          "requestId": "69957dc5-0801-4a5f-9c40-7d33007fbcb3",
+          "acceptedAt": "2026-07-20T19:38:01.766363+00:00",
+          "aggregateId": "07684b0c-8175-4ad8-a8b2-f17740e707ae",
+          "finalParent": {
+            "dueAt": "2026-07-20T20:38:01.750865+00:00",
+            "state": "ACTIVE",
+            "version": 5,
+            "headReceiptId": "9a62f60f-5310-43d2-87f5-37dfeff83396",
+            "activeHandoffId": null,
+            "escalationState": "RESOLVED",
+            "headReceiptDigest": "e9b97f44e989fb684953fabea24a3835d2b4b0d34d862c00a286a17c8ef224fb",
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "activeHandoffState": null,
+            "nextOwnerBindingDigest": null,
+            "activeHandoffGeneration": null,
+            "currentOwnerBindingDigest": "63354c869c85c87fda6e45e507d0c9616935bbf67616b69c97adfa77a932d455"
+          },
+          "operationId": "getCaseReproducibility",
+          "replacement": null,
+          "auditEventId": "6511cb99-aff9-4534-8a9b-657983c21fe6",
+          "effectDigest": "81faf41970b20ecc85e3ef964b134e11df232099897f2892fc2056ebe5e07e7c",
+          "receiptDigest": "81faf41970b20ecc85e3ef964b134e11df232099897f2892fc2056ebe5e07e7c",
+          "decisionReceipt": {
+            "decision": "ACKNOWLEDGE",
+            "handoffId": "07684b0c-8175-4ad8-a8b2-f17740e707ae",
+            "receiptId": "9a62f60f-5310-43d2-87f5-37dfeff83396",
+            "generation": 2,
+            "handoffKind": "HS-03-CASE_OWNERSHIP",
+            "auditEventId": "6511cb99-aff9-4534-8a9b-657983c21fe6",
+            "outboxEventId": "604d847a-659f-498d-9081-86f0502c145f",
+            "receiptDigest": "e9b97f44e989fb684953fabea24a3835d2b4b0d34d862c00a286a17c8ef224fb",
+            "handoffVersion": 2,
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "resultingHandoffState": "ACKNOWLEDGED",
+            "resultingJourneyState": "ACTIVE",
+            "journeyInstanceVersion": 5,
+            "nextOwnerBindingDigest": null,
+            "currentOwnerBindingDigest": "63354c869c85c87fda6e45e507d0c9616935bbf67616b69c97adfa77a932d455"
+          },
+          "emittedEventIds": [
+            "604d847a-659f-498d-9081-86f0502c145f"
+          ],
+          "aggregateVersion": 5,
+          "navigationOperationId": "decideJourneyHandoff",
+          "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "owner": "public-api"
+        },
+        "currentObjectDigest": "d01acbe5753637f26ae30926c339a73fbf5a53cc48cdc33afb3ce2a36dcb8d89",
+        "operationIdPersisted": true,
+        "persistedOperationId": "getCaseReproducibility",
+        "resultingHandoffState": "ACKNOWLEDGED",
+        "journeyInstanceVersion": 5,
+        "destinationReadbackDigest": "234ea8698ddb78ae43113682a343947901c1292a97c6c517bf8379e90da2b86a",
+        "flowId": "FLOW-02",
+        "authorityStage": "J-02-E02",
+        "operationId": "getCaseReproducibility",
+        "navigationPersistedOperationId": "decideJourneyHandoff",
+        "operationBinding": {
+          "expectedOperationId": "getCaseReproducibility",
+          "persistedOperationId": "getCaseReproducibility",
+          "authorityTransitionOperationId": "decideJourneyHandoff",
+          "navigationPersistedOperationId": "decideJourneyHandoff",
+          "navigationBindingVerified": true,
+          "semanticOperationId": "getCaseReproducibility",
+          "semanticReceiptDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "receiverFunction": "journey.J-02.J-02-E02",
+          "auditEventId": "6511cb99-aff9-4534-8a9b-657983c21fe6",
+          "outboxEventId": "604d847a-659f-498d-9081-86f0502c145f",
+          "bindingDigest": "63354c869c85c87fda6e45e507d0c9616935bbf67616b69c97adfa77a932d455",
+          "bindingVerified": true
+        }
+      },
+      {
+        "pass": true,
+        "edgeId": "J-02-E03",
+        "eventType": "journey.handoff_decided.v1",
+        "handoffId": "6ec7b839-6d30-40f4-8082-c79506c97171",
+        "receiptId": "039f4377-8eca-4c6a-a5c0-2cbd72411bde",
+        "observedAt": "2026-07-20T19:38:02.255274+00:00",
+        "stageIndex": 3,
+        "auditAction": "JOURNEY_HANDOFF_DECIDED",
+        "journeyCode": "J-02",
+        "auditEventId": "8ee5941e-0c84-428f-a034-8abfbcee8f9e",
+        "auditOutcome": "SUCCESS",
+        "outboxEventId": "f9abd5a5-06a6-4571-a5a9-dfc09a79f04a",
+        "receiptDigest": "a96fc4c1233c93a7a185f0c7b793b4d7865a53cddacadb9fdbb2c5ce495e21d7",
+        "resultingState": "ACTIVE",
+        "destinationNode": "PUB-006::bundle-downloaded",
+        "receiverRefHmac": "2aceb021e9e5fd263249a733761f4aaa95761ba9c966bcf027a1cbefbb0ec4bd",
+        "receiverFunction": "journey.J-02.J-02-E03",
+        "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+        "operationResponse": {
+          "links": [],
+          "status": "COMPLETED",
+          "decidedAt": "2026-07-20T19:38:02.255274+00:00",
+          "requestId": "7d890d40-4657-416f-91fc-8869db540db6",
+          "acceptedAt": "2026-07-20T19:38:02.249555+00:00",
+          "aggregateId": "6ec7b839-6d30-40f4-8082-c79506c97171",
+          "finalParent": {
+            "dueAt": "2026-07-20T20:38:02.230096+00:00",
+            "state": "ACTIVE",
+            "version": 7,
+            "headReceiptId": "039f4377-8eca-4c6a-a5c0-2cbd72411bde",
+            "activeHandoffId": null,
+            "escalationState": "RESOLVED",
+            "headReceiptDigest": "a96fc4c1233c93a7a185f0c7b793b4d7865a53cddacadb9fdbb2c5ce495e21d7",
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "activeHandoffState": null,
+            "nextOwnerBindingDigest": null,
+            "activeHandoffGeneration": null,
+            "currentOwnerBindingDigest": "2aceb021e9e5fd263249a733761f4aaa95761ba9c966bcf027a1cbefbb0ec4bd"
+          },
+          "operationId": "getCaseReproducibility",
+          "replacement": null,
+          "auditEventId": "8ee5941e-0c84-428f-a034-8abfbcee8f9e",
+          "effectDigest": "6a4420ce78880c2e034f2a6570858019ff3314c43915aced2f4c927540481f8e",
+          "receiptDigest": "6a4420ce78880c2e034f2a6570858019ff3314c43915aced2f4c927540481f8e",
+          "decisionReceipt": {
+            "decision": "ACKNOWLEDGE",
+            "handoffId": "6ec7b839-6d30-40f4-8082-c79506c97171",
+            "receiptId": "039f4377-8eca-4c6a-a5c0-2cbd72411bde",
+            "generation": 3,
+            "handoffKind": "HS-03-CASE_OWNERSHIP",
+            "auditEventId": "8ee5941e-0c84-428f-a034-8abfbcee8f9e",
+            "outboxEventId": "f9abd5a5-06a6-4571-a5a9-dfc09a79f04a",
+            "receiptDigest": "a96fc4c1233c93a7a185f0c7b793b4d7865a53cddacadb9fdbb2c5ce495e21d7",
+            "handoffVersion": 2,
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "resultingHandoffState": "ACKNOWLEDGED",
+            "resultingJourneyState": "ACTIVE",
+            "journeyInstanceVersion": 7,
+            "nextOwnerBindingDigest": null,
+            "currentOwnerBindingDigest": "2aceb021e9e5fd263249a733761f4aaa95761ba9c966bcf027a1cbefbb0ec4bd"
+          },
+          "emittedEventIds": [
+            "f9abd5a5-06a6-4571-a5a9-dfc09a79f04a"
+          ],
+          "aggregateVersion": 7,
+          "navigationOperationId": "decideJourneyHandoff",
+          "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "owner": "public-api"
+        },
+        "currentObjectDigest": "d01acbe5753637f26ae30926c339a73fbf5a53cc48cdc33afb3ce2a36dcb8d89",
+        "operationIdPersisted": true,
+        "persistedOperationId": "getCaseReproducibility",
+        "resultingHandoffState": "ACKNOWLEDGED",
+        "journeyInstanceVersion": 7,
+        "destinationReadbackDigest": "a975c0c802006091e20548da1a83b76e0bff501b97be83b9019479d2d20daf07",
+        "flowId": "FLOW-02",
+        "authorityStage": "J-02-E03",
+        "operationId": "getCaseReproducibility",
+        "navigationPersistedOperationId": "decideJourneyHandoff",
+        "operationBinding": {
+          "expectedOperationId": "getCaseReproducibility",
+          "persistedOperationId": "getCaseReproducibility",
+          "authorityTransitionOperationId": "decideJourneyHandoff",
+          "navigationPersistedOperationId": "decideJourneyHandoff",
+          "navigationBindingVerified": true,
+          "semanticOperationId": "getCaseReproducibility",
+          "semanticReceiptDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "receiverFunction": "journey.J-02.J-02-E03",
+          "auditEventId": "8ee5941e-0c84-428f-a034-8abfbcee8f9e",
+          "outboxEventId": "f9abd5a5-06a6-4571-a5a9-dfc09a79f04a",
+          "bindingDigest": "2aceb021e9e5fd263249a733761f4aaa95761ba9c966bcf027a1cbefbb0ec4bd",
+          "bindingVerified": true
+        }
+      },
+      {
+        "pass": true,
+        "edgeId": "J-02-E04",
+        "eventType": "journey.handoff_decided.v1",
+        "handoffId": "27b6572f-fb51-44c0-af2f-588baf3165ad",
+        "receiptId": "dca74ec1-ee14-4838-8f5c-8c396ed38877",
+        "observedAt": "2026-07-20T19:38:02.748663+00:00",
+        "stageIndex": 4,
+        "auditAction": "JOURNEY_HANDOFF_DECIDED",
+        "journeyCode": "J-02",
+        "auditEventId": "8d6368ee-016d-4cd7-b734-f0ceab1bde1e",
+        "auditOutcome": "SUCCESS",
+        "outboxEventId": "b772ca5e-3839-48f7-abed-8d6c26cf8ddd",
+        "receiptDigest": "4007d0fb02cf40463cdb41e6b118e25c79c57e1e261c8fda37ea4512d13962e1",
+        "resultingState": "ACTIVE",
+        "destinationNode": "PUB-018",
+        "receiverRefHmac": "c3015346d79e4c3d54eeb0187cd26162bd5db3a6243123c09435b24863c7ee1d",
+        "receiverFunction": "journey.J-02.J-02-E04",
+        "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+        "operationResponse": {
+          "links": [],
+          "status": "COMPLETED",
+          "decidedAt": "2026-07-20T19:38:02.748663+00:00",
+          "requestId": "12f42b7a-9bee-4e24-9b30-a1fdade6f40e",
+          "acceptedAt": "2026-07-20T19:38:02.743323+00:00",
+          "aggregateId": "27b6572f-fb51-44c0-af2f-588baf3165ad",
+          "finalParent": {
+            "dueAt": "2026-07-20T20:38:02.724213+00:00",
+            "state": "ACTIVE",
+            "version": 9,
+            "headReceiptId": "dca74ec1-ee14-4838-8f5c-8c396ed38877",
+            "activeHandoffId": null,
+            "escalationState": "RESOLVED",
+            "headReceiptDigest": "4007d0fb02cf40463cdb41e6b118e25c79c57e1e261c8fda37ea4512d13962e1",
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "activeHandoffState": null,
+            "nextOwnerBindingDigest": null,
+            "activeHandoffGeneration": null,
+            "currentOwnerBindingDigest": "c3015346d79e4c3d54eeb0187cd26162bd5db3a6243123c09435b24863c7ee1d"
+          },
+          "operationId": "getCaseReproducibility",
+          "replacement": null,
+          "auditEventId": "8d6368ee-016d-4cd7-b734-f0ceab1bde1e",
+          "effectDigest": "2d9be0deca82e1ef28ac3d2d7521ab8c9b9d06dd8b96ea0e1d30eb1af593baf0",
+          "receiptDigest": "2d9be0deca82e1ef28ac3d2d7521ab8c9b9d06dd8b96ea0e1d30eb1af593baf0",
+          "decisionReceipt": {
+            "decision": "ACKNOWLEDGE",
+            "handoffId": "27b6572f-fb51-44c0-af2f-588baf3165ad",
+            "receiptId": "dca74ec1-ee14-4838-8f5c-8c396ed38877",
+            "generation": 4,
+            "handoffKind": "HS-03-CASE_OWNERSHIP",
+            "auditEventId": "8d6368ee-016d-4cd7-b734-f0ceab1bde1e",
+            "outboxEventId": "b772ca5e-3839-48f7-abed-8d6c26cf8ddd",
+            "receiptDigest": "4007d0fb02cf40463cdb41e6b118e25c79c57e1e261c8fda37ea4512d13962e1",
+            "handoffVersion": 2,
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "resultingHandoffState": "ACKNOWLEDGED",
+            "resultingJourneyState": "ACTIVE",
+            "journeyInstanceVersion": 9,
+            "nextOwnerBindingDigest": null,
+            "currentOwnerBindingDigest": "c3015346d79e4c3d54eeb0187cd26162bd5db3a6243123c09435b24863c7ee1d"
+          },
+          "emittedEventIds": [
+            "b772ca5e-3839-48f7-abed-8d6c26cf8ddd"
+          ],
+          "aggregateVersion": 9,
+          "navigationOperationId": "decideJourneyHandoff",
+          "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "owner": "public-api"
+        },
+        "currentObjectDigest": "d01acbe5753637f26ae30926c339a73fbf5a53cc48cdc33afb3ce2a36dcb8d89",
+        "operationIdPersisted": true,
+        "persistedOperationId": "getCaseReproducibility",
+        "resultingHandoffState": "ACKNOWLEDGED",
+        "journeyInstanceVersion": 9,
+        "destinationReadbackDigest": "23c7ca00ab5f46bf56d982cd90af5776e4c413707df7aaa826bc56b9645cf07c",
+        "flowId": "FLOW-02",
+        "authorityStage": "J-02-E04",
+        "operationId": "getCaseReproducibility",
+        "navigationPersistedOperationId": "decideJourneyHandoff",
+        "operationBinding": {
+          "expectedOperationId": "getCaseReproducibility",
+          "persistedOperationId": "getCaseReproducibility",
+          "authorityTransitionOperationId": "decideJourneyHandoff",
+          "navigationPersistedOperationId": "decideJourneyHandoff",
+          "navigationBindingVerified": true,
+          "semanticOperationId": "getCaseReproducibility",
+          "semanticReceiptDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "receiverFunction": "journey.J-02.J-02-E04",
+          "auditEventId": "8d6368ee-016d-4cd7-b734-f0ceab1bde1e",
+          "outboxEventId": "b772ca5e-3839-48f7-abed-8d6c26cf8ddd",
+          "bindingDigest": "c3015346d79e4c3d54eeb0187cd26162bd5db3a6243123c09435b24863c7ee1d",
+          "bindingVerified": true
+        }
+      },
+      {
+        "pass": true,
+        "edgeId": "J-02-E05",
+        "eventType": "journey.handoff_decided.v1",
+        "handoffId": "a53d4bed-59bf-4111-8563-a9dfe9316b86",
+        "receiptId": "9211270e-028b-469b-b935-d9dfb23e6e99",
+        "observedAt": "2026-07-20T19:38:03.260393+00:00",
+        "stageIndex": 5,
+        "auditAction": "JOURNEY_HANDOFF_DECIDED",
+        "journeyCode": "J-02",
+        "auditEventId": "46a72e14-8045-4e9c-8821-221c6e615012",
+        "auditOutcome": "SUCCESS",
+        "outboxEventId": "4a4e33a5-6ec1-4a55-913a-517ae96ea327",
+        "receiptDigest": "5afe2528c3db72f6a685762b589d03b0b0c2510ec0e76fc415b61d4281239faa",
+        "resultingState": "ACTIVE",
+        "destinationNode": "PUB-018::reproduction-bundle-receipt",
+        "receiverRefHmac": "7387c3e42e6d22c78269deedfb555ff778d84611a79efeb77bffb8f6507ec061",
+        "receiverFunction": "journey.J-02.J-02-E05",
+        "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+        "operationResponse": {
+          "links": [],
+          "status": "COMPLETED",
+          "decidedAt": "2026-07-20T19:38:03.260393+00:00",
+          "requestId": "6473a5b6-cfbe-467b-85e8-42c64f2686f4",
+          "acceptedAt": "2026-07-20T19:38:03.254791+00:00",
+          "aggregateId": "a53d4bed-59bf-4111-8563-a9dfe9316b86",
+          "finalParent": {
+            "dueAt": "2026-07-20T20:38:03.225349+00:00",
+            "state": "ACTIVE",
+            "version": 11,
+            "headReceiptId": "9211270e-028b-469b-b935-d9dfb23e6e99",
+            "activeHandoffId": null,
+            "escalationState": "RESOLVED",
+            "headReceiptDigest": "5afe2528c3db72f6a685762b589d03b0b0c2510ec0e76fc415b61d4281239faa",
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "activeHandoffState": null,
+            "nextOwnerBindingDigest": null,
+            "activeHandoffGeneration": null,
+            "currentOwnerBindingDigest": "7387c3e42e6d22c78269deedfb555ff778d84611a79efeb77bffb8f6507ec061"
+          },
+          "operationId": "getCaseReproducibility",
+          "replacement": null,
+          "auditEventId": "46a72e14-8045-4e9c-8821-221c6e615012",
+          "effectDigest": "bbe0d0724b3a218648fa376c5f43347174acad53a00824f74fc94ab5017ca5c9",
+          "receiptDigest": "bbe0d0724b3a218648fa376c5f43347174acad53a00824f74fc94ab5017ca5c9",
+          "decisionReceipt": {
+            "decision": "ACKNOWLEDGE",
+            "handoffId": "a53d4bed-59bf-4111-8563-a9dfe9316b86",
+            "receiptId": "9211270e-028b-469b-b935-d9dfb23e6e99",
+            "generation": 5,
+            "handoffKind": "HS-03-CASE_OWNERSHIP",
+            "auditEventId": "46a72e14-8045-4e9c-8821-221c6e615012",
+            "outboxEventId": "4a4e33a5-6ec1-4a55-913a-517ae96ea327",
+            "receiptDigest": "5afe2528c3db72f6a685762b589d03b0b0c2510ec0e76fc415b61d4281239faa",
+            "handoffVersion": 2,
+            "journeyInstanceId": "efc6d6ef-5f93-4173-8db9-3798a289b4e9",
+            "resultingHandoffState": "ACKNOWLEDGED",
+            "resultingJourneyState": "ACTIVE",
+            "journeyInstanceVersion": 11,
+            "nextOwnerBindingDigest": null,
+            "currentOwnerBindingDigest": "7387c3e42e6d22c78269deedfb555ff778d84611a79efeb77bffb8f6507ec061"
+          },
+          "emittedEventIds": [
+            "4a4e33a5-6ec1-4a55-913a-517ae96ea327"
+          ],
+          "aggregateVersion": 11,
+          "navigationOperationId": "decideJourneyHandoff",
+          "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "owner": "public-api"
+        },
+        "currentObjectDigest": "d01acbe5753637f26ae30926c339a73fbf5a53cc48cdc33afb3ce2a36dcb8d89",
+        "operationIdPersisted": true,
+        "persistedOperationId": "getCaseReproducibility",
+        "resultingHandoffState": "ACKNOWLEDGED",
+        "journeyInstanceVersion": 11,
+        "destinationReadbackDigest": "06d8a3838d1f1f1a59ff4a2a5eecd26131d628f7535d164e3ea5ef6f678c498d",
+        "flowId": "FLOW-02",
+        "authorityStage": "J-02-E05",
+        "operationId": "getCaseReproducibility",
+        "navigationPersistedOperationId": "decideJourneyHandoff",
+        "operationBinding": {
+          "expectedOperationId": "getCaseReproducibility",
+          "persistedOperationId": "getCaseReproducibility",
+          "authorityTransitionOperationId": "decideJourneyHandoff",
+          "navigationPersistedOperationId": "decideJourneyHandoff",
+          "navigationBindingVerified": true,
+          "semanticOperationId": "getCaseReproducibility",
+          "semanticReceiptDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+          "receiverFunction": "journey.J-02.J-02-E05",
+          "auditEventId": "46a72e14-8045-4e9c-8821-221c6e615012",
+          "outboxEventId": "4a4e33a5-6ec1-4a55-913a-517ae96ea327",
+          "bindingDigest": "7387c3e42e6d22c78269deedfb555ff778d84611a79efeb77bffb8f6507ec061",
+          "bindingVerified": true
+        }
+      }
+    ],
+    "finalDestinationNode": "PUB-018::reproduction-bundle-receipt",
+    "pass": true
+  },
+  "negative": {
+    "branch": "stale-expected-version",
+    "expectedError": {
+      "sqlstate": "40001",
+      "message": "journey_version_conflict"
+    },
+    "observedError": {
+      "message": "journey_version_conflict",
+      "sqlstate": "40001"
+    },
+    "forbiddenMutationCount": 0,
+    "receiptCountBefore": 9,
+    "receiptCountAfterNormal": 20,
+    "receiptCountAfterNegative": 20,
+    "pass": true
+  },
+  "sourceTreeDigest": "9ecdfa4c56c7fa04cb9808cef46b0b1bb2b2edbdfc521c3a6a453c419827a190",
+  "observedAt": "2026-07-20T19:38:03.260393+00:00",
+  "publicQueryReceipts": [
+    {
+      "operationId": "getCaseReproducibility",
+      "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+      "authorityContract": "authority-v13/specs/api/operation-persistence.yaml",
+      "owner": "public-api",
+      "ownerRole": "gurine_public_api",
+      "method": "GET",
+      "path": "/v1/cases/integration-case/reproducibility",
+      "requestId": "1582aeee-b9f5-4255-94cb-75b72825e995",
+      "requestHeaders": {
+        "X-Request-ID": "1582aeee-b9f5-4255-94cb-75b72825e995"
+      },
+      "queryDigest": "3b75e0f58371bcbf79e7de21f5de759b4c7fc55106b42e33aba804a0e1c5a777",
+      "caseSlug": "integration-case",
+      "transaction": "READ ONLY",
+      "auditAction": "read.access",
+      "audit": {
+        "action": "read.access",
+        "boundary": "public-api HTTP access log",
+        "domainAuditEvents": [],
+        "outboxEvents": [],
+        "mutatesState": false
+      },
+      "domainEvents": [],
+      "integrationEvents": [],
+      "projectionTables": [
+        "public.cases",
+        "public.case_revisions"
+      ],
+      "implementation": {
+        "service": "services/public-api/src/service/cases.rs",
+        "ownerFunction": "reproducibility",
+        "contractPath": "/v1/cases/integration-case/reproducibility"
+      },
+      "responseStatus": 200,
+      "responseBody": {
+        "result": {
+          "ratio": "1.1000",
+          "formula": "target / median(cohort)",
+          "targetValue": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "benchmarkType": "MEDIAN",
+          "excludedCount": 0,
+          "includedCount": 1,
+          "benchmarkValue": {
+            "amount": "100000",
+            "currency": "KRW"
+          },
+          "roundingPolicy": "HALF_EVEN_4DP"
+        },
+        "ruleId": "unit-price-ratio",
+        "target": {
+          "id": "target-1",
+          "unit": "EA",
+          "unitPrice": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "agencyName": "통합테스트 조달청",
+          "observedAt": "2026-01-02",
+          "bundleSummary": [],
+          "compatibility": "COMPARABLE"
+        },
+        "formula": "target / median(cohort)",
+        "caseSlug": "integration-case",
+        "inputDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "limitations": [],
+        "ruleVersion": "1.0.0",
+        "resultDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "excludedCohort": [],
+        "includedCohort": [],
+        "roundingPolicy": "HALF_EVEN_4DP"
+      },
+      "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+      "requiredFields": [
+        "caseSlug",
+        "ruleId",
+        "ruleVersion",
+        "inputDigest",
+        "resultDigest",
+        "formula",
+        "roundingPolicy",
+        "target",
+        "includedCohort",
+        "excludedCohort",
+        "result",
+        "limitations"
+      ],
+      "negativeNotFound": {
+        "caseSlug": "pdm-missing-02",
+        "responseStatus": 404,
+        "readbackRows": 0,
+        "pass": true
+      },
+      "readback": {
+        "responseDigestRecomputed": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+        "pass": true
+      },
+      "pass": true
+    },
+    {
+      "operationId": "getCaseReproducibility",
+      "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+      "authorityContract": "authority-v13/specs/api/operation-persistence.yaml",
+      "owner": "public-api",
+      "ownerRole": "gurine_public_api",
+      "method": "GET",
+      "path": "/v1/cases/integration-case/reproducibility",
+      "requestId": "0c05d978-9fed-4dda-8415-2e350f755cde",
+      "requestHeaders": {
+        "X-Request-ID": "0c05d978-9fed-4dda-8415-2e350f755cde"
+      },
+      "queryDigest": "3b75e0f58371bcbf79e7de21f5de759b4c7fc55106b42e33aba804a0e1c5a777",
+      "caseSlug": "integration-case",
+      "transaction": "READ ONLY",
+      "auditAction": "read.access",
+      "audit": {
+        "action": "read.access",
+        "boundary": "public-api HTTP access log",
+        "domainAuditEvents": [],
+        "outboxEvents": [],
+        "mutatesState": false
+      },
+      "domainEvents": [],
+      "integrationEvents": [],
+      "projectionTables": [
+        "public.cases",
+        "public.case_revisions"
+      ],
+      "implementation": {
+        "service": "services/public-api/src/service/cases.rs",
+        "ownerFunction": "reproducibility",
+        "contractPath": "/v1/cases/integration-case/reproducibility"
+      },
+      "responseStatus": 200,
+      "responseBody": {
+        "result": {
+          "ratio": "1.1000",
+          "formula": "target / median(cohort)",
+          "targetValue": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "benchmarkType": "MEDIAN",
+          "excludedCount": 0,
+          "includedCount": 1,
+          "benchmarkValue": {
+            "amount": "100000",
+            "currency": "KRW"
+          },
+          "roundingPolicy": "HALF_EVEN_4DP"
+        },
+        "ruleId": "unit-price-ratio",
+        "target": {
+          "id": "target-1",
+          "unit": "EA",
+          "unitPrice": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "agencyName": "통합테스트 조달청",
+          "observedAt": "2026-01-02",
+          "bundleSummary": [],
+          "compatibility": "COMPARABLE"
+        },
+        "formula": "target / median(cohort)",
+        "caseSlug": "integration-case",
+        "inputDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "limitations": [],
+        "ruleVersion": "1.0.0",
+        "resultDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "excludedCohort": [],
+        "includedCohort": [],
+        "roundingPolicy": "HALF_EVEN_4DP"
+      },
+      "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+      "requiredFields": [
+        "caseSlug",
+        "ruleId",
+        "ruleVersion",
+        "inputDigest",
+        "resultDigest",
+        "formula",
+        "roundingPolicy",
+        "target",
+        "includedCohort",
+        "excludedCohort",
+        "result",
+        "limitations"
+      ],
+      "negativeNotFound": {
+        "caseSlug": "pdm-missing-02",
+        "responseStatus": 404,
+        "readbackRows": 0,
+        "pass": true
+      },
+      "readback": {
+        "responseDigestRecomputed": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+        "pass": true
+      },
+      "pass": true
+    },
+    {
+      "operationId": "getCaseReproducibility",
+      "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+      "authorityContract": "authority-v13/specs/api/operation-persistence.yaml",
+      "owner": "public-api",
+      "ownerRole": "gurine_public_api",
+      "method": "GET",
+      "path": "/v1/cases/integration-case/reproducibility",
+      "requestId": "1bf723f5-a969-4285-a50c-b9e265e3f7aa",
+      "requestHeaders": {
+        "X-Request-ID": "1bf723f5-a969-4285-a50c-b9e265e3f7aa"
+      },
+      "queryDigest": "3b75e0f58371bcbf79e7de21f5de759b4c7fc55106b42e33aba804a0e1c5a777",
+      "caseSlug": "integration-case",
+      "transaction": "READ ONLY",
+      "auditAction": "read.access",
+      "audit": {
+        "action": "read.access",
+        "boundary": "public-api HTTP access log",
+        "domainAuditEvents": [],
+        "outboxEvents": [],
+        "mutatesState": false
+      },
+      "domainEvents": [],
+      "integrationEvents": [],
+      "projectionTables": [
+        "public.cases",
+        "public.case_revisions"
+      ],
+      "implementation": {
+        "service": "services/public-api/src/service/cases.rs",
+        "ownerFunction": "reproducibility",
+        "contractPath": "/v1/cases/integration-case/reproducibility"
+      },
+      "responseStatus": 200,
+      "responseBody": {
+        "result": {
+          "ratio": "1.1000",
+          "formula": "target / median(cohort)",
+          "targetValue": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "benchmarkType": "MEDIAN",
+          "excludedCount": 0,
+          "includedCount": 1,
+          "benchmarkValue": {
+            "amount": "100000",
+            "currency": "KRW"
+          },
+          "roundingPolicy": "HALF_EVEN_4DP"
+        },
+        "ruleId": "unit-price-ratio",
+        "target": {
+          "id": "target-1",
+          "unit": "EA",
+          "unitPrice": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "agencyName": "통합테스트 조달청",
+          "observedAt": "2026-01-02",
+          "bundleSummary": [],
+          "compatibility": "COMPARABLE"
+        },
+        "formula": "target / median(cohort)",
+        "caseSlug": "integration-case",
+        "inputDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "limitations": [],
+        "ruleVersion": "1.0.0",
+        "resultDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "excludedCohort": [],
+        "includedCohort": [],
+        "roundingPolicy": "HALF_EVEN_4DP"
+      },
+      "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+      "requiredFields": [
+        "caseSlug",
+        "ruleId",
+        "ruleVersion",
+        "inputDigest",
+        "resultDigest",
+        "formula",
+        "roundingPolicy",
+        "target",
+        "includedCohort",
+        "excludedCohort",
+        "result",
+        "limitations"
+      ],
+      "negativeNotFound": {
+        "caseSlug": "pdm-missing-02",
+        "responseStatus": 404,
+        "readbackRows": 0,
+        "pass": true
+      },
+      "readback": {
+        "responseDigestRecomputed": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+        "pass": true
+      },
+      "pass": true
+    },
+    {
+      "operationId": "getCaseReproducibility",
+      "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+      "authorityContract": "authority-v13/specs/api/operation-persistence.yaml",
+      "owner": "public-api",
+      "ownerRole": "gurine_public_api",
+      "method": "GET",
+      "path": "/v1/cases/integration-case/reproducibility",
+      "requestId": "7bd1cc2e-e975-46a5-84cd-6d9810b2116a",
+      "requestHeaders": {
+        "X-Request-ID": "7bd1cc2e-e975-46a5-84cd-6d9810b2116a"
+      },
+      "queryDigest": "3b75e0f58371bcbf79e7de21f5de759b4c7fc55106b42e33aba804a0e1c5a777",
+      "caseSlug": "integration-case",
+      "transaction": "READ ONLY",
+      "auditAction": "read.access",
+      "audit": {
+        "action": "read.access",
+        "boundary": "public-api HTTP access log",
+        "domainAuditEvents": [],
+        "outboxEvents": [],
+        "mutatesState": false
+      },
+      "domainEvents": [],
+      "integrationEvents": [],
+      "projectionTables": [
+        "public.cases",
+        "public.case_revisions"
+      ],
+      "implementation": {
+        "service": "services/public-api/src/service/cases.rs",
+        "ownerFunction": "reproducibility",
+        "contractPath": "/v1/cases/integration-case/reproducibility"
+      },
+      "responseStatus": 200,
+      "responseBody": {
+        "result": {
+          "ratio": "1.1000",
+          "formula": "target / median(cohort)",
+          "targetValue": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "benchmarkType": "MEDIAN",
+          "excludedCount": 0,
+          "includedCount": 1,
+          "benchmarkValue": {
+            "amount": "100000",
+            "currency": "KRW"
+          },
+          "roundingPolicy": "HALF_EVEN_4DP"
+        },
+        "ruleId": "unit-price-ratio",
+        "target": {
+          "id": "target-1",
+          "unit": "EA",
+          "unitPrice": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "agencyName": "통합테스트 조달청",
+          "observedAt": "2026-01-02",
+          "bundleSummary": [],
+          "compatibility": "COMPARABLE"
+        },
+        "formula": "target / median(cohort)",
+        "caseSlug": "integration-case",
+        "inputDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "limitations": [],
+        "ruleVersion": "1.0.0",
+        "resultDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "excludedCohort": [],
+        "includedCohort": [],
+        "roundingPolicy": "HALF_EVEN_4DP"
+      },
+      "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+      "requiredFields": [
+        "caseSlug",
+        "ruleId",
+        "ruleVersion",
+        "inputDigest",
+        "resultDigest",
+        "formula",
+        "roundingPolicy",
+        "target",
+        "includedCohort",
+        "excludedCohort",
+        "result",
+        "limitations"
+      ],
+      "negativeNotFound": {
+        "caseSlug": "pdm-missing-02",
+        "responseStatus": 404,
+        "readbackRows": 0,
+        "pass": true
+      },
+      "readback": {
+        "responseDigestRecomputed": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+        "pass": true
+      },
+      "pass": true
+    },
+    {
+      "operationId": "getCaseReproducibility",
+      "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+      "authorityContract": "authority-v13/specs/api/operation-persistence.yaml",
+      "owner": "public-api",
+      "ownerRole": "gurine_public_api",
+      "method": "GET",
+      "path": "/v1/cases/integration-case/reproducibility",
+      "requestId": "b6d1292b-ff8c-4fea-b85c-c6f2e1c25b12",
+      "requestHeaders": {
+        "X-Request-ID": "b6d1292b-ff8c-4fea-b85c-c6f2e1c25b12"
+      },
+      "queryDigest": "3b75e0f58371bcbf79e7de21f5de759b4c7fc55106b42e33aba804a0e1c5a777",
+      "caseSlug": "integration-case",
+      "transaction": "READ ONLY",
+      "auditAction": "read.access",
+      "audit": {
+        "action": "read.access",
+        "boundary": "public-api HTTP access log",
+        "domainAuditEvents": [],
+        "outboxEvents": [],
+        "mutatesState": false
+      },
+      "domainEvents": [],
+      "integrationEvents": [],
+      "projectionTables": [
+        "public.cases",
+        "public.case_revisions"
+      ],
+      "implementation": {
+        "service": "services/public-api/src/service/cases.rs",
+        "ownerFunction": "reproducibility",
+        "contractPath": "/v1/cases/integration-case/reproducibility"
+      },
+      "responseStatus": 200,
+      "responseBody": {
+        "result": {
+          "ratio": "1.1000",
+          "formula": "target / median(cohort)",
+          "targetValue": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "benchmarkType": "MEDIAN",
+          "excludedCount": 0,
+          "includedCount": 1,
+          "benchmarkValue": {
+            "amount": "100000",
+            "currency": "KRW"
+          },
+          "roundingPolicy": "HALF_EVEN_4DP"
+        },
+        "ruleId": "unit-price-ratio",
+        "target": {
+          "id": "target-1",
+          "unit": "EA",
+          "unitPrice": {
+            "amount": "110000",
+            "currency": "KRW"
+          },
+          "agencyName": "통합테스트 조달청",
+          "observedAt": "2026-01-02",
+          "bundleSummary": [],
+          "compatibility": "COMPARABLE"
+        },
+        "formula": "target / median(cohort)",
+        "caseSlug": "integration-case",
+        "inputDigest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "limitations": [],
+        "ruleVersion": "1.0.0",
+        "resultDigest": "2222222222222222222222222222222222222222222222222222222222222222",
+        "excludedCohort": [],
+        "includedCohort": [],
+        "roundingPolicy": "HALF_EVEN_4DP"
+      },
+      "responseDigest": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+      "requiredFields": [
+        "caseSlug",
+        "ruleId",
+        "ruleVersion",
+        "inputDigest",
+        "resultDigest",
+        "formula",
+        "roundingPolicy",
+        "target",
+        "includedCohort",
+        "excludedCohort",
+        "result",
+        "limitations"
+      ],
+      "negativeNotFound": {
+        "caseSlug": "pdm-missing-02",
+        "responseStatus": 404,
+        "readbackRows": 0,
+        "pass": true
+      },
+      "readback": {
+        "responseDigestRecomputed": "ad526fee047169fd6badd4fcb05d915c188d0bedad74709d36d76a3e671c43e1",
+        "pass": true
+      },
+      "pass": true
+    }
+  ],
+  "pass": true
+}

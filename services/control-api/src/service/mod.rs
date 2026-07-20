@@ -65,6 +65,7 @@ pub enum ServiceError {
 
 mod command;
 mod publication;
+mod query_analysis_vm;
 mod query_business;
 mod query_dispatch;
 mod query_support;
@@ -84,6 +85,7 @@ mod util;
 
 use command::*;
 use publication::*;
+use query_analysis_vm::*;
 use query_business::*;
 use query_dispatch::*;
 use query_support::*;

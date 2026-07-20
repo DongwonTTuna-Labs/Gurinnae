@@ -34,7 +34,7 @@ export const screen = {
       order: 4,
       id: "privacy",
       title: "데이터 정책",
-      component: "SensitiveDataNotice",
+      component: "LongFormArticle",
       purpose: "retention/region/mode.",
       test_id: "ops_005__section__privacy",
     },

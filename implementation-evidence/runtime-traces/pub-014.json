@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-014",
+  "route": "/methodology/rules/{ruleId}",
+  "url": "http://127.0.0.1:29101/methodology/rules/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:26.895Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-014",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "purpose",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "inputs",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "calculation",
+        "component": "ComparisonWorkbench",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "blockers",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "false-positive",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "evaluation",
+        "component": "DataCollection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "versions",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 10,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

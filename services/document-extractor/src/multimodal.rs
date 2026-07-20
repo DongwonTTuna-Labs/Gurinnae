@@ -12,7 +12,9 @@ mod image;
 #[path = "media.rs"]
 mod media;
 
-use common::{color_model, media_type, tiff_has_multiple_ifds, webp_is_animated};
+use common::{
+    color_model, media_type, runtime_lifecycle_probe, tiff_has_multiple_ifds, webp_is_animated,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
@@ -33,6 +35,10 @@ pub struct AssetBinding {
     pub asset_id: Uuid,
     pub asset_revision: i64,
     pub content_sha256: String,
+}
+
+pub fn run_runtime_lifecycle_probe() -> Result<serde_json::Value, String> {
+    runtime_lifecycle_probe()
 }
 
 impl AssetBinding {
@@ -244,7 +250,21 @@ pub fn parse_bytes(
         "html" => html::parse_html(bytes, binding)?,
         "png" | "jpeg" | "webp" | "tiff" => image::parse_image(bytes, binding, format)?,
         "wav" => media::parse_wav(bytes, binding)?,
-        "webm" => media::parse_webm(bytes, binding)?,
+        // Video parsing is deliberately fail-closed.  Runtime/provider failures
+        // and malformed media are represented as a typed rejection result so
+        // callers can persist an auditable outcome instead of losing the
+        // source-bound extraction envelope to a transport-level error.
+        "webm" => match media::parse_webm(bytes, binding) {
+            Ok(value) => value,
+            Err(ParseError::Malformed(code)) => rejected(
+                binding,
+                "video/webm",
+                "webm-media",
+                "ffmpeg-8.0.1+gurinnae-ffmpeg-subprocess-media-v1",
+                &code,
+            ),
+            Err(error) => return Err(error),
+        },
         _ => return Err(ParseError::UnsupportedMediaType),
     };
     result.extraction_sha256 = result_digest(&result)?;

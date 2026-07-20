@@ -19,10 +19,7 @@
       "const": "source.fetch.response.v2"
     },
     "requestKind": {
-      "enum": [
-        "SEARCH_PUBLIC_WEB",
-        "FETCH_URL"
-      ]
+      "enum": ["SEARCH_PUBLIC_WEB", "FETCH_URL"]
     },
     "gatewayDecision": {
       "type": "object",
@@ -44,10 +41,7 @@
           "$ref": "#/$defs/sha256"
         },
         "decision": {
-          "enum": [
-            "ALLOW",
-            "DENY"
-          ]
+          "enum": ["ALLOW", "DENY"]
         },
         "decisionCode": {
           "type": "string",
@@ -198,20 +192,14 @@
             "maxLength": 2048
           },
           "snippet": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "maxLength": 1000
           },
           "discoveredUrlSha256": {
             "$ref": "#/$defs/sha256"
           },
           "artifactId": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "uuid"
           }
         }
@@ -268,11 +256,7 @@
             "minimum": 0
           },
           "fetchOutcome": {
-            "enum": [
-              "STORED",
-              "RENDER_REQUIRED",
-              "QUARANTINED"
-            ]
+            "enum": ["STORED", "RENDER_REQUIRED", "QUARANTINED"]
           },
           "sourceAuthority": {
             "type": "string",
@@ -318,11 +302,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "name",
-                "safeValue",
-                "valueSha256"
-              ],
+              "required": ["name", "safeValue", "valueSha256"],
               "properties": {
                 "name": {
                   "enum": [
@@ -337,10 +317,7 @@
                   ]
                 },
                 "safeValue": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
+                  "type": ["string", "null"],
                   "maxLength": 512
                 },
                 "valueSha256": {
@@ -370,13 +347,7 @@
                   "maximum": 5
                 },
                 "status": {
-                  "enum": [
-                    301,
-                    302,
-                    303,
-                    307,
-                    308
-                  ]
+                  "enum": [301, 302, 303, 307, 308]
                 },
                 "fromOrigin": {
                   "type": "string",
@@ -396,11 +367,7 @@
             }
           },
           "contentSafetyState": {
-            "enum": [
-              "CLEAN",
-              "FLAGGED",
-              "QUARANTINED"
-            ]
+            "enum": ["CLEAN", "FLAGGED", "QUARANTINED"]
           },
           "contentSafetyReceiptSha256": {
             "anyOf": [
@@ -440,9 +407,7 @@
             "const": "SEARCH_PUBLIC_WEB"
           }
         },
-        "required": [
-          "requestKind"
-        ]
+        "required": ["requestKind"]
       },
       "then": {
         "properties": {
@@ -464,9 +429,7 @@
             "const": "FETCH_URL"
           }
         },
-        "required": [
-          "requestKind"
-        ]
+        "required": ["requestKind"]
       },
       "then": {
         "properties": {

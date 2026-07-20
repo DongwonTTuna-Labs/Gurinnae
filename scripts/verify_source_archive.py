@@ -67,9 +67,11 @@ def verify_manifest(source: Path) -> None:
         if line
     }
     actual = {
-        path.relative_to(source).as_posix()
+        relative.as_posix()
         for path in source.rglob("*")
-        if path.is_file() and path.name not in {"MANIFEST.md", "MANIFEST.sha256"}
+        if path.is_file()
+        for relative in [path.relative_to(source)]
+        if relative.as_posix() not in {"MANIFEST.md", "MANIFEST.sha256"}
     }
     if listed != actual:
         missing = sorted(actual - listed)
@@ -98,8 +100,13 @@ def main() -> int:
         verify_manifest(source)
         environment = os.environ.copy()
         environment["GURINE_CLEAN_EXTRACTION"] = "1"
-        subprocess.run(["make", "verify-final"], cwd=source, env=environment, check=True)
-    print("clean extraction full hard-gate verification: PASS")
+        # The sealed 439-scenario acceptance run deliberately lives outside
+        # the source archive (its evidence root is append-only and external).
+        # Clean extraction therefore executes every reproducible prearchive
+        # gate here; verify-execution-evidence binds the external run on the
+        # checked-out source and archive separately.
+        subprocess.run(["make", "verify-prearchive"], cwd=source, env=environment, check=True)
+    print("clean extraction reproducible prearchive hard-gate verification: PASS")
     return 0
 
 

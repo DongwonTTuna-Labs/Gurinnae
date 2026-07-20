@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "SRC-001",
+  "route": "/internal/sources",
+  "url": "http://127.0.0.1:29102/internal/sources",
+  "observedAt": "2026-07-19T15:35:47.405Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "SRC-001",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "health",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "registry",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "impact",
+        "component": "CoverageStatement",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "ownership",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

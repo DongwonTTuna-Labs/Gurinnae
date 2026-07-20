@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-007",
+  "route": "/agencies",
+  "url": "http://127.0.0.1:29101/agencies",
+  "observedAt": "2026-07-19T15:35:24.345Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-007",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "search",
+        "component": "UnifiedSearch",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "results",
+        "component": "CoverageStatement",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "coverage",
+        "component": "CoverageStatement",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -116,6 +116,11 @@ function isPending(value: unknown): value is Pending {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     return false;
   const item = value as Record<string, unknown>;
+  const pathParams = item.pathParams;
+  const path = typeof item.path === "string" ? item.path : "";
+  const names = [...path.matchAll(/\{([^}]+)\}/g)]
+    .map((match) => match[1])
+    .filter((name): name is string => Boolean(name));
   return (
     typeof item.operationId === "string" &&
     typeof item.path === "string" &&
@@ -125,7 +130,14 @@ function isPending(value: unknown): value is Pending {
     typeof item.body === "object" &&
     item.body !== null &&
     typeof item.actionContext === "object" &&
-    item.actionContext !== null
+    item.actionContext !== null &&
+    typeof pathParams === "object" &&
+    pathParams !== null &&
+    !Array.isArray(pathParams) &&
+    names.every((name) => {
+      const value = (pathParams as Record<string, unknown>)[name];
+      return typeof value === "string" && value.trim().length > 0;
+    })
   );
 }
 

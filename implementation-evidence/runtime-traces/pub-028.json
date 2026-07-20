@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-028",
+  "route": "/correction-request/receipt",
+  "url": "http://127.0.0.1:29101/correction-request/receipt",
+  "observedAt": "2026-07-19T15:35:31.824Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-028",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "receipt",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "ERROR"
+      },
+      {
+        "id": "summary",
+        "component": "LongFormArticle",
+        "projectionState": "ERROR"
+      },
+      {
+        "id": "next",
+        "component": "StructuredContentSection",
+        "projectionState": "ERROR"
+      },
+      {
+        "id": "manage",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "ERROR"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

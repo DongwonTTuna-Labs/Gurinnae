@@ -11,26 +11,44 @@ export type AddendumProblemDetailsV1 = {
     requestId: string;
 };
 
+export type SupplierPartyRefV1 = {
+    candidateId: string;
+    candidateRevision: number;
+    candidateDigest: string;
+    identityStatus: 'UNVERIFIED' | 'CANDIDATE' | 'VERIFIED' | 'AMBIGUOUS' | 'CONFLICTED' | 'REJECTED';
+    valueHmac: string | null;
+};
+
+export type EvidenceLocatorRefV1 = {
+    evidenceId: string;
+    evidenceVersion: number;
+    evidenceDigest: string;
+    sourceDocumentId: string;
+    sourceAssetId: string;
+    sourceAssetRevision: number;
+    locatorDigest: string;
+};
+
 export type SupplierIdentityResolutionRequestV1 = {
-    action: string;
-    candidateRefs: Array<string>;
+    action: 'MERGE' | 'SPLIT' | 'KEEP_SEPARATE' | 'MARK_AMBIGUOUS';
+    candidateRefs: Array<SupplierPartyRefV1>;
     expectedCandidateSetDigest: string;
-    expectedPriorDecisionDigest: string;
+    expectedPriorDecisionDigest: string | null;
     fromCanonicalSupplierIds: Array<string>;
     toCanonicalSupplierIds: Array<string>;
-    evidenceLocators: Array<string>;
+    evidenceLocators: Array<EvidenceLocatorRefV1>;
     expectedEvidenceLocatorSetDigest: string;
     expectedPublicImpactSetDigest: string;
-    impactOwnerUserId: string;
-    impactDueAt: string;
-    reasonCode: string;
+    impactOwnerUserId: string | null;
+    impactDueAt: string | null;
+    reasonCode: 'AUTHORITATIVE_IDENTIFIER_MATCH' | 'AUTHORITATIVE_IDENTIFIER_CONFLICT' | 'SOURCE_CORRECTION' | 'FALSE_MERGE' | 'INSUFFICIENT_EVIDENCE';
     reason: string;
 };
 
 export type SupplierIdentityResolutionReceiptV1 = {
     decisionId: string;
     decisionSequence: number;
-    action: string;
+    action: 'MERGE' | 'SPLIT' | 'KEEP_SEPARATE' | 'MARK_AMBIGUOUS';
     candidateSetDigest: string;
     evidenceLocatorSetDigest: string;
     publicImpactSetDigest: string;
@@ -42,25 +60,25 @@ export type SupplierIdentityResolutionReceiptV1 = {
 };
 
 export type AssertionPartyV1 = {
-    partyKind: string;
-    supplierCandidateId: string;
-    supplierCandidateRevision: number;
-    supplierCandidateDigest: string;
-    canonicalSupplierId: string;
+    partyKind: 'SUPPLIER' | 'ORGANIZATION' | 'NATURAL_PERSON';
+    supplierCandidateId: string | null;
+    supplierCandidateRevision: number | null;
+    supplierCandidateDigest: string | null;
+    canonicalSupplierId: string | null;
     identityKeyDigest: string;
-    identityStatus: string;
+    identityStatus: 'UNVERIFIED' | 'CANDIDATE' | 'VERIFIED' | 'AMBIGUOUS' | 'CONFLICTED' | 'REJECTED';
 };
 
 export type CreateSupplierRelationshipAssertionRequestV1 = {
-    relationshipKind: string;
+    relationshipKind: 'OWNERSHIP' | 'BENEFICIAL_OWNERSHIP' | 'CONTROL' | 'MANAGEMENT_ROLE' | 'LEGAL_REPRESENTATIVE' | 'CONTRACTUAL_RELATIONSHIP';
     subject: AssertionPartyV1;
     object: AssertionPartyV1;
-    ownershipPercent: number;
+    ownershipPercent: number | null;
     managementRole: string | null;
-    validFrom: string;
-    validTo: string;
-    validityCoverageStatus: string;
-    evidenceLocators: Array<string>;
+    validFrom: string | null;
+    validTo: string | null;
+    validityCoverageStatus: 'COMPLETE' | 'PARTIAL' | 'UNKNOWN' | 'NOT_AVAILABLE';
+    evidenceLocators: Array<EvidenceLocatorRefV1>;
     expectedEvidenceLocatorSetDigest: string;
     reason: string;
 };
@@ -69,10 +87,10 @@ export type SupplierRelationshipAssertionReceiptV1 = {
     assertionId: string;
     assertionRevision: number;
     assertionDigest: string;
-    verificationStatus: string;
+    verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'CONFLICTED' | 'SUPERSEDED';
     evidenceLocatorSetDigest: string;
-    verifiedBy: string;
-    verifiedAt: string;
+    verifiedBy: string | null;
+    verifiedAt: string | null;
     auditEventId: string;
     emittedEventIds: Array<string>;
     acceptedAt: string;
@@ -83,9 +101,9 @@ export type DecideSupplierRelationshipAssertionRequestV1 = {
     expectedAssertionRevision: number;
     expectedAssertionDigest: string;
     expectedEvidenceLocatorSetDigest: string;
-    decision: string;
+    decision: 'VERIFY' | 'REJECT' | 'MARK_CONFLICT' | 'SUPERSEDE';
     counterAssertionIds: Array<string>;
-    reasonCode: string;
+    reasonCode: 'EVIDENCE_CONFIRMED' | 'EVIDENCE_INSUFFICIENT' | 'EVIDENCE_CONTRADICTED' | 'SOURCE_CORRECTED' | 'ASSERTION_SUPERSEDED';
     reason: string;
 };
 

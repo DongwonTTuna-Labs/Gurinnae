@@ -16,14 +16,6 @@ export const screen = {
     },
     {
       order: 2,
-      id: "business-health",
-      title: "Business Health",
-      component: "StructuredContentSection",
-      purpose: "qualification·activation·retention·revenue·margin·SLA의 현재 projection.",
-      test_id: "ops_004__section__business-health",
-    },
-    {
-      order: 3,
       id: "spend",
       title: "사용량",
       component: "StructuredContentSection",
@@ -31,7 +23,7 @@ export const screen = {
       test_id: "ops_004__section__spend",
     },
     {
-      order: 4,
+      order: 3,
       id: "forecast",
       title: "forecast",
       component: "StructuredContentSection",
@@ -39,7 +31,7 @@ export const screen = {
       test_id: "ops_004__section__forecast",
     },
     {
-      order: 5,
+      order: 4,
       id: "limits",
       title: "한도",
       component: "StructuredContentSection",
@@ -47,7 +39,7 @@ export const screen = {
       test_id: "ops_004__section__limits",
     },
     {
-      order: 6,
+      order: 5,
       id: "alerts",
       title: "경고",
       component: "StructuredContentSection",
@@ -55,7 +47,7 @@ export const screen = {
       test_id: "ops_004__section__alerts",
     },
     {
-      order: 7,
+      order: 6,
       id: "changes",
       title: "변경 이력",
       component: "RevisionTimeline",
@@ -79,11 +71,11 @@ export const screen = {
       id: "export",
       label: "비용 보고서",
       capability: "audit.read",
+      operation_id: "exportCostReport",
       interaction_kind: "DOWNLOAD",
       assurance_level: "NONE",
       step_up_required: false,
       confirmation_required: false,
-      local_only: true,
     },
     {
       id: "open-provider",
@@ -106,6 +98,7 @@ export const screen = {
     "unauthorized",
     "forbidden",
     "conflict",
+    "reauth-required",
   ],
   dataOperations: [
     {
@@ -114,7 +107,7 @@ export const screen = {
       method: "GET",
       path: "/v1/internal/queries/get-budget-overview",
       blocking: true,
-      response_schema: "BusinessHealthResponse",
+      response_schema: "BudgetOverviewResponse",
     },
     {
       operation_id: "updateBudgetLimit",

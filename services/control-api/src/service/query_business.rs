@@ -1,55 +1,73 @@
 use super::*;
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
-/// OPS-004 typed business-health read boundary.  The SQL owner function is the
-/// only source for funnel/metric derivation; this adapter only binds the
-/// request scope and wraps the closed response in the control envelope.
+/// OPS-004 authority read boundary. The PostgreSQL owner is the canonical
+/// source for the BudgetOverview projection consumed by the review console.
 pub(super) async fn business_health_query(
-    parameters: &BTreeMap<String, String>,
+    _parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    // getBudgetOverview has historically had an empty query contract.  Keep
-    // the scope optional for that operation, while accepting an explicit
-    // deployment/organization pair for callers that need a single scope.
-    let deployment_id = parameters
-        .get("deploymentId")
-        .map(|value| Uuid::parse_str(value).map_err(|_| ServiceError::InvalidRequest))
-        .transpose()?;
-    let organization_id = parameters
-        .get("organizationId")
-        .map(|value| Uuid::parse_str(value).map_err(|_| ServiceError::InvalidRequest))
-        .transpose()?;
-    let as_of = parameters
-        .get("asOf")
-        .map(|value| {
-            OffsetDateTime::parse(value, &Rfc3339).map_err(|_| ServiceError::InvalidRequest)
-        })
-        .transpose()?;
-    let data: Value = sqlx::query_scalar("SELECT ops.read_business_health_projection_v1($1,$2,$3)")
-        .bind(deployment_id)
-        .bind(organization_id)
-        .bind(as_of)
-        .fetch_one(pool)
-        .await
-        .map_err(db)?;
+    let data: Value = sqlx::query_scalar(
+        "SELECT jsonb_build_object(
+          'summary', jsonb_build_object(
+            'currency', COALESCE((SELECT currency::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1), 'UNKNOWN'),
+            'dailyLimit', COALESCE((SELECT daily_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1), '0'),
+            'dailyUsed', CASE WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) = 1 THEN (SELECT sum(amount)::text FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) ELSE NULL END,
+            'monthlyLimit', COALESCE((SELECT monthly_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1), '0'),
+            'monthlyUsed', CASE WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('month', clock_timestamp())) = 1 THEN (SELECT sum(amount)::text FROM ops.cost_events WHERE occurred_at >= date_trunc('month', clock_timestamp())) ELSE NULL END,
+            'status', CASE
+              WHEN NOT EXISTS (SELECT 1 FROM ops.budget_limits) THEN 'UNKNOWN_NO_BUDGET_LIMIT'
+              WHEN NOT EXISTS (SELECT 1 FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) THEN 'UNKNOWN_NO_COST_OBSERVATION'
+              WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) <> 1 THEN 'UNKNOWN_MIXED_DAILY_CURRENCY'
+              WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('month', clock_timestamp())) <> 1 THEN 'UNKNOWN_MIXED_MONTHLY_CURRENCY'
+              WHEN (SELECT sum(amount) FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) > (SELECT daily_limit FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1) THEN 'EXCEEDED'
+              ELSE 'WITHIN_LIMIT' END
+          ),
+          'providers', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+            'id', p.id, 'name', p.name, 'providerType', p.provider_type,
+            'enabled', p.enabled, 'routingStatus', CASE WHEN p.enabled THEN 'ACTIVE' ELSE 'DISABLED' END,
+            'retentionPolicy', p.data_retention_policy, 'lastTestAt', p.last_connection_test_at,
+            'lastTestStatus', p.last_connection_test_status) ORDER BY p.name)
+            FROM ops.provider_configs p), '[]'::jsonb),
+          'dailySeries', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+            'at', x.at, 'amount', jsonb_build_object('amount', x.amount::text, 'currency', x.currency)) ORDER BY x.at)
+            FROM (SELECT date_trunc('day', occurred_at) AS at, sum(amount) AS amount,
+                         COALESCE(max(currency)::text, 'KRW') AS currency
+                    FROM ops.cost_events
+                   WHERE occurred_at >= clock_timestamp() - interval '30 days'
+                    GROUP BY date_trunc('day', occurred_at)
+                    HAVING count(DISTINCT currency)=1) x), '[]'::jsonb),
+          'topCases', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+            'caseId', x.case_id, 'caseTitle', x.case_title,
+            'amount', jsonb_build_object('amount', x.amount::text, 'currency', x.currency),
+            'runCount', x.run_count) ORDER BY x.amount DESC)
+            FROM (SELECT e.case_id, COALESCE(c.title, 'UNKNOWN') AS case_title,
+                         sum(e.amount) AS amount, count(DISTINCT e.job_id) AS run_count,
+                         COALESCE(max(e.currency)::text, 'KRW') AS currency
+                    FROM ops.cost_events e LEFT JOIN editorial.cases c ON c.id=e.case_id
+                   WHERE e.case_id IS NOT NULL
+                   GROUP BY e.case_id, c.title
+                   HAVING count(DISTINCT e.currency)=1) x), '[]'::jsonb),
+          'updatedAt', clock_timestamp())",
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(db)?;
     let status = data
-        .get("readinessState")
+        .get("summary")
+        .and_then(|summary| summary.get("status"))
         .and_then(Value::as_str)
         .unwrap_or("UNKNOWN")
         .to_owned();
-    let scope_key = format!(
-        "{}:{}",
-        deployment_id
-            .map(|id| id.to_string())
-            .unwrap_or_else(|| "*".to_owned()),
-        organization_id
-            .map(|id| id.to_string())
-            .unwrap_or_else(|| "*".to_owned()),
-    );
     Ok(envelope(
-        stable_uuid("business-health", &scope_key),
+        stable_uuid("budget-overview", "current"),
         status,
         data,
     ))
+}
+
+pub(super) async fn budget_overview_query(pool: &PgPool) -> Result<Value, ServiceError> {
+    business_health_query(&BTreeMap::new(), pool).await
 }
 
 pub(super) async fn estimate_backfill_query(
@@ -114,6 +132,14 @@ pub(super) async fn cost_export_query(
 ) -> Result<Value, ServiceError> {
     let from = parameters.get("from").ok_or(ServiceError::InvalidRequest)?;
     let to = parameters.get("to").ok_or(ServiceError::InvalidRequest)?;
+    let group_by = parameters
+        .get("groupBy")
+        .filter(|value| matches!(value.as_str(), "PROVIDER" | "MODEL" | "CASE" | "DAY"))
+        .ok_or(ServiceError::InvalidRequest)?;
+    let format = parameters
+        .get("format")
+        .filter(|value| matches!(value.as_str(), "CSV" | "JSON"))
+        .ok_or(ServiceError::InvalidRequest)?;
     let rows: Value = sqlx::query_scalar(
         "SELECT jsonb_build_object('runs',count(*),'actualCost',COALESCE(sum(actual_cost),0)::text, \
          'maxCost',COALESCE(sum(max_cost),0)::text) FROM ops.agent_runs \
@@ -124,8 +150,33 @@ pub(super) async fn cost_export_query(
     .fetch_one(pool)
     .await
     .map_err(db)?;
-    let digest = sha256(&serde_json::to_vec(&rows).map_err(|_| ServiceError::Persistence)?);
-    Ok(json!({"id":stable_uuid("cost-export",&digest),"status":"READY","version":1}))
+    let digest_input =
+        serde_json::json!({"from":from,"to":to,"groupBy":group_by,"format":format,"rows":rows});
+    let digest = sha256(&serde_json::to_vec(&digest_input).map_err(|_| ServiceError::Persistence)?);
+    let row_count = rows.get("runs").and_then(Value::as_i64).unwrap_or(0);
+    let payload = if format == "CSV" {
+        format!("runs,actualCost,maxCost\n{},{},{}\n", row_count,
+            rows.get("actualCost").and_then(Value::as_str).unwrap_or("0"),
+            rows.get("maxCost").and_then(Value::as_str).unwrap_or("0"))
+    } else {
+        serde_json::to_string(&json!({"rows":rows,"from":from,"to":to,"groupBy":group_by})).map_err(|_| ServiceError::Persistence)?
+    };
+    let bytes = payload.as_bytes();
+    let content_sha256 = sha256(bytes);
+    Ok(json!({
+        "id":stable_uuid("cost-export",&digest),
+        "status":if row_count > 0 { "READY" } else { "EMPTY" },
+        "version":1,
+        "format":format,
+        "rowCount":row_count,
+        "byteLength":bytes.len(),
+        "contentSha256":content_sha256,
+        "contentBase64":BASE64.encode(bytes),
+        "receiptSha256":sha256(format!("cost-export-receipt:{}:{}:{}", digest, content_sha256, bytes.len()).as_bytes()),
+        "from":from,
+        "to":to,
+        "groupBy":group_by
+    }))
 }
 
 pub(super) fn query_date(
@@ -158,7 +209,7 @@ pub(super) async fn canonical_list_query(
     let items: Value = match operation {
         "listCaseAgentRuns" => {
             let case_id = query_uuid(parameters, "caseId")?;
-            sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'agentType',agent_type,'objective',objective,'status',status,'maxCost',max_cost::text,'actualCost',actual_cost::text,'version',version,'createdAt',created_at) ORDER BY created_at DESC),'[]'::jsonb) FROM ops.agent_runs WHERE case_id=$1").bind(case_id).fetch_one(pool).await.map_err(db)?
+            sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',r.id,'agentType',r.agent_type,'objective',r.objective,'status',r.status,'maxCost',r.max_cost::text,'actualCost',r.actual_cost::text,'version',r.version,'createdAt',r.created_at,'inputSnapshotHash',r.input_snapshot_hash,'validation',COALESCE((SELECT jsonb_agg(jsonb_build_object('status',v.validation_status,'schemaStatus',v.schema_status,'citationStatus',v.citation_status,'policyStatus',v.policy_status,'failureCode',v.failure_code,'validatedAt',v.validated_at) ORDER BY v.validated_at DESC) FROM ops.agent_output_validations v WHERE v.agent_run_id=r.id),'[]'::jsonb),'suggestionCounts',jsonb_build_object('pending',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='PENDING'),0),'accepted',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='ACCEPTED'),0),'rejected',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='REJECTED'),0)),'sourceUseCount',COALESCE((SELECT count(*) FROM ops.agent_source_uses u WHERE u.agent_run_id=r.id),0),'budgetLedger',COALESCE(ops.read_agent_run_budget_projection_v1(r.id),'{}'::jsonb)) ORDER BY r.created_at DESC),'[]'::jsonb) FROM ops.agent_runs r WHERE r.case_id=$1").bind(case_id).fetch_one(pool).await.map_err(db)?
         }
         "listCaseClaims" => {
             let case_id = query_uuid(parameters, "caseId")?;
@@ -222,8 +273,13 @@ pub(super) async fn canonical_list_query(
         }
         _ => return Err(ServiceError::Persistence),
     };
-    Ok(json!({"items":items,"appliedFilters":parameters,
-        "asOf":format_time(OffsetDateTime::now_utc())?}))
+    let mut response = json!({"items":items,"appliedFilters":parameters,
+        "asOf":format_time(OffsetDateTime::now_utc())?});
+    if operation == "listCaseAgentRuns" {
+        let case_id = query_uuid(parameters, "caseId")?;
+        response["analysisVm"] = cas010_projection(case_id, &items)?;
+    }
+    Ok(response)
 }
 
 pub(super) async fn audit_query(

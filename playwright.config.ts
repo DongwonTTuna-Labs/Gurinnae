@@ -4,10 +4,14 @@ const mock = "http://127.0.0.1:29100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: true,
+  // The mock control plane is a single authoritative state machine shared by
+  // the browser journeys.  Running those journeys concurrently lets one
+  // test's explicit reset race another test's approval/receipt transition;
+  // serialize the suite so the observed workflow remains deterministic.
+  fullyParallel: false,
   forbidOnly: true,
   retries: 0,
-  workers: 4,
+  workers: 1,
   timeout: 60_000,
   expect: {
     timeout: 8_000,

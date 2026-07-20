@@ -42,10 +42,7 @@
       "minimum": 0
     },
     "sourceKind": {
-      "enum": [
-        "EVIDENCE_SEGMENT",
-        "RUN_TOOL_ARTIFACT"
-      ]
+      "enum": ["EVIDENCE_SEGMENT", "RUN_TOOL_ARTIFACT"]
     },
     "sourceIdentity": {
       "oneOf": [
@@ -206,11 +203,7 @@
     "locator": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "value",
-        "locatorSha256"
-      ],
+      "required": ["kind", "value", "locatorSha256"],
       "properties": {
         "kind": {
           "enum": [

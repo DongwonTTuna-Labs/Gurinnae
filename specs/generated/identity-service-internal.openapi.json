@@ -20,9 +20,7 @@
       "post": {
         "operationId": "createLoginTransaction",
         "summary": "Create an anonymous LOGIN state/nonce/PKCE transaction.",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "security": [
           {
             "ServiceAssertion": []
@@ -106,9 +104,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SERVICE_ASSERTION_REPLAYED"
-            ]
+            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"]
           },
           "502": {
             "description": "OIDC provider failure",
@@ -135,9 +131,7 @@
       "post": {
         "operationId": "consumeLoginCallback",
         "summary": "Consume a LOGIN transaction and create an opaque internal session.",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "security": [
           {
             "ServiceAssertion": []
@@ -221,9 +215,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SERVICE_ASSERTION_REPLAYED"
-            ]
+            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"]
           },
           "502": {
             "description": "OIDC provider failure",
@@ -250,9 +242,7 @@
       "post": {
         "operationId": "createStepUpTransaction",
         "summary": "Create a session- and action-bound STEP_UP transaction.",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "security": [
           {
             "ServiceAssertion": []
@@ -336,9 +326,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SERVICE_ASSERTION_REPLAYED"
-            ]
+            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"]
           },
           "502": {
             "description": "OIDC provider failure",
@@ -365,9 +353,7 @@
       "post": {
         "operationId": "consumeStepUpCallback",
         "summary": "Consume STEP_UP callback and issue a one-time action proof.",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "security": [
           {
             "ServiceAssertion": []
@@ -451,9 +437,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SERVICE_ASSERTION_REPLAYED"
-            ]
+            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"]
           },
           "502": {
             "description": "OIDC provider failure",
@@ -480,9 +464,7 @@
       "post": {
         "operationId": "resolveInternalSession",
         "summary": "Resolve opaque session state; does not issue an Actor Assertion.",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "security": [
           {
             "ServiceAssertion": []
@@ -566,9 +548,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SERVICE_ASSERTION_REPLAYED"
-            ]
+            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"]
           },
           "502": {
             "description": "OIDC provider failure",
@@ -595,9 +575,7 @@
       "post": {
         "operationId": "revokeInternalSession",
         "summary": "Revoke the current opaque session.",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "security": [
           {
             "ServiceAssertion": []
@@ -681,9 +659,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SERVICE_ASSERTION_REPLAYED"
-            ]
+            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"]
           },
           "502": {
             "description": "OIDC provider failure",
@@ -710,9 +686,7 @@
       "post": {
         "operationId": "getSecurityManagementRedirectInternal",
         "summary": "Build the configured provider security-management redirect.",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "security": [
           {
             "ServiceAssertion": []
@@ -796,9 +770,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SERVICE_ASSERTION_REPLAYED"
-            ]
+            "x-error-codes": ["SERVICE_ASSERTION_REPLAYED"]
           },
           "502": {
             "description": "OIDC provider failure",
@@ -824,9 +796,7 @@
     "/internal/v1/actor-assertions": {
       "post": {
         "operationId": "issueActorAssertion",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "summary": "Issue a request-bound actor assertion",
         "security": [
           {
@@ -918,9 +888,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "502": {
             "description": "Problem response",
@@ -947,9 +915,7 @@
     "/internal/v1/step-up-authorizations/close": {
       "post": {
         "operationId": "closeStepUpAuthorization",
-        "tags": [
-          "identity-internal"
-        ],
+        "tags": ["identity-internal"],
         "summary": "Close a bounded step-up authorization grant",
         "security": [
           {
@@ -1041,9 +1007,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "502": {
             "description": "Problem response",
@@ -1103,13 +1067,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "type",
-          "title",
-          "status",
-          "requestId",
-          "code"
-        ]
+        "required": ["type", "title", "status", "requestId", "code"]
       },
       "RequestContext": {
         "type": "object",
@@ -1128,11 +1086,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "ipHash",
-          "userAgentHash",
-          "requestId"
-        ]
+        "required": ["ipHash", "userAgentHash", "requestId"]
       },
       "ActorIdentity": {
         "type": "object",
@@ -1186,11 +1140,7 @@
             "$ref": "#/components/schemas/RequestContext"
           }
         },
-        "required": [
-          "returnTo",
-          "callbackUri",
-          "context"
-        ]
+        "required": ["returnTo", "callbackUri", "context"]
       },
       "CreateLoginTransactionResponse": {
         "type": "object",
@@ -1259,12 +1209,7 @@
             "$ref": "#/components/schemas/RequestContext"
           }
         },
-        "required": [
-          "transactionCookieValue",
-          "code",
-          "state",
-          "context"
-        ]
+        "required": ["transactionCookieValue", "code", "state", "context"]
       },
       "ConsumeLoginCallbackResponse": {
         "type": "object",
@@ -1504,10 +1449,7 @@
             "$ref": "#/components/schemas/RequestContext"
           }
         },
-        "required": [
-          "opaqueSessionToken",
-          "context"
-        ]
+        "required": ["opaqueSessionToken", "context"]
       },
       "ResolveSessionResponse": {
         "type": "object",
@@ -1562,11 +1504,7 @@
             "$ref": "#/components/schemas/RequestContext"
           }
         },
-        "required": [
-          "opaqueSessionToken",
-          "reason",
-          "context"
-        ]
+        "required": ["opaqueSessionToken", "reason", "context"]
       },
       "RevokeSessionResponse": {
         "type": "object",
@@ -1585,11 +1523,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "revoked",
-          "revokedAt",
-          "auditEventId"
-        ]
+        "required": ["revoked", "revokedAt", "auditEventId"]
       },
       "SecurityManagementRedirectRequest": {
         "type": "object",
@@ -1606,11 +1540,7 @@
             "$ref": "#/components/schemas/RequestContext"
           }
         },
-        "required": [
-          "opaqueSessionToken",
-          "returnTo",
-          "context"
-        ]
+        "required": ["opaqueSessionToken", "returnTo", "context"]
       },
       "SecurityManagementRedirectResponse": {
         "type": "object",
@@ -1625,10 +1555,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "redirectUrl",
-          "expiresAt"
-        ]
+        "required": ["redirectUrl", "expiresAt"]
       },
       "ServiceAssertionToken": {
         "type": "string",
@@ -1692,13 +1619,7 @@
         "properties": {
           "method": {
             "type": "string",
-            "enum": [
-              "GET",
-              "POST",
-              "PUT",
-              "PATCH",
-              "DELETE"
-            ]
+            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
           },
           "normalizedPath": {
             "type": "string",
@@ -1714,10 +1635,7 @@
           },
           "contentType": {
             "type": "string",
-            "enum": [
-              "",
-              "application/json"
-            ]
+            "enum": ["", "application/json"]
           },
           "requestDigest": {
             "type": "string",
@@ -1801,11 +1719,7 @@
           },
           "requiredAssuranceLevel": {
             "type": "string",
-            "enum": [
-              "ACTIVE_SESSION",
-              "RECENT_SESSION",
-              "STEP_UP"
-            ]
+            "enum": ["ACTIVE_SESSION", "RECENT_SESSION", "STEP_UP"]
           }
         },
         "required": [
@@ -1859,11 +1773,7 @@
           },
           "assuranceLevel": {
             "type": "string",
-            "enum": [
-              "ACTIVE_SESSION",
-              "RECENT_SESSION",
-              "STEP_UP"
-            ]
+            "enum": ["ACTIVE_SESSION", "RECENT_SESSION", "STEP_UP"]
           }
         },
         "required": [
@@ -1919,10 +1829,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "closed",
-          "closedAt"
-        ]
+        "required": ["closed", "closedAt"]
       }
     }
   }

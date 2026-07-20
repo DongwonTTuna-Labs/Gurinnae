@@ -1,13 +1,52 @@
 BEGIN;
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
 INSERT INTO ops.users(id,oidc_subject,email,display_name,status)
 VALUES('11111111-1111-4111-8111-111111111111','control-integration','control@example.test','Control Integration','ACTIVE')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO ops.incident_events(
+  id,incident_id,event_sequence,prior_version,version,prior_state,state,transition_kind,
+  severity,affected_capabilities,owner_user_id,commander_user_id,next_update_at,
+  transition_detail,evidence_refs,evidence_set_digest,reason_code,reason,actor_type,
+  actor_id,idempotency_key_sha256,actor_assertion_jti,request_id,audit_event_id,receipt_digest,
+  occurred_at)
+VALUES(
+  '5f6a7b8c-9d0e-5f12-a345-6789abcdef01',
+  '8e5a7c0f-2a7c-54c2-998b-b14ac2ee67ff',1,0,1,NULL,'DETECTED','DETECTED','SEV3',
+  ARRAY['control'],'11111111-1111-4111-8111-111111111111',NULL,
+  clock_timestamp()+interval '1 hour','{}'::jsonb,'[]'::jsonb,repeat('9',64),
+  'CONTROL_FIXTURE','Control fixture transition incident','SERVICE','control-fixture',NULL,NULL,
+  '5f6a7b8c-9d0e-5f12-a345-6789abcdef02',gen_random_uuid(),repeat('a',64),clock_timestamp())
+ON CONFLICT DO NOTHING;
+
+-- Independent reviewer used by the action-approval control-flow witness.  It
+-- must have its own live session so the SOD guard is exercised without
+-- impersonating the proposal owner.
+INSERT INTO ops.users(id,oidc_subject,email,display_name,status)
+VALUES('22222222-2222-4222-8222-222222222222','control-reviewer','reviewer@example.test','Control Reviewer','ACTIVE')
+ON CONFLICT DO NOTHING;
+
 INSERT INTO ops.sessions(id,user_id,session_token_hash,auth_time,step_up_at,expires_at,csrf_token_hash)
 VALUES
  ('22222222-2222-4222-8222-222222222222','11111111-1111-4111-8111-111111111111',repeat('a',64),clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour',repeat('b',64)),
- ('33333333-3333-4333-8333-333333333333','11111111-1111-4111-8111-111111111111',repeat('c',64),clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour',repeat('d',64))
+ ('33333333-3333-4333-8333-333333333333','11111111-1111-4111-8111-111111111111',repeat('c',64),clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour',repeat('d',64)),
+ ('44444444-4444-4444-8444-444444444444','22222222-2222-4222-8222-222222222222',repeat('e',64),clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour',repeat('f',64))
+ON CONFLICT DO NOTHING;
+
+-- Reusable step-up witness for the high-risk HYPOTHESIS approval journey.
+-- The approval command still validates the live session, expiry, issue limit,
+-- and action digest; only the authorization row is deterministic for the
+-- integration harness.
+INSERT INTO ops.step_up_authorizations(
+  id,session_id,action_digest,idempotency_key_sha256,authorization_token_hash,
+  expires_at,assertion_issue_count,max_assertion_issues
+)
+VALUES(
+  '55555555-5555-4555-8555-555555555555',
+  '44444444-4444-4444-8444-444444444444',repeat('c',64),repeat('d',64),repeat('e',64),
+  clock_timestamp()+interval '4 minutes',0,3
+)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.users(id,oidc_subject,email,display_name,status)
@@ -170,6 +209,24 @@ INSERT INTO ops.source_incidents(source_id,severity,incident_type,summary,impact
 VALUES('control-fixture-source','MAJOR','CONTROL_FIXTURE','Control canonical incident','{}','OPEN',1)
 ON CONFLICT DO NOTHING;
 
+-- The incident query/transition contract is backed by the immutable event
+-- stream, not only by source_incidents.  Seed its baseline event so the
+-- control-flow matrix can read and then fence the same incident aggregate.
+INSERT INTO ops.incident_events(
+  id,incident_id,event_sequence,prior_version,version,prior_state,state,transition_kind,
+  severity,affected_capabilities,owner_user_id,commander_user_id,next_update_at,
+  transition_detail,evidence_refs,evidence_set_digest,reason_code,reason,actor_type,
+  actor_id,idempotency_key_sha256,actor_assertion_jti,request_id,audit_event_id,receipt_digest,
+  occurred_at)
+VALUES(
+  '4e5a6b7c-8d9e-5f01-a234-56789abcdef0',
+  '99999999-9999-4999-8999-999999999999',1,0,1,NULL,'DETECTED','DETECTED','SEV3',
+  ARRAY['control'],'11111111-1111-4111-8111-111111111111',NULL,
+  clock_timestamp()+interval '1 hour','{}'::jsonb,'[]'::jsonb,repeat('7',64),
+  'CONTROL_FIXTURE','Control fixture incident detected','SERVICE','control-fixture',NULL,NULL,
+  '4e5a6b7c-8d9e-5f01-a234-56789abcdef1',gen_random_uuid(),repeat('8',64),clock_timestamp())
+ON CONFLICT DO NOTHING;
+
 INSERT INTO ops.provider_configs(id,provider_type,name,enabled,routing_policy,secret_reference,data_retention_policy,version)
 VALUES('59e6fe3c-6803-5f19-8ee2-1595abc421a8','CONTROL_FIXTURE','Control Fixture Provider',true,'{}','secret/control-provider','NO_RETENTION',1)
 ON CONFLICT DO NOTHING;
@@ -241,8 +298,65 @@ INSERT INTO ops.tasks(id,task_type,object_type,object_id,title,status,priority,v
 VALUES('cf6b0dd7-1267-5de0-a363-c8e3af950b1d','CONTROL_FIXTURE','CASE','148b09d5-aa28-5351-b471-9ef333a3e410','Control fixture task','OPEN','NORMAL',1)
 ON CONFLICT DO NOTHING;
 
+-- Stable read fixture for the additive action-proposal detail operation.  It
+-- is a real DRAFT aggregate (not a mocked response), so the query path can
+-- prove the same immutable proposal/version joins used in production.
+INSERT INTO ops.action_proposals(
+  id,action_kind,origin_kind,origin_id,origin_version,origin_digest,
+  target_type,target_id,target_version,target_digest,object_scope_digest,
+  current_version,aggregate_version,created_by,owner_user_id,last_receipt_digest,
+  last_audit_event_id
+) VALUES(
+  '99999999-9999-4999-8999-999999999999','TASK','HUMAN',
+  '11111111-1111-4111-8111-111111111111',1,repeat('1',64),
+  'CASE','148b09d5-aa28-5351-b471-9ef333a3e410',1,repeat('2',64),repeat('3',64),
+  1,1,'11111111-1111-4111-8111-111111111111','11111111-1111-4111-8111-111111111111',
+  repeat('4',64),gen_random_uuid()
+) ON CONFLICT DO NOTHING;
+INSERT INTO ops.action_proposal_versions(
+  proposal_id,version,state,state_version,payload_encrypted,content_digest,
+  rationale_encrypted,rationale_digest,last_editor_id,expires_at
+) VALUES(
+  '99999999-9999-4999-8999-999999999999',1,'DRAFT',1,
+  convert_to(rpad('{"kind":"TASK"}',32,' '),'UTF8'),repeat('5',64),
+  convert_to(rpad('{"summary":"Control fixture proposal"}',32,' '),'UTF8'),repeat('6',64),
+  '11111111-1111-4111-8111-111111111111',clock_timestamp()+interval '7 days'
+) ON CONFLICT DO NOTHING;
+
+-- Independent DRAFT aggregate for the withdrawActionProposal witness.  The
+-- main action flow advances its own proposal through approval, so withdrawal
+-- uses a separate real DRAFT->WITHDRAWN aggregate.
+INSERT INTO ops.action_proposals(
+  id,action_kind,origin_kind,origin_id,origin_version,origin_digest,
+  target_type,target_id,target_version,target_digest,object_scope_digest,
+  current_version,aggregate_version,created_by,owner_user_id,last_receipt_digest,
+  last_audit_event_id
+) VALUES(
+  '77777777-7777-4777-8777-777777777777','TASK','HUMAN',
+  '11111111-1111-4111-8111-111111111111',1,repeat('e',64),
+  'CASE','148b09d5-aa28-5351-b471-9ef333a3e410',1,repeat('e',64),repeat('e',64),
+  1,1,'11111111-1111-4111-8111-111111111111','11111111-1111-4111-8111-111111111111',
+  repeat('e',64),gen_random_uuid()
+) ON CONFLICT DO NOTHING;
+INSERT INTO ops.action_proposal_versions(
+  proposal_id,version,state,state_version,payload_encrypted,content_digest,
+  rationale_encrypted,rationale_digest,last_editor_id,expires_at
+) VALUES(
+  '77777777-7777-4777-8777-777777777777',1,'DRAFT',1,
+  convert_to(rpad('{"kind":"TASK"}',32,' '),'UTF8'),repeat('e',64),
+  convert_to(rpad('{"summary":"Withdraw fixture proposal"}',32,' '),'UTF8'),repeat('e',64),
+  '11111111-1111-4111-8111-111111111111',clock_timestamp()+interval '7 days'
+) ON CONFLICT DO NOTHING;
+
 INSERT INTO ops.agent_runs(id,case_id,agent_type,objective,evidence_scope_ids,provider_policy,status,input_snapshot_hash,max_cost,version,created_by)
 VALUES('8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','CONTROL_FIXTURE','Canonical integration agent run','[]','LOCAL_ONLY','SUCCEEDED',repeat('9',64),1,1,'11111111-1111-4111-8111-111111111111')
+ON CONFLICT DO NOTHING;
+
+-- Independent RUNNING aggregate used by the additive cancelAgentRun witness;
+-- the generic operation generator binds this deterministic UUID and expected
+-- version 1 to the real owner transition.
+INSERT INTO ops.agent_runs(id,case_id,agent_type,objective,evidence_scope_ids,provider_policy,status,input_snapshot_hash,max_cost,version,created_by)
+VALUES('77b9da26-766c-5f56-9084-39380003ec20','148b09d5-aa28-5351-b471-9ef333a3e410','CONTROL_CANCEL_FIXTURE','Cancelable control-flow run','[]','LOCAL_ONLY','RUNNING',repeat('8',64),1,1,'11111111-1111-4111-8111-111111111111')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.agent_suggestions(id,agent_run_id,case_id,suggestion_type,payload,evidence_ids,citation_checks,status,version)
@@ -255,12 +369,35 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.agent_suggestions(id,agent_run_id,case_id,suggestion_type,payload,evidence_ids,citation_checks,status,version)
 VALUES
- ('30ddda7c-3ee4-52a6-af23-f09f1f8cd9d4','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','CONTROL_ACCEPT','{}','[]','[]','PENDING',1),
- ('ae58ffd5-e2a2-5bf2-8a4f-e11facaee532','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','CONTROL_REJECT','{}','[]','[]','PENDING',1)
+ ('30ddda7c-3ee4-52a6-af23-f09f1f8cd9d4','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','TASK','{}','[]','[]','PENDING',1),
+ ('ae58ffd5-e2a2-5bf2-8a4f-e11facaee532','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','TASK','{}','[]','[]','PENDING',1)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.kill_switches(id,code,scope,state,version)
 VALUES('2cd3a1db-f58f-501c-a08c-02b3760c4dbc','CONTROL_FIXTURE','{}','INACTIVE',1)
 ON CONFLICT DO NOTHING;
+
+-- Real pending handoff used by the additive decideJourneyHandoff witness.
+-- The owner command requires the complete start -> request -> acknowledge
+-- aggregate chain; keep creation in the same serializable fixture transaction
+-- and let the harness read the generated handoff id/binding after commit.
+DO $$
+DECLARE
+  started ops.journey_transition_receipts;
+  requested ops.journey_transition_receipts;
+BEGIN
+  SELECT * INTO started FROM ops.start_journey_instance_v1(
+    'J-01','CASE','control-journey-root',1,repeat('a',64),
+    'CASE','control-journey-current',1,repeat('a',64),'PUB-002',
+    'SERVICE','control-fixture-owner',repeat('b',64),
+    clock_timestamp()+interval '1 day',
+    '11111111-1111-4111-8111-111111111121'::uuid,
+    repeat('c',64)::char(64),'11111111-1111-4111-8111-111111111131'::uuid);
+  SELECT * INTO requested FROM ops.request_journey_handoff_v1(
+    started.journey_instance_id,started.journey_instance_version,'J-01-E01',
+    repeat('a',64)::char(64),
+    '11111111-1111-4111-8111-111111111122'::uuid,
+    repeat('d',64)::char(64),'11111111-1111-4111-8111-111111111132'::uuid);
+END $$;
 
 COMMIT;

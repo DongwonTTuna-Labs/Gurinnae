@@ -1,2 +1,6 @@
+export type {
+  Int002Projection,
+  Int002SelectedTarget,
+  Int002ViewModel,
+} from "@gurine/ui";
 export { toInt002ViewModel } from "@gurine/ui";
-export type { Int002ViewModel, Int002Projection, Int002SelectedTarget } from "@gurine/ui";

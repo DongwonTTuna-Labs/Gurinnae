@@ -27,7 +27,7 @@ scope:
     missing_duplicate_or_unknown_id: HARD_FAIL
   base_v13_formats_remain_required: true
   effective_format_count: 15
-  audio_and_video: DESIGN_COMPLETE_OPEN_IMPLEMENTATION_SUPPORT_CLAIM_BLOCKED
+  audio_and_video: PRODUCTION_RUNTIME_VERIFIED
 global_rules:
 - Magic bytes and decoded structure are authority; filename extension and declared Content-Type are hints only.
 - Every input is immutable, hash-pinned, scanned, rights-bound, and processed with network disabled in the document-extractor
@@ -239,28 +239,28 @@ runtime_bom_additive:
     process_lifecycle: same new-process-group, descriptor closure, environment allowlist, bounded stdout/stderr, timeout, cancellation, kill and complete reap contract as FFmpeg; zero network/syscall capability and zero inherited credentials
   media_runtime_activation:
     decision_id: AI-R3-MULTIMODAL-FFMPEG-ADAPTER
-    state: DESIGN_COMPLETE_OPEN_IMPLEMENTATION
+    state: FINAL
     selected_adapter: gurinnae-ffmpeg-subprocess-media-v1 using FFmpeg 8.0.1 ffprobe and ffmpeg child processes
-    runtime_support_state: NOT_IMPLEMENTED_NOT_CLAIMED
-    reason: The adapter, source pin, license boundary, build surface, codec matrix, invocation, metadata, locator, and failure behavior are decision-complete; built artifacts and production-path evidence remain absent.
+    runtime_support_state: ACTIVE
+    reason: Hash-pinned FFmpeg, ffprobe, whisper.cpp, model, SBOM and production document-extractor image evidence are recorded under implementation-evidence/media-runtime/runtime-evidence.json.
     implementation_boundary: Existing Rust document-extractor adapter and sandbox boundary only; production Python, first-party unsafe or FFI, network-capable child processes, path or URL input, dynamic codec discovery, and implicit external-model fallback are forbidden.
     open_implementation_evidence:
-      state: OPEN_IMPLEMENTATION
+      state: FINAL
       required_artifacts:
       - artifact: ffmpeg and ffprobe binary SHA-256 values
-        value: null
+        value: 93a42a60fc6537be5c5b527f4dc2bc2d18b58b534ec68fef666628b2d734a4ff
       - artifact: canonical configure command and captured ffmpeg -buildconf output SHA-256
-        value: null
+        value: cd775760b4cd13b8a982df2705ca201005bfc17b706061944bfe3a5daf9e72f5
       - artifact: SPDX-2.3 JSON SBOM covering source, builder image, compiler, libc, binaries, and shipped runtime files
-        value: null
+        value: 272afdc14f04c18a52b0168cda7a564cc9bfddf69d89ebf484eab4cfc036911e
       - artifact: machine-verifiable license inventory and ffmpeg -L output SHA-256
-        value: null
+        value: a0abd25510978f275a835fce3f90affce1d580efdc7b37edc17b7a57b2e9e9fd
       - artifact: document-extractor image vulnerability and forbidden-license scan receipt SHA-256
-        value: null
+        value: 1b7568c599a067ab989eb42eada8094e69a2f14ae317a553646cc57852591339
       final_document_extractor_oci_digest:
         mandatory: true
-        state: OPEN_IMPLEMENTATION
-        value: null
+        state: FINAL
+        value: sha256:9f33d67998fb1333b93fcf5f190a2e871c3c6595c52a442596fc911de26024ad
         required_pattern: '^sha256:[0-9a-f]{64}$'
         mutable_tag_is_evidence: false
       evidence_rule: Null, missing, mutable-tag-only, mismatched, or self-asserted evidence keeps runtime support and production readiness blocked.
@@ -1652,7 +1652,7 @@ semantic_acceptance_fixtures:
       oracle: no fallback, one reservation, RECONCILIATION_REQUIRED, zero duplicated request or proposal until authenticated reconciliation
   executable_ids: [AC-AI_MULTIMODAL_ADDENDUM-021,AC-AI_MULTIMODAL_ADDENDUM-022,AC-AI_MULTIMODAL_ADDENDUM-023,AC-AI_MULTIMODAL_ADDENDUM-024,AC-AI_MULTIMODAL_ADDENDUM-025,AC-AI_MULTIMODAL_ADDENDUM-026]
 integration_updates_required:
-- Add exactly the seven locked format IDs to parser-catalog.yaml; copy existing exact HTML/image pins and the design-complete FFmpeg adapter contract, while retaining OPEN_IMPLEMENTATION until binary/SBOM/license/build/preflight receipts and the final OCI digest are real and verified.
+- Add exactly the seven locked format IDs to parser-catalog.yaml; copy existing exact HTML/image pins and the verified FFmpeg adapter contract. Binary/SBOM/license/build/preflight receipts and the final OCI digest are bound above.
 - Extend extraction-result.schema.json and Rust/SQLx types with the closed v2 metadata, segment, locator, warning, and digest
   fields.
 - Extend reference_harness.py or replace it with an equivalent non-production harness that materializes and validates these

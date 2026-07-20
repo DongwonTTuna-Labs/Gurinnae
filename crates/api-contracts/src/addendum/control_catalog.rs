@@ -92,7 +92,7 @@ pub const CONTROL_OPERATIONS: &[OperationSpec] = &[
         "/v1/internal/action-proposals/{proposalId}:decide",
         "actor-assertion-and-capability",
         "actions.review",
-        "ACTIVE_SESSION",
+        "conditional-by-action-and-decision",
         "COMMAND",
         200,
         COMMAND_RECEIPT

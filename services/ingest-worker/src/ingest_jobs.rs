@@ -78,7 +78,6 @@ async fn process_parsed_event(
     tracing::info!(source_document_id=%document_id,record_count=records.len(),"parsed document ingested");
     Ok(json!({"recordCount":records.len(),"schemaFingerprint":schema_fingerprint}))
 }
-
 fn parsed_event_fields(job: &ClaimedJob) -> Result<(Uuid, &str, &str), Failure> {
     let payload = job
         .payload
@@ -109,7 +108,6 @@ fn parsed_event_fields(job: &ClaimedJob) -> Result<(Uuid, &str, &str), Failure> 
         })?;
     Ok((document_id, output_digest, parser_version))
 }
-
 #[expect(
     clippy::too_many_arguments,
     reason = "parsed-record persistence binds event, document, parser, and object provenance"
@@ -191,7 +189,6 @@ async fn persist_parsed_records(
 
     Ok(())
 }
-
 #[derive(Clone)]
 struct ManifestDocument {
     external_id: String,
@@ -206,7 +203,6 @@ struct SourceResponse {
     content_type: String,
     http_status: u16,
 }
-
 async fn process_source_run(
     pool: &PgPool,
     store: &Store,
@@ -333,7 +329,6 @@ async fn collect_source_run(
     }
     Ok((seen, changed, fingerprints))
 }
-
 struct SourceTargetResult {
     digest: String,
     changed: bool,
@@ -446,19 +441,17 @@ async fn persist_source_target(
         &mut tx, run_id, source_id, target_url, operation, response, digest, object_key,
     )
     .await?;
-    let document_id = Uuid::new_v4();
     let inserted = if mode == "DRY_RUN" {
         None
     } else {
-        sqlx::query_scalar::<_, Uuid>(
-            "INSERT INTO raw.source_documents(id,source_id,source_fetch_id,external_id,                external_version,canonical_url,retrieved_at,source_published_at,content_type,                content_sha256,content_size_bytes,object_key,status,metadata)              VALUES($1,$2,$3,$4,$5,$6,clock_timestamp(),$7::timestamptz,$8,$9,$10,$11,'FETCHED',$12)              ON CONFLICT(source_id,external_id,content_sha256) DO NOTHING RETURNING id",
+        let document_id: Uuid = sqlx::query_scalar(
+            "SELECT (raw.insert_source_document_revision($1,$2,$3,$4,$5,clock_timestamp(),$6::timestamptz,$7,$8,$9,$10,$11::core.source_document_status,$12,$13,$14,$15,$16,$17)).id",
         )
-        .bind(document_id)
         .bind(source_id)
-        .bind(fetch_id)
         .bind(format!("{}:{}", operation.id, target.external_id))
         .bind(&target.revision)
         .bind(target_url)
+        .bind(fetch_id)
         .bind(target.published_at.as_deref())
         .bind(if response.content_type.is_empty() {
             target.content_type.as_str()
@@ -468,10 +461,17 @@ async fn persist_source_target(
         .bind(digest)
         .bind(i64::try_from(response.bytes.len()).unwrap_or(i64::MAX))
         .bind(object_key)
+        .bind("FETCHED")
+        .bind(Option::<&str>::None)
+        .bind(Option::<&str>::None)
+        .bind(Option::<&str>::None)
+        .bind(json!([]))
+        .bind(Option::<&str>::None)
         .bind(json!({"connectorOperationId":operation.id,"sourceRunId":run_id}))
-        .fetch_optional(&mut *tx)
+        .fetch_one(&mut *tx)
         .await
-        .map_err(database)?
+        .map_err(database)?;
+        Some(document_id)
     };
     if let Some(document_id) = inserted {
         if response.content_type == "application/json" {

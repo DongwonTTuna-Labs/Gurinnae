@@ -41,6 +41,9 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
         process_publication_created(state, &job, &event).await?;
         return Ok(true);
     }
+    if let Some(processed) = process_communication_event(state, &job, &event).await? {
+        return Ok(processed);
+    }
     let delivery = prepare(state, &event).await;
     let (delivery_id, message) = match delivery {
         Ok(value) => value,
@@ -64,6 +67,13 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
     Ok(true)
 }
 
+// COMMUNICATION_V1 dispatch path.  The database owner routine is the
+// linearization point: it re-checks consent, provider activation/preflight,
+// suppression and kill-switch fences and commits an immutable attempt before
+// this function performs provider I/O.  A provider response is persisted only
+// through the typed observation owner routine; no direct delivery/receipt DML
+// is allowed from this worker.
+include!("notification_typed_jobs.rs");
 async fn deliver_prepared(
     state: &State,
     job: &ClaimedJob,
@@ -71,17 +81,29 @@ async fn deliver_prepared(
     delivery_id: Uuid,
     message: EmailMessage,
 ) -> Result<(), WorkerError> {
-    let provider_id = match state.delivery.send(&message).await {
+    let channel = event
+        .payload
+        .get("channel")
+        .or_else(|| event.payload.get("deliveryChannel"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_ascii_uppercase)
+        .unwrap_or_else(|| "EMAIL".to_owned());
+    let provider_id = match state.delivery.send_for_channel(&message, &channel).await {
         Ok(value) => value,
         Err(_) => {
-            mark_failed(state, delivery_id, "SMTP_DELIVERY_FAILED").await?;
+            let error_code = if channel == "EMAIL" {
+                "SMTP_DELIVERY_FAILED"
+            } else {
+                "CHANNEL_DELIVERY_FAILED"
+            };
+            mark_failed(state, delivery_id, error_code).await?;
             state
                 .worker
                 .fail(
                     &state.pool,
                     job,
-                    "SMTP_DELIVERY_FAILED",
-                    "SMTP gateway delivery failed",
+                    error_code,
+                    "channel gateway delivery failed",
                     true,
                     serde_json::json!({"deliveryId":delivery_id}),
                 )
@@ -364,7 +386,7 @@ async fn deliver_publication_subscriber(
             Ok(Some(1))
         }
         Err(_) => {
-            mark_failed(state, delivery_id, "SMTP_DELIVERY_FAILED").await?;
+            mark_failed(state, delivery_id, "CHANNEL_DELIVERY_FAILED").await?;
             state
                 .worker
                 .fail(

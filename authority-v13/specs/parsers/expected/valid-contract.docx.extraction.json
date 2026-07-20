@@ -1,0 +1,49 @@
+{
+  "documentSha256": "8702ecd24e8e97b669b87e6fe7c40ad9802d2d438c0fb4fb1da75b1534fb2005",
+  "mediaType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "pages": [
+    {
+      "blocks": [
+        {
+          "confidence": null,
+          "id": "blk-d87b77480c35414d21d8",
+          "kind": "HEADING",
+          "locator": {
+            "kind": "DOCX_PARAGRAPH",
+            "value": "word/document.xml#/w:document/w:body/w:p[1]"
+          },
+          "text": "계약 문서"
+        },
+        {
+          "confidence": null,
+          "id": "blk-0517d573818ec113cf98",
+          "kind": "PARAGRAPH",
+          "locator": {
+            "kind": "DOCX_PARAGRAPH",
+            "value": "word/document.xml#/w:document/w:body/w:p[2]"
+          },
+          "text": "계약번호 SYN-1"
+        },
+        {
+          "confidence": null,
+          "id": "blk-f07f3f0ede5bd0332010",
+          "kind": "PARAGRAPH",
+          "locator": {
+            "kind": "DOCX_PARAGRAPH",
+            "value": "word/document.xml#/w:document/w:body/w:p[3]"
+          },
+          "text": "안전장비 단가 480000원"
+        }
+      ],
+      "height": null,
+      "index": 0,
+      "tables": [],
+      "width": null
+    }
+  ],
+  "parserId": "docx",
+  "parserVersion": "zip-8.6.0+quick-xml-0.41.0-reference-v1",
+  "rejectionCode": null,
+  "status": "EXTRACTED",
+  "warnings": []
+}

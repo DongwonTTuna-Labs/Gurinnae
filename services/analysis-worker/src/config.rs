@@ -9,6 +9,7 @@ pub struct Config {
     pub environment: String,
     pub ai_enabled: bool,
     pub egress_ai_url: Option<Url>,
+    pub egress_source_url: Option<Url>,
     pub egress_object_store_url: Option<Url>,
     pub provider_order: Vec<String>,
     pub worker_id: String,
@@ -37,6 +38,11 @@ impl Config {
             .filter(|value| !value.trim().is_empty())
             .map(|value| value.parse::<Url>().map_err(|_| ConfigError::Invalid))
             .transpose()?;
+        let egress_source_url = env::var("EGRESS_SOURCE_CHANNEL_URL")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .map(|value| value.parse::<Url>().map_err(|_| ConfigError::Invalid))
+            .transpose()?;
         let egress_object_store_url = env::var("EGRESS_OBJECT_STORE_CHANNEL_URL")
             .ok()
             .filter(|value| !value.trim().is_empty())
@@ -51,7 +57,10 @@ impl Config {
             .collect::<Vec<_>>();
         if environment == "production"
             && ai_enabled
-            && (egress_ai_url.is_none() || egress_object_store_url.is_none() || provider_order.is_empty())
+            && (egress_ai_url.is_none()
+                || egress_source_url.is_none()
+                || egress_object_store_url.is_none()
+                || provider_order.is_empty())
         {
             return Err(ConfigError::Missing);
         }
@@ -72,6 +81,7 @@ impl Config {
             environment,
             ai_enabled,
             egress_ai_url,
+            egress_source_url,
             egress_object_store_url,
             provider_order,
             worker_id,

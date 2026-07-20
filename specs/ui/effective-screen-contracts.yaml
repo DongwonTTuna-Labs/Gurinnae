@@ -21,10 +21,10 @@ rules:
 - A $projection binding is an OPEN_IMPLEMENTATION requirement, never evidence that the field exists.
 counts:
   screens: 94
-  sections: 497
+  sections: 496
   closed_screen_view_model_types: 94
-  closed_section_view_model_types: 497
-  explicit_browser_projection_allowlists: 497
+  closed_section_view_model_types: 496
+  explicit_browser_projection_allowlists: 496
   semantic_dimensions_per_screen: 6
   base_operation_occurrences: 226
   additive_operation_section_occurrences: 100
@@ -42,10 +42,10 @@ canonical_profile_set_equality_oracle:
   failure_rule: Missing, extra, unmapped, multiply canonical, or source-order-derived profile rows fail validation.
 screen_section_set_equality_oracle:
   screen_ids: 94
-  catalog_section_keys: 497
-  effective_section_keys: 497
+  catalog_section_keys: 496
+  effective_section_keys: 496
   semantic_anchor_section_keys: 398
-  supplemental_section_keys: 99
+  supplemental_section_keys: 98
   missing: 0
   extra: 0
   duplicate: 0
@@ -91,7 +91,7 @@ browser_secret_stripping_contract:
   - client storage
   - console
   - client log
-  set_equality_scan: all 94 closed screen schemas + all 497 section leaf/nested/array allowlists + all action and journey
+  set_equality_scan: all 94 closed screen schemas + all 496 section leaf/nested/array allowlists + all action and journey
     browser bindings
   runtime_status: OPEN_IMPLEMENTATION
 implementation_requirements:
@@ -19879,18 +19879,6 @@ screens:
     - name: auditEventId
       type: uuid
       required: false
-    - name: result
-      type: enum:DISMISS,NEEDS_DATA,MARK_DUPLICATE,PROMOTE_TO_CASE,LINK_TO_CASE
-      required: false
-    - name: reasonDigest
-      type: sha256
-      required: false
-    - name: duplicateSignalId
-      type: uuid
-      required: false
-    - name: duplicateRelationship
-      type: enum:SAME_LOGICAL_EVENT,SAME_TARGET,SAME_SOURCE,OTHER
-      required: false
     - name: acceptedAt
       type: date-time
       required: true
@@ -28201,11 +28189,18 @@ screens:
       - path: cost_risk
         type: BudgetSummary
         allowed_fields:
+        - alertThreshold
         - currency
         - dailyLimit
         - dailyUsed
+        - fallbackAction
+        - forecastAssumption
+        - hardLimit
+        - lastChangeReason
+        - lastChangedBy
         - monthlyLimit
         - monthlyUsed
+        - softLimit
         - status
         additional_properties: false
       array_item_fields:
@@ -29435,7 +29430,7 @@ screens:
         forbidden business idempotency fields
     request_field_set:
     - name: schemaVersion
-      type: const decide-journey-handoff.request.v1
+      type: const<decide-journey-handoff.request.v1>
       required: true
     - name: handoffId
       type: uuid
@@ -29447,10 +29442,10 @@ screens:
       type: sha256
       required: true
     - name: decision
-      type: ACKNOWLEDGE|DECLINE
+      type: enum<ACKNOWLEDGE|DECLINE>
       required: true
     - name: reasonCode
-      type: nullable<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>
+      type: nullable<enum<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>>
       required: true
     - name: reason
       type: nullable<string[1..4000]>
@@ -35461,7 +35456,6 @@ screens:
         additional_properties: false
         required:
         - envelope
-        - business-health
         - spend
         - forecast
         - limits
@@ -35469,7 +35463,6 @@ screens:
         - changes
         fields:
           envelope: Ops004EnvelopeSectionVmV1
-          business-health: Ops004BusinessHealthSectionVmV1
           spend: Ops004SpendSectionVmV1
           forecast: Ops004ForecastSectionVmV1
           limits: Ops004LimitsSectionVmV1
@@ -35674,63 +35667,8 @@ screens:
       array_item_fields: []
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
-  - section_id: business-health
-    order: 2
-    title: Business Health
-    purpose: qualification·activation·retention·revenue·margin·SLA의 현재 projection.
-    priority: primary
-    test_id: ops_004__section__business-health
-    semantic_roles: []
-    component:
-      authority_component: StructuredContentSection
-      component: StructuredContentSection
-      variant: dense
-      resolution_source: AUTHORITY_COMPONENT
-      reason: The authority component supports this screen surface and section purpose.
-    typed_slice:
-      name: Ops004BusinessHealthSectionVmV1
-      kind: object
-      additional_properties: false
-      required:
-      - business_health
-      fields:
-      - name: business_health
-        type: Ops004BusinessHealthBusinessHealthProjectionV1
-        required: true
-        nullable: false
-        source:
-          operation_id: getBudgetOverview
-          field_path: $projection.business_health
-          status: RUNTIME_PROJECTION_REQUIRED
-    browser_projection_allowlist:
-      top_level_fields:
-      - business_health
-      nested_object_fields:
-      - path: business_health
-        type: Ops004BusinessHealthBusinessHealthProjectionV1
-        allowed_fields:
-        - summary
-        - status
-        - facts
-        - as_of
-        - provenance
-        additional_properties: false
-      array_item_fields:
-      - path: business_health.facts[]
-        item_type: Ops004BusinessHealthBusinessHealthProjectionV1FactV1
-        allowed_item_fields:
-        - label
-        - value
-        - unit
-        - source_revision
-        - locator
-        - uncertainty
-        - href
-        additional_properties: false
-      deny_unlisted_at_every_depth: true
-      unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: spend
-    order: 3
+    order: 2
     title: 사용량
     purpose: provider/workload/case bucket.
     priority: primary
@@ -35775,7 +35713,7 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: forecast
-    order: 4
+    order: 3
     title: forecast
     purpose: confidence/assumption.
     priority: primary
@@ -35829,7 +35767,7 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: limits
-    order: 5
+    order: 4
     title: 한도
     purpose: soft/hard/fallback.
     priority: primary
@@ -35872,7 +35810,7 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: alerts
-    order: 6
+    order: 5
     title: 경고
     purpose: threshold.
     priority: primary
@@ -35917,7 +35855,7 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: changes
-    order: 7
+    order: 6
     title: 변경 이력
     purpose: approver/reason.
     priority: primary
@@ -35959,51 +35897,7 @@ screens:
         additional_properties: false
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
-  projection_schema_definitions:
-  - name: Ops004BusinessHealthBusinessHealthProjectionV1
-    kind: object
-    additional_properties: false
-    required:
-    - summary
-    - status
-    - facts
-    - as_of
-    - provenance
-    fields:
-      summary: string[1..4096]
-      status: AVAILABLE|EMPTY|PARTIAL|STALE|RESTRICTED|UNAVAILABLE
-      facts: array<Ops004BusinessHealthBusinessHealthProjectionV1FactV1>[0..256]
-      as_of: datetime
-      provenance: Ops004BusinessHealthBusinessHealthProjectionV1ProvenanceV1
-    fact_item:
-      name: Ops004BusinessHealthBusinessHealthProjectionV1FactV1
-      kind: object
-      additional_properties: false
-      required:
-      - label
-      - value
-      - source_revision
-      - uncertainty
-      fields:
-        label: string[1..160]
-        value: string[0..4096]
-        unit: string[1..64]|null
-        source_revision: string[1..256]
-        locator: string[1..2048]|null
-        uncertainty: CONFIRMED|ESTIMATED|DISPUTED|UNKNOWN|NOT_APPLICABLE
-        href: same-origin-authorized-uri-reference|null
-    provenance_type:
-      name: Ops004BusinessHealthBusinessHealthProjectionV1ProvenanceV1
-      kind: object
-      additional_properties: false
-      required:
-      - operation_id
-      - projection_version
-      - source_digest
-      fields:
-        operation_id: operation-id
-        projection_version: int64>=1
-        source_digest: sha256
+  projection_schema_definitions: []
   state_profile: internal-data
   state_profile_resolution:
     canonical_profile: internal-data
@@ -36134,7 +36028,7 @@ screens:
     request_schema: getBudgetOverviewQuery
     request_field_set: []
     server_only_request_field_set: []
-    response_schema: BusinessHealthResponse
+    response_schema: BudgetOverviewResponse
     response_field_set:
     - name: id
       type: uuid-or-string
@@ -36236,7 +36130,6 @@ screens:
     body.
   - getBudgetOverview must replace its generic data field with a closed screen-owned projection.
   - updateBudgetLimit fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser view-model.
-  - 'OPS-004.business-health: getBudgetOverview.$projection.business_health must be implemented as Ops004BusinessHealthBusinessHealthProjectionV1.'
   design_contract_status: DECISION_FINAL
   runtime_implementation_status: OPEN_IMPLEMENTATION
   dto_rendering_forbidden: true
@@ -80868,7 +80761,7 @@ screens:
       required: true
       in: body
     - name: decision
-      type: enum:investigate,dismiss,duplicate,needs_data,link
+      type: enum:investigate,dismiss,duplicate,needs_data
       required: true
       in: body
     - name: reason
@@ -80878,18 +80771,6 @@ screens:
     - name: expectedVersion
       type: integer
       required: true
-      in: body
-    - name: expectedDuplicateSignalVersion
-      type: integer
-      required: false
-      in: body
-    - name: duplicateSignalId
-      type: uuid
-      required: false
-      in: body
-    - name: duplicateRelationship
-      type: enum:SAME_LOGICAL_EVENT,SAME_TARGET,SAME_SOURCE,OTHER
-      required: false
       in: body
     server_only_request_field_set: []
     response_schema: triageSignalReceipt

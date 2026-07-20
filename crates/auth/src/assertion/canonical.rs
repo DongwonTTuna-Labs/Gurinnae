@@ -58,28 +58,53 @@ pub fn parse_token<'a>(token: &'a str, prefix: &str) -> Result<TokenSegments<'a>
 }
 
 pub fn canonical_json<T: Serialize>(value: &T) -> Result<Vec<u8>, AssertionError> {
-    let bytes = serde_json::to_vec(value).map_err(|_| AssertionError::SchemaInvalid)?;
-    if bytes.is_ascii() {
-        return Ok(bytes);
-    }
-    let json = String::from_utf8(bytes).map_err(|_| AssertionError::SchemaInvalid)?;
-    let mut escaped = String::with_capacity(json.len());
-    for character in json.chars() {
-        if character.is_ascii() {
-            escaped.push(character);
-        } else {
-            let codepoint = character as u32;
-            if codepoint <= 0xffff {
-                escaped.push_str(&format!("\\u{codepoint:04x}"));
-            } else {
-                let value = codepoint - 0x1_0000;
-                let high = 0xd800 + (value >> 10);
-                let low = 0xdc00 + (value & 0x3ff);
-                escaped.push_str(&format!("\\u{high:04x}\\u{low:04x}"));
+    let json = serde_json::to_value(value).map_err(|_| AssertionError::SchemaInvalid)?;
+    let mut output = String::new();
+    write_jcs(&json, &mut output)?;
+    Ok(output.into_bytes())
+}
+
+fn write_jcs(value: &Value, output: &mut String) -> Result<(), AssertionError> {
+    match value {
+        Value::Null => output.push_str("null"),
+        Value::Bool(value) => output.push_str(if *value { "true" } else { "false" }),
+        Value::String(value) => output
+            .push_str(&serde_json::to_string(value).map_err(|_| AssertionError::SchemaInvalid)?),
+        Value::Number(value) if value.is_i64() || value.is_u64() => {
+            output.push_str(&value.to_string())
+        }
+        Value::Number(_) => return Err(AssertionError::SchemaInvalid),
+        Value::Array(values) => {
+            output.push('[');
+            for (index, value) in values.iter().enumerate() {
+                if index > 0 {
+                    output.push(',');
+                }
+                write_jcs(value, output)?;
             }
+            output.push(']');
+        }
+        Value::Object(values) => {
+            let mut keys = values.keys().collect::<Vec<_>>();
+            keys.sort_by(|left, right| left.encode_utf16().cmp(right.encode_utf16()));
+            output.push('{');
+            for (index, key) in keys.iter().enumerate() {
+                if index > 0 {
+                    output.push(',');
+                }
+                output.push_str(
+                    &serde_json::to_string(key).map_err(|_| AssertionError::SchemaInvalid)?,
+                );
+                output.push(':');
+                write_jcs(
+                    values.get(*key).ok_or(AssertionError::SchemaInvalid)?,
+                    output,
+                )?;
+            }
+            output.push('}');
         }
     }
-    Ok(escaped.into_bytes())
+    Ok(())
 }
 
 pub fn validate_canonical_payload(bytes: &[u8]) -> Result<Value, AssertionError> {

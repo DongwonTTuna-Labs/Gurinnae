@@ -3,6 +3,7 @@ use gurine_object_store::{
     port::ObjectStoreClient,
     s3::{self, S3Config},
 };
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use thiserror::Error;
 
 use crate::config::{Config, ObjectStoreConfig};
@@ -11,6 +12,7 @@ pub struct GatewayState {
     pub config: Config,
     pub object_store: Option<ObjectStoreClient>,
     pub smtp: Option<Arc<SmtpSender>>,
+    pub database: Option<PgPool>,
 }
 
 #[derive(Debug, Error)]
@@ -19,6 +21,8 @@ pub enum StateError {
     ObjectStore,
     #[error("egress SMTP initialization failed")]
     Smtp,
+    #[error("egress database initialization failed")]
+    Database,
 }
 
 impl GatewayState {
@@ -56,10 +60,21 @@ impl GatewayState {
             .transpose()
             .map_err(|_| StateError::Smtp)?
             .map(Arc::new);
+        let database = config
+            .database_url
+            .as_deref()
+            .map(|url| {
+                PgPoolOptions::new()
+                    .max_connections(4)
+                    .connect_lazy(url)
+                    .map_err(|_| StateError::Database)
+            })
+            .transpose()?;
         Ok(Self {
             config,
             object_store,
             smtp,
+            database,
         })
     }
 }

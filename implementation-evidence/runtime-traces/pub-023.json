@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-023",
+  "route": "/about/funding",
+  "url": "http://127.0.0.1:29101/about/funding",
+  "observedAt": "2026-07-19T17:59:05.548Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-023",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "principles",
+        "component": "StructuredContentSection",
+        "projectionState": "READY"
+      },
+      {
+        "id": "income",
+        "component": "StructuredContentSection",
+        "projectionState": "READY"
+      },
+      {
+        "id": "expenses",
+        "component": "StructuredContentSection",
+        "projectionState": "READY"
+      },
+      {
+        "id": "donors",
+        "component": "StructuredContentSection",
+        "projectionState": "READY"
+      },
+      {
+        "id": "conflicts",
+        "component": "DecisionReviewPanel",
+        "projectionState": "READY"
+      },
+      {
+        "id": "reports",
+        "component": "StructuredContentSection",
+        "projectionState": "READY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

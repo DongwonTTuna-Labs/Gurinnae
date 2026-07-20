@@ -35,7 +35,11 @@ export function subscriptionQuery(url: URL): Record<string, unknown> {
     "token",
   ]);
   const names = [...new Set(url.searchParams.keys())]
-    .filter((name) => !ignored.has(name))
+    // SvelteKit named form actions encode the action as a synthetic
+    // `?/action-id` query key on the POST URL. It is transport metadata,
+    // never a user-selected subscription filter, so exclude it before the
+    // server-bound query snapshot is persisted.
+    .filter((name) => !ignored.has(name) && !name.startsWith("/"))
     .sort();
   const filters = names.map((name) => ({
     name,

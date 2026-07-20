@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Step-up Authorization Cookie Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "typ",
+    "authorizationId",
+    "authorizationToken",
+    "actionDigest",
+    "idempotencyKey",
+    "idempotencyKeySha256",
+    "maxAssertionIssues",
+    "issuedAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "typ": {
+      "const": "step-up-authorization"
+    },
+    "authorizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "actionDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "idempotencyKeySha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "issuedAt": {
+      "type": "integer"
+    },
+    "expiresAt": {
+      "type": "integer"
+    },
+    "authorizationToken": {
+      "type": "string",
+      "minLength": 43,
+      "maxLength": 256
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 200
+    },
+    "maxAssertionIssues": {
+      "const": 3
+    }
+  }
+}

@@ -11,6 +11,74 @@ fn binding() -> SnapshotBinding {
     }
 }
 
+#[test]
+fn source_fetch_v2_is_flat_and_round_trips_without_enum_wrapper() {
+    let binding = binding();
+    let request = SourceFetchRequest {
+        binding: binding.clone(),
+        request_kind: SourceRequestKind::SearchPublicWeb,
+        query: Some("구린네 예산".to_owned()),
+        locale: Some("ko-KR".to_owned()),
+        country: Some("KR".to_owned()),
+        recency_days: Some(30),
+        result_limit: Some(5),
+        canonical_url: None,
+    };
+    let Some(wire) = request.to_v2().ok() else {
+        assert!(false);
+        return;
+    };
+    let Some(json) = serde_json::to_value(&wire).ok() else {
+        assert!(false);
+        return;
+    };
+    assert!(json.get("SearchPublicWeb").is_none());
+    assert_eq!(
+        json.get("requestKind").and_then(|v| v.as_str()),
+        Some("SEARCH_PUBLIC_WEB")
+    );
+    let Some(decoded) = serde_json::from_value::<SourceFetchRequestV2>(json).ok() else {
+        assert!(false);
+        return;
+    };
+    assert_eq!(
+        SourceFetchRequest::from_v2(decoded, binding).ok(),
+        Some(request)
+    );
+}
+
+#[test]
+fn source_fetch_v2_rejects_policy_drift() {
+    let binding = binding();
+    let request = SourceFetchRequest {
+        binding: binding.clone(),
+        request_kind: SourceRequestKind::FetchUrl,
+        query: None,
+        locale: None,
+        country: None,
+        recency_days: None,
+        result_limit: None,
+        canonical_url: Some("https://example.com/report".to_owned()),
+    };
+    let Some(wire) = request.to_v2().ok() else {
+        assert!(false);
+        return;
+    };
+    let Some(mut json) = serde_json::to_value(wire).ok() else {
+        assert!(false);
+        return;
+    };
+    json["allowRedirects"] = serde_json::json!(true);
+    let Some(decoded) = serde_json::from_value::<SourceFetchRequestV2>(json).ok() else {
+        assert!(false);
+        return;
+    };
+    assert_eq!(
+        SourceFetchRequest::from_v2(decoded, binding),
+        Err(RuntimeError::InvalidTransition)
+    );
+}
+
 struct WrongAdapter;
 impl ToolAdapter for WrongAdapter {
     fn id(&self) -> ToolId {
@@ -229,6 +297,7 @@ fn bounded_runtime_passes_typed_tool_result_to_follow_up_turn() {
             evidence: vec![EvidenceRecord {
                 evidence_id,
                 source_use_id: Uuid::new_v4(),
+                source_use_sha256: "c".repeat(64),
                 selected_content_sha256: "b".repeat(64),
                 locator: "page:1".to_owned(),
             }],
@@ -287,6 +356,7 @@ fn snapshot_dispatcher_registers_all_nine_typed_adapters() {
         evidence: vec![EvidenceRecord {
             evidence_id,
             source_use_id: Uuid::new_v4(),
+            source_use_sha256: "c".repeat(64),
             selected_content_sha256: "b".repeat(64),
             locator: "page:1".to_owned(),
         }],

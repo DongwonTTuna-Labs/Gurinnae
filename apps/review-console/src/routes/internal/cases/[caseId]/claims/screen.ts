@@ -34,7 +34,7 @@ export const screen = {
       order: 4,
       id: "lint",
       title: "언어·정책 검사",
-      component: "StructuredContentSection",
+      component: "LongFormArticle",
       purpose: "prohibited wording.",
       test_id: "cas_006__section__lint",
     },

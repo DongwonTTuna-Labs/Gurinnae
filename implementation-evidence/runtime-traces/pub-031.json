@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-031",
+  "route": "/privacy",
+  "url": "http://127.0.0.1:29101/privacy",
+  "observedAt": "2026-07-19T15:35:32.863Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-031",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "controller",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "categories",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "purposes",
+        "component": "EvidenceLedger",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "retention",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "processors",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "rights",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "security",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "history",
+        "component": "RevisionTimeline",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 11,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -75,17 +75,10 @@
       "$ref": "#/$defs/sha256"
     },
     "providerMode": {
-      "enum": [
-        "EXTERNAL_APPROVED",
-        "LOCAL_APPROVED",
-        "DETERMINISTIC_DOUBLE"
-      ]
+      "enum": ["EXTERNAL_APPROVED", "LOCAL_APPROVED", "DETERMINISTIC_DOUBLE"]
     },
     "providerConfigId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "providerCandidateId": {
@@ -195,11 +188,7 @@
           }
         },
         "toolChoice": {
-          "enum": [
-            "AUTO_ALLOWLIST",
-            "FINAL_ONLY",
-            "REQUIRED_ONE_TOOL"
-          ]
+          "enum": ["AUTO_ALLOWLIST", "FINAL_ONLY", "REQUIRED_ONE_TOOL"]
         },
         "maxOutputUnits": {
           "type": "integer",
@@ -233,10 +222,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "payloadSha256"
-          ],
+          "required": ["kind", "payloadSha256"],
           "properties": {
             "kind": {
               "const": "FINAL_OUTPUT"
@@ -249,12 +235,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "kind",
-            "callId",
-            "toolId",
-            "argumentsSha256"
-          ],
+          "required": ["kind", "callId", "toolId", "argumentsSha256"],
           "properties": {
             "kind": {
               "const": "TOOL_CALL"
@@ -356,38 +337,23 @@
       ]
     },
     "inputUnits": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0
     },
     "outputUnits": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0
     },
     "latencyMs": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0
     },
     "costEventId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "errorCode": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "enum": [
         null,
         "PROVIDER_REJECTED",
@@ -418,10 +384,7 @@
       "format": "date-time"
     },
     "completedAt": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "date-time"
     }
   },
@@ -441,10 +404,7 @@
             "format": "uuid"
           },
           "classification": {
-            "enum": [
-              "PUBLIC",
-              "INTERNAL"
-            ]
+            "enum": ["PUBLIC", "INTERNAL"]
           }
         }
       }
@@ -564,32 +524,137 @@
       }
     },
     {
-      "if": {"properties": {"status": {"const": "COMPLETED"}, "envelope": {"properties": {"kind": {"const": "FINAL_OUTPUT"}}, "required": ["kind"]}}, "required": ["status", "envelope"]},
-      "then": {"properties": {"providerReceipt": {"properties": {"outcome": {"const": "ACCEPTED_FINAL"}}, "required": ["outcome"]}}}
+      "if": {
+        "properties": {
+          "status": { "const": "COMPLETED" },
+          "envelope": {
+            "properties": { "kind": { "const": "FINAL_OUTPUT" } },
+            "required": ["kind"]
+          }
+        },
+        "required": ["status", "envelope"]
+      },
+      "then": {
+        "properties": {
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "ACCEPTED_FINAL" } },
+            "required": ["outcome"]
+          }
+        }
+      }
     },
     {
-      "if": {"properties": {"status": {"const": "COMPLETED"}, "envelope": {"properties": {"kind": {"const": "TOOL_CALL"}}, "required": ["kind"]}}, "required": ["status", "envelope"]},
-      "then": {"properties": {"providerReceipt": {"properties": {"outcome": {"const": "ACCEPTED_TOOL_CALL"}}, "required": ["outcome"]}}}
+      "if": {
+        "properties": {
+          "status": { "const": "COMPLETED" },
+          "envelope": {
+            "properties": { "kind": { "const": "TOOL_CALL" } },
+            "required": ["kind"]
+          }
+        },
+        "required": ["status", "envelope"]
+      },
+      "then": {
+        "properties": {
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "ACCEPTED_TOOL_CALL" } },
+            "required": ["outcome"]
+          }
+        }
+      }
     },
     {
-      "if": {"properties": {"status": {"const": "RATE_LIMITED"}}, "required": ["status"]},
-      "then": {"properties": {"errorCode": {"const": "PROVIDER_RATE_LIMITED"}, "providerReceipt": {"properties": {"outcome": {"const": "RATE_LIMITED"}}, "required": ["outcome"]}}}
+      "if": {
+        "properties": { "status": { "const": "RATE_LIMITED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": { "const": "PROVIDER_RATE_LIMITED" },
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "RATE_LIMITED" } },
+            "required": ["outcome"]
+          }
+        }
+      }
     },
     {
-      "if": {"properties": {"status": {"const": "OUTCOME_UNKNOWN"}}, "required": ["status"]},
-      "then": {"properties": {"errorCode": {"const": "PROVIDER_OUTCOME_UNKNOWN"}, "providerReceipt": {"properties": {"outcome": {"const": "OUTCOME_UNKNOWN"}}, "required": ["outcome"]}}}
+      "if": {
+        "properties": { "status": { "const": "OUTCOME_UNKNOWN" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": { "const": "PROVIDER_OUTCOME_UNKNOWN" },
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "OUTCOME_UNKNOWN" } },
+            "required": ["outcome"]
+          }
+        }
+      }
     },
     {
-      "if": {"properties": {"status": {"const": "CANCELLED"}}, "required": ["status"]},
-      "then": {"properties": {"errorCode": {"const": "PROVIDER_CANCELLED"}, "providerReceipt": {"properties": {"outcome": {"enum": ["CANCELLED_CONFIRMED", "NO_DISPATCH_CONFIRMED"]}}, "required": ["outcome"]}}}
+      "if": {
+        "properties": { "status": { "const": "CANCELLED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": { "const": "PROVIDER_CANCELLED" },
+          "providerReceipt": {
+            "properties": {
+              "outcome": {
+                "enum": ["CANCELLED_CONFIRMED", "NO_DISPATCH_CONFIRMED"]
+              }
+            },
+            "required": ["outcome"]
+          }
+        }
+      }
     },
     {
-      "if": {"properties": {"status": {"const": "TIMED_OUT"}}, "required": ["status"]},
-      "then": {"properties": {"errorCode": {"enum": ["PROVIDER_TIMEOUT", "PROVIDER_OUTCOME_UNKNOWN"]}, "providerReceipt": {"properties": {"outcome": {"enum": ["TIMED_OUT_BEFORE_SEND", "OUTCOME_UNKNOWN"]}}, "required": ["outcome"]}}}
+      "if": {
+        "properties": { "status": { "const": "TIMED_OUT" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": {
+            "enum": ["PROVIDER_TIMEOUT", "PROVIDER_OUTCOME_UNKNOWN"]
+          },
+          "providerReceipt": {
+            "properties": {
+              "outcome": {
+                "enum": ["TIMED_OUT_BEFORE_SEND", "OUTCOME_UNKNOWN"]
+              }
+            },
+            "required": ["outcome"]
+          }
+        }
+      }
     },
     {
-      "if": {"properties": {"status": {"const": "PROVIDER_FAILED"}}, "required": ["status"]},
-      "then": {"properties": {"errorCode": {"enum": ["PROVIDER_REJECTED", "PROVIDER_RECEIPT_INVALID", "PROVIDER_RESPONSE_INVALID"]}, "providerReceipt": {"properties": {"outcome": {"enum": ["DEFINITIVE_REJECTED", "OUTCOME_UNKNOWN"]}}, "required": ["outcome"]}}}
+      "if": {
+        "properties": { "status": { "const": "PROVIDER_FAILED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": {
+            "enum": [
+              "PROVIDER_REJECTED",
+              "PROVIDER_RECEIPT_INVALID",
+              "PROVIDER_RESPONSE_INVALID"
+            ]
+          },
+          "providerReceipt": {
+            "properties": {
+              "outcome": { "enum": ["DEFINITIVE_REJECTED", "OUTCOME_UNKNOWN"] }
+            },
+            "required": ["outcome"]
+          }
+        }
+      }
     }
   ],
   "$defs": {

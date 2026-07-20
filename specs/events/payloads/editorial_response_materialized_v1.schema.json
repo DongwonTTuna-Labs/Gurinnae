@@ -14,13 +14,19 @@
     "resultDigest"
   ],
   "properties": {
-    "responseSubmissionId": {"type": "string", "format": "uuid"},
-    "responseRequestId": {"type": "string", "format": "uuid"},
-    "editorialResponseId": {"type": "string", "format": "uuid"},
-    "submissionReceiptVersion": {"type": "integer", "minimum": 1},
-    "submissionReceiptDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "ownedIntakeReceiptDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "materializedAt": {"type": "string", "format": "date-time"},
-    "resultDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "responseSubmissionId": { "type": "string", "format": "uuid" },
+    "responseRequestId": { "type": "string", "format": "uuid" },
+    "editorialResponseId": { "type": "string", "format": "uuid" },
+    "submissionReceiptVersion": { "type": "integer", "minimum": 1 },
+    "submissionReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ownedIntakeReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "materializedAt": { "type": "string", "format": "date-time" },
+    "resultDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
   }
 }

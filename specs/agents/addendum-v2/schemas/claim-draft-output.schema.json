@@ -17,78 +17,84 @@
     "communications"
   ],
   "properties": {
-    "schemaVersion": {"const": "claim-draft-output.v2"},
-    "outcome": {"enum": ["COMPLETED", "ABSTAINED"]},
-    "summary": {"type": "string", "minLength": 1, "maxLength": 6000},
+    "schemaVersion": { "const": "claim-draft-output.v2" },
+    "outcome": { "enum": ["COMPLETED", "ABSTAINED"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 6000 },
     "investigationsPerformed": {
       "type": "array",
       "minItems": 0,
       "maxItems": 7,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/investigation"}
+      "items": { "$ref": "#/$defs/investigation" }
     },
     "citations": {
       "type": "array",
       "minItems": 0,
       "maxItems": 1000,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/citation"}
+      "items": { "$ref": "#/$defs/citation" }
     },
     "unknowns": {
       "type": "array",
       "minItems": 0,
       "maxItems": 100,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/nonemptyText"}
+      "items": { "$ref": "#/$defs/nonemptyText" }
     },
     "nextActions": {
       "type": "array",
       "minItems": 0,
       "maxItems": 50,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/nextAction"}
+      "items": { "$ref": "#/$defs/nextAction" }
     },
     "abstentionReasons": {
       "type": "array",
       "minItems": 0,
       "maxItems": 11,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/abstentionReason"}
+      "items": { "$ref": "#/$defs/abstentionReason" }
     },
     "claims": {
       "type": "array",
       "minItems": 0,
       "maxItems": 100,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/claimDraft"}
+      "items": { "$ref": "#/$defs/claimDraft" }
     },
     "communications": {
       "type": "array",
       "minItems": 0,
       "maxItems": 100,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/communicationDraft"}
+      "items": { "$ref": "#/$defs/communicationDraft" }
     }
   },
   "allOf": [
     {
-      "if": {"properties": {"outcome": {"const": "COMPLETED"}}, "required": ["outcome"]},
-      "then": {"properties": {"abstentionReasons": {"maxItems": 0}}}
+      "if": {
+        "properties": { "outcome": { "const": "COMPLETED" } },
+        "required": ["outcome"]
+      },
+      "then": { "properties": { "abstentionReasons": { "maxItems": 0 } } }
     },
     {
-      "if": {"properties": {"outcome": {"const": "ABSTAINED"}}, "required": ["outcome"]},
+      "if": {
+        "properties": { "outcome": { "const": "ABSTAINED" } },
+        "required": ["outcome"]
+      },
       "then": {
         "properties": {
-          "abstentionReasons": {"minItems": 1},
-          "claims": {"maxItems": 0},
-          "communications": {"maxItems": 0}
+          "abstentionReasons": { "minItems": 1 },
+          "claims": { "maxItems": 0 },
+          "communications": { "maxItems": 0 }
         }
       }
     }
   ],
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "nonemptyText": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nonemptyText": { "type": "string", "minLength": 1, "maxLength": 2000 },
     "locator": {
       "type": "object",
       "additionalProperties": false,
@@ -112,8 +118,8 @@
             "VIDEO_REGION_TIME"
           ]
         },
-        "value": {"type": "string", "minLength": 1, "maxLength": 2048},
-        "locatorSha256": {"$ref": "#/$defs/sha256"}
+        "value": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "locatorSha256": { "$ref": "#/$defs/sha256" }
       }
     },
     "citation": {
@@ -128,12 +134,12 @@
         "supportsSha256"
       ],
       "properties": {
-        "citationId": {"type": "string", "format": "uuid"},
-        "sourceUseSha256": {"$ref": "#/$defs/sha256"},
-        "locator": {"$ref": "#/$defs/locator"},
-        "selectedContentSha256": {"$ref": "#/$defs/sha256"},
-        "supports": {"type": "string", "minLength": 1, "maxLength": 2000},
-        "supportsSha256": {"$ref": "#/$defs/sha256"}
+        "citationId": { "type": "string", "format": "uuid" },
+        "sourceUseSha256": { "$ref": "#/$defs/sha256" },
+        "locator": { "$ref": "#/$defs/locator" },
+        "selectedContentSha256": { "$ref": "#/$defs/sha256" },
+        "supports": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "supportsSha256": { "$ref": "#/$defs/sha256" }
       }
     },
     "investigation": {
@@ -141,16 +147,27 @@
       "additionalProperties": false,
       "required": ["toolId", "objective", "resultSummary", "toolResultSha256"],
       "properties": {
-        "toolId": {"enum": ["evidence.read", "response.read", "claim.language_check"]},
-        "objective": {"type": "string", "minLength": 1, "maxLength": 1000},
-        "resultSummary": {"type": "string", "minLength": 1, "maxLength": 2000},
-        "toolResultSha256": {"$ref": "#/$defs/sha256"}
+        "toolId": {
+          "enum": ["evidence.read", "response.read", "claim.language_check"]
+        },
+        "objective": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "resultSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "toolResultSha256": { "$ref": "#/$defs/sha256" }
       }
     },
     "nextAction": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["actionType", "reason", "targetDescription", "requiresHumanDecision"],
+      "required": [
+        "actionType",
+        "reason",
+        "targetDescription",
+        "requiresHumanDecision"
+      ],
       "properties": {
         "actionType": {
           "enum": [
@@ -163,9 +180,13 @@
             "NO_ACTION"
           ]
         },
-        "reason": {"type": "string", "minLength": 1, "maxLength": 1000},
-        "targetDescription": {"type": "string", "minLength": 1, "maxLength": 1000},
-        "requiresHumanDecision": {"type": "boolean"}
+        "reason": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "targetDescription": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "requiresHumanDecision": { "type": "boolean" }
       }
     },
     "abstentionReason": {
@@ -188,14 +209,14 @@
       "minItems": 1,
       "maxItems": 100,
       "uniqueItems": true,
-      "items": {"type": "integer", "minimum": 0, "maximum": 999}
+      "items": { "type": "integer", "minimum": 0, "maximum": 999 }
     },
     "limitations": {
       "type": "array",
       "minItems": 0,
       "maxItems": 50,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/nonemptyText"}
+      "items": { "$ref": "#/$defs/nonemptyText" }
     },
     "claimDraft": {
       "type": "object",
@@ -211,28 +232,35 @@
         "languageCheckResponseSha256"
       ],
       "properties": {
-        "proposalKind": {"const": "CLAIM"},
-        "proposalState": {"const": "PROPOSAL_ONLY"},
-        "claimType": {"enum": ["FACT", "ASSESSMENT", "CONTEXT", "LIMITATION"]},
-        "text": {"type": "string", "minLength": 1, "maxLength": 8000},
-        "citationIndexes": {"$ref": "#/$defs/citationIndexes"},
-        "limitations": {"$ref": "#/$defs/limitations"},
-        "responseContext": {"enum": ["NO_REQUEST", "REQUESTED_NO_RESPONSE", "RESPONSE_RECEIVED", "RESPONSE_DISPUTES_CLAIM"]},
-        "languageCheckResponseSha256": {"$ref": "#/$defs/sha256"}
+        "proposalKind": { "const": "CLAIM" },
+        "proposalState": { "const": "PROPOSAL_ONLY" },
+        "claimType": {
+          "enum": ["FACT", "ASSESSMENT", "CONTEXT", "LIMITATION"]
+        },
+        "text": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "citationIndexes": { "$ref": "#/$defs/citationIndexes" },
+        "limitations": { "$ref": "#/$defs/limitations" },
+        "responseContext": {
+          "enum": [
+            "NO_REQUEST",
+            "REQUESTED_NO_RESPONSE",
+            "RESPONSE_RECEIVED",
+            "RESPONSE_DISPUTES_CLAIM"
+          ]
+        },
+        "languageCheckResponseSha256": { "$ref": "#/$defs/sha256" }
       }
     },
     "communicationDraft": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "proposalState",
-        "payload",
-        "languageCheckResponseSha256"
-      ],
+      "required": ["proposalState", "payload", "languageCheckResponseSha256"],
       "properties": {
-        "proposalState": {"const": "PROPOSAL_ONLY"},
-        "payload": {"$ref": "https://gurinnae.invalid/schemas/agents/v2/communication-proposal-payload.json"},
-        "languageCheckResponseSha256": {"$ref": "#/$defs/sha256"}
+        "proposalState": { "const": "PROPOSAL_ONLY" },
+        "payload": {
+          "$ref": "https://gurinnae.invalid/schemas/agents/v2/communication-proposal-payload.json"
+        },
+        "languageCheckResponseSha256": { "$ref": "#/$defs/sha256" }
       }
     }
   }

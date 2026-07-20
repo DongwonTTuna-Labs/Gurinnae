@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { invokeSubmissionOperation } from "@gurine/api-client-submission";
 import {
@@ -6,8 +7,13 @@ import {
   requiredServerValue,
   serviceAssertionFetch,
 } from "@gurine/config";
-import type { ScreenRuntime, ScreenViewModel } from "@gurine/ui";
-import { typedScreenViewModel } from "@gurine/ui";
+import {
+  canonicalizeScreenViewModel,
+  projectFetchedData,
+  type ScreenRuntime,
+  type ScreenViewModel,
+  typedScreenViewModel,
+} from "@gurine/ui";
 import { type RequestEvent, redirect } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { responseRuntimeState } from "$lib/view-models/runtime";
@@ -37,8 +43,13 @@ import {
 } from "./submission-cookie";
 
 export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
+  screen = canonicalizeScreenViewModel(screen);
   screen = { ...screen, contract: typedScreenViewModel(screen) };
   const data: Record<string, unknown> = {};
+  const downloads: Record<
+    string,
+    { binary: string; mime: string; extension: "json" | "csv" }
+  > = {};
   const errors: string[] = [];
   let firstErrorStatus: number | undefined;
   const session = readSubmissionSession(event);
@@ -149,6 +160,28 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         );
       }
       data[contract.operation_id] = result.data;
+      if (
+        screen.id === "RSP-002" &&
+        contract.operation_id === "downloadResponseRequest"
+      ) {
+        const value = result.data;
+        if (isRecord(value) && typeof value.binary === "string") {
+          // The submission contract's JSON `format: binary` field is a
+          // base64-encoded, server-owned payload at this boundary.
+          downloads["download-request"] = {
+            binary: value.binary,
+            mime: "application/json",
+            extension: "json",
+          };
+        } else if (value instanceof Blob) {
+          const bytes = Buffer.from(await value.arrayBuffer());
+          downloads["download-request"] = {
+            binary: bytes.toString("base64"),
+            mime: value.type || "application/octet-stream",
+            extension: "json",
+          };
+        }
+      }
       resolved += 1;
     } catch (error) {
       if (contract.blocking)
@@ -240,7 +273,17 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
               resolved,
             }),
     pathname: event.url.pathname,
-    data,
+    ...(session?.csrfToken ? { csrfToken: session.csrfToken } : {}),
+    data: {},
+    projection: projectFetchedData(screen, data),
+    formData: {
+      ...(isRecord(data.getResponseDraft)
+        ? { responseDraft: data.getResponseDraft }
+        : {}),
+      ...(isRecord(data.getResponseSubmissionPreview)
+        ? { submissionPreview: data.getResponseSubmissionPreview }
+        : {}),
+    },
     errors,
     forms,
     idempotencyKeys: {
@@ -266,6 +309,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
           },
         }
       : {}),
+    ...(Object.keys(downloads).length > 0 ? { downloads } : {}),
     ...(blockedActionIds.size > 0
       ? {
           allowedActionIds: screen.actions
@@ -273,7 +317,6 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
             .map((action) => action.id),
         }
       : {}),
-    ...(session ? { csrfToken: session.csrfToken } : {}),
     ...(event.url.searchParams.get("notice")
       ? { notice: event.url.searchParams.get("notice") ?? "" }
       : {}),

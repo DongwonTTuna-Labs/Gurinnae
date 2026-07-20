@@ -35,7 +35,11 @@ describe("shared UI accessibility baseline", () => {
 
   it("filters unknown/raw response keys before a generic record can render", () => {
     expect(dataModule).toContain("displayFieldKeys");
-    expect(dataModule).toContain(".filter(([key]) => displayFieldKeys.has(key)");
-    expect(dataModule).not.toContain("Object.entries(record).map(([key, value])");
+    expect(dataModule).toContain(
+      ".filter(([key]) => displayFieldKeys.has(key)",
+    );
+    expect(dataModule).not.toContain(
+      "Object.entries(record).map(([key, value])",
+    );
   });
 });

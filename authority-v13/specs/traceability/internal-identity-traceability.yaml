@@ -1,0 +1,149 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+operation_count: 9
+rules:
+- This API is private to the Review Console BFF.
+- Every operation requires a short-lived service assertion.
+- No browser may call this API directly.
+- The generated internal identity client is server-only.
+operations:
+- operation_id: createLoginTransaction
+  method: POST
+  path: /internal/v1/oidc/login-transactions
+  auth: service-assertion
+  request_schema: CreateLoginTransactionRequest
+  response_schema: CreateLoginTransactionResponse
+  success_status: 200
+  bff_callers:
+  - startOidcLogin
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/create_login_transaction.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/create_login_transaction.rs
+  contract_test: tests/contract/identity-service-internal/create_login_transaction.spec.ts
+- operation_id: consumeLoginCallback
+  method: POST
+  path: /internal/v1/oidc/login-callbacks
+  auth: service-assertion
+  request_schema: ConsumeLoginCallbackRequest
+  response_schema: ConsumeLoginCallbackResponse
+  success_status: 200
+  bff_callers:
+  - completeOidcCallback
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/consume_login_callback.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/consume_login_callback.rs
+  contract_test: tests/contract/identity-service-internal/consume_login_callback.spec.ts
+- operation_id: createStepUpTransaction
+  method: POST
+  path: /internal/v1/oidc/step-up-transactions
+  auth: service-assertion
+  request_schema: CreateStepUpTransactionRequest
+  response_schema: CreateStepUpTransactionResponse
+  success_status: 200
+  bff_callers:
+  - startStepUpAuthentication
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/create_step_up_transaction.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/create_step_up_transaction.rs
+  contract_test: tests/contract/identity-service-internal/create_step_up_transaction.spec.ts
+- operation_id: consumeStepUpCallback
+  method: POST
+  path: /internal/v1/oidc/step-up-callbacks
+  auth: service-assertion
+  request_schema: ConsumeStepUpCallbackRequest
+  response_schema: ConsumeStepUpCallbackResponse
+  success_status: 200
+  bff_callers:
+  - completeStepUpAuthentication
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/consume_step_up_callback.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/consume_step_up_callback.rs
+  contract_test: tests/contract/identity-service-internal/consume_step_up_callback.spec.ts
+- operation_id: resolveInternalSession
+  method: POST
+  path: /internal/v1/sessions/resolve
+  auth: service-assertion
+  request_schema: ResolveSessionRequest
+  response_schema: ResolveSessionResponse
+  success_status: 200
+  bff_callers:
+  - review-console authenticated server loads/actions
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/resolve_internal_session.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/resolve_internal_session.rs
+  contract_test: tests/contract/identity-service-internal/resolve_internal_session.spec.ts
+  actor_assertion_output: false
+- operation_id: revokeInternalSession
+  method: POST
+  path: /internal/v1/sessions/revoke
+  auth: service-assertion
+  request_schema: RevokeSessionRequest
+  response_schema: RevokeSessionResponse
+  success_status: 200
+  bff_callers:
+  - logoutInternalSession
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/revoke_internal_session.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/revoke_internal_session.rs
+  contract_test: tests/contract/identity-service-internal/revoke_internal_session.spec.ts
+- operation_id: getSecurityManagementRedirectInternal
+  method: POST
+  path: /internal/v1/security-management-redirect
+  auth: service-assertion
+  request_schema: SecurityManagementRedirectRequest
+  response_schema: SecurityManagementRedirectResponse
+  success_status: 200
+  bff_callers:
+  - getSecurityManagementRedirect
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/get_security_management_redirect_internal.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/get_security_management_redirect_internal.rs
+  contract_test: tests/contract/identity-service-internal/get_security_management_redirect_internal.spec.ts
+- operation_id: issueActorAssertion
+  method: POST
+  path: /internal/v1/actor-assertions
+  auth: service-assertion
+  request_schema: IssueActorAssertionRequest
+  response_schema: IssueActorAssertionResponse
+  success_status: 200
+  bff_callers:
+  - review-console authenticated server loads/actions
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/issue_actor_assertion.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/issue_actor_assertion.rs
+  contract_test: tests/contract/identity-service-internal/issue_actor_assertion.spec.ts
+- operation_id: closeStepUpAuthorization
+  method: POST
+  path: /internal/v1/step-up-authorizations/close
+  auth: service-assertion
+  request_schema: CloseStepUpAuthorizationRequest
+  response_schema: CloseStepUpAuthorizationResponse
+  success_status: 200
+  bff_callers:
+  - review-console command receipt handling
+  handler: services/identity-api/src/routes/identity_internal.rs
+  application: crates/auth/src/internal/close_step_up_authorization.rs
+  persistence: crates/persistence-postgres/src/repositories/identity.rs
+  generated_client: packages/api-client-identity-internal/src/generated/
+  integration_test: tests/integration/api/identity-service-internal/close_step_up_authorization.rs
+  contract_test: tests/contract/identity-service-internal/close_step_up_authorization.spec.ts
+assertion_contract: specs/auth/assertion-contract.yaml
+service_assertion_header: X-Gurine-Service-Assertion
+actor_assertion_output: issueActorAssertion only; resolveInternalSession returns identity/session state without an assertion

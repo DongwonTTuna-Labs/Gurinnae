@@ -4,22 +4,52 @@
   "title": "ClaimLanguageCheckRequestV2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "runId", "inputSnapshotId", "inputSnapshotSha256", "draftText", "draftTextSha256", "claimType", "locale", "allowedCitationIds", "languagePolicyVersion", "languagePolicySha256", "maxFindings"],
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputSnapshotId",
+    "inputSnapshotSha256",
+    "draftText",
+    "draftTextSha256",
+    "claimType",
+    "locale",
+    "allowedCitationIds",
+    "languagePolicyVersion",
+    "languagePolicySha256",
+    "maxFindings"
+  ],
   "properties": {
-    "schemaVersion": {"const": "claim.language_check.request.v2"},
-    "runId": {"type": "string", "format": "uuid"},
-    "inputSnapshotId": {"type": "string", "format": "uuid"},
-    "inputSnapshotSha256": {"$ref": "#/$defs/sha256"},
-    "draftText": {"type": "string", "minLength": 1, "maxLength": 10000},
-    "draftTextSha256": {"$ref": "#/$defs/sha256"},
-    "claimType": {"enum": ["FACT", "CALCULATION", "INFERENCE", "LIMITATION", "OFFICIAL_OUTCOME"]},
-    "locale": {"enum": ["ko-KR", "en-US"]},
-    "allowedCitationIds": {"type": "array", "uniqueItems": true, "maxItems": 100, "items": {"type": "string", "format": "uuid"}},
-    "languagePolicyVersion": {"type": "string", "minLength": 1, "maxLength": 64},
-    "languagePolicySha256": {"$ref": "#/$defs/sha256"},
-    "maxFindings": {"type": "integer", "minimum": 1, "maximum": 50}
+    "schemaVersion": { "const": "claim.language_check.request.v2" },
+    "runId": { "type": "string", "format": "uuid" },
+    "inputSnapshotId": { "type": "string", "format": "uuid" },
+    "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "draftText": { "type": "string", "minLength": 1, "maxLength": 10000 },
+    "draftTextSha256": { "$ref": "#/$defs/sha256" },
+    "claimType": {
+      "enum": [
+        "FACT",
+        "CALCULATION",
+        "INFERENCE",
+        "LIMITATION",
+        "OFFICIAL_OUTCOME"
+      ]
+    },
+    "locale": { "enum": ["ko-KR", "en-US"] },
+    "allowedCitationIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 100,
+      "items": { "type": "string", "format": "uuid" }
+    },
+    "languagePolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "languagePolicySha256": { "$ref": "#/$defs/sha256" },
+    "maxFindings": { "type": "integer", "minimum": 1, "maximum": 50 }
   },
-  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
   "x-gurinnae-invariants": [
     "draftTextSha256 is SHA-256 over the exact UTF-8 bytes of draftText after no implicit normalization.",
     "Every response finding citationId is a member of allowedCitationIds; an empty allowedCitationIds array permits no cited finding.",

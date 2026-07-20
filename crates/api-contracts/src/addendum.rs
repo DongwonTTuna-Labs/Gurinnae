@@ -268,6 +268,7 @@ pub fn persistence_owner(id: &str) -> Option<&'static str> {
         id if id.starts_with("listAction")
             || id.starts_with("createAction")
             || id.contains("ActionDraft")
+            || id.contains("ActionForReview")
             || id.contains("ActionReview")
             || id.contains("ActionDecision")
             || id.contains("ActionProposal") =>
@@ -278,6 +279,7 @@ pub fn persistence_owner(id: &str) -> Option<&'static str> {
         id if id.contains("CommunicationDelivery") => "ops.outbound_delivery_receipts",
         id if id.contains("Incident") => "ops.incident_events",
         id if id.contains("Appeal") => "intake.appeals",
+        id if id.contains("ResponseExtension") => "editorial.response_extension_decisions",
         id if id.contains("Retention") || id == "releaseLegalHold" => {
             "ops.retention_request_decisions"
         }
@@ -307,6 +309,16 @@ pub fn submission_operation(id: &str) -> Option<OperationSpec> {
 
 pub fn is_control_operation(id: &str) -> bool {
     control_operation(id).is_some()
+        || PRIVATE_CONTROL_OPERATIONS
+            .iter()
+            .any(|operation| operation.id == id)
+}
+
+pub fn private_control_operation(id: &str) -> Option<OperationSpec> {
+    PRIVATE_CONTROL_OPERATIONS
+        .iter()
+        .find(|operation| operation.id == id)
+        .copied()
 }
 
 pub fn is_submission_operation(id: &str) -> bool {
@@ -318,6 +330,7 @@ pub fn operations() -> impl Iterator<Item = &'static OperationSpec> {
         .iter()
         .chain(SUBMISSION_OPERATIONS.iter())
         .chain(IDENTITY_OPERATIONS.iter())
+        .chain(PRIVATE_CONTROL_OPERATIONS.iter())
 }
 
 /// Validate the closed top-level shape of an additive control command. Nested
@@ -350,6 +363,7 @@ const CONTROL_REQUIRED_FIELDS: &[(&str, &[&str])] = &[
     ("withdrawActionDecision", &["proposalId", "decisionId", "expectedProposalVersion", "expectedProposalStateVersion", "expectedAssignmentVersion", "expectedApprovalDigest", "expectedDecisionReceiptDigest", "reasonCode", "reason"]),
     ("promoteResearchArtifactToEvidence", &["schemaVersion", "caseId", "expectedCaseVersion", "agentRunId", "researchArtifact", "rightsDecision", "evidence", "selectedSegments", "reason"]),
     ("cancelAgentRun", &["schemaVersion", "runId", "expectedVersion", "reasonCode", "reason"]),
+    ("reconcileAgentRun", &["schemaVersion", "runId", "expectedVersion", "reconciliationEvidenceId", "reconciliationEvidenceSha256"]),
     ("decideJourneyHandoff", &["schemaVersion", "handoffId", "expectedHandoffVersion", "expectedBindingDigest", "decision", "reasonCode", "reason"]),
 ];
 

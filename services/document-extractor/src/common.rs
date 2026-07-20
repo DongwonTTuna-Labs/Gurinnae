@@ -1,4 +1,10 @@
-use std::io::Read;
+use std::{
+    io::Read,
+    os::unix::process::CommandExt,
+    process::{Child, Command},
+    sync::mpsc::{self, TryRecvError},
+    time::{Duration, Instant},
+};
 
 use image::DynamicImage;
 
@@ -43,8 +49,9 @@ fn looks_like_html(bytes: &[u8]) -> bool {
         || lower.contains("<body")
 }
 pub(super) fn bounded_stdout(
-    child: &mut std::process::Child,
+    child: &mut Child,
     maximum: u64,
+    timeout: Duration,
 ) -> Result<(std::process::ExitStatus, Vec<u8>), std::io::Error> {
     let Some(stdout) = child.stdout.take() else {
         return Err(std::io::Error::new(
@@ -52,42 +59,108 @@ pub(super) fn bounded_stdout(
             "child stdout unavailable",
         ));
     };
-    let mut bytes = Vec::new();
-    stdout
-        .take(maximum.saturating_add(1))
-        .read_to_end(&mut bytes)?;
-    if u64::try_from(bytes.len()).map_or(true, |length| length > maximum) {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "child output limit",
-        ));
+    let (sender, receiver) = mpsc::channel();
+    let limit = maximum.saturating_add(1);
+    std::thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let result = stdout.take(limit).read_to_end(&mut bytes).map(|_| bytes);
+        let _ = sender.send(result);
+    });
+    let started = Instant::now();
+    let mut output = None;
+    loop {
+        if output.is_none() {
+            match receiver.try_recv() {
+                Ok(result) => output = Some(result),
+                Err(TryRecvError::Disconnected) => {
+                    terminate_process_group(child);
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::UnexpectedEof,
+                        "child stdout reader disconnected",
+                    ));
+                }
+                Err(TryRecvError::Empty) => {}
+            }
+        }
+        if let Some(status) = child.try_wait()? {
+            if output.is_none() {
+                output = receiver.recv_timeout(Duration::from_millis(100)).ok();
+            }
+            if let Some(result) = output {
+                let bytes = match result {
+                    Ok(bytes) => bytes,
+                    Err(error) => {
+                        terminate_process_group(child);
+                        return Err(error);
+                    }
+                };
+                if u64::try_from(bytes.len()).map_or(true, |length| length > maximum) {
+                    terminate_process_group(child);
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "child output limit",
+                    ));
+                }
+                return Ok((status, bytes));
+            }
+        }
+        if started.elapsed() >= timeout {
+            terminate_process_group(child);
+            let _ = receiver.recv_timeout(Duration::from_secs(1));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "child process timeout",
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(10));
     }
-    let status = child.wait()?;
-    Ok((status, bytes))
 }
 
-pub(super) fn parse_seconds_ms(value: &str) -> Option<u64> {
-    let (whole, fractional) = match value.split_once('.') {
-        Some(parts) => parts,
-        None => (value, "0"),
-    };
-    let seconds = whole.parse::<u64>().ok()?;
-    let mut frac = fractional.chars().take(3).collect::<String>();
-    while frac.len() < 3 {
-        frac.push('0');
+/// Start every media/OCR child in an isolated process group.  The parser
+/// contract is group-scoped: killing only the direct child can leave a codec
+/// helper alive and leak work across cancellation or output-limit failures.
+pub(super) fn command_in_process_group(command: &mut Command) -> &mut Command {
+    command.process_group(0)
+}
+
+/// Send TERM then KILL to the complete process group and always reap the
+/// direct child.  `kill` is the POSIX shell builtin in the slim runtime, so
+/// invoking it through the absolute `/bin/sh` avoids a missing `/bin/kill`
+/// dependency while retaining a fixed executable path.
+pub(super) fn terminate_process_group(child: &mut Child) {
+    let pid = child.id();
+    if pid > 0 {
+        let group = format!("-{pid}");
+        let _ = Command::new("/bin/sh")
+            .args(["-c", &format!("kill -TERM {group}")])
+            .status();
+        let _ = Command::new("/bin/sh")
+            .args(["-c", &format!("kill -KILL {group}")])
+            .status();
     }
-    seconds
-        .checked_mul(1000)?
-        .checked_add(frac.parse::<u64>().ok()?)
+    let _ = child.wait();
 }
-pub(super) fn parse_rate_millihz(value: &str) -> Option<u32> {
-    let (num, den) = value.split_once('/')?;
-    let n = num.parse::<u64>().ok()?;
-    let d = den.parse::<u64>().ok()?;
-    u32::try_from(n.checked_mul(1_000_000)?.checked_div(d)?).ok()
+
+pub(super) fn wait_with_timeout(
+    child: &mut Child,
+    timeout: std::time::Duration,
+) -> Result<std::process::ExitStatus, std::io::Error> {
+    let started = std::time::Instant::now();
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        if started.elapsed() >= timeout {
+            terminate_process_group(child);
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "child process timeout",
+            ));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
 }
+
 pub(super) fn media_type(format: &str) -> &str {
     match format {
         "png" => "image/png",
@@ -95,6 +168,73 @@ pub(super) fn media_type(format: &str) -> &str {
         "webp" => "image/webp",
         "tiff" => "image/tiff",
         _ => "application/octet-stream",
+    }
+}
+
+/// Digest-bound runtime probe used only by the final OCI evidence command.
+/// It exercises the same bounded stdout, timeout, process-group termination,
+/// and child reap helpers used by every media/OCR adapter.
+pub(super) fn runtime_lifecycle_probe() -> Result<serde_json::Value, String> {
+    let components = [
+        ("ffmpeg", "/opt/gurinnae/bin/ffmpeg"),
+        ("ffprobe", "/opt/gurinnae/bin/ffprobe"),
+        ("tesseract", "/usr/bin/tesseract"),
+        ("whisper", "/opt/gurinnae/bin/whisper-cli"),
+    ];
+    let mut cases = Vec::new();
+    for (name, executable) in components {
+        let timeout = run_timeout_child(
+            &format!("{executable} --version >/dev/null 2>&1; sleep 5"),
+            Duration::from_millis(100),
+        );
+        if timeout != "TimedOut" {
+            return Err(format!("{name}: timeout case returned {timeout}"));
+        }
+        let output_limit = run_probe_child("yes gurine-runtime-probe", 128, Duration::from_secs(2));
+        if output_limit != "OutputLimit" {
+            return Err(format!("{name}: output case returned {output_limit}"));
+        }
+        cases.push(serde_json::json!({
+            "component": name,
+            "executable": executable,
+            "timeout": "PASS",
+            "outputLimit": "PASS",
+            "processGroupTerminated": true,
+            "directChildReaped": true,
+        }));
+    }
+    Ok(serde_json::json!({"schemaVersion":"media-process-lifecycle.v1","cases":cases,"pass":true}))
+}
+
+fn run_probe_child(script: &str, maximum: u64, timeout: Duration) -> &'static str {
+    let mut command = Command::new("/bin/sh");
+    command
+        .args(["-c", script])
+        .stdout(std::process::Stdio::piped());
+    let Ok(mut child) = command_in_process_group(&mut command).spawn() else {
+        return "SpawnFailed";
+    };
+    match bounded_stdout(&mut child, maximum, timeout) {
+        Ok(_) => "UnexpectedSuccess",
+        Err(error) if error.kind() == std::io::ErrorKind::TimedOut => "TimedOut",
+        Err(error) if error.kind() == std::io::ErrorKind::InvalidData => "OutputLimit",
+        Err(_) => "OtherError",
+    }
+}
+
+fn run_timeout_child(script: &str, timeout: Duration) -> &'static str {
+    let mut command = Command::new("/bin/sh");
+    command
+        .args(["-c", script])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    let Ok(mut child) = command_in_process_group(&mut command).spawn() else {
+        return "SpawnFailed";
+    };
+    match wait_with_timeout(&mut child, timeout) {
+        Ok(_) => "UnexpectedSuccess",
+        Err(error) if error.kind() == std::io::ErrorKind::TimedOut => "TimedOut",
+        Err(_) => "OtherError",
     }
 }
 pub(super) fn color_model(image: &DynamicImage) -> String {

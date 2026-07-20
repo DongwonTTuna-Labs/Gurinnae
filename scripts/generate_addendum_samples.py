@@ -20,11 +20,14 @@ def main() -> None:
     addendum = yaml.safe_load((ROOT / "specs/product/addendum-operation-contracts.yaml").read_text())
     ids = {row["operation_id"] for row in addendum["operations"]}
     ids.add("estimateBackfill")
+    # Keep the generated sample for the control-plane budget projection bound
+    # to its current BudgetOverviewResponse schema after OPS-004 parity fixes.
+    ids.add("getBudgetOverview")
     for operation_id in ids:
         if operation_id in generated:
             status, media_type, body = generated[operation_id]
             samples[operation_id] = {
-                "api": "control-api" if operation_id == "estimateBackfill" or operation_id in {row["operation_id"] for row in addendum["operations"] if row["api"] == "control-api"} else "submission-api",
+                "api": "control-api" if operation_id in {"estimateBackfill", "getBudgetOverview"} or operation_id in {row["operation_id"] for row in addendum["operations"] if row["api"] == "control-api"} else "submission-api",
                 "status": status,
                 "mediaType": media_type,
                 "body": body,
@@ -35,4 +38,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

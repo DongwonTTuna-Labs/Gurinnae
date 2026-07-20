@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0.0",
+  "contract_id": "contract_fixture_amendment_escalation",
+  "source_document_ids": [
+    "srcdoc_fixture_amendment_escalation"
+  ],
+  "contract_number": "SYN-AMENDMENT-ESCALATION",
+  "notice_id": "notice_fixture_amendment_escalation",
+  "award_id": "award_fixture_amendment_escalation",
+  "agency": {
+    "agency_id": "agency_fixture_haetteul",
+    "name": "가상해뜰공단",
+    "identity_status": "VERIFIED"
+  },
+  "supplier": {
+    "supplier_id": "supplier_fixture_sigma",
+    "name": "가상시그마건설",
+    "entity_type": "CORPORATION",
+    "identity_status": "VERIFIED",
+    "business_number_last4": "0001"
+  },
+  "contract_type": "CONSTRUCTION",
+  "method": "OPEN_COMPETITION",
+  "method_basis": "합성 fixture의 계약 방법 설명",
+  "signed_at": "2025-09-01",
+  "starts_at": "2025-09-01",
+  "ends_at": "2026-05-31",
+  "status": "ACTIVE",
+  "amounts": {
+    "original": {
+      "currency": "KRW",
+      "amount_minor": 100000000,
+      "vat_basis": "INCLUDED"
+    },
+    "current": {
+      "currency": "KRW",
+      "amount_minor": 180000000,
+      "vat_basis": "INCLUDED"
+    }
+  },
+  "line_items": [
+    {
+      "line_item_id": "line_fixture_amendment_escalation_1",
+      "line_number": 1,
+      "raw_description": "합성 공공시설 개선공사",
+      "category_code": "SYNTH-CONSTRUCTION",
+      "manufacturer": "가상제조사",
+      "model": "S1",
+      "variant": null,
+      "quantity": "1",
+      "unit_code": "LOT",
+      "unit_price": {
+        "currency": "KRW",
+        "amount_minor": 100000000,
+        "vat_basis": "INCLUDED"
+      },
+      "total_price": {
+        "currency": "KRW",
+        "amount_minor": 100000000,
+        "vat_basis": "INCLUDED"
+      },
+      "vat_basis": "INCLUDED",
+      "bundle_status": "SINGLE_ITEM",
+      "specification": {
+        "project_family": "FACILITY-UPGRADE",
+        "synthetic": true
+      },
+      "included_services": [],
+      "normalization_confidence": 0.99
+    }
+  ],
+  "field_provenance": {
+    "contract_number": {
+      "source_document_id": "srcdoc_fixture_amendment_escalation",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.contractNumber"
+      },
+      "raw_value_hash": "e26fe56d9d353cf0490c1ab656e987a5022b564042ade51d015ba7594097ba52",
+      "raw_value_preview": "SYN-AMENDMENT-ESCALATION",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "agency.name": {
+      "source_document_id": "srcdoc_fixture_amendment_escalation",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.agencyName"
+      },
+      "raw_value_hash": "5381367df165fa08e3963555c51be25c6e319ecc87f8d1c088aa863fa3ae1f82",
+      "raw_value_preview": "가상해뜰공단",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "supplier.name": {
+      "source_document_id": "srcdoc_fixture_amendment_escalation",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.supplierName"
+      },
+      "raw_value_hash": "e3c08df84626fa4dea2848b8bc5bd93cd08fb022c0051b33147894b8a36e44f5",
+      "raw_value_preview": "가상시그마건설",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "amounts.current": {
+      "source_document_id": "srcdoc_fixture_amendment_escalation",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.amount"
+      },
+      "raw_value_hash": "502a21f740a325e24a2efcff6aa6ac12aec36f9889d86f995215c05b8836990f",
+      "raw_value_preview": "180000000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].quantity": {
+      "source_document_id": "srcdoc_fixture_amendment_escalation",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].quantity"
+      },
+      "raw_value_hash": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "raw_value_preview": "1",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].unit_price": {
+      "source_document_id": "srcdoc_fixture_amendment_escalation",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].unitPrice"
+      },
+      "raw_value_hash": "e59bbea6227c578f97fc467bc62dc3407d4885693d74e6e970f6cab44158fef4",
+      "raw_value_preview": "100000000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].vat_basis": {
+      "source_document_id": "srcdoc_fixture_amendment_escalation",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].vatBasis"
+      },
+      "raw_value_hash": "c77a4910d506fabde27cc281a5a48ed9e9a8f75f721eac77918ab30a3181b2be",
+      "raw_value_preview": "INCLUDED",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    }
+  },
+  "normalization_version": "1.0.0",
+  "normalized_at": "2026-01-15T04:00:00Z",
+  "amendments": [
+    {
+      "amendment_id": "amendment_fixture_amendment_escalation_1",
+      "sequence": 1,
+      "signed_at": "2025-10-15",
+      "amount_before": {
+        "currency": "KRW",
+        "amount_minor": 100000000,
+        "vat_basis": "INCLUDED"
+      },
+      "amount_after": {
+        "currency": "KRW",
+        "amount_minor": 135000000,
+        "vat_basis": "INCLUDED"
+      },
+      "reason_category": "SCOPE_CHANGE"
+    },
+    {
+      "amendment_id": "amendment_fixture_amendment_escalation_2",
+      "sequence": 2,
+      "signed_at": "2025-11-20",
+      "amount_before": {
+        "currency": "KRW",
+        "amount_minor": 135000000,
+        "vat_basis": "INCLUDED"
+      },
+      "amount_after": {
+        "currency": "KRW",
+        "amount_minor": 180000000,
+        "vat_basis": "INCLUDED"
+      },
+      "reason_category": "SCOPE_CHANGE"
+    }
+  ]
+}

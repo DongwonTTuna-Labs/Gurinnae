@@ -12,6 +12,7 @@ export type ActorRef = {
 };
 
 export type AgentRun = {
+    analysisVm?: AnalysisVmCas011Projection;
     id: string;
     caseId: string;
     agentType: string;
@@ -26,6 +27,114 @@ export type AgentRun = {
     cost?: Money | null;
     startedAt?: string | null;
     completedAt?: string | null;
+};
+
+export type AnalysisVmCas010Projection = {
+    schemaVersion?: 'analysis-vm.cas-010.v2';
+    screenId?: 'CAS-010';
+    caseId?: string;
+    screenState?: string;
+    title?: string;
+    tenSecond?: {
+        [key: string]: unknown;
+    };
+    freshness?: {
+        [key: string]: unknown;
+    };
+    filters?: {
+        [key: string]: unknown;
+    };
+    runs?: Array<{
+        [key: string]: unknown;
+    }>;
+    budget?: {
+        [key: string]: unknown;
+    };
+    primaryAction?: {
+        [key: string]: unknown;
+    };
+    secondaryActions?: Array<{
+        [key: string]: unknown;
+    }>;
+    visualizations?: VisualizationVmProjection;
+    supportReference?: {
+        [key: string]: unknown;
+    } | null;
+    viewModelSha256?: string;
+};
+
+export type AnalysisVmCas011Projection = {
+    schemaVersion?: 'analysis-vm.cas-011.v2';
+    screenId?: 'CAS-011';
+    caseId?: string;
+    runId?: string;
+    screenState?: string;
+    title?: string;
+    tenSecond?: {
+        [key: string]: unknown;
+    };
+    identity?: {
+        [key: string]: unknown;
+    };
+    inputs?: Array<{
+        [key: string]: unknown;
+    }>;
+    model?: {
+        [key: string]: unknown;
+    };
+    output?: {
+        [key: string]: unknown;
+    };
+    citations?: Array<{
+        [key: string]: unknown;
+    }>;
+    safety?: {
+        [key: string]: unknown;
+    };
+    decisions?: Array<{
+        [key: string]: unknown;
+    }>;
+    cost?: {
+        [key: string]: unknown;
+    };
+    visualizations?: VisualizationVmProjection;
+    provenanceGraph?: ProvenanceGraphProjection;
+    primaryAction?: {
+        [key: string]: unknown;
+    };
+    secondaryActions?: Array<{
+        [key: string]: unknown;
+    }>;
+    supportReference?: {
+        [key: string]: unknown;
+    } | null;
+    viewModelSha256?: string;
+};
+
+export type VisualizationVmProjection = {
+    schemaVersion?: 'visualization-vm.v2';
+    screenId?: 'CAS-010' | 'CAS-011';
+    visualizations?: Array<{
+        [key: string]: unknown;
+    }>;
+    visualizationSetSha256?: string;
+};
+
+export type ProvenanceGraphProjection = {
+    schemaVersion?: 'provenance-graph.v2';
+    agentRunId?: string;
+    rootNodeId?: string;
+    nodes?: Array<{
+        [key: string]: unknown;
+    }>;
+    edges?: Array<{
+        [key: string]: unknown;
+    }>;
+    accessibleRows?: Array<{
+        [key: string]: unknown;
+    }>;
+    graphSha256?: string;
+    accessibleRowsSha256?: string;
 };
 
 export type AgentRunResponse = {
@@ -134,6 +243,7 @@ export type BusinessHealthResponse = {
     status: 'READY' | 'BLOCKED' | 'UNKNOWN';
     data: BusinessHealthV1;
     links: Array<Link>;
+    operationId: string;
 };
 
 export type BusinessHealthV1 = {
@@ -251,6 +361,7 @@ export type BudgetOverviewResponse = {
     summary?: string;
     data: BudgetOverview;
     links: Array<Link>;
+    operationId: string;
 };
 
 export type BudgetSummary = {
@@ -290,6 +401,7 @@ export type CaseAgentRunsItem = {
 };
 
 export type CaseAgentRunsPage = {
+    analysisVm?: AnalysisVmCas010Projection;
     items: Array<CaseAgentRunsItem>;
     nextCursor?: string;
     totalApproximate?: number;
@@ -3357,17 +3469,17 @@ export type ListActionApprovalQueueRequestV1 = {
 };
 
 export type ActionApprovalQueuePageV1 = {
-    items: Array<string>;
+    items: Array<ActionApprovalQueueItemV1>;
     appliedFilters: ActionApprovalQueueFiltersV1;
     asOf: string;
-    nextCursor: {
-        [key: string]: never;
-    };
-    totalApproximate: number;
+    nextCursor: string | null;
+    totalApproximate: number | null;
+    operationId: string;
+    links: Array<Link>;
 };
 
 export type CreateActionProposalRequestV1 = {
-    actionKind: string;
+    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
     origin: ActionOriginV1;
     draft: ActionPayloadV1;
     rationale: ActionRationaleV1;
@@ -3388,13 +3500,14 @@ export type ActionProposalDetailV1 = {
     origin: ActionOriginV1;
     payload: ActionPayloadV1;
     rationale: ActionRationaleV1;
-    latestPreview: string | null;
+    latestPreview: ActionPreviewV1 | null;
     assignmentHistory: ActionAssignmentHistoryPageV1;
     decisionHistory: ActionDecisionHistoryPageV1;
     quorum: QuorumStatusV1;
-    executionAuthorization: string | null;
+    executionAuthorization: ExecutionAuthorizationSummaryV1 | null;
     asOf: string;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type UpdateActionDraftRequestV1 = {
@@ -3428,7 +3541,7 @@ export type SubmitActionForReviewRequestV1 = {
 export type ActionReviewRequestedReceiptV1 = {
     command: CommandReceiptV1;
     proposal: ActionProposalSummaryV1;
-    assignments: Array<string>;
+    assignments: Array<ActionAssignmentSummaryV1>;
     quorum: QuorumStatusV1;
 };
 
@@ -3449,7 +3562,7 @@ export type ActionReviewClaimedReceiptV1 = {
 
 export type SubmitActionDecisionRequestV1 = {
     proposalId: string;
-    actionKind: string;
+    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
     assignmentId: string;
     expectedProposalVersion: number;
     expectedAssignmentVersion: number;
@@ -3462,7 +3575,7 @@ export type ActionDecisionReceiptV1 = {
     proposal: ActionProposalSummaryV1;
     decision: ActionDecisionSummaryV1;
     quorum: QuorumStatusV1;
-    executionAuthorization: string | null;
+    executionAuthorization: ExecutionAuthorizationSummaryV1 | null;
 };
 
 export type GetActionExecutionReceiptRequestV1 = {
@@ -3472,21 +3585,20 @@ export type GetActionExecutionReceiptRequestV1 = {
 export type ActionExecutionReceiptChainV1 = {
     authorization: ExecutionAuthorizationSummaryV1;
     binding: ExecutionBindingV1;
-    attempts: Array<string>;
-    receipts: Array<string>;
+    attempts: Array<ExecutionAttemptV1>;
+    receipts: Array<ExecutionReceiptV1>;
     terminal: boolean;
     reconciliationRequired: boolean;
     asOf: string;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type CancelActionExecutionRequestV1 = {
     executionId: string;
     expectedGeneration: number;
     expectedStateVersion: number;
-    reasonCode: {
-        [key: string]: never;
-    };
+    reasonCode: 'USER_REQUEST' | 'POLICY_CHANGE' | 'CONSENT_REVOKED' | 'SUPPRESSION' | 'RIGHTS_REVOKED' | 'INCIDENT' | 'KILL_SWITCH' | 'BUDGET' | 'OTHER';
     reasonNote: string;
 };
 
@@ -3498,13 +3610,11 @@ export type ActionExecutionMutationReceiptV1 = {
 
 export type RetryActionExecutionRequestV1 = {
     executionId: string;
-    actionKind: string;
+    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
     expectedGeneration: number;
     expectedStateVersion: number;
     safeRetryProof: SafeRetryProofV1;
-    reasonCode: {
-        [key: string]: never;
-    };
+    reasonCode: 'NO_PROVIDER_ATTEMPT' | 'PROVIDER_LOOKUP_NOT_FOUND' | 'PROVIDER_IDEMPOTENT_REPLAY_SAFE';
     reasonNote: string;
 };
 
@@ -3517,9 +3627,7 @@ export type ReleaseLegalHoldRequestV1 = {
     releaseScopeAtoms: Array<string>;
     affectedIds: Array<string>;
     releaseAuthorityReference: string;
-    reasonCode: {
-        [key: string]: never;
-    };
+    reasonCode: 'AUTHORITY_WITHDRAWN' | 'EXPIRED_REVIEWED' | 'RESOLVED' | 'SUPERSEDED' | 'COURT_ORDER' | 'OTHER';
     reason: string;
 };
 
@@ -3537,38 +3645,35 @@ export type GetCommunicationDeliveryReceiptRequestV1 = {
 
 export type CommunicationDeliveryReceiptViewV1 = {
     delivery: CommunicationDeliverySummaryV1;
-    attempts: Array<string>;
-    receipts: Array<string>;
-    latestProviderEvidenceDigest: string;
+    attempts: Array<CommunicationDeliveryAttemptV1>;
+    receipts: Array<CommunicationDeliveryEvidenceReceiptV1>;
+    latestProviderEvidenceDigest: string | null;
     reconciliationRequired: boolean;
     asOf: string;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type ReconcileCommunicationDeliveryRequestV1 = {
     deliveryId: string;
     expectedVersion: number;
     evidence: CommunicationReconciliationEvidenceV1;
-    resolution: {
-        [key: string]: never;
-    };
-    safeRetryProof: string | null;
+    resolution: 'NOT_TRANSMITTED' | 'PROVIDER_ACCEPTED' | 'DELIVERED' | 'FAILED_PERMANENT';
+    safeRetryProof: CommunicationSafeRetryProofV1 | null;
     reason: string;
 };
 
 export type CommunicationDeliveryMutationReceiptV1 = {
     command: CommandReceiptV1;
     delivery: CommunicationDeliverySummaryV1;
-    priorState: string;
+    priorState: 'QUEUED' | 'SENDING' | 'PROVIDER_ACCEPTED' | 'DELIVERED' | 'READ' | 'RETRY_SCHEDULED' | 'FAILED_PERMANENT' | 'RECONCILIATION_REQUIRED' | 'SUPPRESSED' | 'CANCELLED';
     receiptDigest: string;
 };
 
 export type CancelCommunicationDeliveryRequestV1 = {
     deliveryId: string;
     expectedVersion: number;
-    reasonCode: {
-        [key: string]: never;
-    };
+    reasonCode: 'USER_REQUEST' | 'CONSENT_REVOKED' | 'SUPPRESSION' | 'POLICY_CHANGE' | 'INCIDENT' | 'KILL_SWITCH' | 'OTHER';
     reason: string;
 };
 
@@ -3578,29 +3683,28 @@ export type GetIncidentRequestV1 = {
 
 export type IncidentDetailV1 = {
     incident: IncidentSummaryV1;
-    evidence: Array<string>;
+    evidence: Array<IncidentEvidenceRefV1>;
     containmentActions: Array<string>;
     recoveryPlan: string | null;
     rollbackPlan: string | null;
     rootCause: string | null;
-    actionItems: Array<string>;
-    timeline: Array<string>;
+    actionItems: Array<PostmortemActionItemV1>;
+    timeline: Array<IncidentTimelineEntryV1>;
     asOf: string;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type TriageIncidentRequestV1 = {
     incidentId: string;
     expectedVersion: number;
-    severity: {
-        [key: string]: never;
-    };
+    severity: 'SEV0' | 'SEV1' | 'SEV2' | 'SEV3';
     affectedCapabilities: Array<string>;
     ownerUserId: string;
-    commanderUserId: string;
+    commanderUserId: string | null;
     nextUpdateAt: string;
     impact: string;
-    evidenceRefs: Array<string>;
+    evidenceRefs: Array<IncidentEvidenceRefV1>;
     reasonCode: string;
     reason: string;
 };
@@ -3620,7 +3724,7 @@ export type ContainIncidentRequestV1 = {
     nextUpdateAt: string;
     switchReceiptIds: Array<string>;
     cancellationReceiptIds: Array<string>;
-    evidenceRefs: Array<string>;
+    evidenceRefs: Array<IncidentEvidenceRefV1>;
     reasonCode: string;
     reason: string;
 };
@@ -3631,8 +3735,8 @@ export type StartIncidentRecoveryRequestV1 = {
     recoveryPlan: string;
     rollbackPlan: string;
     recoveryOwnerUserId: string;
-    validationEvidenceRefs: Array<string>;
-    evidenceRefs: Array<string>;
+    validationEvidenceRefs: Array<IncidentEvidenceRefV1>;
+    evidenceRefs: Array<IncidentEvidenceRefV1>;
     reasonCode: string;
     reason: string;
 };
@@ -3644,7 +3748,7 @@ export type ResolveIncidentRequestV1 = {
     reconciliationReceiptIds: Array<string>;
     resolutionSummary: string;
     approverUserId: string;
-    evidenceRefs: Array<string>;
+    evidenceRefs: Array<IncidentEvidenceRefV1>;
     reasonCode: string;
     reason: string;
 };
@@ -3654,10 +3758,10 @@ export type CloseIncidentPostmortemRequestV1 = {
     expectedVersion: number;
     rootCause: string;
     contributingFactors: Array<string>;
-    actionItems: Array<string>;
+    actionItems: Array<PostmortemActionItemV1>;
     postmortemDigest: string;
     reviewerUserId: string;
-    evidenceRefs: Array<string>;
+    evidenceRefs: Array<IncidentEvidenceRefV1>;
     reasonCode: string;
     reason: string;
 };
@@ -3667,13 +3771,13 @@ export type ListResponseAppealsRequestV1 = {
 };
 
 export type ResponseAppealQueuePageV1 = {
-    items: Array<string>;
+    items: Array<ResponseAppealSummaryV1>;
     appliedFilters: ResponseAppealQueueFiltersV1;
     asOf: string;
-    nextCursor: {
-        [key: string]: never;
-    };
-    totalApproximate: number;
+    nextCursor: string | null;
+    totalApproximate: number | null;
+    operationId: string;
+    links: Array<Link>;
 };
 
 export type GetResponseAppealWorkspaceRequestV1 = {
@@ -3685,54 +3789,53 @@ export type ResponseAppealWorkspaceV1 = {
     statement: string;
     supportingAttachmentIds: Array<string>;
     responseRequestVersion: number;
-    priorDecisionId: string;
+    priorDecisionId: string | null;
     priorReceiptDigest: string;
     deliveryEvidenceReceiptIds: Array<string>;
     consentEvidenceReceiptIds: Array<string>;
     publicationExcerptEvidenceIds: Array<string>;
-    tasks: Array<string>;
-    decisionReceipts: Array<string>;
+    tasks: Array<ResponseAppealInformationTaskV1>;
+    decisionReceipts: Array<ResponseAppealDecisionSummaryV1>;
     asOf: string;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type TransitionResponseAppealRequestV1 = {
     appealId: string;
     expectedDecisionSequence: number;
-    transition: {
-        [key: string]: never;
-    };
+    transition: 'START_REVIEW' | 'RESOLVE' | 'REJECT' | 'MARK_DUPLICATE' | 'WITHDRAW';
     reasonCode: string;
     reason: string;
     evidenceReceiptIds: Array<string>;
-    task: string | null;
+    task: {
+        [key: string]: never;
+    } | null;
 };
 
 export type ResponseAppealDecisionReceiptV1 = {
     command: CommandReceiptV1;
     appeal: ResponseAppealSummaryV1;
-    transition: string;
+    transition: 'START_REVIEW' | 'RESOLVE' | 'REJECT' | 'MARK_DUPLICATE' | 'WITHDRAW';
     evidenceSetDigest: string;
-    task: string | null;
+    task: ResponseAppealInformationTaskV1 | null;
 };
 
 export type DecideResponseExtensionRequestV1 = {
     extensionRequestId: string;
     expectedVersion: number;
-    decision: {
-        [key: string]: never;
-    };
+    decision: 'APPROVE' | 'REJECT';
     reasonCode: string;
     reason: string;
     calendarVersionId: string;
-    newDueAt: string;
+    newDueAt: string | null;
 };
 
 export type ResponseExtensionDecisionReceiptV1 = {
     command: CommandReceiptV1;
     extension: ResponseExtensionSummaryV1;
     priorDueAt: string;
-    newDueAt: string;
+    newDueAt: string | null;
     calendarDigest: string;
 };
 
@@ -3741,13 +3844,13 @@ export type ListRetentionRequestsRequestV1 = {
 };
 
 export type RetentionRequestQueuePageV1 = {
-    items: Array<string>;
+    items: Array<RetentionRequestSummaryV1>;
     appliedFilters: RetentionRequestQueueFiltersV1;
     asOf: string;
-    nextCursor: {
-        [key: string]: never;
-    };
-    totalApproximate: number;
+    nextCursor: string | null;
+    totalApproximate: number | null;
+    operationId: string;
+    links: Array<Link>;
 };
 
 export type GetRetentionRequestRequestV1 = {
@@ -3761,24 +3864,23 @@ export type RetentionRequestWorkspaceV1 = {
     holdCoverageDigest: string;
     activeHoldIds: Array<string>;
     affectedRecordClasses: Array<string>;
-    locationReceipts: Array<string>;
-    decisionReceipts: Array<string>;
-    completionReceiptId: string;
+    locationReceipts: Array<RetentionLocationReceiptV1>;
+    decisionReceipts: Array<RetentionDecisionSummaryV1>;
+    completionReceiptId: string | null;
     asOf: string;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type TransitionRetentionRequestRequestV1 = {
     retentionRequestId: string;
     expectedDecisionVersion: number;
-    transition: {
-        [key: string]: never;
-    };
+    transition: 'START_REVIEW' | 'APPROVE' | 'REJECT' | 'COMPLETE';
     reasonCode: string;
     reason: string;
     inventorySnapshotDigest: string;
     holdCoverageDigest: string;
-    completionReceiptId: string;
+    completionReceiptId: string | null;
 };
 
 export type RetentionRequestDecisionReceiptV1 = {
@@ -3786,8 +3888,8 @@ export type RetentionRequestDecisionReceiptV1 = {
     request: RetentionRequestSummaryV1;
     inventorySnapshotDigest: string;
     holdCoverageDigest: string;
-    completionReceiptId: string;
-    locationReceipts: Array<string>;
+    completionReceiptId: string | null;
+    locationReceipts: Array<RetentionLocationReceiptV1>;
 };
 
 export type ListRecordClassSchedulesRequestV1 = {
@@ -3795,32 +3897,24 @@ export type ListRecordClassSchedulesRequestV1 = {
 };
 
 export type RecordClassSchedulePageV1 = {
-    items: Array<string>;
+    items: Array<RecordClassScheduleSummaryV1>;
     appliedRecordClasses: Array<string>;
     appliedStates: Array<string>;
     asOf: string;
-    nextCursor: {
-        [key: string]: never;
-    };
+    nextCursor: string | null;
+    operationId: string;
+    links: Array<Link>;
 };
 
 export type DeclareConflictRequestV1 = {
     subjectActorId: string;
     target: ConflictTargetV1;
-    conflictType: {
-        [key: string]: never;
-    };
-    relationState: {
-        [key: string]: never;
-    };
-    materiality: {
-        [key: string]: never;
-    };
-    temporalState: {
-        [key: string]: never;
-    };
-    sourceClass: number;
-    evidenceRefs: Array<string>;
+    conflictType: 'AUTHORSHIP' | 'EDITING' | 'CASE_PARTY' | 'RECIPIENT' | 'ROLE' | 'PERSONAL' | 'FAMILY' | 'EMPLOYMENT' | 'ADVISORY' | 'FINANCIAL' | 'POLITICAL' | 'FUNDING' | 'CUSTOMER';
+    relationState: 'PRESENT' | 'UNKNOWN';
+    materiality: 'MATERIAL' | 'NON_MATERIAL' | 'UNKNOWN';
+    temporalState: 'CURRENT' | 'PAST' | 'UNKNOWN';
+    sourceClass: 'SELF_DECLARED' | 'INTERNAL_AUTHORITATIVE' | 'EXTERNAL_AUTHORITATIVE';
+    evidenceRefs: Array<ConflictEvidenceRefV1>;
     expectedPriorSequence: number;
     policyDigest: string;
     reason: string;
@@ -3831,7 +3925,7 @@ export type DeclareConflictRequestV1 = {
 export type ConflictDeclarationReceiptV1 = {
     command: CommandReceiptV1;
     declaration: ConflictDeclarationSummaryV1;
-    priorDeclarationDigest: string;
+    priorDeclarationDigest: string | null;
     receiptDigest: string;
 };
 
@@ -3840,9 +3934,7 @@ export type WithdrawConflictRequestV1 = {
     expectedDeclarationSequence: number;
     expectedDeclarationDigest: string;
     expectedPolicyDigest: string;
-    reasonCode: {
-        [key: string]: never;
-    };
+    reasonCode: 'NO_LONGER_PRESENT' | 'DECLARED_IN_ERROR' | 'SUPERSEDED_EVIDENCE' | 'OVERSIGHT_DECISION' | 'OTHER';
     reason: string;
     effectiveAt: string;
     expiresAt: string;
@@ -3853,7 +3945,7 @@ export type WithdrawActionProposalRequestV1 = {
     expectedProposalVersion: number;
     expectedStateVersion: number;
     expectedContentDigest: string;
-    reasonCode: string;
+    reasonCode: 'OBJECTIVE_CHANGED' | 'SOURCE_INVALIDATED' | 'DUPLICATE' | 'CREATED_IN_ERROR' | 'OTHER';
     reason: string;
 };
 
@@ -3865,30 +3957,24 @@ export type WithdrawActionDecisionRequestV1 = {
     expectedAssignmentVersion: number;
     expectedApprovalDigest: string;
     expectedDecisionReceiptDigest: string;
-    reasonCode: {
-        [key: string]: never;
-    };
+    reasonCode: 'CONFLICT_DISCOVERED' | 'EVIDENCE_CHANGED' | 'DECISION_ERROR' | 'NO_LONGER_ELIGIBLE' | 'OTHER';
     reason: string;
 };
 
 export type PromoteResearchArtifactRequestV1 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'promote-research-artifact.request.v1';
     caseId: string;
     expectedCaseVersion: number;
     agentRunId: string;
     researchArtifact: PromoteResearchArtifactRefV1;
     rightsDecision: PromotionRightsDecisionRefV1;
     evidence: PromotionEvidenceDraftV1;
-    selectedSegments: Array<string>;
+    selectedSegments: Array<PromotionSegmentSelectionV1>;
     reason: string;
 };
 
 export type PromoteResearchArtifactReceiptV1 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'promote-research-artifact.receipt.v1';
     promotionId: string;
     caseId: string;
     caseVersion: number;
@@ -3899,7 +3985,7 @@ export type PromoteResearchArtifactReceiptV1 = {
     sourceAssetId: string;
     sourceAssetRevision: number;
     sourceContentSha256: string;
-    evidenceSegmentBindings: Array<string>;
+    evidenceSegmentBindings: Array<PromotionEvidenceSegmentBindingV1>;
     selectedSegmentCount: number;
     selectedSegmentSetSha256: string;
     evidenceId: string;
@@ -3913,71 +3999,61 @@ export type PromoteResearchArtifactReceiptV1 = {
     idempotencyKeySha256: string;
     promotedAt: string;
     receiptSha256: string;
-    links: Array<string>;
+    links: Array<Link>;
 };
 
 export type CancelAgentRunRequestV2 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'cancel-agent-run.request.v2';
     runId: string;
     expectedVersion: number;
-    reasonCode: string;
+    reasonCode: 'USER_REQUEST' | 'OBJECTIVE_CHANGED' | 'SOURCE_INVALIDATED' | 'COST_STOP' | 'POLICY_STOP';
     reason: string;
 };
 
 export type AgentRunControlReceiptV2 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'agent-run-control-receipt.v2';
     receiptId: string;
     runId: string;
     aggregateVersion: number;
-    priorStatus: string | null;
-    priorControlState: string | null;
-    nextStatus: string;
-    nextControlState: string;
-    affectedProviderTurnId: string;
-    affectedToolCallId: string;
-    reconciliationEvidenceId: string;
-    reconciliationEvidenceSha256: string;
-    proofKind: number;
+    priorStatus: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'BUDGET_BLOCKED' | 'POLICY_BLOCKED' | null;
+    priorControlState: 'NONE' | 'ACTIVE' | 'CANCEL_REQUESTED' | 'RECONCILIATION_REQUIRED' | 'SETTLED' | null;
+    nextStatus: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'BUDGET_BLOCKED' | 'POLICY_BLOCKED';
+    nextControlState: 'NONE' | 'ACTIVE' | 'CANCEL_REQUESTED' | 'RECONCILIATION_REQUIRED' | 'SETTLED';
+    affectedProviderTurnId: string | null;
+    affectedToolCallId: string | null;
+    reconciliationEvidenceId: string | null;
+    reconciliationEvidenceSha256: string | null;
+    proofKind: 'COMMAND_INPUT' | 'LEASE_CLAIM' | 'PROVIDER_LOOKUP' | 'IDEMPOTENCY_LOOKUP' | 'TOOL_ADAPTER_LOOKUP' | 'COST_USAGE_RECEIPT' | 'DEFINITIVE_NO_DISPATCH' | 'VALIDATED_FINAL_OUTPUT' | 'DEFINITIVE_INTERNAL_FAILURE';
     proofSha256: string;
-    budgetDisposition: string;
+    budgetDisposition: 'NONE' | 'RESERVED' | 'SETTLED' | 'RELEASED' | 'RECONCILIATION_REQUIRED';
     budgetResolutionSetSha256: string;
-    actorKind: string;
-    actorId: string;
-    reasonCode: string;
+    actorKind: 'CONTROL_API' | 'ANALYSIS_WORKER' | 'RECONCILIATION_WORKER' | 'SCHEDULER';
+    actorId: string | null;
+    reasonCode: 'RUN_STARTED' | 'TURN_ADVANCED' | 'FINAL_OUTPUT_VALIDATED' | 'DEFINITIVE_FAILURE' | 'BUDGET_DENIED' | 'POLICY_DENIED' | 'PRE_DISPATCH_CANCELLED' | 'CANCEL_REQUESTED' | 'OUTCOME_AMBIGUOUS' | 'SAFE_RETRY_AUTHORIZED' | 'RECONCILED_SUCCEEDED' | 'RECONCILED_FAILED' | 'RECONCILED_CANCELLED' | 'NO_STATE_CHANGE';
     reasonSha256: string;
-    priorReceiptId: string;
-    priorReceiptSha256: string;
-    commandBinding: string | null;
+    priorReceiptId: string | null;
+    priorReceiptSha256: string | null;
+    commandBinding: AgentRunControlCommandBindingV2 | null;
     auditEventId: string;
     occurredAt: string;
     receiptSha256: string;
 };
 
 export type DecideJourneyHandoffRequestV1 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'decide-journey-handoff.request.v1';
     handoffId: string;
     expectedHandoffVersion: number;
     expectedBindingDigest: string;
-    decision: {
-        [key: string]: never;
-    };
-    reasonCode: number;
+    decision: 'ACKNOWLEDGE' | 'DECLINE';
+    reasonCode: 'CAPABILITY_UNAVAILABLE' | 'OBJECT_SCOPE_MISMATCH' | 'CONFLICT_OF_INTEREST' | 'WORKLOAD_CAPACITY' | 'DEPENDENCY_BLOCKED' | 'SUBJECT_INVALID' | 'OWNER_UNAVAILABLE' | 'POLICY_BLOCKED' | 'RECEIVER_DECLINED' | null;
     reason: string | null;
 };
 
 export type JourneyHandoffDecisionReceiptV1 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'journey-handoff-decision-receipt.v1';
     command: CommandReceiptV1;
     decisionReceipt: JourneyHandoffTerminalReceiptV1;
-    replacement: string | null;
+    replacement: JourneyHandoffReplacementReceiptV1 | null;
     finalParent: JourneyInstanceHeadReceiptV1;
     effectDigest: string;
     decidedAt: string;
@@ -3993,20 +4069,18 @@ export type AddendumProblemDetailsV1 = {
 
 export type ActionApprovalQueueItemV1 = {
     proposal: ActionProposalSummaryV1;
-    assignment: string | null;
+    assignment: ActionAssignmentSummaryV1 | null;
     quorum: QuorumStatusV1;
     dueAt: string;
-    riskClass: string;
-    href: {
-        [key: string]: never;
-    };
+    riskClass: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    href: string;
 };
 
 export type ActionProposalSummaryV1 = {
     proposalId: string;
     version: number;
     actionKind: ActionKindV1;
-    state: string;
+    state: 'DRAFT' | 'PENDING_QUORUM' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUIRED' | 'EXPIRED' | 'SUPERSEDED' | 'WITHDRAWN';
     contentDigest: string;
     approvalDigest: string;
     target: ActionTargetV1;
@@ -4017,19 +4091,17 @@ export type ActionProposalSummaryV1 = {
     expiresAt: string;
 };
 
-export type ActionKindV1 = {
-    [key: string]: never;
-};
+export type ActionKindV1 = 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
 
 export type ActionTargetV1 = {
-    targetType: number;
+    targetType: 'CASE' | 'CLAIM' | 'TASK' | 'LINE_ITEM' | 'COMMUNICATION_INTENT' | 'PUBLICATION' | 'RULE_VERSION' | 'USER' | 'KILL_SWITCH' | 'COMMUNICATION_SUBJECT' | 'ASSET' | 'RECORD_CLASS' | 'FUNDING_DISCLOSURE' | 'CAPABILITY' | 'BUSINESS_CALENDAR' | 'BUSINESS_CONTROL_TRIGGER';
     targetId: string;
-    expectedVersion: number;
+    expectedVersion: number | null;
 };
 
 export type ActorSummaryV1 = {
-    actorType: string;
-    actorId: string;
+    actorType: 'HUMAN' | 'SERVICE' | 'AGENT' | 'SYSTEM';
+    actorId: string | null;
     displayName: string;
 };
 
@@ -4039,8 +4111,8 @@ export type ActionAssignmentSummaryV1 = {
     assignmentGeneration: number;
     slotKind: string;
     requiredCapability: string;
-    reviewer: string | null;
-    state: string;
+    reviewer: ActorSummaryV1 | null;
+    state: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'RECUSED' | 'CANCELLED' | 'VACANT';
     dueAt: string;
     approvalDigest: string;
 };
@@ -4055,35 +4127,318 @@ export type QuorumStatusV1 = {
 };
 
 export type ActionApprovalQueueFiltersV1 = {
-    actionKind: Array<string>;
+    actionKind: Array<ActionKindV1>;
     proposalState: Array<string>;
     assignmentState: Array<string>;
-    dueBefore: string;
-    sort: string;
+    dueBefore: string | null;
+    sort: 'DUE_ASC' | 'UPDATED_DESC';
 };
 
 export type CommandReceiptV1 = {
     operationId: string;
     requestId: string;
-    status: string;
+    status: 'ACCEPTED' | 'COMPLETED' | 'REJECTED';
     aggregateId: string;
     aggregateVersion: number;
     auditEventId: string;
     acceptedAt: string;
     receiptDigest: string;
     emittedEventIds: Array<string>;
-    idempotencyReplay: {
-        [key: string]: never;
-    };
-    links: Array<string>;
+    idempotencyReplay: false;
+    links: Array<Link>;
 };
 
 export type ActionOriginV1 = {
-    [key: string]: never;
+    kind: 'HUMAN';
+    actorId: string;
+    screenId: string;
+    reason: string;
+} | {
+    kind: 'AGENT_PROPOSAL';
+    proposalId: string;
+    proposalVersion: number;
+    payloadSha256: string;
+    validationId: string;
+} | {
+    kind: 'SYSTEM_EVENT';
+    eventId: string;
+    eventType: string;
+    eventPayloadSha256: string;
+} | {
+    kind: 'COMPENSATION';
+    actorId: string;
+    compensatesExecutionId: string;
+    predecessorReceiptDigest: string;
+    predecessorEffectDigest: string;
+    reason: string;
 };
 
 export type ActionPayloadV1 = {
-    [key: string]: never;
+    schemaVersion: 'action-payload.v1';
+    kind: 'HYPOTHESIS';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    caseId: string;
+    expectedCaseVersion: number;
+    statement: string;
+    unknowns: Array<string>;
+    evidenceSegmentIds: Array<string>;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'CLAIM';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    caseId: string;
+    expectedCaseVersion: number;
+    claimType: 'FACT' | 'CALCULATION' | 'INFERENCE' | 'LIMITATION' | 'OFFICIAL_OUTCOME';
+    text: string;
+    responseIds: Array<string>;
+    limitations: Array<string>;
+    evidenceSegmentIds: Array<string>;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'TASK';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    objectType: 'CASE' | 'SIGNAL' | 'EVIDENCE' | 'CLAIM' | 'RESPONSE_REQUEST' | 'RESPONSE_APPEAL' | 'INCIDENT' | 'ACTION_PROPOSAL' | 'SOURCE' | 'RULE' | 'PRIVACY_REQUEST' | 'LEGAL_HOLD';
+    objectId: string;
+    expectedObjectVersion: number;
+    taskType: 'INVESTIGATION' | 'REVIEW' | 'RESPONSE_FOLLOW_UP' | 'EVIDENCE_VERIFICATION' | 'INCIDENT_REMEDIATION' | 'POSTMORTEM_ACTION' | 'PRIVACY_REQUEST' | 'LEGAL_HOLD_REVIEW' | 'OTHER';
+    title: string;
+    description: string;
+    priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+    assigneeUserId: string;
+    dueAt: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'COMPARABLE';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    caseId: string;
+    expectedCaseVersion: number;
+    targetLineItemId: string;
+    targetLineItemVersion: number;
+    candidateLineItemId: string;
+    candidateLineItemVersion: number;
+    compatibilityKind: 'COMPATIBLE' | 'PARTIAL' | 'INCOMPATIBLE' | 'UNKNOWN';
+    includeReason: string;
+    evidenceSegmentIds: Array<string>;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'COMMUNICATION';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    caseId: string;
+    expectedCaseVersion: number;
+    purpose: 'SYSTEM_TRANSACTIONAL' | 'SUBSCRIPTION_UPDATE' | 'DISCRETIONARY_EXTERNAL' | 'INTERNAL_ACTION_REQUEST';
+    provider: 'SMTP_EMAIL' | 'TELEGRAM_BOT_API' | 'META_WHATSAPP_BUSINESS_CLOUD' | 'LINE_MESSAGING_API' | 'SOLAPI_SMS' | 'SOLAPI_KAKAO_BIZMESSAGE' | 'TWILIO_VOICE' | 'SIGNED_WEBHOOK';
+    senderConfigId: string;
+    templateId: string;
+    templateRevision: number;
+    locale: string;
+    recipients: Array<CommunicationRecipientV1>;
+    subject: string;
+    bodyPlainText: string;
+    attachmentIds: Array<string>;
+    authorizationPurpose: string;
+    maximumCost: MoneyV1;
+    notBefore: string;
+    expiresAt: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'PUBLICATION';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    caseId: string;
+    expectedCaseVersion: number;
+    reviewSnapshotId: string;
+    reviewSnapshotDigest: string;
+    previewId: string;
+    previewDigest: string;
+    publicationGatePreviewDigest: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'RETRACTION';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    caseId: string;
+    expectedCaseVersion: number;
+    retractionDraftId: string;
+    retractionDraftDigest: string;
+    reviewSnapshotId: string;
+    previewId: string;
+    previewDigest: string;
+    tombstoneReason: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'RULE_ACTIVATION';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    ruleId: string;
+    version: number;
+    expectedRuleVersion: number;
+    evaluationReceiptId: string;
+    evaluationDigest: string;
+    activationScope: 'SHADOW' | 'LIMITED' | 'PRODUCTION';
+    effectiveAt: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'ROLE_GRANT';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    userId: string;
+    roleId: string;
+    expectedUserVersion: number;
+    scope: string;
+    expiresAt: string | null;
+    reason: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'KILL_SWITCH';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    command: 'ACTIVATE' | 'DEACTIVATE' | 'EXTEND';
+    switchTarget: string;
+    switchEffect: 'PAUSE' | 'DENY' | 'READ_ONLY' | 'DISABLE_EGRESS';
+    expectedGeneration: number;
+    reason: string;
+    expiresAt: string | null;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'COMMUNICATION_AUTHORIZATION';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    subjectId: string;
+    endpointId: string;
+    endpointVersion: number;
+    purpose: string;
+    topicScope: string;
+    basis: 'CONSENT' | 'CONTRACT' | 'LEGAL_OBLIGATION' | 'PUBLIC_TASK' | 'LEGITIMATE_INTEREST';
+    jurisdiction: string;
+    policyVersion: string;
+    decision: 'GRANT' | 'REVOKE' | 'RESTRICT';
+    proofReceiptId: string;
+    effectiveAt: string;
+    expiresAt: string | null;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'ASSET_RIGHTS_DECISION';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    assetId: string;
+    assetSha256: string;
+    expectedDecisionVersion: number;
+    decision: 'ALLOW' | 'RESTRICT' | 'DENY' | 'REVIEW_REQUIRED';
+    dimensions: Array<string>;
+    legalBasis: string;
+    licenseEvidenceDigests: Array<string>;
+    jurisdiction: string;
+    attribution: string | null;
+    effectiveAt: string;
+    expiresAt: string | null;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'RETENTION_SCHEDULE';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    recordClass: string;
+    expectedScheduleRevision: number;
+    purpose: string;
+    lawfulBasis: string;
+    trigger: 'CREATED_AT' | 'CLOSED_AT' | 'LAST_ACTIVITY_AT' | 'CONTRACT_END_AT' | 'CONSENT_REVOKED_AT';
+    activeDuration: string;
+    backupDuration: string;
+    locations: Array<string>;
+    terminalAction: 'DELETE' | 'ANONYMIZE' | 'ARCHIVE';
+    holdBehavior: 'PAUSE' | 'PRESERVE';
+    restoreSuppressionBehavior: 'REAPPLY' | 'BLOCK_RESTORE';
+    effectiveAt: string;
+    reviewExpiresAt: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'FUNDING_DISCLOSURE';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    snapshotBatchId: string;
+    snapshotDigest: string;
+    priorDisclosureRevision: number | null;
+    fiscalYear: number;
+    amountBand: string;
+    concentrationBand: string;
+    purpose: string;
+    conflictSummary: string;
+    policyRequestOutcomes: Array<string>;
+    effectiveAt: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'CAPABILITY_ACTIVATION';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    capabilityClass: 'PROVIDER' | 'CONNECTOR' | 'AGENT_MODEL' | 'COMMUNICATION_CHANNEL' | 'PUBLICATION';
+    capabilityId: string;
+    environment: 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION';
+    configurationDigest: string;
+    evidenceReceiptIds: Array<string>;
+    policyDigest: string;
+    contractDigest: string;
+    rightsDigest: string;
+    jurisdiction: string;
+    effectiveAt: string;
+    expiresAt: string | null;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'RESPONSE_POLICY_CALENDAR';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    calendarId: string;
+    expectedCalendarVersion: number;
+    timezone: string;
+    weekendDays: Array<string>;
+    holidayDates: Array<string>;
+    policyDigest: string;
+    effectiveAt: string;
+    reviewExpiresAt: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'COMMERCIAL_CONTROL';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    triggerId: string;
+    triggerVersion: number;
+    triggerDigest: string;
+    triggerKind: 'METRIC_THRESHOLD' | 'COMMERCIAL_PAUSE' | 'TRUST_HARD_STOP';
+    exactMetricResultDigests: Array<string>;
+    dependencyInputSetDigest: string;
+    evidenceSetDigest: string;
+    affectedScopeDigest: string;
+    requestedActions: Array<string>;
+    expectedKillSwitchGeneration: number;
+    expectedCapabilityVersionSetDigest: string;
+    expectedContractVersionSetDigest: string;
+    reason: string;
+    consequence: string;
+    existingCustomerContinuityPlanDigest: string;
+    originalControlReceiptDigest: string | null;
+    resumeEvidenceSetDigest: string | null;
+    expiresAt: string;
+    commercialControlBindingDigest: string;
 };
 
 export type ActionRationaleV1 = {
@@ -4110,9 +4465,7 @@ export type ActionPreviewV1 = {
 };
 
 export type ApprovalBindingV1 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'approval-binding.v1';
     proposalId: string;
     proposalVersion: number;
     actionKind: ActionKindV1;
@@ -4146,12 +4499,287 @@ export type ApprovalBindingV1 = {
     actionDetailDigest: string;
 };
 
-export type ActionTargetTypeV1 = {
-    [key: string]: never;
-};
+export type ActionTargetTypeV1 = 'CASE' | 'CLAIM' | 'TASK' | 'LINE_ITEM' | 'COMMUNICATION_INTENT' | 'PUBLICATION' | 'RULE_VERSION' | 'USER' | 'KILL_SWITCH' | 'COMMUNICATION_SUBJECT' | 'ASSET' | 'RECORD_CLASS' | 'FUNDING_DISCLOSURE' | 'CAPABILITY' | 'BUSINESS_CALENDAR' | 'BUSINESS_CONTROL_TRIGGER';
 
 export type ActionApprovalDetailV1 = {
-    [key: string]: never;
+    kind: 'HYPOTHESIS';
+    caseId: string;
+    expectedCaseVersion: number;
+    statementDigest: string;
+    evidenceSegmentSetDigest: string;
+    unknownSetDigest: string;
+} | {
+    kind: 'CLAIM';
+    caseId: string;
+    expectedCaseVersion: number;
+    claimType: 'FACT' | 'CALCULATION' | 'INFERENCE' | 'LIMITATION' | 'OFFICIAL_OUTCOME';
+    claimTextDigest: string;
+    responseSetDigest: string;
+    limitationSetDigest: string;
+    evidenceSegmentSetDigest: string;
+} | {
+    kind: 'TASK';
+    objectType: 'CASE' | 'SIGNAL' | 'EVIDENCE' | 'CLAIM' | 'RESPONSE_REQUEST' | 'RESPONSE_APPEAL' | 'INCIDENT' | 'ACTION_PROPOSAL' | 'SOURCE' | 'RULE' | 'PRIVACY_REQUEST' | 'LEGAL_HOLD';
+    objectId: string;
+    expectedObjectVersion: number;
+    taskType: 'INVESTIGATION' | 'REVIEW' | 'RESPONSE_FOLLOW_UP' | 'EVIDENCE_VERIFICATION' | 'INCIDENT_REMEDIATION' | 'POSTMORTEM_ACTION' | 'PRIVACY_REQUEST' | 'LEGAL_HOLD_REVIEW' | 'OTHER';
+    titleDigest: string;
+    descriptionDigest: string;
+    priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+    assigneeUserId: string;
+    assigneeEligibilityDigest: string;
+    dueAt: string;
+} | {
+    kind: 'COMPARABLE';
+    caseId: string;
+    expectedCaseVersion: number;
+    targetLineItemId: string;
+    targetLineItemVersion: number;
+    targetLineItemDigest: string;
+    candidateLineItemId: string;
+    candidateLineItemVersion: number;
+    candidateLineItemDigest: string;
+    comparisonBasisDigest: string;
+    compatibilityKind: 'COMPATIBLE' | 'PARTIAL' | 'INCOMPATIBLE' | 'UNKNOWN';
+    includeReasonDigest: string;
+    evidenceSegmentSetDigest: string;
+} | {
+    kind: 'COMMUNICATION';
+    communicationIntentId: string;
+    communicationIntentVersion: number;
+    communicationIntentDigest: string;
+    caseId: string;
+    expectedCaseVersion: number;
+    communicationClass: CommunicationClassV1;
+    purpose: CommunicationPurposeV1;
+    channel: ProviderChannelV1;
+    providerConfigId: string;
+    providerConfigVersion: number;
+    providerConfigurationDigest: string;
+    providerCapabilitiesDigest: string;
+    providerPreflightReceiptDigest: string;
+    senderIdentityDigest: string;
+    locale: string;
+    templateId: string;
+    templateRevision: number;
+    templateDigest: string;
+    recipientCount: number;
+    recipientSetDigest: string;
+    endpointSnapshotSetDigest: string;
+    recipientReviewScopeDigest: string;
+    authorizationSetDigest: string;
+    suppressionSetDigest: string;
+    renderingSetDigest: string;
+    exactRenderedBytesSetDigest: string;
+    attachmentManifestDigest: string;
+    rightsSetDigest: string;
+    jurisdictionSetDigest: string;
+    rateLimitPolicyDigest: string;
+    costPolicyDigest: string;
+    budgetDigest: string;
+    maximumCost: MoneyV1;
+    providerIdempotencyKeySetDigest: string;
+    callbackOrPollContractDigest: string;
+    terminalReceiptPolicyDigest: string;
+    dispatchPlanDigest: string;
+    fallbackMode: 'NO_AUTOMATIC_FALLBACK';
+} | {
+    kind: 'PUBLICATION';
+    caseId: string;
+    expectedCaseVersion: number;
+    reviewSnapshotId: string;
+    reviewSnapshotDigest: string;
+    publicationPreviewId: string;
+    publicationPreviewDigest: string;
+    publicationGatePreviewDigest: string;
+    exactPublicBytesDigest: string;
+    publicationEvidenceSetDigest: string;
+    rightsSetDigest: string;
+    redactionSetDigest: string;
+    priorPublicHeadDigest: string;
+    projectionPlanDigest: string;
+} | {
+    kind: 'RETRACTION';
+    caseId: string;
+    expectedCaseVersion: number;
+    priorPublicationRevisionId: string;
+    priorPublicationRevision: number;
+    priorPublicationRevisionDigest: string;
+    retractionDraftId: string;
+    retractionDraftDigest: string;
+    reviewSnapshotId: string;
+    reviewSnapshotDigest: string;
+    publicationGatePreviewDigest: string;
+    tombstoneBytesDigest: string;
+    retractionReasonDigest: string;
+    publicPointerSetDigest: string;
+    projectionPlanDigest: string;
+} | {
+    kind: 'RULE_ACTIVATION';
+    ruleId: string;
+    ruleVersion: number;
+    expectedRuleVersion: number;
+    ruleVersionDigest: string;
+    evaluationReceiptId: string;
+    evaluationDigest: string;
+    activationScope: 'SHADOW' | 'LIMITED' | 'PRODUCTION';
+    deploymentScopeDigest: string;
+    activationPlanDigest: string;
+    effectiveAt: string;
+} | {
+    kind: 'ROLE_GRANT';
+    userId: string;
+    expectedUserVersion: number;
+    roleId: string;
+    roleBindingDigest: string;
+    scopeDigest: string;
+    grantExpiry: ExpiryBindingV1;
+    accessPolicyDigest: string;
+    separationOfDutyDigest: string;
+    reasonDigest: string;
+} | {
+    kind: 'KILL_SWITCH';
+    command: 'ACTIVATE' | 'DEACTIVATE' | 'EXTEND';
+    switchTarget: string;
+    switchTargetDigest: string;
+    switchEffect: 'PAUSE' | 'DENY' | 'READ_ONLY' | 'DISABLE_EGRESS';
+    expectedGeneration: number;
+    currentSwitchDigest: string;
+    breadth: 'NARROW' | 'BROAD';
+    affectedScopeDigest: string;
+    reasonDigest: string;
+    requestedExpiry: ExpiryBindingV1;
+    recoveryPlanDigest: string;
+    killSwitchPolicyDigest: string;
+} | {
+    kind: 'COMMUNICATION_AUTHORIZATION';
+    subjectId: string;
+    endpointId: string;
+    endpointVersion: number;
+    endpointSnapshotDigest: string;
+    channel: ProviderChannelV1;
+    communicationClass: CommunicationClassV1;
+    purpose: CommunicationPurposeV1;
+    topicScopeKind: 'EXACT_TOPIC_SET' | 'EXACT_EVENT_SET' | 'EXACT_SUBJECT';
+    topicScopeDigest: string;
+    basis: 'CONSENT' | 'CONTRACTUAL_TRANSACTIONAL' | 'LEGAL_OBLIGATION_REVIEWED' | 'LEGITIMATE_INTEREST_REVIEWED' | 'PUBLIC_TASK_REVIEWED' | 'VITAL_INTEREST_REVIEWED';
+    jurisdiction: string;
+    locale: string;
+    policyVersion: string;
+    policyDigest: string;
+    decision: 'GRANT' | 'REVOKE' | 'RESTRICT';
+    currentAuthorizationHeadDigest: string;
+    proofReceiptId: string;
+    proofReceiptDigest: string;
+    effectiveAt: string;
+    verificationExpiry: ExpiryBindingV1;
+    authorizationExpiry: ExpiryBindingV1;
+    suppressionStateDigest: string;
+} | {
+    kind: 'ASSET_RIGHTS_DECISION';
+    assetId: string;
+    assetSha256: string;
+    expectedDecisionVersion: number;
+    currentDecisionDigest: string;
+    decisionKind: 'GRANT' | 'DENY' | 'SUSPEND' | 'REVOKE';
+    dimensionDecisionSetDigest: string;
+    legalBasisDigest: string;
+    licenseEvidenceSetDigest: string;
+    jurisdiction: string;
+    attribution: AttributionBindingV1;
+    effectiveAt: string;
+    expiry: ExpiryBindingV1;
+} | {
+    kind: 'RETENTION_SCHEDULE';
+    recordClass: string;
+    expectedScheduleRevision: number;
+    currentScheduleDigest: string;
+    purposeDigest: string;
+    lawfulBasisDigest: string;
+    trigger: 'CREATED_AT' | 'UPDATED_AT' | 'CONSUMED_AT' | 'EXPIRES_AT' | 'CASE_CLOSED_AT' | 'LAST_MATERIAL_USE_AT' | 'SUPERSEDED_AT' | 'DELIVERED_AT' | 'TERMINAL_AT';
+    activeDurationSeconds: number | null;
+    backupDurationSeconds: number | null;
+    locationSetDigest: string;
+    terminalAction: 'DELETE' | 'ANONYMIZE' | 'CRYPTO_ERASE' | 'PRESERVE_PUBLIC_REVISION';
+    holdBehavior: 'BLOCK_ON_RETENTION' | 'BLOCK_ON_RETENTION_OR_DELETION' | 'NOT_DESTRUCTIVE';
+    restoreSuppressionBehavior: 'REAPPLY_BEFORE_ACCESS' | 'NOT_APPLICABLE';
+    currentLegalHoldSetDigest: string;
+    effectiveAt: string;
+    reviewExpiresAt: string;
+} | {
+    kind: 'FUNDING_DISCLOSURE';
+    disclosureId: string;
+    priorDisclosure: PriorRevisionBindingV1;
+    fiscalPeriodDigest: string;
+    snapshotBatchId: string;
+    snapshotDigest: string;
+    namingThresholdPolicyDigest: string;
+    conflictSnapshotDigest: string;
+    orderedEntrySetDigest: string;
+    prerequisiteReviewSetDigest: string;
+    disclosurePreviewId: string;
+    disclosurePreviewDigest: string;
+    exactPublicBytesDigest: string;
+    effectiveAt: string;
+} | {
+    kind: 'CAPABILITY_ACTIVATION';
+    capabilityClass: 'PUBLIC_PUBLICATION' | 'SOURCE_ACCESS' | 'SOURCE_STORAGE' | 'SOURCE_REDISTRIBUTION' | 'MODEL_EGRESS' | 'DELIVERY_CHANNEL' | 'PRIVACY_DSAR' | 'PAID_WORKSPACE_PROCESSING';
+    capabilityId: string;
+    environment: 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION';
+    expectedCapabilityVersion: number;
+    currentCapabilityDigest: string;
+    decision: 'ACTIVATE' | 'SUSPEND' | 'REACTIVATE';
+    configurationDigest: string;
+    evidenceReceiptSetDigest: string;
+    preflightReceiptDigest: string;
+    policyDigest: string;
+    contractDigest: string;
+    rightsDigest: string;
+    jurisdictionSetDigest: string;
+    killSwitchDigest: string;
+    effectiveAt: string;
+    expiry: ExpiryBindingV1;
+} | {
+    kind: 'RESPONSE_POLICY_CALENDAR';
+    calendarId: string;
+    expectedCalendarVersion: number;
+    currentCalendarDigest: string;
+    timezone: string;
+    weekendDays: Array<string>;
+    holidayDateSetDigest: string;
+    policyDigest: string;
+    responseClockImpactDigest: string;
+    effectiveAt: string;
+    reviewExpiresAt: string;
+} | {
+    kind: 'COMMERCIAL_CONTROL';
+    triggerId: string;
+    triggerVersion: number;
+    triggerAsOf: string;
+    triggerKind: 'METRIC_THRESHOLD' | 'COMMERCIAL_PAUSE' | 'TRUST_HARD_STOP';
+    triggerDigest: string;
+    controlMode: 'PAUSE' | 'RESUME';
+    metricResultSetDigest: string;
+    transitiveInputSetDigest: string;
+    triggerPolicyDigest: string;
+    affectedScopeDigest: string;
+    requestedActions: Array<string>;
+    requestedActionSetDigest: string;
+    currentOfferProfileDigest: string;
+    currentContractHeadDigest: string;
+    currentCapabilityVersionSetDigest: string;
+    currentKillSwitchVersionSetDigest: string;
+    productExecutionPlanDigest: string;
+    externalExecutionPlanDigest: string;
+    externalSystemBindingSetDigest: string;
+    existingCustomerContinuityPlanDigest: string;
+    consequenceDigest: string;
+    budgetPolicyDigest: string;
+    controlEvidence: CommercialControlEvidenceV1;
+    importContractDigest: string;
+    acknowledgementRequirementDigest: string;
+    ackDueAt: string;
+    expectedTerminalState: 'PAUSED' | 'NORMAL';
 };
 
 export type ActionApprovalSubjectViewV1 = {
@@ -4171,13 +4799,13 @@ export type ActionApprovalSummarySectionV1 = {
     currentState: string;
     expectedState: string;
     whyNow: string;
-    freshness: string;
+    freshness: 'CURRENT' | 'STALE' | 'UNKNOWN';
     materialConsequence: string;
 };
 
 export type ActionApprovalEvidenceSectionV1 = {
-    supporting: Array<string>;
-    contrary: Array<string>;
+    supporting: Array<ApprovalEvidenceItemV1>;
+    contrary: Array<ApprovalEvidenceItemV1>;
     unknowns: Array<string>;
     investigationSummary: string;
     evidenceSetDigest: string;
@@ -4188,11 +4816,11 @@ export type ActionApprovalEvidenceSectionV1 = {
 export type ApprovalEvidenceItemV1 = {
     evidenceId: string;
     label: string;
-    evidenceKind: string;
-    assessment: string;
+    evidenceKind: 'SOURCE' | 'CALCULATION' | 'RESPONSE' | 'DECISION' | 'RECEIPT' | 'LIMITATION';
+    assessment: 'SUPPORTS' | 'CONTRADICTS' | 'CONTEXT_ONLY' | 'UNKNOWN';
     sourceLabel: string;
-    freshness: string;
-    locatorLink: string | null;
+    freshness: 'CURRENT' | 'STALE' | 'UNKNOWN';
+    locatorLink: Link | null;
     evidenceDigest: string;
 };
 
@@ -4207,28 +4835,66 @@ export type ActionApprovalEffectSectionV1 = {
 };
 
 export type ActionApprovalDestinationSectionV1 = {
-    [key: string]: never;
+    kind: 'INTERNAL_OBJECT';
+    objectLabel: string;
+    owningTeam: string;
+} | {
+    kind: 'PUBLIC_SURFACE';
+    surfaceLabel: string;
+    audience: string;
+} | {
+    kind: 'RECIPIENT_SET';
+    channelLabel: string;
+    recipientCount: number;
+    maskedRecipientSummary: Array<string>;
+    additionalRecipientCount: number;
+} | {
+    kind: 'EXTERNAL_SYSTEM';
+    systemLabel: string;
+    affectedScope: string;
 };
 
 export type ActionApprovalExactContentSectionV1 = {
-    [key: string]: never;
+    kind: 'NOT_APPLICABLE';
+    reason: string;
+} | {
+    kind: 'TEXT';
+    subject: string;
+    bodyPlainText: string;
+    attachmentSummaries: Array<string>;
+    exactBytesDigest: string;
+} | {
+    kind: 'PUBLIC_DIFF';
+    beforeSummary: string;
+    afterSummary: string;
+    exactBytesDigest: string;
+} | {
+    kind: 'STRUCTURED_CHANGE';
+    fieldChanges: Array<string>;
+    structuredChangeDigest: string;
 };
 
 export type ActionApprovalGovernanceSectionV1 = {
-    riskClass: string;
+    riskClass: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     riskSummary: string;
-    policyStatus: string;
+    policyStatus: 'PASS' | 'BLOCKED' | 'UNKNOWN';
     policySummary: string;
-    conflictStatus: string;
-    rightsStatus: string;
-    consentAndSuppressionStatus: string;
+    conflictStatus: 'CLEAR' | 'DISCLOSED' | 'RECUSE_REQUIRED' | 'BLOCKED_UNKNOWN';
+    rightsStatus: 'NOT_APPLICABLE' | 'AUTHORIZED' | 'RESTRICTED' | 'DENIED' | 'UNKNOWN';
+    consentAndSuppressionStatus: 'NOT_APPLICABLE' | 'AUTHORIZED' | 'SUPPRESSED' | 'DENIED' | 'UNKNOWN';
     cost: ActionApprovalCostViewV1;
     expirySummary: string;
     governanceDigest: string;
 };
 
 export type ActionApprovalCostViewV1 = {
-    [key: string]: never;
+    kind: 'NO_PAID_EFFECT';
+    explanation: string;
+} | {
+    kind: 'MAXIMUM';
+    maximumCost: MoneyV1;
+    costBasis: string;
+    budgetStatus: 'RESERVED' | 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN';
 };
 
 export type ActionApprovalDecisionHelpSectionV1 = {
@@ -4239,45 +4905,201 @@ export type ActionApprovalDecisionHelpSectionV1 = {
     rejectConsequence: string;
     changesRequiredConsequence: string;
     recuseConsequence: string;
-    requiredAssurance: string;
+    requiredAssurance: 'ACTIVE_SESSION' | 'STEP_UP';
     requiredQuorum: Array<string>;
-    defaultDecision: {
-        [key: string]: never;
-    };
+    defaultDecision: 'NONE';
 };
 
 export type ActionApprovalDetailViewV1 = {
-    [key: string]: never;
+    kind: 'HYPOTHESIS';
+    caseLabel: string;
+    hypothesis: string;
+    strongestEvidence: string;
+    materialUnknowns: Array<string>;
+} | {
+    kind: 'CLAIM';
+    caseLabel: string;
+    claimType: string;
+    claimText: string;
+    strongestSupport: string;
+    strongestContraryEvidence: string;
+    limitations: Array<string>;
+} | {
+    kind: 'TASK';
+    taskTitle: string;
+    taskDescription: string;
+    objectLabel: string;
+    assigneeLabel: string;
+    dueAt: string;
+    completionDefinition: string;
+} | {
+    kind: 'COMPARABLE';
+    targetLabel: string;
+    candidateLabel: string;
+    compatibility: 'COMPATIBLE' | 'PARTIAL' | 'INCOMPATIBLE' | 'UNKNOWN';
+    comparisonBasis: string;
+    materialDifferences: Array<string>;
+    materialUnknowns: Array<string>;
+} | {
+    kind: 'COMMUNICATION';
+    communicationClass: string;
+    purpose: string;
+    channelAndProvider: string;
+    sender: string;
+    recipients: string;
+    authorizationAndSuppression: string;
+    exactContentSummary: string;
+    maximumCost: MoneyV1;
+    terminalReceiptMeaning: string;
+} | {
+    kind: 'PUBLICATION';
+    caseLabel: string;
+    snapshotSummary: string;
+    gateStatus: string;
+    publicChange: string;
+    projectionAndSmokeDefinition: string;
+} | {
+    kind: 'RETRACTION';
+    caseLabel: string;
+    currentPublicRevision: string;
+    retractionReason: string;
+    tombstonePreview: string;
+    affectedPublicPointers: Array<string>;
+} | {
+    kind: 'RULE_ACTIVATION';
+    ruleLabel: string;
+    evaluationResult: string;
+    activationScope: string;
+    affectedDeployment: string;
+    rollbackPlan: string;
+} | {
+    kind: 'ROLE_GRANT';
+    subjectLabel: string;
+    roleLabel: string;
+    scope: string;
+    expiry: string;
+    separationOfDuty: string;
+} | {
+    kind: 'KILL_SWITCH';
+    command: 'ACTIVATE' | 'DEACTIVATE' | 'EXTEND';
+    targetLabel: string;
+    effect: string;
+    affectedScope: string;
+    expiryAndReview: string;
+    recoveryPlan: string;
+} | {
+    kind: 'COMMUNICATION_AUTHORIZATION';
+    subjectAndEndpoint: string;
+    channelPurposeAndScope: string;
+    basisAndJurisdiction: string;
+    decision: 'GRANT' | 'REVOKE' | 'RESTRICT';
+    effectiveAndExpiry: string;
+    suppressionStatus: string;
+} | {
+    kind: 'ASSET_RIGHTS_DECISION';
+    assetLabel: string;
+    decisionKind: 'GRANT' | 'DENY' | 'SUSPEND' | 'REVOKE';
+    nineDimensionSummary: Array<string>;
+    legalBasisAndLicense: string;
+    downstreamImpact: string;
+} | {
+    kind: 'RETENTION_SCHEDULE';
+    recordClass: string;
+    triggerAndDurations: string;
+    terminalAction: string;
+    legalHoldBehavior: string;
+    restoreSuppressionBehavior: string;
+    affectedRecords: string;
+} | {
+    kind: 'FUNDING_DISCLOSURE';
+    period: string;
+    amountAndConcentration: string;
+    unknownAndCaveat: string;
+    conflictsAndPrerequisites: string;
+    exactPublicPreview: string;
+} | {
+    kind: 'CAPABILITY_ACTIVATION';
+    capabilityLabel: string;
+    decision: 'ACTIVATE' | 'SUSPEND' | 'REACTIVATE';
+    configurationAndPreflight: string;
+    policyRightsJurisdiction: string;
+    killSwitchAndExpiry: string;
+} | {
+    kind: 'RESPONSE_POLICY_CALENDAR';
+    calendarLabel: string;
+    timezoneAndWorkingDays: string;
+    holidaySummary: string;
+    responseClockImpact: string;
+    reviewExpiry: string;
+} | {
+    kind: 'COMMERCIAL_CONTROL';
+    plainLanguageTrigger: string;
+    affectedScope: string;
+    requestedActions: Array<string>;
+    whyNow: string;
+    evidenceAndMetricInputs: string;
+    currentVersions: string;
+    expectedProductEffects: string;
+    expectedExternalEffects: string;
+    existingCustomerContinuityPlan: string;
+    maximumCostAndExposure: string;
+    expiry: string;
+    rollbackOrResumeRequirements: string;
+    requiredQuorum: Array<string>;
+    importReceiptStatus: string;
+    acknowledgementStatus: string;
 };
 
 export type ActionAssignmentHistoryPageV1 = {
-    items: Array<string>;
-    order: {
-        [key: string]: never;
-    };
+    items: Array<ActionAssignmentSummaryV1>;
+    order: 'slot-ordinal-asc-generation-asc-assignment-id-asc';
     asOf: string;
     pageDigest: string;
-    nextCursor: {
-        [key: string]: never;
-    };
+    nextCursor: string | null;
     complete: boolean;
 };
 
 export type ActionDecisionHistoryPageV1 = {
-    items: Array<string>;
-    order: {
-        [key: string]: never;
-    };
+    items: Array<ActionDecisionSummaryV1>;
+    order: 'decided-at-asc-decision-id-asc';
     asOf: string;
     pageDigest: string;
-    nextCursor: {
-        [key: string]: never;
-    };
+    nextCursor: string | null;
     complete: boolean;
 };
 
 export type ActionDecisionSummaryV1 = {
-    [key: string]: never;
+    recordKind: 'DECISION';
+    decisionId: string;
+    assignmentId: string;
+    assignmentGeneration: number;
+    decisionKind: 'APPROVE' | 'REJECT' | 'CHANGES_REQUIRED' | 'RECUSE';
+    actor: ActorSummaryV1;
+    slotKind: string;
+    capability: string;
+    assurance: 'ACTIVE_SESSION' | 'STEP_UP';
+    reasonCode: string;
+    reason: string;
+    approvalDigest: string;
+    receiptDigest: string;
+    decidedAt: string;
+} | {
+    recordKind: 'APPROVAL_WITHDRAWAL';
+    decisionId: string;
+    assignmentId: string;
+    assignmentGeneration: number;
+    decisionKind: 'APPROVAL_WITHDRAWN';
+    actor: ActorSummaryV1;
+    slotKind: string;
+    capability: string;
+    assurance: 'ACTIVE_SESSION' | 'STEP_UP';
+    reasonCode: 'CONFLICT_DISCOVERED' | 'EVIDENCE_CHANGED' | 'DECISION_ERROR' | 'NO_LONGER_ELIGIBLE' | 'OTHER';
+    reason: string;
+    withdrawnDecisionId: string;
+    withdrawnDecisionReceiptDigest: string;
+    approvalDigest: string;
+    receiptDigest: string;
+    decidedAt: string;
 };
 
 export type ExecutionAuthorizationSummaryV1 = {
@@ -4285,16 +5107,14 @@ export type ExecutionAuthorizationSummaryV1 = {
     generation: number;
     stateVersion: number;
     actionKind: ActionKindV1;
-    state: string;
+    state: 'QUEUED' | 'CLAIMED' | 'DISPATCHING' | 'PROVIDER_ACCEPTED' | 'SUCCEEDED' | 'RETRYABLE_FAILED' | 'PERMANENT_FAILED' | 'CANCEL_REQUESTED' | 'CANCELLED' | 'RECONCILIATION_REQUIRED';
     executionDigest: string;
     cancellationGeneration: number;
     expiresAt: string;
 };
 
 export type ExecutionBindingV1 = {
-    schemaVersion: {
-        [key: string]: never;
-    };
+    schemaVersion: 'execution-binding.v1';
     executionId: string;
     generation: number;
     approvalDigest: string;
@@ -4312,12 +5132,12 @@ export type ExecutionAttemptV1 = {
     ordinal: number;
     generation: number;
     fencingToken: number;
-    state: string;
+    state: 'QUEUED' | 'CLAIMED' | 'DISPATCHING' | 'PROVIDER_ACCEPTED' | 'SUCCEEDED' | 'RETRYABLE_FAILED' | 'PERMANENT_FAILED' | 'CANCEL_REQUESTED' | 'CANCELLED' | 'RECONCILIATION_REQUIRED';
     providerIdempotencyKeySha256: string;
-    providerAcknowledgementSha256: string;
+    providerAcknowledgementSha256: string | null;
     startedAt: string;
-    finishedAt: string;
-    actualCost: string | null;
+    finishedAt: string | null;
+    actualCost: MoneyV1 | null;
     failureCode: string | null;
 };
 
@@ -4332,9 +5152,9 @@ export type ExecutionReceiptV1 = {
     executionId: string;
     generation: number;
     stateVersion: number;
-    state: string;
-    providerEvidenceDigest: string;
-    reconciliationEvidenceDigest: string;
+    state: 'QUEUED' | 'CLAIMED' | 'DISPATCHING' | 'PROVIDER_ACCEPTED' | 'SUCCEEDED' | 'RETRYABLE_FAILED' | 'PERMANENT_FAILED' | 'CANCEL_REQUESTED' | 'CANCELLED' | 'RECONCILIATION_REQUIRED';
+    providerEvidenceDigest: string | null;
+    reconciliationEvidenceDigest: string | null;
     recordedAt: string;
     receiptDigest: string;
 };
@@ -4346,7 +5166,7 @@ export type LegalHoldCoverageV1 = {
     releasedScopeAtoms: Array<string>;
     affectedSetDigest: string;
     coverageDigest: string;
-    state: string;
+    state: 'ACTIVE' | 'PARTIALLY_RELEASED' | 'FULLY_RELEASED';
 };
 
 export type CommunicationDeliverySummaryV1 = {
@@ -4354,10 +5174,10 @@ export type CommunicationDeliverySummaryV1 = {
     version: number;
     intentId: string;
     deliveryKeySha256: string;
-    channel: string;
+    channel: 'EMAIL' | 'SMS' | 'TELEGRAM' | 'WHATSAPP' | 'LINE' | 'KAKAO' | 'VOICE' | 'WEBHOOK';
     endpointId: string;
     endpointVersion: number;
-    state: string;
+    state: 'QUEUED' | 'SENDING' | 'PROVIDER_ACCEPTED' | 'DELIVERED' | 'READ' | 'RETRY_SCHEDULED' | 'FAILED_PERMANENT' | 'RECONCILIATION_REQUIRED' | 'SUPPRESSED' | 'CANCELLED';
     renderingDigest: string;
     authorizationSnapshotDigest: string;
     activationReceiptDigest: string;
@@ -4369,13 +5189,13 @@ export type CommunicationDeliverySummaryV1 = {
 export type CommunicationDeliveryAttemptV1 = {
     attemptId: string;
     ordinal: number;
-    provider: string;
-    providerEventIdentityHmac: string;
-    providerAcknowledgementSha256: string;
-    state: string;
+    provider: 'SMTP_EMAIL' | 'TELEGRAM_BOT_API' | 'META_WHATSAPP_BUSINESS_CLOUD' | 'LINE_MESSAGING_API' | 'SOLAPI_SMS' | 'SOLAPI_KAKAO_BIZMESSAGE' | 'TWILIO_VOICE' | 'SIGNED_WEBHOOK';
+    providerEventIdentityHmac: string | null;
+    providerAcknowledgementSha256: string | null;
+    state: 'SENDING' | 'PROVIDER_ACCEPTED' | 'DELIVERED' | 'READ' | 'RETRY_SCHEDULED' | 'FAILED_PERMANENT' | 'RECONCILIATION_REQUIRED' | 'CANCELLED';
     startedAt: string;
-    observedAt: string;
-    cost: string | null;
+    observedAt: string | null;
+    cost: MoneyV1 | null;
 };
 
 export type CommunicationDeliveryEvidenceReceiptV1 = {
@@ -4383,11 +5203,11 @@ export type CommunicationDeliveryEvidenceReceiptV1 = {
     sequence: number;
     deliveryId: string;
     deliveryVersion: number;
-    attemptId: string;
-    evidenceKind: string;
-    providerEventIdentityHmac: string;
-    priorState: string;
-    state: string;
+    attemptId: string | null;
+    evidenceKind: 'PROVIDER_ACKNOWLEDGEMENT' | 'SIGNED_CALLBACK' | 'AUTHENTICATED_POLL' | 'RECONCILIATION_DECISION' | 'CANCELLATION_PROOF';
+    providerEventIdentityHmac: string | null;
+    priorState: 'QUEUED' | 'SENDING' | 'PROVIDER_ACCEPTED' | 'DELIVERED' | 'READ' | 'RETRY_SCHEDULED' | 'FAILED_PERMANENT' | 'RECONCILIATION_REQUIRED' | 'SUPPRESSED' | 'CANCELLED';
+    state: 'QUEUED' | 'SENDING' | 'PROVIDER_ACCEPTED' | 'DELIVERED' | 'READ' | 'RETRY_SCHEDULED' | 'FAILED_PERMANENT' | 'RECONCILIATION_REQUIRED' | 'SUPPRESSED' | 'CANCELLED';
     providerEvidenceDigest: string;
     observedAt: string;
     receiptDigest: string;
@@ -4396,13 +5216,13 @@ export type CommunicationDeliveryEvidenceReceiptV1 = {
 export type IncidentSummaryV1 = {
     incidentId: string;
     version: number;
-    state: string;
-    severity: string;
-    affectedCapabilities: Array<string>;
-    ownerUserId: string;
-    commanderUserId: string;
+    state: 'DETECTED' | 'TRIAGED' | 'CONTAINED' | 'RECOVERING' | 'RESOLVED' | 'POSTMORTEM_CLOSED';
+    severity: 'SEV0' | 'SEV1' | 'SEV2' | 'SEV3';
+    affectedCapabilities: Array<IncidentCapabilityV1>;
+    ownerUserId: string | null;
+    commanderUserId: string | null;
     impact: string;
-    nextUpdateAt: string;
+    nextUpdateAt: string | null;
     createdAt: string;
     updatedAt: string;
 };
@@ -4412,9 +5232,9 @@ export type IncidentCapabilityV1 = {
 };
 
 export type IncidentEvidenceRefV1 = {
-    kind: string;
+    kind: 'AUDIT_EVENT' | 'EXECUTION_RECEIPT' | 'DELIVERY_RECEIPT' | 'SLI_RECEIPT' | 'SOURCE_RUN' | 'DATASET_SNAPSHOT' | 'MANUAL_NOTE';
     id: string;
-    version: number;
+    version: number | null;
     digest: string;
     label: string;
 };
@@ -4424,14 +5244,14 @@ export type PostmortemActionItemV1 = {
     title: string;
     ownerUserId: string;
     dueAt: string;
-    priority: string;
+    priority: 'P0' | 'P1' | 'P2' | 'P3';
     verificationMethod: string;
 };
 
 export type IncidentTimelineEntryV1 = {
     eventId: string;
-    priorState: string | null;
-    state: string;
+    priorState: 'DETECTED' | 'TRIAGED' | 'CONTAINED' | 'RECOVERING' | 'RESOLVED' | 'POSTMORTEM_CLOSED' | null;
+    state: 'DETECTED' | 'TRIAGED' | 'CONTAINED' | 'RECOVERING' | 'RESOLVED' | 'POSTMORTEM_CLOSED';
     reasonCode: string;
     actor: ActorSummaryV1;
     evidenceSetDigest: string;
@@ -4444,9 +5264,9 @@ export type ResponseAppealSummaryV1 = {
     responseRequestId: string;
     caseId: string;
     decisionSequence: number;
-    state: string;
-    reasonCode: string;
-    requestedOutcome: string;
+    state: 'RECEIVED' | 'REVIEW' | 'RESOLVED' | 'REJECTED' | 'DUPLICATE' | 'WITHDRAWN';
+    reasonCode: 'DELIVERY_DISPUTE' | 'SCOPE_DISPUTE' | 'CONSENT_DISPUTE' | 'PUBLICATION_EXCERPT_DISPUTE' | 'DEADLINE_DISPUTE' | 'OTHER';
+    requestedOutcome: 'REOPEN_RESPONSE' | 'REVIEW_EXCERPT' | 'CORRECT_STATUS' | 'EXTEND_DEADLINE' | 'HUMAN_REVIEW';
     createdAt: string;
     updatedAt: string;
     dueAt: string;
@@ -4454,9 +5274,9 @@ export type ResponseAppealSummaryV1 = {
 
 export type ResponseAppealQueueFiltersV1 = {
     state: Array<string>;
-    caseId: string;
-    dueBefore: string;
-    sort: string;
+    caseId: string | null;
+    dueBefore: string | null;
+    sort: 'DUE_ASC' | 'CREATED_DESC';
 };
 
 export type ResponseAppealInformationTaskV1 = {
@@ -4470,9 +5290,9 @@ export type ResponseAppealInformationTaskV1 = {
 export type ResponseAppealDecisionSummaryV1 = {
     decisionId: string;
     decisionSequence: number;
-    transition: string;
-    priorState: string;
-    state: string;
+    transition: 'START_REVIEW' | 'RESOLVE' | 'REJECT' | 'MARK_DUPLICATE' | 'WITHDRAW';
+    priorState: 'RECEIVED' | 'REVIEW' | 'RESOLVED' | 'REJECTED' | 'DUPLICATE' | 'WITHDRAWN';
+    state: 'RECEIVED' | 'REVIEW' | 'RESOLVED' | 'REJECTED' | 'DUPLICATE' | 'WITHDRAWN';
     actor: ActorSummaryV1;
     reasonCode: string;
     reason: string;
@@ -4485,19 +5305,19 @@ export type ResponseExtensionSummaryV1 = {
     extensionRequestId: string;
     responseRequestId: string;
     version: number;
-    state: string;
+    state: 'SUBMITTED' | 'APPROVED' | 'REJECTED';
     priorDueAt: string;
-    newDueAt: string;
+    newDueAt: string | null;
     calendarVersionId: string;
     decisionDigest: string;
-    decidedAt: string;
+    decidedAt: string | null;
 };
 
 export type RetentionRequestSummaryV1 = {
     retentionRequestId: string;
-    requestType: string;
+    requestType: 'ACCESS' | 'CORRECTION' | 'DELETION' | 'RESTRICTION';
     decisionVersion: number;
-    state: string;
+    state: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
     jurisdiction: string;
     scopeDigest: string;
     legalHoldBlocked: boolean;
@@ -4509,16 +5329,16 @@ export type RetentionRequestSummaryV1 = {
 export type RetentionRequestQueueFiltersV1 = {
     requestType: Array<string>;
     state: Array<string>;
-    dueBefore: string;
-    legalHoldBlocked: boolean;
-    sort: string;
+    dueBefore: string | null;
+    legalHoldBlocked: boolean | null;
+    sort: 'DUE_ASC' | 'CREATED_DESC';
 };
 
 export type RetentionLocationReceiptV1 = {
     location: string;
     objectCount: number;
     derivativeCount: number;
-    action: string;
+    action: 'EXPORTED' | 'CORRECTED' | 'DELETED' | 'RESTRICTED' | 'SUPPRESSED_FROM_RESTORE';
     completedAt: string;
     receiptDigest: string;
 };
@@ -4526,15 +5346,15 @@ export type RetentionLocationReceiptV1 = {
 export type RetentionDecisionSummaryV1 = {
     decisionId: string;
     decisionVersion: number;
-    transition: string;
-    priorState: string;
-    state: string;
+    transition: 'START_REVIEW' | 'APPROVE' | 'REJECT' | 'COMPLETE';
+    priorState: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+    state: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
     actor: ActorSummaryV1;
     reasonCode: string;
     reason: string;
     inventorySnapshotDigest: string;
     holdCoverageDigest: string;
-    completionReceiptId: string;
+    completionReceiptId: string | null;
     decidedAt: string;
     receiptDigest: string;
 };
@@ -4542,11 +5362,11 @@ export type RetentionDecisionSummaryV1 = {
 export type RecordClassScheduleSummaryV1 = {
     recordClass: string;
     revision: number;
-    state: string;
+    state: 'CURRENT' | 'FUTURE' | 'REVIEW_EXPIRED';
     lawfulBasis: string;
     activeDuration: string;
     backupDuration: string;
-    terminalAction: string;
+    terminalAction: 'DELETE' | 'ANONYMIZE' | 'ARCHIVE';
     effectiveAt: string;
     reviewExpiresAt: string;
     scheduleDigest: string;
@@ -4556,14 +5376,14 @@ export type ConflictDeclarationSummaryV1 = {
     declarationId: string;
     subjectActorId: string;
     target: ConflictTargetV1;
-    conflictType: string;
-    relationState: string;
-    materiality: string;
-    temporalState: string;
-    sourceClass: number;
+    conflictType: 'AUTHORSHIP' | 'EDITING' | 'CASE_PARTY' | 'RECIPIENT' | 'ROLE' | 'PERSONAL' | 'FAMILY' | 'EMPLOYMENT' | 'ADVISORY' | 'FINANCIAL' | 'POLITICAL' | 'FUNDING' | 'CUSTOMER';
+    relationState: 'PRESENT' | 'ABSENT' | 'UNKNOWN';
+    materiality: 'MATERIAL' | 'NON_MATERIAL' | 'UNKNOWN' | 'NOT_APPLICABLE';
+    temporalState: 'CURRENT' | 'PAST' | 'UNKNOWN' | 'NOT_APPLICABLE';
+    sourceClass: 'SELF_DECLARED' | 'INTERNAL_AUTHORITATIVE' | 'EXTERNAL_AUTHORITATIVE';
     nonwaivable: boolean;
     declarationSequence: number;
-    supersedesDeclarationId: string;
+    supersedesDeclarationId: string | null;
     evidenceSetDigest: string;
     policyDigest: string;
     declarationDigest: string;
@@ -4573,7 +5393,78 @@ export type ConflictDeclarationSummaryV1 = {
 };
 
 export type ConflictTargetV1 = {
-    [key: string]: never;
+    targetType: 'CASE';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    caseId: string;
+} | {
+    targetType: 'REVIEW_SNAPSHOT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    reviewSnapshotId: string;
+} | {
+    targetType: 'ACTION_PROPOSAL';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    proposalId: string;
+} | {
+    targetType: 'PUBLICATION';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    publicationRevisionId: string;
+} | {
+    targetType: 'COMMUNICATION_INTENT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    communicationIntentId: string;
+} | {
+    targetType: 'RESPONSE_REQUEST';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    responseRequestId: string;
+} | {
+    targetType: 'LEGAL_HOLD';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    legalHoldId: string;
+} | {
+    targetType: 'CAPABILITY';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    capabilityId: string;
+} | {
+    targetType: 'SOURCE_ASSET';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    sourceAssetId: string;
+} | {
+    targetType: 'RESEARCH_ARTIFACT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    researchArtifactId: string;
+} | {
+    targetType: 'PRIVACY_REQUEST';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    privacyRequestId: string;
+} | {
+    targetType: 'COMMUNICATION_SUBJECT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    communicationSubjectId: string;
+    originBindingDigest: string;
 };
 
 export type PromotionEvidenceSegmentBindingV1 = {
@@ -4584,7 +5475,7 @@ export type PromotionEvidenceSegmentBindingV1 = {
 };
 
 export type AgentRunControlCommandBindingV2 = {
-    operationId: string;
+    operationId: 'cancelAgentRun' | 'reconcileAgentRun';
     expectedRunVersion: number;
     idempotencyKeySha256: string;
     requestSha256: string;
@@ -4597,22 +5488,20 @@ export type JourneyHandoffTerminalReceiptV1 = {
     journeyInstanceVersion: number;
     handoffId: string;
     handoffVersion: number;
-    handoffKind: number;
+    handoffKind: 'HS-01-RESPONSE_REQUEST_DELIVERY' | 'HS-02-RESPONSE_INTAKE_OWNERSHIP' | 'HS-03-CASE_OWNERSHIP' | 'HS-04-SIGNAL_ENRICHMENT_TASK' | 'HS-05-EDITORIAL_REVIEW_ASSIGNMENT' | 'HS-06-REVIEW_CHANGES_TASK' | 'HS-07-PUBLICATION_ASSIGNMENT' | 'HS-08-ACTION_REVIEW_ASSIGNMENT' | 'HS-09-ACTION_EXECUTION_CLAIM' | 'HS-10-ACTION_RECONCILIATION' | 'HS-11-AI_RUN_RECONCILIATION' | 'HS-12-EVIDENCE_PROJECTION_ACK' | 'HS-13-CORRECTION_OWNER' | 'HS-14-SOURCE_DRIFT_RECOVERY' | 'HS-15-COMMERCIAL_REMEDIATION_TASK' | 'HS-16-RETENTION_WATCH_TASK' | 'HS-17-COMMUNICATION_DELIVERY_OWNERSHIP' | 'HS-18-COMMUNICATION_DELIVERY_RECONCILIATION' | 'HS-19-PAID_PACKET_TERMINAL_BINDING' | 'HS-20-COMMERCIAL_CONTROL_EXTERNAL_ACK';
     generation: number;
-    decision: string;
-    resultingHandoffState: string;
-    resultingJourneyState: string;
+    decision: 'ACKNOWLEDGE' | 'DECLINE';
+    resultingHandoffState: 'ACKNOWLEDGED' | 'DECLINED';
+    resultingJourneyState: 'ACTIVE' | 'BLOCKED';
     currentOwnerBindingDigest: string;
-    nextOwnerBindingDigest: string;
+    nextOwnerBindingDigest: string | null;
     auditEventId: string;
     outboxEventId: string;
 };
 
 export type JourneyHandoffReplacementReceiptV1 = {
     handoffId: string;
-    handoffVersion: {
-        [key: string]: never;
-    };
+    handoffVersion: '1';
     generation: number;
     bindingDigest: string;
     requestReceiptId: string;
@@ -4628,36 +5517,91 @@ export type JourneyHandoffReplacementReceiptV1 = {
 export type JourneyInstanceHeadReceiptV1 = {
     journeyInstanceId: string;
     version: number;
-    state: string;
+    state: 'ACTIVE' | 'WAITING_ACK' | 'BLOCKED' | 'RECONCILIATION_REQUIRED' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED' | 'REJECTED';
     currentOwnerBindingDigest: string;
-    nextOwnerBindingDigest: string;
-    activeHandoffId: string;
-    activeHandoffGeneration: number;
-    activeHandoffState: string | null;
-    escalationState: string;
+    nextOwnerBindingDigest: string | null;
+    activeHandoffId: string | null;
+    activeHandoffGeneration: number | null;
+    activeHandoffState: 'PENDING_ACK' | null;
+    escalationState: 'NOT_DUE' | 'DUE' | 'ESCALATED' | 'RESOLVED';
     dueAt: string;
     headReceiptId: string;
     headReceiptDigest: string;
 };
 
 export type ActionDecisionV1 = {
-    [key: string]: never;
+    kind: 'APPROVE';
+    reasonCode: string;
+    reason: string;
+    attestExactPreview: true;
+    assurance: 'ACTIVE_SESSION' | 'STEP_UP' | null;
+    stepUpAuthorizationId: string | null;
+    assertedActionDigest: string | null;
+    stepUpAt: string | null;
+} | {
+    kind: 'REJECT';
+    reasonCode: string;
+    reason: string;
+} | {
+    kind: 'CHANGES_REQUIRED';
+    reasonCode: string;
+    reason: string;
+    tasks: Array<ActionChangeTaskV1>;
+} | {
+    kind: 'RECUSE';
+    reasonCode: string;
+    reason: string;
+    conflictDeclarationId: string;
 };
 
 export type SafeRetryProofV1 = {
-    [key: string]: never;
+    kind: 'NO_PROVIDER_ATTEMPT';
+    attemptReceiptId: string;
+    attemptReceiptDigest: string;
+} | {
+    kind: 'PROVIDER_LOOKUP_NOT_FOUND';
+    lookupReceiptId: string;
+    lookupReceiptDigest: string;
+    observedAt: string;
+} | {
+    kind: 'PROVIDER_IDEMPOTENT_REPLAY_SAFE';
+    providerCapabilityReceiptId: string;
+    lookupReceiptId: string;
+    providerIdempotencyKeySha256: string;
 };
 
 export type CommunicationReconciliationEvidenceV1 = {
-    [key: string]: never;
+    kind: 'PROVIDER_LOOKUP_NOT_FOUND';
+    lookupReceiptId: string;
+    providerAccountId: string;
+    lookupRequestSha256: string;
+    lookupResponseSha256: string;
+    observedAt: string;
+} | {
+    kind: 'PROVIDER_SIGNED_RECEIPT';
+    callbackRequestId: string;
+    itemOrdinal: number;
+    providerEventIdentityHmac: string;
+    providerEvidenceDigest: string;
+    signatureVerificationReceiptId: string;
+    observedAt: string;
+} | {
+    kind: 'AUTHENTICATED_PROVIDER_POLL';
+    pollReceiptId: string;
+    providerStatus: string;
+    providerEvidenceDigest: string;
+    observedAt: string;
+} | {
+    kind: 'OPERATOR_EVIDENCE';
+    evidenceReceiptIds: Array<string>;
+    evidenceDigest: string;
+    observedAt: string;
 };
 
 export type PromoteResearchArtifactRefV1 = {
     id: string;
     assetId: string;
-    assetRevision: {
-        [key: string]: never;
-    };
+    assetRevision: '1';
     artifactSha256: string;
     contentSha256: string;
     sourceFetchId: string;
@@ -4672,14 +5616,195 @@ export type PromotionRightsDecisionRefV1 = {
 };
 
 export type PromotionEvidenceDraftV1 = {
-    evidenceType: string;
+    evidenceType: 'SOURCE_DOCUMENT' | 'OFFICIAL_RECORD' | 'CONTRACT' | 'COMMUNICATION' | 'MEDIA' | 'OTHER';
     title: string;
     description: string | null;
-    classification: number;
-    verificationStatus: {
-        [key: string]: never;
-    };
+    classification: 'PUBLIC' | 'INTERNAL' | 'RESTRICTED';
+    verificationStatus: 'PENDING';
     publicExcerpt: string | null;
+};
+
+export type CommunicationSafeRetryProofV1 = {
+    kind: 'NO_PROVIDER_ATTEMPT';
+    preEgressReceiptId: string;
+    preEgressReceiptSequence: number;
+    preEgressReceiptDigest: string;
+    providerIdempotencyKeySha256: string;
+    requestSha256: string;
+} | {
+    kind: 'PROVIDER_LOOKUP_NOT_FOUND';
+    lookupReceiptId: string;
+    lookupReceiptDeliveryId: string;
+    lookupReceiptSequence: number;
+    lookupReceiptDigest: string;
+    lookupReceiptEvidenceKind: 'AUTHENTICATED_PROVIDER_POLL';
+    lookupReceiptApplied: false;
+    lookupRequestSha256: string;
+    lookupResponseSha256: string;
+    providerIdempotencyKeySha256: string;
+    requestSha256: string;
+    observedAt: string;
+} | {
+    kind: 'PROVIDER_IDEMPOTENT_REPLAY_SAFE';
+    providerPreflightReceiptId: string;
+    providerConfigId: string;
+    providerConfigVersion: number;
+    providerConfigurationDigest: string;
+    providerPreflightReceiptDigest: string;
+    lookupReceiptId: string;
+    lookupReceiptDeliveryId: string;
+    lookupReceiptSequence: number;
+    lookupReceiptDigest: string;
+    lookupReceiptEvidenceKind: 'AUTHENTICATED_PROVIDER_POLL';
+    lookupReceiptApplied: false;
+    providerIdempotencyKeySha256: string;
+    requestSha256: string;
+    observedAt: string;
+};
+
+export type ConflictEvidenceRefV1 = {
+    kind: 'EVIDENCE_SEGMENT';
+    evidenceSegmentId: string;
+    segmentDigest: string;
+} | {
+    kind: 'INTERNAL_RECORD';
+    relationKind: 'REVIEW_DECISION' | 'ACTION_DECISION' | 'AUDIT_EVENT' | 'RIGHTS_DECISION' | 'LEGAL_HOLD' | 'FUNDING_DISCLOSURE';
+    recordId: string;
+    recordDigest: string;
+} | {
+    kind: 'SIGNED_EXTERNAL_REFERENCE';
+    referenceId: string;
+    contentDigest: string;
+    verificationReceiptId: string;
+    verificationReceiptDigest: string;
+};
+
+export type PromotionSegmentSelectionV1 = {
+    ordinal: number;
+    locator: PromotionLocatorV1;
+    selectedContentSha256: string;
+    selectionPurpose: 'PRIMARY_EVIDENCE' | 'SUPPORTING_CONTEXT' | 'COUNTER_EVIDENCE' | 'LIMITATION';
+};
+
+export type PromotionLocatorV1 = {
+    kind: 'PAGE_BBOX' | 'XLSX_CELL' | 'CSV_ROW_COLUMN' | 'XML_XPATH' | 'DOCX_PARAGRAPH' | 'HWPX_XPATH' | 'JSON_POINTER' | 'HTML_CSS_SELECTOR' | 'API_FIELD' | 'TEXT_RANGE' | 'IMAGE_BBOX' | 'AUDIO_TIME_RANGE' | 'VIDEO_TIME_RANGE' | 'VIDEO_REGION_TIME';
+    value: string;
+    locatorSha256: string;
+};
+
+export type ActionEffectV1 = {
+    effectClass: 'INTERNAL_MATERIALIZATION' | 'EXTERNAL_COMMUNICATION' | 'PUBLICATION' | 'ACCESS_CHANGE' | 'POLICY_CHANGE' | 'OPERATIONAL_CONTROL';
+    fromState: ActionEffectStateV1 | null;
+    toState: ActionEffectStateV1;
+    externalSideEffect: boolean;
+    reversible: boolean;
+    expectedOutcome: string;
+};
+
+export type ActionEffectStateV1 = {
+    aggregate: 'CASE';
+    state: 'SIGNAL_DETECTED' | 'TRIAGE' | 'INVESTIGATING' | 'AWAITING_RESPONSE' | 'EDITORIAL_REVIEW' | 'LEGAL_REVIEW' | 'READY_TO_PUBLISH' | 'PUBLISHED' | 'CLOSED';
+} | {
+    aggregate: 'CLAIM';
+    state: 'DRAFT' | 'VALIDATED' | 'REJECTED' | 'PUBLISHED' | 'SUPERSEDED';
+} | {
+    aggregate: 'TASK';
+    state: 'OPEN' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE' | 'CANCELLED';
+} | {
+    aggregate: 'COMPARABLE';
+    state: 'CANDIDATE' | 'VERIFIED' | 'REJECTED' | 'SUPERSEDED';
+} | {
+    aggregate: 'COMMUNICATION';
+    state: 'CREATED' | 'POLICY_BLOCKED' | 'MATERIALIZED' | 'CANCELLED' | 'DRAFT' | 'AWAITING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUIRED' | 'EXPIRED' | 'SUPERSEDED' | 'QUEUED' | 'SENDING' | 'PROVIDER_ACCEPTED' | 'DELIVERED' | 'READ' | 'RETRY_SCHEDULED' | 'FAILED_PERMANENT' | 'RECONCILIATION_REQUIRED' | 'SUPPRESSED';
+} | {
+    aggregate: 'PUBLICATION';
+    state: 'NEVER_PUBLISHED' | 'PUBLISHED_ANOMALY' | 'PUBLISHED_EXPLAINED' | 'OFFICIALLY_CONFIRMED' | 'CORRECTED' | 'RETRACTED' | 'TEMPORARILY_RESTRICTED';
+} | {
+    aggregate: 'RULE';
+    state: 'DRAFT' | 'SHADOW' | 'SCHEDULED' | 'ACTIVE' | 'ROLLED_BACK' | 'DISABLED';
+} | {
+    aggregate: 'ACCESS';
+    state: 'PENDING' | 'ACTIVE' | 'REVOKED' | 'EXPIRED';
+} | {
+    aggregate: 'KILL_SWITCH';
+    state: 'INACTIVE' | 'ACTIVE' | 'EXPIRED' | 'SUPERSEDED';
+} | {
+    aggregate: 'AUTHORIZATION';
+    state: 'GRANTED' | 'REVOKED' | 'RESTRICTED' | 'EXPIRED';
+} | {
+    aggregate: 'RIGHTS';
+    state: 'ALLOW' | 'RESTRICT' | 'DENY' | 'REVIEW_REQUIRED' | 'EXPIRED';
+} | {
+    aggregate: 'POLICY_VERSION';
+    state: 'FUTURE' | 'CURRENT' | 'REVIEW_EXPIRED' | 'SUPERSEDED';
+} | {
+    aggregate: 'CAPABILITY';
+    state: 'UNCONFIGURED' | 'PENDING_REVIEW' | 'APPROVED' | 'SUSPENDED' | 'EXPIRED';
+} | {
+    aggregate: 'COMMERCIAL_CONTROL';
+    state: 'NORMAL' | 'PAUSE_REQUESTED' | 'ACKNOWLEDGEMENT_PENDING' | 'PAUSED' | 'RESUME_REQUESTED' | 'RECONCILIATION_REQUIRED';
+};
+
+export type CommunicationRecipientV1 = {
+    ordinal: number;
+    subjectId: string;
+    endpointId: string;
+    endpointVersion: number;
+    role: 'PRIMARY' | 'CC' | 'BCC' | 'TARGET' | 'OBSERVER';
+    destinationIdentitySha256: string;
+    consentSnapshotDigest: string;
+    suppressionSnapshotDigest: string;
+};
+
+export type ActionChangeTaskV1 = {
+    ordinal: number;
+    ownerUserId: string;
+    dueAt: string;
+    blockerCode: string;
+    requestedChange: string;
+    verificationMethod: string;
+};
+
+export type CommunicationClassV1 = 'SYSTEM_TRANSACTIONAL' | 'SUBSCRIPTION_UPDATE' | 'DISCRETIONARY_EXTERNAL' | 'INTERNAL_ACTION_REQUEST';
+
+export type CommunicationPurposeV1 = 'ENDPOINT_VERIFICATION' | 'RIGHT_OF_REPLY_REQUEST' | 'RIGHT_OF_REPLY_REMINDER' | 'RESPONSE_RECEIPT' | 'CORRECTION_STATUS' | 'CORRECTION_RETRACTION_NOTICE' | 'PRIVACY_TRANSACTIONAL_NOTICE' | 'SECURITY_TRANSACTIONAL_NOTICE' | 'SUBSCRIPTION_UPDATE' | 'PRODUCT_MARKETING' | 'INCIDENT_RECOVERY' | 'INTERNAL_ACTION_REQUEST' | 'DISCRETIONARY_OUTREACH';
+
+export type ProviderChannelV1 = 'SMTP_EMAIL' | 'SOLAPI_SMS' | 'TWILIO_VOICE' | 'TELEGRAM_BOT_API' | 'META_WHATSAPP_BUSINESS_CLOUD' | 'LINE_MESSAGING_API' | 'SOLAPI_KAKAO_BIZMESSAGE' | 'SIGNED_WEBHOOK';
+
+export type ExpiryBindingV1 = {
+    kind: 'NEVER';
+} | {
+    kind: 'AT';
+    at: string;
+};
+
+export type AttributionBindingV1 = {
+    kind: 'NOT_REQUIRED';
+    policyDigest: string;
+} | {
+    kind: 'REQUIRED';
+    textDigest: string;
+};
+
+export type PriorRevisionBindingV1 = {
+    kind: 'NONE';
+} | {
+    kind: 'EXACT';
+    id: string;
+    version: number;
+    digest: string;
+};
+
+export type CommercialControlEvidenceV1 = {
+    kind: 'PAUSE';
+    causeEvidenceSetDigest: string;
+} | {
+    kind: 'RESUME';
+    originalControlExecutionId: string;
+    originalControlReceiptDigest: string;
+    closureReceiptSetDigest: string;
+    remedyVerificationDigest: string;
+    resumeEvidenceSetDigest: string;
 };
 
 export type AcceptAgentSuggestionData = {
@@ -9490,7 +10615,7 @@ export type GetBudgetOverviewResponses = {
     /**
      * Successful response
      */
-    200: BusinessHealthResponse;
+    200: BudgetOverviewResponse;
 };
 
 export type GetBudgetOverviewResponse = GetBudgetOverviewResponses[keyof GetBudgetOverviewResponses];
@@ -12213,7 +13338,17 @@ export type UpdateSavedViewResponse = UpdateSavedViewResponses[keyof UpdateSaved
 export type ListActionApprovalQueueData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        actionKind?: Array<string>;
+        proposalState?: Array<string>;
+        assignmentState?: Array<string>;
+        dueBefore?: string;
+        cursor?: {
+            [key: string]: never;
+        };
+        limit?: number;
+        sort?: 'DUE_ASC' | 'UPDATED_DESC';
+    };
     url: '/v1/internal/action-proposals';
 };
 
@@ -12300,7 +13435,9 @@ export type GetActionProposalData = {
     path: {
         proposalId: string;
     };
-    query?: never;
+    query: {
+        proposalId: string;
+    };
     url: '/v1/internal/action-proposals/{proposalId}';
 };
 
@@ -12541,7 +13678,9 @@ export type GetActionExecutionReceiptData = {
     path: {
         executionId: string;
     };
-    query?: never;
+    query: {
+        executionId: string;
+    };
     url: '/v1/internal/action-executions/{executionId}/receipt';
 };
 
@@ -12692,7 +13831,9 @@ export type GetCommunicationDeliveryReceiptData = {
     path: {
         deliveryId: string;
     };
-    query?: never;
+    query: {
+        deliveryId: string;
+    };
     url: '/v1/internal/communication-deliveries/{deliveryId}/receipt';
 };
 
@@ -12807,7 +13948,9 @@ export type GetIncidentData = {
     path: {
         incidentId: string;
     };
-    query?: never;
+    query: {
+        incidentId: string;
+    };
     url: '/v1/internal/incidents/{incidentId}';
 };
 
@@ -13042,7 +14185,16 @@ export type CloseIncidentPostmortemResponse = CloseIncidentPostmortemResponses[k
 export type ListResponseAppealsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        state?: Array<string>;
+        caseId?: string;
+        dueBefore?: string;
+        cursor?: {
+            [key: string]: never;
+        };
+        limit?: number;
+        sort?: 'DUE_ASC' | 'CREATED_DESC';
+    };
     url: '/v1/internal/queries/list-response-appeals';
 };
 
@@ -13075,7 +14227,9 @@ export type ListResponseAppealsResponse = ListResponseAppealsResponses[keyof Lis
 export type GetResponseAppealWorkspaceData = {
     body?: never;
     path?: never;
-    query?: never;
+    query: {
+        appealId: string;
+    };
     url: '/v1/internal/queries/get-response-appeal-workspace';
 };
 
@@ -13184,7 +14338,17 @@ export type DecideResponseExtensionResponse = DecideResponseExtensionResponses[k
 export type ListRetentionRequestsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        requestType?: Array<string>;
+        state?: Array<string>;
+        dueBefore?: string;
+        legalHoldBlocked?: boolean;
+        cursor?: {
+            [key: string]: never;
+        };
+        limit?: number;
+        sort?: 'DUE_ASC' | 'CREATED_DESC';
+    };
     url: '/v1/internal/queries/list-retention-requests';
 };
 
@@ -13217,7 +14381,9 @@ export type ListRetentionRequestsResponse = ListRetentionRequestsResponses[keyof
 export type GetRetentionRequestData = {
     body?: never;
     path?: never;
-    query?: never;
+    query: {
+        retentionRequestId: string;
+    };
     url: '/v1/internal/queries/get-retention-request';
 };
 
@@ -13290,7 +14456,14 @@ export type TransitionRetentionRequestResponse = TransitionRetentionRequestRespo
 export type ListRecordClassSchedulesData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        recordClass?: Array<string>;
+        state?: Array<string>;
+        cursor?: {
+            [key: string]: never;
+        };
+        limit?: number;
+    };
     url: '/v1/internal/queries/list-record-class-schedules';
 };
 

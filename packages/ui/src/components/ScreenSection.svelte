@@ -1,44 +1,46 @@
 <script lang="ts">
 import type { ScreenSectionProps } from "../index";
+import { typedScreenViewModel } from "../screen-contract";
 import AccessManagementPanel from "./sections/AccessManagementPanel.svelte";
+import AgentAnalysisProjection from "./sections/AgentAnalysisProjection.svelte";
 import AgentSuggestionPanel from "./sections/AgentSuggestionPanel.svelte";
+import BusinessHealthPanel from "./sections/BusinessHealthPanel.svelte";
+import CheckAnswers from "./sections/CheckAnswers.svelte";
 import ClaimWorkbench from "./sections/ClaimWorkbench.svelte";
 import ComparisonWorkbench from "./sections/ComparisonWorkbench.svelte";
 import CoverageStatement from "./sections/CoverageStatement.svelte";
 import DataCollection from "./sections/DataCollection.svelte";
+import DecisionReceipt from "./sections/DecisionReceipt.svelte";
 import DecisionReviewPanel from "./sections/DecisionReviewPanel.svelte";
 import EvidenceLedger from "./sections/EvidenceLedger.svelte";
+import FileUploadQueue from "./sections/FileUploadQueue.svelte";
+import GateChecklist from "./sections/GateChecklist.svelte";
 import GuidedFormSection from "./sections/GuidedFormSection.svelte";
 import KnownUnknownResponse from "./sections/KnownUnknownResponse.svelte";
 import LongFormArticle from "./sections/LongFormArticle.svelte";
+import MetricWithContext from "./sections/MetricWithContext.svelte";
+import NotificationBanner from "./sections/NotificationBanner.svelte";
+import OmnichannelApprovalPanel from "./sections/OmnichannelApprovalPanel.svelte";
 import OperationsStatusPanel from "./sections/OperationsStatusPanel.svelte";
+import PageHeader from "./sections/PageHeader.svelte";
+import ResponseJourneySection from "./sections/ResponseJourneySection.svelte";
 import RevisionAndCorrectionPanel from "./sections/RevisionAndCorrectionPanel.svelte";
 import RevisionTimeline from "./sections/RevisionTimeline.svelte";
+import SaveStatus from "./sections/SaveStatus.svelte";
+import SemanticSection from "./sections/SemanticSection.svelte";
+import SensitiveDataNotice from "./sections/SensitiveDataNotice.svelte";
 import SignalTriagePanel from "./sections/SignalTriagePanel.svelte";
 import StatusAndRevisionHeader from "./sections/StatusAndRevisionHeader.svelte";
+import StepIndicator from "./sections/StepIndicator.svelte";
 import StructuredContentSection from "./sections/StructuredContentSection.svelte";
 import UnifiedSearch from "./sections/UnifiedSearch.svelte";
-import ResponseJourneySection from "./sections/ResponseJourneySection.svelte";
-import BusinessHealthPanel from "./sections/BusinessHealthPanel.svelte";
-import SemanticSection from "./sections/SemanticSection.svelte";
-import OmnichannelApprovalPanel from "./sections/OmnichannelApprovalPanel.svelte";
-import CheckAnswers from "./sections/CheckAnswers.svelte";
-import PageHeader from "./sections/PageHeader.svelte";
-import SensitiveDataNotice from "./sections/SensitiveDataNotice.svelte";
-import StepIndicator from "./sections/StepIndicator.svelte";
-import SaveStatus from "./sections/SaveStatus.svelte";
-import NotificationBanner from "./sections/NotificationBanner.svelte";
-import FileUploadQueue from "./sections/FileUploadQueue.svelte";
-import DecisionReceipt from "./sections/DecisionReceipt.svelte";
-import GateChecklist from "./sections/GateChecklist.svelte";
-import MetricWithContext from "./sections/MetricWithContext.svelte";
-import { typedScreenViewModel } from "../screen-contract";
 
 let props: ScreenSectionProps = $props();
 const contract = $derived(typedScreenViewModel(props.screen));
 </script>
 
-{#if contract.journey === "J-03" && props.screen.id.startsWith("RSP-") && props.section.component === "ResponseJourneySection"}<ResponseJourneySection {...props} />
+{#if (props.screen.id === "CAS-010" || (props.screen.id === "CAS-011" && props.section.id !== "decisions"))}<AgentAnalysisProjection {...props} />
+{:else if contract.journey === "J-03" && (props.screen.id === "RSP-005" || props.screen.id === "RSP-006") }<ResponseJourneySection {...props} />
 {:else if props.section.component === "BusinessHealthPanel"}<BusinessHealthPanel {...props} />
 {:else if props.section.component === "OmnichannelApprovalPanel"}<OmnichannelApprovalPanel {...props} />
 {:else if props.section.component === "CheckAnswers"}<CheckAnswers {...props} />

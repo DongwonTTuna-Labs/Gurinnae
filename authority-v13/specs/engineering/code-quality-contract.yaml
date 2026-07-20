@@ -1,0 +1,120 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+principles:
+- idiomatic-rust
+- idiomatic-svelte-5
+- SOLID-without-ceremonial-abstraction
+- YAGNI
+- clean-code
+rust:
+  first_party_unsafe_code: forbidden
+  required_crate_attribute: '#![forbid(unsafe_code)]'
+  workspace_lint:
+    unsafe_code: forbid
+  forbidden_tokens_in_first_party:
+  - unsafe {
+  - unsafe fn
+  - unsafe trait
+  - unsafe impl
+  - extern "C"
+  - todo!(
+  - unimplemented!(
+  production_forbidden:
+  - unwrap(
+  - expect(
+  - panic!(
+  - unreachable!(
+  error_policy: typed errors per layer; no Box<dyn Error> across domain/application boundaries
+  async_policy:
+    blocking_io_in_async: forbidden
+    unbounded_spawn: forbidden
+    cancellation_and_timeout: required
+  file_limits:
+    soft_lines: 400
+    hard_lines: 600
+  function_limits:
+    soft_logical_lines: 40
+    hard_logical_lines: 70
+  lint_commands:
+  - cargo fmt --all -- --check
+  - cargo clippy --workspace --all-targets --all-features -- -D warnings
+  - cargo geiger --output-format Json --all-features
+svelte:
+  version_model: Svelte 5 runes and snippets
+  data_loading: +page.server.ts or +layout.server.ts
+  mutation: SvelteKit form actions/server endpoints using generated clients
+  progressive_enhancement: required where applicable
+  forbidden_patterns:
+  - React-hook emulation
+  - direct Control/Submission API browser fetch
+  - document.querySelector for product UI behavior
+  - innerHTML
+  - generic global event bus
+  - API DTO rendered without screen view-model
+  - store duplication of server-authoritative data
+  component_limits:
+    soft_lines: 250
+    hard_lines: 400
+typescript:
+  strict_flags:
+    strict: true
+    noUncheckedIndexedAccess: true
+    exactOptionalPropertyTypes: true
+    useUnknownInCatchVariables: true
+  forbidden:
+  - explicit any
+  - implicit any
+  - as unknown as
+  - unexplained non-null assertion
+  file_limits:
+    soft_lines: 300
+    hard_lines: 500
+  generated_client_compile:
+    strict: true
+    exactOptionalPropertyTypes: false
+    reason: Generator-owned code from @hey-api/openapi-ts 0.99.0 is not rewritten; first-party wrappers retain exact optional semantics.
+    first_party_wrappers_exact_optional: true
+clean_code:
+  max_function_parameters: 4
+  max_nesting_depth: 3
+  vague_names_forbidden:
+  - utils
+  - helpers
+  - manager
+  - data
+  - item
+  single_file_must_not_mix:
+  - HTTP route wiring and SQL
+  - validation and persistence implementation
+  - domain transition and transport response mapping
+  - Svelte presentation and provider/client secret logic
+architecture:
+  domain_forbidden_dependencies:
+  - actix-web
+  - sqlx
+  - reqwest
+  - aws-sdk-s3
+  - provider SDKs
+  trait_creation_requires:
+  - at least two real implementations
+  - or a declared external-boundary test seam
+  generic_frameworks_forbidden:
+  - generic CRUD engine
+  - runtime workflow DSL
+  - speculative plugin framework
+ci_hard_gates:
+- first-party unsafe code count equals zero
+- production panic/unwrap/expect token count equals zero
+- every first-party crate root forbids unsafe_code
+- hard file and function limits have zero unexplained violations
+- Biome and svelte-check pass
+- generated code is excluded from style rewriting but included in strict typecheck
+sveltekit:
+  runtime_validator: valibot@1.1.0
+  forbidden:
+  - cross-request global stores
+  - onMount for server-authoritative primary data fetch
+  - server module-scope mutable user state
+  - unvalidated external returnTo redirects
+  - '{@html}'

@@ -72,6 +72,7 @@ export const screen = {
     "unauthorized",
     "forbidden",
     "conflict",
+    "reauth-required",
   ],
   dataOperations: [
     {

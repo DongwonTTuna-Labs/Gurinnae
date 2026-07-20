@@ -6,7 +6,7 @@ use std::{
 
 use image::{DynamicImage, GenericImageView, ImageFormat, ImageReader, Limits};
 
-use super::common::bounded_stdout;
+use super::common::{bounded_stdout, command_in_process_group, terminate_process_group};
 use super::{
     AssetBinding, Locator, LocatorKind, MAX_IMAGE_HEIGHT, MAX_IMAGE_PIXELS, MAX_IMAGE_WIDTH,
     MediaMetadata, MultimodalExtractionResult, ParseError, base_result, color_model, media_type,
@@ -154,22 +154,22 @@ fn append_ocr_segments(
     }
 }
 
-struct OcrLine {
-    text: String,
-    locator: String,
-    confidence: Option<u16>,
+pub(super) struct OcrLine {
+    pub(super) text: String,
+    pub(super) locator: String,
+    pub(super) confidence: Option<u16>,
 }
-struct OcrWord {
-    text: String,
-    locator: String,
-    confidence: Option<u16>,
+pub(super) struct OcrWord {
+    pub(super) text: String,
+    pub(super) locator: String,
+    pub(super) confidence: Option<u16>,
 }
-struct OcrOutput {
-    lines: Vec<OcrLine>,
-    words: Vec<OcrWord>,
+pub(super) struct OcrOutput {
+    pub(super) lines: Vec<OcrLine>,
+    pub(super) words: Vec<OcrWord>,
 }
 
-fn tesseract_ocr(image: &DynamicImage) -> Result<OcrOutput, String> {
+pub(super) fn tesseract_ocr(image: &DynamicImage) -> Result<OcrOutput, String> {
     let text = run_ocr_process(image)?;
     parse_ocr_tsv(&text)
 }
@@ -186,9 +186,12 @@ fn run_ocr_process(image: &DynamicImage) -> Result<String, String> {
     if !std::path::Path::new(executable).is_file() {
         return Err("OCR_NOT_ACTIVATED".to_owned());
     }
-    let mut child = Command::new(executable)
-        .args(["stdin", "stdout", "--psm", "6", "tsv"])
+    let mut command = Command::new(executable);
+    command.args(["stdin", "stdout", "-l", "kor+eng", "--psm", "6", "tsv"]);
+    let mut child = command_in_process_group(&mut command)
+        .env_clear()
         .env("LC_ALL", "C")
+        .env("TZ", "UTC")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -198,13 +201,15 @@ fn run_ocr_process(image: &DynamicImage) -> Result<String, String> {
     image
         .write_to(&mut std::io::Cursor::new(&mut png), ImageFormat::Png)
         .map_err(|_| "OCR_RUNTIME_FAILURE".to_owned())?;
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(&png)
-            .map_err(|_| "OCR_RUNTIME_FAILURE".to_owned())?;
+    if let Some(mut stdin) = child.stdin.take()
+        && stdin.write_all(&png).is_err()
+    {
+        terminate_process_group(&mut child);
+        return Err("OCR_RUNTIME_FAILURE".to_owned());
     }
     let (status, output) =
-        bounded_stdout(&mut child, 16_777_216).map_err(|_| "OCR_RUNTIME_FAILURE".to_owned())?;
+        bounded_stdout(&mut child, 16_777_216, std::time::Duration::from_secs(120))
+            .map_err(|_| "OCR_RUNTIME_FAILURE".to_owned())?;
     if !status.success() {
         return Err("OCR_RUNTIME_FAILURE".to_owned());
     }

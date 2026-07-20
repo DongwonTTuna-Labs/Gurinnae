@@ -82,12 +82,7 @@ fn dispatch_content(operation: &str) -> Result<Option<Value>, ServiceError> {
             "확인된 사실, 핵심 미확인 사항, 당사자 소명과 반대 근거를 구분합니다.",
             &["독립 검토", "무응답은 인정이 아님", "revision 고정 근거"],
         ),
-        "getFundingContent" => content(
-            "funding",
-            "재원 공개",
-            "후원과 비용 지원은 편집 판단 및 분석 규칙에 영향을 주지 않습니다.",
-            &["이해충돌 공개", "후원자 비개입", "연간 투명성 보고"],
-        ),
+        "getFundingContent" => funding_content()?,
         "getGovernanceContent" => content(
             "governance",
             "거버넌스",
@@ -536,4 +531,5 @@ fn entity_ref(id: Option<Uuid>, name: Option<String>, kind: &str) -> Value {
 
 include!("entities.rs");
 include!("cases.rs");
+include!("public_funding.rs");
 include!("public_tail.rs");

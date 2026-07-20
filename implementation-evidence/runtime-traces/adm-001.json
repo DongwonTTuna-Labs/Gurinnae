@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "ADM-001",
+  "route": "/internal/admin/users",
+  "url": "http://127.0.0.1:29102/internal/admin/users",
+  "observedAt": "2026-07-19T15:35:52.773Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "ADM-001",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "summary",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "users",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "requests",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "review",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

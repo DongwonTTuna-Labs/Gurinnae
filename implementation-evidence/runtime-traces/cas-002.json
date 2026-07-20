@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-002",
+  "route": "/internal/cases/{caseId}/overview",
+  "url": "http://127.0.0.1:29102/internal/cases/80000000-0000-4000-8000-000000000001/overview",
+  "observedAt": "2026-07-19T15:35:40.684Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "CAS-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "header",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "known-unknown",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "readiness",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "next",
+        "component": "AccessManagementPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "activity",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -3,7 +3,7 @@ DECLARE
   actual bigint;
 BEGIN
   SELECT version INTO actual FROM editorial.cases WHERE id='148b09d5-aa28-5351-b471-9ef333a3e410';
-  IF actual <> 14 THEN RAISE EXCEPTION 'case canonical version %, expected 14', actual; END IF;
+  IF actual <> 15 THEN RAISE EXCEPTION 'case canonical version %, expected 15', actual; END IF;
   SELECT version INTO actual FROM core.anomaly_signals WHERE id='641fc905-1d30-5062-b0e6-9fbb468502c4';
   IF actual <> 5 THEN RAISE EXCEPTION 'signal canonical version %, expected 5', actual; END IF;
   SELECT count(*) INTO actual FROM ops.signal_triages
@@ -132,7 +132,7 @@ BEGIN
   SELECT count(*) INTO actual FROM editorial.claims WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410';
   IF actual <> 2 THEN RAISE EXCEPTION 'case claims %, expected 2', actual; END IF;
   SELECT count(*) INTO actual FROM editorial.evidence WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410';
-  IF actual <> 3 THEN RAISE EXCEPTION 'case evidence %, expected 3', actual; END IF;
+  IF actual <> 4 THEN RAISE EXCEPTION 'case evidence %, expected 4', actual; END IF;
   SELECT count(*) INTO actual FROM editorial.hypotheses WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410';
   IF actual <> 2 THEN RAISE EXCEPTION 'case hypotheses %, expected 2', actual; END IF;
   SELECT count(*) INTO actual FROM editorial.evidence_redactions
@@ -191,7 +191,7 @@ BEGIN
       OR (id='ae58ffd5-e2a2-5bf2-8a4f-e11facaee532' AND status='REJECTED' AND decided_by IS NOT NULL);
   IF actual <> 2 THEN RAISE EXCEPTION 'agent suggestion decisions %, expected 2', actual; END IF;
   SELECT count(*) INTO actual FROM ops.agent_runs;
-  IF actual <> 2 THEN RAISE EXCEPTION 'agent run rows %, expected 2', actual; END IF;
+  IF actual <> 3 THEN RAISE EXCEPTION 'agent run rows %, expected 3', actual; END IF;
   SELECT count(*) INTO actual FROM core.rule_evaluations;
   IF actual <> 4 THEN RAISE EXCEPTION 'rule evaluation rows %, expected 4', actual; END IF;
 
@@ -274,9 +274,9 @@ BEGIN
   SELECT count(*) INTO actual FROM editorial.legal_holds WHERE active;
   IF actual <> 1 THEN RAISE EXCEPTION 'active legal hold rows %, expected 1', actual; END IF;
   SELECT count(*) INTO actual FROM ops.audit_events WHERE action LIKE 'command.%';
-  IF actual <> 77 THEN RAISE EXCEPTION 'command audit rows %, expected 77', actual; END IF;
+  IF actual <> 85 THEN RAISE EXCEPTION 'command audit rows %, expected 85', actual; END IF;
   SELECT count(*) INTO actual FROM ops.outbox;
-  IF actual <> 9 THEN RAISE EXCEPTION 'control outbox rows %, expected 9', actual; END IF;
+  IF actual <> 31 THEN RAISE EXCEPTION 'control outbox rows %, expected 31', actual; END IF;
 
   BEGIN
     INSERT INTO editorial.publication_revisions(

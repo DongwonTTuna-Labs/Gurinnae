@@ -17,7 +17,7 @@ root=Path(__file__).resolve().parents[1]
 excluded={'MANIFEST.md','MANIFEST.sha256'}
 excluded_directories={
     '.git','.svelte-kit','artifacts','build','node_modules','playwright-report',
-    'target','test-results','__pycache__',
+    'target','test-results','__pycache__','.authority-readonly-v13',
 }
 entries=[]
 for path in sorted(p for p in root.rglob('*') if p.is_file()):

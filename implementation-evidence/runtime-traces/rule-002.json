@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RULE-002",
+  "route": "/internal/rules/{ruleId}/versions/{version}",
+  "url": "http://127.0.0.1:29102/internal/rules/80000000-0000-4000-8000-000000000001/versions/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:49.630Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RULE-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "definition",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "cohort",
+        "component": "ComparisonWorkbench",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "blockers",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "diff",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "usage",
+        "component": "SignalTriagePanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "approval",
+        "component": "RevisionTimeline",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

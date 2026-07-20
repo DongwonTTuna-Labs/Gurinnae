@@ -4,12 +4,7 @@
   "title": "EvidenceReadResponseV2",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "evidence",
-    "segments",
-    "truncated"
-  ],
+  "required": ["schemaVersion", "evidence", "segments", "truncated"],
   "properties": {
     "schemaVersion": {
       "const": "evidence.read.response.v2"
@@ -57,26 +52,14 @@
           "maxLength": 255
         },
         "description": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 4000
         },
         "classification": {
-          "enum": [
-            "PUBLIC",
-            "INTERNAL",
-            "RESTRICTED"
-          ]
+          "enum": ["PUBLIC", "INTERNAL", "RESTRICTED"]
         },
         "verificationStatus": {
-          "enum": [
-            "PENDING",
-            "VERIFIED",
-            "REJECTED",
-            "NEEDS_WORK"
-          ]
+          "enum": ["PENDING", "VERIFIED", "REJECTED", "NEEDS_WORK"]
         },
         "sourceDocumentId": {
           "type": "string",
@@ -103,10 +86,7 @@
           "maxLength": 255
         },
         "publicExcerpt": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 4000
         }
       }
@@ -163,10 +143,7 @@
             "maxLength": 128
           },
           "confidence": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": ["integer", "null"],
             "minimum": 0,
             "maximum": 10000
           },
@@ -192,11 +169,7 @@
     "locator": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "value",
-        "locatorSha256"
-      ],
+      "required": ["kind", "value", "locatorSha256"],
       "properties": {
         "kind": {
           "enum": [

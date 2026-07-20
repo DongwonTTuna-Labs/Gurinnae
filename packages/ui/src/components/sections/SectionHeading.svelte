@@ -5,5 +5,5 @@ let { section, kicker }: { section: ScreenSection; kicker?: string } = $props();
 </script>
 
 {#if kicker}<p class="component-kicker">{kicker}</p>{/if}
-<h2>{section.title}</h2>
+<h2 id={`section-${section.id}-heading`}>{section.title}</h2>
 <p class="section-purpose">{section.purpose}</p>

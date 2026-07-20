@@ -5,7 +5,10 @@ from jsonschema import Draft202012Validator
 from .loaders import load_json,load_yaml
 from .models import Validation
 
-EXPECTED_FORMATS={'csv','xml','xlsx','docx','hwpx','pdf-digital','pdf-ocr','hwp-binary'}
+EXPECTED_FORMATS={
+    'csv', 'xml', 'xlsx', 'docx', 'hwpx', 'pdf-digital', 'pdf-ocr',
+    'html', 'png', 'jpeg', 'webp', 'tiff', 'wav', 'webm', 'hwp-binary',
+}
 
 def validate(root:Path,result:Validation)->None:
  cat=load_yaml(root/'specs/parsers/parser-catalog.yaml'); sandbox=load_yaml(root/'specs/parsers/sandbox-contract.yaml'); bom=load_yaml(root/'specs/parsers/runtime-bom.yaml'); manifest=load_yaml(root/'specs/parsers/fixture-manifest.yaml')

@@ -17869,7 +17869,6 @@ screens:
   heading_test_id: ops_004__heading
   document_section_order: &id174
   - envelope
-  - business-health
   - spend
   - forecast
   - limits
@@ -17914,29 +17913,25 @@ screens:
       grid_column: 1 / -1
       visual_order: 1
       available: true
-    - section_id: business-health
+    - section_id: spend
       grid_column: 1 / -1
       visual_order: 2
       available: true
-    - section_id: spend
+    - section_id: forecast
       grid_column: 1 / -1
       visual_order: 3
       available: true
-    - section_id: forecast
+    - section_id: limits
       grid_column: 1 / -1
       visual_order: 4
       available: true
-    - section_id: limits
+    - section_id: alerts
       grid_column: 1 / -1
       visual_order: 5
       available: true
-    - section_id: alerts
-      grid_column: 1 / -1
-      visual_order: 6
-      available: true
     - section_id: changes
       grid_column: 1 / -1
-      visual_order: 7
+      visual_order: 6
       available: true
   - check: 768x1024
     container_mode: MEDIUM_REFLOW
@@ -17951,40 +17946,34 @@ screens:
       visual_order: 1
       available: true
       sticky: false
-    - section_id: business-health
-      grid_area: ops_004--business_health
-      grid_column: 1 / -1
-      visual_order: 2
-      available: true
-      sticky: false
     - section_id: spend
       grid_area: ops_004--spend
       grid_column: 1 / -1
-      visual_order: 3
+      visual_order: 2
       available: true
       sticky: false
     - section_id: forecast
       grid_area: ops_004--forecast
       grid_column: 1 / -1
-      visual_order: 4
+      visual_order: 3
       available: true
       sticky: false
     - section_id: limits
       grid_area: ops_004--limits
       grid_column: 1 / -1
-      visual_order: 5
+      visual_order: 4
       available: true
       sticky: false
     - section_id: alerts
       grid_area: ops_004--alerts
       grid_column: 1 / -1
-      visual_order: 6
+      visual_order: 5
       available: true
       sticky: false
     - section_id: changes
       grid_area: ops_004--changes
       grid_column: 1 / -1
-      visual_order: 7
+      visual_order: 6
       available: true
       sticky: false
   - check: 1440x900
@@ -18000,40 +17989,34 @@ screens:
       visual_order: 1
       available: true
       sticky: false
-    - section_id: business-health
-      grid_area: ops_004--business_health
-      grid_column: 1 / -1
-      visual_order: 2
-      available: true
-      sticky: false
     - section_id: spend
       grid_area: ops_004--spend
       grid_column: 1 / -1
-      visual_order: 3
+      visual_order: 2
       available: true
       sticky: false
     - section_id: forecast
       grid_area: ops_004--forecast
       grid_column: 1 / -1
-      visual_order: 4
+      visual_order: 3
       available: true
       sticky: false
     - section_id: limits
       grid_area: ops_004--limits
       grid_column: 1 / -1
-      visual_order: 5
+      visual_order: 4
       available: true
       sticky: false
     - section_id: alerts
       grid_area: ops_004--alerts
       grid_column: 1 / -1
-      visual_order: 6
+      visual_order: 5
       available: true
       sticky: false
     - section_id: changes
       grid_area: ops_004--changes
       grid_column: 1 / -1
-      visual_order: 7
+      visual_order: 6
       available: true
       sticky: false
   - check: 1280x1024@200%
@@ -18048,29 +18031,25 @@ screens:
       grid_column: 1 / -1
       visual_order: 1
       available: true
-    - section_id: business-health
+    - section_id: spend
       grid_column: 1 / -1
       visual_order: 2
       available: true
-    - section_id: spend
+    - section_id: forecast
       grid_column: 1 / -1
       visual_order: 3
       available: true
-    - section_id: forecast
+    - section_id: limits
       grid_column: 1 / -1
       visual_order: 4
       available: true
-    - section_id: limits
+    - section_id: alerts
       grid_column: 1 / -1
       visual_order: 5
       available: true
-    - section_id: alerts
-      grid_column: 1 / -1
-      visual_order: 6
-      available: true
     - section_id: changes
       grid_column: 1 / -1
-      visual_order: 7
+      visual_order: 6
       available: true
   - check: 1280x1024@400%
     effective_css_viewport: 320x256
@@ -18084,29 +18063,25 @@ screens:
       grid_column: 1 / -1
       visual_order: 1
       available: true
-    - section_id: business-health
+    - section_id: spend
       grid_column: 1 / -1
       visual_order: 2
       available: true
-    - section_id: spend
+    - section_id: forecast
       grid_column: 1 / -1
       visual_order: 3
       available: true
-    - section_id: forecast
+    - section_id: limits
       grid_column: 1 / -1
       visual_order: 4
       available: true
-    - section_id: limits
+    - section_id: alerts
       grid_column: 1 / -1
       visual_order: 5
       available: true
-    - section_id: alerts
-      grid_column: 1 / -1
-      visual_order: 6
-      available: true
     - section_id: changes
       grid_column: 1 / -1
-      visual_order: 7
+      visual_order: 6
       available: true
   interaction_contract:
     minimum_target_css_px: 44x44 except adequately separated inline links

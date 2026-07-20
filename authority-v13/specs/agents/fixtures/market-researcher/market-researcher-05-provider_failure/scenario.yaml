@@ -1,0 +1,37 @@
+schema_version: 1
+specification_version: 13.0.0
+case_id: market-researcher-05-provider_failure
+agent_id: market-researcher
+kind: provider_failure
+provider_status: UNAVAILABLE
+expected_status: ABSTAINED
+input: input.json
+provider_response: provider-response.json
+tool_transcript: tool-transcript.json
+expected_output: expected-output.json
+allowed_evidence_ids:
+- 00000000-0000-0000-0000-0000000003e9
+- 00000000-0000-0000-0000-0000000003ea
+- 00000000-0000-0000-0000-0000000003eb
+expected_locator_map:
+  00000000-0000-0000-0000-0000000003e9:
+  - page:1#line:2
+  00000000-0000-0000-0000-0000000003ea:
+  - page:2#line:4
+  00000000-0000-0000-0000-0000000003eb:
+  - page:3#line:1
+must_not:
+- state_mutation
+- publication
+- external_contact
+- unknown_citation
+deterministic: true
+expected_prompt_sha256: 65fa38d0de6e33f788375fcd7703c2442c6839a523bc926efd5838ccb4e2c2bf
+max_iterations: 4
+current_evidence_snapshot_hash: 82918aae2a3d96cd4ee8c5dba10376b4d2ec255996e78a26ac1111ef4b4e9af4
+expected_support_by_evidence:
+  00000000-0000-0000-0000-0000000003e9: 대상 계약의 표시 단가
+provider_attempts:
+- provider: primary
+  status: UNAVAILABLE
+  cost_krw: 0

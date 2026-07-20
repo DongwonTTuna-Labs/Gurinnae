@@ -1,0 +1,55 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "gurinnae-document-extractor-media-runtime",
+  "documentNamespace": "https://gurinnae.local/evidence/media-runtime/2026-07-19",
+  "creationInfo": {
+    "created": "2026-07-19T20:45:00Z",
+    "creators": ["Tool: Gurinnae reproducible media-runtime build"]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-FFmpeg",
+      "name": "FFmpeg",
+      "versionInfo": "8.0.1",
+      "downloadLocation": "https://ffmpeg.org/releases/ffmpeg-8.0.1.tar.xz",
+      "licenseConcluded": "LGPL-2.1-or-later",
+      "licenseDeclared": "LGPL-2.1-or-later",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "05ee0b03119b45c0bdb4df654b96802e909e0a752f72e4fe3794f487229e5a41"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Whisper",
+      "name": "whisper.cpp",
+      "versionInfo": "1.9.1",
+      "downloadLocation": "https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v1.9.1.tar.gz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "147267177eef7b22ec3d2476dd514d1b12e160e176230b740e3d1bd600118447"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-WhisperModel",
+      "name": "ggml-large-v3-turbo.bin",
+      "versionInfo": "whisper-large-v3-turbo-multilingual",
+      "downloadLocation": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6813 @@
+schema_version: 1
+specification_version: 13.0.0
+principles:
+- Audit logs and product analytics are separate systems.
+- No third-party analytics on Response Portal.
+- Public interest in a case is not a long-term personal profile.
+- Core tasks work when analytics is unavailable.
+common_forbidden:
+- request/response body
+- tokens
+- credentials
+- file names
+- private evidence locators
+- personal email
+- unredacted search query
+event_count: 233
+events:
+- name: internal.access_request.created
+  consumers:
+  - ACC-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.access_review.started
+  consumers:
+  - ADM-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.account.viewed
+  consumers:
+  - ACC-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.agent_run.opened
+  consumers:
+  - CAS-010
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.agent_run.started
+  consumers:
+  - CAS-010
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.agent_run.viewed
+  consumers:
+  - CAS-011
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.agent_runs.viewed
+  consumers:
+  - CAS-010
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.agent_suggestion.accepted
+  consumers:
+  - CAS-011
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.agent_suggestion.rejected
+  consumers:
+  - CAS-011
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.audit.event_opened
+  consumers:
+  - AUD-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.audit.exported
+  consumers:
+  - CAS-016
+  - AUD-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.audit.integrity_checked
+  consumers:
+  - AUD-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.audit.viewed
+  consumers:
+  - AUD-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.auth.access_denied_viewed
+  consumers:
+  - AUTH-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.auth.session_expired_viewed
+  consumers:
+  - AUTH-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.auth.signin_started
+  consumers:
+  - AUTH-001
+  - AUTH-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.auth.signin_viewed
+  consumers:
+  - AUTH-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.auth.step_up_completed
+  consumers:
+  - AUTH-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.auth.step_up_started
+  consumers:
+  - AUTH-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.backfill.estimated
+  consumers:
+  - SRC-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.backfill.paused
+  consumers:
+  - SRC-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.backfill.started
+  consumers:
+  - SRC-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.backfill.viewed
+  consumers:
+  - SRC-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.budget_limit.updated
+  consumers:
+  - OPS-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.budgets.viewed
+  consumers:
+  - OPS-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case.assigned
+  consumers:
+  - CAS-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case.next_task_opened
+  consumers:
+  - CAS-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case.opened
+  consumers:
+  - CAS-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case.transitioned
+  consumers:
+  - CAS-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_audit.viewed
+  consumers:
+  - CAS-016
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_corrections.viewed
+  consumers:
+  - CAS-015
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_overview.viewed
+  consumers:
+  - CAS-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_queue.viewed
+  consumers:
+  - CAS-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_signal.linked
+  consumers:
+  - CAS-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_signal.unlinked
+  consumers:
+  - CAS-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_signals.viewed
+  consumers:
+  - CAS-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.case_timeline.viewed
+  consumers:
+  - CAS-012
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.claim.created
+  consumers:
+  - CAS-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.claim.validation_failed
+  consumers:
+  - CAS-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.claims.viewed
+  consumers:
+  - CAS-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction.opened
+  consumers:
+  - COR-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction.proposal_saved
+  consumers:
+  - COR-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction.resolved
+  consumers:
+  - COR-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction.restriction_placed
+  consumers:
+  - COR-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction.started
+  consumers:
+  - CAS-015
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction.triaged
+  consumers:
+  - COR-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction.viewed
+  consumers:
+  - COR-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.correction_queue.viewed
+  consumers:
+  - COR-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.cost_report.exported
+  consumers:
+  - OPS-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.dashboard.task_opened
+  consumers:
+  - INT-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.dashboard.viewed
+  consumers:
+  - INT-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.evidence.created
+  consumers:
+  - CAS-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.evidence.linked
+  consumers:
+  - CAS-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.evidence.redaction_created
+  consumers:
+  - CAS-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.evidence.verified
+  consumers:
+  - CAS-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.evidence.viewed
+  consumers:
+  - CAS-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.evidence_list.viewed
+  consumers:
+  - CAS-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.hypotheses.viewed
+  consumers:
+  - CAS-007
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.hypothesis.created
+  consumers:
+  - CAS-007
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.hypothesis.updated
+  consumers:
+  - CAS-007
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.job.cancelled
+  consumers:
+  - OPS-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.job.opened
+  consumers:
+  - OPS-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.job.quarantined
+  consumers:
+  - OPS-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.job.retried
+  consumers:
+  - OPS-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.job.viewed
+  consumers:
+  - OPS-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.job_queue.paused
+  consumers:
+  - OPS-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.jobs.retried
+  consumers:
+  - OPS-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.jobs.viewed
+  consumers:
+  - OPS-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.kill_switch.activated
+  consumers:
+  - OPS-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.kill_switch.deactivated
+  consumers:
+  - OPS-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.kill_switches.viewed
+  consumers:
+  - OPS-006
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.my_work.viewed
+  consumers:
+  - INT-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.notification.opened
+  consumers:
+  - INT-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.notifications.viewed
+  consumers:
+  - INT-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.operations.incident_opened
+  consumers:
+  - OPS-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.operations.viewed
+  consumers:
+  - OPS-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.preview.issue_opened
+  consumers:
+  - CAS-014
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.provider.routing_disabled
+  consumers:
+  - OPS-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.provider.tested
+  consumers:
+  - OPS-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.providers.viewed
+  consumers:
+  - OPS-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.publication.confirmation_viewed
+  consumers:
+  - REV-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.publication.projection_failed
+  consumers:
+  - REV-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.publication.published
+  consumers:
+  - REV-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.publication_preview.refreshed
+  consumers:
+  - CAS-014
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.publication_preview.viewed
+  consumers:
+  - CAS-014
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.response_excerpt.approved
+  consumers:
+  - CAS-008
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.response_request.saved
+  consumers:
+  - CAS-009
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.response_request.sent
+  consumers:
+  - CAS-009
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.response_request.viewed
+  consumers:
+  - CAS-009
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.response_submission.opened
+  consumers:
+  - CAS-008
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.responses.viewed
+  consumers:
+  - CAS-008
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.retraction.started
+  consumers:
+  - CAS-015
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review.assigned
+  consumers:
+  - REV-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review.blocker_opened
+  consumers:
+  - CAS-013
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review.decision_submitted
+  consumers:
+  - REV-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review.opened
+  consumers:
+  - REV-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review.stale_detected
+  consumers:
+  - REV-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review.viewed
+  consumers:
+  - REV-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review_queue.viewed
+  consumers:
+  - REV-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review_readiness.viewed
+  consumers:
+  - CAS-013
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.review_snapshot.created
+  consumers:
+  - CAS-013
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.role.granted
+  consumers:
+  - ADM-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.role.revoked
+  consumers:
+  - ADM-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.role_change.proposed
+  consumers:
+  - ADM-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.role_matrix.exported
+  consumers:
+  - ADM-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.roles.viewed
+  consumers:
+  - ADM-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule.activated
+  consumers:
+  - RULE-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule.opened
+  consumers:
+  - RULE-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule.rolled_back
+  consumers:
+  - RULE-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule_activation.viewed
+  consumers:
+  - RULE-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule_evaluation.started
+  consumers:
+  - RULE-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule_evaluation.viewed
+  consumers:
+  - RULE-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule_registry.viewed
+  consumers:
+  - RULE-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule_shadow.started
+  consumers:
+  - RULE-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule_version.draft_created
+  consumers:
+  - RULE-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.rule_version.viewed
+  consumers:
+  - RULE-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.schema_drift.approved
+  consumers:
+  - SRC-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.schema_drift.rejected
+  consumers:
+  - SRC-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.schema_drift.viewed
+  consumers:
+  - SRC-005
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.search.result_opened
+  consumers:
+  - INT-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.search.submitted
+  consumers:
+  - INT-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.session.revoked
+  consumers:
+  - ACC-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.signal.assigned
+  consumers:
+  - SIG-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.signal.conflict
+  consumers:
+  - SIG-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.signal.opened
+  consumers:
+  - SIG-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.signal.triage_completed
+  consumers:
+  - SIG-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.signal.viewed
+  consumers:
+  - SIG-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.signal_queue.viewed
+  consumers:
+  - SIG-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source.opened
+  consumers:
+  - SRC-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source.paused
+  consumers:
+  - SRC-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source.viewed
+  consumers:
+  - SRC-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source_registry.viewed
+  consumers:
+  - SRC-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source_run.opened
+  consumers:
+  - SRC-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source_run.report_downloaded
+  consumers:
+  - SRC-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source_run.retried
+  consumers:
+  - SRC-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source_run.started
+  consumers:
+  - SRC-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source_run.viewed
+  consumers:
+  - SRC-004
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.source_runs.viewed
+  consumers:
+  - SRC-003
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.task.opened
+  consumers:
+  - INT-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.task.reassigned
+  consumers:
+  - INT-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.timeline.event_opened
+  consumers:
+  - CAS-012
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.user.disabled
+  consumers:
+  - ADM-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.user.opened
+  consumers:
+  - ADM-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.user_detail.viewed
+  consumers:
+  - ADM-002
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: internal.users.viewed
+  consumers:
+  - ADM-001
+  sensitivity: internal-operational
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - internal_object_type
+  - workflow_stage
+  - result_code
+  - duration_bucket
+  - role_category
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.about.viewed
+  consumers:
+  - PUB-022
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.accessibility.viewed
+  consumers:
+  - PUB-033
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.agency.contract_opened
+  consumers:
+  - PUB-008
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.agency.opened
+  consumers:
+  - PUB-007
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.agency.viewed
+  consumers:
+  - PUB-008
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.agency_list.viewed
+  consumers:
+  - PUB-007
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.api_docs.viewed
+  consumers:
+  - PUB-021
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.case.opened
+  consumers:
+  - PUB-003
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.case.viewed
+  consumers:
+  - PUB-004
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.case_list.viewed
+  consumers:
+  - PUB-003
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.case_revision.latest_opened
+  consumers:
+  - PUB-005
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.case_revision.viewed
+  consumers:
+  - PUB-005
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.citation.copied
+  consumers:
+  - PUB-004
+  - PUB-005
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contact.submitted
+  consumers:
+  - PUB-026
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contact.viewed
+  consumers:
+  - PUB-026
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contract.case_opened
+  consumers:
+  - PUB-012
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contract.opened
+  consumers:
+  - PUB-011
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contract.source_opened
+  consumers:
+  - PUB-012
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contract.viewed
+  consumers:
+  - PUB-012
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contract_list.viewed
+  consumers:
+  - PUB-011
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.contracts.downloaded
+  consumers:
+  - PUB-011
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction.opened
+  consumers:
+  - PUB-018
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction.receipt_viewed
+  consumers:
+  - PUB-028
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction.started
+  consumers:
+  - PUB-004
+  - PUB-027
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction.step_completed
+  consumers:
+  - PUB-027
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction.submitted
+  consumers:
+  - PUB-027
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction.target_opened
+  consumers:
+  - PUB-019
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction.viewed
+  consumers:
+  - PUB-019
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.correction_list.viewed
+  consumers:
+  - PUB-018
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.coverage.source_opened
+  consumers:
+  - PUB-015
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.coverage.viewed
+  consumers:
+  - PUB-015
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.data.viewed
+  consumers:
+  - PUB-020
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.dataset.downloaded
+  consumers:
+  - PUB-020
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.editorial_policy.viewed
+  consumers:
+  - PUB-025
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.evidence.opened
+  consumers:
+  - PUB-004
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.filter.applied
+  consumers:
+  - PUB-003
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.funding.viewed
+  consumers:
+  - PUB-023
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.governance.viewed
+  consumers:
+  - PUB-024
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.home.record_opened
+  consumers:
+  - PUB-001
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.home.viewed
+  consumers:
+  - PUB-001
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.methodology.rule_opened
+  consumers:
+  - PUB-013
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.methodology.viewed
+  consumers:
+  - PUB-013
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.openapi.downloaded
+  consumers:
+  - PUB-021
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.privacy.viewed
+  consumers:
+  - PUB-031
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.reproducibility.downloaded
+  consumers:
+  - PUB-006
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.reproducibility.viewed
+  consumers:
+  - PUB-006
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.rule.related_case_opened
+  consumers:
+  - PUB-014
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.rule.viewed
+  consumers:
+  - PUB-014
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.search.filtered
+  consumers:
+  - PUB-002
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.search.result_opened
+  consumers:
+  - PUB-002
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.search.started
+  consumers:
+  - PUB-001
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.search.submitted
+  consumers:
+  - PUB-002
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.source.official_opened
+  consumers:
+  - PUB-017
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.source.opened
+  consumers:
+  - PUB-016
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.source.viewed
+  consumers:
+  - PUB-017
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.source_list.viewed
+  consumers:
+  - PUB-016
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.subscription.manage_viewed
+  consumers:
+  - PUB-030
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.subscription.started
+  consumers:
+  - PUB-004
+  - PUB-008
+  - PUB-010
+  - PUB-018
+  - PUB-029
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.subscription.unsubscribed
+  consumers:
+  - PUB-030
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.subscription.updated
+  consumers:
+  - PUB-030
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.subscription.verification_requested
+  consumers:
+  - PUB-029
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.subscription.verified
+  consumers:
+  - PUB-029
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.supplier.contract_opened
+  consumers:
+  - PUB-010
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.supplier.opened
+  consumers:
+  - PUB-009
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.supplier.viewed
+  consumers:
+  - PUB-010
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.supplier_list.viewed
+  consumers:
+  - PUB-009
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.system_error.viewed
+  consumers:
+  - PUB-034
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.terms.viewed
+  consumers:
+  - PUB-032
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: public.transparency_report.downloaded
+  consumers:
+  - PUB-023
+  sensitivity: public-product
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - public_object_type
+  - public_object_id
+  - state
+  - result_count_bucket
+  - filter_category_count
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.access.verified
+  consumers:
+  - RSP-001
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.answer.started
+  consumers:
+  - RSP-002
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.answer.validation_failed
+  consumers:
+  - RSP-003
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.answer.viewed
+  consumers:
+  - RSP-003
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.attachment.completed
+  consumers:
+  - RSP-004
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.attachment.rejected
+  consumers:
+  - RSP-004
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.attachment.started
+  consumers:
+  - RSP-004
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.draft.saved
+  consumers:
+  - RSP-003
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.extension.started
+  consumers:
+  - RSP-002
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.extension.submitted
+  consumers:
+  - RSP-007
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.extension.viewed
+  consumers:
+  - RSP-007
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.landing.viewed
+  consumers:
+  - RSP-001
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.receipt.downloaded
+  consumers:
+  - RSP-006
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.receipt.viewed
+  consumers:
+  - RSP-006
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.request.viewed
+  consumers:
+  - RSP-002
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.review.viewed
+  consumers:
+  - RSP-005
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.submission.attempted
+  consumers:
+  - RSP-005
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.submission.completed
+  consumers:
+  - RSP-005
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.
+- name: response.unavailable.viewed
+  consumers:
+  - RSP-008
+  sensitivity: response-sensitive-minimal
+  purpose: Measure task progression, quality or recovery for the listed screens.
+  allowed_properties:
+  - screen_id
+  - surface
+  - app_version
+  - specification_version
+  - viewport_class
+  - success
+  - error_code
+  - step_id
+  - result_code
+  - duration_bucket
+  forbidden_properties:
+  - email
+  - response_token
+  - access_token
+  - answer_body
+  - correction_body
+  - filename
+  - private_case_title
+  - raw_search_query
+  - full_ip
+  retention: Product analytics retention must be approved; response events use the shortest retention.

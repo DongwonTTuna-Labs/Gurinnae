@@ -16,6 +16,8 @@ mod adapters;
 mod control;
 #[path = "runtime_dispatch.rs"]
 mod dispatch;
+#[path = "runtime_source.rs"]
+mod source;
 #[path = "runtime_turn.rs"]
 mod turn;
 
@@ -28,6 +30,10 @@ pub use control::{
     RunStatus, RuntimeError,
 };
 pub use dispatch::{DispatchError, ToolAdapter, TypedDispatcher};
+pub use source::{
+    DiscoveryReceiptV2, GatewayDecisionV2, LocatorVerification, SearchResultV2, SourceArtifactV2,
+    SourceFetchResponseV2, SourceLocatorVerifyResponse,
+};
 pub use turn::{
     AgentFinalOutput, Citation, FinalStatus, MultiTurnConfig, MultiTurnRuntime, ProviderAdapter,
     ProviderEnvelope, ProviderOutcome, ProviderReceipt, ProviderReply, ProviderRequest,
@@ -150,7 +156,233 @@ pub struct RuleReproduceRequest {
 pub struct SourceFetchRequest {
     pub binding: SnapshotBinding,
     pub request_kind: SourceRequestKind,
+    /// SEARCH_PUBLIC_WEB carries a query and closed discovery parameters. The
+    /// legacy request remains source-compatible by defaulting these fields;
+    /// production V2 conversion rejects an empty query instead of silently
+    /// turning discovery into a no-op.
+    #[serde(default)]
+    pub query: Option<String>,
+    #[serde(default)]
+    pub locale: Option<String>,
+    #[serde(default)]
+    pub country: Option<String>,
+    #[serde(default)]
+    pub recency_days: Option<u16>,
+    #[serde(default)]
+    pub result_limit: Option<u8>,
     pub canonical_url: Option<String>,
+}
+
+/// Canonical V2 egress request.  The legacy snapshot adapter above remains a
+/// database-facing seam, while provider transport must use this closed
+/// schema so policy, rights purpose and byte limits cannot be omitted.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SourceFetchRequestV2 {
+    SearchPublicWeb {
+        #[serde(rename = "schemaVersion")]
+        schema_version: String,
+        #[serde(rename = "runId")]
+        run_id: Uuid,
+        #[serde(rename = "inputSnapshotId")]
+        input_snapshot_id: Uuid,
+        #[serde(rename = "inputSnapshotSha256")]
+        input_snapshot_sha256: String,
+        #[serde(rename = "requestKind")]
+        request_kind: String,
+        query: String,
+        locale: String,
+        country: String,
+        #[serde(rename = "recencyDays")]
+        recency_days: Option<u16>,
+        #[serde(rename = "resultLimit")]
+        result_limit: u8,
+        #[serde(rename = "sourcePolicyVersion")]
+        source_policy_version: String,
+        #[serde(rename = "sourcePolicySha256")]
+        source_policy_sha256: String,
+        #[serde(rename = "rightsPurpose")]
+        rights_purpose: String,
+        #[serde(rename = "maxBytesPerArtifact")]
+        max_bytes_per_artifact: u64,
+    },
+    FetchUrl {
+        #[serde(rename = "schemaVersion")]
+        schema_version: String,
+        #[serde(rename = "runId")]
+        run_id: Uuid,
+        #[serde(rename = "inputSnapshotId")]
+        input_snapshot_id: Uuid,
+        #[serde(rename = "inputSnapshotSha256")]
+        input_snapshot_sha256: String,
+        #[serde(rename = "requestKind")]
+        request_kind: String,
+        url: String,
+        #[serde(rename = "expectedMediaTypes")]
+        expected_media_types: Vec<String>,
+        #[serde(rename = "sourcePolicyVersion")]
+        source_policy_version: String,
+        #[serde(rename = "sourcePolicySha256")]
+        source_policy_sha256: String,
+        #[serde(rename = "rightsPurpose")]
+        rights_purpose: String,
+        #[serde(rename = "maxBytes")]
+        max_bytes: u64,
+        #[serde(rename = "allowRedirects")]
+        allow_redirects: bool,
+    },
+}
+
+impl SourceFetchRequest {
+    pub fn to_v2(&self) -> Result<SourceFetchRequestV2, RuntimeError> {
+        let policy = "source-policy-v2".to_owned();
+        let policy_sha = sha256_hex(policy.as_bytes());
+        match self.request_kind {
+            SourceRequestKind::SearchPublicWeb => {
+                let query = self
+                    .query
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .ok_or(RuntimeError::InvalidTransition)?;
+                let locale = self.locale.clone().unwrap_or_else(|| "ko-KR".to_owned());
+                let country = self.country.clone().unwrap_or_else(|| "KR".to_owned());
+                let result_limit = self.result_limit.unwrap_or(10);
+                if result_limit == 0
+                    || result_limit > 20
+                    || query.len() > 1000
+                    || !locale
+                        .as_bytes()
+                        .get(0..2)
+                        .is_some_and(|v| v.iter().all(u8::is_ascii_lowercase))
+                    || locale.as_bytes().get(2) != Some(&b'-')
+                    || !locale
+                        .as_bytes()
+                        .get(3..5)
+                        .is_some_and(|v| v.iter().all(u8::is_ascii_uppercase))
+                    || country.len() != 2
+                    || !country.bytes().all(|byte| byte.is_ascii_uppercase())
+                {
+                    return Err(RuntimeError::InvalidTransition);
+                }
+                Ok(SourceFetchRequestV2::SearchPublicWeb {
+                    schema_version: "source.fetch.request.v2".to_owned(),
+                    run_id: self.binding.run_id,
+                    input_snapshot_id: self.binding.input_snapshot_id,
+                    input_snapshot_sha256: self.binding.input_snapshot_sha256.clone(),
+                    request_kind: "SEARCH_PUBLIC_WEB".to_owned(),
+                    query: query.to_owned(),
+                    locale,
+                    country,
+                    recency_days: self.recency_days,
+                    result_limit,
+                    source_policy_version: policy,
+                    source_policy_sha256: policy_sha,
+                    rights_purpose: "FACT_CHECK".to_owned(),
+                    max_bytes_per_artifact: 26_214_400,
+                })
+            }
+            SourceRequestKind::FetchUrl => {
+                let url = self
+                    .canonical_url
+                    .clone()
+                    .ok_or(RuntimeError::InvalidTransition)?;
+                let parsed = url::Url::parse(&url).map_err(|_| RuntimeError::InvalidTransition)?;
+                if parsed.scheme() != "https" || url.len() > 2048 || parsed.host_str().is_none() {
+                    return Err(RuntimeError::InvalidTransition);
+                }
+                Ok(SourceFetchRequestV2::FetchUrl {
+                    schema_version: "source.fetch.request.v2".to_owned(),
+                    run_id: self.binding.run_id,
+                    input_snapshot_id: self.binding.input_snapshot_id,
+                    input_snapshot_sha256: self.binding.input_snapshot_sha256.clone(),
+                    request_kind: "FETCH_URL".to_owned(),
+                    url,
+                    expected_media_types: vec!["text/html".to_owned()],
+                    source_policy_version: policy,
+                    source_policy_sha256: policy_sha,
+                    rights_purpose: "FACT_CHECK".to_owned(),
+                    max_bytes: 26_214_400,
+                    allow_redirects: false,
+                })
+            }
+        }
+    }
+
+    /// Convert the flat provider V2 wire request into the persistence-facing
+    /// request only after validating its closed policy fields. The network
+    /// adapter calls `to_v2()` again, so omitted or altered policy values can
+    /// never be silently accepted.
+    pub fn from_v2(
+        value: SourceFetchRequestV2,
+        binding: SnapshotBinding,
+    ) -> Result<Self, RuntimeError> {
+        match value {
+            SourceFetchRequestV2::SearchPublicWeb {
+                schema_version,
+                request_kind,
+                query,
+                locale,
+                country,
+                recency_days,
+                result_limit,
+                source_policy_version,
+                source_policy_sha256,
+                rights_purpose,
+                max_bytes_per_artifact,
+                ..
+            } if schema_version == "source.fetch.request.v2"
+                && request_kind == "SEARCH_PUBLIC_WEB"
+                && source_policy_version == "source-policy-v2"
+                && source_policy_sha256 == sha256_hex(b"source-policy-v2")
+                && rights_purpose == "FACT_CHECK"
+                && max_bytes_per_artifact == 26_214_400 =>
+            {
+                Ok(Self {
+                    binding,
+                    request_kind: SourceRequestKind::SearchPublicWeb,
+                    query: Some(query),
+                    locale: Some(locale),
+                    country: Some(country),
+                    recency_days,
+                    result_limit: Some(result_limit),
+                    canonical_url: None,
+                })
+            }
+            SourceFetchRequestV2::FetchUrl {
+                schema_version,
+                request_kind,
+                url,
+                expected_media_types,
+                source_policy_version,
+                source_policy_sha256,
+                rights_purpose,
+                max_bytes,
+                allow_redirects,
+                ..
+            } if schema_version == "source.fetch.request.v2"
+                && request_kind == "FETCH_URL"
+                && expected_media_types == ["text/html"]
+                && source_policy_version == "source-policy-v2"
+                && source_policy_sha256 == sha256_hex(b"source-policy-v2")
+                && rights_purpose == "FACT_CHECK"
+                && max_bytes == 26_214_400
+                && !allow_redirects =>
+            {
+                Ok(Self {
+                    binding,
+                    request_kind: SourceRequestKind::FetchUrl,
+                    query: None,
+                    locale: None,
+                    country: None,
+                    recency_days: None,
+                    result_limit: None,
+                    canonical_url: Some(url),
+                })
+            }
+            _ => Err(RuntimeError::InvalidTransition),
+        }
+    }
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SourceLocatorVerifyRequest {
@@ -318,16 +550,8 @@ pub struct SourceFetchResponse {
     pub fetch_receipt_sha256: String,
     pub artifacts: Vec<SourceArtifact>,
 }
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LocatorVerification {
-    pub valid: bool,
-    pub actual_selected_content_sha256: Option<String>,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct SourceLocatorVerifyResponse {
-    pub verification: LocatorVerification,
-}
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ToolResponse {
     ClaimLanguageCheck(LanguageCheckResponse),
@@ -337,7 +561,11 @@ pub enum ToolResponse {
     EvidenceSearch(EvidenceSearchResponse),
     ResponseRead(ResponseReadResponse),
     RuleReproduce(RuleReproduceResponse),
-    SourceFetch(SourceFetchResponse),
+    /// Source fetch always uses the closed V2 response.  Keeping the legacy
+    /// request/record types above is intentional for database compatibility,
+    /// but no provider/tool result may cross the runtime boundary without the
+    /// gateway decision and receipt fields.
+    SourceFetch(SourceFetchResponseV2),
     SourceLocatorVerify(SourceLocatorVerifyResponse),
 }
 impl ToolResponse {

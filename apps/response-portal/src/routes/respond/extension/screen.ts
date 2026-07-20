@@ -34,7 +34,7 @@ export const screen = {
       order: 4,
       id: "review",
       title: "제출 확인",
-      component: "CheckAnswers",
+      component: "KnownUnknownResponse",
       purpose: "승인 아님을 설명.",
       test_id: "rsp_007__section__review",
     },

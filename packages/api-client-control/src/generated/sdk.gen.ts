@@ -1767,6 +1767,7 @@ export const updateSavedView = <ThrowOnError extends boolean = false>(options: O
  * listActionApprovalQueue
  */
 export const listActionApprovalQueue = <ThrowOnError extends boolean = false>(options?: Options<ListActionApprovalQueueData, ThrowOnError>): RequestResult<ListActionApprovalQueueResponses, ListActionApprovalQueueErrors, ThrowOnError> => (options?.client ?? client).get<ListActionApprovalQueueResponses, ListActionApprovalQueueErrors, ThrowOnError>({
+    querySerializer: { parameters: { cursor: { object: { style: 'form' } } } },
     security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
     url: '/v1/internal/action-proposals',
     ...options
@@ -2020,6 +2021,7 @@ export const closeIncidentPostmortem = <ThrowOnError extends boolean = false>(op
  * listResponseAppeals
  */
 export const listResponseAppeals = <ThrowOnError extends boolean = false>(options?: Options<ListResponseAppealsData, ThrowOnError>): RequestResult<ListResponseAppealsResponses, ListResponseAppealsErrors, ThrowOnError> => (options?.client ?? client).get<ListResponseAppealsResponses, ListResponseAppealsErrors, ThrowOnError>({
+    querySerializer: { parameters: { cursor: { object: { style: 'form' } } } },
     security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
     url: '/v1/internal/queries/list-response-appeals',
     ...options
@@ -2028,7 +2030,7 @@ export const listResponseAppeals = <ThrowOnError extends boolean = false>(option
 /**
  * getResponseAppealWorkspace
  */
-export const getResponseAppealWorkspace = <ThrowOnError extends boolean = false>(options?: Options<GetResponseAppealWorkspaceData, ThrowOnError>): RequestResult<GetResponseAppealWorkspaceResponses, GetResponseAppealWorkspaceErrors, ThrowOnError> => (options?.client ?? client).get<GetResponseAppealWorkspaceResponses, GetResponseAppealWorkspaceErrors, ThrowOnError>({
+export const getResponseAppealWorkspace = <ThrowOnError extends boolean = false>(options: Options<GetResponseAppealWorkspaceData, ThrowOnError>): RequestResult<GetResponseAppealWorkspaceResponses, GetResponseAppealWorkspaceErrors, ThrowOnError> => (options.client ?? client).get<GetResponseAppealWorkspaceResponses, GetResponseAppealWorkspaceErrors, ThrowOnError>({
     security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
     url: '/v1/internal/queries/get-response-appeal-workspace',
     ...options
@@ -2064,6 +2066,7 @@ export const decideResponseExtension = <ThrowOnError extends boolean = false>(op
  * listRetentionRequests
  */
 export const listRetentionRequests = <ThrowOnError extends boolean = false>(options?: Options<ListRetentionRequestsData, ThrowOnError>): RequestResult<ListRetentionRequestsResponses, ListRetentionRequestsErrors, ThrowOnError> => (options?.client ?? client).get<ListRetentionRequestsResponses, ListRetentionRequestsErrors, ThrowOnError>({
+    querySerializer: { parameters: { cursor: { object: { style: 'form' } } } },
     security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
     url: '/v1/internal/queries/list-retention-requests',
     ...options
@@ -2072,7 +2075,7 @@ export const listRetentionRequests = <ThrowOnError extends boolean = false>(opti
 /**
  * getRetentionRequest
  */
-export const getRetentionRequest = <ThrowOnError extends boolean = false>(options?: Options<GetRetentionRequestData, ThrowOnError>): RequestResult<GetRetentionRequestResponses, GetRetentionRequestErrors, ThrowOnError> => (options?.client ?? client).get<GetRetentionRequestResponses, GetRetentionRequestErrors, ThrowOnError>({
+export const getRetentionRequest = <ThrowOnError extends boolean = false>(options: Options<GetRetentionRequestData, ThrowOnError>): RequestResult<GetRetentionRequestResponses, GetRetentionRequestErrors, ThrowOnError> => (options.client ?? client).get<GetRetentionRequestResponses, GetRetentionRequestErrors, ThrowOnError>({
     security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
     url: '/v1/internal/queries/get-retention-request',
     ...options
@@ -2095,6 +2098,7 @@ export const transitionRetentionRequest = <ThrowOnError extends boolean = false>
  * listRecordClassSchedules
  */
 export const listRecordClassSchedules = <ThrowOnError extends boolean = false>(options?: Options<ListRecordClassSchedulesData, ThrowOnError>): RequestResult<ListRecordClassSchedulesResponses, ListRecordClassSchedulesErrors, ThrowOnError> => (options?.client ?? client).get<ListRecordClassSchedulesResponses, ListRecordClassSchedulesErrors, ThrowOnError>({
+    querySerializer: { parameters: { cursor: { object: { style: 'form' } } } },
     security: [{ name: 'X-Gurine-Actor-Assertion', type: 'apiKey' }],
     url: '/v1/internal/queries/list-record-class-schedules',
     ...options

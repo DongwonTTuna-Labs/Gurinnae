@@ -50,25 +50,14 @@
           "$ref": "#/$defs/sha256"
         },
         "outcome": {
-          "enum": [
-            "MATCH",
-            "NO_MATCH",
-            "INSUFFICIENT_DATA",
-            "RULE_ERROR"
-          ]
+          "enum": ["MATCH", "NO_MATCH", "INSUFFICIENT_DATA", "RULE_ERROR"]
         },
         "signalId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "format": "uuid"
         },
         "signalVersion": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "minimum": 1
         },
         "matchedConditionCodes": {
@@ -141,10 +130,7 @@
                   "$ref": "#/$defs/sha256"
                 },
                 "fieldProvenanceId": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
+                  "type": ["string", "null"],
                   "format": "uuid"
                 }
               }
@@ -165,12 +151,7 @@
             ]
           },
           "result": {
-            "enum": [
-              "TRUE",
-              "FALSE",
-              "UNKNOWN",
-              "ERROR"
-            ]
+            "enum": ["TRUE", "FALSE", "UNKNOWN", "ERROR"]
           },
           "stepDigest": {
             "$ref": "#/$defs/sha256"
@@ -185,10 +166,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "snapshotMemberId",
-          "snapshotMemberDigest"
-        ],
+        "required": ["snapshotMemberId", "snapshotMemberDigest"],
         "properties": {
           "snapshotMemberId": {
             "type": "string",
@@ -206,10 +184,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "sourceUseId",
-          "sourceUseSha256"
-        ],
+        "required": ["sourceUseId", "sourceUseSha256"],
         "properties": {
           "sourceUseId": {
             "type": "string",

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "SIG-001",
+  "route": "/internal/signals",
+  "url": "http://127.0.0.1:29102/internal/signals",
+  "observedAt": "2026-07-19T15:35:39.694Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "SIG-001",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "scope",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "table",
+        "component": "ComparisonWorkbench",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "bulk",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 6,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

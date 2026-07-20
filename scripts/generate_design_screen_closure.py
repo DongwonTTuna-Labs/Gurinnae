@@ -3,11 +3,45 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+import hashlib
+import json
 import re
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def typed_view_model_name(screen_id: str) -> str:
+    """Use the same stable VM name as the effective UI contract registry."""
+    compact = re.sub(r"[^A-Za-z0-9]+", "_", screen_id).strip("_")
+    return f"{compact.replace('_', '').upper()}ScreenVmV1"
+
+
+TYPED_VIEW_MODEL_PATH = "packages/ui/src/view-models/generated.ts"
+
+
+def source_evidence(screen: dict[str, Any]) -> dict[str, str]:
+    """Hash every declared implementation source that exists in this tree."""
+    result: dict[str, str] = {}
+    for path in screen.get("implementation_files", {}).values():
+        if not isinstance(path, str):
+            continue
+        candidate = ROOT / path
+        if candidate.is_file():
+            result[path] = hashlib.sha256(candidate.read_bytes()).hexdigest()
+    typed_candidate = ROOT / TYPED_VIEW_MODEL_PATH
+    if typed_candidate.is_file():
+        result[TYPED_VIEW_MODEL_PATH] = hashlib.sha256(typed_candidate.read_bytes()).hexdigest()
+    if not result:
+        raise ValueError(f"{screen['id']}: no implementation source exists")
+    return dict(sorted(result.items()))
+
+
+def digest(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 class NoAliasDumper(yaml.SafeDumper):
@@ -288,6 +322,8 @@ def main() -> None:
 
     for screen in catalog["screens"]:
         screen_id = screen["id"]
+        implementation_sources = source_evidence(screen)
+        implementation_source_digest = digest(implementation_sources)
         built = manifest_by[screen_id]
         screen_additive_bindings = additive_bindings_by_screen.get(screen_id, {})
         fields = operation_sources(screen, schema_map)
@@ -495,6 +531,11 @@ def main() -> None:
                     "source_fields": section_source_fields(
                         screen, section, fields, resolved_component
                     ),
+                    "implementation_source_digest": implementation_source_digest,
+                    "source_paths": list(implementation_sources),
+                    "source_fields_digest": digest(
+                        section_source_fields(screen, section, fields, resolved_component)
+                    ),
                     "source_classification": "DISPLAY_SAFE_ALLOWLIST",
                     "heading_level": 2,
                     "landmark": "region" if section["priority"] == "primary" else "group",
@@ -608,6 +649,29 @@ def main() -> None:
             },
             "section_mapping": section_mappings,
             "view_model": screen["implementation_files"]["view_model"],
+            "typed_view_model": {
+                "path": TYPED_VIEW_MODEL_PATH,
+                "export": typed_view_model_name(screen_id),
+                "contract": "ScreenVmV1",
+            },
+            "runtime_trace_path": f"implementation-evidence/runtime-traces/{screen_id.lower()}.json",
+            "authority_source_path": f"specs/ui/screen-catalog.yaml#screens/{screen_id}",
+            "authority_source_sha256": {
+                f"specs/ui/screen-catalog.yaml#screens/{screen_id}": digest(screen)
+            },
+            "implementation_source_digest": implementation_source_digest,
+            "authored_section_ids": [section["id"] for section in screen["sections"]],
+            "action_ids": [action["id"] for action in actions],
+            "state_occurrence_ids": [
+                f"{screen_id}::{state_id}"
+                for state_id in built.get("states", [])
+                if isinstance(state_id, str)
+            ],
+            "required_regions_by_archetype": {
+                "surface": screen["surface"],
+                "required": [section["id"] for section in screen["sections"]],
+            },
+            "implementation_source_sha256": implementation_sources,
             "state_profile": {
                 "name": screen["state_profile"],
                 "states": profiles[screen["state_profile"]],
@@ -651,6 +715,12 @@ def main() -> None:
                 if not isinstance(source_fields, list) or not source_fields:
                     raise ValueError(f"{screen_id}.{section['id']}: empty typed source slice")
                 section["source_fields"] = source_fields
+                # Typed search/provenance slices are an owner-addendum override
+                # of the catalog-derived fields above. Recompute the section
+                # digest after applying that override so the emitted evidence
+                # remains self-consistent and fail-closed validators can hash
+                # the actual serialized source field set.
+                section["source_fields_digest"] = digest(source_fields)
             for question, section_id in screen_sections.items():
                 if question not in row["ten_second_contract"]:
                     raise ValueError(f"{screen_id}: unknown ten-second question {question}")
@@ -661,6 +731,12 @@ def main() -> None:
                 if question != "location":
                     answer["sources"] = screen_slices[section_id]
             row["typed_source_contract"] = "owner-addendum.search_and_provenance_contract"
+        trace_path = ROOT / row["runtime_trace_path"]
+        if not trace_path.is_file():
+            raise ValueError(f"{screen_id}: runtime trace is missing: {trace_path}")
+        trace = yaml.safe_load(trace_path.read_text(encoding="utf-8"))
+        if not isinstance(trace, dict) or trace.get("screenId") != screen_id:
+            raise ValueError(f"{screen_id}: runtime trace identity mismatch")
         rows.append(row)
 
     if len(rows) != 94 or {row["screen_id"] for row in rows} != set(manifest_by):

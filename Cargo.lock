@@ -1673,6 +1673,7 @@ dependencies = [
  "sha2 0.10.9",
  "thiserror 2.0.18",
  "time",
+ "url",
  "uuid",
 ]
 
@@ -1689,6 +1690,7 @@ dependencies = [
  "gurine-persistence-postgres",
  "reqwest 0.12.23",
  "rust_decimal",
+ "serde",
  "serde_json",
  "sha2 0.10.9",
  "sqlx",
@@ -1823,17 +1825,24 @@ name = "gurine-egress-gateway"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "base64 0.22.1",
+ "chacha20poly1305",
+ "getrandom 0.4.3",
  "gurine-email",
  "gurine-object-store",
  "gurine-observability",
+ "hmac 0.12.1",
  "reqwest 0.12.23",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "url",
+ "uuid",
 ]
 
 [[package]]

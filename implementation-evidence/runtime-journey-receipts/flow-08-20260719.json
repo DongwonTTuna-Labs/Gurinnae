@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 4,
+  "evidenceKind": "LIVE_POSTGRES_HIGH_IMPACT_ACTION_FLOW",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "flowId": "FLOW-08",
+  "flowName": "HIGH_IMPACT_ACTION",
+  "operationId": "submitActionDecision",
+  "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "normal": {
+    "pass": true,
+    "assurance": "STEP_UP",
+    "sodDenied": "40001:action_review_already_claimed",
+    "decisionId": "61ec92ec-000f-4c4e-91e1-1edf2e94d477",
+    "proposalId": "0ff97bc7-2830-4895-bf2b-c6751da6ea4f",
+    "assignmentId": "bcfe0bbf-ed5b-4b7f-9b67-793dca42f716",
+    "stepUpDenied": "42501:step_up_required",
+    "terminalState": "APPROVED",
+    "approvalDigest": "cde4389b1c0c8d09b59c733a6a6b864eb465f21fdfd2d70deda2d1e60f9d7c96",
+    "oidcLoginConsumed": true,
+    "oidcStepUpConsumed": true,
+    "expiredStepUpDenied": "22023:invalid_step_up_authorization_expiry",
+    "stepUpAuthorization": {
+      "issuedAt": "2026-07-20T19:38:07.720422+00:00",
+      "expiresAt": "2026-07-20T19:42:07.718583+00:00",
+      "issueNumber": 1,
+      "authorizationId": "6ecc0bb4-0fae-4b1a-a395-eea291cf3ace",
+      "authorizationDigest": "837f07e8e9dff940c214a43ee6c04dc2ed082e10fcfdc25655775631e143bc9b",
+      "authorizationReceiptDigest": "ae34224216ac7fad16191b1638b5ec798b8081640248558656ab3d99905a9f05"
+    },
+    "decisionAuditEventId": "6319aa0b-bb73-49a9-9b14-a0e9ec2d9dc2",
+    "decisionReceiptDigest": "ad3095119e2b99d364b84906149158ab968a6858c1e942867246f61b561d662e",
+    "terminalReceiptDigest": "ad3095119e2b99d364b84906149158ab968a6858c1e942867246f61b561d662e",
+    "oidcLoginTransactionId": "11000000-0000-0000-0000-000000000101",
+    "oidcStepUpTransactionId": "11000000-0000-0000-0000-000000000102"
+  },
+  "negative": {
+    "branches": [
+      "sod-denied",
+      "missing-step-up",
+      "expired-step-up"
+    ],
+    "sodDenied": "40001:action_review_already_claimed",
+    "stepUpDenied": "42501:step_up_required",
+    "expiredStepUpDenied": "22023:invalid_step_up_authorization_expiry",
+    "forbiddenMutationCount": 0,
+    "pass": true
+  },
+  "sourceTreeDigest": "9ecdfa4c56c7fa04cb9808cef46b0b1bb2b2edbdfc521c3a6a453c419827a190",
+  "observedAt": "2026-07-20T19:38:08Z",
+  "pass": true
+}

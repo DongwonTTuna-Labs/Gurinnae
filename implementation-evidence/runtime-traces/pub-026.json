@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-026",
+  "route": "/contact",
+  "url": "http://127.0.0.1:29101/contact",
+  "observedAt": "2026-07-19T15:35:31.108Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-026",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "routing",
+        "component": "KnownUnknownResponse",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "channels",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "form",
+        "component": "GuidedFormSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "security",
+        "component": "GuidedFormSection",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

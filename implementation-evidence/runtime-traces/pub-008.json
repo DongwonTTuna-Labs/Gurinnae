@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-008",
+  "route": "/agencies/{agencySlug}",
+  "url": "http://127.0.0.1:29101/agencies/synthetic-record",
+  "observedAt": "2026-07-19T15:35:24.706Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-008",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "RevisionTimeline",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "coverage",
+        "component": "CoverageStatement",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "metrics",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "contracts",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "cases",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "corrections",
+        "component": "RevisionAndCorrectionPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "methods",
+        "component": "LongFormArticle",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 10,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

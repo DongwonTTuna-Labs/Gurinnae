@@ -94,7 +94,7 @@ relation_inventory:
   stable_derivation_snapshot:
     observed_window_utc: {start: "2026-07-15T05:30:30Z", end: "2026-07-15T05:31:30Z", seconds: 60}
     input_sha256:
-      specs/database/addendum/0025-evidence-snapshots-search.yaml: 1e6ff1cf5daf0ce40cbfe7fdaf6a93e07a2ba8533de0d9674766ebf04de59ff0
+      specs/database/addendum/0025-evidence-snapshots-search.yaml: 7e24967c11b4a7bbdaf60b815fa3aad210d13434f4f07f80a64ef0acb2e9e002
       specs/database/addendum/0026-agent-action-approval.yaml: f9f0771582a654fa3e0cae294925187a26256998bf146830369eb77cc72f1cf8
       specs/database/addendum/0027-communication-consent-delivery.yaml: 9221b470145d330742390eb81feda221b1a220128d74a2a872ae1e2236b44344
       specs/database/addendum/0028-governance-operations.yaml: e3e96b85b7eb2d13f3704479deed85b0b42067adca442d007d2f05f9fc867266

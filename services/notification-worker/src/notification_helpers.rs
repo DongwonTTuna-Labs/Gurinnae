@@ -17,6 +17,27 @@ fn decrypt_email(
     String::from_utf8(bytes).map_err(|_| WorkerError::Cryptography)
 }
 
+fn decrypt_rendered_envelope(
+    state: &State,
+    rendering_id: Uuid,
+    ciphertext: &[u8],
+) -> Result<Vec<u8>, WorkerError> {
+    let token = std::str::from_utf8(ciphertext).map_err(|_| WorkerError::Cryptography)?;
+    decrypt(
+        "gurine-fe-v1",
+        &state.field_keys,
+        &[
+            "ops.communication_renderings",
+            "rendered_envelope_ciphertext",
+            &rendering_id.to_string(),
+            "communication-rendering",
+            "1",
+        ],
+        token,
+    )
+    .map_err(|_| WorkerError::Cryptography)
+}
+
 fn random_token() -> Result<String, WorkerError> {
     let mut bytes = [0_u8; 32];
     getrandom::fill(&mut bytes).map_err(|_| WorkerError::Cryptography)?;

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "media-runtime-scan.v1",
+  "scanMode": "offline-build-output",
+  "scanner": "gurinnae-media-runtime-policy-scan/1",
+  "image": "gurine-document-extractor:final@sha256:9f33d67998fb1333b93fcf5f190a2e871c3c6595c52a442596fc911de26024ad",
+  "forbiddenLicenses": [],
+  "forbiddenCapabilities": [
+    "network",
+    "devices",
+    "GPL",
+    "version3",
+    "nonfree",
+    "external-codec-libraries"
+  ],
+  "observed": {
+    "ffmpegLicense": "LGPL-2.1-or-later",
+    "ffmpegNetworkProtocols": 0,
+    "ffmpegExternalLibraries": [],
+    "whisperLicense": "MIT",
+    "whisperModelLicense": "MIT",
+    "mediaChildCredentials": "none",
+    "mediaChildInputPaths": "stdin-or-private-tmpfs-only"
+  },
+  "result": "PASS"
+}

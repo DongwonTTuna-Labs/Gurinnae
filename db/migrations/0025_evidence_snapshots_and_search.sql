@@ -186,10 +186,16 @@ CREATE OR REPLACE FUNCTION raw.insert_source_document_revision(
 DECLARE v_root uuid; v_revision bigint; v_existing raw.source_documents%ROWTYPE; v_id uuid := gen_random_uuid();
 BEGIN
   IF NULLIF(btrim(p_source_id),'') IS NULL OR NULLIF(btrim(p_external_id),'') IS NULL OR p_content_sha256 !~ '^[0-9a-f]{64}$' OR p_content_size_bytes < 0 THEN RAISE EXCEPTION 'invalid_source_document_revision' USING ERRCODE='22023'; END IF;
-  PERFORM pg_advisory_xact_lock(('x' || substr(encode(extensions.digest(convert_to(p_source_id || chr(0) || p_external_id,'UTF8'),'sha256'),'hex'),1,16))::bit(64)::bigint);
+  -- PostgreSQL text cannot contain NUL; use a control separator that remains
+  -- unambiguous for the advisory-lock key while keeping source/id domains
+  -- collision-safe.
+  PERFORM pg_advisory_xact_lock(('x' || substr(encode(extensions.digest(convert_to(p_source_id || chr(31) || p_external_id,'UTF8'),'sha256'),'hex'),1,16))::bit(64)::bigint);
   SELECT * INTO v_existing FROM raw.source_documents WHERE source_id=p_source_id AND external_id=p_external_id AND content_sha256=p_content_sha256 ORDER BY asset_revision LIMIT 1 FOR UPDATE;
   IF FOUND THEN RETURN v_existing; END IF;
-  SELECT asset_id, max(asset_revision) INTO v_root, v_revision FROM raw.source_documents WHERE source_id=p_source_id AND external_id=p_external_id GROUP BY asset_id ORDER BY max(asset_revision) DESC LIMIT 1 FOR UPDATE;
+  -- The advisory lock above serializes revisions for this source/external id;
+  -- PostgreSQL disallows FOR UPDATE on this grouped aggregate, so the lock is
+  -- both sufficient and the portable form here.
+  SELECT asset_id, max(asset_revision) INTO v_root, v_revision FROM raw.source_documents WHERE source_id=p_source_id AND external_id=p_external_id GROUP BY asset_id ORDER BY max(asset_revision) DESC LIMIT 1;
   IF v_root IS NULL THEN v_root := v_id; v_revision := 1; ELSE v_revision := v_revision + 1; END IF;
   INSERT INTO raw.source_documents(id,source_id,source_fetch_id,external_id,external_version,canonical_url,retrieved_at,source_published_at,content_type,content_sha256,content_size_bytes,object_key,status,parser_name,parser_version,schema_version,prompt_injection_flags,quarantine_reason,metadata,asset_id,asset_revision)
   VALUES(v_id,p_source_id,p_source_fetch_id,p_external_id,p_external_version,p_canonical_url,p_retrieved_at,p_source_published_at,p_content_type,p_content_sha256,p_content_size_bytes,p_object_key,p_status,p_parser_name,p_parser_version,p_schema_version,COALESCE(p_prompt_injection_flags,'[]'::jsonb),p_quarantine_reason,COALESCE(p_metadata,'{}'::jsonb),v_root,v_revision)

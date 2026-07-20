@@ -90,6 +90,12 @@ pub async fn extract_multimodal_path(
         .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error.to_string()))
 }
 
+/// Execute the final-image process lifecycle probe without starting the job
+/// worker. It is enabled only by the explicit evidence environment variable.
+pub fn run_runtime_lifecycle_probe() -> Result<serde_json::Value, String> {
+    multimodal::run_runtime_lifecycle_probe()
+}
+
 async fn extract_blocking(
     path: PathBuf,
     bytes: Vec<u8>,

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "OPS-004",
+  "route": "/internal/operations/budgets",
+  "url": "http://127.0.0.1:29102/internal/operations/budgets",
+  "observedAt": "2026-07-19T15:35:51.541Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "OPS-004",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "envelope",
+        "component": "AgentSuggestionPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "spend",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "forecast",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "limits",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "alerts",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "changes",
+        "component": "RevisionTimeline",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

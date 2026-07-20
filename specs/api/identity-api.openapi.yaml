@@ -14,6 +14,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: cases.evidence.manage
+      x-assurance-level: ACTIVE_SESSION
       x-error-codes:
       - INVALID_PARAMETER
       - RESOURCE_NOT_FOUND
@@ -92,6 +94,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: cases.evidence.manage
+      x-assurance-level: ACTIVE_SESSION
       x-error-codes:
       - INVALID_PARAMETER
       - RESOURCE_NOT_FOUND
@@ -170,6 +174,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: cases.evidence.manage
+      x-assurance-level: ACTIVE_SESSION
       x-error-codes:
       - INVALID_PARAMETER
       - RESOURCE_NOT_FOUND
@@ -272,22 +278,95 @@ components:
       - title
       - status
       - requestId
+    SupplierPartyRefV1:
+      type: object
+      additionalProperties: false
+      properties:
+        candidateId:
+          type: string
+          format: uuid
+        candidateRevision:
+          type: integer
+          format: int64
+        candidateDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        identityStatus:
+          type: string
+          enum:
+          - UNVERIFIED
+          - CANDIDATE
+          - VERIFIED
+          - AMBIGUOUS
+          - CONFLICTED
+          - REJECTED
+        valueHmac:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+      required:
+      - candidateId
+      - candidateRevision
+      - candidateDigest
+      - identityStatus
+      - valueHmac
+    EvidenceLocatorRefV1:
+      type: object
+      additionalProperties: false
+      properties:
+        evidenceId:
+          type: string
+          format: uuid
+        evidenceVersion:
+          type: integer
+          format: int64
+        evidenceDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        sourceDocumentId:
+          type: string
+          format: uuid
+        sourceAssetId:
+          type: string
+          format: uuid
+        sourceAssetRevision:
+          type: integer
+          format: int64
+        locatorDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+      - evidenceId
+      - evidenceVersion
+      - evidenceDigest
+      - sourceDocumentId
+      - sourceAssetId
+      - sourceAssetRevision
+      - locatorDigest
     SupplierIdentityResolutionRequestV1:
       type: object
       additionalProperties: false
       properties:
         action:
           type: string
+          enum:
+          - MERGE
+          - SPLIT
+          - KEEP_SEPARATE
+          - MARK_AMBIGUOUS
         candidateRefs:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/SupplierPartyRefV1'
         expectedCandidateSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
         expectedPriorDecisionDigest:
-          type: string
-          pattern: ^[0-9a-f]{64}$
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
         fromCanonicalSupplierIds:
           type: array
           items:
@@ -299,7 +378,7 @@ components:
         evidenceLocators:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/EvidenceLocatorRefV1'
         expectedEvidenceLocatorSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -307,13 +386,23 @@ components:
           type: string
           pattern: ^[0-9a-f]{64}$
         impactOwnerUserId:
-          type: string
-          format: uuid
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
         impactDueAt:
-          type: string
-          format: date-time
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
         reasonCode:
           type: string
+          enum:
+          - AUTHORITATIVE_IDENTIFIER_MATCH
+          - AUTHORITATIVE_IDENTIFIER_CONFLICT
+          - SOURCE_CORRECTION
+          - FALSE_MERGE
+          - INSUFFICIENT_EVIDENCE
         reason:
           type: string
       required:
@@ -342,6 +431,11 @@ components:
           format: int64
         action:
           type: string
+          enum:
+          - MERGE
+          - SPLIT
+          - KEEP_SEPARATE
+          - MARK_AMBIGUOUS
         candidateSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -385,24 +479,42 @@ components:
       properties:
         partyKind:
           type: string
+          enum:
+          - SUPPLIER
+          - ORGANIZATION
+          - NATURAL_PERSON
         supplierCandidateId:
-          type: string
-          format: uuid
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
         supplierCandidateRevision:
-          type: integer
-          format: int64
+          anyOf:
+          - type: integer
+            format: int64
+          - type: 'null'
         supplierCandidateDigest:
-          type: string
-          pattern: ^[0-9a-f]{64}$
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
         canonicalSupplierId:
-          type: string
-          format: uuid
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
         identityKeyDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
         identityStatus:
           type: string
-          format: date
+          enum:
+          - UNVERIFIED
+          - CANDIDATE
+          - VERIFIED
+          - AMBIGUOUS
+          - CONFLICTED
+          - REJECTED
       required:
       - partyKind
       - supplierCandidateId
@@ -417,29 +529,47 @@ components:
       properties:
         relationshipKind:
           type: string
+          enum:
+          - OWNERSHIP
+          - BENEFICIAL_OWNERSHIP
+          - CONTROL
+          - MANAGEMENT_ROLE
+          - LEGAL_REPRESENTATIVE
+          - CONTRACTUAL_RELATIONSHIP
         subject:
           $ref: '#/components/schemas/AssertionPartyV1'
         object:
           $ref: '#/components/schemas/AssertionPartyV1'
         ownershipPercent:
-          type: integer
-          format: int64
+          anyOf:
+          - type: integer
+            format: int64
+          - type: 'null'
         managementRole:
-          type:
-          - string
-          - 'null'
+          anyOf:
+          - type: string
+          - type: 'null'
         validFrom:
-          type: string
-          format: date
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
         validTo:
-          type: string
-          format: date
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
         validityCoverageStatus:
           type: string
+          enum:
+          - COMPLETE
+          - PARTIAL
+          - UNKNOWN
+          - NOT_AVAILABLE
         evidenceLocators:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/EvidenceLocatorRefV1'
         expectedEvidenceLocatorSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -472,15 +602,25 @@ components:
           pattern: ^[0-9a-f]{64}$
         verificationStatus:
           type: string
+          enum:
+          - PENDING
+          - VERIFIED
+          - REJECTED
+          - CONFLICTED
+          - SUPERSEDED
         evidenceLocatorSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
         verifiedBy:
-          type: string
-          format: uuid
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
         verifiedAt:
-          type: string
-          format: date-time
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
         auditEventId:
           type: string
           format: uuid
@@ -520,12 +660,23 @@ components:
           pattern: ^[0-9a-f]{64}$
         decision:
           type: string
+          enum:
+          - VERIFY
+          - REJECT
+          - MARK_CONFLICT
+          - SUPERSEDE
         counterAssertionIds:
           type: array
           items:
             type: string
         reasonCode:
           type: string
+          enum:
+          - EVIDENCE_CONFIRMED
+          - EVIDENCE_INSUFFICIENT
+          - EVIDENCE_CONTRADICTED
+          - SOURCE_CORRECTED
+          - ASSERTION_SUPERSEDED
         reason:
           type: string
       required:

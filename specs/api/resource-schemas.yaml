@@ -1000,6 +1000,34 @@ resources:
           pattern: ^-?\d+(\.\d+)?$
         status:
           type: string
+        forecastAssumption:
+          anyOf:
+          - type: string
+          - type: 'null'
+        softLimit:
+          anyOf:
+          - type: string
+          - type: 'null'
+        hardLimit:
+          anyOf:
+          - type: string
+          - type: 'null'
+        fallbackAction:
+          anyOf:
+          - type: string
+          - type: 'null'
+        alertThreshold:
+          anyOf:
+          - type: string
+          - type: 'null'
+        lastChangedBy:
+          anyOf:
+          - type: string
+          - type: 'null'
+        lastChangeReason:
+          anyOf:
+          - type: string
+          - type: 'null'
       required:
       - currency
       - dailyLimit
@@ -1007,6 +1035,15 @@ resources:
       - monthlyLimit
       - monthlyUsed
       - status
+      - unknownReason
+      - forecastConfidence
+      - forecastAssumption
+      - softLimit
+      - hardLimit
+      - fallbackAction
+      - alertThreshold
+      - lastChangedBy
+      - lastChangeReason
     apis:
     - control-api
   CalculationResult:

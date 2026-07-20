@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "media-process-lifecycle-runtime.v1",
+  "image": "gurine-document-extractor:final@sha256:9f33d67998fb1333b93fcf5f190a2e871c3c6595c52a442596fc911de26024ad",
+  "imageDigest": "sha256:9f33d67998fb1333b93fcf5f190a2e871c3c6595c52a442596fc911de26024ad",
+  "runtimeUser": "10001:10001",
+  "probe": {
+    "cases": [
+      {
+        "component": "ffmpeg",
+        "directChildReaped": true,
+        "executable": "/opt/gurinnae/bin/ffmpeg",
+        "outputLimit": "PASS",
+        "processGroupTerminated": true,
+        "timeout": "PASS"
+      },
+      {
+        "component": "ffprobe",
+        "directChildReaped": true,
+        "executable": "/opt/gurinnae/bin/ffprobe",
+        "outputLimit": "PASS",
+        "processGroupTerminated": true,
+        "timeout": "PASS"
+      },
+      {
+        "component": "tesseract",
+        "directChildReaped": true,
+        "executable": "/usr/bin/tesseract",
+        "outputLimit": "PASS",
+        "processGroupTerminated": true,
+        "timeout": "PASS"
+      },
+      {
+        "component": "whisper",
+        "directChildReaped": true,
+        "executable": "/opt/gurinnae/bin/whisper-cli",
+        "outputLimit": "PASS",
+        "processGroupTerminated": true,
+        "timeout": "PASS"
+      }
+    ],
+    "pass": true,
+    "schemaVersion": "media-process-lifecycle.v1"
+  },
+  "result": "PASS"
+}

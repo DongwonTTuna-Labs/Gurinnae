@@ -1,78 +1,260 @@
 <script lang="ts">
-  import { untrack } from "svelte";
-  type AnswerRow = {
-    questionId: string;
-    text: string;
-    attachmentIds: string[];
-    updatedAt: string;
-  };
-  type Consent = {
-    bodyConsent: boolean;
-    attachmentConsents: { attachmentId: string; mayPublish: boolean; redactionAllowed: boolean }[];
-    identityDisplay: "ORGANIZATION_NAME" | "ROLE_ONLY" | "ANONYMOUS";
-    redactionAcknowledged: boolean;
-    excerptReviewRequested: boolean;
-    consentedAt: string;
-  };
-  let { name, label, value, required = false }: { name: string; label: string; value?: unknown; required?: boolean } = $props();
-  const isConsent = $derived(name.toLowerCase().includes("consent"));
-  let rows = $state<AnswerRow[]>(untrack(() => toRows(value)));
-  let consent = $state<Consent>(untrack(() => toConsent(value)));
-  const encoded = $derived(isConsent ? JSON.stringify(consent) : JSON.stringify(rows));
-  const now = () => new Date().toISOString();
-  function toRows(input: unknown): AnswerRow[] {
-    if (!Array.isArray(input) || input.length === 0) return [{ questionId: "", text: "", attachmentIds: [], updatedAt: now() }];
-    const parsed = input.flatMap((item): AnswerRow[] => {
-      if (typeof item !== "object" || item === null) return [];
-      const row = item as Record<string, unknown>;
-      const questionId = String(row.questionId ?? row.id ?? row.question ?? "");
-      const text = String(row.text ?? row.answer ?? row.response ?? "");
-      const attachmentIds = Array.isArray(row.attachmentIds) ? row.attachmentIds.filter((id): id is string => typeof id === "string") : [];
-      const updatedAt = typeof row.updatedAt === "string" ? row.updatedAt : now();
-      return [{ questionId, text, attachmentIds, updatedAt }];
-    });
-    return parsed.length > 0 ? parsed : [{ questionId: "", text: "", attachmentIds: [], updatedAt: now() }];
-  }
-  function toConsent(input: unknown): Consent {
-    const row = typeof input === "object" && input !== null ? input as Record<string, unknown> : {};
-    const identity = row.identityDisplay;
-    return {
-      bodyConsent: row.bodyConsent === true || row.body === true,
-      attachmentConsents: Array.isArray(row.attachmentConsents) ? row.attachmentConsents.flatMap((item) => {
+import { untrack } from "svelte";
+
+type AnswerRow = {
+  questionId: string;
+  questionLabel: string;
+  text: string;
+  attachmentIds: string[];
+  updatedAt: string;
+};
+type Consent = {
+  bodyConsent: boolean;
+  attachmentConsents: {
+    attachmentId: string;
+    mayPublish: boolean;
+    redactionAllowed: boolean;
+  }[];
+  identityDisplay: "ORGANIZATION_NAME" | "ROLE_ONLY" | "ANONYMOUS";
+  redactionAcknowledged: boolean;
+  excerptReviewRequested: boolean;
+  consentedAt: string;
+};
+let {
+  name,
+  label,
+  value,
+  required = false,
+  invalid = false,
+  attachmentOptions = [],
+  idPrefix = name,
+}: {
+  name: string;
+  label: string;
+  value?: unknown;
+  required?: boolean;
+  invalid?: boolean;
+  attachmentOptions?: readonly { id: string; filename?: string }[];
+  idPrefix?: string;
+} = $props();
+const isConsent = $derived(name.toLowerCase().includes("consent"));
+const fieldHelpId = $derived(`${idPrefix}-help`);
+const fieldErrorId = $derived(`${idPrefix}-error`);
+const serializationId = $derived(`${idPrefix}-serialized`);
+const describedBy = $derived(
+  invalid ? `${fieldHelpId} ${fieldErrorId}` : fieldHelpId,
+);
+const controlId = (suffix: string) => `${idPrefix}-${suffix}`;
+const attachmentId = (id: string) =>
+  controlId(`attachment-${id.replace(/[^a-zA-Z0-9_-]+/gu, "-")}`);
+const now = () => new Date().toISOString();
+let rows = $state<AnswerRow[]>(untrack(() => toRows(value)));
+let consent = $state<Consent>(untrack(() => toConsent(value)));
+const encoded = $derived(
+  isConsent ? JSON.stringify(consent) : JSON.stringify(rows),
+);
+function toRows(input: unknown): AnswerRow[] {
+  if (!Array.isArray(input) || input.length === 0)
+    return [
+      {
+        questionId: "",
+        questionLabel: "질문 1",
+        text: "",
+        attachmentIds: [],
+        updatedAt: now(),
+      },
+    ];
+  const parsed = input.flatMap((item, index): AnswerRow[] => {
+    if (typeof item !== "object" || item === null) return [];
+    const row = item as Record<string, unknown>;
+    const questionId = String(row.questionId ?? row.id ?? row.question ?? "");
+    const questionLabel = String(
+      row.questionLabel ??
+        row.prompt ??
+        row.questionText ??
+        row.question ??
+        `질문 ${index + 1}`,
+    );
+    const text = String(row.text ?? row.answer ?? row.response ?? "");
+    const attachmentIds = Array.isArray(row.attachmentIds)
+      ? row.attachmentIds.filter((id): id is string => typeof id === "string")
+      : [];
+    const updatedAt = typeof row.updatedAt === "string" ? row.updatedAt : now();
+    return [{ questionId, questionLabel, text, attachmentIds, updatedAt }];
+  });
+  return parsed.length > 0
+    ? parsed
+    : [
+        {
+          questionId: "",
+          questionLabel: "질문 1",
+          text: "",
+          attachmentIds: [],
+          updatedAt: now(),
+        },
+      ];
+}
+function toConsent(input: unknown): Consent {
+  const row =
+    typeof input === "object" && input !== null
+      ? (input as Record<string, unknown>)
+      : {};
+  const identity = row.identityDisplay;
+  const legacyAttachments = Array.isArray(row.attachments)
+    ? row.attachments.flatMap((item) => {
+        if (typeof item === "string")
+          return [
+            { attachmentId: item, mayPublish: true, redactionAllowed: false },
+          ];
         if (typeof item !== "object" || item === null) return [];
         const value = item as Record<string, unknown>;
-        const attachmentId = typeof value.attachmentId === "string" ? value.attachmentId : "";
-        return attachmentId ? [{ attachmentId, mayPublish: value.mayPublish === true, redactionAllowed: value.redactionAllowed === true }] : [];
-      }) : [],
-      identityDisplay: identity === "ROLE_ONLY" || identity === "ANONYMOUS" ? identity : "ORGANIZATION_NAME",
-      redactionAcknowledged: row.redactionAcknowledged === true,
-      excerptReviewRequested: row.excerptReviewRequested === true,
-      consentedAt: typeof row.consentedAt === "string" ? row.consentedAt : now(),
-    };
-  }
+        const attachmentId =
+          typeof value.attachmentId === "string"
+            ? value.attachmentId
+            : typeof value.id === "string"
+              ? value.id
+              : "";
+        return attachmentId
+          ? [
+              {
+                attachmentId,
+                mayPublish: value.mayPublish !== false,
+                redactionAllowed: value.redactionAllowed === true,
+              },
+            ]
+          : [];
+      })
+    : [];
+  const canonicalAttachments = Array.isArray(row.attachmentConsents)
+    ? row.attachmentConsents.flatMap((item) => {
+        if (typeof item !== "object" || item === null) return [];
+        const value = item as Record<string, unknown>;
+        const attachmentId =
+          typeof value.attachmentId === "string" ? value.attachmentId : "";
+        return attachmentId
+          ? [
+              {
+                attachmentId,
+                mayPublish: value.mayPublish === true,
+                redactionAllowed: value.redactionAllowed === true,
+              },
+            ]
+          : [];
+      })
+    : legacyAttachments;
+  return {
+    bodyConsent: row.bodyConsent === true || row.body === true,
+    attachmentConsents: canonicalAttachments,
+    identityDisplay:
+      identity === "ROLE_ONLY" || identity === "ANONYMOUS"
+        ? identity
+        : "ORGANIZATION_NAME",
+    redactionAcknowledged: row.redactionAcknowledged === true,
+    excerptReviewRequested: row.excerptReviewRequested === true,
+    consentedAt: typeof row.consentedAt === "string" ? row.consentedAt : now(),
+  };
+}
 </script>
 
-<div class="structured-json-field" data-field-name={name}>
-  <input type="hidden" {name} value={encoded} {required} />
+<div class="structured-json-field" id={idPrefix} data-field-name={name}>
   {#if isConsent}
-    <fieldset>
+    <!--
+      This control is the form-serialization bridge. The fieldset below
+      contains the controls that users edit. It remains out of the tab order,
+      but it must retain an accessible name because automated and assistive
+      technology audits still inspect every named form control in the DOM.
+    -->
+    <textarea
+      {name}
+      id={serializationId}
+      class="sr-only serialization-control"
+      rows="1"
+      aria-label={label}
+      aria-describedby={describedBy}
+      aria-invalid={invalid ? "true" : undefined}
+      tabindex="-1"
+      value={encoded}
+      oninput={(event) => {
+        // Keep the serialization bridge editable for receipt/review forms that
+        // submit a canonical JSON payload directly. The visible controls remain
+        // the normal editing surface; a valid direct edit simply rehydrates
+        // the same canonical state.
+        try {
+          consent = toConsent(JSON.parse(event.currentTarget.value));
+        } catch {
+          // Leave the last valid state in place; the server will reject an
+          // invalid payload and return the normal field-level error state.
+        }
+      }}
+    ></textarea>
+    <fieldset aria-describedby={describedBy}>
       <legend>{label}</legend>
-      <label><input type="checkbox" bind:checked={consent.bodyConsent} /> <span>답변 본문 공개에 동의합니다.</span></label>
-      <label><span>이름 표시</span><select bind:value={consent.identityDisplay} required={required}><option value="ORGANIZATION_NAME">조직명</option><option value="ROLE_ONLY">역할만</option><option value="ANONYMOUS">익명</option></select></label>
-      <label><input type="checkbox" bind:checked={consent.redactionAcknowledged} required={required} /> <span>민감정보 가림 원칙을 확인했습니다.</span></label>
-      <label><input type="checkbox" bind:checked={consent.excerptReviewRequested} /> <span>게시 전 발췌 검토를 요청합니다.</span></label>
-      <p class="field-help">동의 범위와 표시 방식은 제출 영수증에 immutable하게 기록됩니다.</p>
+      <label for={controlId("body-consent")}><input id={controlId("body-consent")} type="checkbox" checked={consent.bodyConsent} onchange={(event) => { consent = { ...consent, bodyConsent: event.currentTarget.checked }; }} aria-describedby={describedBy} /> <span>답변 본문 공개에 동의합니다.</span></label>
+      <label for={controlId("identity-display")}><span>이름 표시</span><select id={controlId("identity-display")} value={consent.identityDisplay} onchange={(event) => { consent = { ...consent, identityDisplay: event.currentTarget.value as Consent["identityDisplay"] }; }} aria-required={required} aria-describedby={describedBy}><option value="ORGANIZATION_NAME">조직명</option><option value="ROLE_ONLY">역할만</option><option value="ANONYMOUS">익명</option></select></label>
+      <label for={controlId("redaction-acknowledged")}><input id={controlId("redaction-acknowledged")} type="checkbox" checked={consent.redactionAcknowledged} onchange={(event) => { consent = { ...consent, redactionAcknowledged: event.currentTarget.checked }; }} aria-required={required} aria-describedby={describedBy} /> <span>민감정보 가림 원칙을 확인했습니다.</span></label>
+      <label for={controlId("excerpt-review-requested")}><input id={controlId("excerpt-review-requested")} type="checkbox" checked={consent.excerptReviewRequested} onchange={(event) => { consent = { ...consent, excerptReviewRequested: event.currentTarget.checked }; }} aria-describedby={describedBy} /> <span>게시 전 발췌 검토를 요청합니다.</span></label>
+      {#if attachmentOptions.length > 0}
+        <fieldset class="attachment-consent-options">
+          <legend>첨부 공개 범위</legend>
+          {#each attachmentOptions as attachment}
+            {@const existing = consent.attachmentConsents.find((item) => item.attachmentId === attachment.id)}
+            <div class="attachment-consent-option">
+              <input id={attachmentId(attachment.id)} type="checkbox" checked={existing?.mayPublish === true} onchange={(event) => {
+                const checked = event.currentTarget.checked;
+                const rest = consent.attachmentConsents.filter((item) => item.attachmentId !== attachment.id);
+                consent = { ...consent, attachmentConsents: [...rest, { attachmentId: attachment.id, mayPublish: checked, redactionAllowed: existing?.redactionAllowed === true }] };
+              }} aria-describedby={describedBy} />
+              <label for={attachmentId(attachment.id)}>{attachment.filename ?? attachment.id} 공개에 동의합니다.</label>
+            </div>
+          {/each}
+        </fieldset>
+      {/if}
+      <input type="hidden" name="consentedAt" value={consent.consentedAt} />
+      <p id={fieldHelpId} class="field-help">동의 범위와 표시 방식은 제출 영수증에 immutable하게 기록됩니다.</p>
+      {#if invalid}<p id={fieldErrorId} class="field-help field-error" role="alert">입력값을 확인한 뒤 다시 시도하세요.</p>{/if}
     </fieldset>
   {:else}
-    <fieldset>
+    <!-- See the consent bridge above: visible answer controls are authoritative
+      for people, this named field only serializes the canonical JSON payload. -->
+    <textarea
+      {name}
+      id={serializationId}
+      class="sr-only serialization-control"
+      rows="1"
+      aria-label={label}
+      aria-describedby={describedBy}
+      aria-invalid={invalid ? "true" : undefined}
+      tabindex="-1"
+      value={encoded}
+      oninput={(event) => {
+        try {
+          rows = toRows(JSON.parse(event.currentTarget.value));
+        } catch {
+          // Preserve the last valid state and let server validation surface
+          // malformed direct edits as a field error.
+        }
+      }}
+    ></textarea>
+    <fieldset aria-describedby={describedBy}>
       <legend>{label}</legend>
       {#each rows as row, index (index)}
         <div class="structured-answer-row">
-          <label><span>질문 ID</span><input value={row.questionId} required={required} oninput={(event) => { row.questionId = event.currentTarget.value; }} /></label>
-          <label><span>답변</span><textarea rows="4" value={row.text} required={required} oninput={(event) => { row.text = event.currentTarget.value; row.updatedAt = now(); }}></textarea></label>
-          <label><span>첨부 ID (선택, 쉼표로 구분)</span><input value={row.attachmentIds.join(", ")} oninput={(event) => { row.attachmentIds = event.currentTarget.value.split(",").map((id) => id.trim()).filter(Boolean); }} /></label>
+          <div class="field-readonly" aria-label={`질문 ${index + 1} 연결 상태`}><span>{row.questionLabel || `질문 ${index + 1}`}</span><output>{row.questionId ? "서버 질문에 연결됨" : "질문 연결 필요"}</output></div>
+          <label for={controlId(`answer-${index + 1}`)}><span>답변</span><textarea id={controlId(`answer-${index + 1}`)} rows="4" aria-label={`${row.questionLabel || `질문 ${index + 1}`} 답변`} value={row.text} aria-required={required} aria-describedby={describedBy} oninput={(event) => { const text = event.currentTarget.value; rows = rows.map((current, currentIndex) => currentIndex === index ? { ...current, text, updatedAt: now() } : current); }}></textarea></label>
+          <fieldset class="attachment-picker"><legend>첨부 공개 범위 (선택)</legend>
+            {#if attachmentOptions.length > 0}
+              {#each attachmentOptions as attachment}
+                <label for={controlId(`answer-${index + 1}-attachment-${attachment.id.replace(/[^a-zA-Z0-9_-]+/gu, "-")}`)}><input id={controlId(`answer-${index + 1}-attachment-${attachment.id.replace(/[^a-zA-Z0-9_-]+/gu, "-")}`)} type="checkbox" checked={row.attachmentIds.includes(attachment.id)} onchange={(event) => {
+                  const checked = event.currentTarget.checked;
+                  rows = rows.map((current, currentIndex) => currentIndex === index ? { ...current, attachmentIds: checked ? [...current.attachmentIds, attachment.id] : current.attachmentIds.filter((id) => id !== attachment.id) } : current);
+                }} aria-describedby={describedBy} /><span>{attachment.filename ?? "첨부 파일"} 연결</span></label>
+              {/each}
+            {:else}<p class="field-help">연결할 첨부가 없습니다.</p>{/if}
+          </fieldset>
         </div>
       {/each}
+      <p id={fieldHelpId} class="field-help">각 답변은 질문과 첨부 연결 상태를 함께 저장합니다.</p>
+      {#if invalid}<p id={fieldErrorId} class="field-help field-error" role="alert">입력값을 확인한 뒤 다시 시도하세요.</p>{/if}
     </fieldset>
   {/if}
 </div>

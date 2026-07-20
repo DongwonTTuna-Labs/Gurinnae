@@ -192,26 +192,37 @@ test("response flow verifies access, saves the latest draft version, and rotates
   });
   const save = page.locator('form[data-action-id="save-draft"]');
   await expect(save.locator('input[name="expectedVersion"]')).toHaveValue("3");
-  await save.locator('textarea[name="answers"]').fill(
-    JSON.stringify([
-      {
-        questionId: "question-1",
-        text: "요청받은 사실관계를 확인했습니다.",
-        attachmentIds: [],
-        updatedAt: "2026-07-13T00:00:00Z",
-      },
-    ]),
+  await save
+    .locator('textarea[aria-label="질문 1 답변"]')
+    .fill("요청받은 사실관계를 확인했습니다.");
+  const consent = save.locator(
+    '.structured-json-field[data-field-name="publicationConsent"]',
   );
-  await save.locator('textarea[name="publicationConsent"]').fill(
-    JSON.stringify({
-      bodyConsent: true,
-      attachmentConsents: [],
-      identityDisplay: "ORGANIZATION_NAME",
-      redactionAcknowledged: true,
-      excerptReviewRequested: false,
-      consentedAt: "2026-07-13T00:00:00Z",
-    }),
-  );
+  await consent.locator('input[type="checkbox"]').nth(0).check();
+  await consent.locator('input[type="checkbox"]').nth(1).check();
+  await expect
+    .poll(async () =>
+      JSON.parse(await save.locator('textarea[name="answers"]').inputValue()),
+    )
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          text: "요청받은 사실관계를 확인했습니다.",
+        }),
+      ]),
+    );
+  await expect
+    .poll(async () =>
+      JSON.parse(
+        await save.locator('textarea[name="publicationConsent"]').inputValue(),
+      ),
+    )
+    .toEqual(
+      expect.objectContaining({
+        bodyConsent: true,
+        redactionAcknowledged: true,
+      }),
+    );
   await save.locator('button[type="submit"]').click();
   await page.waitForURL(/\/respond\/answer\?notice=/);
 

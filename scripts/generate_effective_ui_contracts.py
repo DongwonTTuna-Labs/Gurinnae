@@ -422,7 +422,6 @@ OPS-002.filters|listJobs.appliedFilters->job_filters
 OPS-002.bulk|listJobs.$projection.bulk_selection_projection->bulk_selection_projection
 OPS-003.attempts|getJob.$projection.attempt_projection->attempt_projection
 OPS-003.payload|getJob.$projection.redacted_payload_projection->redacted_payload_projection
-OPS-004.business-health|getBudgetOverview.$projection.business_health->business_health
 OPS-005.quotas|listProviders.$projection.quota_projection->quota_projection
 OPS-005.fallback|listProviders.$projection.fallback_projection->fallback_projection
 OPS-006.catalog|listKillSwitches.items->kill_switch_rows
@@ -2544,7 +2543,7 @@ def build_effective_contracts(
                 "console",
                 "client log",
             ],
-            "set_equality_scan": "all 94 closed screen schemas + all 497 section leaf/nested/array allowlists + all action and journey browser bindings",
+            "set_equality_scan": "all 94 closed screen schemas + all 496 section leaf/nested/array allowlists + all action and journey browser bindings",
             "runtime_status": "OPEN_IMPLEMENTATION",
         },
         "implementation_requirements": [

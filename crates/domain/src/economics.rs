@@ -152,6 +152,33 @@ pub struct CommercialReadiness {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BusinessMetricSnapshot {
+    pub metric_id: String,
+    pub metric_version: i64,
+    pub status: MetricStatus,
+    pub reason_code: String,
+    pub formula_digest: String,
+    pub policy_digest: String,
+    pub input_set_digest: String,
+    pub eligible_count: u64,
+    pub pending_count: u64,
+    pub unknown_count: u64,
+    pub latest_source_at: Option<OffsetDateTime>,
+    pub fresh_until: Option<OffsetDateTime>,
+    pub breach_action: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BusinessFunnelStage {
+    pub stage: String,
+    pub state: String,
+    pub organization_count: u64,
+    pub unknown_count: u64,
+    pub evidence_set_digest: String,
+    pub owner_function: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BusinessHealth {
     pub as_of: OffsetDateTime,
     pub readiness: CommercialReadiness,
@@ -159,6 +186,13 @@ pub struct BusinessHealth {
     pub activation_p90_hours: MetricValue<Decimal>,
     pub cac: CacResult,
     pub payback: PaybackResult,
+    pub specification_version: String,
+    pub metric_catalog_digest: String,
+    pub funnel: Vec<BusinessFunnelStage>,
+    pub metrics: Vec<BusinessMetricSnapshot>,
+    pub top_issue: Option<String>,
+    pub unknown_source_count: u64,
+    pub next_review_at: OffsetDateTime,
 }
 
 fn is_digest(value: &str) -> bool {

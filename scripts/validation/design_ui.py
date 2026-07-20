@@ -1,11 +1,14 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
+import hashlib
+import json
 import re
 from .design_lifecycle import LifecycleFacts
 from .design_operations import OperationFacts
 from .design_support import DesignDocuments, contains_forbidden_marker, nonempty
 from .design_ui_operations import validate_journey_ui, validate_section_operations
+from .design_ui_tail import validate_ui_tail
 from .loaders import load_yaml
 @dataclass(frozen=True)
 class UiFacts:
@@ -136,6 +139,62 @@ def validate_ui(
     for screen_id, screen in catalog_by.items():
         row = row_by[screen_id]
         result.require(
+            nonempty(row.get("typed_view_model"))
+            and nonempty(row.get("runtime_trace_path"))
+            and nonempty(row.get("implementation_source_digest"))
+            and isinstance(row.get("implementation_source_sha256"), dict)
+            and isinstance(row.get("authority_source_sha256"), dict),
+            f"{screen_id}: typed VM, runtime trace, and source digest evidence is missing",
+        )
+        authority_path = row.get("authority_source_path")
+        authority_hashes = row.get("authority_source_sha256", {})
+        expected_authority_hash = hashlib.sha256(
+            json.dumps(
+                screen,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+        result.require(
+            isinstance(authority_path, str)
+            and authority_hashes == {authority_path: expected_authority_hash},
+            f"{screen_id}: authority source digest does not match the catalog row",
+        )
+        trace_path = root / row.get("runtime_trace_path", "")
+        trace: Any = None
+        try:
+            trace = json.loads(trace_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            pass
+        result.require(
+            isinstance(trace, dict)
+            and trace.get("screenId") == screen_id
+            and trace.get("route") == screen["route"]
+            and trace.get("ssrStatus") == 200,
+            f"{screen_id}: runtime trace is missing or not bound to the route",
+        )
+        source_hashes = row.get("implementation_source_sha256", {})
+        if isinstance(source_hashes, dict):
+            for relative, expected in source_hashes.items():
+                source_path = root / str(relative)
+                actual = (
+                    hashlib.sha256(source_path.read_bytes()).hexdigest()
+                    if source_path.is_file()
+                    else None
+                )
+                result.require(
+                    actual == expected,
+                    f"{screen_id}: implementation source digest mismatch: {relative}",
+                )
+            result.require(
+                hashlib.sha256(
+                    json.dumps(source_hashes, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest()
+                == row["implementation_source_digest"],
+                f"{screen_id}: implementation source digest aggregate mismatch",
+            )
+        result.require(
             row["route"] == screen["route"]
             and row["surface"] == screen["surface"],
             f"{screen_id}: design route/surface mismatch",
@@ -210,6 +269,20 @@ def validate_ui(
                     for source in section["source_fields"]
                 ),
                 f"{qualified}: section source or test closure is incomplete/unsafe",
+            )
+            result.require(
+                section.get("implementation_source_digest")
+                == row.get("implementation_source_digest")
+                and section.get("source_fields_digest")
+                == hashlib.sha256(
+                    json.dumps(
+                        section["source_fields"],
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode()
+                ).hexdigest(),
+                f"{qualified}: section implementation/source digest evidence mismatch",
             )
         result.require(
             row["authority_manifest_test_ids"]
@@ -309,92 +382,5 @@ def validate_ui(
             ),
             f"{screen_id}: embedded navigation closure mismatch",
         )
-    section_rows = [
-        section for row in rows for section in row["section_mapping"]
-    ]
-    result.require(
-        len(section_rows) == 497
-        and all(nonempty(section.get("source_fields")) for section in section_rows)
-        and all(
-            nonempty(section.get("component_variant")) for section in section_rows
-        ),
-        "497-section source/component/variant closure is incomplete",
-    )
-    for question in ("state", "matters_now", "evidence", "unknown_or_disputed"):
-        result.require(
-            len(
-                {
-                    row["ten_second_contract"][question]["answer_pattern"]
-                    for row in rows
-                }
-            )
-            == 94,
-            f"ten-second {question} answer is still generic across screens",
-        )
-    user_copy = "\n".join(
-        answer["answer_pattern"]
-        for row in rows
-        for answer in row["ten_second_contract"].values()
-    )
-    result.require(
-        "executes " not in user_copy
-        and "navigates " not in user_copy
-        and not any(
-            operation_id in user_copy for operation_id in operations.operation_ids
-        ),
-        "ten-second user copy exposes internal operation language",
-    )
-    route_contract = documents.addendum["route_contract"]
-    for screen_id, route in route_contract["canonical_overrides"].items():
-        result.require(
-            catalog_by[screen_id]["route"] == route,
-            f"{screen_id}: canonical token-free route mismatch",
-        )
-    result.require(
-        route_contract["corrected_redirect"]
-        == {
-            "from": "/cases/{caseSlug}/history",
-            "to": "/cases/{caseSlug}#revision",
-            "status": 308,
-        },
-        "case history redirect resolution mismatch",
-    )
-    typed_slices = search["screen_typed_slices"]
-    ten_second_sections = search["screen_ten_second_sections"]
-    result.require(
-        set(typed_slices)
-        == set(ten_second_sections)
-        == {"PUB-002", "INT-003", "PUB-004", "CAS-004"},
-        "search/provenance typed-screen set mismatch",
-    )
-    for screen_id, slices in typed_slices.items():
-        row = row_by[screen_id]
-        section_by = {
-            section["id"]: section for section in row["section_mapping"]
-        }
-        result.require(
-            set(section_by) == set(slices),
-            f"{screen_id}: typed slice section set mismatch",
-        )
-        result.require(
-            row.get("typed_source_contract")
-            == "owner-addendum.search_and_provenance_contract",
-            f"{screen_id}: typed source contract marker missing",
-        )
-        for section_id, fields in slices.items():
-            result.require(
-                section_by[section_id].get("source_fields") == fields,
-                f"{screen_id}.{section_id}: typed source fields mismatch",
-            )
-        for question, section_id in ten_second_sections[screen_id].items():
-            answer = row["ten_second_contract"][question]
-            result.require(
-                answer["section"] == section_id,
-                f"{screen_id}.{question}: typed section mismatch",
-            )
-            if question != "location":
-                result.require(
-                    answer["sources"] == slices[section_id],
-                    f"{screen_id}.{question}: typed question sources mismatch",
-                )
+    validate_ui_tail(result, rows, catalog_by, operations, documents.addendum["route_contract"], search)
     return UiFacts(rows=rows, row_by=row_by, catalog_by=catalog_by)

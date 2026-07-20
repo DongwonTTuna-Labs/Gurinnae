@@ -9584,7 +9584,7 @@ operations:
   capability: budgets.manage
   request_fields: []
   request_schema: getBudgetOverviewQuery
-  response_schema: BusinessHealthResponse
+  response_schema: BudgetOverviewResponse
   idempotency: not-applicable
   optimistic_concurrency: not-applicable
   audit: read-access-log

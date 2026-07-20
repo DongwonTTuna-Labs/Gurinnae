@@ -74,6 +74,68 @@ formats:
   provenance: PAGE_BBOX
   network: false
   execution: sandboxed child processes; no first-party FFI; TSV output provides word confidence and bbox
+- id: html
+  media_types:
+  - text/html
+  parser: html5ever 0.39.0 static tree + gurinnae-html-v1
+  provenance: HTML_CSS_SELECTOR
+  network: false
+- id: png
+  media_types:
+  - image/png
+  extensions:
+  - png
+  parser: image 0.25.10 png + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: jpeg
+  media_types:
+  - image/jpeg
+  extensions:
+  - jpg
+  - jpeg
+  parser: image 0.25.10 jpeg + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: webp
+  media_types:
+  - image/webp
+  extensions:
+  - webp
+  parser: image 0.25.10 webp + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: tiff
+  media_types:
+  - image/tiff
+  extensions:
+  - tif
+  - tiff
+  parser: image 0.25.10 tiff + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: wav
+  media_types:
+  - audio/wav
+  - audio/x-wav
+  extensions:
+  - wav
+  parser: FFmpeg 8.0.1 gurinnae-ffmpeg-subprocess-media-v1 + whisper.cpp 1.9.1
+  provenance: AUDIO_TIME_RANGE
+  network: false
+  support: BLOCKED_UNTIL_HASH_PINNED_RUNTIME_EVIDENCE
+- id: webm
+  media_types:
+  - video/webm
+  extensions:
+  - webm
+  parser: FFmpeg 8.0.1 gurinnae-ffmpeg-subprocess-media-v1 + whisper.cpp 1.9.1
+  provenance:
+  - VIDEO_TIME_RANGE
+  - VIDEO_REGION_TIME
+  - AUDIO_TIME_RANGE
+  network: false
+  support: BLOCKED_UNTIL_HASH_PINNED_RUNTIME_EVIDENCE
 - id: hwp-binary
   media_types:
   - application/x-hwp
@@ -106,7 +168,7 @@ ooxml_security:
 - reject symlink ZIP entries
 - reject traversal and high compression ratio
 - do not resolve external resources
-format_count: 8
+format_count: 15
 binary_hwp_policy:
   mode: QUARANTINE_UNSUPPORTED
   magic: D0CF11E0A1B11AE1

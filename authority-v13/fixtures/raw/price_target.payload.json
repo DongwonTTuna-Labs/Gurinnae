@@ -1,0 +1,32 @@
+{
+  "fixture": true,
+  "fixture_notice": "합성 데이터이며 실제 기관·업체·계약과 무관합니다.",
+  "contractNumber": "SYN-PRICE-TARGET",
+  "agencyName": "가상새빛시청",
+  "supplierName": "가상알파안전 주식회사",
+  "contractType": "GOODS",
+  "method": "OPEN_COMPETITION",
+  "signedDate": "2025-06-15",
+  "amount": 24000000,
+  "items": [
+    {
+      "description": "합성 안전 단말기 S1 단품",
+      "category": "SYNTH-SAFETY-DEVICE",
+      "quantity": "10",
+      "unit": "EA",
+      "unitPrice": 2400000,
+      "totalPrice": 24000000,
+      "vatBasis": "INCLUDED",
+      "bundleStatus": "SINGLE_ITEM",
+      "includedServices": [],
+      "specification": {
+        "grade": "S1",
+        "certification": "BASIC",
+        "warranty_months": 12,
+        "synthetic": true
+      }
+    }
+  ],
+  "processing_status": "ACTIVE",
+  "record_status": "CURRENT"
+}

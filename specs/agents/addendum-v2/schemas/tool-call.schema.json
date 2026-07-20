@@ -180,16 +180,8 @@
       ]
     },
     "resultKind": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "enum": [
-        null,
-        "TOOL_RESULT",
-        "DISPATCH_DENIAL",
-        "TOOL_ERROR"
-      ]
+      "type": ["string", "null"],
+      "enum": [null, "TOOL_RESULT", "DISPATCH_DENIAL", "TOOL_ERROR"]
     },
     "resultSha256": {
       "anyOf": [
@@ -261,10 +253,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "sourceUseId",
-          "sourceUseSha256"
-        ],
+        "required": ["sourceUseId", "sourceUseSha256"],
         "properties": {
           "sourceUseId": {
             "type": "string",
@@ -277,24 +266,15 @@
       }
     },
     "latencyMs": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0
     },
     "costEventId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "terminalCode": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
     },
     "terminalSha256": {
@@ -327,10 +307,7 @@
       "format": "date-time"
     },
     "terminalAt": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "date-time"
     }
   },
@@ -416,22 +393,14 @@
       "if": {
         "properties": {
           "status": {
-            "enum": [
-              "DENIED",
-              "TIMED_OUT",
-              "FAILED",
-              "OUTCOME_UNKNOWN"
-            ]
+            "enum": ["DENIED", "TIMED_OUT", "FAILED", "OUTCOME_UNKNOWN"]
           }
         }
       },
       "then": {
         "properties": {
           "resultKind": {
-            "enum": [
-              "DISPATCH_DENIAL",
-              "TOOL_ERROR"
-            ]
+            "enum": ["DISPATCH_DENIAL", "TOOL_ERROR"]
           },
           "resultSha256": {
             "$ref": "#/$defs/sha256"
@@ -693,16 +662,31 @@
       }
     },
     {
-      "if": {"properties": {"status": {"const": "DENIED"}}, "required": ["status"]},
-      "then": {"properties": {"resultKind": {"const": "DISPATCH_DENIAL"}}}
+      "if": {
+        "properties": { "status": { "const": "DENIED" } },
+        "required": ["status"]
+      },
+      "then": { "properties": { "resultKind": { "const": "DISPATCH_DENIAL" } } }
     },
     {
-      "if": {"properties": {"status": {"enum": ["TIMED_OUT", "FAILED", "OUTCOME_UNKNOWN"]}}, "required": ["status"]},
-      "then": {"properties": {"resultKind": {"const": "TOOL_ERROR"}}}
+      "if": {
+        "properties": {
+          "status": { "enum": ["TIMED_OUT", "FAILED", "OUTCOME_UNKNOWN"] }
+        },
+        "required": ["status"]
+      },
+      "then": { "properties": { "resultKind": { "const": "TOOL_ERROR" } } }
     },
     {
-      "if": {"properties": {"toolId": {"const": "source.fetch"}}, "required": ["toolId"]},
-      "then": {"properties": {"budgetReservationKeySha256": {"$ref": "#/$defs/sha256"}}}
+      "if": {
+        "properties": { "toolId": { "const": "source.fetch" } },
+        "required": ["toolId"]
+      },
+      "then": {
+        "properties": {
+          "budgetReservationKeySha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
     }
   ],
   "$defs": {

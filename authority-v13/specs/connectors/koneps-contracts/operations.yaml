@@ -1,0 +1,1097 @@
+schema_version: 2
+specification_version: 13.0.0
+connector_id: koneps-contracts
+authority: https://www.data.go.kr/data/15129427/openapi.do
+operations:
+- id: contract-goods-list
+  remote_operation: getCntrctInfoListThng
+  path: /getCntrctInfoListThng
+  business_type: goods
+  kind: list
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: goods:contract-goods-list
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: &id001
+    quota_or_429: honor Retry-After; otherwise bounded exponential backoff with jitter
+    transient_5xx: bounded exponential backoff then source incident
+    auth_or_permission: disable connector and open incident
+    malformed_payload: store raw bytes, quarantine record, open schema-drift incident
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-goods-detail
+  remote_operation: getCntrctInfoListThngDetail
+  path: /getCntrctInfoListThngDetail
+  business_type: goods
+  kind: detail
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: false
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: false
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: false
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: false
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: goods:contract-goods-detail
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-goods-change
+  remote_operation: getCntrctInfoListThngChgHstry
+  path: /getCntrctInfoListThngChgHstry
+  business_type: goods
+  kind: change
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: goods:contract-goods-change
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-goods-delete
+  remote_operation: getCntrctInfoListThngDltHstry
+  path: /getCntrctInfoListThngDltHstry
+  business_type: goods
+  kind: delete
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: goods:contract-goods-delete
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-construction-list
+  remote_operation: getCntrctInfoListCnstwk
+  path: /getCntrctInfoListCnstwk
+  business_type: construction
+  kind: list
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: construction:contract-construction-list
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-construction-detail
+  remote_operation: getCntrctInfoListCnstwkDetail
+  path: /getCntrctInfoListCnstwkDetail
+  business_type: construction
+  kind: detail
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: false
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: false
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: false
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: false
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: construction:contract-construction-detail
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-construction-change
+  remote_operation: getCntrctInfoListCnstwkChgHstry
+  path: /getCntrctInfoListCnstwkChgHstry
+  business_type: construction
+  kind: change
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: construction:contract-construction-change
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-construction-delete
+  remote_operation: getCntrctInfoListCnstwkDltHstry
+  path: /getCntrctInfoListCnstwkDltHstry
+  business_type: construction
+  kind: delete
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: construction:contract-construction-delete
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-service-list
+  remote_operation: getCntrctInfoListServc
+  path: /getCntrctInfoListServc
+  business_type: service
+  kind: list
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: service:contract-service-list
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-service-detail
+  remote_operation: getCntrctInfoListServcDetail
+  path: /getCntrctInfoListServcDetail
+  business_type: service
+  kind: detail
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: false
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: false
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: false
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: false
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: service:contract-service-detail
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-service-change
+  remote_operation: getCntrctInfoListServcChgHstry
+  path: /getCntrctInfoListServcChgHstry
+  business_type: service
+  kind: change
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: service:contract-service-change
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-service-delete
+  remote_operation: getCntrctInfoListServcDltHstry
+  path: /getCntrctInfoListServcDltHstry
+  business_type: service
+  kind: delete
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: service:contract-service-delete
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-foreign-list
+  remote_operation: getCntrctInfoListFrgcpt
+  path: /getCntrctInfoListFrgcpt
+  business_type: foreign
+  kind: list
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: foreign:contract-foreign-list
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-foreign-detail
+  remote_operation: getCntrctInfoListFrgcptDetail
+  path: /getCntrctInfoListFrgcptDetail
+  business_type: foreign
+  kind: detail
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: false
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: false
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: false
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: false
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: foreign:contract-foreign-detail
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-foreign-change
+  remote_operation: getCntrctInfoListFrgcptChgHstry
+  path: /getCntrctInfoListFrgcptChgHstry
+  business_type: foreign
+  kind: change
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: foreign:contract-foreign-change
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt
+- id: contract-foreign-delete
+  remote_operation: getCntrctInfoListFrgcptDltHstry
+  path: /getCntrctInfoListFrgcptDltHstry
+  business_type: foreign
+  kind: delete
+  method: GET
+  request_parameters:
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination:
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  deletion_semantics: delete-history operations create tombstones; periodic list reconciliation detects missing records
+  checkpoint:
+    partition: foreign:contract-foreign-delete
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  response_envelope:
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates:
+    - response.body.items
+    - response.body.items.item
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  retry: *id001
+  specification_version: 13.0.0
+  contract_source: official-data-go-kr-operation-documentation
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - untyCntrctNo
+    fallback_fields:
+    - cntrctNo
+    composite_separator: '#'
+  remote_revision:
+    strategy: first-non-empty-or-content-hash
+    fields:
+    - cntrctChgOrd
+    - chgDt
+    - rgstDt

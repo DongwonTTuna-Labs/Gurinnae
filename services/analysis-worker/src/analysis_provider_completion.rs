@@ -35,7 +35,7 @@ async fn complete_provider_turn(
         "redactionReceiptSha256":redaction_receipt_sha256
     });
     let response_canonical = canonical_bytes(&response)?;
-    validate_typed_provider_output(turn, output, actual_cost)?;
+    validate_typed_provider_output(state, turn, output, actual_cost).await?;
     let (provider_turn, turn_transcript_sha256) = terminal_provider_turn(
         turn,
         "COMPLETED",
@@ -70,6 +70,7 @@ async fn complete_provider_turn(
     Ok(())
 }
 
+#[expect(clippy::too_many_arguments, reason = "tool-call completion binds receipt and response lineage fields")]
 async fn complete_provider_turn_tool_call(
     state: &State,
     turn: &ProviderTurnIdentity,
@@ -148,7 +149,7 @@ async fn complete_provider_turn_tool_call(
         None,
     )
     .await?;
-    insert_model_input_source_uses(&mut *tx, turn).await?;
+    insert_model_input_source_uses(&mut tx, turn, Some(receipt_id), Some(&receipt_sha256)).await?;
     tx.commit().await.map_err(database)
 }
 
@@ -182,18 +183,18 @@ async fn persist_completed_provider_turn(
         &sha256(provider_turn_canonical), Some(turn_transcript_sha256),
         input_units, output_units, Some(provider_request_hash), Some(actual_cost), None, None,
     ).await?;
-    insert_model_input_source_uses(&mut *tx, turn).await?;
+    insert_model_input_source_uses(&mut tx, turn, Some(receipt_id), Some(receipt_sha256)).await?;
     insert_model_output_derivation_source_uses(
-        &mut *tx,
+        &mut tx,
         turn,
         receipt_id,
         receipt_sha256,
         output,
     )
     .await?;
-    insert_citation_source_uses(&mut *tx, turn, output).await?;
+    insert_citation_source_uses(&mut tx, turn, output).await?;
     insert_output_validation(
-        &mut *tx,
+        &mut tx,
         turn,
         output,
         envelope_payload_sha256,
@@ -201,6 +202,63 @@ async fn persist_completed_provider_turn(
     )
     .await?;
     tx.commit().await.map_err(database)
+}
+
+/// Preserve a durable validation receipt even when a provider response is
+/// rejected before normal completion.  Invalid output is an auditable failed
+/// attempt, not an unrecorded transport retry.
+async fn insert_output_validation_failure(
+    state: &State,
+    turn: &ProviderTurnIdentity,
+    output: &Value,
+    failure_code: &str,
+    detail: &str,
+) -> Result<(), Failure> {
+    let output_sha256 = sha256(&canonical_bytes(output)?);
+    let empty_set_sha256 = sha256(b"[]");
+    let validation_sha256 = sha256(&canonical_bytes(&json!({
+        "agentRunId": turn.run_id,
+        "providerTurnId": turn.turn_id,
+        "providerOutputSha256": output_sha256,
+        "failureCode": failure_code,
+        "detail": detail,
+    }))?);
+    sqlx::query(
+        "INSERT INTO ops.agent_output_validations(
+          agent_run_id,provider_turn_id,input_snapshot_sha256,provider_output_sha256,
+          validator_version,validator_sha256,output_schema_id,output_schema_version,
+          output_schema_sha256,validation_policy_version,validation_policy_sha256,
+          validation_status,schema_status,citation_status,policy_status,run_terminal_status,
+          output_status,failure_code,failure_details_redacted,validated_outcome,
+          validated_outcome_sha256,citation_count,proposal_count,citation_set_sha256,
+          proposal_set_sha256,validation_sha256)
+         VALUES($1,$2,$3,CAST($4 AS char(64)),'agent-output-validator-v2',CAST($5 AS char(64)),
+          $6,$7,CAST($8 AS char(64)),'agent-output-policy-v2',CAST($9 AS char(64)),
+          'INVALID','FAIL','NOT_RUN','NOT_RUN','FAILED',
+          $10,$11,$12::jsonb,NULL,NULL,0,0,CAST($13 AS char(64)),CAST($13 AS char(64)),CAST($14 AS char(64)))
+         ON CONFLICT(agent_run_id,provider_turn_id) DO NOTHING",
+    )
+    .bind(turn.run_id)
+    .bind(turn.turn_id)
+    .bind(&turn.input_snapshot_sha256)
+    .bind(&output_sha256)
+    .bind(sha256(b"agent-output-validator-v2"))
+    .bind(&turn.output_schema_id)
+    .bind(&turn.output_schema_version)
+    .bind(&turn.output_schema_sha256)
+    .bind(sha256(b"agent-output-policy-v2"))
+    .bind(match output.get("outcome").and_then(Value::as_str) {
+        Some("ABSTAINED") => "ABSTAINED",
+        _ => "COMPLETED",
+    })
+    .bind(failure_code)
+    .bind(json!({"reason": detail.chars().take(512).collect::<String>()}))
+    .bind(&empty_set_sha256)
+    .bind(&validation_sha256)
+    .execute(&state.pool)
+    .await
+    .map_err(database)?;
+    Ok(())
 }
 
 include!("analysis_provider_lineage.rs");

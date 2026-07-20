@@ -27,11 +27,11 @@
     "evidenceSha256"
   ],
   "properties": {
-    "schemaVersion": {"const": "agent-reconciliation-evidence.v1"},
-    "evidenceId": {"type": "string", "format": "uuid"},
-    "runId": {"type": "string", "format": "uuid"},
-    "providerTurnId": {"$ref": "#/$defs/nullableUuid"},
-    "toolCallId": {"$ref": "#/$defs/nullableUuid"},
+    "schemaVersion": { "const": "agent-reconciliation-evidence.v1" },
+    "evidenceId": { "type": "string", "format": "uuid" },
+    "runId": { "type": "string", "format": "uuid" },
+    "providerTurnId": { "$ref": "#/$defs/nullableUuid" },
+    "toolCallId": { "$ref": "#/$defs/nullableUuid" },
     "evidenceKind": {
       "enum": [
         "PROVIDER_LOOKUP",
@@ -51,15 +51,15 @@
         "DEFINITIVE_NO_DISPATCH"
       ]
     },
-    "adapterId": {"type": "string", "minLength": 1, "maxLength": 200},
-    "adapterVersion": {"type": "string", "minLength": 1, "maxLength": 100},
-    "adapterConfigurationSha256": {"$ref": "#/$defs/sha256"},
-    "lookupRequestSha256": {"$ref": "#/$defs/sha256"},
-    "lookupIdempotencyKeySha256": {"$ref": "#/$defs/sha256"},
-    "callerAssertionSha256": {"$ref": "#/$defs/sha256"},
-    "providerReceiptId": {"$ref": "#/$defs/nullableUuid"},
-    "providerReceiptSha256": {"$ref": "#/$defs/nullableSha256"},
-    "toolTerminalSha256": {"$ref": "#/$defs/nullableSha256"},
+    "adapterId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "adapterVersion": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "adapterConfigurationSha256": { "$ref": "#/$defs/sha256" },
+    "lookupRequestSha256": { "$ref": "#/$defs/sha256" },
+    "lookupIdempotencyKeySha256": { "$ref": "#/$defs/sha256" },
+    "callerAssertionSha256": { "$ref": "#/$defs/sha256" },
+    "providerReceiptId": { "$ref": "#/$defs/nullableUuid" },
+    "providerReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
+    "toolTerminalSha256": { "$ref": "#/$defs/nullableSha256" },
     "resolution": {
       "enum": [
         "STILL_AMBIGUOUS",
@@ -73,47 +73,76 @@
     "budgetDisposition": {
       "enum": ["NONE", "SETTLED", "RELEASED", "RECONCILIATION_REQUIRED"]
     },
-    "observedAt": {"type": "string", "format": "date-time"},
-    "evidenceSha256": {"$ref": "#/$defs/sha256"}
+    "observedAt": { "type": "string", "format": "date-time" },
+    "evidenceSha256": { "$ref": "#/$defs/sha256" }
   },
   "allOf": [
     {
-      "if": {"properties": {"evidenceKind": {"const": "TOOL_ADAPTER_LOOKUP"}}, "required": ["evidenceKind"]},
+      "if": {
+        "properties": { "evidenceKind": { "const": "TOOL_ADAPTER_LOOKUP" } },
+        "required": ["evidenceKind"]
+      },
       "then": {
         "properties": {
-          "toolCallId": {"type": "string", "format": "uuid"},
-          "toolTerminalSha256": {"$ref": "#/$defs/sha256"}
+          "toolCallId": { "type": "string", "format": "uuid" },
+          "toolTerminalSha256": { "$ref": "#/$defs/sha256" }
         }
       },
-      "else": {"properties": {"toolCallId": {"type": "null"}, "toolTerminalSha256": {"type": "null"}}}
+      "else": {
+        "properties": {
+          "toolCallId": { "type": "null" },
+          "toolTerminalSha256": { "type": "null" }
+        }
+      }
     },
     {
       "if": {
         "properties": {
-          "evidenceKind": {"enum": ["PROVIDER_LOOKUP", "IDEMPOTENCY_LOOKUP", "COST_USAGE_RECEIPT"]}
+          "evidenceKind": {
+            "enum": [
+              "PROVIDER_LOOKUP",
+              "IDEMPOTENCY_LOOKUP",
+              "COST_USAGE_RECEIPT"
+            ]
+          }
         },
         "required": ["evidenceKind"]
       },
-      "then": {"properties": {"providerTurnId": {"type": "string", "format": "uuid"}}}
+      "then": {
+        "properties": {
+          "providerTurnId": { "type": "string", "format": "uuid" }
+        }
+      }
     },
     {
-      "if": {"properties": {"providerReceiptId": {"type": "string"}}, "required": ["providerReceiptId"]},
-      "then": {"properties": {"providerReceiptSha256": {"$ref": "#/$defs/sha256"}}},
-      "else": {"properties": {"providerReceiptSha256": {"type": "null"}}}
+      "if": {
+        "properties": { "providerReceiptId": { "type": "string" } },
+        "required": ["providerReceiptId"]
+      },
+      "then": {
+        "properties": { "providerReceiptSha256": { "$ref": "#/$defs/sha256" } }
+      },
+      "else": { "properties": { "providerReceiptSha256": { "type": "null" } } }
     },
     {
-      "if": {"properties": {"resolution": {"const": "STILL_AMBIGUOUS"}}, "required": ["resolution"]},
-      "then": {"properties": {"budgetDisposition": {"const": "RECONCILIATION_REQUIRED"}}}
+      "if": {
+        "properties": { "resolution": { "const": "STILL_AMBIGUOUS" } },
+        "required": ["resolution"]
+      },
+      "then": {
+        "properties": {
+          "budgetDisposition": { "const": "RECONCILIATION_REQUIRED" }
+        }
+      }
     }
   ],
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "nullableSha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nullableSha256": {
+      "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+    },
     "nullableUuid": {
-      "oneOf": [
-        {"type": "string", "format": "uuid"},
-        {"type": "null"}
-      ]
+      "oneOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }]
     }
   },
   "x-gurinnae-digest-projection": {

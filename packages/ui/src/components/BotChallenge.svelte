@@ -162,7 +162,6 @@ function currentTurnstile(): TurnstileApi | undefined {
 <div class="bot-challenge" data-testid="bot-challenge">
   <span class="challenge-label">자동 제출 방지 확인 (필수)</span>
   <div bind:this={container}></div>
-  <input type="hidden" name="abuseProof" value={proof} />
   <p class:challenge-error={failed} role="status" aria-live="polite">{status}</p>
   {#if failed && config}
     <button class="secondary-button" type="button" onclick={reset}>검증 다시 시도</button>

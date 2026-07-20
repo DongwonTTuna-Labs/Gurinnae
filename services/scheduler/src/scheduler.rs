@@ -46,10 +46,18 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
     .map_err(|_| SchedulerError::Initialization)?;
     tracing::info!(instance_id=%config.instance_id,"scheduler ready");
     loop {
-        let recovered = recover_expired(&pool, 100)
-            .await
-            .map_err(|error| SchedulerError::Database(job_sqlx(error)))?;
-        let scheduled = schedule_source_runs(&pool, config.batch_size).await?;
+        let recovered = recover_expired(&pool, 100).await.map_err(|error| {
+            tracing::error!(stage="recover_expired", error=%error, "scheduler stage failed");
+            SchedulerError::Database(job_sqlx(error))
+        })?;
+        let scheduled = schedule_source_runs(&pool, config.batch_size).await.map_err(|error| {
+            tracing::error!(stage="schedule_source_runs", error=%error, "scheduler stage failed");
+            error
+        })?;
+        let polls = schedule_delivery_poll_requests(&pool, config.batch_size).await.map_err(|error| {
+            tracing::error!(stage="schedule_delivery_poll_requests", error=%error, "scheduler stage failed");
+            error
+        })?;
         let expired: Option<Uuid> = sqlx::query_scalar(
             "SELECT ops.enqueue_outbox('internal.publication_access_expiry',$1,0, \
              'internal.expire_due_publication_access.v1',$2,clock_timestamp())",
@@ -58,15 +66,24 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
         .bind(json!({"limit":config.batch_size}))
         .fetch_one(&pool)
         .await
-        .map_err(SchedulerError::Database)?;
+        .map_err(|error| {
+            tracing::error!(stage="publication_access_expiry", error=%error, "scheduler stage failed");
+            SchedulerError::Database(error)
+        })?;
         let dispatched = dispatch_batch(&pool, config.batch_size).await?;
         let consumed = consume_scheduler_job(&pool, &event_worker).await?;
         if config.once {
-            if scheduled == 0 && expired.is_none() && dispatched == 0 && !consumed && recovered == 0
+            if scheduled == 0
+                && polls == 0
+                && expired.is_none()
+                && dispatched == 0
+                && !consumed
+                && recovered == 0
             {
                 return Ok(());
             }
         } else if scheduled == 0
+            && polls == 0
             && expired.is_none()
             && dispatched == 0
             && !consumed
@@ -304,6 +321,80 @@ pub async fn schedule_source_runs(pool: &PgPool, limit: i64) -> Result<u64, Sche
     Ok(scheduled)
 }
 
+/// Emit one authenticated poll request for each due Solapi delivery.  The
+/// SECURITY DEFINER outbox helper deduplicates by the stable poll key, while
+/// the notification worker performs the provider call and owns the source
+/// receipt transaction.
+pub async fn schedule_delivery_poll_requests(
+    pool: &PgPool,
+    limit: i64,
+) -> Result<u64, SchedulerError> {
+    let rows = sqlx::query(
+        r#"SELECT id,version,channel,provider_message_id,provider_config_id,
+                provider_config_version,provider_configuration_digest,
+                provider_preflight_receipt_id,provider_preflight_receipt_digest
+           FROM ops.outbound_deliveries
+          WHERE state='PROVIDER_ACCEPTED' AND channel IN ('SMS','KAKAO')
+            AND provider_message_id IS NOT NULL AND dispatch_eligible
+            AND next_attempt_at<=clock_timestamp()
+          ORDER BY next_attempt_at,id LIMIT $1"#,
+    )
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(SchedulerError::Database)?;
+    let mut emitted = 0_u64;
+    for row in rows {
+        let id: Uuid = row.try_get("id").map_err(SchedulerError::Database)?;
+        let version: i64 = row.try_get("version").map_err(SchedulerError::Database)?;
+        let channel: String = row.try_get("channel").map_err(SchedulerError::Database)?;
+        let provider_message_id: String = row
+            .try_get("provider_message_id")
+            .map_err(SchedulerError::Database)?;
+        let config_id: Uuid = row
+            .try_get("provider_config_id")
+            .map_err(SchedulerError::Database)?;
+        let config_version: i64 = row
+            .try_get("provider_config_version")
+            .map_err(SchedulerError::Database)?;
+        let configuration_digest: String = row
+            .try_get("provider_configuration_digest")
+            .map_err(SchedulerError::Database)?;
+        let preflight_id: Uuid = row
+            .try_get("provider_preflight_receipt_id")
+            .map_err(SchedulerError::Database)?;
+        let preflight_digest: String = row
+            .try_get("provider_preflight_receipt_digest")
+            .map_err(SchedulerError::Database)?;
+        let poll_key = format!("{id}:{version}:{provider_message_id}");
+        let event_id: Option<Uuid> = sqlx::query_scalar(
+            "SELECT ops.enqueue_outbox('OutboundDelivery',$1,$2,\
+             'communication.delivery_poll_requested.v1',$3,clock_timestamp())",
+        )
+        .bind(id.to_string())
+        .bind(version)
+        .bind(json!({
+            "pollKey": poll_key,
+            "deliveryId": id,
+            "expectedDeliveryVersion": version,
+            "channel": channel,
+            "providerMessageId": provider_message_id,
+            "providerConfigId": config_id,
+            "providerConfigVersion": config_version,
+            "providerConfigurationDigest": configuration_digest,
+            "providerPreflightReceiptId": preflight_id,
+            "providerPreflightReceiptDigest": preflight_digest,
+        }))
+        .fetch_one(pool)
+        .await
+        .map_err(SchedulerError::Database)?;
+        if event_id.is_some() {
+            emitted += 1;
+        }
+    }
+    Ok(emitted)
+}
+
 fn to_chrono(value: OffsetDateTime) -> Result<DateTime<Utc>, SchedulerError> {
     // Cron slots are second-granular.  Carrying database/client sub-second
     // precision through Croner's previous-occurrence search would let two
@@ -472,12 +563,14 @@ fn consumers_for(event_type: &str) -> &'static [&'static str] {
         | "intake.contact_received.v1"
         | "notification.correction_received.v1"
         | "notification.correction_resolved.v1"
+        | "communication.callback_received.v1"
         | "notification.publication_created.v1"
         | "notification.response_extension_requested.v1"
         | "notification.response_request_delivery_requested.v1"
         | "notification.response_submitted.v1"
         | "notification.subscription_verification_requested.v1"
         | "notification.user_invitation_requested.v1"
+        | "communication.delivery_poll_requested.v1"
         | "projection.publication_applied.v1" => &["notification-worker"],
         _ => &[],
     }

@@ -30,6 +30,25 @@ type CommandAttempt = {
   idempotencyKeySha256: string;
   actorAssertionSha256: string;
 };
+
+/**
+ * Stateful addendum fixture used by the INT-002 browser journey.  The
+ * review-console is still exercised through its BFF and generated control
+ * client; these values only provide a deterministic, server-owned aggregate
+ * behind the test API so the journey cannot pass on SSR sentinels alone.
+ */
+export const actionJourneyIds = Object.freeze({
+  proposalId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  assignmentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  handoffId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+  executionId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+});
+export const actionJourneyDigests = Object.freeze({
+  content: "1".repeat(64),
+  approval: "2".repeat(64),
+  binding: "3".repeat(64),
+  receipt: "4".repeat(64),
+});
 export type AttachmentUpload = {
   id: string;
   kind: "correction" | "response";
@@ -83,6 +102,23 @@ export const runtime = {
   attachmentUploads: new Map<string, AttachmentUpload>(),
   correctionDraftVersion: 1,
   responseDraftVersion: 3,
+  actionJourney: {
+    proposalState: "PENDING_QUORUM" as
+      | "PENDING_QUORUM"
+      | "APPROVED"
+      | "REJECTED",
+    decision: null as "APPROVE" | "REJECT" | null,
+    handoffState: "PENDING_ACK" as "PENDING_ACK" | "ACKNOWLEDGED" | "DECLINED",
+    handoffVersion: 1,
+    executionId: null as string | null,
+    events: [] as Array<{
+      operationId: string;
+      before: string;
+      after: string;
+      proposalId: string;
+      digest: string;
+    }>,
+  },
 };
 
 function resetAll() {
@@ -93,6 +129,12 @@ function resetAll() {
   runtime.sessionRevoked = false;
   runtime.consumedOneTimeTokens.clear();
   runtime.exchangeReplays.clear();
+  runtime.actionJourney.proposalState = "PENDING_QUORUM";
+  runtime.actionJourney.decision = null;
+  runtime.actionJourney.handoffState = "PENDING_ACK";
+  runtime.actionJourney.handoffVersion = 1;
+  runtime.actionJourney.executionId = null;
+  runtime.actionJourney.events = [];
   clearObservations();
 }
 function clearObservations() {
@@ -120,6 +162,11 @@ function actor() {
       "admin.users.manage",
       "admin.roles.manage",
       "audit.export",
+      "actions.read",
+      "actions.propose",
+      "actions.review",
+      "actions.operate",
+      "journeys.handoff.decide",
     ],
   };
 }
@@ -175,6 +222,10 @@ export function testState() {
     submissionReads: runtime.submissionReads,
     submissionWrites: runtime.submissionWrites,
     attachmentUploads: [...runtime.attachmentUploads.values()],
+    actionJourney: {
+      ...runtime.actionJourney,
+      events: [...runtime.actionJourney.events],
+    },
   };
 }
 export {

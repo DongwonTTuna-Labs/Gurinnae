@@ -1,5 +1,5 @@
+import { type ScreenViewModel, typedScreenViewModel } from "@gurine/ui";
 import { describe, expect, it } from "vitest";
-import { typedScreenViewModel, type ScreenViewModel } from "@gurine/ui";
 
 const screens = Object.values(
   import.meta.glob("./routes/**/screen.ts", { eager: true, import: "screen" }),
@@ -17,8 +17,12 @@ function assertTypedContracts(values: unknown[]): void {
     const screen = value as ScreenViewModel;
     const typed = typedScreenViewModel(screen);
     expect(typed.screenId).toBe(screen.id);
-    expect(typed.sections.map((section) => section.id)).toEqual(screen.sections.map((section) => section.id));
-    expect(typed.sections.every((section) => section.fields.length > 0)).toBe(true);
+    expect(typed.sections.map((section) => section.id)).toEqual(
+      screen.sections.map((section) => section.id),
+    );
+    expect(typed.sections.every((section) => section.fields.length > 0)).toBe(
+      true,
+    );
   }
 }
 

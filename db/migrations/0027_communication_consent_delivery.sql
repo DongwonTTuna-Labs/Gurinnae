@@ -41,7 +41,15 @@ REVOKE ALL ON FUNCTION ops.communication_safe_retry_proof_is_valid(jsonb,text,ch
 CREATE OR REPLACE FUNCTION ops.communication_provider_revision_snapshot_is_valid(jsonb,char(64)) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $1 IS NOT NULL AND jsonb_typeof($1) = 'object' $$;
 ALTER FUNCTION ops.communication_provider_revision_snapshot_is_valid(jsonb,char(64)) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.communication_provider_revision_snapshot_is_valid(jsonb,char(64)) FROM PUBLIC;
-CREATE OR REPLACE FUNCTION ops.secret_reference_is_version_pinned(text) RETURNS boolean LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT $1 IS NOT NULL $$;
+CREATE OR REPLACE FUNCTION ops.secret_reference_is_version_pinned(text)
+RETURNS boolean
+LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = pg_catalog, pg_temp
+AS $$
+  SELECT $1 ~ '^[A-Za-z][A-Za-z0-9+.-]*://[^/?#[:space:]@]+/[^?#[:space:]@]+@v[A-Za-z0-9._-]+$'
+     AND lower($1) !~ '@v(latest|current)$'
+     AND lower($1) !~ '/(latest|current)@v';
+$$;
 ALTER FUNCTION ops.secret_reference_is_version_pinned(text) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.secret_reference_is_version_pinned(text) FROM PUBLIC;
 CREATE OR REPLACE FUNCTION ops.delivery_proof_rank(text) RETURNS smallint LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE SET search_path = pg_catalog, pg_temp AS $$ SELECT CASE $1 WHEN 'NONE' THEN 0 WHEN 'PROVIDER_ACCEPTED' THEN 10 WHEN 'DELIVERED' THEN 20 WHEN 'READ' THEN 30 ELSE -1 END::smallint $$;

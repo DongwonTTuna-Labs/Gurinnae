@@ -194,7 +194,9 @@ impl<P: ProviderAdapter> MultiTurnRuntime<P> {
             };
             transcript.append(provider_turn)?;
             match reply.envelope {
-                ProviderEnvelope::FinalOutput(output) => return Ok(final_outcome(output, transcript)),
+                ProviderEnvelope::FinalOutput(output) => {
+                    return Ok(final_outcome(output, transcript));
+                }
                 ProviderEnvelope::ToolCall(call) => {
                     tool_calls = tool_calls
                         .checked_add(1)

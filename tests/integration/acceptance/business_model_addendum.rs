@@ -1,7 +1,5 @@
 #![forbid(unsafe_code)]
 
-use std::sync::OnceLock;
-
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 
@@ -9,8 +7,6 @@ use sqlx::postgres::PgPoolOptions;
 /// function.  The generated observation rows remain the per-clause evidence,
 /// but a clause cannot become green from runner environment variables alone.
 /// One cached probe avoids opening a connection for each generated scenario.
-static BUSINESS_HEALTH_PROBE: OnceLock<bool> = OnceLock::new();
-
 fn projection_is_closed_and_truthful(value: &Value) -> bool {
     let Some(object) = value.as_object() else {
         return false;
@@ -140,20 +136,8 @@ fn real_business_health_projection() -> bool {
 }
 
 fn runtime_probe(scenario_id: &str) -> bool {
-    scenario_id.starts_with("AC-")
-        && std::env::current_exe()
-            .map(|path| path.is_file())
-            .unwrap_or(false)
-        && std::env::var("GURINNAE_ACCEPTANCE_RUNTIME_LAYERS_JSON")
-            .map(|value| value.contains("rust-1.97.0-domain-application"))
-            .unwrap_or(false)
-        && std::env::var("GURINNAE_ACCEPTANCE_OBSERVATION_PATH")
-            .map(|value| !value.is_empty())
-            .unwrap_or(false)
-        && std::env::var("GURINNAE_ACCEPTANCE_EDGE_CONTRACTS_JSON")
-            .map(|value| !value.is_empty())
-            .unwrap_or(false)
-        && *BUSINESS_HEALTH_PROBE.get_or_init(real_business_health_projection)
+    ::gurine_acceptance_testkit::runtime_probe::live_acceptance_probe(scenario_id)
+        && ::gurine_acceptance_testkit::runtime_probe::live_business_health_probe()
 }
 
 #[cfg(test)]

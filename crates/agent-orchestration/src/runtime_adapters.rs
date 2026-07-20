@@ -9,10 +9,14 @@ use uuid::Uuid;
 
 use super::*;
 
+#[path = "runtime_source_adapter.rs"]
+mod source_adapter;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EvidenceRecord {
     pub evidence_id: Uuid,
     pub source_use_id: Uuid,
+    pub source_use_sha256: String,
     pub selected_content_sha256: String,
     pub locator: String,
 }
@@ -49,6 +53,16 @@ pub struct SourceArtifactRecord {
     pub source_use_id: Uuid,
     pub content_sha256: String,
     pub fetch_receipt_sha256: String,
+    /// The request kind and URL are persisted with the immutable research
+    /// artifact.  SourceFetch must never return an artifact for a different
+    /// request or broaden a URL lookup to the whole run.
+    pub request_kind: SourceRequestKind,
+    pub source_url: Option<String>,
+    pub final_url: Option<String>,
+    /// Bytes are loaded through the object-store gateway while the snapshot
+    /// is materialized.  A missing capsule is a fail-closed adapter error;
+    /// metadata/digests alone are not sufficient to claim a fetch result.
+    pub content_bytes: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -106,49 +120,142 @@ impl ToolAdapter for SnapshotAdapter {
 }
 
 impl SnapshotAdapter {
-    fn claim_language_check(&self, value: &ClaimLanguageCheckRequest) -> Result<ToolResponse, DispatchError> {
-        if value.draft_text.trim().is_empty() { return Err(DispatchError::RequestInvalid); }
-        Ok(ToolResponse::ClaimLanguageCheck(LanguageCheckResponse { decision: "REVIEW_REQUIRED".to_owned(), findings: Vec::new() }))
+    fn claim_language_check(
+        &self,
+        value: &ClaimLanguageCheckRequest,
+    ) -> Result<ToolResponse, DispatchError> {
+        if value.draft_text.trim().is_empty() {
+            return Err(DispatchError::RequestInvalid);
+        }
+        Ok(ToolResponse::ClaimLanguageCheck(LanguageCheckResponse {
+            decision: "REVIEW_REQUIRED".to_owned(),
+            findings: Vec::new(),
+        }))
     }
-    fn find_comparables(&self, value: &ContractFindComparablesRequest) -> Result<ToolResponse, DispatchError> {
-        let comparables = self.snapshot.comparables.iter().filter(|item| item.contract_id == value.subject_contract_id)
-            .map(|item| Comparable { contract_id: item.contract_id, source_use_id: item.source_use_id }).collect();
-        Ok(ToolResponse::ContractFindComparables(ComparablesResponse { comparables }))
+    fn find_comparables(
+        &self,
+        value: &ContractFindComparablesRequest,
+    ) -> Result<ToolResponse, DispatchError> {
+        let comparables = self
+            .snapshot
+            .comparables
+            .iter()
+            .filter(|item| item.contract_id == value.subject_contract_id)
+            .map(|item| Comparable {
+                contract_id: item.contract_id,
+                source_use_id: item.source_use_id,
+            })
+            .collect();
+        Ok(ToolResponse::ContractFindComparables(ComparablesResponse {
+            comparables,
+        }))
     }
     fn lookup_entity(&self, value: &EntityLookupRequest) -> Result<ToolResponse, DispatchError> {
-        let matches = self.snapshot.entities.iter().filter(|item| value.identifiers.iter().any(|wanted| item.identifiers.iter().any(|actual| actual == wanted)))
-            .map(|item| EntityMatch { entity_id: item.entity_id, canonical_name: item.canonical_name.clone() }).collect();
+        let matches = self
+            .snapshot
+            .entities
+            .iter()
+            .filter(|item| {
+                value
+                    .identifiers
+                    .iter()
+                    .any(|wanted| item.identifiers.iter().any(|actual| actual == wanted))
+            })
+            .map(|item| EntityMatch {
+                entity_id: item.entity_id,
+                canonical_name: item.canonical_name.clone(),
+            })
+            .collect();
         Ok(ToolResponse::EntityLookup(EntityLookupResponse { matches }))
     }
     fn read_evidence(&self, value: &EvidenceReadRequest) -> Result<ToolResponse, DispatchError> {
-        self.snapshot.evidence.iter().find(|item| item.evidence_id == value.evidence_id)
-            .map(|item| ToolResponse::EvidenceRead(EvidenceReadResponse { evidence: EvidenceValue { evidence_id: item.evidence_id, source_use_id: item.source_use_id, selected_content_sha256: item.selected_content_sha256.clone() } }))
+        self.snapshot
+            .evidence
+            .iter()
+            .find(|item| item.evidence_id == value.evidence_id)
+            .map(|item| {
+                ToolResponse::EvidenceRead(EvidenceReadResponse {
+                    evidence: EvidenceValue {
+                        evidence_id: item.evidence_id,
+                        source_use_id: item.source_use_id,
+                        selected_content_sha256: item.selected_content_sha256.clone(),
+                    },
+                })
+            })
             .ok_or(DispatchError::RequestInvalid)
     }
-    fn search_evidence(&self, value: &EvidenceSearchRequest) -> Result<ToolResponse, DispatchError> {
+    fn search_evidence(
+        &self,
+        value: &EvidenceSearchRequest,
+    ) -> Result<ToolResponse, DispatchError> {
         let query = value.query.to_ascii_lowercase();
-        let hits = self.snapshot.evidence.iter().filter(|item| item.locator.to_ascii_lowercase().contains(&query))
-            .map(|item| EvidenceHit { evidence_id: item.evidence_id, source_use_id: item.source_use_id, selected_content_sha256: item.selected_content_sha256.clone() }).collect();
-        Ok(ToolResponse::EvidenceSearch(EvidenceSearchResponse { query_digest: digest(value.query.as_bytes()), hits }))
+        let hits = self
+            .snapshot
+            .evidence
+            .iter()
+            .filter(|item| item.locator.to_ascii_lowercase().contains(&query))
+            .map(|item| EvidenceHit {
+                evidence_id: item.evidence_id,
+                source_use_id: item.source_use_id,
+                selected_content_sha256: item.selected_content_sha256.clone(),
+            })
+            .collect();
+        Ok(ToolResponse::EvidenceSearch(EvidenceSearchResponse {
+            query_digest: digest(value.query.as_bytes()),
+            hits,
+        }))
     }
     fn read_response(&self, value: &ResponseReadRequest) -> Result<ToolResponse, DispatchError> {
-        self.snapshot.responses.iter().find(|item| item.response_id == value.response_id)
-            .map(|item| ToolResponse::ResponseRead(ResponseReadResponse { response: ResponseValue { response_id: item.response_id, response_content_sha256: item.response_content_sha256.clone() } }))
+        self.snapshot
+            .responses
+            .iter()
+            .find(|item| item.response_id == value.response_id)
+            .map(|item| {
+                ToolResponse::ResponseRead(ResponseReadResponse {
+                    response: ResponseValue {
+                        response_id: item.response_id,
+                        response_content_sha256: item.response_content_sha256.clone(),
+                    },
+                })
+            })
             .ok_or(DispatchError::RequestInvalid)
     }
     fn reproduce_rule(&self, value: &RuleReproduceRequest) -> Result<ToolResponse, DispatchError> {
-        self.snapshot.rules.iter().find(|item| item.rule_version_id == value.rule_version_id)
-            .map(|item| ToolResponse::RuleReproduce(RuleReproduceResponse { reproduction: ReproductionValue { rule_run_id: item.rule_run_id, result_digest: item.result_digest.clone() } }))
+        self.snapshot
+            .rules
+            .iter()
+            .find(|item| item.rule_version_id == value.rule_version_id)
+            .map(|item| {
+                ToolResponse::RuleReproduce(RuleReproduceResponse {
+                    reproduction: ReproductionValue {
+                        rule_run_id: item.rule_run_id,
+                        result_digest: item.result_digest.clone(),
+                    },
+                })
+            })
             .ok_or(DispatchError::RequestInvalid)
     }
     fn fetch_source(&self, value: &SourceFetchRequest) -> Result<ToolResponse, DispatchError> {
-        if matches!(value.request_kind, SourceRequestKind::FetchUrl) && value.canonical_url.as_deref().is_none_or(str::is_empty) { return Err(DispatchError::RequestInvalid); }
-        let artifacts = self.snapshot.source_artifacts.iter().map(|item| SourceArtifact { research_artifact_id: item.research_artifact_id, content_sha256: item.content_sha256.clone(), source_use_id: item.source_use_id }).collect();
-        Ok(ToolResponse::SourceFetch(SourceFetchResponse { fetch_receipt_sha256: digest(value.canonical_url.as_deref().unwrap_or("search").as_bytes()), artifacts }))
+        source_adapter::fetch(self, value)
     }
-    fn verify_locator(&self, value: &SourceLocatorVerifyRequest) -> Result<ToolResponse, DispatchError> {
-        let actual = self.snapshot.evidence.iter().find(|item| item.selected_content_sha256 == value.expected_selected_content_sha256).map(|item| item.selected_content_sha256.clone());
-        Ok(ToolResponse::SourceLocatorVerify(SourceLocatorVerifyResponse { verification: LocatorVerification { valid: actual.is_some(), actual_selected_content_sha256: actual } }))
+    fn verify_locator(
+        &self,
+        value: &SourceLocatorVerifyRequest,
+    ) -> Result<ToolResponse, DispatchError> {
+        let actual = self
+            .snapshot
+            .evidence
+            .iter()
+            .find(|item| item.selected_content_sha256 == value.expected_selected_content_sha256)
+            .map(|item| item.selected_content_sha256.clone());
+        Ok(ToolResponse::SourceLocatorVerify(
+            SourceLocatorVerifyResponse {
+                verification: LocatorVerification {
+                    valid: actual.is_some(),
+                    actual_selected_content_sha256: actual,
+                },
+            },
+        ))
     }
 }
 
@@ -157,4 +264,117 @@ fn digest(bytes: &[u8]) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
+}
+
+fn gateway_decision(decision: &str, code: &str, policy_version: &str) -> GatewayDecisionV2 {
+    let policy_sha256 = digest(policy_version.as_bytes());
+    let decision_sha256 = digest(format!("{policy_version}:{decision}:{code}").as_bytes());
+    GatewayDecisionV2 {
+        policy_version: policy_version.to_owned(),
+        policy_sha256,
+        decision: decision.to_owned(),
+        decision_code: code.to_owned(),
+        decision_sha256,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn binding() -> SnapshotBinding {
+        SnapshotBinding {
+            run_id: Uuid::from_u128(1),
+            input_snapshot_id: Uuid::from_u128(2),
+            input_snapshot_sha256: "a".repeat(64),
+        }
+    }
+
+    fn artifact(bytes: &[u8]) -> SourceArtifactRecord {
+        SourceArtifactRecord {
+            research_artifact_id: Uuid::from_u128(3),
+            source_use_id: Uuid::from_u128(4),
+            content_sha256: digest(bytes),
+            fetch_receipt_sha256: "b".repeat(64),
+            request_kind: SourceRequestKind::FetchUrl,
+            source_url: Some("https://example.test/source".to_owned()),
+            final_url: Some("https://example.test/final".to_owned()),
+            content_bytes: Some(bytes.to_vec()),
+        }
+    }
+
+    fn adapter() -> SnapshotAdapter {
+        SnapshotAdapter {
+            id: ToolId::SourceFetch,
+            snapshot: ToolSnapshot {
+                binding: binding(),
+                evidence: Vec::new(),
+                responses: Vec::new(),
+                comparables: Vec::new(),
+                entities: Vec::new(),
+                rules: Vec::new(),
+                source_artifacts: vec![artifact(b"actual source bytes")],
+            },
+        }
+    }
+
+    #[test]
+    fn search_never_returns_fetch_artifacts() {
+        let request = ToolRequest::SourceFetch(SourceFetchRequest {
+            binding: binding(),
+            request_kind: SourceRequestKind::SearchPublicWeb,
+            query: Some("공공 계약".to_owned()),
+            locale: Some("ko-KR".to_owned()),
+            country: Some("KR".to_owned()),
+            recency_days: None,
+            result_limit: Some(10),
+            canonical_url: None,
+        });
+        let response = adapter().dispatch(&request).expect("search response");
+        let ToolResponse::SourceFetch(response) = response else {
+            panic!("unexpected response variant");
+        };
+        assert!(response.artifacts.is_empty());
+        // The receipt binds the canonical JSON array of zero search
+        // artifacts, not an empty byte payload.
+        assert_eq!(response.fetch_receipt_sha256, digest(b"[]"));
+    }
+
+    #[test]
+    fn fetch_requires_exact_url_and_content_digest() {
+        let request = ToolRequest::SourceFetch(SourceFetchRequest {
+            binding: binding(),
+            request_kind: SourceRequestKind::FetchUrl,
+            query: None,
+            locale: None,
+            country: None,
+            recency_days: None,
+            result_limit: None,
+            canonical_url: Some("https://example.test/final".to_owned()),
+        });
+        let response = adapter().dispatch(&request).expect("fetch response");
+        let ToolResponse::SourceFetch(response) = response else {
+            panic!("unexpected response variant");
+        };
+        assert_eq!(response.artifacts.len(), 1);
+        assert_eq!(
+            response.fetch_receipt_sha256,
+            digest(b"actual source bytes")
+        );
+
+        let wrong_url = ToolRequest::SourceFetch(SourceFetchRequest {
+            binding: binding(),
+            request_kind: SourceRequestKind::FetchUrl,
+            query: None,
+            locale: None,
+            country: None,
+            recency_days: None,
+            result_limit: None,
+            canonical_url: Some("https://example.test/other".to_owned()),
+        });
+        assert!(matches!(
+            adapter().dispatch(&wrong_url),
+            Err(DispatchError::RequestInvalid)
+        ));
+    }
 }

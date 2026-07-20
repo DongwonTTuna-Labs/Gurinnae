@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-010",
+  "route": "/internal/cases/80000000-0000-4000-8000-000000000001/agent-runs",
+  "observedAt": "2026-07-20T15:37:33.507Z",
+  "observation": {
+    "authenticated": true,
+    "screenId": "CAS-010",
+    "errorSummary": false,
+    "sections": [
+      {
+        "id": "runs",
+        "projectionState": "PARTIAL"
+      },
+      {
+        "id": "filters",
+        "projectionState": "PARTIAL"
+      },
+      {
+        "id": "suggestions",
+        "projectionState": "PARTIAL"
+      },
+      {
+        "id": "budget",
+        "projectionState": "PARTIAL"
+      },
+      {
+        "id": "page-actions",
+        "projectionState": null
+      }
+    ],
+    "visualizations": 1,
+    "accessibleTableRows": 1,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

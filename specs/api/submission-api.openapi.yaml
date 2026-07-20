@@ -14,14 +14,6 @@ tags:
 - name: response
 - name: subscription
 - name: addendum
-- name: addendum
-- name: addendum
-- name: addendum
-- name: addendum
-- name: addendum
-- name: addendum
-- name: addendum
-- name: addendum
 paths:
   /v1/contact-requests:
     post:
@@ -4682,6 +4674,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: none
+      x-assurance-level: SCOPED_TOKEN
       x-error-codes:
       - SCOPED_SESSION_REQUIRED
       - APPEAL_SCOPE_INVALID
@@ -4748,6 +4742,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: QUERY
+      x-capability: none
+      x-assurance-level: SCOPED_TOKEN
       x-error-codes:
       - SCOPED_SESSION_REQUIRED
       - RESOURCE_NOT_FOUND
@@ -4795,6 +4791,12 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: appealId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
   /v1/communication-profile-session/endpoints:link:
     post:
       operationId: requestCommunicationEndpointLink
@@ -4802,6 +4804,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: none
+      x-assurance-level: SCOPED_TOKEN
       x-error-codes:
       - SCOPED_SESSION_REQUIRED
       - ENDPOINT_TYPE_UNSUPPORTED
@@ -4872,6 +4876,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: none
+      x-assurance-level: SCOPED_TOKEN
       x-error-codes:
       - SCOPED_SESSION_REQUIRED
       - ENDPOINT_CHALLENGE_INVALID
@@ -4940,6 +4946,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: none
+      x-assurance-level: SCOPED_TOKEN
       x-error-codes:
       - SCOPED_SESSION_REQUIRED
       - ENDPOINT_NOT_FOUND
@@ -5012,6 +5020,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: none
+      x-assurance-level: ANONYMOUS_PROOF
       x-error-codes:
       - INVALID_PARAMETER
       - IDENTITY_PROOF_INVALID
@@ -5086,6 +5096,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: COMMAND
+      x-capability: none
+      x-assurance-level: SCOPED_TOKEN
       x-error-codes:
       - TOKEN_INVALID
       - TOKEN_EXPIRED
@@ -5144,6 +5156,8 @@ paths:
       tags:
       - addendum
       x-operation-kind: QUERY
+      x-capability: none
+      x-assurance-level: SCOPED_TOKEN
       x-error-codes:
       - SCOPED_SESSION_REQUIRED
       - RESOURCE_NOT_FOUND
@@ -7101,11 +7115,22 @@ components:
           type: integer
           format: int64
         reasonCode:
-          type: object
-          additionalProperties: false
+          type: string
+          enum:
+          - DELIVERY_DISPUTE
+          - SCOPE_DISPUTE
+          - CONSENT_DISPUTE
+          - PUBLICATION_EXCERPT_DISPUTE
+          - DEADLINE_DISPUTE
+          - OTHER
         requestedOutcome:
-          type: object
-          additionalProperties: false
+          type: string
+          enum:
+          - REOPEN_RESPONSE
+          - REVIEW_EXCERPT
+          - CORRECT_STATUS
+          - EXTEND_DEADLINE
+          - HUMAN_REVIEW
         statement:
           type: string
         supportingAttachmentIds:
@@ -7153,8 +7178,21 @@ components:
           format: uuid
         state:
           type: string
+          enum:
+          - RECEIVED
+          - REVIEW
+          - RESOLVED
+          - REJECTED
+          - DUPLICATE
+          - WITHDRAWN
         requestedOutcome:
           type: string
+          enum:
+          - REOPEN_RESPONSE
+          - REVIEW_EXCERPT
+          - CORRECT_STATUS
+          - EXTEND_DEADLINE
+          - HUMAN_REVIEW
         submittedAt:
           type: string
           format: date-time
@@ -7165,9 +7203,9 @@ components:
           type: string
           format: date-time
         decisionReason:
-          type:
-          - string
-          - 'null'
+          anyOf:
+          - type: string
+          - type: 'null'
         nextActions:
           type: array
           items:
@@ -7175,7 +7213,9 @@ components:
         links:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/Link'
+        operationId:
+          type: string
       required:
       - appealId
       - state
@@ -7186,13 +7226,14 @@ components:
       - decisionReason
       - nextActions
       - links
+      - operationId
     RequestCommunicationEndpointLinkRequestV1:
       type: object
       additionalProperties: false
       properties:
         contractVersion:
-          type: object
-          additionalProperties: false
+          type: string
+          const: communication-v1
         endpoint:
           $ref: '#/components/schemas/EndpointEnrollmentV1'
         linkingConsent:
@@ -7221,6 +7262,10 @@ components:
           format: uuid
         challengeKind:
           type: string
+          enum:
+          - EMAIL_LINK
+          - SMS_OTP
+          - PROVIDER_SIGNED_BINDING
         expiresAt:
           type: string
           format: date-time
@@ -7279,8 +7324,13 @@ components:
           type: integer
           format: int64
         reasonCode:
-          type: integer
-          format: int64
+          type: string
+          enum:
+          - USER_REQUEST
+          - LOST_ACCESS
+          - WRONG_ENDPOINT
+          - PRIVACY
+          - OTHER
       required:
       - endpointId
       - expectedEndpointVersion
@@ -7310,8 +7360,12 @@ components:
       additionalProperties: false
       properties:
         requestType:
-          type: object
-          additionalProperties: false
+          type: string
+          enum:
+          - ACCESS
+          - CORRECTION
+          - DELETION
+          - RESTRICTION
         subjectIdentityProof:
           $ref: '#/components/schemas/PrivacyIdentityProofV1'
         jurisdiction:
@@ -7374,8 +7428,8 @@ components:
           type: string
           format: uuid
         state:
-          type: object
-          additionalProperties: false
+          type: string
+          const: ACTIVE
         expiresAt:
           type: string
           format: date-time
@@ -7403,13 +7457,13 @@ components:
         request:
           $ref: '#/components/schemas/PrivacyRequestSummaryV1'
         decisionReason:
-          type:
-          - string
-          - 'null'
+          anyOf:
+          - type: string
+          - type: 'null'
         completionSummary:
-          type:
-          - string
-          - 'null'
+          anyOf:
+          - type: string
+          - type: 'null'
         nextActions:
           type: array
           items:
@@ -7420,7 +7474,9 @@ components:
         links:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/Link'
+        operationId:
+          type: string
       required:
       - request
       - decisionReason
@@ -7428,6 +7484,7 @@ components:
       - nextActions
       - asOf
       - links
+      - operationId
     AddendumProblemDetailsV1:
       type: object
       additionalProperties: false
@@ -7461,6 +7518,10 @@ components:
           format: uuid
         status:
           type: string
+          enum:
+          - ACCEPTED
+          - COMPLETED
+          - REJECTED
         aggregateId:
           type: string
           format: uuid
@@ -7481,12 +7542,12 @@ components:
           items:
             type: string
         idempotencyReplay:
-          type: object
-          additionalProperties: false
+          type: boolean
+          const: false
         links:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/Link'
       required:
       - operationId
       - requestId
@@ -7517,10 +7578,30 @@ components:
           format: int64
         state:
           type: string
+          enum:
+          - RECEIVED
+          - REVIEW
+          - RESOLVED
+          - REJECTED
+          - DUPLICATE
+          - WITHDRAWN
         reasonCode:
           type: string
+          enum:
+          - DELIVERY_DISPUTE
+          - SCOPE_DISPUTE
+          - CONSENT_DISPUTE
+          - PUBLICATION_EXCERPT_DISPUTE
+          - DEADLINE_DISPUTE
+          - OTHER
         requestedOutcome:
           type: string
+          enum:
+          - REOPEN_RESPONSE
+          - REVIEW_EXCERPT
+          - CORRECT_STATUS
+          - EXTEND_DEADLINE
+          - HUMAN_REVIEW
         createdAt:
           type: string
           format: date-time
@@ -7553,15 +7634,31 @@ components:
           format: int64
         channel:
           type: string
+          enum:
+          - EMAIL
+          - SMS
+          - TELEGRAM
+          - WHATSAPP
+          - LINE
+          - KAKAO
+          - VOICE
         maskedDestination:
           type: string
         state:
           type: string
+          enum:
+          - PENDING_VERIFICATION
+          - ACTIVE
+          - REVOKED
+          - BOUNCED
+          - SUPPRESSED
         locale:
           type: string
         verifiedAt:
-          type: string
-          format: date-time
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
         updatedAt:
           type: string
           format: date-time
@@ -7583,8 +7680,19 @@ components:
           format: uuid
         requestType:
           type: string
+          enum:
+          - ACCESS
+          - CORRECTION
+          - DELETION
+          - RESTRICTION
         state:
           type: string
+          enum:
+          - RECEIVED
+          - REVIEW
+          - APPROVED
+          - REJECTED
+          - COMPLETED
         jurisdiction:
           type: string
         scopeDigest:
@@ -7609,17 +7717,116 @@ components:
       - createdAt
       - updatedAt
     EndpointEnrollmentV1:
-      type: object
-      additionalProperties: false
-      properties: {}
-      required: []
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          channel:
+            type: string
+            const: EMAIL
+          address:
+            type: string
+          locale:
+            type: string
+        required:
+        - channel
+        - address
+        - locale
+      - type: object
+        additionalProperties: false
+        properties:
+          channel:
+            type: string
+            const: SMS
+          e164:
+            type: string
+          locale:
+            type: string
+        required:
+        - channel
+        - e164
+        - locale
+      - type: object
+        additionalProperties: false
+        properties:
+          channel:
+            type: string
+            const: TELEGRAM
+          providerSubjectToken:
+            type: string
+          locale:
+            type: string
+        required:
+        - channel
+        - providerSubjectToken
+        - locale
+      - type: object
+        additionalProperties: false
+        properties:
+          channel:
+            type: string
+            const: WHATSAPP
+          providerSubjectToken:
+            type: string
+          locale:
+            type: string
+        required:
+        - channel
+        - providerSubjectToken
+        - locale
+      - type: object
+        additionalProperties: false
+        properties:
+          channel:
+            type: string
+            const: LINE
+          providerSubjectToken:
+            type: string
+          locale:
+            type: string
+        required:
+        - channel
+        - providerSubjectToken
+        - locale
+      - type: object
+        additionalProperties: false
+        properties:
+          channel:
+            type: string
+            const: KAKAO
+          e164:
+            type: string
+          locale:
+            type: string
+        required:
+        - channel
+        - e164
+        - locale
+      - type: object
+        additionalProperties: false
+        properties:
+          channel:
+            type: string
+            const: VOICE
+          e164:
+            type: string
+          locale:
+            type: string
+          explicitVoiceConsentReceiptId:
+            type: string
+            format: uuid
+        required:
+        - channel
+        - e164
+        - locale
+        - explicitVoiceConsentReceiptId
     EndpointLinkingConsentV1:
       type: object
       additionalProperties: false
       properties:
         decision:
-          type: object
-          additionalProperties: false
+          type: string
+          const: LINK
         purposes:
           type: array
           items:
@@ -7650,45 +7857,144 @@ components:
       properties:
         provider:
           type: string
+          enum:
+          - TURNSTILE
+          - HCAPTCHA
+          - SYNTHETIC_TEST
         token:
           type: string
         action:
           type: string
         issuedAtEpochSeconds:
-          type: integer
-          format: int64
+          anyOf:
+          - type: integer
+            format: int64
+          - type: 'null'
       required:
       - provider
       - token
       - action
       - issuedAtEpochSeconds
     EndpointVerificationProofV1:
-      type: object
-      additionalProperties: false
-      properties: {}
-      required: []
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: EMAIL_LINK
+          token:
+            type: string
+        required:
+        - kind
+        - token
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: SMS_OTP
+          code:
+            type: string
+        required:
+        - kind
+        - code
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: PROVIDER_SIGNED_BINDING
+          provider:
+            type: string
+            enum:
+            - TELEGRAM_BOT_API
+            - META_WHATSAPP_BUSINESS_CLOUD
+            - LINE_MESSAGING_API
+            - SOLAPI_KAKAO_BIZMESSAGE
+            - TWILIO_VOICE
+          bindingToken:
+            type: string
+        required:
+        - kind
+        - provider
+        - bindingToken
     PrivacyIdentityProofV1:
-      type: object
-      additionalProperties: false
-      properties: {}
-      required: []
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: RESPONSE_RECEIPT
+          receiptId:
+            type: string
+            format: uuid
+          possessionToken:
+            type: string
+        required:
+        - kind
+        - receiptId
+        - possessionToken
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: VERIFIED_ENDPOINT
+          endpointChallengeId:
+            type: string
+            format: uuid
+          endpointProof:
+            $ref: '#/components/schemas/EndpointVerificationProofV1'
+        required:
+        - kind
+        - endpointChallengeId
+        - endpointProof
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: IDENTITY_DOCUMENT_CHALLENGE
+          challengeId:
+            type: string
+            format: uuid
+          verificationReceiptId:
+            type: string
+            format: uuid
+          verificationReceiptDigest:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+        required:
+        - kind
+        - challengeId
+        - verificationReceiptId
+        - verificationReceiptDigest
     PrivacyRequestScopeV1:
       type: object
       additionalProperties: false
       properties:
         scopeKind:
           type: string
-          format: date
+          enum:
+          - ALL_VERIFIED_SUBJECT_DATA
+          - OBJECT_SET
+          - DATE_RANGE
         objectRefs:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/PrivacyObjectRefV1'
         dateFrom:
-          type: string
-          format: date
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
         dateTo:
-          type: string
-          format: date
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
         includeDerivatives:
           type: boolean
         includeBackups:
@@ -7705,8 +8011,15 @@ components:
       additionalProperties: false
       properties:
         objectType:
-          type: integer
-          format: int64
+          type: string
+          enum:
+          - RESPONSE
+          - CORRECTION
+          - SUBSCRIPTION
+          - COMMUNICATION_ENDPOINT
+          - PUBLICATION
+          - EVIDENCE
+          - AUDIT_SUBJECT_RECORD
         objectId:
           type: string
           format: uuid
@@ -7719,16 +8032,22 @@ components:
       properties:
         provider:
           type: string
+          enum:
+          - TURNSTILE
+          - HCAPTCHA
+          - SYNTHETIC_TEST
         token:
           type: string
         action:
-          type: object
-          additionalProperties: false
+          type: string
+          const: privacy-request-receipt-exchange
         clientNonce:
           type: string
         issuedAtEpochSeconds:
-          type: integer
-          format: int64
+          anyOf:
+          - type: integer
+            format: int64
+          - type: 'null'
       required:
       - provider
       - token

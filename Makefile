@@ -1,9 +1,9 @@
-.PHONY: final-check validate-ui validate-api validate-database validate-architecture verify-postgres-runtime test-document-extractor test-document-extractor-runtime test-event-consumers-runtime test-analysis-runtime test-analysis-negative-runtime test-analysis-production-egress test-ingest-runtime test-scheduler-runtime test-procurement-runtime test-ui-e2e test-ui-visual test-runtime-quality test-rust-workspace test-sqlx-prepare manifest package-verify verify verify-authority verify-additive-hard-gates verify-acceptance-source run-acceptance-439 verify-execution-evidence verify-acceptance verify-bun verify-codegen verify-runtime verify-containers verify-prearchive verify-final source-archive clean-extraction-verify archive-check show-tech-baseline show-product-contract
+.PHONY: final-check validate-ui validate-api validate-database validate-architecture verify-postgres-runtime test-document-extractor test-document-extractor-runtime test-event-consumers-runtime test-analysis-runtime test-analysis-negative-runtime test-analysis-production-egress test-ingest-runtime test-scheduler-runtime test-procurement-runtime test-ui-e2e test-ui-visual test-runtime-quality test-rust-workspace test-sqlx-prepare manifest package-verify verify verify-authority verify-authority-snapshot verify-additive-hard-gates verify-acceptance-source run-acceptance-439 verify-execution-evidence verify-acceptance verify-bun verify-codegen verify-runtime verify-containers verify-prearchive verify-final source-archive clean-extraction-verify archive-check show-tech-baseline show-product-contract
 
 PYTHON ?= python3
 PYTHON_ENV := PYTHONDONTWRITEBYTECODE=1
 AUTHORITY_ZIP ?= /home/dongwonttuna/.codex/attachments/29aa0c62-686a-450b-84aa-944e5cb7d47a/gurine-codex-authority-pack-v13.0.0-20260712.zip
-AUTHORITY_VALIDATOR_ARGS = --rm --volume "$(CURDIR):/workspace" --volume "$(AUTHORITY_ZIP):/authority/gurine.zip:ro" --env GURINNAE_AUTHORITY_ZIP=/authority/gurine.zip --workdir /workspace
+AUTHORITY_VALIDATOR_ARGS = --rm --volume "$(CURDIR):/workspace" --volume "$(AUTHORITY_ZIP):/authority/gurine.zip:ro" --env GURINNAE_AUTHORITY_ZIP=/authority/gurine.zip --env PYTHONDONTWRITEBYTECODE=1 --workdir /workspace
 ACCEPTANCE_EVIDENCE_ROOT ?=
 ACCEPTANCE_RUN_INDEX ?=
 ACCEPTANCE_RUN_ID ?=
@@ -78,8 +78,12 @@ test-sqlx-prepare:
 	bash scripts/test-sqlx-prepare.sh
 
 verify-authority:
+	$(PYTHON_ENV) $(PYTHON) scripts/verify_authority_snapshot.py
 	docker build --target authority-validator -f infra/docker/rust-service/Dockerfile -t gurine-authority-validator:13.0.0 .
 	docker run $(AUTHORITY_VALIDATOR_ARGS) gurine-authority-validator:13.0.0 python -B scripts/validate_final_spec.py --strict
+
+verify-authority-snapshot:
+	$(PYTHON_ENV) $(PYTHON) scripts/verify_authority_snapshot.py
 	sha256sum --quiet --check MANIFEST.sha256
 
 verify-additive-hard-gates: verify-authority

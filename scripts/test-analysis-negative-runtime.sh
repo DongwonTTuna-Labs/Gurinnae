@@ -56,7 +56,7 @@ snapshot_hash() {
   local objective="$2"
   local snapshot
   snapshot="$(docker exec "$container" psql -At -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
-    "SELECT jsonb_build_object('caseId','61000000-0000-4000-8000-000000000002','evidence',(SELECT jsonb_agg(jsonb_build_object('id',e.id,'contentSha256',btrim(e.content_sha256::text),'locator',e.source_locator,'updatedAt',e.updated_at,'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb)) ORDER BY e.id) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.case_id='61000000-0000-4000-8000-000000000002' AND e.id='$evidence_id' AND e.verification_status='VERIFIED'),'objective','$objective')")"
+    "SELECT jsonb_build_object('caseId','61000000-0000-4000-8000-000000000002','evidence',(SELECT jsonb_agg(jsonb_build_object('id',e.id,'contentSha256',btrim(e.content_sha256::text),'locator',e.source_locator,'updatedAt',e.updated_at,'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb)) ORDER BY e.id) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.case_id='61000000-0000-4000-8000-000000000002' AND e.id='$evidence_id' AND e.verification_status='VERIFIED'))")"
   printf '%s' "$snapshot" | jq -cSj . | sha256sum | cut -d' ' -f1
 }
 
@@ -89,6 +89,7 @@ seed_agent "62000000-0000-4000-8000-000000000003" "$safe_evidence" "stale snapsh
   "$(printf 'f%.0s' $(seq 1 64))"
 seed_agent "62000000-0000-4000-8000-000000000004" "62000000-0000-4000-8000-000000009999" \
   "invalid evidence scope" 1000 "$(printf 'e%.0s' $(seq 1 64))"
+
 
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <<'SQL' >/dev/null
 INSERT INTO ops.inbox(consumer,event_id,result)
@@ -161,12 +162,16 @@ VALUES('PROVIDER_CONNECTION_TEST','analysis-worker',
 SQL
 
 GURINE_ENV=production AI_ENABLED=true AI_PROVIDER_ORDER=unavailable \
-EGRESS_AI_CHANNEL_URL=http://127.0.0.1:9/ai ANALYSIS_DATABASE_URL="$analysis_url" \
+  EGRESS_SOURCE_CHANNEL_URL=http://127.0.0.1:9/source \
+EGRESS_AI_CHANNEL_URL=http://127.0.0.1:9/ai EGRESS_OBJECT_STORE_CHANNEL_URL=http://127.0.0.1:9/object-store \
+ANALYSIS_DATABASE_URL="$analysis_url" \
 ANALYSIS_ONCE=true HOSTNAME="analysis-negative-retry-1" target/debug/gurine-analysis-worker
 docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
   "UPDATE ops.jobs SET run_after=clock_timestamp() WHERE dedupe_key='negative-provider-retry';" >/dev/null
 GURINE_ENV=production AI_ENABLED=true AI_PROVIDER_ORDER=unavailable \
-EGRESS_AI_CHANNEL_URL=http://127.0.0.1:9/ai ANALYSIS_DATABASE_URL="$analysis_url" \
+  EGRESS_SOURCE_CHANNEL_URL=http://127.0.0.1:9/source \
+EGRESS_AI_CHANNEL_URL=http://127.0.0.1:9/ai EGRESS_OBJECT_STORE_CHANNEL_URL=http://127.0.0.1:9/object-store \
+ANALYSIS_DATABASE_URL="$analysis_url" \
 ANALYSIS_ONCE=true HOSTNAME="analysis-negative-retry-2" target/debug/gurine-analysis-worker
 
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <<'SQL' >/dev/null

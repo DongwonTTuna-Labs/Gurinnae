@@ -13,15 +13,20 @@ pub struct Config {
     pub oidc_issuer_host: String,
     pub source_hosts: BTreeSet<String>,
     pub source_host_bindings: BTreeMap<String, String>,
+    pub public_research_hosts: BTreeSet<String>,
     pub ai_hosts: BTreeSet<String>,
     pub challenge_hosts: BTreeSet<String>,
     pub object_store: Option<ObjectStoreConfig>,
     pub smtp_url: Option<String>,
     pub data_go_kr_service_key: Option<String>,
     pub open_dart_api_key: Option<String>,
+    pub brave_search_api_key: Option<String>,
     pub openai_api_key: Option<String>,
     pub anthropic_api_key: Option<String>,
     pub google_api_key: Option<String>,
+    /// Database read path used for durable AI/communication kill-switch
+    /// enforcement.  Production refuses to start without it.
+    pub database_url: Option<String>,
 }
 
 #[derive(Clone)]
@@ -47,26 +52,33 @@ pub enum ConfigError {
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
         let (environment, bind, oidc_issuer_host) = base_environment()?;
-        let (source_hosts, source_host_bindings) = source_config()?;
+        let (source_hosts, source_host_bindings, public_research_hosts) = source_config()?;
         let ai_hosts = host_list("AI_PROVIDER_HOSTS")?;
         let challenge_hosts = challenge_config(&environment)?;
         let object_store = object_store_config(&environment)?;
         let smtp_url = smtp_config()?;
+        let database_url = optional("EGRESS_DATABASE_URL");
+        if environment == "production" && database_url.is_none() {
+            return Err(ConfigError::Missing);
+        }
         Ok(Self {
             bind,
             environment,
             oidc_issuer_host: normalize_host(&oidc_issuer_host)?,
             source_hosts,
             source_host_bindings,
+            public_research_hosts,
             ai_hosts,
             challenge_hosts,
             object_store,
             smtp_url,
             data_go_kr_service_key: optional("DATA_GO_KR_SERVICE_KEY"),
             open_dart_api_key: optional("OPEN_DART_API_KEY"),
+            brave_search_api_key: optional("BRAVE_SEARCH_API_KEY"),
             openai_api_key: optional("OPENAI_API_KEY"),
             anthropic_api_key: optional("ANTHROPIC_API_KEY"),
             google_api_key: optional("GOOGLE_GENERATIVE_AI_API_KEY"),
+            database_url,
         })
     }
 
@@ -88,16 +100,29 @@ fn base_environment() -> Result<(String, String, String), ConfigError> {
     Ok((environment, bind, normalize_host(&oidc)?))
 }
 
-fn source_config() -> Result<(BTreeSet<String>, BTreeMap<String, String>), ConfigError> {
+#[expect(
+    clippy::type_complexity,
+    reason = "the closed source policy triple is consumed atomically by configuration"
+)]
+fn source_config()
+-> Result<(BTreeSet<String>, BTreeMap<String, String>, BTreeSet<String>), ConfigError> {
     let mut hosts = BTreeSet::from([
         "apis.data.go.kr".to_owned(),
         "opendart.fss.or.kr".to_owned(),
+        "api.search.brave.com".to_owned(),
     ]);
     let mut bindings = BTreeMap::from([
         ("koneps-contracts".to_owned(), "apis.data.go.kr".to_owned()),
         ("koneps-notices".to_owned(), "apis.data.go.kr".to_owned()),
         ("open-dart".to_owned(), "opendart.fss.or.kr".to_owned()),
+        (
+            "brave-search-web-v1".to_owned(),
+            "api.search.brave.com".to_owned(),
+        ),
+        ("public-research".to_owned(), "*".to_owned()),
     ]);
+    let public_research_hosts = host_list("PUBLIC_RESEARCH_HOSTS")?;
+    hosts.extend(public_research_hosts.iter().cloned());
     for (name, source_id) in [
         ("ALIO_HOST", "alio"),
         ("LOCAL_FINANCE_HOST", "local-finance"),
@@ -109,7 +134,7 @@ fn source_config() -> Result<(BTreeSet<String>, BTreeMap<String, String>), Confi
             bindings.insert(source_id.to_owned(), host);
         }
     }
-    Ok((hosts, bindings))
+    Ok((hosts, bindings, public_research_hosts))
 }
 
 fn host_list(name: &'static str) -> Result<BTreeSet<String>, ConfigError> {

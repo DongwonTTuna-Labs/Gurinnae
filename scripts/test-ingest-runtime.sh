@@ -10,6 +10,7 @@ source_pid=""
 cleanup() {
   status=$?
   trap - EXIT
+  if [[ $status -ne 0 ]]; then docker logs "$container" >&2 || true; fi
   [[ -z "$source_pid" ]] || kill "$source_pid" >/dev/null 2>&1 || true
   docker rm -f "$container" >/dev/null 2>&1 || true
   rm -rf "$work"
@@ -63,8 +64,8 @@ for source in "${sources[@]}"; do
 INSERT INTO ops.source_runs(id,source_id,mode,status,requested_from,requested_to,request_reason,requested_by)
 VALUES(:'run_id',:'source','FULL','QUEUED','2026-07-01','2026-07-12','runtime ingest',
   '51000000-0000-4000-8000-000000000001');
-INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key)
-VALUES('SOURCE_RUN','ingest-worker',jsonb_build_object('sourceRunId',:'run_id'),'source-run:'||:'run_id');
+INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,run_after)
+VALUES('SOURCE_RUN','ingest-worker',jsonb_build_object('sourceRunId',:'run_id'),'source-run:'||:'run_id','2020-01-01T00:00:00Z'::timestamptz);
 SQL
 done
 

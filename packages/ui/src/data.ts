@@ -7,12 +7,52 @@ export type SemanticRecord = {
 const sensitive =
   /(authorization|cookie|credential|encrypted|password|secret|token)/i;
 const displayFieldKeys = new Set([
-  "title", "summary", "description", "status", "state", "publicState", "publicationState",
-  "owner", "assignedTo", "dueAt", "expiresAt", "createdAt", "updatedAt", "publishedAt", "occurredAt",
-  "reason", "decision", "receipt", "evidence", "source", "locator", "version", "digest", "count",
-  "items", "questions", "answers", "attachments", "consent", "citations", "links", "health", "readiness",
-  "filename", "mediaType", "sizeBytes", "uploadStatus", "scanStatus", "nextAction", "remainingAttempts",
-  "requiresEmailProof", "statement", "requestedUntil", "remainingQuestions", "savedAt", "activatedAt",
+  "title",
+  "summary",
+  "description",
+  "status",
+  "state",
+  "publicState",
+  "publicationState",
+  "owner",
+  "assignedTo",
+  "dueAt",
+  "expiresAt",
+  "createdAt",
+  "updatedAt",
+  "publishedAt",
+  "occurredAt",
+  "reason",
+  "decision",
+  "receipt",
+  "evidence",
+  "source",
+  "locator",
+  "version",
+  "digest",
+  "count",
+  "items",
+  "questions",
+  "answers",
+  "attachments",
+  "consent",
+  "citations",
+  "links",
+  "health",
+  "readiness",
+  "filename",
+  "mediaType",
+  "sizeBytes",
+  "uploadStatus",
+  "scanStatus",
+  "nextAction",
+  "remainingAttempts",
+  "requiresEmailProof",
+  "statement",
+  "requestedUntil",
+  "remainingQuestions",
+  "savedAt",
+  "activatedAt",
 ]);
 
 export function semanticRecords(runtime: ScreenRuntime): SemanticRecord[] {
@@ -27,7 +67,6 @@ export function semanticRecords(runtime: ScreenRuntime): SemanticRecord[] {
   return output;
 }
 
-
 export function visibleEntries(
   record: Record<string, unknown>,
 ): Array<[string, unknown]> {
@@ -39,12 +78,36 @@ export function visibleEntries(
 export function display(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "예" : "아니오";
-  if (Array.isArray(value)) return `목록 ${value.length.toLocaleString()}개`;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "목록 없음";
+    const preview = value
+      .slice(0, 4)
+      .map((item) => displayStructured(item))
+      .join(" · ");
+    return value.length > 4 ? `${preview} · 외 ${value.length - 4}건` : preview;
+  }
   if (typeof value === "object") {
-    const fields = Object.keys(redactObject(value) as Record<string, unknown>);
-    return fields.length > 0 ? `세부 정보 ${fields.length.toLocaleString()}개` : "세부 정보 없음";
+    return displayStructured(value);
   }
   return String(value);
+}
+
+function displayStructured(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "예" : "아니오";
+  if (typeof value === "number" || typeof value === "string")
+    return String(value);
+  if (Array.isArray(value)) {
+    return value.slice(0, 4).map(displayStructured).join(" · ") || "목록 없음";
+  }
+  if (isRecord(value)) {
+    const entries = Object.entries(value)
+      .filter(([key]) => !sensitive.test(key))
+      .slice(0, 6)
+      .map(([key, item]) => `${key}: ${displayStructured(item)}`);
+    return entries.join(" · ") || "세부 정보 없음";
+  }
+  return "확인 필요";
 }
 
 export function firstValue(

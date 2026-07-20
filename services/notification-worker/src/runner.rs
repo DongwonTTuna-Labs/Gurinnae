@@ -15,7 +15,7 @@ use zeroize::Zeroize;
 
 use crate::{
     config::{Config, EmailAdapter},
-    handlers::delivery::{DeliveryGateway, FileGateway, SmtpGateway},
+    handlers::delivery::{DeliveryGateway, FileGateway, ProviderBinding, SmtpGateway},
 };
 
 struct State {

@@ -14,14 +14,16 @@
     "submittedAt"
   ],
   "properties": {
-    "responseSubmissionId": {"type": "string", "format": "uuid"},
-    "responseRequestId": {"type": "string", "format": "uuid"},
-    "responseRequestVersion": {"type": "integer", "minimum": 1},
-    "responseRequestBindingDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "submissionSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "receiptVersion": {"type": "integer", "minimum": 1},
-    "receiptDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "submittedAt": {"type": "string", "format": "date-time"}
+    "responseSubmissionId": { "type": "string", "format": "uuid" },
+    "responseRequestId": { "type": "string", "format": "uuid" },
+    "responseRequestVersion": { "type": "integer", "minimum": 1 },
+    "responseRequestBindingDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "submissionSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "receiptVersion": { "type": "integer", "minimum": 1 },
+    "receiptDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "submittedAt": { "type": "string", "format": "date-time" }
   }
 }
-

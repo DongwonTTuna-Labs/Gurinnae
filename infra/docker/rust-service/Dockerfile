@@ -49,6 +49,43 @@ RUN curl --fail --location --silent --show-error \
     && cmake --build tesseract-build --parallel \
     && cmake --install tesseract-build
 
+FROM debian:bookworm@sha256:30482e873082e906a4908c10529180aefb6f77620aea7404b909829fadc5d168 AS media-runtime-build
+ARG FFMPEG_VERSION=8.0.1
+ARG FFMPEG_SHA256=05ee0b03119b45c0bdb4df654b96802e909e0a752f72e4fe3794f487229e5a41
+ARG WHISPER_VERSION=1.9.1
+ARG WHISPER_SHA256=147267177eef7b22ec3d2476dd514d1b12e160e176230b740e3d1bd600118447
+ARG WHISPER_MODEL_SHA256=1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+       ca-certificates cmake curl g++ make nasm pkg-config xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+RUN curl --fail --location --silent --show-error \
+      "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" -o ffmpeg.tar.xz \
+    && echo "${FFMPEG_SHA256}  ffmpeg.tar.xz" | sha256sum --check \
+    && tar --extract --xz --file ffmpeg.tar.xz \
+    && cd "ffmpeg-${FFMPEG_VERSION}" \
+    && ./configure --disable-everything --disable-autodetect --disable-network --disable-gpl --disable-version3 --disable-nonfree --disable-doc --disable-debug --disable-devices --disable-avdevice --enable-small --enable-static --disable-shared --enable-ffmpeg --enable-ffprobe --enable-protocol=pipe --enable-demuxer=matroska,wav --enable-decoder=opus,pcm_s16le,vorbis,vp8 --enable-parser=opus,vorbis,vp8 --enable-encoder=pcm_s16le,rawvideo --enable-muxer=rawvideo,s16le --enable-swresample --enable-swscale \
+    && make --jobs="$(nproc)" \
+    && install -D -m 0755 ffmpeg /opt/media/bin/ffmpeg \
+    && install -D -m 0755 ffprobe /opt/media/bin/ffprobe \
+    && ./ffmpeg -buildconf > /opt/media/ffmpeg-buildconf.txt \
+    && ./ffmpeg -L > /opt/media/ffmpeg-license.txt
+RUN curl --fail --location --silent --show-error \
+      "https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v${WHISPER_VERSION}.tar.gz" -o whisper.tar.gz \
+    && echo "${WHISPER_SHA256}  whisper.tar.gz" | sha256sum --check \
+    && tar --extract --gzip --file whisper.tar.gz \
+    && cmake -S "whisper.cpp-${WHISPER_VERSION}" -B whisper-build \
+       -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+       -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON \
+       -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DGGML_CCACHE=OFF \
+    && cmake --build whisper-build --config Release --parallel \
+    && install -D -m 0755 whisper-build/bin/whisper-cli /opt/media/bin/whisper-cli \
+    && curl --fail --location --silent --show-error \
+       'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin?download=true' \
+       -o /opt/media/ggml-large-v3-turbo.bin \
+    && echo "${WHISPER_MODEL_SHA256}  /opt/media/ggml-large-v3-turbo.bin" | sha256sum --check
+
 FROM debian:bookworm-slim@sha256:60eac759739651111db372c07be67863818726f754804b8707c90979bda511df AS runtime
 RUN groupadd --system --gid 10001 gurine \
     && useradd --system --uid 10001 --gid gurine --home-dir /nonexistent --shell /usr/sbin/nologin gurine \
@@ -119,6 +156,12 @@ RUN apt-get update \
        libopenjp2-7 libpng16-16 libtiff6 tesseract-ocr-eng=1:4.1.0-2 tesseract-ocr-kor=1:4.1.0-2 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=parser-tools-build /opt/parser /opt/parser
+COPY --from=media-runtime-build /opt/media/bin/ffmpeg /opt/gurinnae/bin/ffmpeg
+COPY --from=media-runtime-build /opt/media/bin/ffprobe /opt/gurinnae/bin/ffprobe
+COPY --from=media-runtime-build /opt/media/bin/whisper-cli /opt/gurinnae/bin/whisper-cli
+COPY --from=media-runtime-build /opt/media/ggml-large-v3-turbo.bin /opt/gurinnae/models/ggml-large-v3-turbo.bin
+COPY --from=media-runtime-build /opt/media/ffmpeg-buildconf.txt /opt/gurinnae/metadata/ffmpeg-buildconf.txt
+COPY --from=media-runtime-build /opt/media/ffmpeg-license.txt /opt/gurinnae/metadata/ffmpeg-license.txt
 RUN cp /usr/share/tesseract-ocr/5/tessdata/eng.traineddata /opt/parser/share/tessdata/ \
     && cp /usr/share/tesseract-ocr/5/tessdata/kor.traineddata /opt/parser/share/tessdata/
 COPY --from=build /workspace/target/release/gurine-document-extractor /app/gurine-document-extractor

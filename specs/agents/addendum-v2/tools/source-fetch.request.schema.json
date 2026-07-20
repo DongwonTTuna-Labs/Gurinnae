@@ -2,21 +2,122 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/source-fetch-request.json",
   "title": "SourceFetchRequestV2",
-  "oneOf": [{"$ref": "#/$defs/searchPublicWeb"}, {"$ref": "#/$defs/fetchUrl"}],
+  "oneOf": [
+    { "$ref": "#/$defs/searchPublicWeb" },
+    { "$ref": "#/$defs/fetchUrl" }
+  ],
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "searchPublicWeb": {
-      "type": "object", "additionalProperties": false,
-      "required": ["schemaVersion", "runId", "inputSnapshotId", "inputSnapshotSha256", "requestKind", "query", "locale", "country", "recencyDays", "resultLimit", "sourcePolicyVersion", "sourcePolicySha256", "rightsPurpose", "maxBytesPerArtifact"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "runId",
+        "inputSnapshotId",
+        "inputSnapshotSha256",
+        "requestKind",
+        "query",
+        "locale",
+        "country",
+        "recencyDays",
+        "resultLimit",
+        "sourcePolicyVersion",
+        "sourcePolicySha256",
+        "rightsPurpose",
+        "maxBytesPerArtifact"
+      ],
       "properties": {
-        "schemaVersion": {"const": "source.fetch.request.v2"}, "runId": {"type": "string", "format": "uuid"}, "inputSnapshotId": {"type": "string", "format": "uuid"}, "inputSnapshotSha256": {"$ref": "#/$defs/sha256"}, "requestKind": {"const": "SEARCH_PUBLIC_WEB"}, "query": {"type": "string", "minLength": 1, "maxLength": 1000}, "locale": {"enum": ["ko-KR", "en-US"]}, "country": {"type": "string", "pattern": "^[A-Z]{2}$"}, "recencyDays": {"type": ["integer", "null"], "minimum": 1, "maximum": 3650}, "resultLimit": {"type": "integer", "minimum": 1, "maximum": 20}, "sourcePolicyVersion": {"type": "string", "minLength": 1, "maxLength": 64}, "sourcePolicySha256": {"$ref": "#/$defs/sha256"}, "rightsPurpose": {"enum": ["SOURCE_DISCOVERY", "FACT_CHECK", "COMPARABLE_RESEARCH", "COUNTER_EVIDENCE"]}, "maxBytesPerArtifact": {"type": "integer", "minimum": 1, "maximum": 26214400}
+        "schemaVersion": { "const": "source.fetch.request.v2" },
+        "runId": { "type": "string", "format": "uuid" },
+        "inputSnapshotId": { "type": "string", "format": "uuid" },
+        "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+        "requestKind": { "const": "SEARCH_PUBLIC_WEB" },
+        "query": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "locale": { "enum": ["ko-KR", "en-US"] },
+        "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "recencyDays": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 3650
+        },
+        "resultLimit": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "sourcePolicyVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "sourcePolicySha256": { "$ref": "#/$defs/sha256" },
+        "rightsPurpose": {
+          "enum": [
+            "SOURCE_DISCOVERY",
+            "FACT_CHECK",
+            "COMPARABLE_RESEARCH",
+            "COUNTER_EVIDENCE"
+          ]
+        },
+        "maxBytesPerArtifact": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 26214400
+        }
       }
     },
     "fetchUrl": {
-      "type": "object", "additionalProperties": false,
-      "required": ["schemaVersion", "runId", "inputSnapshotId", "inputSnapshotSha256", "requestKind", "url", "expectedMediaTypes", "sourcePolicyVersion", "sourcePolicySha256", "rightsPurpose", "maxBytes", "allowRedirects"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "runId",
+        "inputSnapshotId",
+        "inputSnapshotSha256",
+        "requestKind",
+        "url",
+        "expectedMediaTypes",
+        "sourcePolicyVersion",
+        "sourcePolicySha256",
+        "rightsPurpose",
+        "maxBytes",
+        "allowRedirects"
+      ],
       "properties": {
-        "schemaVersion": {"const": "source.fetch.request.v2"}, "runId": {"type": "string", "format": "uuid"}, "inputSnapshotId": {"type": "string", "format": "uuid"}, "inputSnapshotSha256": {"$ref": "#/$defs/sha256"}, "requestKind": {"const": "FETCH_URL"}, "url": {"type": "string", "format": "uri", "pattern": "^https://", "maxLength": 4096}, "expectedMediaTypes": {"type": "array", "minItems": 1, "uniqueItems": true, "maxItems": 20, "items": {"type": "string", "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"}}, "sourcePolicyVersion": {"type": "string", "minLength": 1, "maxLength": 64}, "sourcePolicySha256": {"$ref": "#/$defs/sha256"}, "rightsPurpose": {"enum": ["SOURCE_DISCOVERY", "FACT_CHECK", "COMPARABLE_RESEARCH", "COUNTER_EVIDENCE"]}, "maxBytes": {"type": "integer", "minimum": 1, "maximum": 26214400}, "allowRedirects": {"type": "boolean"}
+        "schemaVersion": { "const": "source.fetch.request.v2" },
+        "runId": { "type": "string", "format": "uuid" },
+        "inputSnapshotId": { "type": "string", "format": "uuid" },
+        "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+        "requestKind": { "const": "FETCH_URL" },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 4096
+        },
+        "expectedMediaTypes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"
+          }
+        },
+        "sourcePolicyVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "sourcePolicySha256": { "$ref": "#/$defs/sha256" },
+        "rightsPurpose": {
+          "enum": [
+            "SOURCE_DISCOVERY",
+            "FACT_CHECK",
+            "COMPARABLE_RESEARCH",
+            "COUNTER_EVIDENCE"
+          ]
+        },
+        "maxBytes": { "type": "integer", "minimum": 1, "maximum": 26214400 },
+        "allowRedirects": { "type": "boolean" }
       }
     }
   }

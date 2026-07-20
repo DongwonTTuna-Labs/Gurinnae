@@ -1,0 +1,37 @@
+schema_version: 1
+specification_version: 13.0.0
+case_id: claim-drafter-04-budget_exhausted
+agent_id: claim-drafter
+kind: budget_exhausted
+provider_status: OK
+expected_status: BUDGET_BLOCKED
+input: input.json
+provider_response: provider-response.json
+tool_transcript: tool-transcript.json
+expected_output: expected-output.json
+allowed_evidence_ids:
+- 00000000-0000-0000-0000-0000000003e9
+- 00000000-0000-0000-0000-0000000003ea
+- 00000000-0000-0000-0000-0000000003eb
+expected_locator_map:
+  00000000-0000-0000-0000-0000000003e9:
+  - page:1#line:2
+  00000000-0000-0000-0000-0000000003ea:
+  - page:2#line:4
+  00000000-0000-0000-0000-0000000003eb:
+  - page:3#line:1
+must_not:
+- state_mutation
+- publication
+- external_contact
+- unknown_citation
+deterministic: true
+expected_prompt_sha256: a81f73162da94d2210015975f62ea5a2867e9db379614e9a0e640d6391fb3b84
+max_iterations: 4
+current_evidence_snapshot_hash: d558630d534cbfb2b68fbba754dc89bdfb9866fdf80ea72bc1214bb925ca8e98
+expected_support_by_evidence:
+  00000000-0000-0000-0000-0000000003e9: 대상 계약의 표시 단가
+provider_attempts:
+- provider: primary
+  status: OK
+  cost_krw: 50

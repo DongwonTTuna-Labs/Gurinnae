@@ -1,6 +1,7 @@
 export type JsonSchema = {
   $ref?: string;
   type?: string | string[];
+  const?: unknown;
   format?: string;
   enum?: unknown[];
   anyOf?: JsonSchema[];
@@ -96,7 +97,12 @@ export function operationFields(
 ): RuntimeField[] {
   const fields: RuntimeField[] = [];
   for (const parameter of indexed.operation.parameters ?? []) {
-    if (parameter.in !== "query") continue;
+    if (parameter.in !== "query" && parameter.in !== "path") continue;
+    if (
+      parameter.in === "path" &&
+      !indexed.path.includes(`{${parameter.name}}`)
+    )
+      continue;
     fields.push(
       runtimeField(
         indexed.document,
@@ -165,7 +171,9 @@ function runtimeField(
     ...(value !== undefined ? { value } : {}),
     ...(routeValue !== undefined || presetValue !== undefined
       ? { readonly: true }
-      : {}),
+      : field.const !== undefined
+        ? { readonly: true }
+        : {}),
   };
 }
 
@@ -177,6 +185,15 @@ export function formPayload(
   const value: Record<string, unknown> = { ...preset };
   for (const field of fields) {
     const raw = form.get(field.name);
+    const fixed = preset[field.name] ?? preset[snakeCase(field.name)];
+    if (fixed !== undefined) {
+      if (raw !== null && String(raw).trim() !== "") {
+        const submitted = parseFormValue(field, raw);
+        if (!sameCanonicalValue(submitted, fixed))
+          throw new Error(`${field.label} 값이 서버 대상과 일치하지 않습니다.`);
+      }
+      continue;
+    }
     if (field.type === "boolean") {
       if (raw === null || String(raw).trim() === "") {
         if (field.required) value[field.name] = false;
@@ -197,6 +214,34 @@ export function formPayload(
     }
   }
   return value;
+}
+
+function parseFormValue(field: RuntimeField, raw: FormDataEntryValue): unknown {
+  const text = String(raw);
+  if (field.type === "boolean") {
+    if (text === "true" || text === "on") return true;
+    if (text === "false" || text === "off") return false;
+    throw new Error(`${field.label} 값이 올바르지 않습니다.`);
+  }
+  if (field.type === "number") {
+    const number = Number(text);
+    if (!Number.isFinite(number))
+      throw new Error(`${field.label} 값이 올바르지 않습니다.`);
+    return number;
+  }
+  if (field.type === "json") return JSON.parse(text);
+  if (field.type === "datetime-local") return new Date(text).toISOString();
+  return text;
+}
+
+function sameCanonicalValue(left: unknown, right: unknown): boolean {
+  if (
+    typeof left === "number" &&
+    typeof right === "string" &&
+    /^-?\d+(?:\.\d+)?$/.test(right)
+  )
+    return left === Number(right);
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export function bindPath(path: string, params: RouteParams): string {
@@ -307,6 +352,12 @@ function defaultValue(
   schema: JsonSchema,
   required: boolean,
 ): string | number | boolean | undefined {
+  if (
+    typeof schema.const === "string" ||
+    typeof schema.const === "number" ||
+    typeof schema.const === "boolean"
+  )
+    return schema.const;
   if (name === "expectedVersion") return 1;
   if (!required) return undefined;
   if (schema.type === "boolean") return false;

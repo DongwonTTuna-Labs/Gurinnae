@@ -1,18 +1,44 @@
-use std::net::{IpAddr, SocketAddr};
+use std::{
+    collections::BTreeMap,
+    net::{IpAddr, SocketAddr},
+    sync::{Mutex, OnceLock},
+};
 
 use actix_web::{HttpRequest, HttpResponse, http::StatusCode, web};
 use gurine_email::port::EmailMessage;
 use reqwest::redirect::Policy;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tokio::net::lookup_host;
 use url::Url;
 
-use crate::state::GatewayState;
+use crate::{
+    communication_adapter::{
+        Adapter, Channel as ProviderChannel, OutboundMessage, PollRequest as AdapterPollRequest,
+    },
+    credential_resolver::resolve_from_environment,
+    state::GatewayState,
+};
 
-const OIDC_LIMIT: usize = 1_048_576;
-const AI_LIMIT: usize = 10_485_760;
-const SOURCE_LIMIT: usize = 52_428_800;
+pub mod callbacks;
+mod callbacks_support;
+mod support;
+
+use support::{
+    allowed_method, caller, caller_allowed, caller_credential_header, header, hop_or_internal,
+    problem, prohibited, response_limit, sha256_hex,
+};
+
 const OBJECT_LIMIT: usize = 52_428_800;
+const REPLAY_CACHE_LIMIT: usize = 256 * 1024;
+
+#[derive(Clone, Serialize, Deserialize)]
+struct CachedReplay {
+    status: u16,
+    headers: Vec<(String, String)>,
+    body: Vec<u8>,
+}
+static REPLAY_CACHE: OnceLock<Mutex<BTreeMap<String, CachedReplay>>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
 enum Channel {
@@ -53,153 +79,7 @@ pub async fn challenge(
 ) -> HttpResponse {
     proxy(Channel::Challenge, request, body, &state).await
 }
-
-async fn proxy(
-    channel: Channel,
-    request: HttpRequest,
-    body: web::Bytes,
-    state: &GatewayState,
-) -> HttpResponse {
-    if caller(&request) != Some(expected_caller(channel)) {
-        return problem("EGRESS_CALLER_DENIED", 403);
-    }
-    let Some(target) = header(&request, "x-gurine-egress-target") else {
-        return problem("EGRESS_TARGET_REQUIRED", 400);
-    };
-    if !allowed_method(channel, request.method().as_str()) {
-        return problem("EGRESS_METHOD_DENIED", 405);
-    }
-    let mut target = match validate_target(channel, target, state).await {
-        Ok(value) => value,
-        Err(code) => return problem(code, 403),
-    };
-    let credential = match bind_credential(channel, &request, &mut target, state) {
-        Ok(value) => value,
-        Err(code) => return problem(code, credential_error_status(code)),
-    };
-    let client = match pinned_client(&target, state).await {
-        Ok(value) => value,
-        Err(code) => return problem(code, 502),
-    };
-    let method = match reqwest::Method::from_bytes(request.method().as_str().as_bytes()) {
-        Ok(value) => value,
-        Err(_) => return problem("EGRESS_METHOD_DENIED", 405),
-    };
-    let mut outbound = client.request(method, target);
-    for (name, value) in request.headers() {
-        if !hop_or_internal(name.as_str()) && !caller_credential_header(channel, name.as_str()) {
-            outbound = outbound.header(name.as_str(), value.as_bytes());
-        }
-    }
-    outbound = match credential {
-        Some(Credential::Bearer(value)) => outbound.bearer_auth(value),
-        Some(Credential::Header(name, value)) => outbound.header(name, value),
-        None => outbound,
-    };
-    let response = match outbound.body(body.to_vec()).send().await {
-        Ok(value) => value,
-        Err(_) => return problem("EGRESS_UPSTREAM_UNAVAILABLE", 502),
-    };
-    if response.status().is_redirection() {
-        return problem("EGRESS_REDIRECT_DENIED", 502);
-    }
-    proxy_response(response, response_limit(channel)).await
-}
-
-fn credential_error_status(code: &str) -> u16 {
-    match code {
-        "EGRESS_SOURCE_ID_REQUIRED" | "EGRESS_AI_PROVIDER_REQUIRED" => 400,
-        "EGRESS_CREDENTIAL_NOT_CONFIGURED" => 503,
-        _ => 403,
-    }
-}
-
-enum Credential<'a> {
-    Bearer(&'a str),
-    Header(&'static str, &'a str),
-}
-
-fn bind_credential<'a>(
-    channel: Channel,
-    request: &HttpRequest,
-    target: &mut Url,
-    state: &'a GatewayState,
-) -> Result<Option<Credential<'a>>, &'static str> {
-    let host = target.host_str().ok_or("EGRESS_TARGET_INVALID")?;
-    match channel {
-        Channel::Source => {
-            let source_id =
-                header(request, "x-gurine-source-id").ok_or("EGRESS_SOURCE_ID_REQUIRED")?;
-            let expected_host = state
-                .config
-                .source_host_bindings
-                .get(source_id)
-                .ok_or("EGRESS_SOURCE_ID_DENIED")?;
-            if !state.config.development() && !host.eq_ignore_ascii_case(expected_host) {
-                return Err("EGRESS_SOURCE_HOST_MISMATCH");
-            }
-            match source_id {
-                "koneps-contracts" | "koneps-notices" | "local-finance" => {
-                    let secret = state
-                        .config
-                        .data_go_kr_service_key
-                        .as_deref()
-                        .ok_or("EGRESS_CREDENTIAL_NOT_CONFIGURED")?;
-                    replace_query_secret(target, &["serviceKey"], "serviceKey", secret);
-                }
-                "open-dart" => {
-                    let secret = state
-                        .config
-                        .open_dart_api_key
-                        .as_deref()
-                        .ok_or("EGRESS_CREDENTIAL_NOT_CONFIGURED")?;
-                    replace_query_secret(target, &["crtfc_key"], "crtfc_key", secret);
-                }
-                "alio" | "audit-results" => {}
-                _ => return Err("EGRESS_SOURCE_ID_DENIED"),
-            }
-            Ok(None)
-        }
-        Channel::Ai => {
-            let provider = header(request, "x-gurine-ai-provider")
-                .ok_or("EGRESS_AI_PROVIDER_REQUIRED")?
-                .to_ascii_lowercase();
-            let expected_host = match provider.as_str() {
-                "openai" => "api.openai.com",
-                "anthropic" => "api.anthropic.com",
-                "google" => "generativelanguage.googleapis.com",
-                _ => return Err("EGRESS_AI_PROVIDER_DENIED"),
-            };
-            if !state.config.development() && !host.eq_ignore_ascii_case(expected_host) {
-                return Err("EGRESS_AI_HOST_MISMATCH");
-            }
-            match provider.as_str() {
-                "openai" => state
-                    .config
-                    .openai_api_key
-                    .as_deref()
-                    .map(Credential::Bearer)
-                    .ok_or("EGRESS_CREDENTIAL_NOT_CONFIGURED"),
-                "anthropic" => state
-                    .config
-                    .anthropic_api_key
-                    .as_deref()
-                    .map(|value| Credential::Header("x-api-key", value))
-                    .ok_or("EGRESS_CREDENTIAL_NOT_CONFIGURED"),
-                "google" => state
-                    .config
-                    .google_api_key
-                    .as_deref()
-                    .map(|value| Credential::Header("x-goog-api-key", value))
-                    .ok_or("EGRESS_CREDENTIAL_NOT_CONFIGURED"),
-                _ => Err("EGRESS_AI_PROVIDER_DENIED"),
-            }
-            .map(Some)
-        }
-        Channel::Oidc | Channel::Challenge => Ok(None),
-    }
-}
-
+include!("proxy_setup.rs");
 fn replace_query_secret(target: &mut Url, names: &[&str], name: &str, value: &str) {
     let retained = target
         .query_pairs()
@@ -216,14 +96,6 @@ fn replace_query_secret(target: &mut Url, names: &[&str], name: &str, value: &st
         query.append_pair(&key, &value);
     }
     query.append_pair(name, value);
-}
-
-fn caller_credential_header(channel: Channel, name: &str) -> bool {
-    matches!(channel, Channel::Source | Channel::Ai)
-        && matches!(
-            name.to_ascii_lowercase().as_str(),
-            "authorization" | "proxy-authorization" | "x-api-key" | "x-goog-api-key"
-        )
 }
 
 pub async fn object_store(
@@ -285,6 +157,7 @@ pub async fn object_store(
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SmtpRequest {
+    channel: String,
     from: String,
     to: String,
     subject: String,
@@ -300,10 +173,20 @@ pub async fn smtp(
     if caller(&request) != Some("notification-worker") {
         return problem("EGRESS_CALLER_DENIED", 403);
     }
+    let payload = payload.into_inner();
+    let channel = payload.channel.to_ascii_uppercase();
+    // The SMTP adapter is intentionally email-only.  Non-email channels must
+    // be dispatched through their registered provider adapter; routing them
+    // into SMTP with a marker header is not delivery.
+    if channel != "EMAIL" {
+        return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503);
+    }
+    if kill_switch_active(state.get_ref(), "COMMUNICATION", Some(&channel)).await {
+        return problem("COMMUNICATION_EGRESS_KILL_SWITCH_ACTIVE", 503);
+    }
     let Some(sender) = state.smtp.as_ref() else {
         return problem("SMTP_NOT_CONFIGURED", 503);
     };
-    let payload = payload.into_inner();
     let message = EmailMessage {
         from: payload.from,
         to: payload.to,
@@ -318,6 +201,233 @@ pub async fn smtp(
         })),
         Err(_) => problem("SMTP_DELIVERY_FAILED", 502),
     }
+}
+
+/// Dispatches a non-email communication through a typed provider adapter.
+///
+/// Provider credentials stay in the egress process.  The worker supplies only
+/// the rendered recipient/content and a stable idempotency key.  A missing
+/// endpoint or credential is an explicit 503, never an SMTP fallback.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CommunicationRequest {
+    recipient: String,
+    subject: String,
+    text_body: String,
+    idempotency_key: String,
+}
+
+pub async fn communication(
+    request: HttpRequest,
+    path: web::Path<String>,
+    payload: web::Json<CommunicationRequest>,
+    state: web::Data<GatewayState>,
+) -> HttpResponse {
+    if caller(&request) != Some("notification-worker") {
+        return problem("EGRESS_CALLER_DENIED", 403);
+    }
+    let Some(channel) = ProviderChannel::parse(&path.into_inner()) else {
+        return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503);
+    };
+    let channel_name = match channel {
+        ProviderChannel::Telegram => "TELEGRAM",
+        ProviderChannel::WhatsApp => "WHATSAPP",
+        ProviderChannel::Line => "LINE",
+        ProviderChannel::Sms => "SMS",
+        ProviderChannel::Kakao => "KAKAO",
+    };
+    if kill_switch_active(state.get_ref(), "COMMUNICATION", Some(channel_name)).await {
+        return problem("COMMUNICATION_EGRESS_KILL_SWITCH_ACTIVE", 503);
+    }
+    if !provider_revision_is_current(&request, channel_name, state.get_ref()).await {
+        return problem("COMMUNICATION_PROVIDER_REVISION_INVALID", 503);
+    }
+    let prefix = format!("COMMUNICATION_{}_", channel_name);
+    let Some(endpoint) = std::env::var(format!("{}URL", prefix))
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+    else {
+        return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503);
+    };
+    let credential = match resolve_from_environment(channel_name) {
+        Ok(resolved) => resolved,
+        Err(_) => return problem("COMMUNICATION_CREDENTIAL_RESOLUTION_FAILED", 503),
+    };
+    let endpoint = match endpoint.parse() {
+        Ok(value) => value,
+        Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+    };
+    let adapter = match Adapter::new(channel, endpoint, credential.token().to_owned()) {
+        Ok(value) => value,
+        Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+    };
+    let payload = payload.into_inner();
+    match adapter
+        .send(OutboundMessage {
+            recipient: &payload.recipient,
+            subject: &payload.subject,
+            text: &payload.text_body,
+            idempotency_key: &payload.idempotency_key,
+        })
+        .await
+    {
+        Ok(provider_message_id) => HttpResponse::Ok().json(serde_json::json!({
+            "status": "PROVIDER_ACCEPTED",
+            "providerMessageId": provider_message_id,
+            "adapterId": channel.adapter_id(),
+        })),
+        Err(_) => problem("CHANNEL_DELIVERY_FAILED", 502),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CommunicationPollRequest {
+    provider_message_id: String,
+}
+
+/// Executes an authenticated provider-native status poll.  The response is a
+/// normalized, digest-bound proof; no raw provider body or credential-bearing
+/// headers cross the egress boundary.
+pub async fn communication_poll(
+    request: HttpRequest,
+    path: web::Path<String>,
+    payload: web::Json<CommunicationPollRequest>,
+    state: web::Data<GatewayState>,
+) -> HttpResponse {
+    if caller(&request) != Some("notification-worker") {
+        return problem("EGRESS_CALLER_DENIED", 403);
+    }
+    let Some(channel) = ProviderChannel::parse(&path.into_inner()) else {
+        return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503);
+    };
+    let channel_name = match channel {
+        ProviderChannel::Telegram => "TELEGRAM",
+        ProviderChannel::WhatsApp => "WHATSAPP",
+        ProviderChannel::Line => "LINE",
+        ProviderChannel::Sms => "SMS",
+        ProviderChannel::Kakao => "KAKAO",
+    };
+    if kill_switch_active(state.get_ref(), "COMMUNICATION", Some(channel_name)).await {
+        return problem("COMMUNICATION_EGRESS_KILL_SWITCH_ACTIVE", 503);
+    }
+    if !provider_revision_is_current(&request, channel_name, state.get_ref()).await {
+        return problem("COMMUNICATION_PROVIDER_REVISION_INVALID", 503);
+    }
+    let prefix = format!("COMMUNICATION_{}_", channel_name);
+    let Some(endpoint) = std::env::var(format!("{}URL", prefix))
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .and_then(|value| value.parse().ok())
+    else {
+        return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503);
+    };
+    let credential = match resolve_from_environment(channel_name) {
+        Ok(resolved) => resolved,
+        Err(_) => return problem("COMMUNICATION_CREDENTIAL_RESOLUTION_FAILED", 503),
+    };
+    let adapter = match Adapter::new(channel, endpoint, credential.token().to_owned()) {
+        Ok(value) => value,
+        Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+    };
+    match adapter
+        .poll(AdapterPollRequest {
+            provider_message_id: &payload.provider_message_id,
+        })
+        .await
+    {
+        Ok(receipt) => HttpResponse::Ok().json(serde_json::json!({
+            "status": "AUTHENTICATED_PROVIDER_POLL",
+            "providerMessageId": receipt.provider_message_id,
+            "assertedState": receipt.state,
+            "providerEvidenceDigest": receipt.provider_evidence_digest,
+            "adapterId": channel.adapter_id(),
+        })),
+        Err(crate::communication_adapter::AdapterError::PollUnsupported) => {
+            problem("CHANNEL_POLL_UNSUPPORTED", 422)
+        }
+        Err(_) => problem("CHANNEL_POLL_FAILED", 502),
+    }
+}
+
+pub use callbacks::{
+    communication_callback, communication_callback_smtp,
+    communication_callback_smtp_with_integration,
+};
+
+async fn provider_revision_is_current(
+    request: &HttpRequest,
+    channel: &str,
+    state: &GatewayState,
+) -> bool {
+    let Some(pool) = state.database.as_ref() else {
+        return false;
+    };
+    let Some(config_id) = header(request, "x-gurine-provider-config-id")
+        .and_then(|value| uuid::Uuid::parse_str(value).ok())
+    else {
+        return false;
+    };
+    let Some(config_version) = header(request, "x-gurine-provider-config-version")
+        .and_then(|value| value.parse::<i64>().ok())
+    else {
+        return false;
+    };
+    let Some(config_digest) = header(request, "x-gurine-provider-configuration-digest") else {
+        return false;
+    };
+    let Some(preflight_id) = header(request, "x-gurine-provider-preflight-id")
+        .and_then(|value| uuid::Uuid::parse_str(value).ok())
+    else {
+        return false;
+    };
+    let Some(preflight_digest) = header(request, "x-gurine-provider-preflight-digest") else {
+        return false;
+    };
+    let Some(secret_reference) =
+        std::env::var(format!("COMMUNICATION_{}_TOKEN_SECRET_REFERENCE", channel))
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+    else {
+        return false;
+    };
+    let row = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM ops.communication_provider_configs pc JOIN ops.communication_provider_preflight_receipts pf ON pf.provider_config_id=pc.id AND pf.provider_config_version=pc.version AND pf.configuration_digest=pc.configuration_digest WHERE pc.id=$1 AND pc.version=$2 AND pc.configuration_digest=$3 AND pc.channel = CASE $6 WHEN 'TELEGRAM' THEN 'TELEGRAM_BOT_API' WHEN 'WHATSAPP' THEN 'META_WHATSAPP_BUSINESS_CLOUD' WHEN 'LINE' THEN 'LINE_MESSAGING_API' WHEN 'SMS' THEN 'SOLAPI_SMS' WHEN 'KAKAO' THEN 'SOLAPI_KAKAO_BIZMESSAGE' ELSE '' END AND pc.credential_secret_reference=$7 AND pc.operational_state='ACTIVE' AND pc.activation_effective_at<=clock_timestamp() AND (pc.activation_expires_at IS NULL OR pc.activation_expires_at>clock_timestamp()) AND pf.id=$4 AND pf.receipt_digest=$5 AND pf.result='PASS' AND pf.expires_at>clock_timestamp() AND pf.live_sandbox AND pf.callback_or_poll_verified AND pf.sender_identity_verified AND pf.template_catalog_verified)",
+    )
+    .bind(config_id).bind(config_version).bind(config_digest).bind(preflight_id).bind(preflight_digest).bind(channel)
+    .bind(secret_reference)
+    .fetch_one(pool).await;
+    row.unwrap_or(false)
+}
+
+async fn kill_switch_active(state: &GatewayState, tier: &str, channel: Option<&str>) -> bool {
+    let Some(pool) = state.database.as_ref() else {
+        // Development/test may run without a database; production config
+        // rejects that shape before the server starts.
+        return false;
+    };
+    let active: Result<bool, _> = sqlx::query_scalar(
+        "SELECT EXISTS(
+           SELECT 1 FROM ops.kill_switches k
+           WHERE k.state='ACTIVE'
+             AND (k.expires_at IS NULL OR k.expires_at > clock_timestamp())
+             AND (
+               k.scope='{}'::jsonb
+               OR k.code ILIKE ('%' || $1 || '%')
+               OR k.scope ? lower($1)
+               OR k.scope ? 'all'
+               OR ($2::text IS NOT NULL AND k.scope ? lower($2))
+               OR ($2::text IS NOT NULL AND k.scope @> jsonb_build_object('channel',$2))
+             )
+         )",
+    )
+    .bind(tier)
+    .bind(channel)
+    .fetch_one(pool)
+    .await;
+    // A failed read is a fail-closed egress decision.  This prevents an
+    // unavailable control database from silently bypassing an incident stop.
+    active.unwrap_or(true)
 }
 
 async fn validate_target(
@@ -398,126 +508,20 @@ async fn pinned_client(
     let mut builder = reqwest::Client::builder()
         .redirect(Policy::none())
         .connect_timeout(std::time::Duration::from_secs(5))
-        .timeout(std::time::Duration::from_secs(60));
+        .timeout(std::time::Duration::from_secs(15));
     for address in addresses {
         builder = builder.resolve(host, address);
     }
     builder.build().map_err(|_| "EGRESS_CLIENT_FAILED")
 }
 
-async fn proxy_response(mut response: reqwest::Response, limit: usize) -> HttpResponse {
-    if response
-        .content_length()
-        .is_some_and(|length| length > limit as u64)
-    {
-        return problem("EGRESS_RESPONSE_TOO_LARGE", 502);
-    }
-    let status = response.status().as_u16();
-    let headers = response.headers().clone();
-    let mut body = Vec::new();
-    loop {
-        match response.chunk().await {
-            Ok(Some(chunk)) if body.len() + chunk.len() <= limit => body.extend_from_slice(&chunk),
-            Ok(Some(_)) => return problem("EGRESS_RESPONSE_TOO_LARGE", 502),
-            Ok(None) => break,
-            Err(_) => return problem("EGRESS_UPSTREAM_UNAVAILABLE", 502),
-        }
-    }
-    let status = StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY);
-    let mut output = HttpResponse::build(status);
-    for (name, value) in &headers {
-        if !hop_or_internal(name.as_str()) && name.as_str() != "set-cookie" {
-            let name = actix_web::http::header::HeaderName::try_from(name.as_str());
-            let value = actix_web::http::header::HeaderValue::from_bytes(value.as_bytes());
-            if let (Ok(name), Ok(value)) = (name, value) {
-                output.insert_header((name, value));
-            }
-        }
-    }
-    output.body(body)
-}
-
-fn expected_caller(channel: Channel) -> &'static str {
-    match channel {
-        Channel::Oidc => "identity-api",
-        Channel::Source => "ingest-worker",
-        Channel::Ai => "analysis-worker",
-        Channel::Challenge => "submission-api",
-    }
-}
-
-fn allowed_method(channel: Channel, method: &str) -> bool {
-    match channel {
-        Channel::Oidc => matches!(method, "GET" | "POST"),
-        Channel::Source => method == "GET",
-        Channel::Ai | Channel::Challenge => method == "POST",
-    }
-}
-
-fn response_limit(channel: Channel) -> usize {
-    match channel {
-        Channel::Oidc | Channel::Challenge => OIDC_LIMIT,
-        Channel::Source => SOURCE_LIMIT,
-        Channel::Ai => AI_LIMIT,
-    }
-}
-
-fn caller(request: &HttpRequest) -> Option<&str> {
-    header(request, "x-gurine-egress-caller")
-}
-
-fn header<'a>(request: &'a HttpRequest, name: &str) -> Option<&'a str> {
-    request
-        .headers()
-        .get(name)
-        .and_then(|value| value.to_str().ok())
-}
-
-fn hop_or_internal(name: &str) -> bool {
-    matches!(
-        name,
-        "host"
-            | "content-length"
-            | "connection"
-            | "transfer-encoding"
-            | "te"
-            | "trailer"
-            | "upgrade"
-            | "proxy-authorization"
-            | "proxy-authenticate"
-            | "x-gurine-egress-target"
-            | "x-gurine-egress-caller"
-            | "x-gurine-source-id"
-            | "x-gurine-ai-provider"
-            | "x-gurine-object-key"
-            | "x-gurine-object-sha256"
-    )
-}
-
-fn prohibited(address: IpAddr) -> bool {
-    match address {
-        IpAddr::V4(value) => {
-            value.is_private()
-                || value.is_loopback()
-                || value.is_link_local()
-                || value.is_multicast()
-                || value.is_broadcast()
-                || value.is_unspecified()
-                || value.octets() == [169, 254, 169, 254]
-        }
-        IpAddr::V6(value) => {
-            value.is_loopback()
-                || value.is_multicast()
-                || value.is_unspecified()
-                || value.is_unique_local()
-                || value.is_unicast_link_local()
-        }
-    }
-}
-
-fn problem(code: &str, status: u16) -> HttpResponse {
-    let status = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-    HttpResponse::build(status)
-        .insert_header(("content-type", "application/problem+json"))
-        .json(serde_json::json!({"code":code,"title":code,"status":status.as_u16()}))
+async fn proxy_response(
+    mut response: reqwest::Response,
+    limit: usize,
+    target: &str,
+    idempotency_key: &str,
+    redirect_chain: &str,
+    state: &GatewayState,
+) -> HttpResponse {
+    include!("proxy_response_body.rs")
 }

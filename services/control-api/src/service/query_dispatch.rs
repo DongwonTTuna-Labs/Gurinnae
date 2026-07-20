@@ -11,6 +11,11 @@ pub(super) async fn query(
     if let Some(object) = data.as_object_mut() {
         object.entry("operationId").or_insert(json!(operation.id));
     }
+    let data = if operation.id == "getActionProposal" {
+        action_proposal_detail_response(data)
+    } else {
+        data
+    };
     let response = response_for(operation, &data)?;
     Ok(Output {
         status: operation.success_status,
@@ -18,6 +23,21 @@ pub(super) async fn query(
         body: response,
         replay: false,
     })
+}
+include!("query_action_proposal.rs");
+
+fn normalize_history(mut value: Value, order: &str, as_of: &Value) -> Value {
+    let object = value.as_object_mut().cloned().unwrap_or_default();
+    let mut normalized = object;
+    normalized.entry("items").or_insert_with(|| json!([]));
+    normalized.entry("order").or_insert_with(|| json!(order));
+    normalized.entry("asOf").or_insert_with(|| as_of.clone());
+    normalized.entry("pageDigest").or_insert_with(|| {
+        json!("0000000000000000000000000000000000000000000000000000000000000000")
+    });
+    normalized.entry("nextCursor").or_insert(Value::Null);
+    normalized.entry("complete").or_insert(json!(true));
+    Value::Object(normalized)
 }
 
 pub(super) async fn canonical_query(
@@ -79,10 +99,9 @@ pub(super) async fn canonical_query(
         "getSourceRun" => source_run_query(parameters, pool).await,
         "getUserAccessDetail" => user_access_query(parameters, pool).await,
         "estimateBackfill" => estimate_backfill_query(parameters, pool).await,
-        // OPS-004 is the canonical BusinessHealthV1 read.  The legacy budget
-        // envelope is intentionally not used here because it cannot prove
-        // funnel, paid-MVW, retention, or revenue gates.
-        "getBudgetOverview" => business_health_query(parameters, pool).await,
+        // OPS-004 is the v13 authority BudgetOverview read. Supplemental
+        // BusinessHealth remains a separate non-authority projection.
+        "getBudgetOverview" => budget_overview_query(pool).await,
         "downloadSourceRunReport" => source_run_download(parameters, pool).await,
         "exportCostReport" => cost_export_query(parameters, pool).await,
         "listCaseAuditEvents" | "searchAuditEvents" => audit_query(pool, parameters).await,
@@ -118,19 +137,33 @@ pub(super) async fn query_agent_run(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "agentRunId")?;
-    let row: Value = sqlx::query_scalar(
-        "SELECT jsonb_build_object('id',id,'caseId',case_id,'agentType',agent_type, \
-         'objective',objective,'evidenceScopeIds',evidence_scope_ids,'providerPolicy',provider_policy, \
-         'provider',provider,'model',model,'status',status,'inputSnapshotHash',input_snapshot_hash, \
-         'output',output_payload,'maxCost',max_cost::text,'actualCost',actual_cost::text, \
-         'startedAt',started_at,'completedAt',completed_at,'version',version) \
-         FROM ops.agent_runs WHERE id=$1",
+    let mut row: Value = sqlx::query_scalar(
+        "SELECT jsonb_build_object('id',r.id,'caseId',r.case_id,'agentType',r.agent_type, \
+         'objective',r.objective,'evidenceScopeIds',r.evidence_scope_ids,'providerPolicy',r.provider_policy, \
+         'provider',r.provider,'model',r.model,'status',r.status,'inputSnapshotHash',r.input_snapshot_hash, \
+         'inputEvidence',jsonb_build_object('evidenceIds',r.evidence_scope_ids,'snapshotHash',r.input_snapshot_hash), \
+         'promptPolicy',jsonb_build_object(\
+             'promptVersions',COALESCE((SELECT jsonb_agg(DISTINCT t.prompt_version ORDER BY t.prompt_version) FROM ops.agent_provider_turns t WHERE t.agent_run_id=r.id),'[]'::jsonb),\
+             'routingPolicyVersions',COALESCE((SELECT jsonb_agg(DISTINCT t.routing_policy_version ORDER BY t.routing_policy_version) FROM ops.agent_provider_turns t WHERE t.agent_run_id=r.id),'[]'::jsonb),\
+             'outputSchemas',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',x.output_schema_id,'version',x.output_schema_version,'sha256',x.output_schema_sha256) ORDER BY x.output_schema_id,x.output_schema_version) FROM (SELECT DISTINCT t.output_schema_id,t.output_schema_version,t.output_schema_sha256 FROM ops.agent_provider_turns t WHERE t.agent_run_id=r.id) x),'[]'::jsonb)),\
+         'providerTurns',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',t.provider_turn_id,'provider',t.provider_candidate_id,'model',t.model_id,'providerMode',t.provider_mode,'status',t.status,'promptVersion',t.prompt_version,'promptSha256',t.prompt_sha256,'outputSchemaVersion',t.output_schema_version,'outputSchemaSha256',t.output_schema_sha256,'routingPolicyVersion',t.routing_policy_version,'providerTurnSha256',t.provider_turn_sha256,'inputSnapshotHash',t.input_snapshot_sha256,'providerReceiptId',t.provider_receipt_id,'providerReceiptSha256',t.provider_receipt_sha256,'requestSha256',t.request_sha256,'outputSha256',t.envelope_payload_sha256,'completedAt',t.completed_at) ORDER BY t.turn_sequence,t.attempt_sequence) FROM ops.agent_provider_turns t WHERE t.agent_run_id=r.id),'[]'::jsonb),\
+         'output',r.output_payload,'validation',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',v.validation_id,'providerTurnId',v.provider_turn_id,'status',v.validation_status,'schemaStatus',v.schema_status,'citationStatus',v.citation_status,'policyStatus',v.policy_status,'outputStatus',v.output_status,'failureCode',v.failure_code,'failureDetails',v.failure_details_redacted,'validatedOutcome',v.validated_outcome,'validatedOutcomeSha256',v.validated_outcome_sha256,'citationCount',v.citation_count,'proposalCount',v.proposal_count,'validatorVersion',v.validator_version,'validationPolicyVersion',v.validation_policy_version,'validatedAt',v.validated_at) ORDER BY v.validated_at) FROM ops.agent_output_validations v WHERE v.agent_run_id=r.id),'[]'::jsonb),\
+         'sourceUses',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',u.source_use_id,'kind',u.use_kind,'sourceKind',u.source_kind,'sourceDocumentId',u.source_document_id,'sourceAssetId',u.source_asset_id,'sourceAssetRevision',u.source_asset_revision,'sourceContentSha256',u.source_content_sha256,'evidenceSegmentId',u.evidence_segment_id,'researchArtifactId',u.research_artifact_id,'locatorKind',u.locator_kind,'locatorValue',u.locator_value,'selectedContentSha256',u.selected_content_sha256,'classification',u.classification,'accessRight',u.access_right,'rightsBindingKind',u.rights_binding_kind,'rightsPolicyVersion',u.rights_policy_version,'sourceUseSha256',u.source_use_sha256,'occurredAt',u.occurred_at) ORDER BY u.occurred_at) FROM ops.agent_source_uses u WHERE u.agent_run_id=r.id),'[]'::jsonb),\
+         'citations',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',c.citation_id,'proposalId',c.proposal_id,'validationId',c.validation_id,'sourceKind',c.source_kind,'sourceUseId',c.source_use_id,'sourceId',c.source_id,'locatorKind',c.locator_kind,'locatorValue',c.locator_value,'contentSha256',c.content_sha256,'supports',c.supports_redacted,'citationDigest',c.citation_digest) ORDER BY c.proposal_id,c.citation_ordinal) FROM ops.agent_proposal_citations c WHERE c.agent_run_id=r.id),'[]'::jsonb),\
+         'suggestions',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',s.id,'caseId',s.case_id,'type',s.suggestion_type,'payload',s.payload,'evidenceIds',s.evidence_ids,'citationChecks',s.citation_checks,'status',s.status,'decisionReason',s.decision_reason,'decidedBy',s.decided_by,'decidedAt',s.decided_at,'version',s.version) ORDER BY s.created_at) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id),'[]'::jsonb),\
+         'safetyFlags',COALESCE((SELECT jsonb_agg(DISTINCT v.failure_code ORDER BY v.failure_code) FROM ops.agent_output_validations v WHERE v.agent_run_id=r.id AND v.failure_code IS NOT NULL),'[]'::jsonb),\
+         'humanActions',COALESCE((SELECT jsonb_agg(jsonb_build_object('suggestionId',s.id,'decision',s.status,'reason',s.decision_reason,'actorId',s.decided_by,'occurredAt',s.decided_at) ORDER BY s.decided_at) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status IN ('ACCEPTED','REJECTED')),'[]'::jsonb),\
+         'budgetLedger',COALESCE(ops.read_agent_run_budget_projection_v1(r.id),'{}'::jsonb),\
+         'maxCost',r.max_cost::text,'actualCost',r.actual_cost::text, \
+         'startedAt',r.started_at,'completedAt',r.completed_at,'createdAt',r.created_at,'updatedAt',r.updated_at,'version',r.version) \
+         FROM ops.agent_runs r WHERE r.id=$1",
     )
     .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
     .ok_or(ServiceError::NotFound)?;
+    attach_cas011(&mut row)?;
     Ok(envelope(id, value_status(&row), row))
 }
 
@@ -214,7 +247,7 @@ async fn addendum_query(
         }
         _ => "id",
     };
-    if let Some(value) = addendum_queue_query(operation, pool).await? {
+    if let Some(value) = addendum_queue_query(operation, parameters, pool).await? {
         return Ok(value);
     }
     let id = parameters
@@ -223,17 +256,20 @@ async fn addendum_query(
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or(ServiceError::InvalidRequest)?;
     let value: Option<Value> = match operation {
-        "getActionProposal" => sqlx::query_scalar("SELECT ops.read_action_proposal_v1($1)")
-            .bind(id)
-            .fetch_optional(pool)
-            .await
-            .map_err(db)?,
+        "getActionProposal" => {
+            sqlx::query_scalar::<_, Option<Value>>("SELECT ops.read_action_proposal_v1($1)")
+                .bind(id)
+                .fetch_one(pool)
+                .await
+                .map_err(db)?
+        }
         "getActionExecutionReceipt" => {
-            sqlx::query_scalar("SELECT ops.read_execution_receipt_v1($1)")
+            sqlx::query_scalar::<_, Option<Value>>("SELECT ops.read_execution_receipt_v1($1)")
                 .bind(id)
                 .fetch_optional(pool)
                 .await
                 .map_err(db)?
+                .flatten()
         }
         "getCommunicationDeliveryReceipt" => {
             sqlx::query_scalar("SELECT ops.read_communication_delivery_receipt_v1($1)")
@@ -254,11 +290,14 @@ async fn addendum_query(
                 .await
                 .map_err(db)?
         }
-        "getRetentionRequest" => sqlx::query_scalar("SELECT ops.read_retention_request_v1($1)")
-            .bind(id)
-            .fetch_optional(pool)
-            .await
-            .map_err(db)?,
+        "getRetentionRequest" => {
+            sqlx::query_scalar::<_, Option<Value>>("SELECT ops.read_retention_request_v1($1)")
+                .bind(id)
+                .fetch_optional(pool)
+                .await
+                .map_err(db)?
+                .flatten()
+        }
         _ => None,
     };
     let Some(value) = value else {
@@ -266,25 +305,7 @@ async fn addendum_query(
     };
     Ok(value)
 }
-
-async fn addendum_queue_query(
-    operation: &str,
-    pool: &PgPool,
-) -> Result<Option<Value>, ServiceError> {
-    let query = match operation {
-        "listActionApprovalQueue" => "SELECT ops.read_action_queue_v1()",
-        "listResponseAppeals" => "SELECT ops.read_appeal_queue_v1()",
-        "listRetentionRequests" => "SELECT ops.read_retention_queue_v1()",
-        "listRecordClassSchedules" => "SELECT ops.read_record_class_schedule_queue_v1()",
-        _ => return Ok(None),
-    };
-    let items: Value = sqlx::query_scalar(query)
-        .fetch_one(pool)
-        .await
-        .map_err(db)?;
-    Ok(Some(json!({"items":items,"nextCursor":null,"links":[]})))
-}
-
+include!("query_addendum_queue.rs");
 pub(super) fn envelope(id: Uuid, status: impl Into<String>, data: Value) -> Value {
     let status = status.into();
     json!({"id":id,"status":status,"data":data,"links":[]})

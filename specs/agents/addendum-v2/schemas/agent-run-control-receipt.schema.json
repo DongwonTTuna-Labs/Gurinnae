@@ -33,18 +33,18 @@
     "receiptSha256"
   ],
   "properties": {
-    "schemaVersion": {"const": "agent-run-control-receipt.v2"},
-    "receiptId": {"type": "string", "format": "uuid"},
-    "runId": {"type": "string", "format": "uuid"},
-    "aggregateVersion": {"type": "integer", "minimum": 1},
-    "priorStatus": {"$ref": "#/$defs/nullableRunStatus"},
-    "priorControlState": {"$ref": "#/$defs/nullableControlState"},
-    "nextStatus": {"$ref": "#/$defs/runStatus"},
-    "nextControlState": {"$ref": "#/$defs/controlState"},
-    "affectedProviderTurnId": {"$ref": "#/$defs/nullableUuid"},
-    "affectedToolCallId": {"$ref": "#/$defs/nullableUuid"},
-    "reconciliationEvidenceId": {"$ref": "#/$defs/nullableUuid"},
-    "reconciliationEvidenceSha256": {"$ref": "#/$defs/nullableSha256"},
+    "schemaVersion": { "const": "agent-run-control-receipt.v2" },
+    "receiptId": { "type": "string", "format": "uuid" },
+    "runId": { "type": "string", "format": "uuid" },
+    "aggregateVersion": { "type": "integer", "minimum": 1 },
+    "priorStatus": { "$ref": "#/$defs/nullableRunStatus" },
+    "priorControlState": { "$ref": "#/$defs/nullableControlState" },
+    "nextStatus": { "$ref": "#/$defs/runStatus" },
+    "nextControlState": { "$ref": "#/$defs/controlState" },
+    "affectedProviderTurnId": { "$ref": "#/$defs/nullableUuid" },
+    "affectedToolCallId": { "$ref": "#/$defs/nullableUuid" },
+    "reconciliationEvidenceId": { "$ref": "#/$defs/nullableUuid" },
+    "reconciliationEvidenceSha256": { "$ref": "#/$defs/nullableSha256" },
     "proofKind": {
       "enum": [
         "COMMAND_INPUT",
@@ -58,15 +58,26 @@
         "DEFINITIVE_INTERNAL_FAILURE"
       ]
     },
-    "proofSha256": {"$ref": "#/$defs/sha256"},
+    "proofSha256": { "$ref": "#/$defs/sha256" },
     "budgetDisposition": {
-      "enum": ["NONE", "RESERVED", "SETTLED", "RELEASED", "RECONCILIATION_REQUIRED"]
+      "enum": [
+        "NONE",
+        "RESERVED",
+        "SETTLED",
+        "RELEASED",
+        "RECONCILIATION_REQUIRED"
+      ]
     },
-    "budgetResolutionSetSha256": {"$ref": "#/$defs/sha256"},
+    "budgetResolutionSetSha256": { "$ref": "#/$defs/sha256" },
     "actorKind": {
-      "enum": ["CONTROL_API", "ANALYSIS_WORKER", "RECONCILIATION_WORKER", "SCHEDULER"]
+      "enum": [
+        "CONTROL_API",
+        "ANALYSIS_WORKER",
+        "RECONCILIATION_WORKER",
+        "SCHEDULER"
+      ]
     },
-    "actorId": {"$ref": "#/$defs/nullableUuid"},
+    "actorId": { "$ref": "#/$defs/nullableUuid" },
     "reasonCode": {
       "enum": [
         "RUN_STARTED",
@@ -85,36 +96,36 @@
         "NO_STATE_CHANGE"
       ]
     },
-    "reasonSha256": {"$ref": "#/$defs/sha256"},
-    "priorReceiptId": {"$ref": "#/$defs/nullableUuid"},
-    "priorReceiptSha256": {"$ref": "#/$defs/nullableSha256"},
+    "reasonSha256": { "$ref": "#/$defs/sha256" },
+    "priorReceiptId": { "$ref": "#/$defs/nullableUuid" },
+    "priorReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
     "commandBinding": {
-      "oneOf": [
-        {"$ref": "#/$defs/commandBinding"},
-        {"type": "null"}
-      ]
+      "oneOf": [{ "$ref": "#/$defs/commandBinding" }, { "type": "null" }]
     },
-    "auditEventId": {"type": "string", "format": "uuid"},
-    "occurredAt": {"type": "string", "format": "date-time"},
-    "receiptSha256": {"$ref": "#/$defs/sha256"}
+    "auditEventId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "receiptSha256": { "$ref": "#/$defs/sha256" }
   },
   "allOf": [
     {
-      "if": {"properties": {"aggregateVersion": {"const": 1}}, "required": ["aggregateVersion"]},
+      "if": {
+        "properties": { "aggregateVersion": { "const": 1 } },
+        "required": ["aggregateVersion"]
+      },
       "then": {
         "properties": {
-          "priorStatus": {"type": "null"},
-          "priorControlState": {"type": "null"},
-          "priorReceiptId": {"type": "null"},
-          "priorReceiptSha256": {"type": "null"}
+          "priorStatus": { "type": "null" },
+          "priorControlState": { "type": "null" },
+          "priorReceiptId": { "type": "null" },
+          "priorReceiptSha256": { "type": "null" }
         }
       },
       "else": {
         "properties": {
-          "priorStatus": {"$ref": "#/$defs/runStatus"},
-          "priorControlState": {"$ref": "#/$defs/controlState"},
-          "priorReceiptId": {"type": "string", "format": "uuid"},
-          "priorReceiptSha256": {"$ref": "#/$defs/sha256"}
+          "priorStatus": { "$ref": "#/$defs/runStatus" },
+          "priorControlState": { "$ref": "#/$defs/controlState" },
+          "priorReceiptId": { "type": "string", "format": "uuid" },
+          "priorReceiptSha256": { "$ref": "#/$defs/sha256" }
         }
       }
     },
@@ -122,106 +133,171 @@
       "if": {
         "properties": {
           "nextStatus": {
-            "enum": ["SUCCEEDED", "FAILED", "CANCELLED", "BUDGET_BLOCKED", "POLICY_BLOCKED"]
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "BUDGET_BLOCKED",
+              "POLICY_BLOCKED"
+            ]
           }
         },
         "required": ["nextStatus"]
       },
-      "then": {"properties": {"nextControlState": {"const": "SETTLED"}}},
-      "else": {"properties": {"nextControlState": {"not": {"const": "SETTLED"}}}}
+      "then": { "properties": { "nextControlState": { "const": "SETTLED" } } },
+      "else": {
+        "properties": { "nextControlState": { "not": { "const": "SETTLED" } } }
+      }
     },
     {
-      "if": {"properties": {"actorKind": {"const": "SCHEDULER"}}, "required": ["actorKind"]},
-      "then": {"properties": {"actorId": {"type": "null"}}},
-      "else": {"properties": {"actorId": {"type": "string", "format": "uuid"}}}
+      "if": {
+        "properties": { "actorKind": { "const": "SCHEDULER" } },
+        "required": ["actorKind"]
+      },
+      "then": { "properties": { "actorId": { "type": "null" } } },
+      "else": {
+        "properties": { "actorId": { "type": "string", "format": "uuid" } }
+      }
     },
     {
-      "if": {"properties": {"actorKind": {"const": "CONTROL_API"}}, "required": ["actorKind"]},
+      "if": {
+        "properties": { "actorKind": { "const": "CONTROL_API" } },
+        "required": ["actorKind"]
+      },
       "then": {
         "properties": {
           "commandBinding": {
             "allOf": [
-              {"$ref": "#/$defs/commandBinding"},
-              {"properties": {"operationId": {"const": "cancelAgentRun"}}, "required": ["operationId"]}
+              { "$ref": "#/$defs/commandBinding" },
+              {
+                "properties": { "operationId": { "const": "cancelAgentRun" } },
+                "required": ["operationId"]
+              }
             ]
           }
         }
       }
     },
     {
-      "if": {"properties": {"actorKind": {"const": "RECONCILIATION_WORKER"}}, "required": ["actorKind"]},
+      "if": {
+        "properties": { "actorKind": { "const": "RECONCILIATION_WORKER" } },
+        "required": ["actorKind"]
+      },
       "then": {
         "properties": {
           "commandBinding": {
             "allOf": [
-              {"$ref": "#/$defs/commandBinding"},
-              {"properties": {"operationId": {"const": "reconcileAgentRun"}}, "required": ["operationId"]}
+              { "$ref": "#/$defs/commandBinding" },
+              {
+                "properties": {
+                  "operationId": { "const": "reconcileAgentRun" }
+                },
+                "required": ["operationId"]
+              }
             ]
           }
         }
       }
     },
     {
-      "if": {"properties": {"actorKind": {"enum": ["ANALYSIS_WORKER", "SCHEDULER"]}}, "required": ["actorKind"]},
-      "then": {"properties": {"commandBinding": {"type": "null"}}}
+      "if": {
+        "properties": {
+          "actorKind": { "enum": ["ANALYSIS_WORKER", "SCHEDULER"] }
+        },
+        "required": ["actorKind"]
+      },
+      "then": { "properties": { "commandBinding": { "type": "null" } } }
     },
     {
       "if": {
         "properties": {
           "proofKind": {
-            "enum": ["PROVIDER_LOOKUP", "IDEMPOTENCY_LOOKUP", "TOOL_ADAPTER_LOOKUP", "COST_USAGE_RECEIPT"]
+            "enum": [
+              "PROVIDER_LOOKUP",
+              "IDEMPOTENCY_LOOKUP",
+              "TOOL_ADAPTER_LOOKUP",
+              "COST_USAGE_RECEIPT"
+            ]
           }
         },
         "required": ["proofKind"]
       },
       "then": {
         "properties": {
-          "reconciliationEvidenceId": {"type": "string", "format": "uuid"},
-          "reconciliationEvidenceSha256": {"$ref": "#/$defs/sha256"}
+          "reconciliationEvidenceId": { "type": "string", "format": "uuid" },
+          "reconciliationEvidenceSha256": { "$ref": "#/$defs/sha256" }
         }
       }
     },
     {
       "if": {
-        "properties": {"priorControlState": {"const": "CANCEL_REQUESTED"}},
+        "properties": { "priorControlState": { "const": "CANCEL_REQUESTED" } },
         "required": ["priorControlState"]
       },
-      "then": {"properties": {"nextControlState": {"not": {"const": "ACTIVE"}}}}
+      "then": {
+        "properties": { "nextControlState": { "not": { "const": "ACTIVE" } } }
+      }
     },
     {
       "if": {
-        "properties": {"nextControlState": {"const": "ACTIVE"}},
+        "properties": { "nextControlState": { "const": "ACTIVE" } },
         "required": ["nextControlState"]
       },
-      "then": {"properties": {"priorControlState": {"const": "RECONCILIATION_REQUIRED"}}}
+      "then": {
+        "properties": {
+          "priorControlState": { "const": "RECONCILIATION_REQUIRED" }
+        }
+      }
     }
   ],
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "nullableSha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nullableSha256": {
+      "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+    },
     "nullableUuid": {
-      "oneOf": [
-        {"type": "string", "format": "uuid"},
-        {"type": "null"}
-      ]
+      "oneOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }]
     },
     "runStatus": {
-      "enum": ["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED", "BUDGET_BLOCKED", "POLICY_BLOCKED"]
+      "enum": [
+        "QUEUED",
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "BUDGET_BLOCKED",
+        "POLICY_BLOCKED"
+      ]
     },
-    "nullableRunStatus": {"oneOf": [{"$ref": "#/$defs/runStatus"}, {"type": "null"}]},
+    "nullableRunStatus": {
+      "oneOf": [{ "$ref": "#/$defs/runStatus" }, { "type": "null" }]
+    },
     "controlState": {
-      "enum": ["NONE", "ACTIVE", "CANCEL_REQUESTED", "RECONCILIATION_REQUIRED", "SETTLED"]
+      "enum": [
+        "NONE",
+        "ACTIVE",
+        "CANCEL_REQUESTED",
+        "RECONCILIATION_REQUIRED",
+        "SETTLED"
+      ]
     },
-    "nullableControlState": {"oneOf": [{"$ref": "#/$defs/controlState"}, {"type": "null"}]},
+    "nullableControlState": {
+      "oneOf": [{ "$ref": "#/$defs/controlState" }, { "type": "null" }]
+    },
     "commandBinding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["operationId", "expectedRunVersion", "idempotencyKeySha256", "requestSha256"],
+      "required": [
+        "operationId",
+        "expectedRunVersion",
+        "idempotencyKeySha256",
+        "requestSha256"
+      ],
       "properties": {
-        "operationId": {"enum": ["cancelAgentRun", "reconcileAgentRun"]},
-        "expectedRunVersion": {"type": "integer", "minimum": 1},
-        "idempotencyKeySha256": {"$ref": "#/$defs/sha256"},
-        "requestSha256": {"$ref": "#/$defs/sha256"}
+        "operationId": { "enum": ["cancelAgentRun", "reconcileAgentRun"] },
+        "expectedRunVersion": { "type": "integer", "minimum": 1 },
+        "idempotencyKeySha256": { "$ref": "#/$defs/sha256" },
+        "requestSha256": { "$ref": "#/$defs/sha256" }
       }
     }
   },

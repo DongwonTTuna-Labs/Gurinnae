@@ -101,6 +101,10 @@ pub fn derived_token(key: &[u8], purpose: &str, id: Uuid) -> Result<String, Serv
     let mut mac = Hmac::<Sha256>::new_from_slice(key).map_err(|_| ServiceError::Cryptography)?;
     mac.update(purpose.as_bytes());
     mac.update(b":");
+    // Bind the token to the UUID's canonical 16-byte value.  The integration
+    // and receipt contracts use the UUID bytes (without textual hyphens), so
+    // hashing the display string would produce a token that cannot be
+    // re-derived by clients or verified by the delivery worker.
     mac.update(id.as_bytes());
     Ok(URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes()))
 }

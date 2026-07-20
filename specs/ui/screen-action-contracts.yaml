@@ -3798,7 +3798,7 @@ commands:
     rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
   request_field_set:
   - name: schemaVersion
-    type: const decide-journey-handoff.request.v1
+    type: const<decide-journey-handoff.request.v1>
     required: true
   - name: handoffId
     type: uuid
@@ -3810,10 +3810,10 @@ commands:
     type: sha256
     required: true
   - name: decision
-    type: ACKNOWLEDGE|DECLINE
+    type: enum<ACKNOWLEDGE|DECLINE>
     required: true
   - name: reasonCode
-    type: nullable<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>
+    type: nullable<enum<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>>
     required: true
   - name: reason
     type: nullable<string[1..4000]>
@@ -3858,7 +3858,7 @@ commands:
     session_authority_source: request_context.review_console_session
     request_bindings:
     - field: schemaVersion
-      type: const decide-journey-handoff.request.v1
+      type: const<decide-journey-handoff.request.v1>
       required: true
       source: view_model.sections.handoff.forms.decide_journey_handoff__handoff.schemaVersion
       binding_class: USER_EDITABLE_FORM_FIELD
@@ -3886,14 +3886,14 @@ commands:
       browser_visible: true
       error_test_id: int_002__field_error__decide_journey_handoff__handoff__expectedBindingDigest
     - field: decision
-      type: ACKNOWLEDGE|DECLINE
+      type: enum<ACKNOWLEDGE|DECLINE>
       required: true
       source: view_model.sections.handoff.forms.decide_journey_handoff__handoff.decision
       binding_class: USER_EDITABLE_FORM_FIELD
       browser_visible: true
       error_test_id: int_002__field_error__decide_journey_handoff__handoff__decision
     - field: reasonCode
-      type: nullable<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>
+      type: nullable<enum<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>>
       required: true
       source: view_model.sections.handoff.forms.decide_journey_handoff__handoff.reasonCode
       binding_class: USER_EDITABLE_FORM_FIELD

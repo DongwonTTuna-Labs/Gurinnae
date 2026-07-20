@@ -13,6 +13,10 @@ BEGIN
 END
 $$;
 
+-- The research-fetch SECURITY DEFINER owns this immutable ingest relation in
+-- deployments; establish the same owner after the fixture roles exist.
+ALTER TABLE raw.source_fetches OWNER TO gurine_migrator;
+
 REVOKE ALL ON SCHEMA raw, core, editorial, intake, ops, public, extensions FROM PUBLIC;
 GRANT USAGE ON SCHEMA extensions TO
   gurine_migrator, gurine_ingest_worker, gurine_analysis_worker,

@@ -15,10 +15,7 @@
       "const": "visualization-vm.v2"
     },
     "screenId": {
-      "enum": [
-        "CAS-010",
-        "CAS-011"
-      ]
+      "enum": ["CAS-010", "CAS-011"]
     },
     "visualizations": {
       "type": "array",
@@ -52,12 +49,7 @@
     "tableAlternative": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "caption",
-        "headers",
-        "rows",
-        "dataSha256"
-      ],
+      "required": ["caption", "headers", "rows", "dataSha256"],
       "properties": {
         "caption": {
           "type": "string",
@@ -139,10 +131,7 @@
           "format": "date-time"
         },
         "uncertaintyNote": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 1000
         },
         "sourceDigest": {
@@ -167,11 +156,7 @@
             {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "label",
-                "value",
-                "direction"
-              ],
+              "required": ["label", "value", "direction"],
               "properties": {
                 "label": {
                   "type": "string",
@@ -182,12 +167,7 @@
                   "type": "integer"
                 },
                 "direction": {
-                  "enum": [
-                    "HIGHER",
-                    "LOWER",
-                    "EQUAL",
-                    "NOT_COMPARABLE"
-                  ]
+                  "enum": ["HIGHER", "LOWER", "EQUAL", "NOT_COMPARABLE"]
                 }
               }
             }
@@ -248,10 +228,7 @@
           "format": "date-time"
         },
         "uncertaintyNote": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 1000
         },
         "sourceDigest": {
@@ -267,11 +244,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "seriesId",
-              "label",
-              "points"
-            ],
+            "required": ["seriesId", "label", "points"],
             "properties": {
               "seriesId": {
                 "type": "string",
@@ -289,28 +262,17 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "at",
-                    "value",
-                    "state"
-                  ],
+                  "required": ["at", "value", "state"],
                   "properties": {
                     "at": {
                       "type": "string",
                       "format": "date-time"
                     },
                     "value": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ]
+                      "type": ["integer", "null"]
                     },
                     "state": {
-                      "enum": [
-                        "OBSERVED",
-                        "MISSING",
-                        "ESTIMATED"
-                      ]
+                      "enum": ["OBSERVED", "MISSING", "ESTIMATED"]
                     }
                   }
                 }
@@ -373,10 +335,7 @@
           "format": "date-time"
         },
         "uncertaintyNote": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 1000
         },
         "sourceDigest": {
@@ -392,12 +351,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "categoryId",
-              "label",
-              "value",
-              "state"
-            ],
+            "required": ["categoryId", "label", "value", "state"],
             "properties": {
               "categoryId": {
                 "type": "string",
@@ -410,17 +364,10 @@
                 "maxLength": 255
               },
               "value": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+                "type": ["integer", "null"]
               },
               "state": {
-                "enum": [
-                  "OBSERVED",
-                  "MISSING",
-                  "NOT_COMPARABLE"
-                ]
+                "enum": ["OBSERVED", "MISSING", "NOT_COMPARABLE"]
               }
             }
           }
@@ -481,10 +428,7 @@
           "format": "date-time"
         },
         "uncertaintyNote": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 1000
         },
         "sourceDigest": {
@@ -500,11 +444,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "columnId",
-              "label",
-              "valueKind"
-            ],
+            "required": ["columnId", "label", "valueKind"],
             "properties": {
               "columnId": {
                 "type": "string",
@@ -516,12 +456,7 @@
                 "maxLength": 128
               },
               "valueKind": {
-                "enum": [
-                  "TEXT",
-                  "INTEGER",
-                  "DATETIME",
-                  "STATUS"
-                ]
+                "enum": ["TEXT", "INTEGER", "DATETIME", "STATUS"]
               }
             }
           }
@@ -532,12 +467,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "rowId",
-              "label",
-              "cells",
-              "sourceUseIds"
-            ],
+            "required": ["rowId", "label", "cells", "sourceUseIds"],
             "properties": {
               "rowId": {
                 "type": "string",
@@ -556,29 +486,18 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "columnId",
-                    "displayValue",
-                    "state"
-                  ],
+                  "required": ["columnId", "displayValue", "state"],
                   "properties": {
                     "columnId": {
                       "type": "string",
                       "pattern": "^[a-z][a-z0-9-]{0,63}$"
                     },
                     "displayValue": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
+                      "type": ["string", "null"],
                       "maxLength": 1000
                     },
                     "state": {
-                      "enum": [
-                        "PRESENT",
-                        "MISSING",
-                        "NOT_COMPARABLE"
-                      ]
+                      "enum": ["PRESENT", "MISSING", "NOT_COMPARABLE"]
                     }
                   }
                 }

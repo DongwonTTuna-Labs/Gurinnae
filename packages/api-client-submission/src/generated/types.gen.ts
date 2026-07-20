@@ -660,12 +660,8 @@ export type VerifySubscriptionResult = {
 
 export type CreateResponseAppealRequestV1 = {
     expectedReceiptVersion: number;
-    reasonCode: {
-        [key: string]: never;
-    };
-    requestedOutcome: {
-        [key: string]: never;
-    };
+    reasonCode: 'DELIVERY_DISPUTE' | 'SCOPE_DISPUTE' | 'CONSENT_DISPUTE' | 'PUBLICATION_EXCERPT_DISPUTE' | 'DEADLINE_DISPUTE' | 'OTHER';
+    requestedOutcome: 'REOPEN_RESPONSE' | 'REVIEW_EXCERPT' | 'CORRECT_STATUS' | 'EXTEND_DEADLINE' | 'HUMAN_REVIEW';
     statement: string;
     supportingAttachmentIds: Array<string>;
     attestation: boolean;
@@ -683,20 +679,19 @@ export type GetResponseAppealRequestV1 = {
 
 export type ResponseAppealPublicStatusV1 = {
     appealId: string;
-    state: string;
-    requestedOutcome: string;
+    state: 'RECEIVED' | 'REVIEW' | 'RESOLVED' | 'REJECTED' | 'DUPLICATE' | 'WITHDRAWN';
+    requestedOutcome: 'REOPEN_RESPONSE' | 'REVIEW_EXCERPT' | 'CORRECT_STATUS' | 'EXTEND_DEADLINE' | 'HUMAN_REVIEW';
     submittedAt: string;
     updatedAt: string;
     dueAt: string;
     decisionReason: string | null;
     nextActions: Array<string>;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type RequestCommunicationEndpointLinkRequestV1 = {
-    contractVersion: {
-        [key: string]: never;
-    };
+    contractVersion: 'communication-v1';
     endpoint: EndpointEnrollmentV1;
     linkingConsent: EndpointLinkingConsentV1;
     expectedProfileVersion: number;
@@ -707,7 +702,7 @@ export type CommunicationEndpointLinkRequestedReceiptV1 = {
     command: CommandReceiptV1;
     endpoint: CommunicationEndpointSummaryV1;
     challengeId: string;
-    challengeKind: string;
+    challengeKind: 'EMAIL_LINK' | 'SMS_OTP' | 'PROVIDER_SIGNED_BINDING';
     expiresAt: string;
 };
 
@@ -728,7 +723,7 @@ export type UnlinkCommunicationEndpointRequestV1 = {
     endpointId: string;
     expectedEndpointVersion: number;
     expectedProfileVersion: number;
-    reasonCode: number;
+    reasonCode: 'USER_REQUEST' | 'LOST_ACCESS' | 'WRONG_ENDPOINT' | 'PRIVACY' | 'OTHER';
 };
 
 export type CommunicationEndpointUnlinkedReceiptV1 = {
@@ -739,9 +734,7 @@ export type CommunicationEndpointUnlinkedReceiptV1 = {
 };
 
 export type CreatePrivacyRequestRequestV1 = {
-    requestType: {
-        [key: string]: never;
-    };
+    requestType: 'ACCESS' | 'CORRECTION' | 'DELETION' | 'RESTRICTION';
     subjectIdentityProof: PrivacyIdentityProofV1;
     jurisdiction: string;
     scope: PrivacyRequestScopeV1;
@@ -766,9 +759,7 @@ export type ExchangePrivacyRequestReceiptTokenRequestV1 = {
 export type PrivacyRequestSessionReceiptV1 = {
     requestId: string;
     sessionId: string;
-    state: {
-        [key: string]: never;
-    };
+    state: 'ACTIVE';
     expiresAt: string;
     cookieName: string;
     tokenConsumedAt: string;
@@ -784,7 +775,8 @@ export type PrivacyRequestPublicStatusV1 = {
     completionSummary: string | null;
     nextActions: Array<string>;
     asOf: string;
-    links: Array<string>;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type AddendumProblemDetailsV1 = {
@@ -798,17 +790,15 @@ export type AddendumProblemDetailsV1 = {
 export type CommandReceiptV1 = {
     operationId: string;
     requestId: string;
-    status: string;
+    status: 'ACCEPTED' | 'COMPLETED' | 'REJECTED';
     aggregateId: string;
     aggregateVersion: number;
     auditEventId: string;
     acceptedAt: string;
     receiptDigest: string;
     emittedEventIds: Array<string>;
-    idempotencyReplay: {
-        [key: string]: never;
-    };
-    links: Array<string>;
+    idempotencyReplay: false;
+    links: Array<Link>;
 };
 
 export type ResponseAppealSummaryV1 = {
@@ -816,9 +806,9 @@ export type ResponseAppealSummaryV1 = {
     responseRequestId: string;
     caseId: string;
     decisionSequence: number;
-    state: string;
-    reasonCode: string;
-    requestedOutcome: string;
+    state: 'RECEIVED' | 'REVIEW' | 'RESOLVED' | 'REJECTED' | 'DUPLICATE' | 'WITHDRAWN';
+    reasonCode: 'DELIVERY_DISPUTE' | 'SCOPE_DISPUTE' | 'CONSENT_DISPUTE' | 'PUBLICATION_EXCERPT_DISPUTE' | 'DEADLINE_DISPUTE' | 'OTHER';
+    requestedOutcome: 'REOPEN_RESPONSE' | 'REVIEW_EXCERPT' | 'CORRECT_STATUS' | 'EXTEND_DEADLINE' | 'HUMAN_REVIEW';
     createdAt: string;
     updatedAt: string;
     dueAt: string;
@@ -827,18 +817,18 @@ export type ResponseAppealSummaryV1 = {
 export type CommunicationEndpointSummaryV1 = {
     endpointId: string;
     version: number;
-    channel: string;
+    channel: 'EMAIL' | 'SMS' | 'TELEGRAM' | 'WHATSAPP' | 'LINE' | 'KAKAO' | 'VOICE';
     maskedDestination: string;
-    state: string;
+    state: 'PENDING_VERIFICATION' | 'ACTIVE' | 'REVOKED' | 'BOUNCED' | 'SUPPRESSED';
     locale: string;
-    verifiedAt: string;
+    verifiedAt: string | null;
     updatedAt: string;
 };
 
 export type PrivacyRequestSummaryV1 = {
     privacyRequestId: string;
-    requestType: string;
-    state: string;
+    requestType: 'ACCESS' | 'CORRECTION' | 'DELETION' | 'RESTRICTION';
+    state: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
     jurisdiction: string;
     scopeDigest: string;
     dueAt: string;
@@ -847,13 +837,38 @@ export type PrivacyRequestSummaryV1 = {
 };
 
 export type EndpointEnrollmentV1 = {
-    [key: string]: never;
+    channel: 'EMAIL';
+    address: string;
+    locale: string;
+} | {
+    channel: 'SMS';
+    e164: string;
+    locale: string;
+} | {
+    channel: 'TELEGRAM';
+    providerSubjectToken: string;
+    locale: string;
+} | {
+    channel: 'WHATSAPP';
+    providerSubjectToken: string;
+    locale: string;
+} | {
+    channel: 'LINE';
+    providerSubjectToken: string;
+    locale: string;
+} | {
+    channel: 'KAKAO';
+    e164: string;
+    locale: string;
+} | {
+    channel: 'VOICE';
+    e164: string;
+    locale: string;
+    explicitVoiceConsentReceiptId: string;
 };
 
 export type EndpointLinkingConsentV1 = {
-    decision: {
-        [key: string]: never;
-    };
+    decision: 'LINK';
     purposes: Array<string>;
     policyVersion: string;
     jurisdiction: string;
@@ -863,42 +878,59 @@ export type EndpointLinkingConsentV1 = {
 };
 
 export type AbuseProofV1 = {
-    provider: string;
+    provider: 'TURNSTILE' | 'HCAPTCHA' | 'SYNTHETIC_TEST';
     token: string;
     action: string;
-    issuedAtEpochSeconds: number;
+    issuedAtEpochSeconds: number | null;
 };
 
 export type EndpointVerificationProofV1 = {
-    [key: string]: never;
+    kind: 'EMAIL_LINK';
+    token: string;
+} | {
+    kind: 'SMS_OTP';
+    code: string;
+} | {
+    kind: 'PROVIDER_SIGNED_BINDING';
+    provider: 'TELEGRAM_BOT_API' | 'META_WHATSAPP_BUSINESS_CLOUD' | 'LINE_MESSAGING_API' | 'SOLAPI_KAKAO_BIZMESSAGE' | 'TWILIO_VOICE';
+    bindingToken: string;
 };
 
 export type PrivacyIdentityProofV1 = {
-    [key: string]: never;
+    kind: 'RESPONSE_RECEIPT';
+    receiptId: string;
+    possessionToken: string;
+} | {
+    kind: 'VERIFIED_ENDPOINT';
+    endpointChallengeId: string;
+    endpointProof: EndpointVerificationProofV1;
+} | {
+    kind: 'IDENTITY_DOCUMENT_CHALLENGE';
+    challengeId: string;
+    verificationReceiptId: string;
+    verificationReceiptDigest: string;
 };
 
 export type PrivacyRequestScopeV1 = {
-    scopeKind: string;
-    objectRefs: Array<string>;
-    dateFrom: string;
-    dateTo: string;
+    scopeKind: 'ALL_VERIFIED_SUBJECT_DATA' | 'OBJECT_SET' | 'DATE_RANGE';
+    objectRefs: Array<PrivacyObjectRefV1>;
+    dateFrom: string | null;
+    dateTo: string | null;
     includeDerivatives: boolean;
     includeBackups: boolean;
 };
 
 export type PrivacyObjectRefV1 = {
-    objectType: number;
+    objectType: 'RESPONSE' | 'CORRECTION' | 'SUBSCRIPTION' | 'COMMUNICATION_ENDPOINT' | 'PUBLICATION' | 'EVIDENCE' | 'AUDIT_SUBJECT_RECORD';
     objectId: string;
 };
 
 export type BrowserProofV1 = {
-    provider: string;
+    provider: 'TURNSTILE' | 'HCAPTCHA' | 'SYNTHETIC_TEST';
     token: string;
-    action: {
-        [key: string]: never;
-    };
+    action: 'privacy-request-receipt-exchange';
     clientNonce: string;
-    issuedAtEpochSeconds: number;
+    issuedAtEpochSeconds: number | null;
 };
 
 export type CreateContactRequestData = {
@@ -3010,7 +3042,9 @@ export type GetResponseAppealData = {
     path: {
         appealId: string;
     };
-    query?: never;
+    query: {
+        appealId: string;
+    };
     url: '/v1/response-receipt/appeals/{appealId}';
 };
 

@@ -34,7 +34,7 @@ export const screen = {
       order: 4,
       id: "errors",
       title: "오류",
-      component: "StructuredContentSection",
+      component: "AgentSuggestionPanel",
       purpose: "Problem Details.",
       test_id: "pub_021__section__errors",
     },

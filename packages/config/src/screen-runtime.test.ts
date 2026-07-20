@@ -50,6 +50,46 @@ describe("screen runtime form payloads", () => {
     );
   });
 
+  it("materializes OpenAPI const fields as server-bound readonly values", () => {
+    const constDocument = {
+      paths: {
+        "/command": {
+          post: {
+            operationId: "constCommand",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      schemaVersion: {
+                        type: "string",
+                        const: "command.v1",
+                      },
+                    },
+                    required: ["schemaVersion"],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    } satisfies OpenApiDocument;
+    const constOperation = indexOperations([constDocument]).get("constCommand");
+    if (!constOperation) throw new Error("const operation was not indexed");
+    expect(operationFields(constOperation, {})).toEqual([
+      {
+        name: "schemaVersion",
+        label: "schema Version",
+        type: "text",
+        required: true,
+        value: "command.v1",
+        readonly: true,
+      },
+    ]);
+  });
+
   it("builds query fields and marks route-bound values read-only", () => {
     const queryDocument = {
       paths: {
@@ -114,6 +154,15 @@ describe("screen runtime form payloads", () => {
     form.set("paused", "false");
     const payload = formPayload(form, fields);
     expect(payload).toEqual({ paused: false, attestation: false });
+  });
+
+  it("rejects tampering with a server-bound preset", () => {
+    const fixedFields = operationFields(indexed, {}, { name: "server-bound" });
+    const form = new FormData();
+    form.set("name", "caller-overwrite");
+    expect(() =>
+      formPayload(form, fixedFields, { name: "server-bound" }),
+    ).toThrow("서버 대상과 일치하지 않습니다");
   });
 
   it("prefers a nested current target version over wrapper metadata", () => {

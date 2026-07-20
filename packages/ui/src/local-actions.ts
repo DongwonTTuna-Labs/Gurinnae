@@ -74,6 +74,9 @@ export function localActionHref(
   if (explicit)
     return safeHref(renderRoute(explicit, runtime.pathname ?? screen.route));
 
+  const serverDestination = runtime.destinations?.[action.id];
+  if (serverDestination) return safeHref(serverDestination);
+
   const key = `${screen.id}:${action.id}`;
   const contextual = contextualTarget(key, screen, runtime);
   if (contextual) return contextual;
@@ -84,8 +87,6 @@ export function localActionHref(
       resolveRelative(configured, runtime.pathname ?? screen.route),
     );
 
-  const targetFromData = dataTarget(screen, runtime, action.id);
-  if (targetFromData) return targetFromData;
   return fallbackTargets[key];
 }
 
@@ -100,29 +101,17 @@ function contextualTarget(
       return path.split("/revisions/")[0];
     case "PUB-005:compare":
       return "#diff";
-    case "PUB-006:view-rule": {
-      const rule = scalar(runtime.data, ["ruleId"]);
-      return rule
-        ? `/methodology/rules/${encodeURIComponent(rule)}`
-        : "/methodology";
-    }
+    case "PUB-006:view-rule":
+      return "/methodology";
     case "PUB-014:view-related-cases": {
       const rule = lastSegment(path);
       return `/cases?ruleId=${encodeURIComponent(rule)}`;
     }
     case "PUB-017:view-related-rules":
       return "/methodology";
-    case "PUB-019:view-old-revision": {
-      const slug = scalar(runtime.data, ["caseSlug", "slug"]);
-      const revision = scalar(runtime.data, ["sourceRevision"]);
-      return slug && revision
-        ? `/cases/${encodeURIComponent(slug)}/revisions/${encodeURIComponent(revision)}`
-        : undefined;
-    }
-    case "REV-003:open-public": {
-      const publicUrl = scalar(runtime.data, ["publicUrl", "publicUrls"]);
-      return publicUrl ? safeHref(publicUrl) : undefined;
-    }
+    case "PUB-019:view-old-revision":
+    case "REV-003:open-public":
+      return undefined;
     case "CAS-002:start-next":
       return path.replace(/\/overview\/?$/, "/signals");
     case "CAS-008:new-request":
@@ -138,197 +127,6 @@ function contextualTarget(
     default:
       return undefined;
   }
-}
-
-function dataTarget(
-  screen: ScreenViewModel,
-  runtime: ScreenRuntime,
-  actionId: string,
-): string | undefined {
-  const data = runtime.data;
-  const pathname = runtime.pathname ?? screen.route;
-  const segment = targetSegment(actionId);
-  const urls = collectUrls(data);
-  const preferred = segment
-    ? urls.find((value) => value.includes(segment))
-    : urls[0];
-  if (preferred) return safeHref(preferred);
-
-  const internal =
-    !screen.id.startsWith("PUB-") && !screen.id.startsWith("RSP-");
-  const value = (names: string[]) => scalar(data, names);
-  const encoded = (names: string[]) => {
-    const item = value(names);
-    return item ? encodeURIComponent(item) : undefined;
-  };
-  if (actionId.includes("case")) {
-    const id = encoded(internal ? ["caseId", "id"] : ["caseSlug", "slug"]);
-    return id
-      ? internal
-        ? `/internal/cases/${id}/overview`
-        : `/cases/${id}`
-      : undefined;
-  }
-  if (actionId.includes("contract")) {
-    const id = encoded(["contractId", "id"]);
-    return id ? `/contracts/${id}` : undefined;
-  }
-  if (actionId.includes("agency")) {
-    const id = encoded(["agencySlug", "agencyId", "id"]);
-    return id ? `/agencies/${id}` : undefined;
-  }
-  if (actionId.includes("supplier")) {
-    const id = encoded(["supplierSlug", "supplierId", "id"]);
-    return id ? `/suppliers/${id}` : undefined;
-  }
-  if (actionId.includes("correction") || actionId.includes("request")) {
-    const id = encoded(["correctionId", "correctionRequestId", "id"]);
-    if (!id) return undefined;
-    return internal ? `/internal/corrections/${id}` : `/corrections/${id}`;
-  }
-  if (actionId.includes("source")) {
-    const id = encoded(["sourceId", "id"]);
-    return id
-      ? internal
-        ? `/internal/sources/${id}`
-        : `/sources/${id}`
-      : undefined;
-  }
-  if (actionId.includes("rule")) {
-    const id = encoded(["ruleId", "id"]);
-    if (!id) return undefined;
-    if (!internal) return `/methodology/rules/${id}`;
-    const version = encoded(["ruleVersion", "version"]);
-    return version ? `/internal/rules/${id}/versions/${version}` : undefined;
-  }
-  if (actionId.includes("job")) {
-    const id = encoded(["jobId", "id"]);
-    return id ? `/internal/operations/jobs/${id}` : undefined;
-  }
-  if (actionId.includes("provider")) {
-    const id = encoded(["providerId", "id"]);
-    return id ? `/internal/operations/providers?providerId=${id}` : undefined;
-  }
-  if (actionId.includes("user")) {
-    const id = encoded(["userId", "id"]);
-    return id ? `/internal/admin/users/${id}` : undefined;
-  }
-  if (actionId.includes("role")) {
-    const id = encoded(["roleId", "id"]);
-    return id ? `/internal/admin/roles?roleId=${id}` : undefined;
-  }
-  if (actionId.includes("run")) {
-    const id = encoded(["runId", "sourceRunId", "agentRunId", "id"]);
-    return id ? `${trimSlash(pathname)}/${id}` : undefined;
-  }
-  if (actionId.includes("signal")) {
-    const id = encoded(["signalId", "id"]);
-    return id ? `/internal/signals/${id}` : undefined;
-  }
-  if (actionId.includes("evidence")) {
-    const evidenceId = encoded(["evidenceId", "id"]);
-    const caseId = encoded(["caseId"]);
-    if (internal && evidenceId) {
-      const base = caseId
-        ? `/internal/cases/${caseId}`
-        : pathname.match(/^\/internal\/cases\/[^/]+/)?.[0];
-      return base ? `${base}/evidence/${evidenceId}` : undefined;
-    }
-  }
-  if (actionId.includes("review")) {
-    const id = encoded(["snapshotId", "reviewSnapshotId", "id"]);
-    return id ? `/internal/review/${id}` : undefined;
-  }
-  if (actionId.includes("sample")) {
-    const id = encoded(["caseId", "caseSlug", "id"]);
-    return id
-      ? internal
-        ? `/internal/cases/${id}/overview`
-        : `/cases/${id}`
-      : undefined;
-  }
-  return urls[0] ? safeHref(urls[0]) : undefined;
-}
-
-function targetSegment(actionId: string): string | undefined {
-  for (const [token, segment] of [
-    ["contract", "/contracts/"],
-    ["agency", "/agencies/"],
-    ["supplier", "/suppliers/"],
-    ["correction", "/corrections/"],
-    ["case", "/cases/"],
-    ["source", "/sources/"],
-    ["rule", "/rules/"],
-    ["job", "/jobs/"],
-    ["signal", "/signals/"],
-    ["evidence", "/evidence/"],
-    ["review", "/review/"],
-    ["run", "/runs/"],
-  ] as const) {
-    if (actionId.includes(token)) return segment;
-  }
-  return undefined;
-}
-
-function collectUrls(value: unknown): string[] {
-  const result: string[] = [];
-  const visit = (item: unknown) => {
-    if (Array.isArray(item)) {
-      item.forEach(visit);
-      return;
-    }
-    if (!record(item)) return;
-    for (const [key, child] of Object.entries(item)) {
-      if (
-        typeof child === "string" &&
-        [
-          "href",
-          "sourceUrl",
-          "officialUrl",
-          "publicUrl",
-          "downloadUrl",
-          "targetUrl",
-          "canonicalUrl",
-          "artifactUrl",
-          "reportUrl",
-          "receiptUrl",
-        ].includes(key) &&
-        safeHref(child)
-      )
-        result.push(child);
-      else visit(child);
-    }
-  };
-  visit(value);
-  return [...new Set(result)];
-}
-
-function scalar(value: unknown, names: string[]): string | undefined {
-  for (const name of names) {
-    const found = scalarNamed(value, name);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function scalarNamed(value: unknown, name: string): string | undefined {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = scalarNamed(item, name);
-      if (found) return found;
-    }
-    return undefined;
-  }
-  if (!record(value)) return undefined;
-  const item = value[name];
-  if (typeof item === "string" || typeof item === "number") return String(item);
-  if (Array.isArray(item) && item.length > 0 && typeof item[0] === "string")
-    return item[0];
-  for (const item of Object.values(value)) {
-    const found = scalarNamed(item, name);
-    if (found) return found;
-  }
-  return undefined;
 }
 
 function safeHref(value: string): string | undefined {
@@ -373,8 +171,4 @@ function trimSlash(value: string): string {
 
 function lastSegment(value: string): string {
   return value.split("/").filter(Boolean).at(-1) ?? "";
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

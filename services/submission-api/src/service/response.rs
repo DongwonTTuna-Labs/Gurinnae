@@ -278,19 +278,21 @@ pub async fn create_attachment(context: &RequestContext<'_>) -> Result<Value, Se
 pub async fn finalize_attachment(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
     let value = common::parse(context.body)?;
     let id = common::attachment_id(context)?;
-    let _etag = common::string(&value, "objectEtag")?;
+    let etag = common::string(&value, "objectEtag")?;
     let size = common::i64_field(&value, "uploadedSizeBytes")?;
     let digest = hash(common::string(&value, "uploadedSha256")?)?;
-    let persisted: Uuid =
-        sqlx::query_scalar("SELECT intake.finalize_response_attachment_session_v2($1,$2,$3,$4,$5)")
-            .bind(session_hash(context)?)
-            .bind(context.issuer)
-            .bind(id)
-            .bind(size)
-            .bind(digest)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let persisted: Uuid = sqlx::query_scalar(
+        "SELECT intake.finalize_response_attachment_session_v2($1,$2,$3,$4,$5,$6)",
+    )
+    .bind(session_hash(context)?)
+    .bind(context.issuer)
+    .bind(id)
+    .bind(etag)
+    .bind(size)
+    .bind(digest)
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?;
     common::command_receipt(context.operation, context.request_id, persisted, None)
 }
 
@@ -377,7 +379,7 @@ pub async fn submit(context: &RequestContext<'_>) -> Result<Value, ServiceError>
         "response-answers",
         text(&draft, "answers_encrypted")?,
     )?;
-    let submission_id = draft_id;
+    let submission_id = Uuid::new_v4();
     let encrypted = common::encrypt_field(
         context,
         "intake.response_submissions",
@@ -400,6 +402,7 @@ pub async fn submit(context: &RequestContext<'_>) -> Result<Value, ServiceError>
     let expires_at = OffsetDateTime::now_utc() + Duration::minutes(30);
     let id = persist_submission(
         context,
+        submission_id,
         version,
         &digest,
         encrypted,
@@ -421,6 +424,7 @@ pub async fn submit(context: &RequestContext<'_>) -> Result<Value, ServiceError>
 )]
 async fn persist_submission(
     context: &RequestContext<'_>,
+    submission_id: Uuid,
     version: i64,
     digest: &str,
     encrypted: Vec<u8>,
@@ -436,7 +440,7 @@ async fn persist_submission(
         .await
         .map_err(|_| ServiceError::Persistence)?;
     let row = sqlx::query(
-        "SELECT submission_id FROM intake.submit_response_session_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        "SELECT submission_id FROM intake.submit_response_session_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
     )
     .bind(session_hash(context)?)
     .bind(context.issuer)
@@ -444,6 +448,7 @@ async fn persist_submission(
     .bind(digest)
     .bind(encrypted)
     .bind(consent)
+    .bind(submission_id)
     .bind(common::token_hmac(
         &context.state.token_hmac_key,
         receipt_token,

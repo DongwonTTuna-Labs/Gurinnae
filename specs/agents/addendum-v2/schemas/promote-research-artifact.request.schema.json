@@ -79,11 +79,7 @@
     "rightsDecision": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "version",
-        "decisionSha256"
-      ],
+      "required": ["id", "version", "decisionSha256"],
       "properties": {
         "id": {
           "type": "string",
@@ -126,27 +122,17 @@
           "maxLength": 255
         },
         "description": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 4000
         },
         "classification": {
-          "enum": [
-            "PUBLIC",
-            "INTERNAL",
-            "RESTRICTED"
-          ]
+          "enum": ["PUBLIC", "INTERNAL", "RESTRICTED"]
         },
         "verificationStatus": {
           "const": "PENDING"
         },
         "publicExcerpt": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "maxLength": 4000
         }
       }
@@ -200,11 +186,7 @@
     "locator": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "value",
-        "locatorSha256"
-      ],
+      "required": ["kind", "value", "locatorSha256"],
       "properties": {
         "kind": {
           "enum": [

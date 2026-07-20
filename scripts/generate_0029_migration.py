@@ -328,11 +328,17 @@ SET search_path = pg_catalog, ops, pg_temp AS $$
   LEFT JOIN LATERAL (
     SELECT im.* FROM ops.invoice_usage_memberships im
     WHERE im.usage_fact_id = u.id
-      AND im.membership_effect <> 'RESTATEMENT'
       AND im.recorded_at <= p_billing_cutoff_at
     ORDER BY im.revision DESC, im.id DESC LIMIT 1
   ) m ON TRUE
   WHERE u.contract_period_id = p_contract_period_id
+    AND p_expected_contract_record_digest IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM ops.commercial_contract_periods c
+       WHERE c.id = p_contract_period_id
+         AND c.record_digest = p_expected_contract_record_digest
+         AND c.state_effective_at <= p_billing_cutoff_at
+    )
     AND u.period_start < p_period_end AND u.period_end > p_period_start
     AND u.record_digest IS NOT NULL
     AND u.created_at <= p_billing_cutoff_at;

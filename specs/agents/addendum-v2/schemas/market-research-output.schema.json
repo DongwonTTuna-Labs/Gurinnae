@@ -20,10 +20,7 @@
       "const": "market-research-output.v2"
     },
     "outcome": {
-      "enum": [
-        "COMPLETED",
-        "ABSTAINED"
-      ]
+      "enum": ["COMPLETED", "ABSTAINED"]
     },
     "summary": {
       "type": "string",
@@ -93,9 +90,7 @@
             "const": "COMPLETED"
           }
         },
-        "required": [
-          "outcome"
-        ]
+        "required": ["outcome"]
       },
       "then": {
         "properties": {
@@ -112,9 +107,7 @@
             "const": "ABSTAINED"
           }
         },
-        "required": [
-          "outcome"
-        ]
+        "required": ["outcome"]
       },
       "then": {
         "properties": {
@@ -136,11 +129,7 @@
     "locator": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "value",
-        "locatorSha256"
-      ],
+      "required": ["kind", "value", "locatorSha256"],
       "properties": {
         "kind": {
           "enum": [
@@ -203,12 +192,7 @@
     "investigation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "toolId",
-        "objective",
-        "resultSummary",
-        "toolResultSha256"
-      ],
+      "required": ["toolId", "objective", "resultSummary", "toolResultSha256"],
       "properties": {
         "toolId": {
           "enum": [
@@ -366,11 +350,7 @@
           "maxLength": 3
         },
         "compatibility": {
-          "enum": [
-            "POTENTIAL",
-            "INCOMPATIBLE",
-            "UNKNOWN"
-          ]
+          "enum": ["POTENTIAL", "INCOMPATIBLE", "UNKNOWN"]
         },
         "comparisonBasis": {
           "type": "string",

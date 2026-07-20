@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "INT-002",
+  "route": "/internal/my-work",
+  "url": "http://127.0.0.1:29102/internal/my-work",
+  "observedAt": "2026-07-19T15:35:38.613Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "INT-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "views",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "tasks",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "handoff",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 6,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

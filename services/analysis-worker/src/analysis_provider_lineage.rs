@@ -1,13 +1,20 @@
+mod analysis_research_lineage;
+mod analysis_provider_output_validation;
+
+use analysis_research_lineage::insert_research_artifact_model_inputs;
+use analysis_provider_output_validation::insert_output_validation;
+
 /// Bind the provider's accepted receipt to the exact evidence segments that
 /// were selected by the pre-dispatch TOOL_QUERY rows. The insert is
 /// idempotent on the run/source-use digest pair, so a replay of the same
 /// receipt cannot create a second lineage branch.
-async fn insert_model_input_source_uses<'a, E>(
-    executor: E,
+async fn insert_model_input_source_uses(
+    executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
+    receipt_id: Option<Uuid>,
+    receipt_sha256: Option<&str>,
 ) -> Result<(), Failure>
 where
-    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
 {
     sqlx::query(
         r#"
@@ -54,14 +61,13 @@ where
                  rights.policy_sha256 AS rights_policy_sha256,
                  turn.provider_turn_id,
                  turn.provider_receipt_id,
-                 turn.provider_receipt_sha256
+                 turn.provider_receipt_sha256,
+                 turn.input_snapshot_sha256
             FROM ops.agent_source_uses root
             JOIN ops.agent_provider_turns turn
               ON turn.agent_run_id = root.agent_run_id
              AND turn.provider_turn_id = $1
-             AND turn.status = 'COMPLETED'
-             AND turn.provider_receipt_id IS NOT NULL
-             AND turn.provider_receipt_sha256 IS NOT NULL
+             AND turn.status IN ('DISPATCHED','COMPLETED')
             JOIN core.dataset_snapshot_members member
               ON member.dataset_snapshot_id = root.dataset_snapshot_id
              AND member.snapshot_kind = 'AGENT_CASE'
@@ -134,13 +140,14 @@ where
                      'redistributionRight',i.redistribution_right,
                      'commercialUseRight',i.commercial_use_right,
                      'publicDisplayRight',i.public_display_right),
-                   'providerReceiptId',i.provider_receipt_id,
+                   'providerReceiptId',COALESCE($2,i.provider_turn_id),
+                   'providerReceiptSha256',COALESCE($3,i.input_snapshot_sha256),
                    'occurredAt',i.occurred_at
                  ) AS unsigned_canonical
             FROM identities i
         ), payloads AS (
           SELECT u.*,
-                 encode(extensions.digest(convert_to(u.unsigned_canonical::text,'UTF8'),'sha256'),'hex') AS source_use_sha256
+                 encode(extensions.digest(ops.canonical_jsonb_v1(u.unsigned_canonical),'sha256'),'hex') AS source_use_sha256
             FROM unsigned_payloads u
         )
         INSERT INTO ops.agent_source_uses(
@@ -172,31 +179,48 @@ where
                p.rights_expires_at,p.access_right,p.private_storage_right,p.model_egress_right,
                p.model_use_right,p.derivative_creation_right,p.excerpt_right,
                p.redistribution_right,p.commercial_use_right,p.public_display_right,
-               p.rights_policy_version,p.rights_policy_sha256,p.provider_receipt_id,
-               p.provider_receipt_sha256,p.occurred_at,
-               convert_to((p.unsigned_canonical || jsonb_build_object('sourceUseSha256',p.source_use_sha256))::text,'UTF8'),
+               p.rights_policy_version,p.rights_policy_sha256,COALESCE($2,p.provider_turn_id),COALESCE($3,p.input_snapshot_sha256),p.occurred_at,
+               ops.canonical_jsonb_v1(p.unsigned_canonical || jsonb_build_object('sourceUseSha256',p.source_use_sha256)),
                p.source_use_sha256
           FROM payloads p
         ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING
         "#,
     )
     .bind(turn.turn_id)
-    .execute(executor)
+    .bind(receipt_id)
+    .bind(receipt_sha256)
+    .execute(&mut *executor)
     .await
     .map_err(database)?;
+    insert_research_artifact_model_inputs(executor, turn, receipt_id, receipt_sha256).await?;
     Ok(())
 }
 
-async fn insert_model_output_derivation_source_uses<'a, E>(
-    executor: E,
+async fn insert_model_output_derivation_source_uses(
+    executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
-    receipt_id: Uuid,
-    receipt_sha256: &str,
+    _receipt_id: Uuid,
+    _receipt_sha256: &str,
     output: &Value,
 ) -> Result<(), Failure>
-where
-    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
 {
+    // Bind the derivation to the receipt values committed on the provider
+    // turn itself.  The completion owner is the source of truth; reusing a
+    // separately parsed value here could trip the database receipt guard on
+    // an otherwise successful completion.
+    let (bound_receipt_id, bound_receipt_sha256): (Uuid, String) = sqlx::query_as(
+        r#"SELECT provider_receipt_id, btrim(provider_receipt_sha256::text)
+             FROM ops.agent_provider_turns
+            WHERE agent_run_id=$1 AND provider_turn_id=$2
+              AND provider_receipt_id IS NOT NULL
+              AND provider_receipt_sha256 IS NOT NULL"#,
+    )
+    .bind(turn.run_id)
+    .bind(turn.turn_id)
+    .fetch_optional(&mut *executor)
+    .await
+    .map_err(database)?
+    .ok_or_else(|| Failure::Terminal("PROVIDER_RECEIPT_INVALID", "completed turn receipt missing".into()))?;
     let output_sha256 = sha256(&canonical_bytes(output)?);
     sqlx::query(
         r#"
@@ -220,7 +244,7 @@ where
           ) AS payload
           FROM identities i
         ), payloads AS (
-          SELECT u.*, encode(extensions.digest(convert_to(u.payload::text,'UTF8'),'sha256'),'hex') AS digest
+          SELECT u.*, encode(extensions.digest(ops.canonical_jsonb_v1(u.payload),'sha256'),'hex') AS digest
             FROM unsigned u
         )
         INSERT INTO ops.agent_source_uses(
@@ -252,31 +276,67 @@ where
           p.model_egress_right,p.model_use_right,p.derivative_creation_right,p.excerpt_right,p.redistribution_right,
           p.commercial_use_right,p.public_display_right,p.rights_policy_version,p.rights_policy_sha256,
           $3,$4,p.new_occurred_at,
-          convert_to((p.payload || jsonb_build_object('sourceUseSha256',p.digest))::text,'UTF8'),p.digest
+          ops.canonical_jsonb_v1(p.payload || jsonb_build_object('sourceUseSha256',p.digest)),p.digest
         FROM payloads p
         ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING
         "#,
     )
     .bind(turn.run_id)
     .bind(turn.turn_id)
-    .bind(receipt_id)
-    .bind(receipt_sha256)
+    .bind(bound_receipt_id)
+    .bind(&bound_receipt_sha256)
     .bind(output_sha256)
-    .execute(executor)
+    .execute(&mut *executor)
     .await
     .map_err(database)?;
     Ok(())
 }
 
-async fn insert_citation_source_uses<'a, E>(
-    executor: E,
+async fn insert_citation_source_uses(
+    executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
     output: &Value,
 ) -> Result<(), Failure>
-where
-    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
 {
     let citations = output.get("citations").cloned().unwrap_or_else(|| json!([]));
+    let citation_count = citations.as_array().map_or(0, Vec::len);
+    if citation_count == 0 {
+        return Ok(());
+    }
+    let unmatched: bool = sqlx::query_scalar(
+        r#"
+        SELECT EXISTS (
+          SELECT 1
+            FROM jsonb_array_elements($3::jsonb) AS requested(value)
+           WHERE NOT EXISTS (
+             SELECT 1
+               FROM ops.agent_source_uses model_input
+              WHERE model_input.agent_run_id=$1
+                AND model_input.provider_turn_id=$2
+                AND model_input.use_kind='MODEL_INPUT'
+                AND model_input.source_kind IN ('EVIDENCE_SEGMENT','RESEARCH_ARTIFACT')
+                AND (
+                  model_input.source_use_sha256=CAST(requested.value->>'sourceUseSha256' AS char(64))
+                  OR model_input.parent_source_use_sha256=CAST(requested.value->>'sourceUseSha256' AS char(64))
+                )
+                AND model_input.locator_value=requested.value->'locator'->>'value'
+                AND model_input.selected_content_sha256=CAST(requested.value->>'selectedContentSha256' AS char(64))
+           )
+        )
+        "#,
+    )
+    .bind(turn.run_id)
+    .bind(turn.turn_id)
+    .bind(&citations)
+    .fetch_one(&mut *executor)
+    .await
+    .map_err(database)?;
+    if unmatched {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "citation source-use binding".into(),
+        ));
+    }
     sqlx::query(
         r#"
         WITH requested AS (
@@ -286,10 +346,14 @@ where
           SELECT mi.*, r.value, r.citation_ordinal
             FROM requested r
             JOIN ops.agent_source_uses mi
-              ON mi.agent_run_id=$1 AND mi.provider_turn_id=$2 AND mi.use_kind='MODEL_INPUT'
-             AND mi.source_kind='EVIDENCE_SEGMENT'
-             AND mi.evidence_segment_id=(r.value->>'evidence_id')::uuid
-             AND mi.locator_value=r.value->>'locator'
+             ON mi.agent_run_id=$1 AND mi.provider_turn_id=$2 AND mi.use_kind='MODEL_INPUT'
+             AND mi.source_kind IN ('EVIDENCE_SEGMENT','RESEARCH_ARTIFACT')
+             AND (
+               mi.source_use_sha256=CAST(r.value->>'sourceUseSha256' AS char(64))
+               OR mi.parent_source_use_sha256=CAST(r.value->>'sourceUseSha256' AS char(64))
+             )
+             AND mi.locator_value=r.value->'locator'->>'value'
+             AND mi.selected_content_sha256=CAST(r.value->>'selectedContentSha256' AS char(64))
         ), identities AS (
           SELECT p.*, gen_random_uuid() AS new_source_use_id,
                  clock_timestamp() AS new_occurred_at
@@ -301,13 +365,14 @@ where
             'parentSourceUseSha256',btrim(i.source_use_sha256::text),
             'useKind','CITATION','sourceKind',i.source_kind,
             'citationOrdinal',i.citation_ordinal,'supports',i.value->>'supports',
+            'supportsSha256',i.value->>'supportsSha256',
             'selectedContentSha256',btrim(i.selected_content_sha256::text),
             'locator',jsonb_build_object('kind',i.locator_kind,'value',i.locator_value,'locatorSha256',btrim(i.locator_sha256::text)),
             'classification',i.classification,'occurredAt',i.new_occurred_at
           ) AS payload
           FROM identities i
         ), payloads AS (
-          SELECT u.*, encode(extensions.digest(convert_to(u.payload::text,'UTF8'),'sha256'),'hex') AS digest
+          SELECT u.*, encode(extensions.digest(ops.canonical_jsonb_v1(u.payload),'sha256'),'hex') AS digest
             FROM unsigned u
         )
         INSERT INTO ops.agent_source_uses(
@@ -331,7 +396,7 @@ where
           p.rights_effective_at,p.rights_expires_at,p.access_right,p.private_storage_right,p.model_egress_right,
           p.model_use_right,p.derivative_creation_right,p.excerpt_right,p.redistribution_right,p.commercial_use_right,
           p.public_display_right,p.rights_policy_version,p.rights_policy_sha256,p.new_occurred_at,
-          convert_to((p.payload || jsonb_build_object('sourceUseSha256',p.digest))::text,'UTF8'),p.digest
+          ops.canonical_jsonb_v1(p.payload || jsonb_build_object('sourceUseSha256',p.digest)),p.digest
         FROM payloads p
         ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING
         "#,
@@ -339,60 +404,7 @@ where
     .bind(turn.run_id)
     .bind(turn.turn_id)
     .bind(citations)
-    .execute(executor)
-    .await
-    .map_err(database)?;
-    Ok(())
-}
-
-async fn insert_output_validation<'a, E>(
-    executor: E,
-    turn: &ProviderTurnIdentity,
-    output: &Value,
-    output_sha256: &str,
-    receipt_sha256: &str,
-) -> Result<(), Failure>
-where
-    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
-{
-    let citations = output.get("citations").and_then(Value::as_array).map_or(0, Vec::len);
-    let citation_set_sha256 = sha256(&canonical_bytes(&output.get("citations").cloned().unwrap_or_else(|| json!([])))?);
-    let proposal_set_sha256 = sha256(b"[]");
-    let validation_sha256 = sha256(&canonical_bytes(&json!({
-        "agentRunId":turn.run_id,"providerTurnId":turn.turn_id,"outputSha256":output_sha256,
-        "receiptSha256":receipt_sha256,"citationSetSha256":citation_set_sha256
-    }))?);
-    let validated = json!({
-        "status": output.get("status"),
-        "summary": output.get("summary"),
-        "citations": output.get("citations").cloned().unwrap_or_else(|| json!([]))
-    });
-    sqlx::query(
-        "INSERT INTO ops.agent_output_validations(\
-          agent_run_id,provider_turn_id,input_snapshot_sha256,provider_output_sha256,validator_version,validator_sha256,\
-          output_schema_id,output_schema_version,output_schema_sha256,validation_policy_version,validation_policy_sha256,\
-          validation_status,schema_status,citation_status,policy_status,run_terminal_status,output_status,failure_details_redacted,\
-          validated_outcome,validated_outcome_sha256,citation_count,proposal_count,citation_set_sha256,proposal_set_sha256,validation_sha256)\
-         VALUES($1,$2,$3,CAST($4 AS char(64)),'agent-output-validator-v2',CAST($5 AS char(64)),\
-          'gurine-agent-output-v2','2',CAST($6 AS char(64)),'agent-output-policy-v2',CAST($7 AS char(64)),\
-          'VALID','PASS','PASS','PASS','SUCCEEDED',$8,'{}'::jsonb,$9,CAST($10 AS char(64)),$11,0,CAST($12 AS char(64)),CAST($13 AS char(64)),CAST($14 AS char(64)))\
-         ON CONFLICT(agent_run_id,provider_turn_id) DO NOTHING",
-    )
-    .bind(turn.run_id)
-    .bind(turn.turn_id)
-    .bind(&turn.input_snapshot_sha256)
-    .bind(output_sha256)
-    .bind(sha256(b"agent-output-validator-v2"))
-    .bind(sha256(b"gurine-agent-output-v2"))
-    .bind(sha256(b"agent-output-policy-v2"))
-    .bind(output.get("status").and_then(Value::as_str).unwrap_or("COMPLETED"))
-    .bind(&validated)
-    .bind(output_sha256)
-    .bind(citations as i32)
-    .bind(citation_set_sha256)
-    .bind(proposal_set_sha256)
-    .bind(validation_sha256)
-    .execute(executor)
+    .execute(&mut *executor)
     .await
     .map_err(database)?;
     Ok(())

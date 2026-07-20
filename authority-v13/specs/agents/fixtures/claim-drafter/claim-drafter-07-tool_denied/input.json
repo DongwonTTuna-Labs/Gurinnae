@@ -1,0 +1,17 @@
+{
+  "run_id": "00000000-0000-0000-0000-000000009c47",
+  "case_id": "00000000-0000-0000-0000-000000013887",
+  "objective": "claim-drafter 합성 평가 tool_denied",
+  "evidence_snapshot_hash": "365adc2a7fd420e14070db2b1218ce716ee69b3372981ad31c2eecd5645464d9",
+  "allowed_evidence_ids": [
+    "00000000-0000-0000-0000-0000000003e9",
+    "00000000-0000-0000-0000-0000000003ea",
+    "00000000-0000-0000-0000-0000000003eb"
+  ],
+  "budget_krw": 1000,
+  "locale": "ko-KR",
+  "known_unknowns": [
+    "설치·인증 비용 포함 여부"
+  ],
+  "policy_flags": []
+}

@@ -1,0 +1,37 @@
+{
+  "fixture": true,
+  "fixture_notice": "합성 데이터이며 실제 기관·업체·계약과 무관합니다.",
+  "contractNumber": "SYN-BUNDLE-EXPLAINED",
+  "agencyName": "가상한강구청",
+  "supplierName": "가상베타서비스",
+  "contractType": "GOODS",
+  "method": "OPEN_COMPETITION",
+  "signedDate": "2025-07-01",
+  "amount": 25000000,
+  "items": [
+    {
+      "description": "합성 안전 단말기 및 3년 통합운영 패키지",
+      "category": "SYNTH-SAFETY-DEVICE",
+      "quantity": "10",
+      "unit": "EA",
+      "unitPrice": 2500000,
+      "totalPrice": 25000000,
+      "vatBasis": "INCLUDED",
+      "bundleStatus": "KNOWN_BUNDLE",
+      "includedServices": [
+        "INSTALLATION",
+        "TRAINING",
+        "MAINTENANCE",
+        "WARRANTY"
+      ],
+      "specification": {
+        "grade": "S1",
+        "maintenance_months": 36,
+        "onsite_training_days": 5,
+        "synthetic": true
+      }
+    }
+  ],
+  "processing_status": "ACTIVE",
+  "record_status": "CURRENT"
+}

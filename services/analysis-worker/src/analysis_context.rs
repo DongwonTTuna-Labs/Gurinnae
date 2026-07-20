@@ -57,7 +57,11 @@ async fn load_agent_context(state: &State, job: &ClaimedJob) -> Result<AgentCont
     // receipt-dependent fields here would make the control-side snapshot hash
     // change after dispatch and falsely report a stale snapshot.
     let snapshot_evidence = evidence_without_source_uses(&evidence)?;
-    let current_snapshot = sha256(&canonical_bytes(&json!({"caseId":case_id,"evidence":snapshot_evidence,"objective":objective}))?);
+    // AGENT_CASE snapshot identity is the immutable selected evidence graph.
+    // The objective is separately bound into the provider request/prompt
+    // digest; including it here would make two runs over the same READY
+    // snapshot require different dataset snapshot rows.
+    let current_snapshot = sha256(&canonical_bytes(&json!({"caseId":case_id,"evidence":snapshot_evidence}))?);
     let (allowed_ids, locator_map, input, transcript) = agent_inputs(
         &evidence,
         &evidence_ids,

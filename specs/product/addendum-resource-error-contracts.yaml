@@ -1058,7 +1058,7 @@ schemas:
     kind: discriminated_union
     discriminator: kind
     variants:
-      APPROVE: {additional_properties: false, fields: {kind: 'const<APPROVE>', reasonCode: 'string[1..100]', reason: 'string[1..4000]', attestExactPreview: 'const<true>'}}
+      APPROVE: {additional_properties: false, fields: {kind: 'const<APPROVE>', reasonCode: 'string[1..100]', reason: 'string[1..4000]', attestExactPreview: 'const<true>', assurance: 'nullable<enum<ACTIVE_SESSION|STEP_UP>>', stepUpAuthorizationId: 'nullable<uuid>', assertedActionDigest: 'nullable<sha256>', stepUpAt: 'nullable<datetime>'}}
       REJECT: {additional_properties: false, fields: {kind: 'const<REJECT>', reasonCode: 'string[1..100]', reason: 'string[1..4000]'}}
       CHANGES_REQUIRED: {additional_properties: false, fields: {kind: 'const<CHANGES_REQUIRED>', reasonCode: 'string[1..100]', reason: 'string[1..4000]', tasks: 'array<ActionChangeTaskV1>[1..100]'}}
       RECUSE: {additional_properties: false, fields: {kind: 'const<RECUSE>', reasonCode: 'string[1..100]', reason: 'string[1..4000]', conflictDeclarationId: uuid}}

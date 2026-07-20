@@ -24,6 +24,26 @@ pub async fn run() -> io::Result<()> {
             .route("/challenge", web::to(handlers::challenge))
             .route("/object-store", web::to(handlers::object_store))
             .route("/smtp", web::post().to(handlers::smtp))
+            .route(
+                "/communication/{channel}",
+                web::post().to(handlers::communication),
+            )
+            .route(
+                "/communication/{channel}/poll",
+                web::post().to(handlers::communication_poll),
+            )
+            .route(
+                "/private/v1/callbacks/{channel}/{integrationId}",
+                web::post().to(handlers::communication_callback),
+            )
+            .route(
+                "/private/v1/callbacks/smtp-dsn",
+                web::post().to(handlers::communication_callback_smtp),
+            )
+            .route(
+                "/private/v1/callbacks/smtp-dsn/{integrationId}",
+                web::post().to(handlers::communication_callback_smtp_with_integration),
+            )
     })
     .bind(bind)?
     .run()

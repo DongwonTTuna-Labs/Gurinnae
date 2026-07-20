@@ -26,7 +26,7 @@ async fn production_provider(
         "objective": objective,
         "evidence": evidence,
         "maxCostKrw": maximum_cost_krw,
-        "responseFormat": "gurine-agent-output-v1",
+        "responseFormat": output_schema_contract(agent_type).1,
     });
     redact_provider_payload(&mut semantic_request);
     let semantic_request_sha256 = sha256(&canonical_bytes(&semantic_request)?);
@@ -83,7 +83,7 @@ async fn production_provider(
     Ok((
         "none".to_owned(),
         "none".to_owned(),
-        blocked_output("ABSTAINED", "PROVIDER_UNAVAILABLE"),
+        blocked_output_for(agent_type, "POLICY_BLOCKED", "PROVIDER_UNAVAILABLE"),
         0,
         false,
     ))
@@ -124,7 +124,8 @@ async fn request_provider(
     let mut prior_transcript_sha256 = sha256(b"{\"calls\":[]}");
     let mut prior_tool_result: Option<Value> = None;
     let mut total_cost = 0_i64;
-    for turn_sequence in 1..=16_i32 {
+    let max_provider_turns = agent_max_provider_turns(agent_type);
+    for turn_sequence in 1..=max_provider_turns {
         let turn = insert_provider_turn(
             state,
             run_id,
@@ -146,9 +147,20 @@ async fn request_provider(
             prior_tool_result.as_ref(),
         )
         .await?;
+        // Bind the selected evidence to this provider turn before any bytes
+        // leave the process.  A pre-dispatch receipt identity is allocated
+        // for the immutable MODEL_INPUT row; completion may add a second
+        // receipt-bound projection, but there is never an unbound input row.
+        {
+            let mut lineage_tx = state.pool.begin().await.map_err(database)?;
+            let pre_receipt_id = stable_uuid(format!("pre-dispatch:{}", turn.turn_id).as_bytes());
+            let pre_receipt_sha = sha256(format!("pre-dispatch-receipt:{}", turn.turn_id).as_bytes());
+            insert_model_input_source_uses(&mut lineage_tx, &turn, Some(pre_receipt_id), Some(&pre_receipt_sha)).await?;
+            lineage_tx.commit().await.map_err(database)?;
+        }
         let response = send_provider_request(
             state, gateway, &turn, evidence, run_id, provider_config_id, provider,
-            model, target, agent_type, semantic_request_sha256,
+            model, target, agent_type, objective, prior_tool_result.as_ref(), semantic_request_sha256,
         ).await?;
         let (output, cost, next_transcript, tool_result) = finalize_provider_response(
             state,
@@ -175,9 +187,19 @@ async fn request_provider(
         prior_tool_result = tool_result;
     }
     Ok(Some((
-        blocked_output("ABSTAINED", "ITERATION_LIMIT_REACHED"),
+        blocked_output_for(agent_type, "ABSTAINED", "ITERATION_LIMIT_REACHED"),
         total_cost,
     )))
+}
+
+fn agent_max_provider_turns(agent_type: &str) -> i32 {
+    match agent_type {
+        "market-researcher" | "skeptic" => 12,
+        "investigator" => 16,
+        "claim-drafter" => 8,
+        "citation-verifier" => 10,
+        _ => 1,
+    }
 }
 
 #[expect(clippy::too_many_arguments, reason = "provider egress binds the immutable turn headers")]
@@ -192,19 +214,44 @@ async fn send_provider_request(
     model: &str,
     target: &str,
     agent_type: &str,
+    objective: &str,
+    prior_tool_result: Option<&Value>,
     semantic_request_sha256: &str,
 ) -> Result<reqwest::Response, Failure> {
-    let wire_request = provider_wire_request(
+    // `insert_provider_turn` already persisted and hashed the exact semantic
+    // request, including the selected authorized bytes.  Sending that value
+    // verbatim preserves the request_sha256/wire equality contract.
+    let mut wire_request = provider_wire_request(
         &turn.request_redacted,
         evidence,
         state.object_store.as_ref(),
+        &state.pool,
+        objective,
+        prior_tool_result,
     )
     .await?;
+    // Dispatch-only turn metadata is kept outside the persisted closed
+    // requestRedacted object.  It lets an approved provider distinguish the
+    // tool turn from the final turn without changing the semantic request
+    // schema or storing transient tool results in the durable turn row.
+    if let Some(object) = wire_request.as_object_mut() {
+        object.insert("turnSequence".to_owned(), json!(turn.turn_sequence));
+        object.insert(
+            "priorTranscriptSha256".to_owned(),
+            json!(turn.prior_transcript_sha256),
+        );
+    }
+    // Tool V2 requests must carry the exact immutable snapshot binding.  The
+    // provider receives the UUID alongside the already persisted hash so it
+    // can emit a closed request without guessing database state.
+    let input_snapshot_id = resolve_snapshot_id_for_dispatch(state, turn).await?;
     let response = state.client.post(gateway.clone())
         .header("x-gurine-egress-caller", "analysis-worker")
         .header("x-gurine-ai-provider", provider)
         .header("x-gurine-egress-target", target)
         .header("x-gurine-ai-agent-run-id", run_id.to_string())
+        .header("x-gurine-ai-input-snapshot-id", input_snapshot_id.to_string())
+        .header("x-gurine-ai-input-snapshot-sha256", turn.input_snapshot_sha256.as_str())
         .header("x-gurine-ai-provider-turn-id", turn.turn_id.to_string())
         .header("x-gurine-ai-agent-type", agent_type)
         .header("x-gurine-ai-provider-config-id", provider_config_id.to_string())
@@ -255,19 +302,10 @@ async fn finalize_provider_response(
     };
     let body: Value = match response.json().await {
         Ok(body) => body,
-        Err(error) => {
-            return context.retry_unknown(&error.to_string(), turn.turn_id.to_string()).await.map(|_| retry_result_shape());
-        }
+        Err(error) => return context.retry_shape("provider response is not JSON", error.to_string()).await,
     };
-    let receipt = match body
-        .get("providerReceipt")
-        .or_else(|| body.get("receipt"))
-        .cloned()
-    {
-        Some(receipt) => receipt,
-        None => {
-            return context.retry_unknown("provider receipt missing", turn.turn_id.to_string()).await.map(|_| retry_result_shape());
-        }
+    let Some(receipt) = body.get("providerReceipt").or_else(|| body.get("receipt")).cloned() else {
+        return context.retry_shape("provider receipt missing", turn.turn_id.to_string()).await;
     };
     let receipt_id = bound_receipt_id(&context, &receipt).await?;
     let outcome = receipt.get("outcome").and_then(Value::as_str).unwrap_or("");
@@ -275,12 +313,12 @@ async fn finalize_provider_response(
         let code = match provider_failure_code(outcome) {
             Ok(code) => code,
             Err(_) => {
-                return context.retry_unknown("provider outcome unrecognized", turn.turn_id.to_string()).await.map(|_| retry_result_shape());
+                return context.retry_shape("provider outcome unrecognized", turn.turn_id.to_string()).await;
             }
         };
         complete_provider_turn_failure(state, turn, &receipt, receipt_id, code).await?;
         return if code == "PROVIDER_OUTCOME_UNKNOWN" {
-            Err(Failure::Retryable(code, turn.turn_id.to_string()))
+            context.retry_shape(code, turn.turn_id.to_string()).await
         } else {
             Err(Failure::Terminal(code, turn.turn_id.to_string()))
         };
@@ -289,40 +327,110 @@ async fn finalize_provider_response(
     let actual_cost = match receipt_cost_krw(&receipt, pricing) {
         Ok(cost) => cost,
         Err(_) => {
-            return context.retry_unknown("provider pricing invalid", turn.turn_id.to_string()).await.map(|_| retry_result_shape());
+            return context.retry_shape("provider pricing invalid", turn.turn_id.to_string()).await;
         }
     };
     if actual_cost < 0 || actual_cost > maximum_cost_krw {
-        return context.retry_unknown("provider cost exceeds budget", provider.to_owned()).await.map(|_| retry_result_shape());
+        return context.retry_shape("provider cost exceeds budget", provider.to_owned()).await;
     }
     if outcome == "ACCEPTED_TOOL_CALL" {
-        let call = parse_tool_call(&body, turn, evidence)?;
-        let (tool_result, transcript_sha256) = dispatch_tool_call(
-            state,
-            turn,
-            agent_type,
-            call.clone(),
-            &receipt,
+        return persist_tool_turn(state, turn, agent_type, &body, evidence, &receipt, receipt_id, actual_cost).await;
+    }
+    persist_validated_output(
+        &context,
+        agent_type,
+        &output,
+        &receipt,
+        receipt_id,
+        actual_cost,
+    )
+    .await
+}
+
+async fn persist_validated_output(
+    context: &ProviderResponseContext<'_>,
+    agent_type: &str,
+    output: &Value,
+    receipt: &Value,
+    receipt_id: Uuid,
+    actual_cost: i64,
+) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
+    if validate_agent_output_for(Some(agent_type), output).is_err() {
+        insert_output_validation_failure(
+            context.state,
+            context.turn,
+            output,
+            "OUTPUT_SCHEMA_INVALID",
+            "provider output did not satisfy the selected agent schema",
         )
         .await?;
-        complete_provider_turn_tool_call(
-            state,
-            turn,
-            &receipt,
+        let mut failure_receipt = receipt.clone();
+        if let Some(object) = failure_receipt.as_object_mut() {
+            object.insert("outcome".to_owned(), Value::String("DEFINITIVE_REJECTED".to_owned()));
+            object.insert("proofKind".to_owned(), Value::String("VALIDATED_OUTPUT_REJECTION".to_owned()));
+            object.insert("proofSha256".to_owned(), Value::String(sha256(b"OUTPUT_SCHEMA_INVALID")));
+            object.remove("receiptSha256");
+        }
+        let failure_receipt_sha = sha256(&canonical_bytes(&failure_receipt)?);
+        failure_receipt["receiptSha256"] = Value::String(failure_receipt_sha);
+        complete_provider_turn_failure(
+            context.state,
+            context.turn,
+            &failure_receipt,
             receipt_id,
-            &call,
-            &tool_result,
-            transcript_sha256.as_str(),
-            actual_cost,
+            "PROVIDER_RESPONSE_INVALID",
         )
         .await?;
-        return Ok((None, actual_cost, Some(transcript_sha256), Some(tool_result)));
+        return Err(Failure::Terminal(
+            "PROVIDER_RESPONSE_INVALID",
+            context.turn.turn_id.to_string(),
+        ));
     }
-    if validate_agent_output(&output).is_err() {
-        return context.retry_unknown("provider output schema invalid", turn.turn_id.to_string()).await.map(|_| retry_result_shape());
-    }
-    complete_provider_turn(state, turn, &receipt, receipt_id, &output, actual_cost).await?;
-    Ok((Some(output), actual_cost, None, None))
+    complete_provider_turn(
+        context.state,
+        context.turn,
+        receipt,
+        receipt_id,
+        output,
+        actual_cost,
+    )
+    .await?;
+    Ok((Some(output.clone()), actual_cost, None, None))
+}
+
+#[expect(clippy::too_many_arguments, reason = "provider tool turn binds receipt, snapshot, and immutable tool transcript")]
+async fn persist_tool_turn(
+    state: &State,
+    turn: &ProviderTurnIdentity,
+    agent_type: &str,
+    body: &Value,
+    evidence: &Value,
+    receipt: &Value,
+    receipt_id: Uuid,
+    actual_cost: i64,
+) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
+    let call = parse_tool_call(state, body, turn, evidence).await?;
+    let (tool_result, transcript_sha256) = dispatch_tool_call(
+        state,
+        turn,
+        agent_type,
+        call.clone(),
+        receipt,
+        receipt_id,
+    )
+    .await?;
+    complete_provider_turn_tool_call(
+        state,
+        turn,
+        receipt,
+        receipt_id,
+        &call,
+        &tool_result,
+        transcript_sha256.as_str(),
+        actual_cost,
+    )
+    .await?;
+    Ok((None, actual_cost, Some(transcript_sha256), Some(tool_result)))
 }
 
 async fn bound_receipt_id(
@@ -362,6 +470,16 @@ struct ProviderResponseContext<'a> {
 }
 
 impl ProviderResponseContext<'_> {
+    async fn retry_shape(
+        &self,
+        reason: &str,
+        detail: impl Into<String>,
+    ) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
+        self.retry_unknown(reason, detail)
+            .await
+            .map(|_| retry_result_shape())
+    }
+
     async fn retry_unknown(
         &self,
         reason: &str,
@@ -385,220 +503,4 @@ impl ProviderResponseContext<'_> {
             detail_text,
         ))
     }
-}
-
-/// The pricing schedule is activated with the provider routing policy and is
-/// copied into the budget reservation as `provider-pricing-v1`. Provider
-/// reported prices are evidence only: the worker recomputes the settled
-/// amount from this immutable local schedule and rejects a receipt whose
-/// arithmetic or schedule digest differs.
-struct LocalPricing {
-    version: String,
-    digest: String,
-    input_micros_per_unit: i64,
-    output_micros_per_unit: i64,
-}
-
-impl LocalPricing {
-    fn from_routing_policy(policy: &Value) -> Result<Self, Failure> {
-        let value = policy
-            .get("pricing")
-            .ok_or_else(|| Failure::Terminal("PROVIDER_PRICING_UNAVAILABLE", "pricing".into()))?;
-        let object = value
-            .as_object()
-            .ok_or_else(|| Failure::Terminal("PROVIDER_PRICING_INVALID", "object".into()))?;
-        let version = required_text(object, "pricingVersion")?;
-        let digest = required_hash(object, "pricingSha256")?;
-        let input_micros_per_unit = required_positive_i64(object, "inputMicrosKrwPerUnit")?;
-        let output_micros_per_unit = required_positive_i64(object, "outputMicrosKrwPerUnit")?;
-        let canonical = json!({
-            "currency": "KRW",
-            "inputMicrosKrwPerUnit": input_micros_per_unit,
-            "outputMicrosKrwPerUnit": output_micros_per_unit,
-            "pricingVersion": version,
-        });
-        if sha256(&canonical_bytes(&canonical)?) != digest {
-            return Err(Failure::Terminal(
-                "PROVIDER_PRICING_INVALID",
-                "pricingSha256".into(),
-            ));
-        }
-        Ok(Self {
-            version,
-            digest,
-            input_micros_per_unit,
-            output_micros_per_unit,
-        })
-    }
-}
-
-fn required_text(object: &serde_json::Map<String, Value>, key: &str) -> Result<String, Failure> {
-    object
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|value| !value.trim().is_empty() && value.chars().count() <= 64)
-        .map(str::to_owned)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_PRICING_INVALID", key.into()))
-}
-
-fn required_hash(object: &serde_json::Map<String, Value>, key: &str) -> Result<String, Failure> {
-    let value = required_text(object, key)?;
-    if value.len() != 64
-        || !value
-            .bytes()
-            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-    {
-        return Err(Failure::Terminal("PROVIDER_PRICING_INVALID", key.into()));
-    }
-    Ok(value)
-}
-
-fn required_positive_i64(
-    object: &serde_json::Map<String, Value>,
-    key: &str,
-) -> Result<i64, Failure> {
-    object
-        .get(key)
-        .and_then(Value::as_i64)
-        .filter(|value| *value > 0)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_PRICING_INVALID", key.into()))
-}
-
-fn provider_failure_code(outcome: &str) -> Result<&'static str, Failure> {
-    match outcome {
-        "DEFINITIVE_REJECTED" => Ok("PROVIDER_REJECTED"),
-        "RATE_LIMITED" => Ok("PROVIDER_RATE_LIMITED"),
-        "TIMED_OUT_BEFORE_SEND" => Ok("PROVIDER_TIMEOUT"),
-        "OUTCOME_UNKNOWN" => Ok("PROVIDER_OUTCOME_UNKNOWN"),
-        "CANCELLED_CONFIRMED" | "NO_DISPATCH_CONFIRMED" => Ok("PROVIDER_CANCELLED"),
-        _ => Err(Failure::Retryable(
-            "PROVIDER_OUTCOME_UNKNOWN",
-            "unrecognized receipt outcome".into(),
-        )),
-    }
-}
-
-struct ProviderTurnIdentity {
-    turn_id: Uuid,
-    run_id: Uuid,
-    idempotency_hash: String,
-    request_redacted: Value,
-    input_snapshot_sha256: String,
-    prior_transcript_sha256: String,
-    provider_config_id: Uuid,
-    provider_mode: String,
-    provider_candidate_id: String,
-    model_id: String,
-    model_configuration_sha256: String,
-    routing_policy_version: String,
-    routing_decision_sha256: String,
-    prompt_id: String,
-    prompt_version: String,
-    prompt_sha256: String,
-    output_schema_id: String,
-    output_schema_version: String,
-    output_schema_sha256: String,
-    classification: String,
-    model_use_rights_sha256: String,
-    budget_reservation_key_sha256: String,
-    dispatch_key_sha256: String,
-    request_sha256: String,
-    turn_sequence: i32,
-    attempt_sequence: i32,
-    dispatched_at: String,
-}
-
-fn redact_provider_payload(value: &mut Value) {
-    if let Some(object) = value.as_object_mut() {
-        // Evidence is a typed digest/locator graph, not raw source text. Keep
-        // its exact hashes and source-use identities in the semantic request;
-        // redacting those values would make the provider unable to bind the
-        // request to the selected bytes. Only free-form instructions pass
-        // through the generic secret redactor.
-        if let Some(objective) = object.get_mut("objective") {
-            gurine_observability::redaction::redact(objective);
-        }
-    }
-}
-
-fn parse_receipt_uuid(object: &serde_json::Map<String, Value>, key: &str) -> Result<Uuid, Failure> {
-    object
-        .get(key)
-        .and_then(Value::as_str)
-        .and_then(|value| Uuid::parse_str(value).ok())
-        .ok_or_else(|| Failure::Terminal("PROVIDER_RECEIPT_INVALID", key.into()))
-}
-
-fn receipt_cost_krw(receipt: &Value, pricing: &LocalPricing) -> Result<i64, Failure> {
-    if !matches!(
-        receipt.get("outcome").and_then(Value::as_str),
-        Some("ACCEPTED_FINAL" | "ACCEPTED_TOOL_CALL")
-    ) {
-        return Err(Failure::Terminal(
-            "PROVIDER_RESPONSE_INVALID",
-            "final outcome required".into(),
-        ));
-    }
-    if receipt
-        .pointer("/pricing/costState")
-        .and_then(Value::as_str)
-        != Some("SETTLED")
-    {
-        return Err(Failure::Terminal(
-            "PROVIDER_COST_INVALID",
-            "settled pricing required".into(),
-        ));
-    }
-    let pricing_object = receipt
-        .get("pricing")
-        .and_then(Value::as_object)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "pricing".into()))?;
-    if pricing_object.get("pricingVersion").and_then(Value::as_str) != Some(pricing.version.as_str())
-        || pricing_object.get("pricingSha256").and_then(Value::as_str) != Some(pricing.digest.as_str())
-    {
-        return Err(Failure::Terminal(
-            "PROVIDER_COST_INVALID",
-            "local pricing binding".into(),
-        ));
-    }
-    let usage = receipt
-        .get("usage")
-        .and_then(Value::as_object)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "usage".into()))?;
-    let input_units = usage
-        .get("inputUnits")
-        .and_then(Value::as_i64)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "inputUnits".into()))?;
-    let output_units = usage
-        .get("outputUnits")
-        .and_then(Value::as_i64)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "outputUnits".into()))?;
-    if input_units < 0 || output_units < 0 {
-        return Err(Failure::Terminal(
-            "PROVIDER_COST_INVALID",
-            "negative usage".into(),
-        ));
-    }
-    let calculated_micros = input_units
-        .checked_mul(pricing.input_micros_per_unit)
-        .and_then(|value| {
-            output_units
-                .checked_mul(pricing.output_micros_per_unit)
-                .and_then(|output| value.checked_add(output))
-        })
-        .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "overflow".into()))?;
-    let micros = pricing_object
-        .get("actualMicrosKrw")
-        .and_then(Value::as_i64)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "actualMicrosKrw".into()))?;
-    if micros < 0 || micros != calculated_micros {
-        return Err(Failure::Terminal(
-            "PROVIDER_COST_INVALID",
-            "provider cost does not match local schedule".into(),
-        ));
-    }
-    micros
-        .checked_add(999_999)
-        .and_then(|value| value.checked_div(1_000_000))
-        .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "overflow".into()))
 }

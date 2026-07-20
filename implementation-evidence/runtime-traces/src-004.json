@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "SRC-004",
+  "route": "/internal/sources/{sourceId}/runs/{runId}",
+  "url": "http://127.0.0.1:29102/internal/sources/80000000-0000-4000-8000-000000000001/runs/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:48.408Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "SRC-004",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "scope",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "counts",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "errors",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "artifacts",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "impact",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "actions",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

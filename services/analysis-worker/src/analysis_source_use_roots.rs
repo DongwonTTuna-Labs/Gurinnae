@@ -172,7 +172,7 @@ async fn ensure_agent_source_use_roots(
             FROM identities i
         ), payloads AS (
           SELECT u.*,
-                 encode(extensions.digest(convert_to(u.unsigned_canonical::text,'UTF8'),'sha256'),'hex') AS source_use_sha256
+                 encode(extensions.digest(ops.canonical_jsonb_v1(u.unsigned_canonical),'sha256'),'hex') AS source_use_sha256
             FROM unsigned_payloads u
         )
         INSERT INTO ops.agent_source_uses(
@@ -205,7 +205,7 @@ async fn ensure_agent_source_use_roots(
                p.model_use_right,p.derivative_creation_right,p.excerpt_right,
                p.redistribution_right,p.commercial_use_right,p.public_display_right,
                p.rights_policy_version,p.rights_policy_sha256,p.occurred_at,
-               convert_to((p.unsigned_canonical || jsonb_build_object('sourceUseSha256',p.source_use_sha256))::text,'UTF8'),
+               ops.canonical_jsonb_v1(p.unsigned_canonical || jsonb_build_object('sourceUseSha256',p.source_use_sha256)),
                p.source_use_sha256
           FROM payloads p
         ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING

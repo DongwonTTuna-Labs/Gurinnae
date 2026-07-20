@@ -5,6 +5,7 @@ pub mod economics;
 pub mod idempotency;
 pub mod identity;
 pub mod jobs;
+pub mod journey_registry;
 pub mod mappers;
 pub mod outbox;
 pub mod pool;

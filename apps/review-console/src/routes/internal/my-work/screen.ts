@@ -110,6 +110,16 @@ export const screen = {
       step_up_required: true,
       confirmation_required: true,
     },
+    {
+      id: "decide-journey-handoff",
+      label: "인계 승인·반려 결정",
+      capability: "journeys.handoff.decide",
+      operation_id: "decideJourneyHandoff",
+      interaction_kind: "DESTRUCTIVE_CONFIRMATION",
+      assurance_level: "STEP_UP",
+      step_up_required: true,
+      confirmation_required: true,
+    },
   ],
   states: [
     "loading",
@@ -118,9 +128,12 @@ export const screen = {
     "partial",
     "stale",
     "error",
+    "refreshing",
     "unauthorized",
     "forbidden",
     "conflict",
+    "degraded",
+    "reauth-required",
   ],
   dataOperations: [
     {

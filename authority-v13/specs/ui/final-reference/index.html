@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>구린네 Final Design Reference</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 바로가기</a>
+
+<template id="public-header">
+  <header class="public-header">
+    <div class="header-inner">
+      <a class="brand" href="?view=home"><span class="brand-mark" aria-hidden="true"></span><span class="brand-text">구린네</span></a>
+      <nav class="public-nav" aria-label="주요 메뉴">
+        <a href="?view=search">사례</a><a href="?view=search">계약</a><a href="?view=agency">기관·업체</a><a href="#">방법론</a><a href="#">데이터 범위</a><a href="#">정정</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-button" aria-label="검색">⌕</button>
+        <button class="secondary-button">업데이트 구독</button>
+        <button class="icon-button mobile-menu" aria-label="메뉴">☰</button>
+      </div>
+    </div>
+  </header>
+</template>
+
+<div id="app"></div>
+
+<nav class="prototype-switcher" aria-label="디자인 참조 화면">
+  <a data-view="home" href="?view=home">홈</a>
+  <a data-view="case" href="?view=case">사건</a>
+  <a data-view="search" href="?view=search">검색</a>
+  <a data-view="agency" href="?view=agency">기관</a>
+  <a data-view="workspace" href="?view=workspace">조사</a>
+  <a data-view="review" href="?view=review">검토</a>
+  <a data-view="response" href="?view=response">소명</a>
+</nav>
+<script src="./app.js"></script>
+</body>
+</html>

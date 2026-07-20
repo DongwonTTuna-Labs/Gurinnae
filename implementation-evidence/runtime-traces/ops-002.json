@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "OPS-002",
+  "route": "/internal/operations/jobs",
+  "url": "http://127.0.0.1:29102/internal/operations/jobs",
+  "observedAt": "2026-07-19T15:35:50.891Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "OPS-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "summary",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "jobs",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "bulk",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "runbook",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

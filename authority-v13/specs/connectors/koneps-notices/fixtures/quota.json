@@ -1,0 +1,18 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-notices",
+  "kind": "quota",
+  "operation_id": "notice-goods-list",
+  "response": {
+    "header": {
+      "resultCode": "22",
+      "resultMsg": "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR"
+    },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 0,
+      "items": []
+    }
+  }
+}

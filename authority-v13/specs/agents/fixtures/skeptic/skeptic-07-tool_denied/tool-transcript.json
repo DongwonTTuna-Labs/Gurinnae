@@ -1,0 +1,78 @@
+{
+  "calls": [
+    {
+      "sequence": 1,
+      "tool_id": "evidence.read",
+      "mode": "READ_ONLY",
+      "request": {
+        "run_id": "00000000-0000-0000-0000-000000007537",
+        "evidence_snapshot_hash": "b22c6eda7195f463f9b2ac01e08e784ceb773d4e2258b2d574e51cd83f966898",
+        "query": "skeptic 합성 평가 tool_denied",
+        "allowed_ids": [
+          "00000000-0000-0000-0000-0000000003e9",
+          "00000000-0000-0000-0000-0000000003ea",
+          "00000000-0000-0000-0000-0000000003eb"
+        ],
+        "limit": 3
+      },
+      "response": {
+        "results": [
+          {
+            "id": "00000000-0000-0000-0000-0000000003e9",
+            "title": "합성 근거 03e9",
+            "locator": "page:1#line:2",
+            "content_hash": "08ca5e320dcbca322f84d52156ee244565481f5071ca471b1635270d01c7e4f6",
+            "excerpt": "합성 평가용 근거 문맥입니다.",
+            "metadata": [
+              {
+                "key": "fixture",
+                "value": "synthetic"
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-0000-0000-0000000003ea",
+            "title": "합성 근거 03ea",
+            "locator": "page:2#line:4",
+            "content_hash": "f41bad0fc07722f5aa0531085d5d4afcc92c24a2be012512c989f8e001f63aed",
+            "excerpt": "합성 평가용 근거 문맥입니다.",
+            "metadata": [
+              {
+                "key": "fixture",
+                "value": "synthetic"
+              }
+            ]
+          },
+          {
+            "id": "00000000-0000-0000-0000-0000000003eb",
+            "title": "합성 근거 03eb",
+            "locator": "page:3#line:1",
+            "content_hash": "3f944b0a20dfdb19a1e5ed7337b424775083c2b576f73ec6f904e96785bd0a2e",
+            "excerpt": "합성 평가용 근거 문맥입니다.",
+            "metadata": [
+              {
+                "key": "fixture",
+                "value": "synthetic"
+              }
+            ]
+          }
+        ],
+        "snapshot_hash": "b22c6eda7195f463f9b2ac01e08e784ceb773d4e2258b2d574e51cd83f966898",
+        "truncated": false
+      },
+      "status": "OK",
+      "cost_krw": 10
+    },
+    {
+      "sequence": 2,
+      "tool_id": "case.update",
+      "mode": "WRITE",
+      "request": {
+        "case_id": "00000000-0000-0000-0000-00000000ea67"
+      },
+      "response": {},
+      "status": "DENIED",
+      "cost_krw": 10
+    }
+  ]
+}

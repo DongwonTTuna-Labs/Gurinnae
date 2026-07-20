@@ -70,8 +70,7 @@ async function uploadCorrectionAttachment(event: RequestEvent) {
     const session = readSubmissionSession(event);
     if (session?.sessionKind !== "CORRECTION_DRAFT")
       return fail(401, { message: "정정 초안 제출 세션이 필요합니다." });
-    if (form.get("csrfToken") !== session.csrfToken)
-      return fail(403, { message: "CSRF_TOKEN_STALE" });
+    if (!sameOrigin(event)) return fail(403, { message: "CSRF_ORIGIN_DENIED" });
     const idempotencyKey = formIdempotencyKey(form);
     const file = form.get("attachment");
     if (!(file instanceof File) || file.size < 1)
@@ -158,8 +157,8 @@ async function runAction(
     const form = await event.request.formData();
     const session = readSubmissionSession(event);
     if (session) {
-      if (form.get("csrfToken") !== session.csrfToken)
-        return fail(403, { message: "CSRF_TOKEN_STALE" });
+      if (!sameOrigin(event))
+        return fail(403, { message: "CSRF_ORIGIN_DENIED" });
     } else if (!sameOrigin(event)) {
       return fail(403, { message: "CSRF_ORIGIN_DENIED" });
     }

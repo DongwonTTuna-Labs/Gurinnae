@@ -1,0 +1,19 @@
+{
+  "name": "session-cookie-positive",
+  "testOnlyKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "kid": "630dcd2966c43366",
+  "nonceHex": "000102030405060708090a0b",
+  "aadHex": "677572696e652d73632d763100677572696e655f696e7465726e616c5f73657373696f6e0068747470733a2f2f7265766965772e677572696e652e696e76616c6964002f004c6178",
+  "plaintextUtf8": "{\"absoluteExpiresAt\":1783872000,\"csrfRotatedAt\":1783828800,\"csrfToken\":\"test-only-csrf-token-43-characters-00000000000\",\"issuedAt\":1783828800,\"opaqueIdentitySessionToken\":\"test-only-opaque-session-token-43-characters-0000000\",\"typ\":\"internal-session\",\"v\":1}",
+  "ciphertextAndTagHex": "f2d969625a78c935c3e67a8be8747c06ba31c6c56b459a81d5af18f745f09610cee35f81804cdeec564613bc24e0ad194fb39147c51a80a32288f525f33cecb02d17d7a88b3616cbb0733ec83513b29da3f324411d0cdd4a613c9560f54931922eb60d8196ba5391c328de8792a187b0d95f6608b96d62d46d0447ac0c5adb07d544f98c9e0bec547b2b474a1c104955c410f6076e26a83b5c95ce45dd48c54a4cd0ee86e92bff83e05c5c3213d49c74f33bc8266e761565b96e9bf44a45f163aa2e30e14e8960744826083afe6b0e6503aaa45f126add243b191c95cb2a4ccd4e6f28c4f7c027daf8936632ce6afaed9c72d89d1808c3f1d0a247f993df3b13fe0b2fcc937302bb37b5f88678876386f3",
+  "token": "gurine-sc-v1.630dcd2966c43366.AAECAwQFBgcICQoL.8tlpYlp4yTXD5nqL6HR8BroxxsVrRZqB1a8Y90XwlhDO41-BgEze7FZGE7wk4K0ZT7ORR8UagKMiiPUl8zzssC0X16iLNhbLsHM-yDUTsp2j8yRBHQzdSmE8lWD1STGSLrYNgZa6U5HDKN6HkqGHsNlfZgi5bWLUbQRHrAxa2wfVRPmMngvsVHsrR0ocEElVxBD2B24mqDtclc5F3UjFSkzQ7obpK_-D4FxcMhPUnHTzO8gmbnYVZblum_RKRfFjqi4w4U6JYHRIJgg6_msOZQOqpF8Sat0kOxkclcsqTM1ObyjE98An2viTZjLOavrtnHLYnRgIw_HQokf5k987E_4LL8yTcwK7N7X4hniHY4bz",
+  "payload": {
+    "v": 1,
+    "typ": "internal-session",
+    "opaqueIdentitySessionToken": "test-only-opaque-session-token-43-characters-0000000",
+    "csrfToken": "test-only-csrf-token-43-characters-00000000000",
+    "issuedAt": 1783828800,
+    "absoluteExpiresAt": 1783872000,
+    "csrfRotatedAt": 1783828800
+  }
+}

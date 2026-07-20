@@ -36,24 +36,15 @@
       "format": "uuid"
     },
     "providerTurnId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "toolCallId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "parentSourceUseId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "parentSourceUseSha256": {
@@ -134,10 +125,7 @@
       "$ref": "#/$defs/rightsDecision"
     },
     "providerReceiptId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "format": "uuid"
     },
     "occurredAt": {
@@ -217,10 +205,7 @@
       "if": {
         "properties": {
           "useKind": {
-            "enum": [
-              "MODEL_INPUT",
-              "MODEL_OUTPUT_DERIVATION"
-            ]
+            "enum": ["MODEL_INPUT", "MODEL_OUTPUT_DERIVATION"]
           }
         }
       },
@@ -250,9 +235,7 @@
             ]
           }
         },
-        "required": [
-          "useKind"
-        ]
+        "required": ["useKind"]
       },
       "then": {
         "properties": {
@@ -273,9 +256,7 @@
             "type": "null"
           }
         },
-        "required": [
-          "parentSourceUseId"
-        ]
+        "required": ["parentSourceUseId"]
       },
       "then": {
         "properties": {
@@ -292,9 +273,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "parentSourceUseId"
-        ]
+        "required": ["parentSourceUseId"]
       },
       "then": {
         "properties": {
@@ -311,9 +290,7 @@
             "$ref": "#/$defs/sha256"
           }
         },
-        "required": [
-          "parentSourceUseSha256"
-        ]
+        "required": ["parentSourceUseSha256"]
       },
       "then": {
         "properties": {
@@ -513,11 +490,7 @@
     "locator": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "value",
-        "locatorSha256"
-      ],
+      "required": ["kind", "value", "locatorSha256"],
       "properties": {
         "kind": {
           "enum": [
@@ -583,74 +556,35 @@
           "format": "date-time"
         },
         "expiresAt": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "format": "date-time"
         },
         "accessRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "privateStorageRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "modelEgressRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "modelUseRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "derivativeCreationRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "excerptRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "redistributionRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "commercialUseRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         },
         "publicDisplayRight": {
-          "enum": [
-            "ALLOW",
-            "DENY",
-            "UNKNOWN"
-          ]
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
         }
       }
     }

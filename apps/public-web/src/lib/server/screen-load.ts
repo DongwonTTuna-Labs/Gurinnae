@@ -1,7 +1,10 @@
+import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import { invokePublicOperation } from "@gurine/api-client-public";
 import { operationFields, requiredServerValue } from "@gurine/config";
 import {
+  canonicalizeScreenViewModel,
+  projectFetchedData,
   type ScreenField,
   type ScreenRuntime,
   type ScreenViewModel,
@@ -46,8 +49,13 @@ import {
 } from "./submission-cookie";
 
 export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
+  screen = canonicalizeScreenViewModel(screen);
   screen = { ...screen, contract: typedScreenViewModel(screen) };
   const data: Record<string, unknown> = {};
+  const downloads: Record<
+    string,
+    { binary: string; mime: string; extension: "json" | "csv" }
+  > = {};
   const errors: string[] = [];
   const submissionSession = readSubmissionSession(event);
   const attachmentUpload =
@@ -111,7 +119,13 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   for (const contract of screen.dataOperations) {
     if (contract.method !== "GET") continue;
     if (bootstrapCorrection && contract.api === "submission-api") continue;
-    if (!contract.blocking && contract.operation_id.startsWith("download"))
+    if (
+      !contract.blocking &&
+      contract.operation_id.startsWith("download") &&
+      !(
+        screen.id === "PUB-011" && contract.operation_id === "downloadContracts"
+      )
+    )
       continue;
     const indexed = operations.get(contract.operation_id);
     if (!indexed) {
@@ -120,16 +134,28 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       continue;
     }
     try {
-      const query = operationQuery(
+      let query = operationQuery(
         indexed.operation.parameters ?? [],
         event.url.searchParams,
       );
+      // PUB-011's download action is local-only by contract, while its
+      // server operation returns the export receipt that must be bound to the
+      // browser download.  The format is intentionally fixed here so the
+      // initial screen can prepare a deterministic JSON receipt without
+      // exposing the public API's internal URL or raw response DTO.
+      if (
+        query === null &&
+        screen.id === "PUB-011" &&
+        contract.operation_id === "downloadContracts"
+      ) {
+        query = { format: "JSONL" };
+      }
       if (query === null) {
-        data[contract.operation_id] = {
-          items: [],
-          appliedFilters: {},
-          asOf: new Date().toISOString(),
-        };
+        if (contract.blocking) {
+          errors.push(
+            `${contract.operation_id} 필수 검색 조건이 올바르지 않습니다.`,
+          );
+        }
         continue;
       }
       const result =
@@ -153,6 +179,31 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
           problemTitle(result.error, result.response?.status ?? 503),
         );
       data[contract.operation_id] = result.data;
+      if (
+        screen.id === "PUB-011" &&
+        contract.operation_id === "downloadContracts" &&
+        isRecord(result.data)
+      ) {
+        const receipt = {
+          id: typeof result.data.id === "string" ? result.data.id : null,
+          status:
+            typeof result.data.status === "string" ? result.data.status : null,
+          version:
+            typeof result.data.version === "number"
+              ? result.data.version
+              : null,
+          format: "JSONL" as const,
+        };
+        // Keep the browser boundary allowlisted: this is the BinaryDownload
+        // receipt, not the generated operation DTO or arbitrary API data.
+        downloads.download = {
+          binary: Buffer.from(`${JSON.stringify(receipt)}\n`, "utf8").toString(
+            "base64",
+          ),
+          mime: "application/json",
+          extension: "json",
+        };
+      }
       resolved += 1;
     } catch (error) {
       if (contract.blocking)
@@ -193,14 +244,21 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     errors.push("자동 제출 방지 검증이 구성되지 않았습니다.");
   const hasData = Object.values(data).some((value) => hasRecords(value));
   const runtime: ScreenRuntime = {
-    state: publicRuntimeState({ errors: errors.length, resolved, hasData }),
+    state: publicRuntimeState({
+      errors: errors.length,
+      resolved,
+      hasData,
+      invalidFilter: errors.some((error) => error.includes("필수 검색 조건")),
+    }),
     pathname: event.url.pathname,
-    data,
+    data: {},
+    projection: projectFetchedData(screen, data),
     errors,
     forms,
     ...(screen.id === "PUB-020"
       ? { formOperationIds: { "download-dataset": "createDatasetExport" } }
       : {}),
+    ...(Object.keys(downloads).length > 0 ? { downloads } : {}),
     idempotencyKeys: {
       ...actionIdempotencyKeys(screen),
       ...(attachmentUpload ? { "upload-attachment": randomUUID() } : {}),
@@ -235,10 +293,10 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         }
       : {}),
     ...(bootstrapCorrection ? { allowedActionIds: ["save-draft"] } : {}),
-    ...(submissionSession ? { csrfToken: submissionSession.csrfToken } : {}),
     ...(event.url.searchParams.get("notice")
       ? { notice: event.url.searchParams.get("notice") ?? "" }
       : {}),
+    search: event.url.search,
   };
   return { screen, runtime };
 }

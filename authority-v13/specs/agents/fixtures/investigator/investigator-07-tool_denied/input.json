@@ -1,0 +1,17 @@
+{
+  "run_id": "00000000-0000-0000-0000-000000004e27",
+  "case_id": "00000000-0000-0000-0000-000000009c47",
+  "objective": "investigator 합성 평가 tool_denied",
+  "evidence_snapshot_hash": "b617d342eec6a70f36336e0055c34690c6bd4f1d0c6c74a7240604e4acd3ac6f",
+  "allowed_evidence_ids": [
+    "00000000-0000-0000-0000-0000000003e9",
+    "00000000-0000-0000-0000-0000000003ea",
+    "00000000-0000-0000-0000-0000000003eb"
+  ],
+  "budget_krw": 1000,
+  "locale": "ko-KR",
+  "known_unknowns": [
+    "설치·인증 비용 포함 여부"
+  ],
+  "policy_flags": []
+}

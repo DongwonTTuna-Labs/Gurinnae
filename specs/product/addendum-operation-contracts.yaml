@@ -776,12 +776,12 @@ operations:
     request:
       required: [schemaVersion, handoffId, expectedHandoffVersion, expectedBindingDigest, decision, reasonCode, reason]
       fields:
-        schemaVersion: const decide-journey-handoff.request.v1
+        schemaVersion: const<decide-journey-handoff.request.v1>
         handoffId: uuid
         expectedHandoffVersion: int64>=1
         expectedBindingDigest: sha256
-        decision: ACKNOWLEDGE|DECLINE
-        reasonCode: nullable<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>
+        decision: enum<ACKNOWLEDGE|DECLINE>
+        reasonCode: nullable<enum<CAPABILITY_UNAVAILABLE|OBJECT_SCOPE_MISMATCH|CONFLICT_OF_INTEREST|WORKLOAD_CAPACITY|DEPENDENCY_BLOCKED|SUBJECT_INVALID|OWNER_UNAVAILABLE|POLICY_BLOCKED|RECEIVER_DECLINED>>
         reason: nullable<string[1..4000]>
       forbidden: [journeyId, edgeId, handoffKind, receiver, receiverFunction, receiverCapability, destination, owner, domainAdapter]
     decision_reason_shape:

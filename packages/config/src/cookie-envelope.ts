@@ -124,7 +124,7 @@ function aad(context: CookieEnvelopeContext): Buffer {
 }
 
 function canonicalJson(value: unknown): string {
-  return JSON.stringify(sortJson(value));
+  return writeJson(sortJson(value));
 }
 
 function sortJson(value: unknown): unknown {
@@ -132,9 +132,47 @@ function sortJson(value: unknown): unknown {
   if (typeof value !== "object" || value === null) return value;
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareUtf16(left, right))
       .map(([key, item]) => [key, sortJson(item)]),
   );
+}
+
+function compareUtf16(left: string, right: string): number {
+  const units = (value: string): number[] =>
+    Array.from(value).flatMap((item) => {
+      const code = item.codePointAt(0) ?? 0;
+      return code > 0xffff
+        ? [
+            0xd800 + ((code - 0x10000) >> 10),
+            0xdc00 + ((code - 0x10000) & 0x3ff),
+          ]
+        : [code];
+    });
+  const a = units(left);
+  const b = units(right);
+  const length = Math.min(a.length, b.length);
+  for (let index = 0; index < length; index += 1) {
+    if (a[index] !== b[index]) return (a[index] ?? 0) - (b[index] ?? 0);
+  }
+  return a.length - b.length;
+}
+
+function writeJson(value: unknown): string {
+  if (value === null) return "null";
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value))
+      throw new Error("canonical JSON accepts only safe integers");
+    return String(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(writeJson).join(",")}]`;
+  if (typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `${JSON.stringify(key)}:${writeJson(item)}`)
+      .join(",")}}`;
+  }
+  throw new Error("unsupported canonical JSON value");
 }
 
 function constantTimeTextEqual(left: string, right: string): boolean {

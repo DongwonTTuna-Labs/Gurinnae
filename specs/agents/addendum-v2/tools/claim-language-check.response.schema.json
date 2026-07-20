@@ -28,11 +28,7 @@
       "maximum": 20000
     },
     "decision": {
-      "enum": [
-        "PASS",
-        "REVISE",
-        "BLOCK"
-      ]
+      "enum": ["PASS", "REVISE", "BLOCK"]
     },
     "findings": {
       "type": "array",
@@ -69,11 +65,7 @@
             ]
           },
           "severity": {
-            "enum": [
-              "INFO",
-              "WARNING",
-              "BLOCKING"
-            ]
+            "enum": ["INFO", "WARNING", "BLOCKING"]
           },
           "startUtf16": {
             "type": "integer",
@@ -89,10 +81,7 @@
             "maxLength": 1000
           },
           "suggestedReplacement": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "maxLength": 2000
           },
           "citationIds": {
@@ -124,9 +113,7 @@
                   ]
                 }
               },
-              "required": [
-                "code"
-              ]
+              "required": ["code"]
             },
             "then": {
               "properties": {
@@ -147,17 +134,12 @@
                   ]
                 }
               },
-              "required": [
-                "code"
-              ]
+              "required": ["code"]
             },
             "then": {
               "properties": {
                 "severity": {
-                  "enum": [
-                    "INFO",
-                    "WARNING"
-                  ]
+                  "enum": ["INFO", "WARNING"]
                 }
               }
             }
@@ -195,9 +177,7 @@
             "const": "PASS"
           }
         },
-        "required": [
-          "decision"
-        ]
+        "required": ["decision"]
       },
       "then": {
         "properties": {
@@ -220,9 +200,7 @@
             "const": "REVISE"
           }
         },
-        "required": [
-          "decision"
-        ]
+        "required": ["decision"]
       },
       "then": {
         "properties": {
@@ -242,9 +220,7 @@
                     "const": "BLOCKING"
                   }
                 },
-                "required": [
-                  "severity"
-                ]
+                "required": ["severity"]
               }
             }
           }
@@ -258,9 +234,7 @@
             "const": "BLOCK"
           }
         },
-        "required": [
-          "decision"
-        ]
+        "required": ["decision"]
       },
       "then": {
         "properties": {
@@ -285,9 +259,7 @@
                       "const": "BLOCKING"
                     }
                   },
-                  "required": [
-                    "severity"
-                  ]
+                  "required": ["severity"]
                 }
               }
             }
@@ -302,9 +274,7 @@
             "const": true
           }
         },
-        "required": [
-          "truncated"
-        ]
+        "required": ["truncated"]
       },
       "then": {
         "properties": {

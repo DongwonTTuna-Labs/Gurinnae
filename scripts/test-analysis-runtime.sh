@@ -43,6 +43,10 @@ free_port() {
 provider_port="$(free_port)"
 gateway_port="$(free_port)"
 provider_key="runtime-openai-key-never-persist"
+selected_content='runtime-selected-source-bytes-v13'
+selected_sha256="$(printf '%s' "$selected_content" | sha256sum | cut -d' ' -f1)"
+mkdir -p "$temp/objects/raw"
+printf '%s' "$selected_content" >"$temp/objects/raw/analysis-document.json"
 docker run --rm -d --name "$container" \
   -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
   -p 127.0.0.1::5432 postgres:18.4-bookworm >/dev/null
@@ -62,10 +66,13 @@ provider_test_id="41000000-0000-4000-8000-000000000006"
 
 AI_PROVIDER_TEST_PORT="$provider_port" AI_PROVIDER_EXPECTED_KEY="$provider_key" \
 AI_PROVIDER_EVIDENCE_ID="$evidence_id" AI_PROVIDER_EVIDENCE_LOCATOR="page:7" \
+AI_PROVIDER_EXPECTED_CONTENT_B64="$(printf '%s' "$selected_content" | base64 -w0)" \
+AI_PROVIDER_EXPECTED_CONTENT_SHA256="$selected_sha256" \
   bun run tests/integration/ai-provider-upstream.ts >"$temp/provider.log" 2>&1 &
 provider_pid=$!
 GURINE_ENV=test HTTP_BIND="127.0.0.1:$gateway_port" OIDC_ISSUER_HOST=localhost \
 AI_PROVIDER_HOSTS=localhost OPENAI_API_KEY="$provider_key" \
+OBJECT_STORE_ADAPTER=filesystem OBJECT_STORE_FILESYSTEM_ROOT="$temp/objects" \
   target/debug/gurine-egress-gateway >"$temp/gateway.log" 2>&1 &
 gateway_pid=$!
 for endpoint in "http://127.0.0.1:$provider_port/health" "http://127.0.0.1:$gateway_port/health/ready"; do
@@ -109,7 +116,7 @@ VALUES('PROVIDER_CONNECTION_TEST','analysis-worker',
 SQL
 
 sed -e "s/:'document_id'/'$document_id'/g" -e "s/:'evidence_id'/'$evidence_id'/g" \
-    -e "s/:'actor_id'/'$actor'/g" db/test-fixtures/analysis-source-graph.sql \
+    -e "s/:'actor_id'/'$actor'/g" -e "s/repeat('3',64)/'$selected_sha256'/g" db/test-fixtures/analysis-source-graph.sql \
   | docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" >/dev/null
 
 rules=(
@@ -142,14 +149,16 @@ SQL
 done
 
 agents=(market-researcher investigator skeptic claim-drafter citation-verifier)
+snapshot="$(docker exec "$container" psql -At -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
+  "SELECT jsonb_build_object('caseId','$case_id','evidence',(SELECT jsonb_agg(jsonb_build_object('id',e.id,'contentSha256',btrim(e.content_sha256::text),'locator',e.source_locator,'updatedAt',e.updated_at,'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb)) ORDER BY e.id) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.case_id='$case_id' AND e.id='$evidence_id' AND e.verification_status='VERIFIED'))")"
+snapshot_hash="$(printf '%s' "$snapshot" | jq -cSj . | sha256sum | cut -d' ' -f1)"
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
+  -c "UPDATE core.dataset_snapshots SET snapshot_sha256='$snapshot_hash' WHERE id='46000000-0000-4000-8000-000000000007';" >/dev/null
 index=0
 for agent in "${agents[@]}"; do
   index=$((index + 1))
   run_id="$(printf '45000000-0000-4000-8000-%012d' "$index")"
   objective="Runtime objective for $agent"
-  snapshot="$(docker exec "$container" psql -At -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
-    "SELECT jsonb_build_object('caseId','$case_id','evidence',(SELECT jsonb_agg(jsonb_build_object('id',e.id,'contentSha256',btrim(e.content_sha256::text),'locator',e.source_locator,'updatedAt',e.updated_at,'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb)) ORDER BY e.id) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.case_id='$case_id' AND e.id='$evidence_id' AND e.verification_status='VERIFIED'),'objective','$objective')")"
-  snapshot_hash="$(printf '%s' "$snapshot" | jq -cSj . | sha256sum | cut -d' ' -f1)"
   docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
     -v run_id="$run_id" -v agent="$agent" -v objective="$objective" -v document_id="$document_id" \
     -v snapshot_hash="$snapshot_hash" <<'SQL' >/dev/null
@@ -166,6 +175,8 @@ done
 postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"
 GURINE_ENV=production AI_ENABLED=true AI_PROVIDER_ORDER=openai \
 EGRESS_AI_CHANNEL_URL="http://127.0.0.1:$gateway_port/ai" \
+EGRESS_SOURCE_CHANNEL_URL="http://127.0.0.1:$gateway_port/source" \
+EGRESS_OBJECT_STORE_CHANNEL_URL="http://127.0.0.1:$gateway_port/object-store" \
 ANALYSIS_DATABASE_URL="postgresql://gurine_analysis_worker:analysis_test@127.0.0.1:${postgres_port}/${database}" \
 ANALYSIS_ONCE=true HOSTNAME="analysis-runtime-test" target/debug/gurine-analysis-worker
 
@@ -174,10 +185,10 @@ DO $$
 DECLARE actual bigint;
 BEGIN
   SELECT count(*) INTO actual FROM ops.jobs WHERE queue='analysis-worker' AND status='SUCCEEDED';
-  IF actual <> 16 THEN
-    RAISE NOTICE 'analysis job outcomes: %', (SELECT jsonb_agg(jsonb_build_object('type',job_type,'status',status,'detail',last_error_detail) ORDER BY id) FROM ops.jobs WHERE queue='analysis-worker');
-    RAISE NOTICE 'agent outcomes: %', (SELECT jsonb_agg(jsonb_build_object('agent',agent_type,'status',status,'output',output_payload) ORDER BY agent_type) FROM ops.agent_runs);
-    RAISE EXCEPTION 'analysis succeeded jobs %, expected 16',actual;
+    IF actual <> 16 THEN
+      RAISE NOTICE 'analysis job outcomes: %', (SELECT jsonb_agg(jsonb_build_object('type',job_type,'status',status,'detail',last_error_detail) ORDER BY id) FROM ops.jobs WHERE queue='analysis-worker');
+      RAISE NOTICE 'agent outcomes: %', (SELECT jsonb_agg(jsonb_build_object('agent',agent_type,'status',status,'output',output_payload) ORDER BY agent_type) FROM ops.agent_runs);
+      RAISE EXCEPTION 'analysis succeeded jobs %, expected 16',actual;
   END IF;
   SELECT count(*) INTO actual FROM core.rule_evaluations WHERE status='SUCCEEDED';
   IF actual <> 10 THEN RAISE EXCEPTION 'rule evaluations %, expected 10',actual; END IF;
@@ -188,13 +199,13 @@ BEGIN
   SELECT count(*) INTO actual FROM ops.outbox WHERE event_type='detection.signal_created.v1';
   IF actual <> 10 THEN RAISE EXCEPTION 'signal events %, expected 10',actual; END IF;
   SELECT count(*) INTO actual FROM ops.agent_runs
-   WHERE status='SUCCEEDED' AND output_payload->>'status'='COMPLETED'
+   WHERE status='SUCCEEDED' AND COALESCE(output_payload->>'status', output_payload->>'outcome')='COMPLETED'
      AND jsonb_array_length(output_payload->'citations')=1;
   IF actual <> 5 THEN
     RAISE NOTICE 'agent outcomes: %',(
       SELECT jsonb_agg(jsonb_build_object(
         'agent',agent_type,'status',status,'outputStatus',output_payload->>'status',
-        'reasons',output_payload->'abstention_reasons','snapshot',input_snapshot_hash
+        'reasons',COALESCE(output_payload->'abstention_reasons', output_payload->'abstentionReasons'),'snapshot',input_snapshot_hash
       ) ORDER BY agent_type) FROM ops.agent_runs
     );
     RAISE EXCEPTION 'completed agent runs %, expected 5',actual;

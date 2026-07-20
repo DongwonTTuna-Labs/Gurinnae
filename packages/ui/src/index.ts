@@ -1,10 +1,16 @@
 export { default as ScreenPage } from "./components/ScreenPage.svelte";
-export * from "./local-actions";
-export * from "./tokens";
-export * from "./screen-contract";
 export * from "./decision-contract";
+export * from "./generated-screen-journeys";
+export * from "./local-actions";
+export * from "./screen-contract";
+export * from "./screen-projection";
+export * from "./tokens";
+export * from "./view-models/cas-010";
+export * from "./view-models/cas-011";
 export * from "./view-models/int-002";
 export * from "./view-models/ops-004";
+export * from "./view-models/rsp-003";
+export * from "./view-models/rsp-005";
 export * from "./view-models/rsp-006";
 
 export type ScreenSection = ScreenViewModel["sections"][number];
@@ -13,6 +19,10 @@ export type ScreenSectionProps = {
   screen: ScreenViewModel;
   runtime: ScreenRuntime;
   index: number;
+  /** Typed, display-safe section projection. Components must not read raw DTOs. */
+  projection?:
+    | import("./screen-projection").ScreenSectionProjection
+    | undefined;
 };
 
 export type ScreenField = {
@@ -56,11 +66,15 @@ export type AttachmentRemovalRuntime = {
 export type ScreenRuntime = {
   state:
     | "loading"
+    | "initial-loading"
     | "success"
     | "empty"
+    | "filtered-empty"
     | "partial"
     | "stale"
     | "error"
+    | "server-error"
+    | "not-found"
     | "unauthenticated"
     | "unauthorized"
     | "forbidden"
@@ -69,8 +83,15 @@ export type ScreenRuntime = {
     | "offline"
     | "saving"
     | "saved"
+    | "current"
+    | "draft"
+    | "superseded"
+    | "healthy"
+    | "maintenance"
+    | "invalid-filter"
     | "validation-error"
     | "session-expiring"
+    | "session-expired"
     | "blocked"
     | "refreshing"
     | "degraded"
@@ -82,19 +103,89 @@ export type ScreenRuntime = {
     | "partial-failure"
     | "terminal";
   data: Record<string, unknown>;
+  /**
+   * Server-owned, display-safe data envelope.  Components and projections
+   * must consume this allowlisted shape instead of operation response DTOs.
+   * Missing values remain explicit UNKNOWN entries so SSR never guesses from
+   * arbitrary runtime JSON.
+   */
+  projection?: ScreenRuntimeProjection;
   errors: readonly string[];
   forms: Record<string, readonly ScreenField[]>;
   formOperationIds?: Readonly<Record<string, string>>;
   idempotencyKeys?: Readonly<Record<string, string>>;
   botChallenge?: BotChallengeRuntime;
+  /** SSR synchronizer token echoed by every mutating form. */
+  csrfToken?: string;
   attachmentUpload?: AttachmentUploadRuntime;
   attachmentRemoval?: AttachmentRemovalRuntime;
-  csrfToken?: string;
   notice?: string;
   pathname?: string;
+  /** Current URL query, retained when a named form action posts back. */
+  search?: string;
   allowedActionIds?: readonly string[];
   actorDisplayName?: string;
   sessionExpiresAt?: string;
+  /** Server-validated approval binding; never inferred from arbitrary DTO data. */
+  selectedTarget?: {
+    proposalId: string;
+    actionKind: string | null;
+    assignmentId: string | null;
+    expectedProposalVersion: number;
+    expectedAssignmentVersion: number | null;
+    expectedApprovalDigest: string;
+    handoffId: string | null;
+    expectedHandoffVersion: number | null;
+    expectedBindingDigest: string | null;
+    digestCurrent: boolean;
+    loadState: "READY" | "BLOCKED";
+  };
+  /**
+   * Server-validated approval queue cards.  This is deliberately narrower
+   * than the action-proposal DTO: the browser receives only the identifiers,
+   * version/digest binding and a server-owned navigation target needed to
+   * choose a proposal.  Components must not scan runtime.data for queue rows.
+   */
+  approvalQueue?: readonly {
+    proposalId: string;
+    version: number;
+    state: string;
+    approvalDigest: string;
+    href: string;
+  }[];
+  /** Server-owned navigation destinations. Raw DTO traversal is forbidden. */
+  destinations?: Readonly<Record<string, string>>;
+  /** Server-prepared, action-scoped binary exports; raw DTOs never reach download code. */
+  downloads?: Readonly<
+    Record<string, { binary: string; mime: string; extension: "json" | "csv" }>
+  >;
+  /** Narrow, server-owned form context for progressive response editing. */
+  formData?: {
+    responseDraft?: Record<string, unknown>;
+    submissionPreview?: Record<string, unknown>;
+    submitted?: Record<string, unknown>;
+  };
+};
+
+export type ScreenProjectionScalar = string | number | boolean;
+
+export type ScreenRuntimeProjectionField = {
+  value: ScreenProjectionScalar | null;
+  known: boolean;
+  source: string;
+};
+
+export type ScreenRuntimeProjectionSection = {
+  fields: Readonly<Record<string, ScreenRuntimeProjectionField>>;
+  blocked: boolean;
+  /** Optional server-owned analysis metadata retained for accessible CAS renderers. */
+  analysis?: import("./screen-projection-specialized-types").AnalysisProjection;
+};
+
+export type ScreenRuntimeProjection = {
+  screenId: string;
+  contractVersion: "AUTHORITY_V1";
+  sections: Readonly<Record<string, ScreenRuntimeProjectionSection>>;
 };
 
 export type ScreenViewModel = {

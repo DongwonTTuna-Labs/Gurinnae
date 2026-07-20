@@ -1,38 +1,8 @@
 use super::*;
 
-pub(super) async fn arm_acceptagentsuggestion_rejectagentsuggestion(
-    operation: &str,
-    payload: &Map<String, Value>,
-    _id: Uuid,
-    actor: Uuid,
-    _session_id: Uuid,
-    _field_keys: &EnvelopeKeyRing,
-    tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    let suggestion = uuid_value(payload, &["suggestionId"]).ok_or(ServiceError::InvalidRequest)?;
-    let status = if operation == "acceptAgentSuggestion" {
-        "ACCEPTED"
-    } else {
-        "REJECTED"
-    };
-    let changed = sqlx::query(
-        "UPDATE ops.agent_suggestions SET status=$2,decision_reason=$3,decided_by=$4, \
-         decided_at=clock_timestamp() WHERE id=$1 AND status='PENDING'",
-    )
-    .bind(suggestion)
-    .bind(status)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?
-    .rows_affected();
-    if changed != 1 {
-        return Err(ServiceError::VersionConflict);
-    }
-
-    Ok(())
-}
+#[path = "specialized_group_1_suggestion.rs"]
+mod suggestion;
+pub(super) use suggestion::arm_acceptagentsuggestion_rejectagentsuggestion;
 
 pub(super) async fn arm_activateruleversion_scheduleruleactivation(
     operation: &str,

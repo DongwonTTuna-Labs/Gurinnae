@@ -49,9 +49,7 @@
     "/v1/agencies": {
       "get": {
         "operationId": "listAgencies",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "기관 목록",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -105,11 +103,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "name_asc",
-                "updated_desc",
-                "contract_count_desc"
-              ]
+              "enum": ["name_asc", "updated_desc", "contract_count_desc"]
             }
           },
           {
@@ -142,10 +136,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -156,9 +147,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -169,9 +158,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -190,9 +177,7 @@
     "/v1/agencies/{agencyId}": {
       "get": {
         "operationId": "getAgency",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "기관 기본 상세",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -234,9 +219,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -247,9 +230,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -260,9 +241,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -273,9 +252,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -294,9 +271,7 @@
     "/v1/agencies/{agencyId}/cases": {
       "get": {
         "operationId": "listAgencyCases",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "기관 사건",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -331,10 +306,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "created_asc"
-              ]
+              "enum": ["updated_desc", "created_asc"]
             }
           },
           {
@@ -367,10 +339,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -381,9 +350,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -394,9 +361,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -407,9 +372,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -429,9 +392,7 @@
     "/v1/agencies/{agencyId}/contracts": {
       "get": {
         "operationId": "listAgencyContracts",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "기관 계약",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -466,10 +427,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "created_asc"
-              ]
+              "enum": ["updated_desc", "created_asc"]
             }
           },
           {
@@ -502,10 +460,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -516,9 +471,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -529,9 +482,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -542,9 +493,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -564,9 +513,7 @@
     "/v1/cases": {
       "get": {
         "operationId": "listPublicCases",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "상태별 최근 공개 기록 / 공개 사례 목록",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -664,11 +611,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "published_desc",
-                "title_asc"
-              ]
+              "enum": ["updated_desc", "published_desc", "title_asc"]
             }
           },
           {
@@ -701,10 +644,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -715,9 +655,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -728,9 +666,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -749,9 +685,7 @@
     "/v1/cases/{caseSlug}": {
       "get": {
         "operationId": "getPublicCase",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "사건 최신 공개 revision",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -793,9 +727,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -806,9 +738,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -819,9 +749,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -832,9 +760,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -853,9 +779,7 @@
     "/v1/cases/{caseSlug}/reproducibility": {
       "get": {
         "operationId": "getCaseReproducibility",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "재현 정보 / 재현 payload",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -897,9 +821,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -910,9 +832,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -923,9 +843,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -936,9 +854,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -957,9 +873,7 @@
     "/v1/cases/{caseSlug}/reproducibility/download": {
       "get": {
         "operationId": "downloadCaseReproducibility",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "재현 파일",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -977,10 +891,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "enum": [
-                "JSON",
-                "CSV"
-              ]
+              "enum": ["JSON", "CSV"]
             }
           },
           {
@@ -1013,9 +924,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -1026,9 +935,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1039,9 +946,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1052,9 +957,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: STORAGE_FAILURE",
@@ -1065,9 +968,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "STORAGE_FAILURE"
-            ]
+            "x-error-codes": ["STORAGE_FAILURE"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1087,9 +988,7 @@
     "/v1/cases/{caseSlug}/revisions": {
       "get": {
         "operationId": "listCaseRevisions",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "revision 목록 / revision navigation",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1124,10 +1023,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "created_asc"
-              ]
+              "enum": ["updated_desc", "created_asc"]
             }
           },
           {
@@ -1160,10 +1056,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -1174,9 +1067,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1187,9 +1078,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1200,9 +1089,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1222,9 +1109,7 @@
     "/v1/cases/{caseSlug}/revisions/{revision}": {
       "get": {
         "operationId": "getPublicCaseRevision",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "특정 revision 조회",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1274,9 +1159,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -1287,9 +1170,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1300,9 +1181,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1313,9 +1192,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1334,9 +1211,7 @@
     "/v1/content/about": {
       "get": {
         "operationId": "getAboutContent",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned about",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1370,9 +1245,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1383,9 +1256,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1396,9 +1267,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1416,9 +1285,7 @@
     "/v1/content/accessibility": {
       "get": {
         "operationId": "getAccessibilityStatement",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned accessibility statement",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1452,9 +1319,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1465,9 +1330,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1478,9 +1341,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1498,9 +1359,7 @@
     "/v1/content/api": {
       "get": {
         "operationId": "getPublicApiDocumentation",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned API guide",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1534,9 +1393,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1547,9 +1404,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1560,9 +1415,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: DEPENDENCY_UNAVAILABLE, STORAGE_FAILURE",
@@ -1573,10 +1426,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "DEPENDENCY_UNAVAILABLE",
-              "STORAGE_FAILURE"
-            ]
+            "x-error-codes": ["DEPENDENCY_UNAVAILABLE", "STORAGE_FAILURE"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1596,9 +1446,7 @@
     "/v1/content/contact": {
       "get": {
         "operationId": "getContactContent",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "contact routing",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1632,9 +1480,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1645,9 +1491,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1658,9 +1502,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1678,9 +1520,7 @@
     "/v1/content/editorial-policy": {
       "get": {
         "operationId": "getEditorialPolicy",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned editorial policy",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1714,9 +1554,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1727,9 +1565,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1740,9 +1576,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1760,9 +1594,7 @@
     "/v1/content/funding": {
       "get": {
         "operationId": "getFundingContent",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned funding disclosures",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1796,9 +1628,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1809,9 +1639,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1822,9 +1650,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1842,9 +1668,7 @@
     "/v1/content/governance": {
       "get": {
         "operationId": "getGovernanceContent",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned governance",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1878,9 +1702,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1891,9 +1713,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1904,9 +1724,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -1924,9 +1742,7 @@
     "/v1/content/methodology": {
       "get": {
         "operationId": "getMethodologyOverview",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned methodology content",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -1960,9 +1776,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -1973,9 +1787,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -1986,9 +1798,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2006,9 +1816,7 @@
     "/v1/content/privacy": {
       "get": {
         "operationId": "getPrivacyPolicy",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned privacy policy",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2042,9 +1850,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2055,9 +1861,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -2068,9 +1872,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2088,9 +1890,7 @@
     "/v1/content/terms": {
       "get": {
         "operationId": "getTerms",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "versioned terms",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2124,9 +1924,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2137,9 +1935,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -2150,9 +1946,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2170,9 +1964,7 @@
     "/v1/contracts": {
       "get": {
         "operationId": "listContracts",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "계약 목록",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2283,12 +2075,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "signed_desc",
-                "amount_desc",
-                "amount_asc",
-                "title_asc"
-              ]
+              "enum": ["signed_desc", "amount_desc", "amount_asc", "title_asc"]
             }
           },
           {
@@ -2321,10 +2108,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2335,9 +2119,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -2348,9 +2130,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2369,9 +2149,7 @@
     "/v1/contracts/download": {
       "get": {
         "operationId": "downloadContracts",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "필터 결과 export",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2381,10 +2159,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "enum": [
-                "CSV",
-                "JSONL"
-              ]
+              "enum": ["CSV", "JSONL"]
             }
           },
           {
@@ -2453,9 +2228,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2466,9 +2239,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -2479,9 +2250,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: STORAGE_FAILURE",
@@ -2492,9 +2261,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "STORAGE_FAILURE"
-            ]
+            "x-error-codes": ["STORAGE_FAILURE"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2513,9 +2280,7 @@
     "/v1/contracts/{contractId}": {
       "get": {
         "operationId": "getContract",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "계약 상세",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2557,9 +2322,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -2570,9 +2333,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2583,9 +2344,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -2596,9 +2355,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2617,9 +2374,7 @@
     "/v1/contracts/{contractId}/changes": {
       "get": {
         "operationId": "listContractChanges",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "변경 계약",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2654,10 +2409,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "created_asc"
-              ]
+              "enum": ["updated_desc", "created_asc"]
             }
           },
           {
@@ -2690,10 +2442,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -2704,9 +2453,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2717,9 +2464,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -2730,9 +2475,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2752,9 +2495,7 @@
     "/v1/corrections": {
       "get": {
         "operationId": "listCorrections",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "최근 정정 / 정정 목록",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2810,10 +2551,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "published_desc",
-                "title_asc"
-              ]
+              "enum": ["published_desc", "title_asc"]
             }
           },
           {
@@ -2846,10 +2584,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "409": {
             "description": "Problem response: SNAPSHOT_STALE",
@@ -2860,9 +2595,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SNAPSHOT_STALE"
-            ]
+            "x-error-codes": ["SNAPSHOT_STALE"]
           },
           "422": {
             "description": "Problem response: PUBLICATION_GATE_BLOCKED",
@@ -2873,9 +2606,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "PUBLICATION_GATE_BLOCKED"
-            ]
+            "x-error-codes": ["PUBLICATION_GATE_BLOCKED"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2886,9 +2617,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -2899,9 +2628,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2922,9 +2649,7 @@
     "/v1/corrections/{correctionId}": {
       "get": {
         "operationId": "getCorrection",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "정정 상세",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -2966,9 +2691,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -2979,9 +2702,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "409": {
             "description": "Problem response: SNAPSHOT_STALE",
@@ -2992,9 +2713,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "SNAPSHOT_STALE"
-            ]
+            "x-error-codes": ["SNAPSHOT_STALE"]
           },
           "422": {
             "description": "Problem response: PUBLICATION_GATE_BLOCKED",
@@ -3005,9 +2724,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "PUBLICATION_GATE_BLOCKED"
-            ]
+            "x-error-codes": ["PUBLICATION_GATE_BLOCKED"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3018,9 +2735,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3031,9 +2746,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -3054,9 +2767,7 @@
     "/v1/coverage": {
       "get": {
         "operationId": "getCoverage",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "coverage read model",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3090,9 +2801,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3103,9 +2812,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3116,9 +2823,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -3136,9 +2841,7 @@
     "/v1/datasets": {
       "get": {
         "operationId": "listPublicDatasets",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "공개 dataset catalog",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3176,10 +2879,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "title_asc"
-              ]
+              "enum": ["updated_desc", "title_asc"]
             }
           },
           {
@@ -3212,10 +2912,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3226,9 +2923,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3239,9 +2934,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -3260,9 +2953,7 @@
     "/v1/openapi.json": {
       "get": {
         "operationId": "downloadPublicOpenApi",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "generated public OpenAPI",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3296,9 +2987,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3309,9 +2998,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: STORAGE_FAILURE",
@@ -3322,18 +3009,12 @@
                 }
               }
             },
-            "x-error-codes": [
-              "STORAGE_FAILURE"
-            ]
+            "x-error-codes": ["STORAGE_FAILURE"]
           }
         },
         "x-operation-kind": "QUERY",
         "x-capability": "public.read",
-        "x-error-codes": [
-          "RATE_LIMITED",
-          "STORAGE_FAILURE",
-          "INTERNAL_ERROR"
-        ],
+        "x-error-codes": ["RATE_LIMITED", "STORAGE_FAILURE", "INTERNAL_ERROR"],
         "security": [],
         "x-assurance-level": "NONE",
         "x-step-up-required": false
@@ -3342,9 +3023,7 @@
     "/v1/rules": {
       "get": {
         "operationId": "listRules",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "방법론 규칙",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3382,10 +3061,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "name_asc",
-                "updated_desc"
-              ]
+              "enum": ["name_asc", "updated_desc"]
             }
           },
           {
@@ -3418,10 +3094,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3432,9 +3105,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3445,9 +3116,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -3466,9 +3135,7 @@
     "/v1/rules/{ruleId}": {
       "get": {
         "operationId": "getRule",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "규칙 상세",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3510,9 +3177,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -3523,9 +3188,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3536,9 +3199,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3549,9 +3210,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -3570,9 +3229,7 @@
     "/v1/rules/{ruleId}/cases": {
       "get": {
         "operationId": "listRuleCases",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "규칙 관련 공개 사례",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3607,10 +3264,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "created_asc"
-              ]
+              "enum": ["updated_desc", "created_asc"]
             }
           },
           {
@@ -3643,10 +3297,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -3657,9 +3308,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3670,9 +3319,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3683,9 +3330,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -3705,9 +3350,7 @@
     "/v1/search": {
       "get": {
         "operationId": "searchPublicRecords",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "통합 검색 autocomplete / 통합 검색 결과",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3782,11 +3425,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "relevance",
-                "updated_desc",
-                "title_asc"
-              ]
+              "enum": ["relevance", "updated_desc", "title_asc"]
             }
           },
           {
@@ -3819,10 +3458,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3833,9 +3469,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3846,9 +3480,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -3867,9 +3499,7 @@
     "/v1/sources/status": {
       "get": {
         "operationId": "listSourceStatus",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "source freshness / source 상태와 목록",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -3907,11 +3537,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "status_asc",
-                "last_success_desc",
-                "name_asc"
-              ]
+              "enum": ["status_asc", "last_success_desc", "name_asc"]
             }
           },
           {
@@ -3944,10 +3570,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -3958,9 +3581,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -3971,9 +3592,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED, UPSTREAM_SCHEMA_CHANGED",
@@ -4010,9 +3629,7 @@
     "/v1/sources/{sourceId}": {
       "get": {
         "operationId": "getSource",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "source 상세",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -4054,9 +3671,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -4067,9 +3682,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -4080,9 +3693,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -4093,9 +3704,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED, UPSTREAM_SCHEMA_CHANGED",
@@ -4132,9 +3741,7 @@
     "/v1/suppliers": {
       "get": {
         "operationId": "listSuppliers",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "업체 목록",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -4191,11 +3798,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "name_asc",
-                "updated_desc",
-                "contract_count_desc"
-              ]
+              "enum": ["name_asc", "updated_desc", "contract_count_desc"]
             }
           },
           {
@@ -4228,10 +3831,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -4242,9 +3842,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -4255,9 +3853,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -4276,9 +3872,7 @@
     "/v1/suppliers/{supplierId}": {
       "get": {
         "operationId": "getSupplier",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "업체 기본 상세",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -4320,9 +3914,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -4333,9 +3925,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -4346,9 +3936,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -4359,9 +3947,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -4380,9 +3966,7 @@
     "/v1/suppliers/{supplierId}/cases": {
       "get": {
         "operationId": "listSupplierCases",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "업체 사건",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -4417,10 +4001,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "created_asc"
-              ]
+              "enum": ["updated_desc", "created_asc"]
             }
           },
           {
@@ -4453,10 +4034,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -4467,9 +4045,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -4480,9 +4056,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -4493,9 +4067,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -4515,9 +4087,7 @@
     "/v1/suppliers/{supplierId}/contracts": {
       "get": {
         "operationId": "listSupplierContracts",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "업체 계약",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -4552,10 +4122,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "updated_desc",
-                "created_asc"
-              ]
+              "enum": ["updated_desc", "created_asc"]
             }
           },
           {
@@ -4588,10 +4155,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -4602,9 +4166,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -4615,9 +4177,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -4628,9 +4188,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -4650,9 +4208,7 @@
     "/v1/system/status": {
       "get": {
         "operationId": "getPublicSystemStatus",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "degraded/incident 상태",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -4686,9 +4242,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -4699,9 +4253,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -4712,9 +4264,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -4732,9 +4282,7 @@
     "/v1/transparency-reports": {
       "get": {
         "operationId": "listTransparencyReports",
-        "tags": [
-          "operations"
-        ],
+        "tags": ["operations"],
         "summary": "투명성 보고서 목록",
         "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
         "parameters": [
@@ -4779,10 +4327,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "published_desc",
-                "period_desc"
-              ]
+              "enum": ["published_desc", "period_desc"]
             }
           },
           {
@@ -4815,10 +4360,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_CURSOR"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_CURSOR"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -4829,9 +4371,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RATE_LIMITED"
-            ]
+            "x-error-codes": ["RATE_LIMITED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -4842,9 +4382,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -4891,13 +4429,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "AboutContentResponse": {
         "type": "object",
@@ -4937,12 +4469,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "AccessibilityStatement": {
         "type": "object",
@@ -4971,13 +4498,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "AccessibilityStatementResponse": {
         "type": "object",
@@ -5017,12 +4538,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "ActorRef": {
         "type": "object",
@@ -5062,9 +4578,7 @@
             ]
           }
         },
-        "required": [
-          "actorType"
-        ]
+        "required": ["actorType"]
       },
       "AgenciesAppliedFilters": {
         "type": "object",
@@ -5153,11 +4667,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "AgencyCasesAppliedFilters": {
         "type": "object",
@@ -5192,11 +4702,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "AgencyContractsAppliedFilters": {
         "type": "object",
@@ -5231,11 +4737,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "AgencyResponse": {
         "type": "object",
@@ -5322,11 +4824,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "status",
-          "version"
-        ]
+        "required": ["id", "status", "version"]
       },
       "CalculationResult": {
         "type": "object",
@@ -5534,13 +5032,7 @@
             "format": "uri-reference"
           }
         },
-        "required": [
-          "revision",
-          "state",
-          "publishedAt",
-          "summary",
-          "href"
-        ]
+        "required": ["revision", "state", "publishedAt", "summary", "href"]
       },
       "CaseRevisionsPage": {
         "type": "object",
@@ -5567,11 +5059,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "CaseStateCounts": {
         "type": "object",
@@ -5591,12 +5079,7 @@
             "$ref": "#/components/schemas/ResolutionCodeCounts"
           }
         },
-        "required": [
-          "total",
-          "publication",
-          "investigation",
-          "resolution"
-        ]
+        "required": ["total", "publication", "investigation", "resolution"]
       },
       "ComparableRecord": {
         "type": "object",
@@ -5761,13 +5244,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "ContactContentResponse": {
         "type": "object",
@@ -5807,12 +5284,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "ContentSection": {
         "type": "object",
@@ -5838,11 +5310,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "id",
-          "heading",
-          "body"
-        ]
+        "required": ["id", "heading", "body"]
       },
       "ContractChange": {
         "type": "object",
@@ -5924,11 +5392,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "id",
-          "sequence",
-          "sourceDocumentId"
-        ]
+        "required": ["id", "sequence", "sourceDocumentId"]
       },
       "ContractChangesAppliedFilters": {
         "type": "object",
@@ -5963,11 +5427,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "ContractLineItem": {
         "type": "object",
@@ -6247,13 +5707,7 @@
             "format": "uri-reference"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "agency",
-          "status",
-          "href"
-        ]
+        "required": ["id", "title", "agency", "status", "href"]
       },
       "ContractsAppliedFilters": {
         "type": "object",
@@ -6328,11 +5782,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "Correction": {
         "type": "object",
@@ -6426,12 +5876,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "CorrectionSummary": {
         "type": "object",
@@ -6528,11 +5973,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "CoverageGap": {
         "type": "object",
@@ -6576,13 +6017,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "scope",
-          "reason",
-          "impact",
-          "status"
-        ]
+        "required": ["id", "scope", "reason", "impact", "status"]
       },
       "CoverageModel": {
         "type": "object",
@@ -6688,9 +6123,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "label"
-        ]
+        "required": ["label"]
       },
       "EditorialPolicy": {
         "type": "object",
@@ -6719,13 +6152,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "EditorialPolicyResponse": {
         "type": "object",
@@ -6765,12 +6192,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "EntityRef": {
         "type": "object",
@@ -6785,22 +6207,14 @@
           },
           "entityType": {
             "type": "string",
-            "enum": [
-              "AGENCY",
-              "SUPPLIER"
-            ]
+            "enum": ["AGENCY", "SUPPLIER"]
           },
           "href": {
             "type": "string",
             "format": "uri-reference"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "entityType",
-          "href"
-        ]
+        "required": ["id", "name", "entityType", "href"]
       },
       "EvidenceSummary": {
         "type": "object",
@@ -6859,11 +6273,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "record",
-          "exclusionCode",
-          "exclusionReason"
-        ]
+        "required": ["record", "exclusionCode", "exclusionReason"]
       },
       "FactItem": {
         "type": "object",
@@ -6897,20 +6307,12 @@
             ]
           }
         },
-        "required": [
-          "id",
-          "statement",
-          "evidenceIds",
-          "verifiedAt"
-        ]
+        "required": ["id", "statement", "evidenceIds", "verifiedAt"]
       },
       "FieldError": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "field",
-          "message"
-        ],
+        "required": ["field", "message"],
         "properties": {
           "field": {
             "type": "string"
@@ -6966,18 +6368,10 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "CURRENT",
-              "DELAYED",
-              "STALE",
-              "UNKNOWN"
-            ]
+            "enum": ["CURRENT", "DELAYED", "STALE", "UNKNOWN"]
           }
         },
-        "required": [
-          "asOf",
-          "status"
-        ]
+        "required": ["asOf", "status"]
       },
       "FundingContent": {
         "type": "object",
@@ -7006,13 +6400,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "FundingContentResponse": {
         "type": "object",
@@ -7052,12 +6440,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "GovernanceContent": {
         "type": "object",
@@ -7086,13 +6469,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "GovernanceContentResponse": {
         "type": "object",
@@ -7132,12 +6509,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "Identifier": {
         "type": "object",
@@ -7163,11 +6535,7 @@
             ]
           }
         },
-        "required": [
-          "scheme",
-          "value",
-          "verified"
-        ]
+        "required": ["scheme", "value", "verified"]
       },
       "InvestigationStateCounts": {
         "type": "object",
@@ -7220,10 +6588,7 @@
       "Link": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "rel",
-          "href"
-        ],
+        "required": ["rel", "href"],
         "properties": {
           "rel": {
             "type": "string"
@@ -7264,13 +6629,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "MethodologyOverviewResponse": {
         "type": "object",
@@ -7310,12 +6669,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "MetricWithContext": {
         "type": "object",
@@ -7359,21 +6713,12 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "label",
-          "value",
-          "period",
-          "coverageNote"
-        ]
+        "required": ["id", "label", "value", "period", "coverageNote"]
       },
       "Money": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "amount",
-          "currency"
-        ],
+        "required": ["amount", "currency"],
         "properties": {
           "amount": {
             "type": "string",
@@ -7464,13 +6809,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "PrivacyPolicyResponse": {
         "type": "object",
@@ -7510,22 +6849,12 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "ProblemDetails": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status",
-          "requestId"
-        ],
+        "required": ["type", "title", "status", "requestId"],
         "properties": {
           "type": {
             "type": "string",
@@ -7589,13 +6918,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "PublicApiDocumentationResponse": {
         "type": "object",
@@ -7635,12 +6958,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "PublicCaseResponse": {
         "type": "object",
@@ -7969,11 +7287,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "PublicClaim": {
         "type": "object",
@@ -8104,11 +7418,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "PublicEvidence": {
         "type": "object",
@@ -8259,12 +7569,7 @@
             "format": "uri-reference"
           }
         },
-        "required": [
-          "resultType",
-          "id",
-          "title",
-          "href"
-        ]
+        "required": ["resultType", "id", "title", "href"]
       },
       "PublicRecordsSearchResultPage": {
         "type": "object",
@@ -8291,11 +7596,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "PublicSignalSummary": {
         "type": "object",
@@ -8339,11 +7640,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "operational",
-              "degraded",
-              "incident"
-            ]
+            "enum": ["operational", "degraded", "incident"]
           },
           "asOf": {
             "type": "string",
@@ -8365,12 +7662,7 @@
             }
           }
         },
-        "required": [
-          "status",
-          "asOf",
-          "affectedCapabilities",
-          "sourceStatus"
-        ]
+        "required": ["status", "asOf", "affectedCapabilities", "sourceStatus"]
       },
       "PublicationConsentModel": {
         "type": "object",
@@ -8500,12 +7792,7 @@
           },
           "changeType": {
             "type": "string",
-            "enum": [
-              "ADDED",
-              "REMOVED",
-              "CHANGED",
-              "MOVED"
-            ]
+            "enum": ["ADDED", "REMOVED", "CHANGED", "MOVED"]
           },
           "before": {
             "anyOf": [
@@ -8538,10 +7825,7 @@
             ]
           }
         },
-        "required": [
-          "path",
-          "changeType"
-        ]
+        "required": ["path", "changeType"]
       },
       "Rule": {
         "type": "object",
@@ -8630,11 +7914,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "RuleResponse": {
         "type": "object",
@@ -8674,12 +7954,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "RulesAppliedFilters": {
         "type": "object",
@@ -8721,11 +7996,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "SeoMetadata": {
         "type": "object",
@@ -8755,12 +8026,7 @@
             ]
           }
         },
-        "required": [
-          "title",
-          "description",
-          "canonicalUrl",
-          "robots"
-        ]
+        "required": ["title", "description", "canonicalUrl", "robots"]
       },
       "Source": {
         "type": "object",
@@ -8929,12 +8195,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "SourceStatusAppliedFilters": {
         "type": "object",
@@ -8976,11 +8237,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "SourceStatusSummary": {
         "type": "object",
@@ -9028,11 +8285,7 @@
             ]
           }
         },
-        "required": [
-          "sourceId",
-          "displayName",
-          "status"
-        ]
+        "required": ["sourceId", "displayName", "status"]
       },
       "SupplierCasesAppliedFilters": {
         "type": "object",
@@ -9067,11 +8320,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "SupplierContractsAppliedFilters": {
         "type": "object",
@@ -9106,11 +8355,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "SupplierResponse": {
         "type": "object",
@@ -9272,11 +8517,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "Terms": {
         "type": "object",
@@ -9305,13 +8546,7 @@
             }
           }
         },
-        "required": [
-          "version",
-          "title",
-          "updatedAt",
-          "sections",
-          "sourceLinks"
-        ]
+        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
       },
       "TermsResponse": {
         "type": "object",
@@ -9351,12 +8586,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "status",
-          "data",
-          "links"
-        ]
+        "required": ["id", "status", "data", "links"]
       },
       "TimelineItem": {
         "type": "object",
@@ -9407,12 +8637,7 @@
             ]
           }
         },
-        "required": [
-          "id",
-          "occurredAt",
-          "eventType",
-          "title"
-        ]
+        "required": ["id", "occurredAt", "eventType", "title"]
       },
       "TransparencyReportsAppliedFilters": {
         "type": "object",
@@ -9494,11 +8719,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "items",
-          "appliedFilters",
-          "asOf"
-        ]
+        "required": ["items", "appliedFilters", "asOf"]
       },
       "UnknownItem": {
         "type": "object",
@@ -9525,19 +8746,10 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "OPEN",
-              "PARTIALLY_RESOLVED",
-              "RESOLVED"
-            ]
+            "enum": ["OPEN", "PARTIALLY_RESOLVED", "RESOLVED"]
           }
         },
-        "required": [
-          "id",
-          "question",
-          "whyMaterial",
-          "status"
-        ]
+        "required": ["id", "question", "whyMaterial", "status"]
       },
       "money": {
         "type": "object",
@@ -9561,11 +8773,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "id",
-          "status",
-          "version"
-        ]
+        "required": ["id", "status", "version"]
       },
       "object": {
         "type": "object",
@@ -9589,11 +8797,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "id",
-          "status",
-          "version"
-        ]
+        "required": ["id", "status", "version"]
       },
       "uuid-or-string": {
         "type": "object",
@@ -9617,11 +8821,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "id",
-          "status",
-          "version"
-        ]
+        "required": ["id", "status", "version"]
       },
       "CoverageRecordCounts": {
         "type": "object",

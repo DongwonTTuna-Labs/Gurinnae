@@ -11,6 +11,12 @@ pub(super) async fn command(
 ) -> Result<Output, ServiceError> {
     let payload = parse_command_payload(body)?;
     let payload_object = payload.as_object().ok_or(ServiceError::InvalidRequest)?;
+    if operation.id == "createResponseRequest"
+        && let Some(email) = payload_object.get("recipientEmail").and_then(Value::as_str)
+        && !valid_recipient_email(email)
+    {
+        return Err(ServiceError::InvalidRequest);
+    }
     validate_command(operation.id, payload_object)?;
     if gurine_api_contracts::addendum::is_control_operation(operation.id) {
         return addendum_command(operation, request, body, claims, pool, request_id, payload).await;
@@ -68,83 +74,20 @@ pub(super) async fn command(
     Ok(response)
 }
 
-#[derive(sqlx::FromRow)]
-struct AddendumCommandRow {
-    aggregate_id: Uuid,
-    aggregate_version: i64,
-    status: String,
-    accepted_at: OffsetDateTime,
-    response_body: Value,
-    receipt_digest: String,
-    audit_event_id: Uuid,
-    outbox_event_id: Uuid,
+fn valid_recipient_email(value: &str) -> bool {
+    let trimmed = value.trim();
+    let Some((local, domain)) = trimmed.split_once('@') else {
+        return false;
+    };
+    !local.is_empty()
+        && !domain.is_empty()
+        && domain.contains('.')
+        && !domain.starts_with('.')
+        && !domain.ends_with('.')
+        && !trimmed.chars().any(char::is_whitespace)
 }
 
-async fn addendum_command(
-    operation: &OperationSpec,
-    request: &HttpRequest,
-    body: &[u8],
-    claims: &ActorClaims,
-    pool: &PgPool,
-    request_id: Uuid,
-    payload: Value,
-) -> Result<Output, ServiceError> {
-    let actor_id = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
-    let session_id = Uuid::parse_str(&claims.sid).map_err(|_| ServiceError::InvalidRequest)?;
-    let (mut transaction, key, replay) =
-        begin_idempotency(pool, operation, request, body, claims).await?;
-    if let Some(response) = replay {
-        transaction.commit().await.map_err(db)?;
-        return Ok(response);
-    }
-    let row = sqlx::query_as::<_, AddendumCommandRow>(
-        "SELECT aggregate_id,aggregate_version,status,accepted_at,response_body,receipt_digest,audit_event_id,outbox_event_id \
-         FROM ops.apply_control_addendum_command($1,$2,$3,$4,$5,$6,$7)",
-    )
-    .bind(operation.id)
-    .bind(&payload)
-    .bind(actor_id)
-    .bind(session_id)
-    .bind(request_id)
-    .bind(&key.key_hash)
-    .bind(&key.request_hash)
-    .fetch_one(&mut *transaction)
-    .await
-    .map_err(db)?;
-    let _persisted_receipt_metadata = (
-        row.aggregate_version,
-        &row.status,
-        row.accepted_at,
-        &row.receipt_digest,
-        row.audit_event_id,
-        row.outbox_event_id,
-    );
-    let response = response_for(operation, &row.response_body)?;
-    sqlx::query(
-        "UPDATE ops.idempotency_keys SET response_status=$3,response_body=$4,resource_type=$5,resource_id=$6 \
-         WHERE scope=$1 AND key_hash=$2",
-    )
-    .bind(&key.scope)
-    .bind(&key.key_hash)
-    .bind(i32::from(operation.success_status))
-    .bind(&response)
-    .bind(gurine_api_contracts::addendum::persistence_owner(operation.id).ok_or(ServiceError::Persistence)?)
-    .bind(row.aggregate_id.to_string())
-    .execute(&mut *transaction)
-    .await
-    .map_err(db)?;
-    transaction.commit().await.map_err(db)?;
-    Ok(Output {
-        status: operation.success_status,
-        media_type: if operation.success_status == 204 {
-            ""
-        } else {
-            "application/json"
-        },
-        body: response,
-        replay: false,
-    })
-}
+include!("command_addendum.rs");
 
 fn parse_command_payload(body: &[u8]) -> Result<Value, ServiceError> {
     if body.is_empty() {
@@ -190,6 +133,14 @@ async fn begin_idempotency<'a>(
         .map_err(|_| ServiceError::InvalidRequest)?,
     };
     let mut transaction = pool.begin().await.map_err(db)?;
+    // All control mutations share the same serializable boundary.  Journey
+    // owner routines require this before their first statement; applying it
+    // here also prevents a caller from accidentally running a mixed-strength
+    // transaction through the generic dispatcher.
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        .execute(&mut *transaction)
+        .await
+        .map_err(db)?;
     let inserted = sqlx::query(
         "INSERT INTO ops.idempotency_keys(scope,key_hash,request_hash,expires_at) VALUES($1,$2,$3,clock_timestamp()+interval '24 hours') ON CONFLICT DO NOTHING",
     )
@@ -289,13 +240,34 @@ async fn prepare_command(
     transaction: &mut Transaction<'_, Postgres>,
 ) -> Result<PreparedCommand, ServiceError> {
     let canonical_payload = command_parameters(request, payload_object);
-    // triageSignal owns its optimistic update in the specialized handler.  It
-    // must validate the expected version and append the typed duplicate
-    // metadata in the same UPDATE; running the generic guard first would
-    // increment the signal version and make that handler either reject the
-    // request or advance the aggregate twice.  All other operations keep the
-    // shared guard path.
-    let canonical_version = if operation.id == "triageSignal" {
+    if operation.id == "publishCase" {
+        let case_id =
+            uuid_value(payload_object, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
+        let snapshot_id = uuid_value(payload_object, &["reviewSnapshotId"])
+            .ok_or(ServiceError::InvalidRequest)?;
+        let valid = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM editorial.review_snapshots s \
+             JOIN editorial.cases c ON c.id=s.case_id \
+             WHERE s.id=$1 AND s.case_id=$2 AND c.current_review_snapshot_id=$1 \
+               AND s.unresolved_blockers='[]'::jsonb)",
+        )
+        .bind(snapshot_id)
+        .bind(case_id)
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(db)?;
+        if !valid {
+            return Err(ServiceError::InvalidRequest);
+        }
+    }
+    // These specialized handlers own their optimistic update and therefore
+    // must validate the expected version and mutate the aggregate atomically.
+    // Running the generic guard first would increment the row before the
+    // handler sees it, causing a false VERSION_CONFLICT or a double advance.
+    let canonical_version = if matches!(
+        operation.id,
+        "triageSignal" | "acceptAgentSuggestion" | "rejectAgentSuggestion"
+    ) {
         None
     } else {
         canonical_guard(operation.id, &canonical_payload, actor_id, transaction).await?

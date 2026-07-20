@@ -44,10 +44,7 @@
             "minimum": 1
           },
           "entityKind": {
-            "enum": [
-              "AGENCY",
-              "SUPPLIER"
-            ]
+            "enum": ["AGENCY", "SUPPLIER"]
           },
           "canonicalName": {
             "type": "string",
@@ -55,12 +52,7 @@
             "maxLength": 255
           },
           "identityStatus": {
-            "enum": [
-              "VERIFIED",
-              "PROVISIONAL",
-              "DISPUTED",
-              "SUPERSEDED"
-            ]
+            "enum": ["VERIFIED", "PROVISIONAL", "DISPUTED", "SUPERSEDED"]
           },
           "matchedIdentifiers": {
             "type": "array",
@@ -69,11 +61,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "kind",
-                "displayValue",
-                "matchReason"
-              ],
+              "required": ["kind", "displayValue", "matchReason"],
               "properties": {
                 "kind": {
                   "enum": [
@@ -90,11 +78,7 @@
                   "maxLength": 255
                 },
                 "matchReason": {
-                  "enum": [
-                    "EXACT",
-                    "NORMALIZED_EXACT",
-                    "VERIFIED_ALIAS"
-                  ]
+                  "enum": ["EXACT", "NORMALIZED_EXACT", "VERIFIED_ALIAS"]
                 }
               }
             }

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "summary",
+    "citations",
+    "unknowns",
+    "abstention_reasons"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "COMPLETED",
+        "ABSTAINED",
+        "POLICY_BLOCKED",
+        "BUDGET_BLOCKED"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 6000
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence_id",
+          "locator",
+          "supports"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locator": {
+            "type": "string"
+          },
+          "supports": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "abstention_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recommended_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action_type",
+          "reason"
+        ],
+        "properties": {
+          "action_type": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "comparables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_url",
+          "observed_at",
+          "unit",
+          "unit_price",
+          "compatibility",
+          "limitations"
+        ],
+        "properties": {
+          "source_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "string"
+          },
+          "compatibility": {
+            "enum": [
+              "POTENTIAL",
+              "INCOMPATIBLE",
+              "UNKNOWN"
+            ]
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

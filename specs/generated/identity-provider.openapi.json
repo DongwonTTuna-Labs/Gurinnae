@@ -19,9 +19,7 @@
     "/auth/callback": {
       "get": {
         "operationId": "completeOidcCallback",
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "completeOidcCallback",
         "description": "Final v13 contract. Kind: COMMAND. Capability: none.",
         "parameters": [
@@ -82,9 +80,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "401": {
             "description": "Problem response: TOKEN_INVALID",
@@ -95,9 +91,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "TOKEN_INVALID"
-            ]
+            "x-error-codes": ["TOKEN_INVALID"]
           },
           "409": {
             "description": "Problem response: VERSION_CONFLICT",
@@ -108,9 +102,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "VERSION_CONFLICT"
-            ]
+            "x-error-codes": ["VERSION_CONFLICT"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -121,9 +113,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: DEPENDENCY_UNAVAILABLE",
@@ -134,9 +124,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "DEPENDENCY_UNAVAILABLE"
-            ]
+            "x-error-codes": ["DEPENDENCY_UNAVAILABLE"]
           }
         },
         "x-operation-kind": "COMMAND",
@@ -166,9 +154,7 @@
     "/auth/login": {
       "get": {
         "operationId": "startOidcLogin",
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "OIDC authorization / OIDC 재시작",
         "description": "Final v13 contract. Kind: COMMAND. Capability: none.",
         "parameters": [
@@ -213,9 +199,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -226,9 +210,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: DEPENDENCY_UNAVAILABLE",
@@ -239,9 +221,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "DEPENDENCY_UNAVAILABLE"
-            ]
+            "x-error-codes": ["DEPENDENCY_UNAVAILABLE"]
           }
         },
         "x-operation-kind": "COMMAND",
@@ -265,9 +245,7 @@
     "/auth/logout": {
       "post": {
         "operationId": "logoutInternalSession",
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "logoutInternalSession",
         "description": "Final v13 contract. Kind: COMMAND. Capability: none.",
         "parameters": [
@@ -304,10 +282,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_REQUEST"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"]
           },
           "401": {
             "description": "Problem response: AUTHENTICATION_REQUIRED, SESSION_EXPIRED",
@@ -318,10 +293,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "AUTHENTICATION_REQUIRED",
-              "SESSION_EXPIRED"
-            ]
+            "x-error-codes": ["AUTHENTICATION_REQUIRED", "SESSION_EXPIRED"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -332,9 +304,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "409": {
             "description": "Problem response: IDEMPOTENCY_CONFLICT",
@@ -345,9 +315,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "IDEMPOTENCY_CONFLICT"
-            ]
+            "x-error-codes": ["IDEMPOTENCY_CONFLICT"]
           },
           "413": {
             "description": "Problem response: PAYLOAD_TOO_LARGE",
@@ -358,9 +326,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "PAYLOAD_TOO_LARGE"
-            ]
+            "x-error-codes": ["PAYLOAD_TOO_LARGE"]
           },
           "415": {
             "description": "Problem response: UNSUPPORTED_MEDIA_TYPE",
@@ -371,9 +337,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "UNSUPPORTED_MEDIA_TYPE"
-            ]
+            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"]
           },
           "422": {
             "description": "Problem response: PRECONDITION_FAILED, VALIDATION_FAILED",
@@ -384,10 +348,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "PRECONDITION_FAILED",
-              "VALIDATION_FAILED"
-            ]
+            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -398,9 +359,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "COMMAND",
@@ -446,9 +405,7 @@
     "/auth/security-management": {
       "get": {
         "operationId": "getSecurityManagementRedirect",
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "getSecurityManagementRedirect",
         "description": "Final v13 contract. Kind: QUERY. Capability: none.",
         "parameters": [
@@ -493,9 +450,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "401": {
             "description": "Problem response: AUTHENTICATION_REQUIRED",
@@ -506,9 +461,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "AUTHENTICATION_REQUIRED"
-            ]
+            "x-error-codes": ["AUTHENTICATION_REQUIRED"]
           },
           "404": {
             "description": "Problem response: RESOURCE_NOT_FOUND",
@@ -519,9 +472,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "RESOURCE_NOT_FOUND"
-            ]
+            "x-error-codes": ["RESOURCE_NOT_FOUND"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -532,9 +483,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -557,9 +506,7 @@
     "/auth/step-up/start": {
       "post": {
         "operationId": "startStepUpAuthentication",
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "고위험 행동에 결합된 OIDC step-up transaction 시작",
         "description": "Final v13 contract. Kind: COMMAND. Capability: none.",
         "parameters": [
@@ -605,10 +552,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER",
-              "INVALID_REQUEST"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER", "INVALID_REQUEST"]
           },
           "401": {
             "description": "Problem response: AUTHENTICATION_REQUIRED, SESSION_EXPIRED",
@@ -619,10 +563,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "AUTHENTICATION_REQUIRED",
-              "SESSION_EXPIRED"
-            ]
+            "x-error-codes": ["AUTHENTICATION_REQUIRED", "SESSION_EXPIRED"]
           },
           "403": {
             "description": "Problem response: CSRF_FAILED",
@@ -633,9 +574,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "CSRF_FAILED"
-            ]
+            "x-error-codes": ["CSRF_FAILED"]
           },
           "409": {
             "description": "Problem response: IDEMPOTENCY_CONFLICT",
@@ -646,9 +585,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "IDEMPOTENCY_CONFLICT"
-            ]
+            "x-error-codes": ["IDEMPOTENCY_CONFLICT"]
           },
           "413": {
             "description": "Problem response: PAYLOAD_TOO_LARGE",
@@ -659,9 +596,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "PAYLOAD_TOO_LARGE"
-            ]
+            "x-error-codes": ["PAYLOAD_TOO_LARGE"]
           },
           "415": {
             "description": "Problem response: UNSUPPORTED_MEDIA_TYPE",
@@ -672,9 +607,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "UNSUPPORTED_MEDIA_TYPE"
-            ]
+            "x-error-codes": ["UNSUPPORTED_MEDIA_TYPE"]
           },
           "422": {
             "description": "Problem response: PRECONDITION_FAILED, VALIDATION_FAILED",
@@ -685,10 +618,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "PRECONDITION_FAILED",
-              "VALIDATION_FAILED"
-            ]
+            "x-error-codes": ["PRECONDITION_FAILED", "VALIDATION_FAILED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -699,9 +629,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: DEPENDENCY_UNAVAILABLE",
@@ -712,9 +640,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "DEPENDENCY_UNAVAILABLE"
-            ]
+            "x-error-codes": ["DEPENDENCY_UNAVAILABLE"]
           }
         },
         "x-operation-kind": "COMMAND",
@@ -761,9 +687,7 @@
     "/auth/step-up/callback": {
       "get": {
         "operationId": "completeStepUpAuthentication",
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "MFA/step-up",
         "description": "Final v13 contract. Kind: COMMAND. Capability: none.",
         "parameters": [
@@ -824,9 +748,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INVALID_PARAMETER"
-            ]
+            "x-error-codes": ["INVALID_PARAMETER"]
           },
           "401": {
             "description": "Problem response: AUTHENTICATION_REQUIRED, SESSION_EXPIRED, TOKEN_INVALID",
@@ -852,9 +774,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "VERSION_CONFLICT"
-            ]
+            "x-error-codes": ["VERSION_CONFLICT"]
           },
           "422": {
             "description": "Problem response: PRECONDITION_FAILED",
@@ -865,9 +785,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "PRECONDITION_FAILED"
-            ]
+            "x-error-codes": ["PRECONDITION_FAILED"]
           },
           "500": {
             "description": "Problem response: INTERNAL_ERROR",
@@ -878,9 +796,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "INTERNAL_ERROR"
-            ]
+            "x-error-codes": ["INTERNAL_ERROR"]
           },
           "503": {
             "description": "Problem response: DEPENDENCY_UNAVAILABLE",
@@ -891,9 +807,7 @@
                 }
               }
             },
-            "x-error-codes": [
-              "DEPENDENCY_UNAVAILABLE"
-            ]
+            "x-error-codes": ["DEPENDENCY_UNAVAILABLE"]
           }
         },
         "x-operation-kind": "COMMAND",
@@ -947,10 +861,7 @@
       "FieldError": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "field",
-          "message"
-        ],
+        "required": ["field", "message"],
         "properties": {
           "field": {
             "type": "string"
@@ -966,12 +877,7 @@
       "ProblemDetails": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status",
-          "requestId"
-        ],
+        "required": ["type", "title", "status", "requestId"],
         "properties": {
           "type": {
             "type": "string",
@@ -1020,9 +926,7 @@
             "format": "uri-reference"
           }
         },
-        "required": [
-          "csrfToken"
-        ]
+        "required": ["csrfToken"]
       },
       "startStepUpAuthenticationRequest": {
         "type": "object",
@@ -1041,11 +945,7 @@
             "maxLength": 64
           }
         },
-        "required": [
-          "returnTo",
-          "actionDescriptor",
-          "csrfToken"
-        ]
+        "required": ["returnTo", "actionDescriptor", "csrfToken"]
       },
       "CoverageRecordCounts": {
         "type": "object",

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "OPS-006",
+  "route": "/internal/operations/kill-switches",
+  "url": "http://127.0.0.1:29102/internal/operations/kill-switches",
+  "observedAt": "2026-07-19T15:35:52.152Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "OPS-006",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "active",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "catalog",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "impact",
+        "component": "AccessManagementPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "approval",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "history",
+        "component": "RevisionTimeline",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "runbook",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

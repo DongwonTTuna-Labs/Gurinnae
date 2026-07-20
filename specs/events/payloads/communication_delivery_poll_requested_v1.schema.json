@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.local/schemas/payloads/communication_delivery_poll_requested_v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pollKey",
+    "deliveryId",
+    "expectedDeliveryVersion",
+    "channel",
+    "providerMessageId",
+    "providerConfigId",
+    "providerConfigVersion",
+    "providerConfigurationDigest",
+    "providerPreflightReceiptId",
+    "providerPreflightReceiptDigest"
+  ],
+  "properties": {
+    "pollKey": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "deliveryId": { "type": "string", "format": "uuid" },
+    "expectedDeliveryVersion": { "type": "integer", "minimum": 1 },
+    "channel": { "type": "string", "enum": ["SMS", "KAKAO"] },
+    "providerMessageId": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "providerConfigId": { "type": "string", "format": "uuid" },
+    "providerConfigVersion": { "type": "integer", "minimum": 1 },
+    "providerConfigurationDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "providerPreflightReceiptId": { "type": "string", "format": "uuid" },
+    "providerPreflightReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

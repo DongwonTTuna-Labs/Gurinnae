@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 4,
+  "evidenceKind": "LIVE_POSTGRES_KILL_SWITCH_FLOW",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "flowId": "FLOW-10",
+  "flowName": "INCIDENT_KILL_SWITCH",
+  "operationId": "activateKillSwitch",
+  "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "normal": {
+    "pass": true,
+    "scope": "narrow",
+    "finalState": "INACTIVE",
+    "incidentId": "16194281-8a10-44db-9639-4ac24d5a1f58",
+    "operations": [
+      "activateKillSwitch",
+      "deactivateKillSwitch"
+    ],
+    "staleError": "40001:kill_switch_version_conflict",
+    "activeState": "ACTIVE",
+    "expiryBound": true,
+    "sodVerified": true,
+    "finalVersion": 3,
+    "killSwitchId": "59c5412d-515f-4890-a28c-f25e4460aaeb",
+    "activateReceipt": {
+      "links": [],
+      "status": "COMPLETED",
+      "incident": {
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "detected": true,
+        "severity": "MINOR",
+        "incidentId": "16194281-8a10-44db-9639-4ac24d5a1f58"
+      },
+      "requestId": "5be04bd6-f5f7-47e4-b0a5-26992d4bbed5",
+      "acceptedAt": "2026-07-20T19:38:08.580344+00:00",
+      "killSwitch": {
+        "id": "59c5412d-515f-4890-a28c-f25e4460aaeb",
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "state": "ACTIVE",
+        "reason": "pdm verified incident",
+        "version": 2,
+        "expiresAt": "2026-07-20T19:53:08.579482+00:00",
+        "activatedAt": "2026-07-20T19:38:08.580344+00:00",
+        "deactivatedAt": null
+      },
+      "aggregateId": "59c5412d-515f-4890-a28c-f25e4460aaeb",
+      "operationId": "activateKillSwitch",
+      "auditEventId": "b897a599-e0ff-4eaf-8979-9f748ebaab81",
+      "receiptDigest": "6cd6f88bce3cba26a6770a7ad0b721792f985c2771e4fdf12a76951ddf357d43",
+      "emittedEventIds": [
+        "9669857e-57a0-49ed-bee1-99505b55f84e"
+      ],
+      "aggregateVersion": 2,
+      "separationOfDuty": {
+        "distinct": true,
+        "required": false,
+        "operatorId": "a1b3c771-8c21-4685-b313-7b48933d2683",
+        "secondApproverId": null
+      }
+    },
+    "incidentDetected": true,
+    "deactivateReceipt": {
+      "links": [],
+      "status": "COMPLETED",
+      "incident": {
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "detected": true,
+        "severity": null,
+        "incidentId": "16194281-8a10-44db-9639-4ac24d5a1f58"
+      },
+      "requestId": "cad8d506-15f4-433e-84cf-0c62dc51ce44",
+      "acceptedAt": "2026-07-20T19:38:08.58871+00:00",
+      "killSwitch": {
+        "id": "59c5412d-515f-4890-a28c-f25e4460aaeb",
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "state": "INACTIVE",
+        "reason": "pdm recovery verified",
+        "version": 3,
+        "expiresAt": "2026-07-20T19:53:08.579482+00:00",
+        "activatedAt": "2026-07-20T19:38:08.580344+00:00",
+        "deactivatedAt": "2026-07-20T19:38:08.58871+00:00"
+      },
+      "aggregateId": "59c5412d-515f-4890-a28c-f25e4460aaeb",
+      "operationId": "deactivateKillSwitch",
+      "auditEventId": "475d7abe-35fc-4386-b151-cff28e0d8bd3",
+      "receiptDigest": "7c9b4e726d2dd802ecf99ba96128f6b9b2a31b571c7c80cebc68707a2cd6b0a9",
+      "emittedEventIds": [
+        "7c1700b5-f823-473c-b1b0-4c1fefdf7adb"
+      ],
+      "aggregateVersion": 3,
+      "separationOfDuty": {
+        "distinct": true,
+        "required": false,
+        "operatorId": "5b6e9b90-f308-487f-9996-d66735e1b71c",
+        "secondApproverId": null
+      }
+    }
+  },
+  "negative": {
+    "branch": "stale-expected-version",
+    "expectedError": "40001:kill_switch_version_conflict",
+    "observedError": "40001:kill_switch_version_conflict",
+    "forbiddenMutationCount": 0,
+    "pass": true
+  },
+  "sourceTreeDigest": "9ecdfa4c56c7fa04cb9808cef46b0b1bb2b2edbdfc521c3a6a453c419827a190",
+  "pass": true
+}

@@ -64,7 +64,7 @@ pub async fn recover_expired(pool: &PgPool, limit: u32) -> Result<u64, JobError>
         let updated = sqlx::query(
             "UPDATE ops.jobs SET \
                status=CASE WHEN $2 THEN 'QUEUED'::ops.job_status ELSE 'DEAD_LETTER'::ops.job_status END, \
-               run_after=CASE WHEN $2 THEN clock_timestamp()+make_interval(secs=>$3) ELSE run_after END, \
+               run_after=CASE WHEN $2 THEN clock_timestamp()+($3 * INTERVAL '1 second') ELSE run_after END, \
                completed_at=CASE WHEN $2 THEN NULL ELSE clock_timestamp() END, \
                lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL, \
                last_error_code='LEASE_EXPIRED',last_error_detail='worker lease expired before completion', \
@@ -123,13 +123,12 @@ impl Worker {
     pub async fn claim(&self, pool: &PgPool) -> Result<Option<ClaimedJob>, JobError> {
         let mut tx = pool.begin().await.map_err(JobError::Database)?;
         let row = sqlx::query(
-            "SELECT j.id,j.job_type,j.queue,j.payload,j.attempt_count,j.max_attempts \
-             FROM ops.jobs j \
-             LEFT JOIN ops.queue_controls q ON q.queue_name=j.queue \
-             WHERE j.queue=$1 AND j.status='QUEUED' AND j.run_after<=clock_timestamp() \
-               AND COALESCE(q.state,'RUNNING')='RUNNING' \
-             ORDER BY j.priority,j.created_at,j.id \
-             FOR UPDATE OF j SKIP LOCKED LIMIT 1",
+            "SELECT id,job_type,queue,payload,attempt_count,max_attempts \
+             FROM ops.jobs \
+             WHERE queue=$1 AND status='QUEUED' AND run_after<=clock_timestamp() \
+               AND COALESCE((SELECT state FROM ops.queue_controls WHERE queue_name=queue),'RUNNING')='RUNNING' \
+             ORDER BY priority,created_at,id \
+             FOR UPDATE SKIP LOCKED LIMIT 1",
         )
         .bind(&self.queue)
         .fetch_optional(&mut *tx)

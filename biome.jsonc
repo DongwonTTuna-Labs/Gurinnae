@@ -13,7 +13,13 @@
       "!!**/vendor",
       "!!**/.sqlx",
       "!!**/generated",
-      "!!specs/api/control-api.openapi.json"
+      "!!**/generated-procurement",
+      "!!specs/api/control-api.openapi.json",
+      "!!authority-v13",
+      "!!authority-v13",
+      "!!validator-procurement-*.json",
+      "!!database-procurement-*.json",
+      "!!design-procurement-*.json"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
