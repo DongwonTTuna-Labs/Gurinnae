@@ -28190,18 +28190,22 @@ screens:
         type: BudgetSummary
         allowed_fields:
         - alertThreshold
+        - asOf
         - currency
         - dailyLimit
         - dailyUsed
         - fallbackAction
         - forecastAssumption
+        - forecastConfidence
         - hardLimit
         - lastChangeReason
         - lastChangedBy
         - monthlyLimit
         - monthlyUsed
+        - reservationSummary
         - softLimit
         - status
+        - unknownReason
         additional_properties: false
       array_item_fields:
       - path: unread_unknowns[]
