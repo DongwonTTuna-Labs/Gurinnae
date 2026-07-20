@@ -5,7 +5,7 @@
   "flowId": "FLOW-08",
   "flowName": "HIGH_IMPACT_ACTION",
   "operationId": "submitActionDecision",
-  "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+  "correlationId": "2bd680ad-ba47-49d2-b8e4-f612e6c4e985",
   "postgres": {
     "image": "postgres:18.4-bookworm",
     "migrationCount": 30,
@@ -15,26 +15,26 @@
     "pass": true,
     "assurance": "STEP_UP",
     "sodDenied": "40001:action_review_already_claimed",
-    "decisionId": "61ec92ec-000f-4c4e-91e1-1edf2e94d477",
-    "proposalId": "0ff97bc7-2830-4895-bf2b-c6751da6ea4f",
-    "assignmentId": "bcfe0bbf-ed5b-4b7f-9b67-793dca42f716",
+    "decisionId": "1c6aabfb-4d40-4702-937e-d5f02b962b6d",
+    "proposalId": "5221c0ae-a3c8-46af-b9f1-889bf1ee1411",
+    "assignmentId": "7924e817-0a51-494f-aed3-11359431b791",
     "stepUpDenied": "42501:step_up_required",
     "terminalState": "APPROVED",
-    "approvalDigest": "cde4389b1c0c8d09b59c733a6a6b864eb465f21fdfd2d70deda2d1e60f9d7c96",
+    "approvalDigest": "fa826173be2eb097c52c9a6cc70cf9a172224f259964b448852ec438f1109082",
     "oidcLoginConsumed": true,
     "oidcStepUpConsumed": true,
     "expiredStepUpDenied": "22023:invalid_step_up_authorization_expiry",
     "stepUpAuthorization": {
-      "issuedAt": "2026-07-20T19:38:07.720422+00:00",
-      "expiresAt": "2026-07-20T19:42:07.718583+00:00",
+      "issuedAt": "2026-07-20T20:09:55.193748+00:00",
+      "expiresAt": "2026-07-20T20:13:55.188859+00:00",
       "issueNumber": 1,
-      "authorizationId": "6ecc0bb4-0fae-4b1a-a395-eea291cf3ace",
-      "authorizationDigest": "837f07e8e9dff940c214a43ee6c04dc2ed082e10fcfdc25655775631e143bc9b",
-      "authorizationReceiptDigest": "ae34224216ac7fad16191b1638b5ec798b8081640248558656ab3d99905a9f05"
+      "authorizationId": "fa2476c1-94b1-42bb-bc07-e47b0cc71e30",
+      "authorizationDigest": "775081445cd09228fcbad89ff2ddfcff680a58dc690e252a6e3287148ec849c3",
+      "authorizationReceiptDigest": "5081cf0660bae4ec5a25b456f0b780e8b16ac263e693e6435b86e6f4ff36ed37"
     },
-    "decisionAuditEventId": "6319aa0b-bb73-49a9-9b14-a0e9ec2d9dc2",
-    "decisionReceiptDigest": "ad3095119e2b99d364b84906149158ab968a6858c1e942867246f61b561d662e",
-    "terminalReceiptDigest": "ad3095119e2b99d364b84906149158ab968a6858c1e942867246f61b561d662e",
+    "decisionAuditEventId": "456bc365-d954-4bd0-9c63-435e6b3bf2ba",
+    "decisionReceiptDigest": "0248bb9525c6c222f179dbfd3c800ca700bd2f0cef7d1a1dda0fbdb7be0e9ce0",
+    "terminalReceiptDigest": "0248bb9525c6c222f179dbfd3c800ca700bd2f0cef7d1a1dda0fbdb7be0e9ce0",
     "oidcLoginTransactionId": "11000000-0000-0000-0000-000000000101",
     "oidcStepUpTransactionId": "11000000-0000-0000-0000-000000000102"
   },
@@ -50,7 +50,7 @@
     "forbiddenMutationCount": 0,
     "pass": true
   },
-  "sourceTreeDigest": "9ecdfa4c56c7fa04cb9808cef46b0b1bb2b2edbdfc521c3a6a453c419827a190",
-  "observedAt": "2026-07-20T19:38:08Z",
+  "sourceTreeDigest": "8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060",
+  "observedAt": "2026-07-20T20:09:56Z",
   "pass": true
 }

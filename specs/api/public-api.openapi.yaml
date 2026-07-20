@@ -3508,6 +3508,37 @@ components:
           type: string
         version:
           type: integer
+        binary:
+          type: string
+          format: binary
+        filename:
+          type: string
+        mediaType:
+          type: string
+        byteLength:
+          type: integer
+          format: int64
+        contentSha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        receiptSha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        contentBase64:
+          type: string
+        format:
+          type: string
+        rowCount:
+          type: integer
+          format: int64
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        groupBy:
+          type: string
       required:
       - id
       - status

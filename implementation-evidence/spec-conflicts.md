@@ -212,6 +212,27 @@ Exact tuple resolution:
   treat case freshness as evidence retrieval, or silently jump revision.
 - Status: `OPEN_IMPLEMENTATION`.
 
+## SPEC-CONFLICT-012 — Cost export binary versus shared download envelope
+
+- Conflicting authority rows: `specs/api/operation-contracts.yaml` requires
+  `exportCostReport.response_fields.binary` plus filename/media type/length and
+  checksum evidence, while the shared `BinaryDownload` resource originally
+  required only `id/status/version` and forbade additional properties.
+- Resolution: preserve the shared envelope for existing download operations and
+  extend its closed schema with optional receipt metadata.  The control API's
+  `exportCostReport` path is a server-owned subtype: `response_for` preserves the
+  immutable CSV/JSON bytes and the handler MUST emit `binary`, `contentBase64`,
+  `contentSha256`, `receiptSha256`, filename, media type, byte length, period and
+  grouping.  The owner SECURITY DEFINER projection reads the reservation,
+  settlement and cost-event ledger with a half-open `[from,to)` window; no
+  direct ledger table privilege is granted to the control role.
+- Rejected alternative: silently strip the binary fields through the generic
+  materializer or synthesize a zero-cost report from `agent_runs`.
+- Required follow-up: generated OpenAPI/client schemas, response samples and a
+  live authenticated OPS-004 export witness must all carry the same content and
+  receipt digests before release freeze.
+- Status: `DECISION_COMPLETE`.
+
 ## USER-ADDENDUM-001 — 2026-07-14 product steering
 
 - Statement: the product owner requires low-cognitive-load journeys, consistent

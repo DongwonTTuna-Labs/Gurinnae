@@ -5,7 +5,7 @@
   "flowId": "FLOW-04",
   "flowName": "RESPONSE_REQUEST_SUBMISSION",
   "operationId": "createResponseRequest",
-  "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+  "correlationId": "2bd680ad-ba47-49d2-b8e4-f612e6c4e985",
   "postgres": {
     "image": "postgres:18.4-bookworm",
     "migrationCount": 30,
@@ -13,24 +13,24 @@
   },
   "normal": {
     "pass": true,
-    "caseId": "1867b0f4-a36c-4e78-97a5-af9f9f0fb352",
-    "requestId": "f44f75b9-5669-49d8-a420-b06ca3e10eb8",
+    "caseId": "721975a0-886a-4c86-84f5-0e26dff23a34",
+    "requestId": "94aecf9a-df45-403d-8779-be0e80b6bcef",
     "caseVersion": 2,
-    "auditEventId": "3e60c364-2a4e-470b-82c4-6e8b4d490e1f",
+    "auditEventId": "84305500-f3d3-4f57-8e4c-0134e6c2e9da",
     "draftVersion": 1,
-    "submissionId": "6e328607-9360-4a44-aefd-6d8bca569e4d",
+    "submissionId": "c5a163af-c2e5-47bc-8f14-9053b77027b5",
     "requestStatus": "SUBMITTED",
     "requestVersion": 2,
     "receiptReadback": {
-      "id": "6e328607-9360-4a44-aefd-6d8bca569e4d",
+      "id": "c5a163af-c2e5-47bc-8f14-9053b77027b5",
       "status": "SUBMITTED",
-      "submitted_at": "2026-07-20T19:38:04.914914+00:00",
+      "submitted_at": "2026-07-20T20:09:49.66168+00:00",
       "draft_version": 1,
-      "submission_sha256": "7aee89b52bb50e435c817a3449775f704486ac5a32ef21b69818c86fe3dc01ad",
+      "submission_sha256": "faf3f8670450669143156b647907b565fded36fb28f37482e91cc24a91947a07",
       "publication_consent": {
         "consent": "PUBLIC_EXCERPT"
       },
-      "response_request_id": "f44f75b9-5669-49d8-a420-b06ca3e10eb8",
+      "response_request_id": "94aecf9a-df45-403d-8779-be0e80b6bcef",
       "editorial_response_id": null,
       "receipt_token_consumed_at": null
     },
@@ -38,31 +38,31 @@
     "followUpTaskCount": 1,
     "activeSessionState": "CONSUMED",
     "requestOutboxCount": 2,
-    "createReceiptDigest": "a9c49cfeeb1e8b1ab8c8c02362170e6538b5e541a3b41464c7d0c4420eeb8180",
+    "createReceiptDigest": "7899f2461f4e50529805f6dfff01c611725fe3de40af77c31db2ed2ce8b6d921",
     "pendingSessionState": "CONSUMED",
     "receiptSessionCount": 1,
     "attachmentScanStatus": "CLEAN",
     "submissionOutboxCount": 1,
     "attachmentUploadStatus": "FINALIZED",
-    "submissionAuditEventId": "521228f4-97bf-424c-a188-8b5cb2bac309",
+    "submissionAuditEventId": "3ff6e0f2-1693-467d-9760-c0027a42af44",
     "submissionDraftVersion": 1,
     "flowId": "FLOW-04",
     "operationId": "submitResponse",
     "createResponseRequestReceipt": {
       "operationId": "createResponseRequest",
-      "aggregateId": "f44f75b9-5669-49d8-a420-b06ca3e10eb8",
+      "aggregateId": "94aecf9a-df45-403d-8779-be0e80b6bcef",
       "aggregateVersion": 1,
       "status": "SENT",
-      "auditEventId": "3e60c364-2a4e-470b-82c4-6e8b4d490e1f",
-      "receiptDigest": "a9c49cfeeb1e8b1ab8c8c02362170e6538b5e541a3b41464c7d0c4420eeb8180",
+      "auditEventId": "84305500-f3d3-4f57-8e4c-0134e6c2e9da",
+      "receiptDigest": "7899f2461f4e50529805f6dfff01c611725fe3de40af77c31db2ed2ce8b6d921",
       "outboxEventCount": 2
     },
     "submitResponseReceipt": {
       "operationId": "submitResponse",
-      "aggregateId": "6e328607-9360-4a44-aefd-6d8bca569e4d",
+      "aggregateId": "c5a163af-c2e5-47bc-8f14-9053b77027b5",
       "status": "SUBMITTED",
       "receiptSessionCount": 1,
-      "auditEventId": "521228f4-97bf-424c-a188-8b5cb2bac309",
+      "auditEventId": "3ff6e0f2-1693-467d-9760-c0027a42af44",
       "outboxEventCount": 1
     },
     "operations": [
@@ -98,7 +98,7 @@
     },
     "pass": true
   },
-  "sourceTreeDigest": "9ecdfa4c56c7fa04cb9808cef46b0b1bb2b2edbdfc521c3a6a453c419827a190",
-  "observedAt": "2026-07-20T19:38:05Z",
+  "sourceTreeDigest": "8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060",
+  "observedAt": "2026-07-20T20:09:51Z",
   "pass": true
 }

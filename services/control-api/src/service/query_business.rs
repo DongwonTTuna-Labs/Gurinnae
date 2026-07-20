@@ -7,49 +7,7 @@ pub(super) async fn business_health_query(
     _parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let data: Value = sqlx::query_scalar(
-        "SELECT jsonb_build_object(
-          'summary', jsonb_build_object(
-            'currency', COALESCE((SELECT currency::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1), 'UNKNOWN'),
-            'dailyLimit', COALESCE((SELECT daily_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1), '0'),
-            'dailyUsed', CASE WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) = 1 THEN (SELECT sum(amount)::text FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) ELSE NULL END,
-            'monthlyLimit', COALESCE((SELECT monthly_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1), '0'),
-            'monthlyUsed', CASE WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('month', clock_timestamp())) = 1 THEN (SELECT sum(amount)::text FROM ops.cost_events WHERE occurred_at >= date_trunc('month', clock_timestamp())) ELSE NULL END,
-            'status', CASE
-              WHEN NOT EXISTS (SELECT 1 FROM ops.budget_limits) THEN 'UNKNOWN_NO_BUDGET_LIMIT'
-              WHEN NOT EXISTS (SELECT 1 FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) THEN 'UNKNOWN_NO_COST_OBSERVATION'
-              WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) <> 1 THEN 'UNKNOWN_MIXED_DAILY_CURRENCY'
-              WHEN (SELECT count(DISTINCT currency) FROM ops.cost_events WHERE occurred_at >= date_trunc('month', clock_timestamp())) <> 1 THEN 'UNKNOWN_MIXED_MONTHLY_CURRENCY'
-              WHEN (SELECT sum(amount) FROM ops.cost_events WHERE occurred_at >= date_trunc('day', clock_timestamp())) > (SELECT daily_limit FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1) THEN 'EXCEEDED'
-              ELSE 'WITHIN_LIMIT' END
-          ),
-          'providers', COALESCE((SELECT jsonb_agg(jsonb_build_object(
-            'id', p.id, 'name', p.name, 'providerType', p.provider_type,
-            'enabled', p.enabled, 'routingStatus', CASE WHEN p.enabled THEN 'ACTIVE' ELSE 'DISABLED' END,
-            'retentionPolicy', p.data_retention_policy, 'lastTestAt', p.last_connection_test_at,
-            'lastTestStatus', p.last_connection_test_status) ORDER BY p.name)
-            FROM ops.provider_configs p), '[]'::jsonb),
-          'dailySeries', COALESCE((SELECT jsonb_agg(jsonb_build_object(
-            'at', x.at, 'amount', jsonb_build_object('amount', x.amount::text, 'currency', x.currency)) ORDER BY x.at)
-            FROM (SELECT date_trunc('day', occurred_at) AS at, sum(amount) AS amount,
-                         COALESCE(max(currency)::text, 'KRW') AS currency
-                    FROM ops.cost_events
-                   WHERE occurred_at >= clock_timestamp() - interval '30 days'
-                    GROUP BY date_trunc('day', occurred_at)
-                    HAVING count(DISTINCT currency)=1) x), '[]'::jsonb),
-          'topCases', COALESCE((SELECT jsonb_agg(jsonb_build_object(
-            'caseId', x.case_id, 'caseTitle', x.case_title,
-            'amount', jsonb_build_object('amount', x.amount::text, 'currency', x.currency),
-            'runCount', x.run_count) ORDER BY x.amount DESC)
-            FROM (SELECT e.case_id, COALESCE(c.title, 'UNKNOWN') AS case_title,
-                         sum(e.amount) AS amount, count(DISTINCT e.job_id) AS run_count,
-                         COALESCE(max(e.currency)::text, 'KRW') AS currency
-                    FROM ops.cost_events e LEFT JOIN editorial.cases c ON c.id=e.case_id
-                   WHERE e.case_id IS NOT NULL
-                   GROUP BY e.case_id, c.title
-                   HAVING count(DISTINCT e.currency)=1) x), '[]'::jsonb),
-          'updatedAt', clock_timestamp())",
-    )
+    let data: Value = sqlx::query_scalar("SELECT ops.read_business_health_projection_v1()")
     .fetch_one(pool)
     .await
     .map_err(db)?;
@@ -141,28 +99,45 @@ pub(super) async fn cost_export_query(
         .filter(|value| matches!(value.as_str(), "CSV" | "JSON"))
         .ok_or(ServiceError::InvalidRequest)?;
     let rows: Value = sqlx::query_scalar(
-        "SELECT jsonb_build_object('runs',count(*),'actualCost',COALESCE(sum(actual_cost),0)::text, \
-         'maxCost',COALESCE(sum(max_cost),0)::text) FROM ops.agent_runs \
-         WHERE created_at >= $1::timestamptz AND created_at <= $2::timestamptz",
+        // The contract is an explicit half-open window [from,to).  Do not
+        // widen a caller's upper bound by converting it to a date and adding
+        // a day; that silently exports rows outside the requested snapshot.
+        "SELECT ops.read_cost_export_projection_v1($1::timestamptz, $2::timestamptz, $3)",
     )
     .bind(from)
     .bind(to)
+    .bind(group_by)
     .fetch_one(pool)
     .await
     .map_err(db)?;
     let digest_input =
         serde_json::json!({"from":from,"to":to,"groupBy":group_by,"format":format,"rows":rows});
     let digest = sha256(&serde_json::to_vec(&digest_input).map_err(|_| ServiceError::Persistence)?);
-    let row_count = rows.get("runs").and_then(Value::as_i64).unwrap_or(0);
+    let row_count = rows
+        .get("rows")
+        .and_then(Value::as_array)
+        .map(|items| items.len() as i64)
+        .unwrap_or(0);
     let payload = if format == "CSV" {
-        format!("runs,actualCost,maxCost\n{},{},{}\n", row_count,
-            rows.get("actualCost").and_then(Value::as_str).unwrap_or("0"),
-            rows.get("maxCost").and_then(Value::as_str).unwrap_or("0"))
+        let mut csv = String::from("group,amount,currency,rowCount,reservationSettled,reservationReserved\n");
+        if let Some(items) = rows.get("rows").and_then(Value::as_array) {
+            for item in items {
+                csv.push_str(&format!("{},{},{},{},{},{}\n",
+                    item.get("key").and_then(Value::as_str).unwrap_or("UNKNOWN"),
+                    item.get("amount").and_then(Value::as_str).unwrap_or(""),
+                    item.get("currency").and_then(Value::as_str).unwrap_or("UNKNOWN"),
+                    item.get("rowCount").and_then(Value::as_i64).unwrap_or(0),
+                    item.get("reservationSettled").and_then(Value::as_str).unwrap_or(""),
+                    item.get("reservationReserved").and_then(Value::as_str).unwrap_or("")));
+            }
+        }
+        csv
     } else {
         serde_json::to_string(&json!({"rows":rows,"from":from,"to":to,"groupBy":group_by})).map_err(|_| ServiceError::Persistence)?
     };
     let bytes = payload.as_bytes();
     let content_sha256 = sha256(bytes);
+    let content_base64 = BASE64.encode(bytes);
     Ok(json!({
         "id":stable_uuid("cost-export",&digest),
         "status":if row_count > 0 { "READY" } else { "EMPTY" },
@@ -171,7 +146,10 @@ pub(super) async fn cost_export_query(
         "rowCount":row_count,
         "byteLength":bytes.len(),
         "contentSha256":content_sha256,
-        "contentBase64":BASE64.encode(bytes),
+        "contentBase64":content_base64,
+        "binary":content_base64,
+        "filename":format!("gurinnae-cost-report-{}.{}", from, if format == "CSV" { "csv" } else { "json" }),
+        "mediaType":if format == "CSV" { "text/csv; charset=utf-8" } else { "application/json" },
         "receiptSha256":sha256(format!("cost-export-receipt:{}:{}:{}", digest, content_sha256, bytes.len()).as_bytes()),
         "from":from,
         "to":to,

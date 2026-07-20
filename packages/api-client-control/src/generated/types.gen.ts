@@ -217,6 +217,18 @@ export type BinaryDownload = {
     id: string;
     status: string;
     version: number;
+    binary?: Blob | File;
+    filename?: string;
+    mediaType?: string;
+    byteLength?: number;
+    contentSha256?: string;
+    receiptSha256?: string;
+    contentBase64?: string;
+    format?: string;
+    rowCount?: number;
+    from?: string;
+    to?: string;
+    groupBy?: string;
 };
 
 export type Blocker = {
@@ -366,11 +378,29 @@ export type BudgetOverviewResponse = {
 
 export type BudgetSummary = {
     currency: string;
-    dailyLimit: string;
-    dailyUsed: string;
-    monthlyLimit: string;
-    monthlyUsed: string;
+    dailyLimit: string | null;
+    dailyUsed: string | null;
+    monthlyLimit: string | null;
+    monthlyUsed: string | null;
     status: string;
+    unknownReason: string | null;
+    forecastConfidence: string;
+    forecastAssumption: string | null;
+    softLimit: string | null;
+    hardLimit: string | null;
+    fallbackAction: string | null;
+    alertThreshold: string | null;
+    lastChangedBy: string | null;
+    lastChangeReason: string | null;
+    asOf: string;
+    reservationSummary: {
+        reserved: string | null;
+        settled: string | null;
+        exposure: string | null;
+        ledgerEntryCount: number;
+        reconciliationRequired: boolean;
+        asOf: string;
+    };
 };
 
 export type CalculationResult = {
@@ -2497,17 +2527,7 @@ export type EstimateBackfillReceipt = {
     updatedAt?: string;
     title?: string;
     summary?: string;
-    data: {
-        sourceId: string;
-        from: string;
-        to: string;
-        estimatedRecords: number;
-        estimatedJobs: number;
-        estimatedCostKrw: string;
-        estimatedDurationSeconds: number;
-        dedupeStrategy: string;
-        downstreamEffects: Array<string>;
-    };
+    data: BackfillEstimate;
     links: Array<Link>;
 };
 
@@ -5805,6 +5825,18 @@ export type CommercialControlEvidenceV1 = {
     closureReceiptSetDigest: string;
     remedyVerificationDigest: string;
     resumeEvidenceSetDigest: string;
+};
+
+export type BackfillEstimate = {
+    sourceId: string;
+    from: string;
+    to: string;
+    estimatedRecords: number;
+    estimatedJobs: number;
+    estimatedCostKrw: string;
+    estimatedDurationSeconds: number;
+    dedupeStrategy: string;
+    downstreamEffects: Array<string>;
 };
 
 export type AcceptAgentSuggestionData = {

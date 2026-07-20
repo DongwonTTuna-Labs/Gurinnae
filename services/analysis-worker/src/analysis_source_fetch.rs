@@ -157,6 +157,7 @@ async fn read_source_response(
         .and_then(|value| value.to_str().ok())
         .and_then(|value| serde_json::from_str::<Value>(value).ok())
         .unwrap_or_else(|| Value::Array(Vec::new()));
+    let redirects = normalize_redirect_chain(redirects)?;
     if response.status().is_redirection() && !allow_redirects {
         return Err(Failure::Terminal("SOURCE_REDIRECT_DENIED", status.to_string()));
     }
@@ -182,6 +183,49 @@ async fn read_source_response(
         response_sha256: sha256(&bytes),
         bytes,
     })
+}
+
+fn normalize_redirect_chain(value: Value) -> Result<Value, Failure> {
+    let Some(items) = value.as_array() else {
+        return Err(Failure::Terminal("SOURCE_REDIRECT_CHAIN_INVALID", "array".to_owned()));
+    };
+    if items.len() > 5 {
+        return Err(Failure::Terminal("SOURCE_REDIRECT_CHAIN_INVALID", "max_redirects".to_owned()));
+    }
+    let mut normalized = Vec::with_capacity(items.len());
+    for (index, item) in items.iter().enumerate() {
+        let Some(object) = item.as_object() else {
+            return Err(Failure::Terminal("SOURCE_REDIRECT_CHAIN_INVALID", "object".to_owned()));
+        };
+        let ordinal = object.get("ordinal").and_then(Value::as_u64);
+        let from = object.get("fromOrigin").and_then(Value::as_str);
+        let to = object.get("toOrigin").and_then(Value::as_str);
+        let status = object.get("status").and_then(Value::as_u64);
+        let dns = object.get("dnsDecisionSha256").and_then(Value::as_str);
+        let policy = object.get("policyDecisionSha256").and_then(Value::as_str);
+        let valid_status = matches!(status, Some(301 | 302 | 303 | 307 | 308));
+        let valid_digest = |candidate: Option<&str>| {
+            candidate.is_some_and(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        };
+        if ordinal != Some(index as u64 + 1)
+            || from.is_none()
+            || to.is_none()
+            || !valid_status
+            || !valid_digest(dns)
+            || !valid_digest(policy)
+        {
+            return Err(Failure::Terminal("SOURCE_REDIRECT_CHAIN_INVALID", format!("hop:{}", index + 1)));
+        }
+        normalized.push(json!({
+            "ordinal": ordinal,
+            "fromOrigin": from,
+            "toOrigin": to,
+            "status": status,
+            "dnsDecisionSha256": dns,
+            "policyDecisionSha256": policy,
+        }));
+    }
+    Ok(Value::Array(normalized))
 }
 
 #[expect(clippy::too_many_arguments, reason = "pending source receipt binds all immutable fetch evidence")]
@@ -223,35 +267,21 @@ async fn build_pending_source_fetch(
         "contentSha256":response_sha256,"responseHeadersSha256":sha256(&canonical_bytes(&safe_headers)?),
         "contentSafetyState":"CLEAN","contentSafetyReceiptSha256":receipt_digest});
     let artifact_sha256 = sha256(&canonical_bytes(&artifact_identity)?);
-    let capability_decision_id = rights.get("decisionId").and_then(Value::as_str)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionId".to_owned()))?;
-    let _capability_version = rights.get("decisionVersion").and_then(Value::as_i64)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionVersion".to_owned()))?;
-    let rights_version = 1_i64;
-    let rights_sha256 = rights.get("decisionSha256").and_then(Value::as_str)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionSha256".to_owned()))?;
-    let occurred_at = rights.get("effectiveAt").and_then(Value::as_str)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "effectiveAt".to_owned()))?;
-    let dimensions = rights.get("dimensions").cloned().unwrap_or_else(|| json!({}));
-    let right = |name: &str| dimensions.get(name).and_then(Value::as_str).unwrap_or("UNKNOWN");
-    let source_use_root = json!({
-        "schemaVersion":"source-use.v2","sourceUseId":source_use_id,"agentRunId":turn.run_id,
-        "providerTurnId":turn.turn_id,"toolCallId":call.call_id,"parentSourceUseId":Value::Null,
-        "parentSourceUseSha256":Value::Null,"useKind":"TOOL_QUERY","sourceKind":"RESEARCH_ARTIFACT",
-        "sourceIdentity":{"kind":"RESEARCH_ARTIFACT","researchArtifactId":artifact_id,"assetId":asset_id,
-            "assetRevision":1,"artifactSha256":artifact_sha256,"contentSha256":response_sha256,"sourceFetchId":fetch_id},
-        "locator":{"kind":"HTML_CSS_SELECTOR","value":redacted_locator,"locatorSha256":sha256(redacted_locator.as_bytes())},
-        "selectedContentSha256":response_sha256,"classification":"PUBLIC",
-        "rightsDecision":{"decisionId":asset_id,"capabilityDecisionId":capability_decision_id,"decisionVersion":rights_version,"decisionSha256":rights_sha256,
-            "effectiveAt":occurred_at,"expiresAt":rights.get("expiresAt").cloned().unwrap_or(Value::Null),
-            "accessRight":right("accessRight"),"privateStorageRight":right("privateStorageRight"),
-            "modelEgressRight":right("modelEgressRight"),"modelUseRight":right("modelUseRight"),
-            "derivativeCreationRight":right("derivativeCreationRight"),"excerptRight":right("excerptRight"),
-            "redistributionRight":right("redistributionRight"),"commercialUseRight":right("commercialUseRight"),
-            "publicDisplayRight":right("publicDisplayRight")},
-        "providerReceiptId":Value::Null,"occurredAt":occurred_at});
+    let rights_projection = project_rights(&rights, artifact_id, asset_id, &response_sha256, policy_version, source_id)?;
+    let source_use_root = build_source_use_root(
+        source_use_id,
+        turn,
+        call,
+        artifact_id,
+        asset_id,
+        fetch_id,
+        artifact_sha256,
+        &response_sha256,
+        &redacted_locator,
+        &rights_projection,
+    );
     let source_use_sha256 = sha256(&canonical_bytes(&source_use_root)?);
-    let retrieved_at = occurred_at.to_owned();
+    let retrieved_at = rights_projection.occurred_at.clone();
     let pending = PendingSourceFetch {
         request_kind, source_id, external_locator: redacted_locator.clone(),
         source_url_redacted: (request_kind == "FETCH_URL").then(|| redacted_locator.clone()),
@@ -262,6 +292,85 @@ async fn build_pending_source_fetch(
         content_safety_receipt_sha256: receipt_digest.clone(),
     };
     Ok((pending, retrieved_at, receipt_digest))
+}
+
+struct RightsProjection {
+    capability_id: String,
+    occurred_at: String,
+    expires_at: Value,
+    dimensions: Value,
+    digest: String,
+}
+
+fn project_rights(
+    rights: &Value,
+    artifact_id: Uuid,
+    asset_id: Uuid,
+    content_sha256: &str,
+    policy_version: &str,
+    source_id: &str,
+) -> Result<RightsProjection, Failure> {
+    let capability_id = rights.get("decisionId").and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionId".to_owned()))?.to_owned();
+    let capability_version = rights.get("decisionVersion").and_then(Value::as_i64)
+        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionVersion".to_owned()))?;
+    let capability_digest = rights.get("decisionSha256").and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionSha256".to_owned()))?.to_owned();
+    let occurred_at = rights.get("effectiveAt").and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "effectiveAt".to_owned()))?.to_owned();
+    let expires_at = rights.get("expiresAt").cloned().unwrap_or(Value::Null);
+    let dimensions = rights.get("dimensions").cloned().unwrap_or_else(|| json!({}));
+    let right = |name: &str| dimensions.get(name).and_then(Value::as_str).unwrap_or("UNKNOWN");
+    let identity = json!({
+        "schemaVersion":"asset-rights-decision.v1","decisionId":asset_id,"assetId":asset_id,
+        "assetSha256":content_sha256,"assetRevision":1,"decisionVersion":1,
+        "assetKind":"RESEARCH_ARTIFACT","researchArtifactId":artifact_id,"decisionKind":"GRANT",
+        "accessRight":right("accessRight"),"privateStorageRight":right("privateStorageRight"),
+        "modelEgressRight":right("modelEgressRight"),"modelUseRight":right("modelUseRight"),
+        "derivativeCreationRight":right("derivativeCreationRight"),"excerptRight":right("excerptRight"),
+        "redistributionRight":right("redistributionRight"),"commercialUseRight":right("commercialUseRight"),
+        "publicDisplayRight":right("publicDisplayRight"),"policyVersion":policy_version,
+        "policySha256":sha256(policy_version.as_bytes()),"legalBasisCode":"PUBLIC_RESEARCH",
+        "legalBasisReference":source_id,"jurisdiction":"GLOBAL","attributionRequired":false,
+        "effectiveAt":occurred_at,"expiresAt":expires_at,"capabilityDecisionId":capability_id,
+        "capabilityDecisionVersion":capability_version,"capabilityDecisionSha256":capability_digest
+    });
+    Ok(RightsProjection {
+        capability_id, occurred_at, expires_at, dimensions,
+        digest: sha256(&canonical_bytes(&identity)?),
+    })
+}
+
+fn build_source_use_root(
+    source_use_id: Uuid,
+    turn: &ProviderTurnIdentity,
+    call: &gurine_agent_orchestration::runtime::ToolCall,
+    artifact_id: Uuid,
+    asset_id: Uuid,
+    fetch_id: Uuid,
+    artifact_sha256: String,
+    content_sha256: &str,
+    locator: &str,
+    rights: &RightsProjection,
+) -> Value {
+    let right = |name: &str| rights.dimensions.get(name).and_then(Value::as_str).unwrap_or("UNKNOWN");
+    json!({
+        "schemaVersion":"source-use.v2","sourceUseId":source_use_id,"agentRunId":turn.run_id,
+        "providerTurnId":turn.turn_id,"toolCallId":call.call_id,"parentSourceUseId":Value::Null,
+        "parentSourceUseSha256":Value::Null,"useKind":"TOOL_QUERY","sourceKind":"RESEARCH_ARTIFACT",
+        "sourceIdentity":{"kind":"RESEARCH_ARTIFACT","researchArtifactId":artifact_id,"assetId":asset_id,
+            "assetRevision":1,"artifactSha256":artifact_sha256,"contentSha256":content_sha256,"sourceFetchId":fetch_id},
+        "locator":{"kind":"HTML_CSS_SELECTOR","value":locator,"locatorSha256":sha256(locator.as_bytes())},
+        "selectedContentSha256":content_sha256,"classification":"PUBLIC",
+        "rightsDecision":{"decisionId":asset_id,"capabilityDecisionId":rights.capability_id,
+            "decisionVersion":1,"decisionSha256":rights.digest,"effectiveAt":rights.occurred_at,
+            "expiresAt":rights.expires_at,"accessRight":right("accessRight"),
+            "privateStorageRight":right("privateStorageRight"),"modelEgressRight":right("modelEgressRight"),
+            "modelUseRight":right("modelUseRight"),"derivativeCreationRight":right("derivativeCreationRight"),
+            "excerptRight":right("excerptRight"),"redistributionRight":right("redistributionRight"),
+            "commercialUseRight":right("commercialUseRight"),"publicDisplayRight":right("publicDisplayRight")},
+        "providerReceiptId":Value::Null,"occurredAt":rights.occurred_at
+    })
 }
 
 struct ContentSafety {

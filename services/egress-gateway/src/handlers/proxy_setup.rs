@@ -38,8 +38,10 @@ async fn proxy(
     let mut redirects = 0_u8;
     let allow_redirects = header(&request, "x-gurine-allow-redirects")
         .is_some_and(|value| value.eq_ignore_ascii_case("true"));
-    let mut redirect_chain = vec![target.to_string()];
+    let mut redirect_chain: Vec<serde_json::Value> = Vec::new();
     let response = loop {
+        let hop_from = target.to_string();
+        let from_origin = origin_of(&target);
         let response = match send_upstream(channel, &request, &body, target.clone(), state).await {
             Ok(value) => value,
             Err(code) => return problem(code, if code == "EGRESS_UPSTREAM_UNAVAILABLE" { 502 } else { 403 }),
@@ -52,7 +54,24 @@ async fn proxy(
         };
         let next = match target.join(location) { Ok(value) => value, Err(_) => return problem("EGRESS_REDIRECT_INVALID", 502) };
         target = match validate_target(channel, next.as_str(), state).await { Ok(value) => value, Err(code) => return problem(code, 403) };
-        redirect_chain.push(target.to_string());
+        let hop_to = target.to_string();
+        let to_origin = origin_of(&target);
+        let (from_dns, from_policy) = match target_decision_digests(&hop_from, channel).await {
+            Ok(value) => value,
+            Err(code) => return problem(code, 403),
+        };
+        let (to_dns, to_policy) = match target_decision_digests(&hop_to, channel).await {
+            Ok(value) => value,
+            Err(code) => return problem(code, 403),
+        };
+        redirect_chain.push(serde_json::json!({
+            "ordinal": redirects as u16 + 1,
+            "fromOrigin": from_origin,
+            "toOrigin": to_origin,
+            "status": response.status().as_u16(),
+            "dnsDecisionSha256": sha256_hex(format!("{}:{}", from_dns, to_dns).as_bytes()),
+            "policyDecisionSha256": sha256_hex(format!("{}:{}:{}", from_policy, to_policy, channel_name(channel)).as_bytes())
+        }));
         redirects += 1;
     };
     proxy_response(
@@ -64,6 +83,43 @@ async fn proxy(
         state,
     )
     .await
+}
+
+fn origin_of(url: &Url) -> String {
+    let host = url.host_str().map_or_else(String::new, str::to_owned);
+    match url.port() {
+        Some(port) => format!("{}://{}:{}", url.scheme(), host, port),
+        None => format!("{}://{}", url.scheme(), host),
+    }
+}
+
+async fn target_decision_digests(
+    target: &str,
+    channel: Channel,
+) -> Result<(String, String), &'static str> {
+    let url = Url::parse(target).map_err(|_| "EGRESS_TARGET_INVALID")?;
+    let host = url.host_str().ok_or("EGRESS_TARGET_INVALID")?;
+    let port = url.port_or_known_default().ok_or("EGRESS_TARGET_INVALID")?;
+    let mut addresses = lookup_host((host, port))
+        .await
+        .map_err(|_| "EGRESS_DNS_FAILED")?
+        .map(|address| address.to_string())
+        .collect::<Vec<_>>();
+    addresses.sort();
+    let dns = sha256_hex(format!("dns-v2:{}:{}", host, addresses.join(",")).as_bytes());
+    let policy = sha256_hex(
+        format!("egress-policy-v2:{}:{}:{}", channel_name(channel), url.scheme(), host).as_bytes(),
+    );
+    Ok((dns, policy))
+}
+
+fn channel_name(channel: Channel) -> &'static str {
+    match channel {
+        Channel::Source => "SOURCE",
+        Channel::Ai => "AI",
+        Channel::Oidc => "OIDC",
+        Channel::Challenge => "CHALLENGE",
+    }
 }
 
 async fn send_upstream(

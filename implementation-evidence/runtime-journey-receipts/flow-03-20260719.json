@@ -5,7 +5,7 @@
   "flowId": "FLOW-03",
   "flowName": "SIGNAL_TO_PUBLICATION",
   "operationId": "publishCase",
-  "correlationId": "3156c7d0-005c-4694-b173-cb0eee6dae48",
+  "correlationId": "2bd680ad-ba47-49d2-b8e4-f612e6c4e985",
   "postgres": {
     "image": "postgres:18.4-bookworm",
     "migrationCount": 30,
@@ -13,15 +13,15 @@
   },
   "normal": {
     "pass": true,
-    "caseId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+    "caseId": "b4999137-3420-4255-a077-75eeae4a6184",
     "rootIds": [
-      "29ad39b0-6e69-44b0-a57b-5799152702fc",
-      "29ad39b0-6e69-44b0-a57b-5799152702fc",
-      "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-      "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-      "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-      "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-      "9f6415cd-e7e4-4d02-827c-9c1091962ed6"
+      "7997ad43-356e-46ce-a321-084c9a8f57ae",
+      "7997ad43-356e-46ce-a321-084c9a8f57ae",
+      "b4999137-3420-4255-a077-75eeae4a6184",
+      "b4999137-3420-4255-a077-75eeae4a6184",
+      "b4999137-3420-4255-a077-75eeae4a6184",
+      "b4999137-3420-4255-a077-75eeae4a6184",
+      "b4999137-3420-4255-a077-75eeae4a6184"
     ],
     "negative": {
       "staleTriage": "40001:signal_version_conflict",
@@ -39,213 +39,213 @@
       "crossAggregateLink": true,
       "reviewDecisionCount": 1,
       "casePublicationState": "PUBLISHED_EXPLAINED",
-      "publicationReceiptId": "1cea89f2-8c5f-4a55-8203-e990d3345944",
+      "publicationReceiptId": "49a4b2a7-fbda-4b99-817b-2b42f49984d4",
       "caseInvestigationState": "CLOSED",
-      "publicationAuditEventId": "74a05d7c-baeb-413b-8670-a19d2694faa5",
-      "publicationOutboxEventId": "f74900f8-5fc7-40d5-895e-f8a0bde42fab",
+      "publicationAuditEventId": "1e390fd9-d25a-47d6-8a26-8951af707d12",
+      "publicationOutboxEventId": "345c23b8-f544-41ff-b211-8fffece5f125",
       "publicationRevisionCount": 1
     },
     "receipts": [
       {
         "links": [
           {
-            "id": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+            "id": "7997ad43-356e-46ce-a321-084c9a8f57ae",
             "kind": "SIGNAL",
-            "digest": "c2185023fe4a88e0f489ef72d8fe440e4c9004213875f6d17ff93766a5f38d05",
+            "digest": "060bb1a785f0dc905fe52d426eb5db7a7bd2011b215f3efd635ab8db7288ac9f",
             "version": 1
           }
         ],
-        "rootId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+        "rootId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
         "status": "NEW",
-        "signalId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
-        "requestId": "a5310396-b2f1-48af-8f1e-67d2567695d2",
-        "acceptedAt": "2026-07-20T19:38:04.415903+00:00",
-        "aggregateId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+        "signalId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
+        "requestId": "351fd036-251e-4c7d-8d12-cfeeacb265b8",
+        "acceptedAt": "2026-07-20T20:09:48.545301+00:00",
+        "aggregateId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
         "operationId": "createSignal",
-        "auditEventId": "fc01459a-3437-4345-956d-0f618f2cd47b",
-        "outboxEventId": "3cab97fb-eb05-4707-8dbb-840dc149f3e6",
-        "receiptDigest": "c2185023fe4a88e0f489ef72d8fe440e4c9004213875f6d17ff93766a5f38d05",
+        "auditEventId": "8fc2254d-b37d-4e16-beb8-954345224850",
+        "outboxEventId": "10dc3c95-4dca-4d6f-98eb-509faf8c2751",
+        "receiptDigest": "060bb1a785f0dc905fe52d426eb5db7a7bd2011b215f3efd635ab8db7288ac9f",
         "emittedEventIds": [
-          "3cab97fb-eb05-4707-8dbb-840dc149f3e6"
+          "10dc3c95-4dca-4d6f-98eb-509faf8c2751"
         ],
         "aggregateVersion": 1
       },
       {
         "links": [
           {
-            "id": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+            "id": "7997ad43-356e-46ce-a321-084c9a8f57ae",
             "kind": "SIGNAL",
-            "digest": "4738a1f36df245ed6b06d6b8632cf49722a0c3436e45ddd051be0e0f5a6401a5",
+            "digest": "13a71c2f6fbf7e06ab3e44cbfc9047d11157efab72844979b3d0c1fbc87364f8",
             "version": 2
           }
         ],
-        "rootId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+        "rootId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
         "status": "PROMOTE_TO_CASE",
-        "signalId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
-        "triageId": "a165f760-679b-43f8-a9af-1c6eeab555d7",
-        "requestId": "bb2a18d2-ca33-4eca-8ce7-b6e983c66a9c",
-        "acceptedAt": "2026-07-20T19:38:04.426379+00:00",
-        "aggregateId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+        "signalId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
+        "triageId": "529a0057-f463-439c-a028-624130ec449a",
+        "requestId": "cbd7bcaa-207a-4122-9ebf-18a121eb9839",
+        "acceptedAt": "2026-07-20T20:09:48.593664+00:00",
+        "aggregateId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
         "operationId": "triageSignal",
-        "auditEventId": "85bc5921-3e0e-4edc-a758-4b9b45048126",
-        "outboxEventId": "354ae44e-fe09-4047-9a83-138b49e49e80",
-        "receiptDigest": "4738a1f36df245ed6b06d6b8632cf49722a0c3436e45ddd051be0e0f5a6401a5",
+        "auditEventId": "c25d5021-6e39-496a-90a6-2c92a3c5ffb7",
+        "outboxEventId": "3cea276f-fccd-4a5d-addf-2c303a476c11",
+        "receiptDigest": "13a71c2f6fbf7e06ab3e44cbfc9047d11157efab72844979b3d0c1fbc87364f8",
         "emittedEventIds": [
-          "354ae44e-fe09-4047-9a83-138b49e49e80"
+          "3cea276f-fccd-4a5d-addf-2c303a476c11"
         ],
         "aggregateVersion": 2
       },
       {
         "links": [
           {
-            "id": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+            "id": "7997ad43-356e-46ce-a321-084c9a8f57ae",
             "kind": "SIGNAL"
           },
           {
-            "id": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+            "id": "b4999137-3420-4255-a077-75eeae4a6184",
             "kind": "CASE",
-            "digest": "12859f596fb60fa7f9cec98d376585919779b5630a4772d2535047b93832f3bc",
+            "digest": "776030bdcb9cfc776261918ae4be3f17aa53f5baee7044c3978b9bf85e5d8b2e",
             "version": 1
           }
         ],
-        "caseId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-        "rootId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+        "caseId": "b4999137-3420-4255-a077-75eeae4a6184",
+        "rootId": "b4999137-3420-4255-a077-75eeae4a6184",
         "status": "INVESTIGATING",
-        "signalId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
-        "requestId": "88b6b222-890a-4a5a-b7ae-6cf4b243f127",
-        "acceptedAt": "2026-07-20T19:38:04.429972+00:00",
-        "aggregateId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+        "signalId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
+        "requestId": "837f5413-0626-41e2-8383-beaae81fe0e7",
+        "acceptedAt": "2026-07-20T20:09:48.61659+00:00",
+        "aggregateId": "b4999137-3420-4255-a077-75eeae4a6184",
         "operationId": "createCase",
-        "auditEventId": "733e947b-5ca8-4eea-8b64-be4a79847ad9",
-        "outboxEventId": "2959de65-0c4e-4b89-a7b2-447669d6085c",
-        "receiptDigest": "12859f596fb60fa7f9cec98d376585919779b5630a4772d2535047b93832f3bc",
+        "auditEventId": "e4669b8a-eecc-4f5b-86c5-a3888e6d913b",
+        "outboxEventId": "ce7763f6-4555-472b-aef8-48f53fb56a07",
+        "receiptDigest": "776030bdcb9cfc776261918ae4be3f17aa53f5baee7044c3978b9bf85e5d8b2e",
         "emittedEventIds": [
-          "2959de65-0c4e-4b89-a7b2-447669d6085c"
+          "ce7763f6-4555-472b-aef8-48f53fb56a07"
         ],
         "aggregateVersion": 1
       },
       {
         "links": [
           {
-            "id": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+            "id": "b4999137-3420-4255-a077-75eeae4a6184",
             "kind": "CASE"
           },
           {
-            "id": "46751b0e-e133-4eee-9d3b-487b1e2d8231",
+            "id": "31f3dcfd-cd05-4e72-9998-3bcd79cede3b",
             "kind": "EVIDENCE",
-            "digest": "612b5938ecf0454e5e59d2da719ffc794a12e036df40333c2daedecf8a6cd931",
+            "digest": "7ae14c70563a77cf5419b31fb3650bf42dc6d6a9b085f5103b9e8db6bad3f0da",
             "version": 1
           }
         ],
-        "caseId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-        "rootId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+        "caseId": "b4999137-3420-4255-a077-75eeae4a6184",
+        "rootId": "b4999137-3420-4255-a077-75eeae4a6184",
         "status": "VERIFIED",
-        "requestId": "bab85057-d6e5-41fb-8c0c-4071d1032605",
-        "acceptedAt": "2026-07-20T19:38:04.433466+00:00",
-        "evidenceId": "46751b0e-e133-4eee-9d3b-487b1e2d8231",
-        "aggregateId": "46751b0e-e133-4eee-9d3b-487b1e2d8231",
+        "requestId": "a90e4663-c687-47ff-9ca2-dbb036f30b10",
+        "acceptedAt": "2026-07-20T20:09:48.647544+00:00",
+        "evidenceId": "31f3dcfd-cd05-4e72-9998-3bcd79cede3b",
+        "aggregateId": "31f3dcfd-cd05-4e72-9998-3bcd79cede3b",
         "operationId": "createEvidence",
-        "auditEventId": "e36946b9-5ae3-4cdb-b1f3-4775822aea87",
-        "outboxEventId": "87ca1be5-c3af-4b61-99ee-782b31367d55",
-        "receiptDigest": "612b5938ecf0454e5e59d2da719ffc794a12e036df40333c2daedecf8a6cd931",
+        "auditEventId": "c6a9d738-402e-4baa-91f1-2137cca69ef2",
+        "outboxEventId": "9b7b773a-178c-4c46-87bb-7df9c9998505",
+        "receiptDigest": "7ae14c70563a77cf5419b31fb3650bf42dc6d6a9b085f5103b9e8db6bad3f0da",
         "emittedEventIds": [
-          "87ca1be5-c3af-4b61-99ee-782b31367d55"
+          "9b7b773a-178c-4c46-87bb-7df9c9998505"
         ],
         "aggregateVersion": 1
       },
       {
         "links": [
           {
-            "id": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+            "id": "b4999137-3420-4255-a077-75eeae4a6184",
             "kind": "CASE"
           },
           {
-            "id": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
+            "id": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
             "kind": "REVIEW_SNAPSHOT",
-            "digest": "b2705a791f8045ee09582bf02a191679079e0bd690109b638a352819329360f8",
+            "digest": "afbade6f738c9c268cb46d3ebe5269289cdf9be5de535e283323039dda1cb937",
             "version": 1
           }
         ],
-        "caseId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-        "rootId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+        "caseId": "b4999137-3420-4255-a077-75eeae4a6184",
+        "rootId": "b4999137-3420-4255-a077-75eeae4a6184",
         "status": "REVIEW_READY",
-        "requestId": "2bd25c02-10b5-429f-8991-49c2b470dd89",
-        "acceptedAt": "2026-07-20T19:38:04.435557+00:00",
-        "snapshotId": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
-        "aggregateId": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
+        "requestId": "ea4afe89-defa-4bad-82a8-aee26650aef0",
+        "acceptedAt": "2026-07-20T20:09:48.651497+00:00",
+        "snapshotId": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
+        "aggregateId": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
         "operationId": "createReviewSnapshot",
-        "auditEventId": "eefcfa6c-aba8-44f8-ad9c-eaad5984d178",
-        "outboxEventId": "744fff83-e48a-42ba-ac0c-de25aaaf3577",
-        "receiptDigest": "b2705a791f8045ee09582bf02a191679079e0bd690109b638a352819329360f8",
+        "auditEventId": "653e9c97-81e1-4ceb-8f40-265b07f9ae88",
+        "outboxEventId": "05778011-378d-4c52-a2f5-aa3178147a04",
+        "receiptDigest": "afbade6f738c9c268cb46d3ebe5269289cdf9be5de535e283323039dda1cb937",
         "emittedEventIds": [
-          "744fff83-e48a-42ba-ac0c-de25aaaf3577"
+          "05778011-378d-4c52-a2f5-aa3178147a04"
         ],
         "aggregateVersion": 1
       },
       {
         "links": [
           {
-            "id": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+            "id": "b4999137-3420-4255-a077-75eeae4a6184",
             "kind": "CASE"
           },
           {
-            "id": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
+            "id": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
             "kind": "REVIEW_SNAPSHOT",
-            "digest": "4426bd507b1fb934f026e75d88f950d304c956fa518001dfa0e985a28e6a483c"
+            "digest": "14de606c85bf70bd18996874269dc6311e03f00f475d0276435b4db71996e437"
           }
         ],
-        "caseId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-        "rootId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+        "caseId": "b4999137-3420-4255-a077-75eeae4a6184",
+        "rootId": "b4999137-3420-4255-a077-75eeae4a6184",
         "status": "APPROVED",
-        "requestId": "43e3fda7-4a0b-4de7-b1a5-76a61e17f361",
-        "acceptedAt": "2026-07-20T19:38:04.43866+00:00",
-        "snapshotId": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
-        "aggregateId": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
+        "requestId": "40370af2-39c7-4d97-a29b-eca5de71ef85",
+        "acceptedAt": "2026-07-20T20:09:48.665134+00:00",
+        "snapshotId": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
+        "aggregateId": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
         "operationId": "submitReview",
-        "auditEventId": "27c9b4a2-e7c1-4ace-b9d8-ab278bedca6e",
-        "outboxEventId": "5f4c2e94-bec8-4948-a77d-eb60674db331",
-        "receiptDigest": "4426bd507b1fb934f026e75d88f950d304c956fa518001dfa0e985a28e6a483c",
+        "auditEventId": "a35092fe-23f1-4eef-b52a-9e9077881244",
+        "outboxEventId": "e125b20a-74b1-4471-9963-af487dfd340c",
+        "receiptDigest": "14de606c85bf70bd18996874269dc6311e03f00f475d0276435b4db71996e437",
         "emittedEventIds": [
-          "5f4c2e94-bec8-4948-a77d-eb60674db331"
+          "e125b20a-74b1-4471-9963-af487dfd340c"
         ],
         "aggregateVersion": 1
       },
       {
         "links": [
           {
-            "id": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+            "id": "b4999137-3420-4255-a077-75eeae4a6184",
             "kind": "CASE"
           },
           {
-            "id": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
+            "id": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
             "kind": "REVIEW_SNAPSHOT"
           },
           {
-            "id": "1cea89f2-8c5f-4a55-8203-e990d3345944",
+            "id": "49a4b2a7-fbda-4b99-817b-2b42f49984d4",
             "kind": "PUBLICATION",
-            "digest": "74d13f50ee96ebb387cc62b7c3b986f580ad9af8fb0d543ad51fdd216c5678f3",
+            "digest": "281f6b62c9569a21d4107edb8f409ca4a46a43696d0f2c4da0f74edecb50d064",
             "version": 1
           }
         ],
-        "caseId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
-        "rootId": "9f6415cd-e7e4-4d02-827c-9c1091962ed6",
+        "caseId": "b4999137-3420-4255-a077-75eeae4a6184",
+        "rootId": "b4999137-3420-4255-a077-75eeae4a6184",
         "status": "PUBLISHED",
-        "requestId": "34e8e5ff-5132-4606-9422-0a90849496a5",
-        "acceptedAt": "2026-07-20T19:38:04.440864+00:00",
-        "snapshotId": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
-        "aggregateId": "1cea89f2-8c5f-4a55-8203-e990d3345944",
+        "requestId": "9ca94136-294c-4a9e-82e6-df8e2bda7dd7",
+        "acceptedAt": "2026-07-20T20:09:48.673792+00:00",
+        "snapshotId": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
+        "aggregateId": "49a4b2a7-fbda-4b99-817b-2b42f49984d4",
         "operationId": "publishCase",
-        "auditEventId": "74a05d7c-baeb-413b-8670-a19d2694faa5",
-        "outboxEventId": "f74900f8-5fc7-40d5-895e-f8a0bde42fab",
-        "receiptDigest": "74d13f50ee96ebb387cc62b7c3b986f580ad9af8fb0d543ad51fdd216c5678f3",
+        "auditEventId": "1e390fd9-d25a-47d6-8a26-8951af707d12",
+        "outboxEventId": "345c23b8-f544-41ff-b211-8fffece5f125",
+        "receiptDigest": "281f6b62c9569a21d4107edb8f409ca4a46a43696d0f2c4da0f74edecb50d064",
         "emittedEventIds": [
-          "f74900f8-5fc7-40d5-895e-f8a0bde42fab"
+          "345c23b8-f544-41ff-b211-8fffece5f125"
         ],
         "aggregateVersion": 1,
-        "publicationRevisionId": "1cea89f2-8c5f-4a55-8203-e990d3345944"
+        "publicationRevisionId": "49a4b2a7-fbda-4b99-817b-2b42f49984d4"
       }
     ],
-    "signalId": "29ad39b0-6e69-44b0-a57b-5799152702fc",
+    "signalId": "7997ad43-356e-46ce-a321-084c9a8f57ae",
     "operations": [
       "createSignal",
       "triageSignal",
@@ -255,7 +255,7 @@
       "submitReview",
       "publishCase"
     ],
-    "snapshotId": "0b42c756-7ef9-4b21-8a3f-41edc70d0b51",
+    "snapshotId": "6c7f0ab9-d7f1-470d-9c89-967c744797be",
     "rootConsistent": true,
     "receiptBound": true
   },
@@ -273,7 +273,7 @@
     "forbiddenMutationCount": 0,
     "pass": true
   },
-  "sourceTreeDigest": "9ecdfa4c56c7fa04cb9808cef46b0b1bb2b2edbdfc521c3a6a453c419827a190",
-  "observedAt": "2026-07-20T19:38:04Z",
+  "sourceTreeDigest": "8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060",
+  "observedAt": "2026-07-20T20:09:49Z",
   "pass": true
 }

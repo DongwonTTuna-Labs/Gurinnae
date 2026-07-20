@@ -31183,7 +31183,22 @@
           },
           "version": {
             "type": "integer"
-          }
+          },
+          "binary": {
+            "type": "string",
+            "format": "binary"
+          },
+          "filename": {"type": "string"},
+          "mediaType": {"type": "string"},
+          "byteLength": {"type": "integer", "format": "int64"},
+          "contentSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "receiptSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "contentBase64": {"type": "string"},
+          "format": {"type": "string"},
+          "rowCount": {"type": "integer", "format": "int64"},
+          "from": {"type": "string", "format": "date"},
+          "to": {"type": "string", "format": "date"},
+          "groupBy": {"type": "string"}
         },
         "required": [
           "id",
@@ -31761,23 +31776,41 @@
             "type": "string"
           },
           "dailyLimit": {
-            "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "anyOf": [{"type":"string","pattern":"^-?\\d+(\\.\\d+)?$"},{"type":"null"}]
           },
           "dailyUsed": {
-            "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "anyOf": [{"type":"string","pattern":"^-?\\d+(\\.\\d+)?$"},{"type":"null"}]
           },
           "monthlyLimit": {
-            "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "anyOf": [{"type":"string","pattern":"^-?\\d+(\\.\\d+)?$"},{"type":"null"}]
           },
           "monthlyUsed": {
-            "type": "string",
-            "pattern": "^-?\\d+(\\.\\d+)?$"
+            "anyOf": [{"type":"string","pattern":"^-?\\d+(\\.\\d+)?$"},{"type":"null"}]
           },
           "status": {
             "type": "string"
+          },
+          "unknownReason": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "forecastConfidence": {"type":"string"},
+          "forecastAssumption": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "softLimit": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "hardLimit": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "fallbackAction": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "alertThreshold": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "lastChangedBy": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "lastChangeReason": {"anyOf":[{"type":"string"},{"type":"null"}]},
+          "asOf": {"type":"string","format":"date-time"},
+          "reservationSummary": {
+            "type":"object","additionalProperties":false,
+            "properties": {
+              "reserved":{"anyOf":[{"type":"string"},{"type":"null"}]},
+              "settled":{"anyOf":[{"type":"string"},{"type":"null"}]},
+              "exposure":{"anyOf":[{"type":"string"},{"type":"null"}]},
+              "ledgerEntryCount":{"type":"integer","format":"int64"},
+              "reconciliationRequired":{"type":"boolean"},
+              "asOf":{"type":"string","format":"date-time"}
+            },
+            "required":["reserved","settled","exposure","ledgerEntryCount","reconciliationRequired","asOf"]
           }
         },
         "required": [
@@ -31786,7 +31819,18 @@
           "dailyUsed",
           "monthlyLimit",
           "monthlyUsed",
-          "status"
+          "status",
+          "unknownReason",
+          "forecastConfidence",
+          "forecastAssumption",
+          "softLimit",
+          "hardLimit",
+          "fallbackAction",
+          "alertThreshold",
+          "lastChangedBy",
+          "lastChangeReason",
+          "asOf",
+          "reservationSummary"
         ]
       },
       "CalculationResult": {

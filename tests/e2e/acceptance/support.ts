@@ -9,7 +9,6 @@ export async function assertAcceptanceJourney(
   const contracts = routeCatalog();
   expect(contracts, `${scenarioId} route inventory`).toHaveLength(94);
   const screenByJourney: Record<string, string> = {
-    ACCESSIBILITY_RESPONSIVE: "PUB-004",
     ANALYTICS_PRIVACY: "PUB-001",
     PUBLIC_COMPREHENSION: "PUB-004",
     RESPONSE_PORTAL_EXPERIENCE: "RSP-001",
@@ -21,7 +20,9 @@ export async function assertAcceptanceJourney(
     scenarioId.includes(prefix),
   );
   if (!journey) throw new Error(`${scenarioId} has no route contract mapping`);
-  const screenId = screenByJourney[journey];
+  const screenId = journey === "ACCESSIBILITY_RESPONSIVE"
+    ? accessibilityScreenForScenario(scenarioId)
+    : screenByJourney[journey];
   const contract = contracts.find(
     (candidate) => candidate.screenId === screenId,
   );
@@ -61,6 +62,26 @@ export async function assertAcceptanceJourney(
     await assertAccessibilityEvidence(page, scenarioId);
   }
   return contract;
+}
+
+/** Keep accessibility scenarios on representative authority archetypes.
+ * The browser contract is still exercised against the real route; this avoids
+ * treating one public detail page as evidence for forms, tables, approvals,
+ * and operational dashboards.
+ */
+function accessibilityScreenForScenario(scenarioId: string): string {
+  const representatives: Record<string, string> = {
+    "001": "PUB-004",
+    "002": "RSP-003",
+    "003": "RSP-002",
+    "004": "CAS-011",
+    "005": "PUB-004",
+    "006": "OPS-004",
+    "007": "CAS-010",
+    "008": "PUB-004",
+  };
+  const suffix = scenarioId.match(/-(\d{3})$/)?.[1];
+  return (suffix && representatives[suffix]) || "PUB-004";
 }
 
 async function assertAccessibilityEvidence(

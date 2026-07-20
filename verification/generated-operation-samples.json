@@ -2467,7 +2467,7 @@
         "to": "2026-07-12",
         "estimatedRecords": 0,
         "estimatedJobs": 0,
-        "estimatedCostKrw": "",
+        "estimatedCostKrw": "0",
         "estimatedDurationSeconds": 0,
         "dedupeStrategy": "",
         "downstreamEffects": []
@@ -2482,7 +2482,19 @@
     "body": {
       "id": "",
       "status": "",
-      "version": 0
+      "version": 0,
+      "binary": "",
+      "filename": "gurinnae-cost-report-2026-07-12.csv",
+      "mediaType": "text/csv; charset=utf-8",
+      "byteLength": 0,
+      "contentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "receiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "contentBase64": "",
+      "format": "CSV",
+      "rowCount": 0,
+      "from": "2026-07-12",
+      "to": "2026-07-12",
+      "groupBy": "DAY"
     }
   },
   "getAgentRun": {
@@ -2544,7 +2556,25 @@
           "dailyUsed": "0",
           "monthlyLimit": "0",
           "monthlyUsed": "0",
-          "status": ""
+          "status": "",
+          "unknownReason": null,
+          "forecastConfidence": "UNKNOWN",
+          "forecastAssumption": null,
+          "softLimit": null,
+          "hardLimit": null,
+          "fallbackAction": null,
+          "alertThreshold": null,
+          "lastChangedBy": null,
+          "lastChangeReason": null,
+          "asOf": "2026-07-12T00:00:00Z",
+          "reservationSummary": {
+            "reserved": null,
+            "settled": null,
+            "exposure": null,
+            "ledgerEntryCount": 0,
+            "reconciliationRequired": false,
+            "asOf": "2026-07-12T00:00:00Z"
+          }
         },
         "providers": [],
         "dailySeries": [],
@@ -2748,7 +2778,25 @@
         "dailyUsed": "0",
         "monthlyLimit": "0",
         "monthlyUsed": "0",
-        "status": ""
+        "status": "",
+        "unknownReason": null,
+        "forecastConfidence": "UNKNOWN",
+        "forecastAssumption": null,
+        "softLimit": null,
+        "hardLimit": null,
+        "fallbackAction": null,
+        "alertThreshold": null,
+        "lastChangedBy": null,
+        "lastChangeReason": null,
+        "asOf": "2026-07-12T00:00:00Z",
+        "reservationSummary": {
+          "reserved": null,
+          "settled": null,
+          "exposure": null,
+          "ledgerEntryCount": 0,
+          "reconciliationRequired": false,
+          "asOf": "2026-07-12T00:00:00Z"
+        }
       },
       "notifications": []
     }

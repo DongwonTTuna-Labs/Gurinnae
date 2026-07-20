@@ -2261,6 +2261,10 @@ AS $$
 DECLARE v jsonb;
 BEGIN
   IF p_source_id IS NULL OR p_request_kind NOT IN ('SEARCH_PUBLIC_WEB','FETCH_URL') THEN RETURN NULL; END IF;
+  -- The source/hold decision and the subsequent record path share a
+  -- transaction-scoped lock so a concurrent hold placement cannot race the
+  -- owner preflight silently.
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_source_id, 13));
   SELECT jsonb_build_object(
       'decisionId', d.id, 'decisionVersion', d.decision_version,
       'decisionSha256', d.decision_digest, 'effectiveAt', d.effective_at,
@@ -2269,7 +2273,8 @@ BEGIN
       'licenseDigest', d.license_digest, 'evidenceSetDigest', d.evidence_set_digest,
       'dimensions', jsonb_build_object(
         'accessRight','ALLOW','privateStorageRight','ALLOW',
-        'modelEgressRight','ALLOW','modelUseRight','ALLOW',
+        'modelEgressRight',CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class='MODEL_EGRESS' AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST') AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= clock_timestamp() AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())) THEN 'ALLOW' ELSE 'UNKNOWN' END,
+        'modelUseRight',CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class IN ('MODEL_EGRESS','PAID_WORKSPACE_PROCESSING') AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST') AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= clock_timestamp() AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())) THEN 'ALLOW' ELSE 'UNKNOWN' END,
         'derivativeCreationRight','UNKNOWN','excerptRight','UNKNOWN',
         'redistributionRight','UNKNOWN','commercialUseRight','UNKNOWN','publicDisplayRight','UNKNOWN'))
     INTO v
@@ -2286,7 +2291,8 @@ BEGIN
      AND NOT EXISTS (
        SELECT 1 FROM editorial.legal_holds h
         WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > clock_timestamp())
-          AND h.affected_ids @> jsonb_build_array(p_source_id))
+          AND (h.affected_ids @> jsonb_build_array(p_source_id)
+               OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id))
    ORDER BY d.decision_version DESC LIMIT 1;
   RETURN v;
 END $$;
@@ -2356,6 +2362,8 @@ DECLARE
   v_redirects jsonb := coalesce(p_redirect_chain,'[]'::jsonb);
   v_artifact_canonical bytea;
   v_artifact_sha char(64);
+  v_asset_rights_canonical bytea;
+  v_asset_rights_sha char(64);
   v_locator text := coalesce(nullif(p_final_url_redacted,''),nullif(p_source_url_redacted,''),p_external_locator);
   v_locator_sha char(64);
   v_policy_sha char(64);
@@ -2394,6 +2402,7 @@ BEGIN
      OR p_source_url_redacted !~ '^https://.*' OR p_final_url_redacted !~ '^https://.*')
   THEN RAISE EXCEPTION 'RESEARCH_FETCH_URL_INVALID' USING ERRCODE='22023'; END IF;
   v_now := clock_timestamp();
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_source_id, 13));
   IF p_receipt_digest <> encode(extensions.digest(convert_to('content-safety-v2:'||v_content_sha||':'||v_safety_state,'UTF8'),'sha256'),'hex')
   THEN RAISE EXCEPTION 'CONTENT_SAFETY_RECEIPT_MISMATCH' USING ERRCODE='22023'; END IF;
   PERFORM 1 FROM ops.agent_runs WHERE id=p_agent_run_id;
@@ -2413,7 +2422,10 @@ BEGIN
     RAISE EXCEPTION 'TOOL_RESULT_DIGEST_MISMATCH' USING ERRCODE='22023';
   END IF;
   SELECT d.id,d.decision_version,d.effective_at,d.expires_at,
-         'ALLOW','ALLOW','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN'
+         'ALLOW','ALLOW',
+         CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class='MODEL_EGRESS' AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=d.environment AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= v_now AND (m.expires_at IS NULL OR m.expires_at > v_now)) THEN 'ALLOW' ELSE 'UNKNOWN' END,
+         CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class IN ('MODEL_EGRESS','PAID_WORKSPACE_PROCESSING') AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=d.environment AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= v_now AND (m.expires_at IS NULL OR m.expires_at > v_now)) THEN 'ALLOW' ELSE 'UNKNOWN' END,
+         'UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN'
     INTO v_capability_id,v_capability_version,v_capability_effective,v_capability_expires,
          v_access_right,v_private_storage_right,v_model_egress_right,v_model_use_right,
          v_derivative_creation_right,v_excerpt_right,v_redistribution_right,v_commercial_use_right,v_public_display_right
@@ -2424,13 +2436,17 @@ BEGIN
      AND d.environment=COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST')
      AND d.legal_state='APPROVED' AND d.operational_state='ACTIVE'
      AND d.effective_at <= v_now AND (d.expires_at IS NULL OR d.expires_at > v_now)
-     AND NOT EXISTS (SELECT 1 FROM editorial.legal_holds h WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > v_now) AND h.affected_ids @> jsonb_build_array(p_source_id))
+     AND NOT EXISTS (SELECT 1 FROM editorial.legal_holds h WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > v_now)
+       AND (h.affected_ids @> jsonb_build_array(p_source_id) OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id))
    ORDER BY d.decision_version DESC LIMIT 1;
   IF v_capability_id IS NULL THEN RAISE EXCEPTION 'SOURCE_RIGHTS_UNAVAILABLE' USING ERRCODE='42501'; END IF;
   -- The capability decision is provenance; each immutable artifact receives
   -- its own asset-rights decision identity so two fetches cannot collide on a
   -- capability UUID primary key.
   v_rights_id := v_asset_id;
+  SELECT decision_digest INTO v_rights_sha
+    FROM ops.capability_activation_decisions
+   WHERE id=v_capability_id AND decision_version=v_capability_version;
   -- Artifact identity is a typed authority projection.  Raw bytes remain
   -- content_sha256; artifact_sha256 covers the canonical metadata envelope.
   v_artifact_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
@@ -2443,9 +2459,26 @@ BEGIN
     'responseHeadersSha256',encode(extensions.digest(ops.canonical_jsonb_v1(v_headers),'sha256'),'hex'),
     'contentSafetyState',v_safety_state,'contentSafetyReceiptSha256',v_fetch_receipt));
   v_artifact_sha := encode(extensions.digest(v_artifact_canonical,'sha256'),'hex');
+  -- The capability decision is only the admission input.  The immutable
+  -- asset decision must have its own digest over the exact asset identity and
+  -- dimensions so a source-level capability can never be mistaken for a
+  -- rights decision for a different payload.
+  v_asset_rights_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
+    'schemaVersion','asset-rights-decision.v1','decisionId',v_rights_id,
+    'assetId',v_asset_id,'assetSha256',v_content_sha,'assetRevision',1,
+    'decisionVersion',1,'assetKind','RESEARCH_ARTIFACT','researchArtifactId',v_artifact_id,
+    'decisionKind','GRANT','accessRight',v_access_right,'privateStorageRight',v_private_storage_right,
+    'modelEgressRight',v_model_egress_right,'modelUseRight',v_model_use_right,
+    'derivativeCreationRight',v_derivative_creation_right,'excerptRight',v_excerpt_right,
+    'redistributionRight',v_redistribution_right,'commercialUseRight',v_commercial_use_right,
+    'publicDisplayRight',v_public_display_right,'policyVersion',p_policy_version,
+    'policySha256',v_policy_sha,'legalBasisCode','PUBLIC_RESEARCH','legalBasisReference',p_source_id,
+    'jurisdiction','GLOBAL','attributionRequired',false,'effectiveAt',coalesce(v_capability_effective,v_now),
+    'expiresAt',v_capability_expires,'capabilityDecisionId',v_capability_id,
+    'capabilityDecisionVersion',v_capability_version,'capabilityDecisionSha256',v_rights_sha));
+  v_asset_rights_sha := encode(extensions.digest(v_asset_rights_canonical,'sha256'),'hex');
   v_locator_sha := encode(extensions.digest(convert_to(v_locator,'UTF8'),'sha256'),'hex');
   v_policy_sha := encode(extensions.digest(convert_to(p_policy_version,'UTF8'),'sha256'),'hex');
-  SELECT decision_digest INTO v_rights_sha FROM ops.capability_activation_decisions WHERE id=v_capability_id AND decision_version=v_capability_version;
   INSERT INTO raw.source_fetches(id,source_id,source_run_id,external_locator,requested_at,completed_at,http_status,content_type,payload_sha256,payload_size_bytes,object_key)
   VALUES(v_fetch_id,p_source_id,NULL,p_external_locator,v_now,v_now,p_http_status,p_content_media_type,v_content_sha,octet_length(p_content),p_object_key)
   ON CONFLICT (source_id,external_locator,payload_sha256) DO UPDATE SET completed_at=EXCLUDED.completed_at
@@ -2502,7 +2535,7 @@ BEGIN
     encode(extensions.digest(convert_to('[]','UTF8'),'sha256'),'hex'),
     'GLOBAL',false,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'),p_policy_version,v_policy_sha,
     v_artifact_sha,v_artifact_sha,v_fetch_id,v_fetch_receipt,v_reviewer_user_id,coalesce(v_capability_effective,v_now),
-    v_rights_sha);
+    v_asset_rights_sha);
   v_source_use_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
     'schemaVersion','source-use.v2','sourceUseId',v_source_use_id,'agentRunId',p_agent_run_id,
     'providerTurnId',p_provider_turn_id,'toolCallId',p_tool_call_id,
@@ -2513,12 +2546,12 @@ BEGIN
       'contentSha256',v_content_sha,'sourceFetchId',v_fetch_id),
     'locator',jsonb_build_object('kind','HTML_CSS_SELECTOR','value',v_locator,'locatorSha256',v_locator_sha),
     'selectedContentSha256',v_content_sha,'classification','PUBLIC',
-    'rightsDecision',jsonb_build_object('decisionId',v_rights_id,'capabilityDecisionId',v_capability_id,'decisionVersion',v_capability_version,
-      'decisionSha256',v_rights_sha,'effectiveAt',coalesce(v_capability_effective,v_now),'expiresAt',v_capability_expires,
+    'rightsDecision',jsonb_build_object('decisionId',v_rights_id,'capabilityDecisionId',v_capability_id,'decisionVersion',1,
+      'decisionSha256',v_asset_rights_sha,'effectiveAt',coalesce(v_capability_effective,v_now),'expiresAt',v_capability_expires,
       'accessRight',v_access_right,'privateStorageRight',v_private_storage_right,'modelEgressRight',v_model_egress_right,
       'modelUseRight',v_model_use_right,'derivativeCreationRight',v_derivative_creation_right,'excerptRight',v_excerpt_right,
       'redistributionRight',v_redistribution_right,'commercialUseRight',v_commercial_use_right,'publicDisplayRight',v_public_display_right),
-    'providerReceiptId',NULL,'occurredAt',v_now));
+    'providerReceiptId',NULL,'occurredAt',coalesce(v_capability_effective,v_now)));
   v_source_use_sha := encode(extensions.digest(v_source_use_canonical,'sha256'),'hex');
   IF p_source_use_sha256 <> v_source_use_sha THEN
     RAISE EXCEPTION 'SOURCE_USE_DIGEST_MISMATCH' USING ERRCODE='22023';
@@ -2534,7 +2567,7 @@ BEGIN
   VALUES(v_source_use_id,2,p_agent_run_id,p_provider_turn_id,p_tool_call_id,'TOOL_QUERY','RESEARCH_ARTIFACT',
     v_artifact_id,v_asset_id,1,v_artifact_sha,v_content_sha,v_fetch_id,'HTML_CSS_SELECTOR',v_locator,v_locator_sha,v_content_sha,
     'PUBLIC','ASSET_RIGHTS',v_asset_id,1,v_content_sha,v_rights_id,1,
-    v_rights_sha,coalesce(v_capability_effective,v_now),
+    v_asset_rights_sha,coalesce(v_capability_effective,v_now),
     v_access_right,v_private_storage_right,v_model_egress_right,v_model_use_right,v_derivative_creation_right,
     v_excerpt_right,v_redistribution_right,v_commercial_use_right,v_public_display_right,p_policy_version,v_policy_sha,coalesce(v_capability_effective,v_now),
     v_source_use_canonical,v_source_use_sha)
@@ -10116,6 +10149,83 @@ ALTER FUNCTION ops.record_outcome_fact_v1(jsonb) OWNER TO gurine_migrator;
 ALTER FUNCTION ops.record_paid_evidence_packet_v1(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.record_invoice_fact_v1(jsonb),ops.record_invoice_line_fact_v1(jsonb),ops.record_usage_fact_v1(jsonb),ops.record_invoice_usage_membership_v1(jsonb),ops.record_accounting_correction_v1(jsonb),ops.record_outcome_fact_v1(jsonb),ops.record_paid_evidence_packet_v1(jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ops.record_invoice_fact_v1(jsonb),ops.record_invoice_line_fact_v1(jsonb),ops.record_usage_fact_v1(jsonb),ops.record_invoice_usage_membership_v1(jsonb),ops.record_accounting_correction_v1(jsonb),ops.record_outcome_fact_v1(jsonb),ops.record_paid_evidence_packet_v1(jsonb) TO gurine_workflow_worker;
+
+-- OPS-004 is a server-owned projection.  The control API never receives table
+-- privileges for immutable budget/cost ledgers; this SECURITY DEFINER routine
+-- is the sole read boundary and returns an explicit UNKNOWN instead of a
+-- synthetic zero when the snapshot is missing, mixed-currency, or stale.
+CREATE OR REPLACE FUNCTION ops.read_business_health_projection_v1() RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ops,editorial,extensions,pg_temp AS $$
+DECLARE v_now timestamptz := clock_timestamp(); v_currency text; v_limit_count bigint; v_daily_count bigint; v_monthly_count bigint;
+BEGIN
+  SELECT count(DISTINCT currency), max(currency::text) INTO v_limit_count,v_currency FROM ops.budget_limits;
+  SELECT count(DISTINCT currency) INTO v_daily_count FROM ops.cost_events WHERE occurred_at >= date_trunc('day',v_now);
+  SELECT count(DISTINCT currency) INTO v_monthly_count FROM ops.cost_events WHERE occurred_at >= date_trunc('month',v_now);
+  RETURN jsonb_build_object(
+    'summary',jsonb_build_object(
+      'currency',CASE WHEN v_limit_count=1 THEN v_currency ELSE 'UNKNOWN' END,
+      'dailyLimit',CASE WHEN v_limit_count=1 THEN (SELECT daily_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1) END,
+      'dailyUsed',CASE WHEN v_daily_count=1 THEN (SELECT sum(amount)::text FROM ops.cost_events WHERE occurred_at >= date_trunc('day',v_now)) END,
+      'monthlyLimit',CASE WHEN v_limit_count=1 THEN (SELECT monthly_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1) END,
+      'monthlyUsed',CASE WHEN v_monthly_count=1 THEN (SELECT sum(amount)::text FROM ops.cost_events WHERE occurred_at >= date_trunc('month',v_now)) END,
+      'status',CASE WHEN v_limit_count=0 THEN 'UNKNOWN_NO_BUDGET_LIMIT' WHEN v_limit_count<>1 THEN 'UNKNOWN_MIXED_LIMIT_CURRENCY' WHEN v_daily_count=0 THEN 'UNKNOWN_NO_COST_OBSERVATION' WHEN v_daily_count<>1 OR v_monthly_count<>1 THEN 'UNKNOWN_MIXED_COST_CURRENCY' WHEN (SELECT sum(amount) FROM ops.cost_events WHERE occurred_at >= date_trunc('day',v_now)) > (SELECT daily_limit FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1) THEN 'EXCEEDED' ELSE 'WITHIN_LIMIT' END,
+      'unknownReason',CASE WHEN v_limit_count=0 THEN 'BUDGET_LIMIT_NOT_OBSERVED' WHEN v_limit_count<>1 THEN 'MIXED_LIMIT_CURRENCY' WHEN v_daily_count=0 THEN 'COST_OBSERVATION_NOT_AVAILABLE' WHEN v_daily_count<>1 OR v_monthly_count<>1 THEN 'MIXED_COST_CURRENCY' END,
+      'forecastConfidence',CASE WHEN v_daily_count=1 THEN 'OBSERVED' ELSE 'UNKNOWN' END,
+      'forecastAssumption',NULL,'softLimit',NULL,'hardLimit',NULL,
+      'fallbackAction',CASE WHEN v_limit_count=0 THEN 'PAUSE_PAID_PROVIDER_EGRESS' END,
+      'alertThreshold',NULL,
+      'lastChangedBy',(SELECT updated_by::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1),
+      'lastChangeReason',NULL,'asOf',v_now,
+      'reservationSummary',jsonb_build_object(
+        'reserved',(SELECT sum(reserved_amount)::text FROM ops.budget_reservations WHERE state='RESERVED'),
+        'settled',(SELECT sum(coalesce(settled_amount,0))::text FROM ops.budget_reservations WHERE state='SETTLED'),
+        'exposure',(SELECT sum(coalesce(exposure_amount,0))::text FROM ops.budget_reservations WHERE state='RECONCILIATION_REQUIRED'),
+        'ledgerEntryCount',(SELECT count(*) FROM ops.budget_reservation_ledger_entries),
+        'reconciliationRequired',EXISTS(SELECT 1 FROM ops.budget_reservations WHERE state='RECONCILIATION_REQUIRED'),'asOf',v_now)),
+    'providers',coalesce((SELECT jsonb_agg(jsonb_build_object('id',p.id,'name',p.name,'providerType',p.provider_type,'enabled',p.enabled,'routingStatus',CASE WHEN p.enabled THEN 'ACTIVE' ELSE 'DISABLED' END,'retentionPolicy',p.data_retention_policy,'lastTestAt',p.last_connection_test_at,'lastTestStatus',p.last_connection_test_status) ORDER BY p.name) FROM ops.provider_configs p),'[]'::jsonb),
+    'dailySeries',coalesce((SELECT jsonb_agg(jsonb_build_object('at',x.at,'amount',jsonb_build_object('amount',x.amount::text,'currency',x.currency)) ORDER BY x.at) FROM (SELECT date_trunc('day',occurred_at) at,sum(amount) amount,max(currency)::text currency FROM ops.cost_events WHERE occurred_at >= v_now-interval '30 days' GROUP BY date_trunc('day',occurred_at) HAVING count(DISTINCT currency)=1) x),'[]'::jsonb),
+    'topCases',coalesce((SELECT jsonb_agg(jsonb_build_object('caseId',x.case_id,'caseTitle',x.case_title,'amount',jsonb_build_object('amount',x.amount::text,'currency',x.currency),'runCount',x.run_count) ORDER BY x.amount DESC) FROM (SELECT e.case_id,coalesce(c.title,'UNKNOWN') case_title,sum(e.amount) amount,count(DISTINCT e.job_id) run_count,max(e.currency)::text currency FROM ops.cost_events e LEFT JOIN editorial.cases c ON c.id=e.case_id WHERE e.case_id IS NOT NULL GROUP BY e.case_id,c.title HAVING count(DISTINCT e.currency)=1) x),'[]'::jsonb),
+    'updatedAt',v_now);
+END $$;
+ALTER FUNCTION ops.read_business_health_projection_v1() OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.read_business_health_projection_v1() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ops.read_business_health_projection_v1() TO gurine_control_api;
+
+CREATE OR REPLACE FUNCTION ops.read_cost_export_projection_v1(
+  p_from timestamptz, p_to timestamptz, p_group_by text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ops,editorial,pg_temp AS $$
+DECLARE v_rows jsonb;
+BEGIN
+  IF p_from IS NULL OR p_to IS NULL OR p_from >= p_to OR p_group_by NOT IN ('PROVIDER','MODEL','CASE','DAY') THEN
+    RAISE EXCEPTION 'COST_EXPORT_WINDOW_INVALID' USING ERRCODE='22023';
+  END IF;
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+      'key',x.group_key,'amount',CASE WHEN x.currency_count=1 THEN x.amount::text ELSE NULL END,
+      'currency',CASE WHEN x.currency_count=1 THEN x.currency ELSE 'UNKNOWN' END,'rowCount',x.row_count,
+      'reservationSettled',CASE WHEN x.currency_count=1 THEN x.settled_amount::text ELSE NULL END,
+      'reservationReserved',CASE WHEN x.currency_count=1 THEN x.reserved_amount::text ELSE NULL END,
+      'state',CASE WHEN x.currency_count=1 THEN 'READY' ELSE 'UNKNOWN' END,
+      'unknownReason',CASE WHEN x.currency_count=1 THEN NULL ELSE 'MIXED_CURRENCY' END)
+      ORDER BY x.group_key),'[]'::jsonb) INTO v_rows
+    FROM (
+      SELECT CASE p_group_by
+        WHEN 'PROVIDER' THEN coalesce(e.provider_id::text,'UNKNOWN_PROVIDER')
+        WHEN 'MODEL' THEN coalesce(e.model,'UNKNOWN_MODEL')
+        WHEN 'CASE' THEN coalesce(e.case_id::text,'UNKNOWN_CASE')
+        ELSE to_char(date_trunc('day',e.occurred_at),'YYYY-MM-DD') END AS group_key,
+        sum(e.amount) amount,max(e.currency)::text currency,count(DISTINCT e.currency) currency_count,count(*) row_count,
+        coalesce(sum(r.settled_amount),0) settled_amount,coalesce(sum(r.reserved_amount),0) reserved_amount
+      FROM ops.cost_events e LEFT JOIN ops.budget_reservations r ON r.cost_event_id=e.id
+      WHERE e.occurred_at >= p_from AND e.occurred_at < p_to
+      GROUP BY 1
+      HAVING count(DISTINCT e.currency)=1
+    ) x;
+  RETURN jsonb_build_object('rows',v_rows,'from',p_from,'to',p_to,'groupBy',p_group_by,'asOf',clock_timestamp());
+END $$;
+ALTER FUNCTION ops.read_cost_export_projection_v1(timestamptz,timestamptz,text) OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.read_cost_export_projection_v1(timestamptz,timestamptz,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ops.read_cost_export_projection_v1(timestamptz,timestamptz,text) TO gurine_control_api;
 
 -- Additive migration owns the runtime grant that the SECURITY DEFINER
 -- assertion owner uses; the authority-pinned base migration remains byte exact.

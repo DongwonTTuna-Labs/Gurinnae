@@ -22,10 +22,10 @@
         return problem("EGRESS_COMPRESSION_RATIO_EXCEEDED", 502);
     }
     let receipt_id = sha256_hex(
-        format!("egress-receipt-v1:{idempotency_key}:{target}:{status}:{body_sha256}").as_bytes(),
+        format!("egress-receipt-v2:{idempotency_key}:{target}:{status}:{body_sha256}:{redirect_chain}").as_bytes(),
     );
     let receipt_sha256 =
-        sha256_hex(format!("egress-receipt:{receipt_id}:{body_sha256}").as_bytes());
+        sha256_hex(format!("egress-receipt:{receipt_id}:{body_sha256}:{redirect_chain}").as_bytes());
     let status = StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY);
     let mut output = HttpResponse::build(status);
     for (name, value) in &headers {

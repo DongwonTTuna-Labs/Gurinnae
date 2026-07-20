@@ -292,7 +292,7 @@ fn deterministic_output(agent_type: &str, evidence: &Value) -> Value {
         return blocked_output("ABSTAINED", "EVIDENCE_REQUIRED");
     };
     let path = format!(
-        "{}/../../specs/agents/fixtures/{agent_type}/{agent_type}-01-valid/provider-response.json",
+        "{}/../../specs/agents/fixtures/{agent_type}/{agent_type}-01-valid/provider-response-v2.json",
         env!("CARGO_MANIFEST_DIR")
     );
     let Ok(bytes) = std::fs::read(path) else {

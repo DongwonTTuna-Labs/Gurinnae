@@ -357,6 +357,31 @@ pub(super) async fn arm_placelegalhold(
     _field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
+    // Match the research-fetch owner preflight lock. A legal hold placement
+    // therefore cannot commit between rights admission and artifact record.
+    let held_object = uuid_value(payload, &["objectId"]).ok_or(ServiceError::InvalidRequest)?;
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 13))")
+        .bind(held_object.to_string())
+        .execute(&mut **tx)
+        .await
+        .map_err(db)?;
+    if let Some(case_id) = uuid_value(payload, &["caseId"]) {
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 13))")
+            .bind(case_id.to_string())
+            .execute(&mut **tx)
+            .await
+            .map_err(db)?;
+    }
+    // Fetch admission locks the exact affected-id atoms as text.  Acquire
+    // those same locks before inserting the hold so placement cannot commit
+    // between the admission check and the immutable fetch record.
+    sqlx::query(
+        "SELECT pg_advisory_xact_lock(hashtextextended(value, 13)) FROM jsonb_array_elements_text(COALESCE($1::jsonb, '[]'::jsonb)) ORDER BY value",
+    )
+    .bind(payload.get("affectedIds").cloned().unwrap_or_else(|| json!([])))
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?;
     sqlx::query(
         "INSERT INTO editorial.legal_holds(id,case_id,review_snapshot_id,object_type,object_id,scope,affected_ids,reason,authority_reference,expires_at,placed_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
     )
@@ -364,7 +389,7 @@ pub(super) async fn arm_placelegalhold(
     .bind(uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?)
     .bind(uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?)
     .bind(string_value(payload, "objectType").ok_or(ServiceError::InvalidRequest)?)
-    .bind(uuid_value(payload, &["objectId"]).ok_or(ServiceError::InvalidRequest)?)
+    .bind(held_object)
     .bind(string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?)
     .bind(payload.get("affectedIds").cloned().unwrap_or_else(|| json!([])))
     .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)

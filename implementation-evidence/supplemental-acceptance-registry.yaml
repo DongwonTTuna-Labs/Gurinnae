@@ -28,8 +28,8 @@
     },
     {
       "path": "tests/acceptance/effective-execution-registry.yaml",
-      "sha256": "3760f69d32b8f089cdc0fea2ecc8d3c13b5462c6284bf6c041e59b6a80ec2b96",
-      "size": 11761538
+      "sha256": "62dcd58c321a0c34ba362e872aa6212a4502f2ec5b80b266524e53ef34acb124",
+      "size": 11746931
     }
   ],
   "execution_contract": {
@@ -112,8 +112,8 @@
     },
     {
       "path": "scripts/generate_effective_execution_registry.py",
-      "sha256": "6a44aa9f00d3f31eddf8b7d0119a72f2379a26aced25c81015a174054402f0dc",
-      "size": 24093
+      "sha256": "f8b480b0e83d1421893acf32e3fd7ea985a98e5e5a97aa95f444e5325e173e9d",
+      "size": 24593
     },
     {
       "path": "scripts/generate_supplemental_execution_mapping.py",
