@@ -17,15 +17,16 @@
             Err(_) => return problem("EGRESS_UPSTREAM_UNAVAILABLE", 502),
         }
     }
+    let body_len = body.len();
     let body_sha256 = format!("{:x}", Sha256::digest(&body));
     if compressed_bytes > 0 && body.len() as u64 > compressed_bytes.saturating_mul(100) {
         return problem("EGRESS_COMPRESSION_RATIO_EXCEEDED", 502);
     }
     let receipt_id = sha256_hex(
-        format!("egress-receipt-v2:{idempotency_key}:{target}:{status}:{body_sha256}:{redirect_chain}").as_bytes(),
+        format!("egress-receipt-v3:{idempotency_key}:{request_digest}:{target}:{status}:{body_sha256}:{compressed_bytes}:{body_len}:{redirect_chain}").as_bytes(),
     );
     let receipt_sha256 =
-        sha256_hex(format!("egress-receipt:{receipt_id}:{body_sha256}:{redirect_chain}").as_bytes());
+        sha256_hex(format!("egress-receipt-v3:{receipt_id}:{request_digest}:{body_sha256}:{compressed_bytes}:{body_len}:{redirect_chain}").as_bytes());
     let status = StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY);
     let mut output = HttpResponse::build(status);
     for (name, value) in &headers {
@@ -51,8 +52,9 @@
     ));
     output.insert_header((
         "x-gurine-source-fetch-expanded-bytes",
-        body.len().to_string(),
+        body_len.to_string(),
     ));
+    output.insert_header(("x-gurine-source-fetch-request-sha256", request_digest.to_owned()));
     output.insert_header((
         "x-gurine-source-fetch-redirect-chain",
         redirect_chain.to_owned(),
@@ -82,6 +84,9 @@
                     "x-gurine-source-fetch-redirect-chain".to_owned(),
                     redirect_chain.to_owned(),
                 ),
+                ("x-gurine-source-fetch-compressed-bytes".to_owned(), compressed_bytes.to_string()),
+                ("x-gurine-source-fetch-expanded-bytes".to_owned(), body_len.to_string()),
+                ("x-gurine-source-fetch-request-sha256".to_owned(), request_digest.to_owned()),
             ],
             body: body.clone(),
         };

@@ -507,6 +507,9 @@ async fn pinned_client(
     }
     let mut builder = reqwest::Client::builder()
         .redirect(Policy::none())
+        .no_gzip()
+        .no_brotli()
+        .no_deflate()
         .connect_timeout(std::time::Duration::from_secs(5))
         .timeout(std::time::Duration::from_secs(15));
     for address in addresses {
@@ -520,6 +523,7 @@ async fn proxy_response(
     limit: usize,
     target: &str,
     idempotency_key: &str,
+    request_digest: &str,
     redirect_chain: &str,
     state: &GatewayState,
 ) -> HttpResponse {

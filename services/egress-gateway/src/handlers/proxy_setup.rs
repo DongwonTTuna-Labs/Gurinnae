@@ -36,6 +36,21 @@ async fn proxy(
         return replay.body(cached.body);
     }
     let mut redirects = 0_u8;
+    let requested_limit = match header(&request, "x-gurine-source-fetch-max-bytes") {
+        Some(value) => match value.parse::<usize>() { Ok(value) => value, Err(_) => return problem("EGRESS_LIMIT_INVALID", 400) },
+        None => response_limit(channel),
+    }.min(response_limit(channel));
+    if requested_limit == 0 { return problem("EGRESS_LIMIT_INVALID", 400); }
+    let expected_media_types: Vec<String> = match header(&request, "x-gurine-source-fetch-expected-media-types") {
+        Some(value) => match serde_json::from_str(value) { Ok(value) => value, Err(_) => return problem("EGRESS_MEDIA_TYPES_INVALID", 400) },
+        None => Vec::new(),
+    };
+    let request_digest = header(&request, "x-gurine-source-fetch-request-sha256")
+        .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .unwrap_or("");
+    if matches!(channel, Channel::Source | Channel::Ai) && request_digest.is_empty() {
+        return problem("EGRESS_REQUEST_DIGEST_REQUIRED", 400);
+    }
     let allow_redirects = header(&request, "x-gurine-allow-redirects")
         .is_some_and(|value| value.eq_ignore_ascii_case("true"));
     let mut redirect_chain: Vec<serde_json::Value> = Vec::new();
@@ -46,7 +61,18 @@ async fn proxy(
             Ok(value) => value,
             Err(code) => return problem(code, if code == "EGRESS_UPSTREAM_UNAVAILABLE" { 502 } else { 403 }),
         };
-        if !response.status().is_redirection() { break response; }
+        if !response.status().is_redirection() {
+            if !expected_media_types.is_empty() {
+                let actual = response.headers().get(reqwest::header::CONTENT_TYPE)
+                    .and_then(|value| value.to_str().ok())
+                    .map(|value| value.split(';').next().unwrap_or(value).trim().to_ascii_lowercase())
+                    .unwrap_or_default();
+                if !expected_media_types.iter().any(|expected| expected == &actual) {
+                    return problem("EGRESS_MEDIA_TYPE_DENIED", 403);
+                }
+            }
+            break response;
+        }
         if !allow_redirects { return problem("EGRESS_REDIRECT_DENIED", 403); }
         if redirects >= 5 { return problem("EGRESS_REDIRECT_LIMIT", 502); }
         let Some(location) = response.headers().get(reqwest::header::LOCATION).and_then(|v| v.to_str().ok()) else {
@@ -76,9 +102,10 @@ async fn proxy(
     };
     proxy_response(
         response,
-        response_limit(channel),
+        requested_limit,
         &target_for_receipt,
         &receipt_key,
+        request_digest,
         &serde_json::to_string(&redirect_chain).unwrap_or_else(|_| "[]".to_owned()),
         state,
     )

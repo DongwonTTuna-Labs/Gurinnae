@@ -318,6 +318,21 @@ async fn claim_tool_call(
     let (request_schema_sha256, response_schema_sha256) = tool_schema_hashes(tool_id);
     let call_text = call.call_id.to_string();
     let tool_call_id = Uuid::new_v4();
+    let rights_decision_sha256 = if tool_id == "source.fetch" {
+        let request_kind = request.get("requestKind").and_then(Value::as_str)
+            .unwrap_or("FETCH_URL");
+        let source_id = if request_kind == "SEARCH_PUBLIC_WEB" { "brave-search-web-v1" } else { "public-research" };
+        let rights: Option<Value> = sqlx::query_scalar("SELECT ops.assert_research_fetch_rights_v1($1,$2)")
+            .bind(source_id)
+            .bind(request_kind)
+            .fetch_one(&state.pool)
+            .await
+            .map_err(database)?;
+        rights.and_then(|value| value.get("decisionSha256").and_then(Value::as_str).map(str::to_owned))
+            .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_UNAVAILABLE", source_id.to_owned()))?
+    } else {
+        sha256(format!("rights-snapshot:{tool_id}:{request_sha256}").as_bytes())
+    };
     sqlx::query(
         "INSERT INTO ops.agent_tool_calls(
            tool_call_id,agent_run_id,provider_turn_id,call_id,input_snapshot_sha256,
@@ -352,7 +367,7 @@ async fn claim_tool_call(
     .bind(request_canonical)
     .bind(sha256(format!("allowlist:{agent_type}").as_bytes()))
     .bind(sha256(b"snapshot-scope"))
-    .bind(sha256(b"rights-allow"))
+    .bind(rights_decision_sha256)
     .bind(sha256(call_text.as_bytes()))
     .execute(&state.pool)
     .await

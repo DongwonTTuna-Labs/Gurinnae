@@ -2271,6 +2271,19 @@ BEGIN
       'expiresAt', d.expires_at, 'rightsDigest', d.rights_digest,
       'policyDigest', d.policy_digest, 'scopeDigest', d.scope_digest,
       'licenseDigest', d.license_digest, 'evidenceSetDigest', d.evidence_set_digest,
+      'holdCoverage', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'holdId',h.id,'holdVersion',h.version,'objectId',h.object_id,
+        'caseId',h.case_id,'affectedIds',h.affected_ids,
+        'anchor', (SELECT jsonb_build_object('anchorId',a.id,'anchorDigest',a.anchor_digest,
+                    'targetId',a.target_id,'targetVersion',a.target_version)
+                   FROM ops.legal_hold_target_anchors a
+                  WHERE a.target_id IN (h.object_id,h.case_id)
+                  ORDER BY a.target_version DESC,a.created_at DESC LIMIT 1)
+        ) ORDER BY h.placed_at DESC)
+        FROM editorial.legal_holds h
+       WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > clock_timestamp())
+         AND (h.affected_ids @> jsonb_build_array(p_source_id)
+              OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)), '[]'::jsonb),
       'dimensions', jsonb_build_object(
         'accessRight','ALLOW','privateStorageRight','ALLOW',
         'modelEgressRight',CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class='MODEL_EGRESS' AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST') AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= clock_timestamp() AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())) THEN 'ALLOW' ELSE 'UNKNOWN' END,
@@ -2529,10 +2542,15 @@ BEGIN
   VALUES(v_rights_id,v_asset_id,v_content_sha,1,1,'RESEARCH_ARTIFACT',v_artifact_id,'GRANT',
     v_access_right,v_private_storage_right,v_model_egress_right,v_model_use_right,v_derivative_creation_right,v_excerpt_right,
     v_redistribution_right,v_commercial_use_right,v_public_display_right,
-    encode(extensions.digest(convert_to(octet_length(p_content)::text,'UTF8'),'sha256'),'hex'),'PUBLIC_RESEARCH',p_source_id,
+    encode(extensions.digest(ops.canonical_jsonb_v1(jsonb_build_object(
+      'accessRight',v_access_right,'privateStorageRight',v_private_storage_right,
+      'modelEgressRight',v_model_egress_right,'modelUseRight',v_model_use_right,
+      'derivativeCreationRight',v_derivative_creation_right,'excerptRight',v_excerpt_right,
+      'redistributionRight',v_redistribution_right,'commercialUseRight',v_commercial_use_right,
+      'publicDisplayRight',v_public_display_right)),'sha256'),'hex'),'PUBLIC_RESEARCH',p_source_id,
     encode(extensions.digest(convert_to(p_source_id,'UTF8'),'sha256'),'hex'),
     ARRAY[encode(extensions.digest(convert_to(p_source_id,'UTF8'),'sha256'),'hex')],
-    encode(extensions.digest(convert_to('[]','UTF8'),'sha256'),'hex'),
+    encode(extensions.digest(ops.canonical_jsonb_v1(to_jsonb(ARRAY[encode(extensions.digest(convert_to(p_source_id,'UTF8'),'sha256'),'hex')]::text[])),'sha256'),'hex'),
     'GLOBAL',false,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'),p_policy_version,v_policy_sha,
     v_artifact_sha,v_artifact_sha,v_fetch_id,v_fetch_receipt,v_reviewer_user_id,coalesce(v_capability_effective,v_now),
     v_asset_rights_sha);

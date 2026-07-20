@@ -39,6 +39,7 @@ struct FetchedResponse {
     redirects: Value,
     bytes: Vec<u8>,
     response_sha256: String,
+    gateway_receipt_sha256: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -92,13 +93,14 @@ pub(super) async fn dispatch_source_fetch(
         ));
     };
     let fetched = read_source_response(&state.client, channel, target.as_str(), source_id,
-        turn.turn_id, request_kind, &expected_media_types, max_bytes, allow_redirects).await?;
+        turn.turn_id, &call.call_id.to_string(), &call.request_sha256, request_kind, &expected_media_types, max_bytes, allow_redirects).await?;
     let status = fetched.status;
     let content_type = fetched.content_type;
     let safe_headers = fetched.safe_headers;
     let redirects = fetched.redirects;
     let bytes = fetched.bytes;
     let response_sha256 = fetched.response_sha256;
+    let gateway_receipt_sha256 = fetched.gateway_receipt_sha256;
     let safety = scan_fetched_content(&bytes, content_type.as_deref());
     if safety.state != "CLEAN" {
         // Do not persist or expose flagged content as a usable artifact.  The
@@ -119,7 +121,7 @@ pub(super) async fn dispatch_source_fetch(
     let output = build_fetch_output(request_kind, &bytes, requested_limit, &call.request_sha256,
         status, &policy_sha256, &decision_sha256, &retrieved_at, receipt_digest,
         &pending, pending.artifact_id, pending.asset_id, pending.fetch_id, source_id, &pending.external_locator, brave_pricing.as_ref(),
-        response_sha256, &pending.safe_headers, &pending.redirects)?;
+        response_sha256, &pending.safe_headers, &pending.redirects, &gateway_receipt_sha256)?;
     Ok((output, Some(pending)))
 }
 
@@ -130,18 +132,26 @@ async fn read_source_response(
     target: &str,
     source_id: &str,
     turn_id: Uuid,
+    call_id: &str,
+    request_sha256: &str,
     request_kind: &str,
     expected_media_types: &[String],
     max_bytes: u64,
     allow_redirects: bool,
 ) -> Result<FetchedResponse, Failure> {
-    let response = client.get(channel.clone())
+    let mut request = client.get(channel.clone())
         .header("x-gurine-egress-caller", "analysis-worker")
         .header("x-gurine-egress-target", target)
         .header("x-gurine-source-id", source_id)
         .header("x-gurine-source-fetch-id", turn_id.to_string())
         .header("x-gurine-allow-redirects", if allow_redirects { "true" } else { "false" })
-        .send().await
+        .header("x-gurine-source-fetch-max-bytes", max_bytes.to_string())
+        .header("x-gurine-source-fetch-request-sha256", request_sha256);
+    if !expected_media_types.is_empty() {
+        request = request.header("x-gurine-source-fetch-expected-media-types", serde_json::to_string(expected_media_types).unwrap_or_else(|_| "[]".to_owned()));
+    }
+    request = request.header("x-gurine-idempotency-key", format!("source-fetch:{turn_id}:{call_id}:{request_sha256}"));
+    let response = request.send().await
         .map_err(|error| Failure::Retryable("SOURCE_FETCH_UNKNOWN", error.to_string()))?;
     let status = response.status().as_u16();
     let successful = response.status().is_success();
@@ -158,6 +168,11 @@ async fn read_source_response(
         .and_then(|value| serde_json::from_str::<Value>(value).ok())
         .unwrap_or_else(|| Value::Array(Vec::new()));
     let redirects = normalize_redirect_chain(redirects)?;
+    let gateway_receipt_sha256 = response.headers().get("x-gurine-egress-receipt-sha256")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .ok_or_else(|| Failure::Terminal("SOURCE_GATEWAY_RECEIPT_MISSING", status.to_string()))?
+        .to_owned();
     if response.status().is_redirection() && !allow_redirects {
         return Err(Failure::Terminal("SOURCE_REDIRECT_DENIED", status.to_string()));
     }
@@ -181,6 +196,7 @@ async fn read_source_response(
         safe_headers,
         redirects,
         response_sha256: sha256(&bytes),
+        gateway_receipt_sha256,
         bytes,
     })
 }
@@ -444,6 +460,7 @@ fn build_fetch_output(
     response_sha256: String,
     safe_headers: &Value,
     redirects: &Value,
+    gateway_receipt_sha256: &str,
 ) -> Result<Value, Failure> {
     let mut output = json!({"schemaVersion":"source.fetch.response.v2","requestKind":request_kind,
         "gatewayDecision":{"policyVersion":"source-policy-v2","policySha256":policy_sha256,"decision":"ALLOW","decisionCode":"EGRESS_FETCHED","decisionSha256":decision_sha256},
@@ -474,7 +491,7 @@ fn build_fetch_output(
         let brave_price_usd_micros = pricing.get("usdMicrosPerRequest").and_then(Value::as_i64).ok_or_else(|| Failure::Terminal("BRAVE_PRICING_INVALID", "usdMicrosPerRequest".to_owned()))?;
         let usd_krw_micros = pricing.get("usdKrwMicros").and_then(Value::as_i64).ok_or_else(|| Failure::Terminal("BRAVE_PRICING_INVALID", "usdKrwMicros".to_owned()))?;
         let cost_micros_krw = pricing.get("costMicrosKrw").and_then(Value::as_i64).ok_or_else(|| Failure::Terminal("BRAVE_PRICING_INVALID", "costMicrosKrw".to_owned()))?;
-        let mut discovery = json!({"providerId":"BRAVE_SEARCH_WEB_V1","adapterVersion":1,"providerConfigurationId":stable_uuid(b"brave-search-provider-configuration-v1"),"providerConfigurationVersion":1,"providerConfigurationSha256":sha256(b"brave-search-config-v1"),"searchRequestSha256":request_sha256,"responseBodySha256":response_sha256,"httpStatus":status,"resultCount":output["searchResults"].as_array().map_or(0, Vec::len),"usageRequests":1,"priceScheduleId":stable_uuid(b"brave-search-price-schedule-v1"),"priceScheduleVersion":pricing.get("scheduleVersion"),"priceScheduleSha256":pricing.get("scheduleSha256"),"fxFactId":pricing.get("fxFactId"),"fxFactSha256":pricing.get("fxFactSha256"),"usdMicrosPerRequest":brave_price_usd_micros,"usdKrwMicros":usd_krw_micros,"costMicrosKrw":cost_micros_krw,"gatewayReceiptSha256":sha256(format!("gateway:{status}:{response_sha256}:{policy_sha256}").as_bytes()),"observedAt":retrieved_at});
+        let mut discovery = json!({"providerId":"BRAVE_SEARCH_WEB_V1","adapterVersion":1,"providerConfigurationId":stable_uuid(b"brave-search-provider-configuration-v1"),"providerConfigurationVersion":1,"providerConfigurationSha256":sha256(b"brave-search-config-v1"),"searchRequestSha256":request_sha256,"responseBodySha256":response_sha256,"httpStatus":status,"resultCount":output["searchResults"].as_array().map_or(0, Vec::len),"usageRequests":1,"priceScheduleId":stable_uuid(b"brave-search-price-schedule-v1"),"priceScheduleVersion":pricing.get("scheduleVersion"),"priceScheduleSha256":pricing.get("scheduleSha256"),"fxFactId":pricing.get("fxFactId"),"fxFactSha256":pricing.get("fxFactSha256"),"usdMicrosPerRequest":brave_price_usd_micros,"usdKrwMicros":usd_krw_micros,"costMicrosKrw":cost_micros_krw,"gatewayReceiptSha256":gateway_receipt_sha256,"observedAt":retrieved_at});
         discovery["receiptSha256"] = json!(sha256(&canonical_bytes(&discovery)?));
         output["discoveryReceipt"] = discovery;
     } else {
