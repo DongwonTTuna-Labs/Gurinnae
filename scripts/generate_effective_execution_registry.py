@@ -311,7 +311,14 @@ def _rust_selector(scenario_id: str, path: str) -> dict[str, object]:
 
 def _playwright_selector(scenario_id: str, title: str, path: str) -> dict[str, object]:
     exact_title = f"[{scenario_id}] {title}"
-    pattern = "^" + re.escape(exact_title) + "$"
+    # Playwright consumes a JavaScript RegExp. Python's re.escape also
+    # escapes spaces (``\ ``), which JS treats as a literal backslash-space
+    # and therefore makes every exact-title discovery report zero tests.
+    # Playwright's CLI normalizes grep arguments before constructing its
+    # matcher; bracket-anchored titles are interpreted as character classes
+    # and never discover the literal acceptance test. A scenario-id token is
+    # unique in the suite and is the stable, executable selector.
+    pattern = re.escape(scenario_id)
     common = [
         "bunx",
         "playwright",
