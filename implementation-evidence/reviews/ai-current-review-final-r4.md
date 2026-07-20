@@ -22,9 +22,14 @@ AI_VERDICT: CHANGES_REQUIRED
 These are compile/harness/analysis-runtime observations only; they do not prove
 the external source-fetch acceptance matrix or a clean final archive.
 
+The latest source snapshot corrected the asset-rights canonical version and
+removed the extra gateway-receipt artifact field. Those two checks are retained
+below as resolved observations; the remaining rights, hold, receipt, network,
+claim, and freeze findings still block approval.
+
 ## Blocking findings
 
-### R4-001 — asset-rights/source-use canonical version mismatch
+### R4-001 (resolved in latest snapshot) — asset-rights/source-use canonical version mismatch
 
 `services/analysis-worker/src/analysis_source_fetch.rs` builds the root
 `rightsDecision` with `decisionVersion: 1` (the newly created asset-rights row),
@@ -35,8 +40,9 @@ persists `asset_rights_decision_version = 1`. Any active capability decision who
 version is not exactly one therefore produces a digest different from the worker's
 `p_source_use_sha256` and fails with `SOURCE_USE_DIGEST_MISMATCH`.
 
-The capability version must be a separately named/bound field while the asset-rights
-decision version remains 1 in both canonical projections.
+The latest migration now uses asset-rights `decisionVersion: 1` in this canonical
+object, with capability version carried separately. A DB integration run with a
+capability version greater than one is still required as proof.
 
 ### R4-002 — source rights are still projected/synthesized from capability
 
@@ -61,13 +67,12 @@ hold/anchor snapshot receipt is required.
 
 ### R4-004 — gateway/source receipt does not bind the complete network policy
 
-The worker sends no max-byte/media-type/policy capsule or replay key to the gateway;
-the gateway applies its channel-wide 25 MiB limit and the worker rejects an
-over-budget response only after egress. The gateway receipt digest includes body,
-status and redirect JSON but not compressed/expanded counters, request/policy/DNS
-decision digests, or the actual receipt header values. The worker synthesizes
-`gatewayReceiptSha256` from `gateway:{status}:{body}:{policy}` instead of binding
-`x-gurine-egress-receipt-sha256`. Replay headers omit compressed/expanded counters.
+The worker now sends max-byte/media-type/request-digest headers and the gateway
+echoes them, but the request's policy/capability/rights snapshot is still not a
+cryptographically bound capsule. The gateway receipt digest includes body, status,
+request digest, counters, and redirect JSON, but does not bind the source rights
+decision/activation digest or a complete per-hop DNS/policy proof. The receipt is
+also not persisted into the research-artifact/source-fetch rows (see R4-009).
 
 Reqwest's default decompression also means `content_length` is not a reliable
 compressed-byte counter; ratio-100 enforcement is not proven. The worker client
@@ -99,9 +104,6 @@ The journey/PDM receipts currently claim source digest
 `8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060`, which cannot
 be accepted as a digest for this unverified working tree. Regenerate MANIFEST,
 tree digest, all runtime/CAS/PDM receipts, and clean-extraction archive together.
-
-Until R4-001 through R4-008 are resolved and a fresh unchanged-source review passes,
-`AI_VERDICT: LGTM_NO_BLOCKING` and `VERDICT: ARTIFACT_READY` are forbidden.
 
 ### R4-007 — legacy suggestion projection is not explicitly isolated
 
@@ -139,18 +141,15 @@ not an exact owner decision/version/digest and lets a claimed call carry a fake
 rights receipt. The claim must bind the exact rights snapshot or remain blocked
 until that owner decision is resolved.
 
-### R4-011 — FETCH_URL wire response now violates its closed schema
+### R4-011 (resolved in latest snapshot) — FETCH_URL wire response now violates its closed schema
 
 The latest `build_fetch_output` adds `gatewayReceiptSha256` directly to each
 `artifact`. `SourceFetchResponseV2`/`SourceArtifactV2` and the authority
-`source-fetch.response.schema.json` use `deny_unknown_fields` and do not define
-that property. A positive `FETCH_URL` response therefore fails typed
-deserialization in `analysis_runtime_bridge` as an unknown field. Gateway receipt
-proof must be carried in an already-authorized receipt object/ToolCall adapter
-receipt or the closed authority schema and all generated bindings must be changed
-together.
+`source-fetch.response.schema.json` use `deny_unknown_fields` and did not define
+that property. The latest source removed the extra artifact field. Gateway receipt
+proof still needs to be persisted through an authorized receipt path (R4-009).
 
 ## Gate
 
-Until R4-001 through R4-011 are resolved and a fresh unchanged-source review passes,
+Until the remaining R4-002 through R4-010 findings are resolved and a fresh unchanged-source review passes,
 `AI_VERDICT: LGTM_NO_BLOCKING` and `VERDICT: ARTIFACT_READY` are forbidden.
