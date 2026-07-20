@@ -258,6 +258,7 @@ async fn send_provider_request(
         .header("x-gurine-ai-model-id", model)
         .header("x-gurine-ai-model-configuration-sha256", sha256(model.as_bytes()))
         .header("x-gurine-ai-idempotency-key-sha256", turn.idempotency_hash.as_str())
+        .header("x-gurine-source-fetch-request-sha256", turn.request_sha256.as_str())
         .header("x-gurine-idempotency-key", turn.idempotency_hash.as_str())
         .json(&wire_request).send().await;
     match response {
@@ -305,7 +306,16 @@ async fn finalize_provider_response(
         Err(error) => return context.retry_shape("provider response is not JSON", error.to_string()).await,
     };
     let Some(receipt) = body.get("providerReceipt").or_else(|| body.get("receipt")).cloned() else {
-        return context.retry_shape("provider receipt missing", turn.turn_id.to_string()).await;
+        let provider_code = body
+            .get("code")
+            .and_then(Value::as_str)
+            .unwrap_or("UNKNOWN_PROVIDER_ERROR");
+        return context
+            .retry_shape(
+                "provider receipt missing",
+                format!("{}:{}", turn.turn_id, provider_code),
+            )
+            .await;
     };
     let receipt_id = bound_receipt_id(&context, &receipt).await?;
     let outcome = receipt.get("outcome").and_then(Value::as_str).unwrap_or("");

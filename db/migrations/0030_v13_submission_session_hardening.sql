@@ -7709,7 +7709,17 @@ BEGIN
       ARRAY['AI_PROVIDER']::text[],ar.created_by,NULL,
       clock_timestamp()+interval '1 hour',
       jsonb_build_object('providerTurnId',p_provider_turn_id,'redacted',true),
-      jsonb_build_object('providerTurnId',p_provider_turn_id,'redacted',true),
+      -- Incident evidence is an ordered array of typed references.  Keep the
+      -- ambiguous provider outcome auditable without inventing a source
+      -- document: the provider turn is the durable reconciliation reference
+      -- and the receipt digest binds the evidence to this terminal attempt.
+      jsonb_build_array(jsonb_build_object(
+        'kind','PROVIDER_RECEIPT',
+        'refId',p_provider_turn_id::text,
+        'refVersion',1,
+        'refDigest',v_receipt_digest,
+        'observedAt',clock_timestamp()
+      )),
       encode(extensions.digest(convert_to('incident-evidence:'||p_provider_turn_id::text,'UTF8'),'sha256'),'hex'),
       'PROVIDER_OUTCOME_UNKNOWN','Provider outcome requires authenticated reconciliation',
       'SERVICE','analysis-worker',NULL,NULL,p_provider_turn_id,gen_random_uuid(),

@@ -58,6 +58,8 @@ async fn connection_test_result(
         .egress_ai_url
         .as_ref()
         .ok_or_else(|| Failure::Terminal("AI_EGRESS_MISSING", provider_id.to_string()))?;
+    let request = json!({"operation":"connection_test","model":model});
+    let request_digest = sha256(&canonical_bytes(&request)?);
     let response = state
         .client
         .post(gateway.clone())
@@ -68,7 +70,8 @@ async fn connection_test_result(
             "x-gurine-idempotency-key",
             sha256(format!("connection-test\0{provider_id}\0{model}").as_bytes()),
         )
-        .json(&json!({"operation":"connection_test","model":model}))
+        .header("x-gurine-source-fetch-request-sha256", request_digest)
+        .json(&request)
         .send()
         .await
         .map_err(|error| Failure::Retryable("PROVIDER_UNAVAILABLE", error.to_string()))?;
@@ -108,4 +111,3 @@ async fn update_connection_test(
     .map_err(database)?;
     Ok(())
 }
-
