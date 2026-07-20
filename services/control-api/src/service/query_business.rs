@@ -98,6 +98,15 @@ pub(super) async fn cost_export_query(
         .get("format")
         .filter(|value| matches!(value.as_str(), "CSV" | "JSON"))
         .ok_or(ServiceError::InvalidRequest)?;
+    let date_format = time::format_description::parse("[year]-[month]-[day]")
+        .map_err(|_| ServiceError::Persistence)?;
+    let from_date = Date::parse(from, &date_format)
+        .map_err(|_| ServiceError::InvalidRequest)?;
+    let to_date = Date::parse(to, &date_format)
+        .map_err(|_| ServiceError::InvalidRequest)?;
+    if from_date >= to_date {
+        return Err(ServiceError::InvalidRequest);
+    }
     let rows: Value = sqlx::query_scalar(
         // The contract is an explicit half-open window [from,to).  Do not
         // widen a caller's upper bound by converting it to a date and adding
@@ -119,16 +128,18 @@ pub(super) async fn cost_export_query(
         .map(|items| items.len() as i64)
         .unwrap_or(0);
     let payload = if format == "CSV" {
-        let mut csv = String::from("group,amount,currency,rowCount,reservationSettled,reservationReserved\n");
+        let mut csv = String::from("group,amount,currency,rowCount,reservationSettled,reservationReserved,state,unknownReason\n");
         if let Some(items) = rows.get("rows").and_then(Value::as_array) {
             for item in items {
-                csv.push_str(&format!("{},{},{},{},{},{}\n",
+                csv.push_str(&format!("{},{},{},{},{},{},{},{}\n",
                     item.get("key").and_then(Value::as_str).unwrap_or("UNKNOWN"),
                     item.get("amount").and_then(Value::as_str).unwrap_or(""),
                     item.get("currency").and_then(Value::as_str).unwrap_or("UNKNOWN"),
                     item.get("rowCount").and_then(Value::as_i64).unwrap_or(0),
                     item.get("reservationSettled").and_then(Value::as_str).unwrap_or(""),
-                    item.get("reservationReserved").and_then(Value::as_str).unwrap_or("")));
+                    item.get("reservationReserved").and_then(Value::as_str).unwrap_or(""),
+                    item.get("state").and_then(Value::as_str).unwrap_or("UNKNOWN"),
+                    item.get("unknownReason").and_then(Value::as_str).unwrap_or("")));
             }
         }
         csv
