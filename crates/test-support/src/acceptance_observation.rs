@@ -96,7 +96,26 @@ fn required_layers() -> Result<Vec<String>, String> {
 fn edge_contracts() -> Result<BTreeMap<String, BTreeMap<String, EdgeBinding>>, String> {
     let encoded = std::env::var(EDGE_CONTRACTS_ENV)
         .map_err(|_| format!("{EDGE_CONTRACTS_ENV} is required by the authoritative runner"))?;
-    serde_json::from_str(&encoded)
+    // The local full-workspace runtime gate can exceed the host exec argument
+    // limit when it binds every generated acceptance instance.  It passes a
+    // runner-owned regular file as `@/absolute/path`; the authoritative
+    // acceptance runner continues to pass the sealed JSON value directly.
+    let payload = if let Some(path) = encoded.strip_prefix('@') {
+        let metadata = std::fs::symlink_metadata(path).map_err(|error| {
+            format!("{EDGE_CONTRACTS_ENV} contract file is unavailable: {error}")
+        })?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err(format!(
+                "{EDGE_CONTRACTS_ENV} contract file must be a regular non-symlink file"
+            ));
+        }
+        std::fs::read_to_string(path).map_err(|error| {
+            format!("{EDGE_CONTRACTS_ENV} contract file cannot be read: {error}")
+        })?
+    } else {
+        encoded
+    };
+    serde_json::from_str(&payload)
         .map_err(|error| format!("{EDGE_CONTRACTS_ENV} is not a closed edge map: {error}"))
 }
 

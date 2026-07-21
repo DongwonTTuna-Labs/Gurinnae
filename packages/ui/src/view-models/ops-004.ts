@@ -7,6 +7,17 @@ export type Ops004BudgetSummary = {
   monthlyLimit: string | null;
   monthlyUsed: string | null;
   status: string | null;
+  forecastAssumption?: string | null;
+  softLimit?: string | null;
+  hardLimit?: string | null;
+  fallbackAction?: string | null;
+  alertThreshold?: string | null;
+  lastChangedBy?: string | null;
+  lastChangeReason?: string | null;
+  unknownReason?: string | null;
+  forecastConfidence?: string | null;
+  asOf?: string | null;
+  reservationSummary?: Record<string, unknown> | null;
 };
 export type Ops004CostPoint = {
   at: string | null;
@@ -82,6 +93,17 @@ function parseSummary(value: unknown): Ops004BudgetSummary | null {
         monthlyLimit: text(row.monthlyLimit),
         monthlyUsed: text(row.monthlyUsed),
         status: text(row.status),
+        forecastAssumption: text(row.forecastAssumption),
+        softLimit: text(row.softLimit),
+        hardLimit: text(row.hardLimit),
+        fallbackAction: text(row.fallbackAction),
+        alertThreshold: text(row.alertThreshold),
+        lastChangedBy: text(row.lastChangedBy),
+        lastChangeReason: text(row.lastChangeReason),
+        unknownReason: text(row.unknownReason),
+        forecastConfidence: text(row.forecastConfidence),
+        asOf: text(row.asOf),
+        reservationSummary: record(row.reservationSummary),
       }
     : null;
 }
@@ -125,8 +147,26 @@ export function toOps004ViewModel(
   const dailySeries = parseSeries(body.dailySeries);
   const topCases = parseCases(body.topCases);
   const updatedAt = text(body.updatedAt ?? response.updatedAt);
-  const forecast = record(body.forecast);
-  const limits = record(body.limits);
+  const forecast: Record<string, unknown> | null =
+    record(body.forecast) ??
+    (summary
+      ? {
+          state: summary.status,
+          unknownReason: summary.unknownReason,
+          forecastConfidence: summary.forecastConfidence,
+          forecastAssumption: summary.forecastAssumption,
+        }
+      : null);
+  const limits =
+    record(body.limits) ??
+    (summary
+      ? {
+          softLimit: summary.softLimit,
+          hardLimit: summary.hardLimit,
+          alertThreshold: summary.alertThreshold,
+          fallbackAction: summary.fallbackAction,
+        }
+      : null);
   const alerts = array(body.alerts).flatMap((item) => {
     const row = record(item);
     return row ? [row] : [];
@@ -176,8 +216,8 @@ export function toOps004ViewModel(
       unknownReason:
         text(forecast?.unknownReason) ??
         (forecast ? null : "FORECAST_OWNER_FACT_MISSING"),
-      confidence: text(forecast?.confidence),
-      assumption: text(forecast?.assumption),
+      confidence: text(forecast?.confidence ?? forecast?.forecastConfidence),
+      assumption: text(forecast?.assumption ?? forecast?.forecastAssumption),
       assumptions: arrayText(forecast?.assumptions),
     },
     limits,

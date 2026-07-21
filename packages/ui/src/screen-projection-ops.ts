@@ -8,14 +8,6 @@ const scalar = (value: unknown): SafeProjectionValue | null =>
   typeof value === "boolean"
     ? value
     : null;
-const record = (value: unknown): Record<string, unknown> | null =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-const text = (value: unknown): string | null =>
-  typeof value === "string" && value.trim() ? value : null;
-const array = (value: unknown): readonly unknown[] =>
-  Array.isArray(value) ? value : [];
 const field = (
   name: string,
   label: string,
@@ -56,74 +48,6 @@ export function ops004Fields(
         vm.summary?.currency ?? null,
         "BudgetOverview.summary.currency",
       ),
-    ],
-    "business-health": [
-      field(
-        "readiness_state",
-        "수익화 준비 상태",
-        scalar(vm.businessHealth?.readinessState),
-        "BudgetOverview.businessHealth.readinessState",
-      ),
-      field(
-        "as_of",
-        "기준 시각",
-        scalar(vm.businessHealth?.asOf),
-        "BudgetOverview.businessHealth.asOf",
-      ),
-      field(
-        "unknown_source_count",
-        "미확인 근거 수",
-        scalar(vm.businessHealth?.unknownSourceCount),
-        "BudgetOverview.businessHealth.unknownSourceCount",
-      ),
-      field(
-        "top_issue",
-        "가장 큰 미확인",
-        scalar(record(vm.businessHealth?.topIssue)?.issueCode),
-        "BudgetOverview.businessHealth.topIssue.issueCode",
-      ),
-      field(
-        "next_action",
-        "다음 조치",
-        scalar(record(vm.businessHealth?.topIssue)?.nextActionCode),
-        "BudgetOverview.businessHealth.topIssue.nextActionCode",
-      ),
-      ...array(vm.businessHealth?.funnel).flatMap((item) => {
-        const row = record(item);
-        const id = text(row?.stageId ?? row?.stage ?? row?.name);
-        const status = text(row?.status);
-        return id
-          ? [
-              field(
-                `funnel.${id}`,
-                id,
-                status,
-                "BudgetOverview.businessHealth.funnel",
-              ),
-            ]
-          : [];
-      }),
-      ...array(vm.businessHealth?.metrics).flatMap((item) => {
-        const row = record(item);
-        const id = text(row?.metricId);
-        if (!id) return [];
-        const status = text(row?.status);
-        const reason = text(row?.reasonCode);
-        return [
-          field(
-            `metric.${id}.status`,
-            `${id} 상태`,
-            status,
-            "BudgetOverview.businessHealth.metrics.status",
-          ),
-          field(
-            `metric.${id}.reason`,
-            `${id} 사유`,
-            reason,
-            "BudgetOverview.businessHealth.metrics.reasonCode",
-          ),
-        ];
-      }),
     ],
     spend: [
       ...common,

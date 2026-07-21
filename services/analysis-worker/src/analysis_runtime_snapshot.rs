@@ -206,7 +206,7 @@ async fn load_source_artifacts(
 ) -> Result<Vec<SourceArtifactRecord>, Failure> {
     let rows = sqlx::query(
         "SELECT r.id AS research_artifact_id,
-                su.source_use_id,r.content_sha256,r.artifact_sha256,
+                su.source_use_id,r.content_sha256,r.artifact_sha256,r.content_media_type,
                 r.request_kind,r.source_url_redacted,r.final_url_redacted,r.object_key
            FROM raw.research_artifacts r
            JOIN LATERAL (
@@ -265,6 +265,7 @@ async fn load_source_artifacts(
             source_use_id: row.try_get("source_use_id").map_err(database)?,
             content_sha256,
             fetch_receipt_sha256: row.try_get("artifact_sha256").map_err(database)?,
+            content_media_type: row.try_get("content_media_type").map_err(database)?,
             request_kind,
             source_url: row.try_get("source_url_redacted").map_err(database)?,
             final_url: row.try_get("final_url_redacted").map_err(database)?,

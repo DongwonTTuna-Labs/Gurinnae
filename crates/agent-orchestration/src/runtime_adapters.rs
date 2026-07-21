@@ -53,6 +53,9 @@ pub struct SourceArtifactRecord {
     pub source_use_id: Uuid,
     pub content_sha256: String,
     pub fetch_receipt_sha256: String,
+    /// Provider-declared media type, persisted with the immutable artifact and
+    /// echoed in the typed source response after byte/digest verification.
+    pub content_media_type: String,
     /// The request kind and URL are persisted with the immutable research
     /// artifact.  SourceFetch must never return an artifact for a different
     /// request or broaden a URL lookup to the whole run.
@@ -296,6 +299,7 @@ mod tests {
             source_use_id: Uuid::from_u128(4),
             content_sha256: digest(bytes),
             fetch_receipt_sha256: "b".repeat(64),
+            content_media_type: "text/html".to_owned(),
             request_kind: SourceRequestKind::FetchUrl,
             source_url: Some("https://example.test/source".to_owned()),
             final_url: Some("https://example.test/final".to_owned()),

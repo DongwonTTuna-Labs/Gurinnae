@@ -78,9 +78,6 @@ const invalidField = (actionId: string, field: ScreenField): boolean => {
   return firstEditable?.name === field.name;
 };
 const primaryActionId = $derived(typedScreenViewModel(screen).primaryActionId);
-const hasSearchForm = $derived(
-  screen.sections.some((section) => section.component === "UnifiedSearch"),
-);
 function appendChallengeProof(actionId: string, event: FormDataEvent) {
   const proof = challengeProof[actionId];
   if (proof) event.formData.append("abuseProof", proof);
@@ -93,13 +90,10 @@ const supportsLocalCommand = (action: ScreenViewModel["actions"][number]) => {
       "retry",
       "discard-change",
       "discard-local",
-      "view-compact",
     ].includes(action.id)
   )
     return true;
   if (action.id === "open-evidence") return hrefFor(action) !== undefined;
-  if (action.id.includes("search") || action.id.includes("filter"))
-    return hasSearchForm;
   return false;
 };
 const visibleActions = $derived(
@@ -179,10 +173,6 @@ function runLocalCommand(action: ScreenViewModel["actions"][number]) {
     return;
   }
   if (action.id === "discard-local") {
-    const confirmed = window.confirm(
-      "이 화면에서 작성 중인 로컬 초안만 삭제합니다. 다른 화면의 저장 내용은 유지됩니다. 계속하시겠습니까?",
-    );
-    if (!confirmed) return;
     const prefix = `gurine:${screen.id}:`;
     for (const storage of [window.sessionStorage, window.localStorage]) {
       for (let index = storage.length - 1; index >= 0; index -= 1) {
@@ -193,69 +183,25 @@ function runLocalCommand(action: ScreenViewModel["actions"][number]) {
     window.location.assign("/auth/sign-in");
     return;
   }
-  if (action.id === "view-compact") {
-    document.documentElement.classList.toggle("compact-preview");
-    return;
-  }
-  const search = document.querySelector<HTMLFormElement>('form[role="search"]');
-  if (
-    (action.id.includes("search") || action.id.includes("filter")) &&
-    search
-  ) {
-    search.requestSubmit();
-    return;
-  }
   if (action.id === "open-evidence") {
     const destination = hrefFor(action);
     if (destination) window.location.assign(destination);
   }
 }
 
-function downloadData(action: ScreenViewModel["actions"][number]) {
-  if (typeof document === "undefined") return;
+function downloadHref(
+  action: ScreenViewModel["actions"][number],
+): string | undefined {
   if (screen.id === "PUB-021" && action.id === "download-openapi") {
-    const link = document.createElement("a");
-    link.href = "/api/openapi.json";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    return;
+    return "/api/openapi.json";
   }
   const encoded = runtime.downloads?.[action.id];
-  if (encoded) {
-    const bytes = Uint8Array.from(atob(encoded.binary), (character) =>
-      character.charCodeAt(0),
-    );
-    saveBlob(
-      action,
-      new Blob([bytes], { type: encoded.mime }),
-      encoded.extension,
-    );
-    return;
-  }
-  window.alert(
-    "이 화면의 서버 권위 export가 아직 준비되지 않았습니다. 원본 자료를 노출하지 않고 안전하게 중단했습니다.",
-  );
-}
-
-function saveBlob(
-  action: ScreenViewModel["actions"][number],
-  blob: Blob,
-  extension: string,
-) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${screen.id.toLowerCase()}-${action.id}.${extension}`;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  return encoded ? `data:${encoded.mime};base64,${encoded.binary}` : undefined;
 }
 </script>
 
 {#if visibleActions.length > 0 || attachmentUpload || attachmentRemoval}
-  <section id="page-actions" class="command-panel" aria-labelledby="command-heading" data-component="GuidedFormSection" data-testid="screen-actions">
+  <section id="page-actions" class="command-panel" class:response-actions={screen.id.startsWith("RSP-")} aria-labelledby="command-heading" data-component="GuidedFormSection" data-testid="screen-actions">
     <div class="section-content">
       <p class="component-kicker">다음 단계</p><h2 id="command-heading">화면 작업</h2>
       <div class="action-grid">
@@ -326,8 +272,10 @@ function saveBlob(
               {/each}
               <button class={action.id === primaryActionId ? "primary-button" : "secondary-button"} type="submit" disabled={Boolean(challengeField(action.id)) && !challengeReady[action.id]}>{action.label}</button>
             </form>
+          {:else if interactionKind(action) === "DOWNLOAD" && downloadHref(action)}
+            <a id={`action-${action.id}`} class="secondary-button local-action" href={downloadHref(action)} download={`${screen.id.toLowerCase()}-${action.id}`} data-action-id={action.id}>{action.label}</a>
           {:else if interactionKind(action) === "DOWNLOAD"}
-            <button id={`action-${action.id}`} class="secondary-button local-action" type="button" onclick={() => downloadData(action)} data-action-id={action.id}>{action.label}</button>
+            <div class="download-unavailable" role="status" data-action-id={action.id}><span>{action.label}</span><small>현재 다운로드를 준비할 수 없습니다. 잠시 후 화면을 새로고침해 다시 시도하세요.</small></div>
           {:else if interactionKind(action) === "COMMAND"}
             <button id={`action-${action.id}`} class="secondary-button local-action" type="button" onclick={() => runLocalCommand(action)} data-action-id={action.id}>{action.label}</button>
           {:else if hrefFor(action)}

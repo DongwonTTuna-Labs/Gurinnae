@@ -7,6 +7,18 @@ let query = $state("");
 let role = $state("");
 let type = $state("");
 let filterState = $state("");
+let initialized = $state(false);
+$effect(() => {
+  if (initialized) return;
+  const searchParams = new URLSearchParams(
+    (runtime.search ?? "").replace(/^\?/, ""),
+  );
+  query = searchParams.get("q") ?? "";
+  role = searchParams.get("role") ?? "";
+  type = searchParams.get("type") ?? "";
+  filterState = searchParams.get("state") ?? "";
+  initialized = true;
+});
 const records = $derived.by(() => {
   return projection?.fields.filter((field) => field.known) ?? [];
 });

@@ -35,6 +35,10 @@ const stateMessage = $derived(
               ? "일부 자료만 확인되어 미확인 범위를 함께 표시합니다."
               : null,
 );
+const destinationFor = (name: string): string | null =>
+  runtime.destinations?.[name] ??
+  runtime.destinations?.[`${projection.sectionId}.${name}`] ??
+  null;
 </script>
 
 <div class="projection-data" data-projection-state={projection.state} aria-busy={runtime.state === "loading"}>
@@ -42,11 +46,11 @@ const stateMessage = $derived(
   {#if fields.length === 0}
     <p class="empty-message" data-testid="empty-state">{emptyLabel}</p>
   {:else if mode === "table"}
-    <div class="table-scroll" role="region" aria-label="확인된 projection 표"><table><caption class="sr-only">서버 권위 projection</caption><thead><tr><th scope="col">항목</th><th scope="col">값</th></tr></thead><tbody>{#each fields as field}<tr><th scope="row">{field.label}</th><td data-label={field.label}>{display(field.value)}</td></tr>{/each}</tbody></table></div>
+    <div class="table-scroll" role="region" aria-label="확인된 projection 표"><table><caption class="sr-only">서버 권위 projection</caption><thead><tr><th scope="col">항목</th><th scope="col">값</th></tr></thead><tbody>{#each fields as field}<tr><th scope="row">{field.label}</th><td data-label={field.label}>{#if destinationFor(field.name)}<a href={destinationFor(field.name) ?? undefined}>{display(field.value)}</a>{:else}{display(field.value)}{/if}</td></tr>{/each}</tbody></table></div>
   {:else if mode === "timeline"}
     <ol class="timeline">{#each fields as field, index}<li><span class="timeline-marker" aria-hidden="true">{index + 1}</span><span class="sr-only">기록 {index + 1}</span><div><strong>{field.label}</strong><p>{display(field.value)}</p></div></li>{/each}</ol>
   {:else}
-    <div class:metric-grid={mode === "metrics"} class:record-grid={mode !== "metrics"}><article class="data-card"><h3>서버 권위 projection</h3><dl>{#each fields as field}<div><dt>{field.label}</dt><dd>{display(field.value)}</dd></div>{/each}</dl></article></div>
+    <div class:metric-grid={mode === "metrics"} class:record-grid={mode !== "metrics"}><article class="data-card"><h3>서버 권위 projection</h3><dl>{#each fields as field}<div><dt>{field.label}</dt><dd>{#if destinationFor(field.name)}<a href={destinationFor(field.name) ?? undefined}>{display(field.value)}</a>{:else}{display(field.value)}{/if}</dd></div>{/each}</dl></article></div>
   {/if}
   {#if unknownFields.length > 0}
     <section class="unknown-fields" aria-label="확인하지 못한 항목">

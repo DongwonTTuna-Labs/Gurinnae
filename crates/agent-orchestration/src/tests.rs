@@ -79,6 +79,52 @@ fn source_fetch_v2_rejects_policy_drift() {
     );
 }
 
+#[test]
+fn source_fetch_v2_declares_authority_multimodal_media_contract() {
+    let request = SourceFetchRequest {
+        binding: binding(),
+        request_kind: SourceRequestKind::FetchUrl,
+        query: None,
+        locale: None,
+        country: None,
+        recency_days: None,
+        result_limit: None,
+        canonical_url: Some("https://example.com/evidence.pdf".to_owned()),
+    };
+    let Some(wire) = request.to_v2().ok() else {
+        assert!(false, "closed source-fetch policy");
+        return;
+    };
+    let SourceFetchRequestV2::FetchUrl {
+        expected_media_types,
+        ..
+    } = wire
+    else {
+        assert!(false, "expected FETCH_URL wire request");
+        return;
+    };
+    assert!(
+        expected_media_types
+            .iter()
+            .any(|value| value == "application/pdf")
+    );
+    assert!(
+        expected_media_types
+            .iter()
+            .any(|value| value == "image/png")
+    );
+    assert!(
+        expected_media_types
+            .iter()
+            .any(|value| value == "audio/wav")
+    );
+    assert!(
+        expected_media_types
+            .iter()
+            .any(|value| value == "video/webm")
+    );
+}
+
 struct WrongAdapter;
 impl ToolAdapter for WrongAdapter {
     fn id(&self) -> ToolId {

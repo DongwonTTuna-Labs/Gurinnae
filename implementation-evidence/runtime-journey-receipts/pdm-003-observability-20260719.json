@@ -44,9 +44,7 @@
       "observed": 0,
       "status": "NOT_APPLICABLE",
       "reason": "NO_SOURCE_OBSERVATIONS",
-      "unknownReasons": [
-        "NO_SOURCE_OBSERVATIONS"
-      ],
+      "unknownReasons": ["NO_SOURCE_OBSERVATIONS"],
       "evidence": {
         "sourceDocuments": 0,
         "replayMismatchCount": 0,

@@ -80,9 +80,7 @@
             "nextOwnerBindingDigest": null,
             "currentOwnerBindingDigest": "ee6b363a9aa5093cdbcdd0bc4a6910cb57d0082496f28697a5fba1884f8985b2"
           },
-          "emittedEventIds": [
-            "318d97b5-e4a2-4ca8-8481-c113997d4b5a"
-          ],
+          "emittedEventIds": ["318d97b5-e4a2-4ca8-8481-c113997d4b5a"],
           "aggregateVersion": 3,
           "navigationOperationId": "decideJourneyHandoff",
           "responseDigest": "a8d3c76566417428091f976dffb9b19c12871eb3b0f490c7d558b357599267c4",
@@ -175,9 +173,7 @@
             "nextOwnerBindingDigest": null,
             "currentOwnerBindingDigest": "5996877919f4c2464b49785a8f9b05eb26cee80bdd617fab89415d158e13a7e6"
           },
-          "emittedEventIds": [
-            "8c76e307-1ac8-41e0-8b3f-14692975bd6f"
-          ],
+          "emittedEventIds": ["8c76e307-1ac8-41e0-8b3f-14692975bd6f"],
           "aggregateVersion": 5,
           "navigationOperationId": "decideJourneyHandoff",
           "responseDigest": "a8d3c76566417428091f976dffb9b19c12871eb3b0f490c7d558b357599267c4",
@@ -270,9 +266,7 @@
             "nextOwnerBindingDigest": null,
             "currentOwnerBindingDigest": "bf8f87f9e3de41a60e1fb90938916d90c493cf49eb7a7afac974dae889662dd1"
           },
-          "emittedEventIds": [
-            "0691e44a-11bd-4f62-81bb-821ed834b9b3"
-          ],
+          "emittedEventIds": ["0691e44a-11bd-4f62-81bb-821ed834b9b3"],
           "aggregateVersion": 7,
           "navigationOperationId": "decideJourneyHandoff",
           "responseDigest": "a8d3c76566417428091f976dffb9b19c12871eb3b0f490c7d558b357599267c4",
@@ -365,9 +359,7 @@
             "nextOwnerBindingDigest": null,
             "currentOwnerBindingDigest": "b9ade0ba38b08d86c2fac788622913b615c154a459700c8fffcfdf77c2260ea4"
           },
-          "emittedEventIds": [
-            "b3f4c17a-ac36-4c9e-85da-662e45a9340a"
-          ],
+          "emittedEventIds": ["b3f4c17a-ac36-4c9e-85da-662e45a9340a"],
           "aggregateVersion": 9,
           "navigationOperationId": "decideJourneyHandoff",
           "responseDigest": "a8d3c76566417428091f976dffb9b19c12871eb3b0f490c7d558b357599267c4",
@@ -446,10 +438,7 @@
       },
       "domainEvents": [],
       "integrationEvents": [],
-      "projectionTables": [
-        "public.cases",
-        "public.case_revisions"
-      ],
+      "projectionTables": ["public.cases", "public.case_revisions"],
       "implementation": {
         "service": "services/public-api/src/service/cases.rs",
         "ownerFunction": "get_case",
@@ -544,10 +533,7 @@
       },
       "domainEvents": [],
       "integrationEvents": [],
-      "projectionTables": [
-        "public.cases",
-        "public.case_revisions"
-      ],
+      "projectionTables": ["public.cases", "public.case_revisions"],
       "implementation": {
         "service": "services/public-api/src/service/cases.rs",
         "ownerFunction": "get_case",
@@ -642,10 +628,7 @@
       },
       "domainEvents": [],
       "integrationEvents": [],
-      "projectionTables": [
-        "public.cases",
-        "public.case_revisions"
-      ],
+      "projectionTables": ["public.cases", "public.case_revisions"],
       "implementation": {
         "service": "services/public-api/src/service/cases.rs",
         "ownerFunction": "get_case",
@@ -740,10 +723,7 @@
       },
       "domainEvents": [],
       "integrationEvents": [],
-      "projectionTables": [
-        "public.cases",
-        "public.case_revisions"
-      ],
+      "projectionTables": ["public.cases", "public.case_revisions"],
       "implementation": {
         "service": "services/public-api/src/service/cases.rs",
         "ownerFunction": "get_case",

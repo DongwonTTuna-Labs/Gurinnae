@@ -30,7 +30,7 @@ const links = $derived(
       </nav>
     {/if}
   {:else}<p role="status">제출 projection을 불러오는 중입니다.</p>{/if}
-  {#if runtime.state === "conflict"}<p class="inline-state conflict" role="alert">영수증 버전이 변경되었습니다. 최신 영수증을 다시 확인하세요.</p>
+  {#if runtime.state === "conflict"}<p class="inline-state conflict" role="status">영수증 버전이 변경되었습니다. 최신 영수증을 다시 확인하세요.</p>
   {:else if runtime.state === "stale" || runtime.state === "superseded"}<p class="inline-state stale" role="status">영수증 정보가 오래되었습니다. 새로고침 후 확인하세요.</p>
-  {:else if runtime.state === "forbidden" || runtime.state === "unauthenticated"}<p class="inline-state forbidden" role="alert">현재 세션에서는 이 영수증을 확인할 수 없습니다.</p>{/if}
+  {:else if runtime.state === "forbidden" || runtime.state === "unauthenticated"}<p class="inline-state forbidden" role="status">현재 세션에서는 이 영수증을 확인할 수 없습니다.</p>{/if}
 </div>

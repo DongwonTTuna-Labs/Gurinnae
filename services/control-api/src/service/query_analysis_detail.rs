@@ -65,10 +65,10 @@ fn citation_ids_for_indexes(context: &RunContext<'_>, item: &Value, keys: &[&str
             let Some(citation) = context.citations.get(index as usize) else {
                 continue;
             };
-            if let Some(id) = uuid_field(citation, "id") {
-                if !ids.iter().any(|existing: &Uuid| existing == &id) {
-                    ids.push(id);
-                }
+            if let Some(id) = uuid_field(citation, "id")
+                && !ids.iter().any(|existing: &Uuid| existing == &id)
+            {
+                ids.push(id);
             }
         }
     }

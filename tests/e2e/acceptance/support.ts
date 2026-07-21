@@ -15,14 +15,16 @@ export async function assertAcceptanceJourney(
     SCREEN_CONTRACTS: "PUB-001",
     SUBMISSION_BOUNDARY: "PUB-027",
     SVELTEKIT_SSR: "PUB-004",
+    ACCESSIBILITY_RESPONSIVE: "PUB-004",
   };
   const journey = Object.keys(screenByJourney).find((prefix) =>
     scenarioId.includes(prefix),
   );
   if (!journey) throw new Error(`${scenarioId} has no route contract mapping`);
-  const screenId = journey === "ACCESSIBILITY_RESPONSIVE"
-    ? accessibilityScreenForScenario(scenarioId)
-    : screenByJourney[journey];
+  const screenId =
+    journey === "ACCESSIBILITY_RESPONSIVE"
+      ? accessibilityScreenForScenario(scenarioId)
+      : screenByJourney[journey];
   const contract = contracts.find(
     (candidate) => candidate.screenId === screenId,
   );

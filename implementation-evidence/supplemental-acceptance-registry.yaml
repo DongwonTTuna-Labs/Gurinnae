@@ -62,8 +62,8 @@
     },
     {
       "path": "Makefile",
-      "sha256": "03d0a02b317afd07b72ec727b7b3eca3ca1c656e8f539b9c2d508b4eee9207cb",
-      "size": 10313
+      "sha256": "2f7bbc19f42ee246bd68328f4cb045097200444a3f590ec3dd05d0cc3f724bd8",
+      "size": 10358
     },
     {
       "path": "crates/test-support/Cargo.toml",
@@ -72,8 +72,8 @@
     },
     {
       "path": "crates/test-support/src/acceptance_observation.rs",
-      "sha256": "1abb65e46896690882b2ab84114125f6f5919a2154ad84d987f04909015ab6e0",
-      "size": 21529
+      "sha256": "61c3a646392e021bcc5b4af0ce991747ac8ecf718ead8e43854fcf4ac5cd67d0",
+      "size": 22469
     },
     {
       "path": "crates/test-support/src/lib.rs",
@@ -87,8 +87,8 @@
     },
     {
       "path": "infra/docker/rust-service/Dockerfile",
-      "sha256": "67a5970d7aa3b3392e3f89534454aebfaa0a31d62c147090903d8ae18185be2f",
-      "size": 13650
+      "sha256": "01c6b7c153a1db072edc9a898952ec8132dc97b34b52db8dc5ca7f02c4b896ca",
+      "size": 13999
     },
     {
       "path": "infra/images.lock",

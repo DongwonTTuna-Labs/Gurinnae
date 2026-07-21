@@ -3,6 +3,7 @@ import {
   canonicalizeScreenViewModel,
   emptyScreenProjection,
   projectFetchedData,
+  serverActionDestinations,
   type ScreenRuntime,
   type ScreenViewModel,
   typedScreenViewModel,
@@ -44,6 +45,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         errors: [],
         forms: {},
         allowedActionIds: localActionIds(screen),
+        destinations: serverActionDestinations(screen, event.url.pathname),
         notice: "내부 화면을 사용하려면 로그인해야 합니다.",
         ...(csrfToken ? { csrfToken } : {}),
       } satisfies ScreenRuntime,
@@ -79,6 +81,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         ],
         forms: {},
         allowedActionIds: localActionIds(screen),
+        destinations: serverActionDestinations(screen, event.url.pathname),
       } satisfies ScreenRuntime,
     };
   }
@@ -347,6 +350,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
             ? "invalid-filter"
             : reviewRuntimeState(errors.length, resolved),
     pathname: event.url.pathname,
+    destinations: serverActionDestinations(screen, event.url.pathname),
     search: event.url.search,
     // Raw operation DTOs stay server-side. The browser receives only the
     // closed, allowlisted projection below; this prevents accidental DTO

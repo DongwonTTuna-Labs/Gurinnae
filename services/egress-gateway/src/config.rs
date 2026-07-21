@@ -16,6 +16,10 @@ pub struct Config {
     pub public_research_hosts: BTreeSet<String>,
     pub ai_hosts: BTreeSet<String>,
     pub challenge_hosts: BTreeSet<String>,
+    /// Closed host allowlist for typed outbound communication adapters.  The
+    /// communication route does not use the generic proxy channel and must
+    /// therefore carry its own SSRF/DNS policy.
+    pub communication_hosts: BTreeSet<String>,
     pub object_store: Option<ObjectStoreConfig>,
     pub smtp_url: Option<String>,
     pub data_go_kr_service_key: Option<String>,
@@ -55,6 +59,7 @@ impl Config {
         let (source_hosts, source_host_bindings, public_research_hosts) = source_config()?;
         let ai_hosts = host_list("AI_PROVIDER_HOSTS")?;
         let challenge_hosts = challenge_config(&environment)?;
+        let communication_hosts = communication_config()?;
         let object_store = object_store_config(&environment)?;
         let smtp_url = smtp_config()?;
         let database_url = optional("EGRESS_DATABASE_URL");
@@ -70,6 +75,7 @@ impl Config {
             public_research_hosts,
             ai_hosts,
             challenge_hosts,
+            communication_hosts,
             object_store,
             smtp_url,
             data_go_kr_service_key: optional("DATA_GO_KR_SERVICE_KEY"),
@@ -85,6 +91,20 @@ impl Config {
     pub fn development(&self) -> bool {
         matches!(self.environment.as_str(), "development" | "test")
     }
+}
+
+fn communication_config() -> Result<BTreeSet<String>, ConfigError> {
+    // Provider defaults are intentionally narrow. Deployments may add a
+    // provider hostname explicitly, but an endpoint is never trusted merely
+    // because it came from an environment variable.
+    let mut hosts = BTreeSet::from([
+        "api.telegram.org".to_owned(),
+        "graph.facebook.com".to_owned(),
+        "api.line.me".to_owned(),
+        "api.solapi.com".to_owned(),
+    ]);
+    hosts.extend(host_list("COMMUNICATION_PROVIDER_HOSTS")?);
+    Ok(hosts)
 }
 
 fn base_environment() -> Result<(String, String, String), ConfigError> {

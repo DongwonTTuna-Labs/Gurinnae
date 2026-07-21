@@ -253,14 +253,19 @@ pub async fn communication(
         Ok(resolved) => resolved,
         Err(_) => return problem("COMMUNICATION_CREDENTIAL_RESOLUTION_FAILED", 503),
     };
-    let endpoint = match endpoint.parse() {
+    let endpoint = match validate_communication_target(&endpoint, state.get_ref()).await {
         Ok(value) => value,
-        Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+        Err(code) => return problem(code, 403),
     };
-    let adapter = match Adapter::new(channel, endpoint, credential.token().to_owned()) {
+    let client = match pinned_client(&endpoint, state.get_ref()).await {
         Ok(value) => value,
-        Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+        Err(code) => return problem(code, 403),
     };
+    let adapter =
+        match Adapter::with_client(channel, endpoint, credential.token().to_owned(), client) {
+            Ok(value) => value,
+            Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+        };
     let payload = payload.into_inner();
     match adapter
         .send(OutboundMessage {
@@ -318,18 +323,26 @@ pub async fn communication_poll(
     let Some(endpoint) = std::env::var(format!("{}URL", prefix))
         .ok()
         .filter(|value| !value.trim().is_empty())
-        .and_then(|value| value.parse().ok())
     else {
         return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503);
+    };
+    let endpoint = match validate_communication_target(&endpoint, state.get_ref()).await {
+        Ok(value) => value,
+        Err(code) => return problem(code, 403),
     };
     let credential = match resolve_from_environment(channel_name) {
         Ok(resolved) => resolved,
         Err(_) => return problem("COMMUNICATION_CREDENTIAL_RESOLUTION_FAILED", 503),
     };
-    let adapter = match Adapter::new(channel, endpoint, credential.token().to_owned()) {
+    let client = match pinned_client(&endpoint, state.get_ref()).await {
         Ok(value) => value,
-        Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+        Err(code) => return problem(code, 403),
     };
+    let adapter =
+        match Adapter::with_client(channel, endpoint, credential.token().to_owned(), client) {
+            Ok(value) => value,
+            Err(_) => return problem("CHANNEL_ADAPTER_NOT_CONFIGURED", 503),
+        };
     match adapter
         .poll(AdapterPollRequest {
             provider_message_id: &payload.provider_message_id,
@@ -462,6 +475,41 @@ async fn validate_target(
             .iter()
             .any(|address| prohibited(address.ip()) && !development_private_allowed(&host, state))
     {
+        return Err("EGRESS_ADDRESS_DENIED");
+    }
+    Ok(url)
+}
+
+/// Communication adapters use a separate HTTP client from the generic proxy,
+/// so the endpoint must be subjected to the same closed-host, HTTPS, DNS and
+/// private-address policy before it reaches the provider-specific client.
+async fn validate_communication_target(
+    target: &str,
+    state: &GatewayState,
+) -> Result<Url, &'static str> {
+    let url = Url::parse(target).map_err(|_| "EGRESS_TARGET_INVALID")?;
+    if url.username() != "" || url.password().is_some() || url.fragment().is_some() {
+        return Err("EGRESS_TARGET_INVALID");
+    }
+    let host = url
+        .host_str()
+        .ok_or("EGRESS_TARGET_INVALID")?
+        .trim_end_matches('.')
+        .to_ascii_lowercase();
+    if host.parse::<IpAddr>().is_ok() || !state.config.communication_hosts.contains(&host) {
+        return Err("EGRESS_HOST_DENIED");
+    }
+    let scheme_allowed =
+        url.scheme() == "https" || (state.config.development() && url.scheme() == "http");
+    if !scheme_allowed {
+        return Err("EGRESS_SCHEME_DENIED");
+    }
+    let port = url.port_or_known_default().ok_or("EGRESS_TARGET_INVALID")?;
+    let addresses = lookup_host((&*host, port))
+        .await
+        .map_err(|_| "EGRESS_DNS_FAILED")?
+        .collect::<Vec<_>>();
+    if addresses.is_empty() || addresses.iter().any(|address| prohibited(address.ip())) {
         return Err("EGRESS_ADDRESS_DENIED");
     }
     Ok(url)

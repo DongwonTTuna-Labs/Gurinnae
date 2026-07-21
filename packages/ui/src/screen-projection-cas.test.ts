@@ -219,9 +219,9 @@ describe("closed CAS screen projection", () => {
     expect(
       projection.sections.inputs?.analysis?.provenanceRows[0]?.relationLabel,
     ).toBe("생성");
-    expect(
-      projection.sections.inputs?.analysis?.provenanceRows,
-    ).toHaveLength(1);
+    expect(projection.sections.inputs?.analysis?.provenanceRows).toHaveLength(
+      1,
+    );
     expect(
       projection.sections.identity?.fields.find(
         (field) => field.name === "identity",

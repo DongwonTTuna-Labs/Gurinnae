@@ -1,19 +1,7 @@
 #![forbid(unsafe_code)]
 
 fn runtime_probe(scenario_id: &str) -> bool {
-    std::env::current_exe()
-        .map(|path| path.is_file())
-        .unwrap_or(false)
-        && scenario_id.starts_with("AC-")
-        && std::env::var("GURINNAE_ACCEPTANCE_RUNTIME_LAYERS_JSON")
-            .map(|value| value.contains("rust-1.97.0-domain-application"))
-            .unwrap_or(false)
-        && std::env::var("GURINNAE_ACCEPTANCE_OBSERVATION_PATH")
-            .map(|value| !value.is_empty())
-            .unwrap_or(false)
-        && std::env::var("GURINNAE_ACCEPTANCE_EDGE_CONTRACTS_JSON")
-            .map(|value| !value.is_empty())
-            .unwrap_or(false)
+    ::gurine_acceptance_testkit::runtime_probe::live_acceptance_probe(scenario_id)
 }
 
 #[rustfmt::skip]

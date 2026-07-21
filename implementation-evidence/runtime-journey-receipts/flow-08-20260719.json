@@ -39,11 +39,7 @@
     "oidcStepUpTransactionId": "11000000-0000-0000-0000-000000000102"
   },
   "negative": {
-    "branches": [
-      "sod-denied",
-      "missing-step-up",
-      "expired-step-up"
-    ],
+    "branches": ["sod-denied", "missing-step-up", "expired-step-up"],
     "sodDenied": "40001:action_review_already_claimed",
     "stepUpDenied": "42501:step_up_required",
     "expiredStepUpDenied": "22023:invalid_step_up_authorization_expiry",

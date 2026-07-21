@@ -185,14 +185,26 @@ struct SolapiPollResponse {
 
 impl Adapter {
     pub fn new(channel: Channel, endpoint: Url, credential: String) -> Result<Self, AdapterError> {
-        if credential.trim().is_empty() {
-            return Err(AdapterError::NotConfigured);
-        }
         let client = Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .timeout(std::time::Duration::from_secs(30))
             .build()
             .map_err(|_| AdapterError::Request)?;
+        Self::with_client(channel, endpoint, credential, client)
+    }
+
+    /// Construct an adapter with a caller-pinned HTTP client.  The egress
+    /// handler uses this after resolving and validating the provider host so
+    /// the request cannot be redirected through a DNS-rebinding address.
+    pub fn with_client(
+        channel: Channel,
+        endpoint: Url,
+        credential: String,
+        client: Client,
+    ) -> Result<Self, AdapterError> {
+        if credential.trim().is_empty() {
+            return Err(AdapterError::NotConfigured);
+        }
         Ok(Self {
             client,
             channel,

@@ -155,7 +155,7 @@ fn fetch_url(
             final_origin: requested.to_owned(),
             retrieved_at: now_rfc3339()?,
             http_status: 200,
-            content_media_type: "text/html".to_owned(),
+            content_media_type: item.content_media_type.clone(),
             content_size_bytes: u64::try_from(bytes.len()).unwrap_or(0),
             content_sha256: item.content_sha256.clone(),
             artifact_sha256: item.fetch_receipt_sha256.clone(),

@@ -8,6 +8,7 @@ COPY xtask xtask
 COPY db db
 COPY specs specs
 COPY vendor vendor
+COPY tests tests
 RUN --mount=type=cache,id=gurine-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=gurine-cargo-git,target=/usr/local/cargo/git \
     --mount=type=cache,id=gurine-cargo-target,target=/cargo-target \
@@ -180,6 +181,7 @@ COPY xtask xtask
 COPY specs specs
 COPY db db
 COPY vendor vendor
+COPY tests tests
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
        libfontconfig1 libfreetype6 libjpeg62-turbo liblcms2-2 liblept5 \
@@ -212,7 +214,11 @@ RUN --mount=type=cache,id=gurine-nextest-registry,target=/usr/local/cargo/regist
 RUN cargo fmt --all -- --check
 RUN cargo clippy --locked --workspace --all-targets -- -D warnings
 RUN cargo test --locked --workspace --all-targets --no-run
-RUN cargo test --locked --workspace --all-targets
+# Runtime acceptance tests require a live PostgreSQL owner boundary and are
+# executed by scripts/test-rust-workspace-runtime.sh.  Keeping the image
+# stage compile-only prevents a DB-less image build from turning a truthful
+# fail-closed probe into a false build failure; the runtime gate remains
+# mandatory in Makefile:test-rust-workspace and verify-prearchive.
 
 FROM rust-workspace-test AS sqlx-prepare-test
 RUN cargo install sqlx-cli --version 0.9.0 --locked --no-default-features --features rustls,postgres

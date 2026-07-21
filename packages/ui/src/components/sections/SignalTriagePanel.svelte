@@ -46,5 +46,5 @@ const relationship = $derived(
   {/each}
 </div>
 <dl class="triage-duplicate-context" aria-label="중복 관계 확인"><div><dt>중복 대상</dt><dd>{duplicateTarget}</dd></div><div><dt>관계 유형</dt><dd>{relationship}</dd></div><div><dt>결정 사유</dt><dd>중복 근거와 대상 신호를 함께 입력해야 저장됩니다.</dd></div></dl>
-{#if runtime.state === "conflict"}<p class="inline-state conflict" role="alert">다른 분류가 먼저 저장되었습니다. 최신 신호 버전을 다시 확인하세요.</p>{/if}
+{#if runtime.state === "conflict"}<p class="inline-state conflict" role="status">다른 분류가 먼저 저장되었습니다. 최신 신호 버전을 다시 확인하세요.</p>{/if}
 {#if projection}<OperationData {runtime} {projection} mode="table" emptyLabel="현재 분류할 신호가 없습니다." />{/if}

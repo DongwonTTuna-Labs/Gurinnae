@@ -5,6 +5,7 @@ import { operationFields, requiredServerValue } from "@gurine/config";
 import {
   canonicalizeScreenViewModel,
   projectFetchedData,
+  serverActionDestinations,
   type ScreenField,
   type ScreenRuntime,
   type ScreenViewModel,
@@ -297,6 +298,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       ? { notice: event.url.searchParams.get("notice") ?? "" }
       : {}),
     search: event.url.search,
+    destinations: serverActionDestinations(screen, event.url.pathname),
   };
   return { screen, runtime };
 }

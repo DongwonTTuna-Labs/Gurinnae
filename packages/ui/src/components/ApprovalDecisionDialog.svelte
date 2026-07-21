@@ -14,6 +14,7 @@ let {
   dialogId?: string;
 } = $props();
 let dialog = $state<HTMLDialogElement>();
+let dialogTitle = $state<HTMLElement>();
 let opener = $state<HTMLElement>();
 let selected = $state<string>("");
 let reason = $state("");
@@ -170,54 +171,17 @@ const fieldInvalid = (name: string) => {
   const value = runtime.errors.join(" ").toLowerCase();
   return value.includes(name.toLowerCase()) || name === "reason";
 };
-const focusableSelector = [
-  "button:not([disabled])",
-  "input:not([disabled]):not([type=hidden])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  "a[href]",
-].join(",");
-const open = (id: string) => {
+const open = (id: string, event: MouseEvent) => {
   if (dialog?.open) return;
-  opener =
-    document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : undefined;
+  opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
   selected = id;
   reason = "";
   changeTasks = "[]";
   conflictDeclarationId = "";
   dialog?.showModal();
-  void tick().then(() => document.getElementById(`${dialogId}-title`)?.focus());
+  void tick().then(() => dialogTitle?.focus());
 };
 const close = () => dialog?.close();
-const handleKeydown = (event: KeyboardEvent) => {
-  if (!dialog?.open) return;
-  if (event.key === "Escape") {
-    event.preventDefault();
-    close();
-    return;
-  }
-  if (event.key !== "Tab") return;
-  const focusable = [
-    ...dialog.querySelectorAll<HTMLElement>(focusableSelector),
-  ].filter((element) => element.offsetParent !== null);
-  if (focusable.length === 0) {
-    event.preventDefault();
-    document.getElementById(`${dialogId}-title`)?.focus();
-    return;
-  }
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (!first || !last) return;
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-};
 const restoreOpener = () => {
   const target = opener;
   opener = undefined;
@@ -240,14 +204,14 @@ const restoreOpener = () => {
           id={`action-${item.id}`}
           data-decision={item.id}
           aria-haspopup="dialog"
-          onclick={() => open(item.id)}
+          onclick={(event) => open(item.id, event)}
         >{item.label}</button>
       {/each}
     </div>
   </div>
-  <dialog bind:this={dialog} id={dialogId} class="decision-dialog" aria-modal="true" aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`} data-focus-target={dialogId} onkeydown={handleKeydown} onclose={restoreOpener}>
+  <dialog bind:this={dialog} id={dialogId} class="decision-dialog" aria-modal="true" aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`} data-focus-target={dialogId} onclose={restoreOpener}>
     <form method="POST" action={commandActionId ? formAction : "?"}>
-      <h2 id={`${dialogId}-title`} tabindex="-1">{action?.label ?? "결정"}</h2>
+      <h2 bind:this={dialogTitle} id={`${dialogId}-title`} tabindex="-1">{action?.label ?? "결정"}</h2>
       <p id={`${dialogId}-description`} class="decision-question">{question}</p>
       <p>대상: {screen.title}. 예·아니오 선택은 현재 표시된 snapshot과 권한에 결합되어 기록됩니다.</p>
       <p id={fieldHelpId} class="field-help" class:field-error={hasValidationError} aria-live="polite">{hasValidationError ? "입력값을 확인한 뒤 다시 시도하세요." : "결정 이유와 필수 항목은 저장 전에 다시 확인됩니다."}</p>

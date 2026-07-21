@@ -16,10 +16,7 @@
     "scope": "narrow",
     "finalState": "INACTIVE",
     "incidentId": "5c453dcd-7eed-4877-8072-12af081d7cc5",
-    "operations": [
-      "activateKillSwitch",
-      "deactivateKillSwitch"
-    ],
+    "operations": ["activateKillSwitch", "deactivateKillSwitch"],
     "staleError": "40001:kill_switch_version_conflict",
     "activeState": "ACTIVE",
     "expiryBound": true,
@@ -57,9 +54,7 @@
       "operationId": "activateKillSwitch",
       "auditEventId": "7306ba2e-41c5-4940-ae7c-6ee1c5a1c5cb",
       "receiptDigest": "d8524c95d3b97735e58243b7a37059d1d8fde117c498639e9bc7c879805ece29",
-      "emittedEventIds": [
-        "4f5983c7-6a39-4691-baaa-3cfef9100687"
-      ],
+      "emittedEventIds": ["4f5983c7-6a39-4691-baaa-3cfef9100687"],
       "aggregateVersion": 2,
       "separationOfDuty": {
         "distinct": true,
@@ -100,9 +95,7 @@
       "operationId": "deactivateKillSwitch",
       "auditEventId": "7ea0d32a-6b99-460e-a5e5-d817107bd591",
       "receiptDigest": "cbfe92fd73d6cd1eaf09b6cb9b3b3d5cd4c8e31a96f97a46835b87701c4f64c8",
-      "emittedEventIds": [
-        "3a69e567-8372-4bcc-a93e-9e2695595c4c"
-      ],
+      "emittedEventIds": ["3a69e567-8372-4bcc-a93e-9e2695595c4c"],
       "aggregateVersion": 3,
       "separationOfDuty": {
         "distinct": true,

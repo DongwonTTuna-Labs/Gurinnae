@@ -73,6 +73,7 @@ test-runtime-quality:
 test-rust-workspace:
 	$(MAKE) test-runtime-quality
 	docker build --target rust-workspace-test --output type=cacheonly -f infra/docker/rust-service/Dockerfile .
+	bash scripts/test-rust-workspace-runtime.sh
 
 test-sqlx-prepare:
 	bash scripts/test-sqlx-prepare.sh

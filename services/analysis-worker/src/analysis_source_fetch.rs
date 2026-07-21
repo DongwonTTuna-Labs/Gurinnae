@@ -61,8 +61,8 @@ struct BraveResult {
     url: String,
     #[serde(default)]
     description: Option<String>,
-    #[serde(default)]
-    age: Option<String>,
+    #[serde(rename = "age", default)]
+    _age: Option<String>,
 }
 
 pub(super) async fn dispatch_source_fetch(
@@ -284,18 +284,18 @@ async fn build_pending_source_fetch(
         "contentSafetyState":"CLEAN","contentSafetyReceiptSha256":receipt_digest});
     let artifact_sha256 = sha256(&canonical_bytes(&artifact_identity)?);
     let rights_projection = project_rights(&rights, artifact_id, asset_id, &response_sha256, policy_version, source_id)?;
-    let source_use_root = build_source_use_root(
+    let source_use_root = build_source_use_root(&SourceUseRootInput {
         source_use_id,
         turn,
         call,
         artifact_id,
         asset_id,
         fetch_id,
-        artifact_sha256,
-        &response_sha256,
-        &redacted_locator,
-        &rights_projection,
-    );
+        artifact_sha256: &artifact_sha256,
+        content_sha256: &response_sha256,
+        locator: &redacted_locator,
+        rights: &rights_projection,
+    });
     let source_use_sha256 = sha256(&canonical_bytes(&source_use_root)?);
     let retrieved_at = rights_projection.occurred_at.clone();
     let pending = PendingSourceFetch {
@@ -357,18 +357,32 @@ fn project_rights(
     })
 }
 
-fn build_source_use_root(
+struct SourceUseRootInput<'a> {
     source_use_id: Uuid,
-    turn: &ProviderTurnIdentity,
-    call: &gurine_agent_orchestration::runtime::ToolCall,
+    turn: &'a ProviderTurnIdentity,
+    call: &'a gurine_agent_orchestration::runtime::ToolCall,
     artifact_id: Uuid,
     asset_id: Uuid,
     fetch_id: Uuid,
-    artifact_sha256: String,
-    content_sha256: &str,
-    locator: &str,
-    rights: &RightsProjection,
-) -> Value {
+    artifact_sha256: &'a str,
+    content_sha256: &'a str,
+    locator: &'a str,
+    rights: &'a RightsProjection,
+}
+
+fn build_source_use_root(input: &SourceUseRootInput<'_>) -> Value {
+    let SourceUseRootInput {
+        source_use_id,
+        turn,
+        call,
+        artifact_id,
+        asset_id,
+        fetch_id,
+        artifact_sha256,
+        content_sha256,
+        locator,
+        rights,
+    } = input;
     let right = |name: &str| rights.dimensions.get(name).and_then(Value::as_str).unwrap_or("UNKNOWN");
     json!({
         "schemaVersion":"source-use.v2","sourceUseId":source_use_id,"agentRunId":turn.run_id,
@@ -469,17 +483,24 @@ fn build_fetch_output(
         let provider: BraveSearchResponse = serde_json::from_slice(bytes)
             .map_err(|_| Failure::Terminal("SOURCE_PROVIDER_SCHEMA_DRIFT", "brave".to_owned()))?;
         let mut seen_urls = std::collections::BTreeSet::new();
-        let results = provider.web.results.iter().take(requested_limit).enumerate().filter_map(|(index, item)| {
-            let _age = item.age.as_deref();
-            let parsed = reqwest::Url::parse(&item.url).ok()?;
-            if parsed.scheme() != "https" || !seen_urls.insert(parsed.to_string()) {
-                return None;
+        let mut results = Vec::with_capacity(requested_limit);
+        for (index, item) in provider.web.results.iter().take(requested_limit).enumerate() {
+            let parsed = reqwest::Url::parse(&item.url)
+                .map_err(|_| Failure::Terminal("SOURCE_PROVIDER_SCHEMA_DRIFT", format!("invalid_url:{index}")))?;
+            if parsed.scheme() != "https" {
+                return Err(Failure::Terminal("SOURCE_PROVIDER_SCHEMA_DRIFT", format!("non_https_url:{index}")));
             }
-            let host = parsed.host_str()?;
+            if !seen_urls.insert(parsed.to_string()) {
+                return Err(Failure::Terminal("SOURCE_PROVIDER_SCHEMA_DRIFT", format!("duplicate_url:{index}")));
+            }
+            let host = parsed.host_str().ok_or_else(|| Failure::Terminal(
+                "SOURCE_PROVIDER_SCHEMA_DRIFT",
+                format!("missing_host:{index}"),
+            ))?;
             let title = if item.title.trim().is_empty() { host } else { item.title.as_str() };
             let snippet = item.description.as_deref().map(|value| value.chars().take(1000).collect::<String>());
-            Some(json!({"rank":index+1,"title":title,"origin":format!("{}://{}",parsed.scheme(),host),"path":parsed.path(),"snippet":snippet,"discoveredUrlSha256":sha256(item.url.as_bytes()),"artifactId":null}))
-        }).collect::<Vec<_>>();
+            results.push(json!({"rank":index+1,"title":title,"origin":format!("{}://{}",parsed.scheme(),host),"path":parsed.path(),"snippet":snippet,"discoveredUrlSha256":sha256(item.url.as_bytes()),"artifactId":null}));
+        }
         let truncated = provider.web.results.len() > requested_limit;
         output["searchResults"] = Value::Array(results);
         output["truncated"] = json!(truncated);

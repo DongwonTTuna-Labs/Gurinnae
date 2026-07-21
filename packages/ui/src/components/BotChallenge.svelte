@@ -1,3 +1,7 @@
+<svelte:head>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</svelte:head>
+
 <script lang="ts">
 import { onMount } from "svelte";
 import type { BotChallengeRuntime } from "../index";
@@ -123,29 +127,15 @@ function loadTurnstile(): Promise<TurnstileApi> {
   const current = currentTurnstile();
   if (current) return Promise.resolve(current);
   if (turnstileLoader) return turnstileLoader;
-  document
-    .querySelector<HTMLScriptElement>('script[data-gurine-turnstile="true"]')
-    ?.remove();
   const pending = new Promise<TurnstileApi>((resolve, reject) => {
-    const script = document.createElement("script");
-    const loaded = () =>
-      currentTurnstile()
-        ? resolve(currentTurnstile() as TurnstileApi)
-        : reject(new Error("Turnstile API is unavailable"));
-    script.addEventListener("load", loaded, { once: true });
-    script.addEventListener(
-      "error",
-      () => reject(new Error("Turnstile load failed")),
-      {
-        once: true,
-      },
-    );
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    script.async = true;
-    script.defer = true;
-    script.dataset.gurineTurnstile = "true";
-    document.head.append(script);
+    const deadline = Date.now() + 10_000;
+    const poll = () => {
+      const api = currentTurnstile();
+      if (api) return resolve(api);
+      if (Date.now() >= deadline) return reject(new Error("Turnstile API is unavailable"));
+      setTimeout(poll, 100);
+    };
+    poll();
   });
   turnstileLoader = pending.catch((error) => {
     turnstileLoader = undefined;

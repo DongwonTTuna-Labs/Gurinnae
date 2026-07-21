@@ -64,7 +64,7 @@ a {
   text-underline-offset: 3px;
 }
 :focus-visible {
-  outline: 3px solid rgba(50, 121, 168, 0.45);
+  outline: 3px solid #1769aa;
   outline-offset: 3px;
 }
 /* Fragment navigation must leave the target visible below sticky headers. */
@@ -72,7 +72,7 @@ a {
 [id$="__heading"],
 [id$="__state_live"],
 .section {
-  scroll-margin-top: 84px;
+  scroll-margin-top: 120px;
 }
 .skip-link {
   position: fixed;
@@ -150,6 +150,10 @@ a {
   gap: 26px;
 }
 .public-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
   color: var(--ink-700);
   text-decoration: none;
   font-size: 14px;
@@ -415,6 +419,11 @@ p {
   color: var(--blue-900);
   border-color: var(--blue-100);
 }
+.badge.status {
+  background: var(--green-50, #eaf7ee);
+  color: var(--green-900, #14532d);
+  border-color: var(--green-500, #3c9a5f);
+}
 .badge.neutral {
   background: var(--paper-100);
   color: var(--ink-700);
@@ -429,6 +438,42 @@ p {
   background: var(--red-50);
   color: var(--red-900);
   border-color: var(--red-500);
+}
+.skeleton-record {
+  display: grid;
+  gap: 10px;
+  min-height: 112px;
+  padding: 18px;
+  border: 1px solid var(--paper-200);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--paper-100) 25%,
+    #fff 37%,
+    var(--paper-100) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-record span {
+  display: block;
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(120, 120, 120, 0.16);
+}
+.skeleton-record span:nth-child(2) {
+  width: 76%;
+}
+.skeleton-record span:nth-child(3) {
+  width: 54%;
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
 }
 .notice,
 .error-summary {
@@ -1010,6 +1055,7 @@ input[type="checkbox"] {
 }
 .sidebar nav a {
   padding: 10px 12px;
+  min-height: 44px;
   border-radius: 7px;
   color: #c8cdd0;
   text-decoration: none;
@@ -1088,6 +1134,20 @@ input[type="checkbox"] {
   border-radius: 10px;
   background: white;
 }
+.data-collection {
+  display: grid;
+  gap: var(--space-3, 12px);
+}
+.collection-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  align-items: baseline;
+  color: var(--ink-600);
+}
+.collection-summary strong {
+  color: var(--ink-900);
+}
 .task-rail {
   position: sticky;
   top: 74px;
@@ -1125,7 +1185,7 @@ input[type="checkbox"] {
   font-weight: 700;
 }
 .task-rail-siblings a {
-  min-height: 36px;
+  min-height: 44px;
   padding-block: 7px;
   font-size: 12px;
 }
@@ -1175,6 +1235,21 @@ input[type="checkbox"] {
   color: var(--ink-500);
   font-size: 13px;
 }
+.response-header nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.response-header nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  color: var(--blue-800);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .form-main {
   max-width: 760px;
   margin: auto;
@@ -1184,16 +1259,35 @@ input[type="checkbox"] {
 .progress {
   margin-bottom: 30px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
+  list-style: none;
+  padding: 0;
 }
-.progress span {
-  height: 5px;
-  border-radius: 999px;
-  background: var(--paper-200);
+.progress li {
+  min-height: 44px;
+  padding: 6px 4px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border-top: 4px solid var(--paper-200);
+  color: var(--ink-500);
+  font-size: 12px;
+  text-align: center;
 }
-.progress span.active {
-  background: var(--blue-700);
+.progress li span:first-child {
+  font-weight: 700;
+}
+.progress li.active {
+  border-color: var(--blue-700);
+  color: var(--blue-800);
+}
+.progress li[data-step-state="error"] {
+  border-color: var(--color-danger, #9f1239);
+  color: var(--color-danger, #9f1239);
+}
+.progress li[data-step-state="not-started"] {
+  color: var(--ink-400);
 }
 .request-summary {
   margin-bottom: 26px;
@@ -1202,6 +1296,16 @@ input[type="checkbox"] {
   gap: 6px;
   border-radius: 8px;
   background: var(--blue-50);
+}
+.response-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-inline: -20px;
+  padding: 12px 20px;
+  background: color-mix(in srgb, var(--paper-50) 94%, transparent);
+  border-top: 1px solid var(--paper-200);
+  backdrop-filter: blur(8px);
 }
 .request-summary span {
   color: var(--ink-700);
@@ -1420,7 +1524,9 @@ input[type="checkbox"] {
     flex-direction: column;
   }
   .context-rail {
-    order: -1;
+    /* Task content stays first on compact screens; context is supporting
+       evidence and must not displace the answer or primary action. */
+    order: 2;
     position: static;
   }
   .workspace-panel {

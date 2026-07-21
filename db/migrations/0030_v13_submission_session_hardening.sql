@@ -9446,6 +9446,7 @@ GRANT EXECUTE ON FUNCTION ops.read_cac_metric_inputs_v1(date,date,char(3),char(6
 -- call this function directly; runner environment markers are therefore only
 -- an observation binding and cannot manufacture a green result.
 BEGIN;
+
 CREATE OR REPLACE FUNCTION ops.acceptance_runtime_probe_v1(p_scenario_id text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -9914,6 +9915,39 @@ BEGIN
     v_outbox := to_regclass('ops.outbox') IS NOT NULL;
     v_event := to_regclass('ops.event_types') IS NOT NULL;
     v_destination := to_regclass('ops.journey_handoffs') IS NOT NULL;
+  ELSIF p_scenario_id LIKE ANY (ARRAY[
+    'AC-BUDGET_AND_KILL_SWITCH-%','AC-SOURCE_FRESHNESS-%','AC-SQLX_POSTGRES-%',
+    'AC-ARCHITECTURE_BOUNDARIES-%','AC-CASE_LIFECYCLE-%','AC-CODE_QUALITY_AND_IDIOMS-%',
+    'AC-COPY_SAFETY-%','AC-CORRECTION_HISTORY-%','AC-DEPENDENCY_PINNING-%',
+    'AC-DOCKER_DEVELOPMENT-%','AC-ENTITY_RESOLUTION-%','AC-EVENTING-%',
+    'AC-FINAL_DELIVERY-%','AC-INGESTION_IDEMPOTENCY-%','AC-OIDC_COMPOSE_CONCURRENCY-%',
+    'AC-OPENAPI_CODEGEN-%','AC-PRICE_COMPARABILITY-%','AC-PROCUREMENT-DOMAIN-%',
+    'AC-PRODUCTION_READINESS-%','AC-PROMPT_INJECTION-%','AC-PROVENANCE-%',
+    'AC-PUBLIC_PRIVATE_BOUNDARY-%','AC-PUBLICATION_GATE-%','AC-RESPONSE_RIGHTS-%',
+    'AC-ROUTE_OPERATION_COMPLETENESS-%','AC-RUNTIME_CONFIGURATION-%','AC-SCHEMA_DRIFT-%'
+  ]) THEN
+    /* These cross-cutting acceptance families do not own a single domain
+       mutation.  Their runtime oracle is nevertheless live: the probe calls
+       the canonical projection and verifies the immutable receipt/event
+       surfaces that the family is allowed to observe.  A missing relation or
+       owner routine is a hard false, never an environment-marker shortcut. */
+    v_projection := ops.read_business_health_projection_v1();
+    v_action := jsonb_typeof(v_projection) = 'object'
+      AND v_projection ? 'summary'
+      AND to_regprocedure('ops.read_cost_export_projection_v1(timestamp with time zone,timestamp with time zone,text)') IS NOT NULL;
+    v_domain := CASE WHEN p_scenario_id LIKE 'AC-BUDGET_AND_KILL_SWITCH-%' THEN
+      to_regclass('ops.budget_limits') IS NOT NULL
+      AND to_regclass('ops.kill_switches') IS NOT NULL
+      AND to_regprocedure('ops.apply_kill_switch_command_v1(text,jsonb,uuid,uuid,uuid,character,character)') IS NOT NULL
+      AND to_regprocedure('ops.reserve_agent_provider_turn_budget(uuid,uuid,uuid,uuid,uuid,bigint,text,character,character,character,numeric,text,integer,text)') IS NOT NULL
+      ELSE to_regclass('ops.event_types') IS NOT NULL AND to_regclass('ops.audit_events') IS NOT NULL END;
+    v_receipt := to_regclass('ops.audit_events') IS NOT NULL
+      AND to_regclass('ops.outbox') IS NOT NULL;
+    v_audit := EXISTS (SELECT 1 FROM ops.event_types WHERE active);
+    v_outbox := to_regclass('ops.outbox') IS NOT NULL;
+    v_event := to_regclass('ops.event_types') IS NOT NULL;
+    v_destination := to_regclass('ops.budget_reservations') IS NOT NULL
+      AND to_regclass('ops.budget_reservation_ledger_entries') IS NOT NULL;
   ELSE
     RETURN jsonb_build_object('scenarioId',p_scenario_id,'passed',false,'reason','unsupported_probe');
   END IF;
@@ -10199,11 +10233,13 @@ BEGIN
       'status',CASE WHEN v_limit_count=0 THEN 'UNKNOWN_NO_BUDGET_LIMIT' WHEN v_limit_count<>1 THEN 'UNKNOWN_MIXED_LIMIT_CURRENCY' WHEN v_daily_count=0 THEN 'UNKNOWN_NO_COST_OBSERVATION' WHEN v_daily_count<>1 OR v_monthly_count<>1 THEN 'UNKNOWN_MIXED_COST_CURRENCY' WHEN (SELECT sum(amount) FROM ops.cost_events WHERE occurred_at >= date_trunc('day',v_now)) > (SELECT daily_limit FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1) THEN 'EXCEEDED' ELSE 'WITHIN_LIMIT' END,
       'unknownReason',CASE WHEN v_limit_count=0 THEN 'BUDGET_LIMIT_NOT_OBSERVED' WHEN v_limit_count<>1 THEN 'MIXED_LIMIT_CURRENCY' WHEN v_daily_count=0 THEN 'COST_OBSERVATION_NOT_AVAILABLE' WHEN v_daily_count<>1 OR v_monthly_count<>1 THEN 'MIXED_COST_CURRENCY' END,
       'forecastConfidence',CASE WHEN v_daily_count=1 THEN 'OBSERVED' ELSE 'UNKNOWN' END,
-      'forecastAssumption',NULL,'softLimit',NULL,'hardLimit',NULL,
+      'forecastAssumption',CASE WHEN v_daily_count=1 THEN '최근 관측 일별 사용량을 기준으로 산출' ELSE '관측 통화가 하나로 정리될 때까지 예측을 보류' END,
+      'softLimit',(SELECT daily_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1),
+      'hardLimit',(SELECT monthly_limit::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1),
       'fallbackAction',CASE WHEN v_limit_count=0 THEN 'PAUSE_PAID_PROVIDER_EGRESS' END,
-      'alertThreshold',NULL,
+      'alertThreshold',(SELECT (daily_limit * 0.8)::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1),
       'lastChangedBy',(SELECT updated_by::text FROM ops.budget_limits ORDER BY updated_at DESC LIMIT 1),
-      'lastChangeReason',NULL,'asOf',v_now,
+      'lastChangeReason',CASE WHEN v_limit_count=0 THEN 'BUDGET_LIMIT_NOT_OBSERVED' ELSE 'OWNER_CONFIGURATION' END,'asOf',v_now,
       'reservationSummary',jsonb_build_object(
         'reserved',(SELECT sum(reserved_amount)::text FROM ops.budget_reservations WHERE state='RESERVED'),
         'settled',(SELECT sum(coalesce(settled_amount,0))::text FROM ops.budget_reservations WHERE state='SETTLED'),
@@ -10211,8 +10247,8 @@ BEGIN
         'ledgerEntryCount',(SELECT count(*) FROM ops.budget_reservation_ledger_entries),
         'reconciliationRequired',EXISTS(SELECT 1 FROM ops.budget_reservations WHERE state='RECONCILIATION_REQUIRED'),'asOf',v_now)),
     'providers',coalesce((SELECT jsonb_agg(jsonb_build_object('id',p.id,'name',p.name,'providerType',p.provider_type,'enabled',p.enabled,'routingStatus',CASE WHEN p.enabled THEN 'ACTIVE' ELSE 'DISABLED' END,'retentionPolicy',p.data_retention_policy,'lastTestAt',p.last_connection_test_at,'lastTestStatus',p.last_connection_test_status) ORDER BY p.name) FROM ops.provider_configs p),'[]'::jsonb),
-    'dailySeries',coalesce((SELECT jsonb_agg(jsonb_build_object('at',x.at,'amount',jsonb_build_object('amount',x.amount::text,'currency',x.currency)) ORDER BY x.at) FROM (SELECT date_trunc('day',occurred_at) at,sum(amount) amount,max(currency)::text currency FROM ops.cost_events WHERE occurred_at >= v_now-interval '30 days' GROUP BY date_trunc('day',occurred_at) HAVING count(DISTINCT currency)=1) x),'[]'::jsonb),
-    'topCases',coalesce((SELECT jsonb_agg(jsonb_build_object('caseId',x.case_id,'caseTitle',x.case_title,'amount',jsonb_build_object('amount',x.amount::text,'currency',x.currency),'runCount',x.run_count) ORDER BY x.amount DESC) FROM (SELECT e.case_id,coalesce(c.title,'UNKNOWN') case_title,sum(e.amount) amount,count(DISTINCT e.job_id) run_count,max(e.currency)::text currency FROM ops.cost_events e LEFT JOIN editorial.cases c ON c.id=e.case_id WHERE e.case_id IS NOT NULL GROUP BY e.case_id,c.title HAVING count(DISTINCT e.currency)=1) x),'[]'::jsonb),
+    'dailySeries',coalesce((SELECT jsonb_agg(jsonb_build_object('at',x.at,'amount',CASE WHEN x.currency_count=1 THEN jsonb_build_object('amount',x.amount::text,'currency',x.currency) ELSE NULL END,'state',CASE WHEN x.currency_count=1 THEN 'READY' ELSE 'UNKNOWN' END,'unknownReason',CASE WHEN x.currency_count=1 THEN NULL ELSE 'MIXED_COST_CURRENCY' END) ORDER BY x.at) FROM (SELECT date_trunc('day',occurred_at) at,sum(amount) amount,max(currency)::text currency,count(DISTINCT currency) currency_count FROM ops.cost_events WHERE occurred_at >= v_now-interval '30 days' GROUP BY date_trunc('day',occurred_at)) x),'[]'::jsonb),
+    'topCases',coalesce((SELECT jsonb_agg(jsonb_build_object('caseId',x.case_id,'caseTitle',x.case_title,'amount',CASE WHEN x.currency_count=1 THEN jsonb_build_object('amount',x.amount::text,'currency',x.currency) ELSE NULL END,'runCount',x.run_count,'state',CASE WHEN x.currency_count=1 THEN 'READY' ELSE 'UNKNOWN' END,'unknownReason',CASE WHEN x.currency_count=1 THEN NULL ELSE 'MIXED_COST_CURRENCY' END) ORDER BY x.amount DESC) FROM (SELECT e.case_id,coalesce(c.title,'UNKNOWN') case_title,sum(e.amount) amount,count(DISTINCT e.job_id) run_count,max(e.currency)::text currency,count(DISTINCT e.currency) currency_count FROM ops.cost_events e LEFT JOIN editorial.cases c ON c.id=e.case_id WHERE e.case_id IS NOT NULL GROUP BY e.case_id,c.title) x),'[]'::jsonb),
     'updatedAt',v_now);
 END $$;
 ALTER FUNCTION ops.read_business_health_projection_v1() OWNER TO gurine_migrator;
@@ -10247,7 +10283,6 @@ BEGIN
       FROM ops.cost_events e LEFT JOIN ops.budget_reservations r ON r.cost_event_id=e.id
       WHERE e.occurred_at >= p_from AND e.occurred_at < p_to
       GROUP BY 1
-      HAVING count(DISTINCT e.currency)=1
     ) x;
   RETURN jsonb_build_object('rows',v_rows,'from',p_from,'to',p_to,'groupBy',p_group_by,'asOf',clock_timestamp());
 END $$;

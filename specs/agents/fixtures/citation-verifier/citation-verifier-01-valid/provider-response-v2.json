@@ -1,1 +1,11 @@
-{"schemaVersion":"citation-verification-output.v2","outcome":"COMPLETED","summary":"결정적 provider double의 인용 검증 결과입니다.","investigationsPerformed":[],"citations":[],"unknowns":["설치·인증 비용 포함 여부"],"nextActions":[],"abstentionReasons":[],"claimResults":[]}
+{
+  "schemaVersion": "citation-verification-output.v2",
+  "outcome": "COMPLETED",
+  "summary": "결정적 provider double의 인용 검증 결과입니다.",
+  "investigationsPerformed": [],
+  "citations": [],
+  "unknowns": ["설치·인증 비용 포함 여부"],
+  "nextActions": [],
+  "abstentionReasons": [],
+  "claimResults": []
+}

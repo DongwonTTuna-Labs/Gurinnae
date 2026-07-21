@@ -381,7 +381,12 @@ export function projectScreen(
       const serverEnvelope = envelopeFields(
         screen.id,
         section.id,
-        section.fields,
+        [
+          ...new Set([
+            ...section.fields,
+            ...Object.keys(runtime.projection?.sections[section.id]?.fields ?? {}),
+          ]),
+        ],
         runtime.projection,
       );
       // The browser must render only the server-owned allowlist. A missing or

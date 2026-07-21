@@ -177,7 +177,7 @@ pub(super) fn tesseract_ocr(image: &DynamicImage) -> Result<OcrOutput, String> {
 fn run_ocr_process(image: &DynamicImage) -> Result<String, String> {
     let configured = match std::env::var("GURINNAE_TESSERACT_PATH") {
         Ok(value) => value,
-        Err(_) => "/opt/gurinnae/bin/tesseract".to_owned(),
+        Err(_) => "/usr/bin/tesseract".to_owned(),
     };
     let executable = configured.as_str();
     if !std::path::Path::new(executable).is_absolute() {

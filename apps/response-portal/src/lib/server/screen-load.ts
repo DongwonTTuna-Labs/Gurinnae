@@ -10,6 +10,7 @@ import {
 import {
   canonicalizeScreenViewModel,
   projectFetchedData,
+  serverActionDestinations,
   type ScreenRuntime,
   type ScreenViewModel,
   typedScreenViewModel,
@@ -273,6 +274,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
               resolved,
             }),
     pathname: event.url.pathname,
+    destinations: serverActionDestinations(screen, event.url.pathname),
     ...(session?.csrfToken ? { csrfToken: session.csrfToken } : {}),
     data: {},
     projection: projectFetchedData(screen, data),

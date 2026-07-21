@@ -65,9 +65,7 @@
         "auditEventId": "8fc2254d-b37d-4e16-beb8-954345224850",
         "outboxEventId": "10dc3c95-4dca-4d6f-98eb-509faf8c2751",
         "receiptDigest": "060bb1a785f0dc905fe52d426eb5db7a7bd2011b215f3efd635ab8db7288ac9f",
-        "emittedEventIds": [
-          "10dc3c95-4dca-4d6f-98eb-509faf8c2751"
-        ],
+        "emittedEventIds": ["10dc3c95-4dca-4d6f-98eb-509faf8c2751"],
         "aggregateVersion": 1
       },
       {
@@ -90,9 +88,7 @@
         "auditEventId": "c25d5021-6e39-496a-90a6-2c92a3c5ffb7",
         "outboxEventId": "3cea276f-fccd-4a5d-addf-2c303a476c11",
         "receiptDigest": "13a71c2f6fbf7e06ab3e44cbfc9047d11157efab72844979b3d0c1fbc87364f8",
-        "emittedEventIds": [
-          "3cea276f-fccd-4a5d-addf-2c303a476c11"
-        ],
+        "emittedEventIds": ["3cea276f-fccd-4a5d-addf-2c303a476c11"],
         "aggregateVersion": 2
       },
       {
@@ -119,9 +115,7 @@
         "auditEventId": "e4669b8a-eecc-4f5b-86c5-a3888e6d913b",
         "outboxEventId": "ce7763f6-4555-472b-aef8-48f53fb56a07",
         "receiptDigest": "776030bdcb9cfc776261918ae4be3f17aa53f5baee7044c3978b9bf85e5d8b2e",
-        "emittedEventIds": [
-          "ce7763f6-4555-472b-aef8-48f53fb56a07"
-        ],
+        "emittedEventIds": ["ce7763f6-4555-472b-aef8-48f53fb56a07"],
         "aggregateVersion": 1
       },
       {
@@ -148,9 +142,7 @@
         "auditEventId": "c6a9d738-402e-4baa-91f1-2137cca69ef2",
         "outboxEventId": "9b7b773a-178c-4c46-87bb-7df9c9998505",
         "receiptDigest": "7ae14c70563a77cf5419b31fb3650bf42dc6d6a9b085f5103b9e8db6bad3f0da",
-        "emittedEventIds": [
-          "9b7b773a-178c-4c46-87bb-7df9c9998505"
-        ],
+        "emittedEventIds": ["9b7b773a-178c-4c46-87bb-7df9c9998505"],
         "aggregateVersion": 1
       },
       {
@@ -177,9 +169,7 @@
         "auditEventId": "653e9c97-81e1-4ceb-8f40-265b07f9ae88",
         "outboxEventId": "05778011-378d-4c52-a2f5-aa3178147a04",
         "receiptDigest": "afbade6f738c9c268cb46d3ebe5269289cdf9be5de535e283323039dda1cb937",
-        "emittedEventIds": [
-          "05778011-378d-4c52-a2f5-aa3178147a04"
-        ],
+        "emittedEventIds": ["05778011-378d-4c52-a2f5-aa3178147a04"],
         "aggregateVersion": 1
       },
       {
@@ -205,9 +195,7 @@
         "auditEventId": "a35092fe-23f1-4eef-b52a-9e9077881244",
         "outboxEventId": "e125b20a-74b1-4471-9963-af487dfd340c",
         "receiptDigest": "14de606c85bf70bd18996874269dc6311e03f00f475d0276435b4db71996e437",
-        "emittedEventIds": [
-          "e125b20a-74b1-4471-9963-af487dfd340c"
-        ],
+        "emittedEventIds": ["e125b20a-74b1-4471-9963-af487dfd340c"],
         "aggregateVersion": 1
       },
       {
@@ -238,9 +226,7 @@
         "auditEventId": "1e390fd9-d25a-47d6-8a26-8951af707d12",
         "outboxEventId": "345c23b8-f544-41ff-b211-8fffece5f125",
         "receiptDigest": "281f6b62c9569a21d4107edb8f409ca4a46a43696d0f2c4da0f74edecb50d064",
-        "emittedEventIds": [
-          "345c23b8-f544-41ff-b211-8fffece5f125"
-        ],
+        "emittedEventIds": ["345c23b8-f544-41ff-b211-8fffece5f125"],
         "aggregateVersion": 1,
         "publicationRevisionId": "49a4b2a7-fbda-4b99-817b-2b42f49984d4"
       }
@@ -260,10 +246,7 @@
     "receiptBound": true
   },
   "negative": {
-    "branches": [
-      "stale-signal-version",
-      "stale-case-version"
-    ],
+    "branches": ["stale-signal-version", "stale-case-version"],
     "staleTriage": "40001:signal_version_conflict",
     "stalePublication": "40001:case_version_conflict",
     "publicationCountAfter": 1,

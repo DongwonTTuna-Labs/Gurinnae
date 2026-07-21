@@ -70,7 +70,31 @@ def empty_result(path: Path, media_type: str, parser_id: str, parser_version: st
 
 
 def run_tool(args: list[str], *, cwd: Path | None = None, timeout: int = 60) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
+    command = list(args)
+    if command and shutil.which(command[0]) is None:
+        pinned_roots = [
+            Path(os.environ["GURINNAE_PARSER_BIN"]) if os.environ.get("GURINNAE_PARSER_BIN") else None,
+            Path("/opt/parser/bin"),
+            Path.home() / ".codex/toolchains/gurinnae-parser-25.06.0-5.5.0/bin",
+            Path.home() / ".codex/authority/gurine-v13-960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5/parser-tools/bin",
+        ]
+        for root in pinned_roots:
+            if root is None:
+                continue
+            candidate = root / command[0]
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                command[0] = str(candidate)
+                break
+    environment = os.environ.copy()
+    if not environment.get("TESSDATA_PREFIX"):
+        for candidate in (
+            Path("/opt/parser/share/tessdata"),
+            Path.home() / ".codex/authority/gurine-v13-960687b445edee3/parser-tools/share/tessdata",
+        ):
+            if (candidate / "eng.traineddata").is_file():
+                environment["TESSDATA_PREFIX"] = str(candidate.parent)
+                break
+    return subprocess.run(command, cwd=cwd, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
 
 
 def tool_version(command: list[str], pattern: str) -> str:
@@ -355,7 +379,10 @@ def extract(path: Path, versions: dict[str,str]) -> dict:
 
 
 def main() -> int:
-    parser=argparse.ArgumentParser(); parser.add_argument('--write-golden',action='store_true'); args=parser.parse_args()
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--write-golden',action='store_true')
+    parser.add_argument('--json-output',type=Path)
+    args=parser.parse_args()
     versions={
       'pdftotext':tool_version(['pdftotext','-v'],r'pdftotext version ([0-9.]+)'),
       'pdftoppm':tool_version(['pdftoppm','-v'],r'pdftoppm version ([0-9.]+)'),
@@ -377,6 +404,11 @@ def main() -> int:
             if result!=expected: raise AssertionError(f"{item['file']}: extraction differs from {expected_file}")
         cases.append({'file':item['file'],'status':result['status'],'rejectionCode':result.get('rejectionCode'),'golden':expected_file,'result':'PASS'})
     payload={'specificationVersion':'13.0.0','result':'PASS','caseCount':len(cases),'goldenCount':golden_count,'toolVersions':versions,'cases':cases}
+    if args.json_output:
+        args.json_output.write_text(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + '\n',
+            encoding='utf-8',
+        )
     print(json.dumps(payload,ensure_ascii=False,sort_keys=True,indent=2)); return 0
 
 if __name__=='__main__': raise SystemExit(main())

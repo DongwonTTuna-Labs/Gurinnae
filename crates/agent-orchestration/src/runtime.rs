@@ -77,6 +77,28 @@ pub(super) fn sha256_hex(bytes: &[u8]) -> String {
         .collect()
 }
 
+/// Media types that the source-fetch pipeline can persist and hand to the
+/// authority parsers.  Keeping this list closed prevents a provider from
+/// widening the egress contract to arbitrary binary content while allowing
+/// HTML, office/PDF documents, images, audio and video in one typed request.
+pub const SOURCE_FETCH_MEDIA_TYPES: &[&str] = &[
+    "text/html",
+    "text/plain",
+    "text/csv",
+    "application/json",
+    "application/xml",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/hwp+zip",
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/tiff",
+    "audio/wav",
+    "video/webm",
+];
+
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
@@ -298,7 +320,10 @@ impl SourceFetchRequest {
                     input_snapshot_sha256: self.binding.input_snapshot_sha256.clone(),
                     request_kind: "FETCH_URL".to_owned(),
                     url,
-                    expected_media_types: vec!["text/html".to_owned()],
+                    expected_media_types: SOURCE_FETCH_MEDIA_TYPES
+                        .iter()
+                        .map(|value| (*value).to_owned())
+                        .collect(),
                     source_policy_version: policy,
                     source_policy_sha256: policy_sha,
                     rights_purpose: "FACT_CHECK".to_owned(),
@@ -362,7 +387,11 @@ impl SourceFetchRequest {
                 ..
             } if schema_version == "source.fetch.request.v2"
                 && request_kind == "FETCH_URL"
-                && expected_media_types == ["text/html"]
+                && expected_media_types
+                    == SOURCE_FETCH_MEDIA_TYPES
+                        .iter()
+                        .map(|value| (*value).to_owned())
+                        .collect::<Vec<_>>()
                 && source_policy_version == "source-policy-v2"
                 && source_policy_sha256 == sha256_hex(b"source-policy-v2")
                 && rights_purpose == "FACT_CHECK"
@@ -384,215 +413,13 @@ impl SourceFetchRequest {
         }
     }
 }
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct SourceLocatorVerifyRequest {
-    pub binding: SnapshotBinding,
-    pub expected_selected_content_sha256: String,
-}
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum EntityKind {
-    Agency,
-    Supplier,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum EntityIdentifierKind {
-    CanonicalName,
-    BusinessRegistrationNumber,
-    AgencyCode,
-    PublicSlug,
-    VerifiedAlias,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct EntityIdentifier {
-    pub kind: EntityIdentifierKind,
-    pub value: String,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum SourceRequestKind {
-    SearchPublicWeb,
-    FetchUrl,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum ToolRequest {
-    ClaimLanguageCheck(ClaimLanguageCheckRequest),
-    ContractFindComparables(ContractFindComparablesRequest),
-    EntityLookup(EntityLookupRequest),
-    EvidenceRead(EvidenceReadRequest),
-    EvidenceSearch(EvidenceSearchRequest),
-    ResponseRead(ResponseReadRequest),
-    RuleReproduce(RuleReproduceRequest),
-    SourceFetch(SourceFetchRequest),
-    SourceLocatorVerify(SourceLocatorVerifyRequest),
-}
-
-impl ToolRequest {
-    pub const fn tool_id(&self) -> ToolId {
-        match self {
-            Self::ClaimLanguageCheck(_) => ToolId::ClaimLanguageCheck,
-            Self::ContractFindComparables(_) => ToolId::ContractFindComparables,
-            Self::EntityLookup(_) => ToolId::EntityLookup,
-            Self::EvidenceRead(_) => ToolId::EvidenceRead,
-            Self::EvidenceSearch(_) => ToolId::EvidenceSearch,
-            Self::ResponseRead(_) => ToolId::ResponseRead,
-            Self::RuleReproduce(_) => ToolId::RuleReproduce,
-            Self::SourceFetch(_) => ToolId::SourceFetch,
-            Self::SourceLocatorVerify(_) => ToolId::SourceLocatorVerify,
-        }
-    }
-    pub fn binding(&self) -> &SnapshotBinding {
-        match self {
-            Self::ClaimLanguageCheck(value) => &value.binding,
-            Self::ContractFindComparables(value) => &value.binding,
-            Self::EntityLookup(value) => &value.binding,
-            Self::EvidenceRead(value) => &value.binding,
-            Self::EvidenceSearch(value) => &value.binding,
-            Self::ResponseRead(value) => &value.binding,
-            Self::RuleReproduce(value) => &value.binding,
-            Self::SourceFetch(value) => &value.binding,
-            Self::SourceLocatorVerify(value) => &value.binding,
-        }
-    }
-    pub const fn schema_version(&self) -> &'static str {
-        match self {
-            Self::ClaimLanguageCheck(_) => "claim.language_check.request.v2",
-            Self::ContractFindComparables(_) => "contract.find_comparables.request.v2",
-            Self::EntityLookup(_) => "entity.lookup.request.v2",
-            Self::EvidenceRead(_) => "evidence.read.request.v2",
-            Self::EvidenceSearch(_) => "evidence.search.request.v2",
-            Self::ResponseRead(_) => "response.read.request.v2",
-            Self::RuleReproduce(_) => "rule.reproduce.request.v2",
-            Self::SourceFetch(_) => "source.fetch.request.v2",
-            Self::SourceLocatorVerify(_) => "source.locator_verify.request.v2",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Finding {
-    pub code: String,
-    pub severity: String,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LanguageCheckResponse {
-    pub decision: String,
-    pub findings: Vec<Finding>,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Comparable {
-    pub contract_id: Uuid,
-    pub source_use_id: Uuid,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ComparablesResponse {
-    pub comparables: Vec<Comparable>,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct EntityMatch {
-    pub entity_id: Uuid,
-    pub canonical_name: String,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct EntityLookupResponse {
-    pub matches: Vec<EntityMatch>,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct EvidenceValue {
-    pub evidence_id: Uuid,
-    pub source_use_id: Uuid,
-    pub selected_content_sha256: String,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct EvidenceReadResponse {
-    pub evidence: EvidenceValue,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct EvidenceHit {
-    pub evidence_id: Uuid,
-    pub source_use_id: Uuid,
-    pub selected_content_sha256: String,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct EvidenceSearchResponse {
-    pub query_digest: String,
-    pub hits: Vec<EvidenceHit>,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ResponseValue {
-    pub response_id: Uuid,
-    pub response_content_sha256: String,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ResponseReadResponse {
-    pub response: ResponseValue,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ReproductionValue {
-    pub rule_run_id: Uuid,
-    pub result_digest: String,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct RuleReproduceResponse {
-    pub reproduction: ReproductionValue,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct SourceArtifact {
-    pub research_artifact_id: Uuid,
-    pub content_sha256: String,
-    pub source_use_id: Uuid,
-}
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct SourceFetchResponse {
-    pub fetch_receipt_sha256: String,
-    pub artifacts: Vec<SourceArtifact>,
-}
-
-#[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum ToolResponse {
-    ClaimLanguageCheck(LanguageCheckResponse),
-    ContractFindComparables(ComparablesResponse),
-    EntityLookup(EntityLookupResponse),
-    EvidenceRead(EvidenceReadResponse),
-    EvidenceSearch(EvidenceSearchResponse),
-    ResponseRead(ResponseReadResponse),
-    RuleReproduce(RuleReproduceResponse),
-    /// Source fetch always uses the closed V2 response.  Keeping the legacy
-    /// request/record types above is intentional for database compatibility,
-    /// but no provider/tool result may cross the runtime boundary without the
-    /// gateway decision and receipt fields.
-    SourceFetch(SourceFetchResponseV2),
-    SourceLocatorVerify(SourceLocatorVerifyResponse),
-}
-impl ToolResponse {
-    pub const fn tool_id(&self) -> ToolId {
-        match self {
-            Self::ClaimLanguageCheck(_) => ToolId::ClaimLanguageCheck,
-            Self::ContractFindComparables(_) => ToolId::ContractFindComparables,
-            Self::EntityLookup(_) => ToolId::EntityLookup,
-            Self::EvidenceRead(_) => ToolId::EvidenceRead,
-            Self::EvidenceSearch(_) => ToolId::EvidenceSearch,
-            Self::ResponseRead(_) => ToolId::ResponseRead,
-            Self::RuleReproduce(_) => ToolId::RuleReproduce,
-            Self::SourceFetch(_) => ToolId::SourceFetch,
-            Self::SourceLocatorVerify(_) => ToolId::SourceLocatorVerify,
-        }
-    }
-    pub const fn schema_version(&self) -> &'static str {
-        match self {
-            Self::ClaimLanguageCheck(_) => "claim.language_check.response.v2",
-            Self::ContractFindComparables(_) => "contract.find_comparables.response.v2",
-            Self::EntityLookup(_) => "entity.lookup.response.v2",
-            Self::EvidenceRead(_) => "evidence.read.response.v2",
-            Self::EvidenceSearch(_) => "evidence.search.response.v2",
-            Self::ResponseRead(_) => "response.read.response.v2",
-            Self::RuleReproduce(_) => "rule.reproduce.response.v2",
-            Self::SourceFetch(_) => "source.fetch.response.v2",
-            Self::SourceLocatorVerify(_) => "source.locator_verify.response.v2",
-        }
-    }
-}
+#[path = "runtime_legacy.rs"]
+mod legacy;
+pub use legacy::{
+    Comparable, ComparablesResponse, EntityIdentifier, EntityIdentifierKind, EntityKind,
+    EntityLookupResponse, EntityMatch, EvidenceHit, EvidenceReadResponse, EvidenceSearchResponse,
+    EvidenceValue, Finding, LanguageCheckResponse, ReproductionValue, ResponseReadResponse,
+    ResponseValue, RuleReproduceResponse, SourceArtifact, SourceFetchResponse,
+    SourceLocatorVerifyRequest, SourceRequestKind, ToolRequest, ToolResponse,
+};

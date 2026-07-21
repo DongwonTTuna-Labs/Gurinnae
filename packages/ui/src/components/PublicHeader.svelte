@@ -5,7 +5,16 @@ import Brand from "./Brand.svelte";
 
 let { runtime }: { runtime: ScreenRuntime } = $props();
 const degraded = $derived(
-  ["partial", "stale", "error"].includes(runtime.state),
+  [
+    "partial",
+    "partial-failure",
+    "stale",
+    "error",
+    "server-error",
+    "incident",
+    "degraded",
+    "telemetry-gap",
+  ].includes(runtime.state),
 );
 let mobileNav: HTMLDetailsElement;
 let mobileNavOpen = $state(false);
@@ -70,7 +79,6 @@ $effect(() => {
     </nav>
     <div class="header-actions">
       <a class="icon-button" href="/search" aria-label="검색">⌕</a>
-      <a class="mobile-quick-link" href="/cases" aria-current={current("/cases") ? "page" : undefined}>사례</a>
       <a class="secondary-button subscribe-link" href="/subscribe">업데이트 구독</a>
       <details class="mobile-nav" bind:this={mobileNav} bind:open={mobileNavOpen} ontoggle={() => { mobileNavOpen = mobileNav?.open ?? false; }}>
         <summary class="icon-button" aria-label={mobileNavOpen ? "주요 탐색 닫기" : "주요 탐색 열기"} aria-expanded={mobileNavOpen} aria-controls="mobile-primary-nav" onclick={(event) => { mobileNavOpener = event.currentTarget as HTMLElement; }} onkeydown={handleMobileNavKeydown} >☰</summary>
