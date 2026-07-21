@@ -30,8 +30,8 @@ const stateCopy = $derived(
     <p class="inline-state conflict" role={projection?.state === "ERROR" || projection?.state === "BLOCKED" ? "alert" : "status"} aria-live="polite">{stateCopy}</p>
   {:else if projection}
     <div class="collection-summary" role="status" aria-live="polite">
-      <strong>{projection.fields.filter((field) => field.known && field.value !== null).length}개 항목 확인됨</strong>
-      <span>각 항목은 서버 권위 projection의 최신 확인 결과입니다.</span>
+      <strong>서버 권위 목록</strong>
+      <span>표시된 값은 현재 범위에서 확인된 필드이며 전체 결과 수를 의미하지 않습니다.</span>
     </div>
     <OperationData {runtime} {projection} mode="table" emptyLabel="현재 범위에 확인 가능한 기록이 없습니다." />
   {:else}

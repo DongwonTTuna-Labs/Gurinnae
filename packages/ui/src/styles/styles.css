@@ -1250,6 +1250,21 @@ input[type="checkbox"] {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.public-nav-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.public-nav-child {
+  color: var(--ink-500);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fragment-anchor {
+  display: block;
+  scroll-margin-top: 20px;
+}
 .form-main {
   max-width: 760px;
   margin: auto;
@@ -1365,6 +1380,10 @@ input[type="checkbox"] {
   }
   .mobile-nav {
     display: block;
+  }
+  .mobile-nav nav .public-nav-child {
+    padding-left: 18px;
+    color: var(--ink-500);
   }
   .mobile-quick-link {
     display: inline-flex;
@@ -1541,6 +1560,28 @@ input[type="checkbox"] {
   }
   .form-main {
     padding-top: 20px;
+  }
+  .response-header {
+    height: auto;
+    min-height: 64px;
+    padding: 8px 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    align-items: start;
+  }
+  .response-header > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .response-header nav {
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+  .response-header nav a {
+    min-height: 40px;
+    padding-inline: 0;
+    margin-right: 12px;
   }
   .form-card {
     padding: 20px 16px;

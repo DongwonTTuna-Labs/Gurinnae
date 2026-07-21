@@ -166,12 +166,15 @@ function sectionStateFor(
 ): ProjectionSectionState {
   const transport = stateFor(runtime, blocked);
   if (transport !== "READY") return transport;
-  if (fields.length === 0) return "UNKNOWN";
-  const known = fields.filter((field) => field.known).length;
+  const materialFields = fields.filter(
+    (field) => field.known || !field.source.startsWith("authority:"),
+  );
+  if (materialFields.length === 0) return "UNKNOWN";
+  const known = materialFields.filter((field) => field.known).length;
   // The contract is present but no allowlisted value was resolved.  This is
   // distinct from an authority-confirmed empty result and must stay visible.
   if (known === 0) return "UNKNOWN";
-  if (known < fields.length) return "PARTIAL";
+  if (known < materialFields.length) return "PARTIAL";
   return "READY";
 }
 
@@ -348,10 +351,10 @@ export function projectFetchedData(
             ? { analysis: sections[sectionId].analysis }
             : {}),
           fields: Object.fromEntries(
-            Object.entries(section.fields).map(([fieldName, field]) => [
-              fieldName,
-              sections[sectionId]?.fields[fieldName] ?? field,
-            ]),
+            Object.entries({
+              ...section.fields,
+              ...(sections[sectionId]?.fields ?? {}),
+            }).map(([fieldName, field]) => [fieldName, field]),
           ),
         },
       ]),
@@ -384,7 +387,9 @@ export function projectScreen(
         [
           ...new Set([
             ...section.fields,
-            ...Object.keys(runtime.projection?.sections[section.id]?.fields ?? {}),
+            ...Object.keys(
+              runtime.projection?.sections[section.id]?.fields ?? {},
+            ),
           ]),
         ],
         runtime.projection,

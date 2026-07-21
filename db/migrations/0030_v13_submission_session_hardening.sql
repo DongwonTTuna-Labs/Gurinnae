@@ -2251,6 +2251,30 @@ COMMIT;
 -- This read-only owner routine binds the source/request to a currently active
 -- SOURCE_ACCESS capability decision; it never manufactures a rights decision.
 BEGIN;
+-- Hold placement/release and public-research preflight use one advisory lock
+-- domain.  Without this trigger a new hold could be inserted after the
+-- preflight snapshot but before the gateway response is recorded.
+CREATE OR REPLACE FUNCTION ops.lock_research_hold_domain_v1()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, ops, editorial, pg_temp
+AS $$
+DECLARE v_id text;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(NEW.object_id::text, 13));
+  PERFORM pg_advisory_xact_lock(hashtextextended(NEW.case_id::text, 13));
+  FOR v_id IN SELECT value FROM jsonb_array_elements_text(COALESCE(NEW.affected_ids, '[]'::jsonb)) LOOP
+    PERFORM pg_advisory_xact_lock(hashtextextended(v_id, 13));
+  END LOOP;
+  RETURN NEW;
+END $$;
+ALTER FUNCTION ops.lock_research_hold_domain_v1() OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.lock_research_hold_domain_v1() FROM PUBLIC;
+DROP TRIGGER IF EXISTS editorial_legal_holds_research_domain_lock ON editorial.legal_holds;
+CREATE TRIGGER editorial_legal_holds_research_domain_lock
+  BEFORE INSERT OR UPDATE OF object_id,case_id,affected_ids ON editorial.legal_holds
+  FOR EACH ROW EXECUTE FUNCTION ops.lock_research_hold_domain_v1();
+
 CREATE OR REPLACE FUNCTION ops.assert_research_fetch_rights_v1(
   p_source_id text,
   p_request_kind text
@@ -2265,6 +2289,22 @@ BEGIN
   -- transaction-scoped lock so a concurrent hold placement cannot race the
   -- owner preflight silently.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_source_id, 13));
+  -- Lock the matching hold rows and their canonical target anchors while the
+  -- snapshot is built.  Reading an unlocked hold row here would leave a
+  -- release/update TOCTOU window between preflight and artifact recording.
+  PERFORM h.id
+    FROM editorial.legal_holds h
+   WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > clock_timestamp())
+     AND (h.affected_ids @> jsonb_build_array(p_source_id)
+          OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)
+   FOR UPDATE;
+  PERFORM a.id
+    FROM ops.legal_hold_target_anchors a
+    JOIN editorial.legal_holds h ON a.target_id IN (h.object_id,h.case_id)
+   WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > clock_timestamp())
+     AND (h.affected_ids @> jsonb_build_array(p_source_id)
+          OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)
+   FOR UPDATE;
   SELECT jsonb_build_object(
       'decisionId', d.id, 'decisionVersion', d.decision_version,
       'decisionSha256', d.decision_digest, 'effectiveAt', d.effective_at,
@@ -2416,6 +2456,22 @@ BEGIN
   THEN RAISE EXCEPTION 'RESEARCH_FETCH_URL_INVALID' USING ERRCODE='22023'; END IF;
   v_now := clock_timestamp();
   PERFORM pg_advisory_xact_lock(hashtextextended(p_source_id, 13));
+  -- Re-lock the same hold/anchor set in the write transaction.  The exact
+  -- rows used for the rights decision therefore cannot change before the
+  -- artifact and source-use lineage is committed.
+  PERFORM h.id
+    FROM editorial.legal_holds h
+   WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > v_now)
+     AND (h.affected_ids @> jsonb_build_array(p_source_id)
+          OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)
+   FOR UPDATE;
+  PERFORM a.id
+    FROM ops.legal_hold_target_anchors a
+    JOIN editorial.legal_holds h ON a.target_id IN (h.object_id,h.case_id)
+   WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > v_now)
+     AND (h.affected_ids @> jsonb_build_array(p_source_id)
+          OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)
+   FOR UPDATE;
   IF p_receipt_digest <> encode(extensions.digest(convert_to('content-safety-v2:'||v_content_sha||':'||v_safety_state,'UTF8'),'sha256'),'hex')
   THEN RAISE EXCEPTION 'CONTENT_SAFETY_RECEIPT_MISMATCH' USING ERRCODE='22023'; END IF;
   PERFORM 1 FROM ops.agent_runs WHERE id=p_agent_run_id;

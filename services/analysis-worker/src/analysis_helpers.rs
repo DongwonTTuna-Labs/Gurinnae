@@ -291,8 +291,12 @@ fn deterministic_output(agent_type: &str, evidence: &Value) -> Value {
     let Some(first) = evidence.as_array().and_then(|items| items.first()) else {
         return blocked_output("ABSTAINED", "EVIDENCE_REQUIRED");
     };
+    // The deterministic double is pinned to the FINAL authority fixture.  Do
+    // not read the review-only addendum-v2 fixture here: that file is outside
+    // the immutable authority pack and may drift independently of the base
+    // provider contract.
     let path = format!(
-        "{}/../../specs/agents/fixtures/{agent_type}/{agent_type}-01-valid/provider-response-v2.json",
+        "{}/../../specs/agents/fixtures/{agent_type}/{agent_type}-01-valid/provider-response.json",
         env!("CARGO_MANIFEST_DIR")
     );
     let Ok(bytes) = std::fs::read(path) else {

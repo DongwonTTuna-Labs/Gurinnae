@@ -233,6 +233,28 @@ Exact tuple resolution:
   receipt digests before release freeze.
 - Status: `DECISION_COMPLETE`.
 
+## SPEC-CONFLICT-013 — Response route parameterization versus static screen sheets
+
+- Conflicting authority rows: `specs/ui/routes.md` and
+  `specs/traceability/final-traceability.yaml` require the response journey at
+  `/respond/{token}` and `/respond/{token}/...`, while the individual RSP screen
+  sheets (`specs/ui/screens/RSP-001.md` through `RSP-007.md`) and the existing
+  source tree name static routes such as `/respond/access` and
+  `/respond/overview`.
+- Resolution: the parameterized routes are the canonical production contract
+  because the higher-level route catalog and traceability contract bind the
+  response token to the session boundary. Static paths remain deterministic
+  local fixture aliases only; they must never issue or accept a response
+  session without a token exchange. Any route parity test must assert both the
+  canonical token route and the explicitly marked fixture alias.
+- Rejected alternative: silently choose static paths in production or infer a
+  token from cookies/query state, which would break the request-bound session
+  and IDOR protections.
+- Required follow-up: add token-route adapters and route tests, update screen
+  route metadata to distinguish canonical and fixture aliases, and record a
+  fresh SSR/DOM/AX witness for every RSP route.
+- Status: `OPEN_IMPLEMENTATION`.
+
 ## USER-ADDENDUM-001 — 2026-07-14 product steering
 
 - Statement: the product owner requires low-cognitive-load journeys, consistent

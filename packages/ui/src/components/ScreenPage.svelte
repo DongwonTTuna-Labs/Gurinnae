@@ -135,9 +135,23 @@ function responseStepForScreen(screenId: string): number {
   return steps[screenId] ?? 1;
 }
 
-const responseStepLabels = ["요청 확인", "답변 작성", "첨부 검토", "제출 검토", "제출 완료"];
-const responseProgressState = (step: number): "not-started" | "in-progress" | "complete" | "error" =>
-  runtime.errors.length > 0 ? "error" : step < responseStep ? "complete" : step === responseStep ? "in-progress" : "not-started";
+const responseStepLabels = [
+  "요청 확인",
+  "답변 작성",
+  "첨부 검토",
+  "제출 검토",
+  "제출 완료",
+];
+const responseProgressState = (
+  step: number,
+): "not-started" | "in-progress" | "complete" | "error" =>
+  runtime.errors.length > 0
+    ? "error"
+    : step < responseStep
+      ? "complete"
+      : step === responseStep
+        ? "in-progress"
+        : "not-started";
 
 function sourceSection(sectionId: string): ScreenViewModel["sections"][number] {
   const source = screen.sections.find((section) => section.id === sectionId);
@@ -268,7 +282,7 @@ function stateTone(
       {#if !evidenceLanding}<p id={projection.focus.stateLive} class={`state badge ${stateTone(runtime.state)}`} data-state={runtime.state} data-testid={stateTestId} data-focus-target={projection.focus.stateLive} aria-live="polite">현재 상태: {stateLabel(runtime.state)}</p>{@render stateSummary()}{/if}
       {@render sections(evidenceLanding)}
     </main>
-    <footer class="footer"><div class="footer-inner"><p>구린네는 자동 분석 결과를 범죄 또는 비리의 확정 판단으로 표현하지 않습니다.</p><nav aria-label="푸터 탐색"><a href="/methodology">검증 방법</a><a href="/coverage">데이터 범위</a><a href="/editorial-policy">편집 정책</a><a href="/corrections">정정</a><a href="/contact">도움말·문의</a><a href="/privacy">개인정보</a><a href="/terms">이용약관</a></nav></div></footer>
+    <footer class="footer"><div class="footer-inner"><p>구린네는 자동 분석 결과를 범죄 또는 비리의 확정 판단으로 표현하지 않습니다.</p><nav aria-label="푸터 탐색"><a href="/methodology">검증 방법</a><a href="/coverage">데이터 범위</a><a href="/sources">출처</a><a href="/data">데이터 정책</a><a href="/api">API</a><a href="/about">소개</a><a href="/about/funding">후원·재정</a><a href="/about/governance">거버넌스</a><a href="/editorial-policy">편집 정책</a><a href="/corrections">정정</a><a href="/correction-request">정정 요청</a><a href="/accessibility">접근성</a><a href="/contact">도움말·문의</a><a href="/privacy">개인정보</a><a href="/terms">이용약관</a></nav></div></footer>
   </div>
 {:else if surface === "response"}
   <div class="form-shell">

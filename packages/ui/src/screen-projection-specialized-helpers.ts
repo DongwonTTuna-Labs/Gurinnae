@@ -8,6 +8,11 @@ export function summarize(value: unknown): SafeProjectionValue | null {
     reason?: unknown;
     count?: unknown;
     total?: unknown;
+    sort?: unknown;
+    agentTypeLabel?: unknown;
+    providerLabel?: unknown;
+    modelLabel?: unknown;
+    objective?: unknown;
   };
   const parts: string[] = [];
   for (const [label, candidate] of [
@@ -16,11 +21,19 @@ export function summarize(value: unknown): SafeProjectionValue | null {
     ["사유", item.reason],
     ["건수", item.count],
     ["전체", item.total],
+    ["정렬", item.sort],
+    ["에이전트", item.agentTypeLabel],
+    ["제공자", item.providerLabel],
+    ["모델", item.modelLabel],
+    ["목표", item.objective],
   ] as const) {
     const safe = scalar(candidate);
     if (safe !== null) parts.push(`${label}: ${safe}`);
   }
-  return parts.join(" · ") || "확인됨";
+  // An object without an authority scalar is not a successful result.  Do not
+  // turn an empty/unknown provider or cost envelope into a fabricated “known”
+  // value; callers must render the closed UNKNOWN state instead.
+  return parts.join(" · ") || null;
 }
 
 export function scalar(value: unknown): SafeProjectionValue | null {

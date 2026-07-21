@@ -84,14 +84,7 @@ function appendChallengeProof(actionId: string, event: FormDataEvent) {
 }
 const supportsLocalCommand = (action: ScreenViewModel["actions"][number]) => {
   if (action.id.startsWith("copy-")) return true;
-  if (
-    [
-      "clear",
-      "retry",
-      "discard-change",
-      "discard-local",
-    ].includes(action.id)
-  )
+  if (["clear", "retry", "discard-change", "discard-local"].includes(action.id))
     return true;
   if (action.id === "open-evidence") return hrefFor(action) !== undefined;
   return false;
@@ -241,6 +234,8 @@ function downloadHref(
         {/if}
         {#each visibleActions as action (action.id)}
           {#if operationId(action)}
+            {#if screen.id === "RSP-008" && action.id === "request-new-link"}<span id="new-link" class="fragment-anchor" aria-hidden="true"></span>{/if}
+            {#if screen.id === "RSP-008" && action.id === "contact-owner"}<span id="contact" class="fragment-anchor" aria-hidden="true"></span>{/if}
             <form id={`action-${action.id}`} method="POST" action={formAction(action.id)} data-action-id={action.id} onformdata={(event) => appendChallengeProof(action.id, event)}>
               {#if runtime.csrfToken}<input type="hidden" name="csrfToken" value={runtime.csrfToken} />{/if}
               <h3>{action.label}</h3>

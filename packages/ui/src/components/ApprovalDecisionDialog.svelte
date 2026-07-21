@@ -173,7 +173,10 @@ const fieldInvalid = (name: string) => {
 };
 const open = (id: string, event: MouseEvent) => {
   if (dialog?.open) return;
-  opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
+  opener =
+    event.currentTarget instanceof HTMLElement
+      ? event.currentTarget
+      : undefined;
   selected = id;
   reason = "";
   changeTasks = "[]";

@@ -15,18 +15,22 @@ struct RunContext<'a> {
 fn build_inputs(context: &RunContext<'_>) -> Value {
     json!(context.sources.iter().filter_map(|source| {
         let id = uuid_field(source, "id")?;
+        // A projection must never manufacture provenance from a source-use
+        // identifier.  If the upstream artifact did not provide its content
+        // digest, expose an explicit unknown value and let the UI explain the
+        // missing evidence instead of presenting a plausible-looking hash.
         let content = string_field(source, "sourceContentSha256")
-            .or_else(|| string_field(source, "selectedContentSha256"))
-            .unwrap_or_else(|| sha256(id.to_string().as_bytes()));
+            .or_else(|| string_field(source, "selectedContentSha256"));
+        let source_kind = string_field(source, "sourceKind").unwrap_or_else(|| "UNKNOWN".to_owned());
         Some(json!({
             "sourceUseId": id,
-            "sourceKind": string_field(source, "sourceKind").unwrap_or_else(|| "RESEARCH_ARTIFACT".to_owned()),
-            "humanLabel": format!("{} 출처", string_field(source, "sourceKind").unwrap_or_else(|| "확인되지 않음".to_owned())),
-            "revisionLabel": string_field(source, "sourceAssetRevision").map(|v| format!("v{v}")).unwrap_or_else(|| "v1".to_owned()),
+            "sourceKind": source_kind,
+            "humanLabel": format!("{} 출처", source_kind),
+            "revisionLabel": string_field(source, "sourceAssetRevision").map(|v| format!("v{v}")),
             "contentSha256": content,
-            "classification": string_field(source, "classification").unwrap_or_else(|| "INTERNAL".to_owned()),
+            "classification": string_field(source, "classification").unwrap_or_else(|| "UNKNOWN".to_owned()),
             "rightsState": if string_field(source, "accessRight").as_deref() == Some("ALLOW") { "ALLOWED" } else { "UNKNOWN" },
-            "freshnessState": "CURRENT",
+            "freshnessState": string_field(source, "freshnessState").unwrap_or_else(|| "UNKNOWN".to_owned()),
             "locatorLabel": string_field(source, "locatorValue"),
             "href": format!("{}/sources/{id}", href(context.case_id, context.run_id)),
         }))
@@ -40,13 +44,13 @@ fn build_model(context: &RunContext<'_>, first_turn: &Value) -> Value {
             .iter()
             .all(|turn| string_field(turn, "status").as_deref() == Some("COMPLETED"));
     json!({
-        "providerMode": string_field(first_turn, "providerMode").unwrap_or_else(|| "DETERMINISTIC_DOUBLE".to_owned()),
+        "providerMode": string_field(first_turn, "providerMode").unwrap_or_else(|| "UNKNOWN".to_owned()),
         "providerLabel": string_field(first_turn, "provider").or_else(|| string_field(context.row, "provider")).unwrap_or_else(|| "확인되지 않음".to_owned()),
         "modelLabel": string_field(first_turn, "model").or_else(|| string_field(context.row, "model")).unwrap_or_else(|| "확인되지 않음".to_owned()),
         "promptVersion": string_field(first_turn, "promptVersion").unwrap_or_else(|| "unknown".to_owned()),
-        "promptSha256": sha_field(first_turn, "promptSha256", &context.run_id.to_string()),
+        "promptSha256": string_field(first_turn, "promptSha256").filter(|value| is_sha256(value)).map(Value::from).unwrap_or(Value::Null),
         "outputSchemaVersion": string_field(first_turn, "outputSchemaVersion").or_else(|| string_field(context.row, "outputSchemaVersion")).unwrap_or_else(|| "unknown".to_owned()),
-        "outputSchemaSha256": sha_field(first_turn, "outputSchemaSha256", &context.run_id.to_string()),
+        "outputSchemaSha256": string_field(first_turn, "outputSchemaSha256").filter(|value| is_sha256(value)).map(Value::from).unwrap_or(Value::Null),
         "routingPolicyVersion": string_field(first_turn, "routingPolicyVersion").unwrap_or_else(|| "unknown".to_owned()),
         "dataPolicyLabel": "권한·출처·개인정보 정책 적용",
         "turnCount": context.turns.len(),
@@ -345,10 +349,10 @@ fn build_identity(context: &RunContext<'_>) -> Value {
         "statusLabel": status_label(&context.status),
         "controlState": control_state(&context.status),
         "version": context.row.get("version").and_then(Value::as_i64).unwrap_or(1),
-        "createdAt": string_field(context.row, "createdAt").unwrap_or_else(|| "1970-01-01T00:00:00Z".to_owned()),
+        "createdAt": string_field(context.row, "createdAt").map(Value::from).unwrap_or(Value::Null),
         "startedAt": context.row.get("startedAt").cloned().unwrap_or(Value::Null),
         "completedAt": context.row.get("completedAt").cloned().unwrap_or(Value::Null),
-        "snapshotAsOf": string_field(context.row, "updatedAt").or_else(|| string_field(context.row, "createdAt")).unwrap_or_else(|| "1970-01-01T00:00:00Z".to_owned()),
+        "snapshotAsOf": string_field(context.row, "updatedAt").or_else(|| string_field(context.row, "createdAt")).map(Value::from).unwrap_or(Value::Null),
         "snapshotSha256": context.snapshot,
     })
 }
@@ -396,7 +400,7 @@ fn build_view_model(context: &RunContext<'_>, graph: Value, visuals: Value) -> V
         "citations": build_citations(context),
         "safety": build_safety(context, &first_validation),
         "decisions": build_decisions(context.row),
-        "cost": {"currency":"KRW","limitMicrosKrw":limit_cost,"reservedMicrosKrw":ledger.and_then(|value| cost_micros(value.get("reservedExposureAmount"))),"settledMicrosKrw":actual_cost,"remainingMicrosKrw":ledger.and_then(|value| cost_micros(value.get("availableAmount"))),"state":cost_state,"unknownReason":cost_unknown_reason.map(Value::from).unwrap_or(Value::Null),"reservationId":ledger.and_then(|value| value.get("reservationId")).cloned().unwrap_or(Value::Null),"reservationDigest":ledger.and_then(|value| value.get("reservationDigest")).cloned().unwrap_or(Value::Null),"ledgerEntryCount":ledger.and_then(|value| value.get("ledgerEntryCount")).cloned().unwrap_or(Value::Null),"providerReceiptBound":ledger.and_then(|value| value.get("providerReceiptBound")).cloned().unwrap_or(Value::Bool(false)),"pricingAsOf":string_field(context.row,"updatedAt").or_else(||string_field(context.row,"createdAt")).unwrap_or_else(||"1970-01-01T00:00:00Z".to_owned()),"isEstimate":false},
+        "cost": {"currency":"KRW","limitMicrosKrw":limit_cost,"reservedMicrosKrw":ledger.and_then(|value| cost_micros(value.get("reservedExposureAmount"))),"settledMicrosKrw":actual_cost,"remainingMicrosKrw":ledger.and_then(|value| cost_micros(value.get("availableAmount"))),"state":cost_state,"unknownReason":cost_unknown_reason.map(Value::from).unwrap_or(Value::Null),"reservationId":ledger.and_then(|value| value.get("reservationId")).cloned().unwrap_or(Value::Null),"reservationDigest":ledger.and_then(|value| value.get("reservationDigest")).cloned().unwrap_or(Value::Null),"ledgerEntryCount":ledger.and_then(|value| value.get("ledgerEntryCount")).cloned().unwrap_or(Value::Null),"providerReceiptBound":ledger.and_then(|value| value.get("providerReceiptBound")).cloned().unwrap_or(Value::Bool(false)),"pricingAsOf":string_field(context.row,"updatedAt").or_else(||string_field(context.row,"createdAt")).map(Value::from).unwrap_or(Value::Null),"isEstimate":false},
         "primaryAction": action("review-output", "출력과 근거 검토", "NAVIGATION", None),
         "secondaryActions": [action("rerun", "새 버전으로 다시 실행", "COMMAND", Some("startAgentRun"))],
         "visualizations": visuals,

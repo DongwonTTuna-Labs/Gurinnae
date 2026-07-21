@@ -10,9 +10,9 @@ import {
 import {
   canonicalizeScreenViewModel,
   projectFetchedData,
-  serverActionDestinations,
   type ScreenRuntime,
   type ScreenViewModel,
+  serverActionDestinations,
   typedScreenViewModel,
 } from "@gurine/ui";
 import { type RequestEvent, redirect } from "@sveltejs/kit";

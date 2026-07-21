@@ -187,7 +187,19 @@ export function toOps004ViewModel(
     updatedAt !== null &&
     providers.length > 0 &&
     dailySeries.length > 0 &&
-    topCases.length > 0;
+    dailySeries.every(
+      (point) =>
+        point.at !== null && point.amount !== null && point.currency !== null,
+    ) &&
+    topCases.length > 0 &&
+    topCases.every(
+      (item) =>
+        item.caseId !== null &&
+        item.caseTitle !== null &&
+        item.amount !== null &&
+        item.currency !== null &&
+        item.runCount !== null,
+    );
   const projectionState: Ops004ProjectionState =
     complete && summary.status !== "UNKNOWN"
       ? "READY"

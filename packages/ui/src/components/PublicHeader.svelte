@@ -75,14 +75,28 @@ $effect(() => {
   <div class="header-inner">
     <Brand />
     <nav class="public-nav" aria-label="주요 탐색">
-      {#each navItems as [href, label]}<a href={href} aria-current={current(href) ? "page" : undefined}>{label}</a>{/each}
+      {#each navItems as [href, label]}
+        {#if href === "/agencies"}
+          <div class="public-nav-group">
+            <a href={href} aria-current={current(href) ? "page" : undefined}>{label}</a>
+            <a class="public-nav-child" href="/suppliers" aria-current={current("/suppliers") ? "page" : undefined}>업체</a>
+          </div>
+        {:else}
+          <a href={href} aria-current={current(href) ? "page" : undefined}>{label}</a>
+        {/if}
+      {/each}
     </nav>
     <div class="header-actions">
       <a class="icon-button" href="/search" aria-label="검색">⌕</a>
       <a class="secondary-button subscribe-link" href="/subscribe">업데이트 구독</a>
       <details class="mobile-nav" bind:this={mobileNav} bind:open={mobileNavOpen} ontoggle={() => { mobileNavOpen = mobileNav?.open ?? false; }}>
         <summary class="icon-button" aria-label={mobileNavOpen ? "주요 탐색 닫기" : "주요 탐색 열기"} aria-expanded={mobileNavOpen} aria-controls="mobile-primary-nav" onclick={(event) => { mobileNavOpener = event.currentTarget as HTMLElement; }} onkeydown={handleMobileNavKeydown} >☰</summary>
-        <nav id="mobile-primary-nav" aria-label="모바일 주요 탐색">{#each navItems as [href, label]}<a href={href} aria-current={current(href) ? "page" : undefined} onclick={() => closeMobileNav(false)}>{label}</a>{/each}</nav>
+        <nav id="mobile-primary-nav" aria-label="모바일 주요 탐색">
+          {#each navItems as [href, label]}
+            <a href={href} aria-current={current(href) ? "page" : undefined} onclick={() => closeMobileNav(false)}>{label}</a>
+            {#if href === "/agencies"}<a class="public-nav-child" href="/suppliers" aria-current={current("/suppliers") ? "page" : undefined} onclick={() => closeMobileNav(false)}>└ 업체</a>{/if}
+          {/each}
+        </nav>
       </details>
     </div>
   </div>

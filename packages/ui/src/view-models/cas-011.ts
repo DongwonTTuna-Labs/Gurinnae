@@ -96,12 +96,15 @@ function graphRows(value: unknown): readonly Cas011GraphRow[] {
     const toLabel = text(row.toLabel);
     const factSha256 = text(row.factSha256);
     if (!fromLabel || !relationLabel || !toLabel || !factSha256) return [];
+    if (
+      typeof row.ordinal !== "number" ||
+      !Number.isInteger(row.ordinal) ||
+      row.ordinal < 0
+    )
+      return [];
     return [
       {
-        ordinal:
-          typeof row.ordinal === "number" && Number.isFinite(row.ordinal)
-            ? row.ordinal
-            : 0,
+        ordinal: row.ordinal,
         fromLabel,
         relationLabel,
         toLabel,
@@ -180,7 +183,12 @@ export function toCas011ViewModel(
     model: record(vm.model),
     output: (() => {
       const value = record(vm.output);
-      const summary = text(value?.summary ?? value?.text ?? value?.content);
+      const summary = text(
+        value?.summary ??
+          value?.answerFirstSummary ??
+          value?.text ??
+          value?.content,
+      );
       return summary ? { summary } : null;
     })(),
     citations: records(vm.citations),

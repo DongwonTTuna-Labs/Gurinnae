@@ -3,9 +3,9 @@ import {
   canonicalizeScreenViewModel,
   emptyScreenProjection,
   projectFetchedData,
-  serverActionDestinations,
   type ScreenRuntime,
   type ScreenViewModel,
+  serverActionDestinations,
   typedScreenViewModel,
 } from "@gurine/ui";
 import type { RequestEvent } from "@sveltejs/kit";
