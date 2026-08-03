@@ -7,6 +7,89 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
     else {
         return Ok(false);
     };
+    if job.job_type == "COMMUNICATION_PROVIDER_PREFLIGHT" {
+        if let Err(error) = process_provider_preflight_job(state, &job).await {
+            let (error_code, error_detail, retryable) = match error {
+                WorkerError::Delivery => (
+                    "COMMUNICATION_PROVIDER_PREFLIGHT_FAILED",
+                    "provider preflight egress failed",
+                    true,
+                ),
+                WorkerError::Database => (
+                    "COMMUNICATION_PROVIDER_PREFLIGHT_PERSISTENCE_FAILED",
+                    "provider preflight state could not be loaded",
+                    true,
+                ),
+                WorkerError::Contract => (
+                    "COMMUNICATION_PROVIDER_PREFLIGHT_CONTRACT_INVALID",
+                    "provider preflight job or receipt contract is invalid",
+                    false,
+                ),
+                WorkerError::Cryptography | WorkerError::Initialization => (
+                    "COMMUNICATION_PROVIDER_PREFLIGHT_INTERNAL_INVALID",
+                    "provider preflight worker state is invalid",
+                    false,
+                ),
+                WorkerError::Job(error) => return Err(WorkerError::Job(error)),
+            };
+            state
+                .worker
+                .fail(
+                    &state.pool,
+                    &job,
+                    error_code,
+                    error_detail,
+                    retryable,
+                    serde_json::json!({
+                        "providerConnectionTestId": job.payload.get("providerConnectionTestId"),
+                        "providerConfigId": job.payload.get("providerConfigId"),
+                    }),
+                )
+                .await
+                .map_err(WorkerError::Job)?;
+        }
+        return Ok(true);
+    }
+    if job.job_type == "COMMUNICATION_PROVIDER_POLL" {
+        if let Err(error) = process_provider_poll_job(state, &job).await {
+            let (error_code, error_detail, retryable) = match error {
+                WorkerError::Delivery => (
+                    "COMMUNICATION_PROVIDER_POLL_FAILED",
+                    "authenticated provider poll failed",
+                    true,
+                ),
+                WorkerError::Database => (
+                    "COMMUNICATION_PROVIDER_POLL_PERSISTENCE_FAILED",
+                    "provider poll receipt persistence failed",
+                    true,
+                ),
+                WorkerError::Contract => (
+                    "COMMUNICATION_PROVIDER_POLL_CONTRACT_INVALID",
+                    "provider poll job or receipt contract is invalid",
+                    false,
+                ),
+                WorkerError::Cryptography | WorkerError::Initialization => (
+                    "COMMUNICATION_PROVIDER_POLL_INTERNAL_INVALID",
+                    "provider poll worker state is invalid",
+                    false,
+                ),
+                WorkerError::Job(error) => return Err(WorkerError::Job(error)),
+            };
+            state
+                .worker
+                .fail(
+                    &state.pool,
+                    &job,
+                    error_code,
+                    error_detail,
+                    retryable,
+                    serde_json::json!({"deliveryId":job.payload.get("deliveryId")}),
+                )
+                .await
+                .map_err(WorkerError::Job)?;
+        }
+        return Ok(true);
+    }
     let event = match event_from_job(&job) {
         Ok(event) => event,
         Err(error) => {
@@ -25,7 +108,7 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
             return Ok(true);
         }
     };
-    if inbox_processed(state, event.id).await? {
+    if inbox_processed(state, &event.consumer_id, event.id).await? {
         state
             .worker
             .complete(&state.pool, &job, serde_json::json!({"deduplicated":true}))
@@ -65,6 +148,68 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
     };
     deliver_prepared(state, &job, &event, delivery_id, message).await?;
     Ok(true)
+}
+
+async fn process_provider_preflight_job(
+    state: &State,
+    job: &ClaimedJob,
+) -> Result<(), WorkerError> {
+    let test_id = pointer_uuid(&job.payload, "/providerConnectionTestId")
+        .map_err(|_| WorkerError::Contract)?;
+    let config_id = pointer_uuid(&job.payload, "/providerConfigId")
+        .map_err(|_| WorkerError::Contract)?;
+    let row = sqlx::query(
+        "SELECT pc.version, btrim(pc.configuration_digest::text) AS configuration_digest \
+           FROM ops.provider_connection_tests t \
+           JOIN ops.communication_provider_bindings b ON b.generic_provider_id=t.provider_id \
+           JOIN ops.communication_provider_configs pc \
+             ON pc.id=b.communication_provider_config_id \
+          WHERE t.id=$1 AND t.status IN ('QUEUED','RUNNING') \
+            AND pc.id=$2",
+    )
+    .bind(test_id)
+    .bind(config_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| WorkerError::Database)?
+    .ok_or(WorkerError::Contract)?;
+    let revision = ProviderRevision {
+        config_id,
+        config_version: row.try_get("version").map_err(|_| WorkerError::Database)?,
+        configuration_digest: row
+            .try_get("configuration_digest")
+            .map_err(|_| WorkerError::Database)?,
+    };
+    let receipt = state
+        .delivery
+        .preflight_provider_revision(test_id, &revision)
+        .await
+        .map_err(|_| WorkerError::Delivery)?;
+    if receipt.provider_connection_test_id != test_id
+        || receipt.provider_config_id != config_id
+        || receipt.provider_config_version != revision.config_version
+        || receipt.receipt_digest.len() != 64
+        || !matches!(receipt.status.as_str(), "SUCCEEDED" | "FAILED")
+    {
+        return Err(WorkerError::Contract);
+    }
+    state
+        .worker
+        .complete(
+            &state.pool,
+            job,
+            serde_json::json!({
+                "providerConnectionTestId": receipt.provider_connection_test_id,
+                "providerConfigId": receipt.provider_config_id,
+                "providerConfigVersion": receipt.provider_config_version,
+                "preflightReceiptId": receipt.receipt_id,
+                "preflightReceiptDigest": receipt.receipt_digest,
+                "status": receipt.status,
+            }),
+        )
+        .await
+        .map_err(WorkerError::Job)?;
+    Ok(())
 }
 
 // COMMUNICATION_V1 dispatch path.  The database owner routine is the
@@ -127,8 +272,9 @@ async fn deliver_prepared(
     .map_err(|_| WorkerError::Database)?;
     let completed = sqlx::query(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
-         WHERE consumer='notification-worker' AND event_id=$1 AND processed_at IS NULL",
+         WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
     )
+    .bind(&event.consumer_id)
     .bind(event.id)
     .execute(&mut *transaction)
     .await
@@ -160,6 +306,12 @@ fn event_from_job(job: &ClaimedJob) -> Result<ClaimedEvent, String> {
         return Err(format!("unsupported job type {}", job.job_type));
     }
     let event_id = pointer_uuid(&job.payload, "/eventId")?;
+    let consumer_id = job
+        .payload
+        .get("consumerId")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "consumerId is missing".to_owned())?;
     let event_type = job
         .payload
         .get("eventType")
@@ -167,6 +319,12 @@ fn event_from_job(job: &ClaimedJob) -> Result<ClaimedEvent, String> {
         .filter(|value| !value.is_empty())
         .ok_or_else(|| "eventType is missing".to_owned())?;
     let aggregate_id = pointer_uuid(&job.payload, "/aggregateId")?;
+    let aggregate_version = job
+        .payload
+        .get("aggregateVersion")
+        .and_then(serde_json::Value::as_i64)
+        .filter(|value| *value > 0)
+        .ok_or_else(|| "aggregateVersion is missing or invalid".to_owned())?;
     let payload = job
         .payload
         .get("payload")
@@ -174,9 +332,11 @@ fn event_from_job(job: &ClaimedJob) -> Result<ClaimedEvent, String> {
         .cloned()
         .ok_or_else(|| "payload is missing or invalid".to_owned())?;
     Ok(ClaimedEvent {
+        consumer_id: consumer_id.to_owned(),
         id: event_id,
         event_type: event_type.to_owned(),
         aggregate_id,
+        aggregate_version,
         payload,
     })
 }
@@ -189,11 +349,16 @@ fn pointer_uuid(value: &serde_json::Value, pointer: &str) -> Result<Uuid, String
         .ok_or_else(|| format!("{pointer} is missing or invalid"))
 }
 
-async fn inbox_processed(state: &State, event_id: Uuid) -> Result<bool, WorkerError> {
+async fn inbox_processed(
+    state: &State,
+    consumer_id: &str,
+    event_id: Uuid,
+) -> Result<bool, WorkerError> {
     sqlx::query_scalar(
         "SELECT processed_at IS NOT NULL FROM ops.inbox \
-         WHERE consumer='notification-worker' AND event_id=$1",
+         WHERE consumer=$1 AND event_id=$2",
     )
+    .bind(consumer_id)
     .bind(event_id)
     .fetch_optional(&state.pool)
     .await
@@ -236,8 +401,9 @@ async fn process_projection_applied(
     }
     let changed = sqlx::query(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
-         WHERE consumer='notification-worker' AND event_id=$1 AND processed_at IS NULL",
+         WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
     )
+    .bind(&event.consumer_id)
     .bind(event.id)
     .execute(&state.pool)
     .await
@@ -296,8 +462,9 @@ async fn process_publication_created(
     }
     let changed = sqlx::query(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
-         WHERE consumer='notification-worker' AND event_id=$1 AND processed_at IS NULL",
+         WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
     )
+    .bind(&event.consumer_id)
     .bind(event.id)
     .execute(&state.pool)
     .await

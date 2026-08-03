@@ -53,3 +53,53 @@ fn graph_and_visualization_digests_are_bound() {
         Some(&json!(set_digest))
     );
 }
+
+#[test]
+fn materialized_target_digest_is_bound_to_canonical_output() {
+    let run = Uuid::new_v4();
+    let case_id = Uuid::new_v4();
+    let mut first = json!({
+        "id": run,
+        "caseId": case_id,
+        "status": "SUCCEEDED",
+        "inputSnapshotHash": ZERO_SHA256,
+        "version": 1,
+        "createdAt": "2026-07-19T00:00:00Z",
+        "sourceUses": [],
+        "providerTurns": [],
+        "validation": [],
+        "citations": [],
+        "output": {
+            "answerFirstSummary": "검증 결과",
+            "hypotheses": [{"statement": "가설 A"}],
+            "unknowns": ["계약 원문 확인 필요"]
+        }
+    });
+    let mut second = first.clone();
+    second["output"]["answerFirstSummary"] = json!("변경된 검증 결과");
+
+    assert!(attach_cas011(&mut first).is_ok());
+    assert!(attach_cas011(&mut second).is_ok());
+
+    let target_digest = |row: &Value| {
+        row.pointer("/analysisVm/provenanceGraph/nodes")
+            .and_then(Value::as_array)
+            .and_then(|nodes| {
+                nodes.iter().find(|node| {
+                    node.get("nodeType").and_then(Value::as_str) == Some("MATERIALIZED_TARGET")
+                })
+            })
+            .and_then(|node| node.get("objectSha256"))
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned)
+    };
+    let expected = canonical_json_digest(first.get("output").unwrap_or(&Value::Null));
+
+    assert!(expected.is_ok());
+    assert_eq!(target_digest(&first), expected.ok());
+    assert_ne!(target_digest(&first), target_digest(&second));
+    assert_ne!(
+        first.pointer("/analysisVm/provenanceGraph/graphSha256"),
+        second.pointer("/analysisVm/provenanceGraph/graphSha256")
+    );
+}

@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::BTreeSet;
 
 pub(super) async fn insert_output_validation(
     executor: &mut sqlx::PgConnection,
@@ -151,30 +152,187 @@ fn output_proposals(output: &Value) -> Result<Vec<(&'static str, Value)>, Failur
     Ok(proposals)
 }
 
+fn communication_sha256(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+}
+
 fn validate_communication_payload(payload: &Value) -> Result<(), Failure> {
+    let object = payload.as_object().ok_or_else(|| {
+        Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "communication payload object".to_owned(),
+        )
+    })?;
+    validate_communication_fields(object)?;
+    validate_communication_envelope(payload)?;
+    require_communication_enum(
+        payload,
+        "channel",
+        &[
+            "SMTP_EMAIL",
+            "TELEGRAM_BOT_API",
+            "META_WHATSAPP_BUSINESS_CLOUD",
+            "LINE_MESSAGING_API",
+            "SOLAPI_SMS",
+            "SOLAPI_KAKAO_BIZMESSAGE",
+            "TWILIO_VOICE",
+            "SIGNED_WEBHOOK",
+        ],
+    )?;
+    require_communication_enum(
+        payload,
+        "purpose",
+        &[
+            "ENDPOINT_VERIFICATION",
+            "RIGHT_OF_REPLY_REQUEST",
+            "RIGHT_OF_REPLY_REMINDER",
+            "RESPONSE_RECEIPT",
+            "CORRECTION_STATUS",
+            "CORRECTION_RETRACTION_NOTICE",
+            "PRIVACY_TRANSACTIONAL_NOTICE",
+            "SECURITY_TRANSACTIONAL_NOTICE",
+            "SUBSCRIPTION_UPDATE",
+            "PRODUCT_MARKETING",
+            "INCIDENT_RECOVERY",
+            "INTERNAL_ACTION_REQUEST",
+            "DISCRETIONARY_OUTREACH",
+        ],
+    )?;
+    validate_communication_text(payload)?;
+    validate_communication_citations(payload)?;
+    validate_recipient_binding(payload)
+}
+
+fn validate_communication_fields(object: &serde_json::Map<String, Value>) -> Result<(), Failure> {
+    let allowed = [
+        "schemaVersion",
+        "kind",
+        "recipientBinding",
+        "channel",
+        "purpose",
+        "draftText",
+        "rationale",
+        "citationIds",
+        "requiresApproval",
+    ];
+    if object.len() != allowed.len() || object.keys().any(|key| !allowed.contains(&key.as_str())) {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "communication payload closed fields".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_communication_envelope(payload: &Value) -> Result<(), Failure> {
     if payload.get("schemaVersion").and_then(Value::as_str) != Some("communication-proposal-payload.v1")
         || payload.get("kind").and_then(Value::as_str) != Some("COMMUNICATION")
         || payload.get("requiresApproval").and_then(Value::as_bool) != Some(true)
     {
         return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "communication payload envelope".to_owned()));
     }
-    for key in ["channel", "purpose", "draftText", "rationale"] {
-        if payload.get(key).and_then(Value::as_str).is_none() {
-            return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", format!("communication {key}")));
+    Ok(())
+}
+
+fn require_communication_enum(
+    payload: &Value,
+    field: &'static str,
+    allowed: &[&str],
+) -> Result<(), Failure> {
+    let value = payload.get(field).and_then(Value::as_str).unwrap_or_default();
+    if !allowed.contains(&value) {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            format!("communication {field}"),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_communication_text(payload: &Value) -> Result<(), Failure> {
+    for (key, maximum) in [("draftText", 10_000), ("rationale", 4_000)] {
+        let length = payload
+            .get(key)
+            .and_then(Value::as_str)
+            .map(str::chars)
+            .map(Iterator::count)
+            .unwrap_or_default();
+        if !(1..=maximum).contains(&length) {
+            return Err(Failure::Terminal(
+                "AGENT_OUTPUT_INVALID",
+                format!("communication {key}"),
+            ));
         }
     }
-    if payload.get("citationIds").and_then(Value::as_array).is_none_or(|items| items.is_empty()) {
-        return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "communication citationIds".to_owned()));
+    Ok(())
+}
+
+fn validate_communication_citations(payload: &Value) -> Result<(), Failure> {
+    let citation_ids = payload
+        .get("citationIds")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            Failure::Terminal(
+                "AGENT_OUTPUT_INVALID",
+                "communication citationIds".to_owned(),
+            )
+        })?;
+    let unique = citation_ids
+        .iter()
+        .filter_map(Value::as_str)
+        .filter_map(|value| Uuid::parse_str(value).ok())
+        .collect::<BTreeSet<_>>();
+    if !(1..=100).contains(&citation_ids.len()) || unique.len() != citation_ids.len() {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "communication citationIds".to_owned(),
+        ));
     }
+    Ok(())
+}
+
+fn validate_recipient_binding(payload: &Value) -> Result<(), Failure> {
     let binding = payload.get("recipientBinding").and_then(Value::as_object)
         .ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", "communication recipientBinding".to_owned()))?;
-    for key in ["subjectId", "endpointId", "endpointDigest"] {
-        if binding.get(key).and_then(Value::as_str).is_none() {
-            return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", format!("communication recipientBinding.{key}")));
+    let binding_fields = ["subjectId", "endpointId", "endpointVersion", "endpointDigest"];
+    if binding.len() != binding_fields.len()
+        || binding
+            .keys()
+            .any(|key| !binding_fields.contains(&key.as_str()))
+    {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "communication recipientBinding closed fields".to_owned(),
+        ));
+    }
+    for key in ["subjectId", "endpointId"] {
+        if binding
+            .get(key)
+            .and_then(Value::as_str)
+            .and_then(|value| Uuid::parse_str(value).ok())
+            .is_none()
+        {
+            return Err(Failure::Terminal(
+                "AGENT_OUTPUT_INVALID",
+                format!("communication recipientBinding.{key}"),
+            ));
         }
     }
-    if binding.get("endpointVersion").and_then(Value::as_i64).is_none() {
+    if binding.get("endpointVersion").and_then(Value::as_i64).is_none_or(|value| value < 1) {
         return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "communication endpointVersion".to_owned()));
+    }
+    if binding
+        .get("endpointDigest")
+        .and_then(Value::as_str)
+        .is_none_or(|value| !communication_sha256(value))
+    {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "communication recipientBinding.endpointDigest".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -287,4 +445,54 @@ fn output_citations_placeholder(output: &Value, citation_id: &str) -> Option<Val
         .iter()
         .find(|citation| citation.get("citationId").and_then(Value::as_str) == Some(citation_id))
         .cloned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_communication() -> Value {
+        json!({
+            "schemaVersion": "communication-proposal-payload.v1",
+            "kind": "COMMUNICATION",
+            "recipientBinding": {
+                "subjectId": "00000000-0000-0000-0000-000000000001",
+                "endpointId": "00000000-0000-0000-0000-000000000002",
+                "endpointVersion": 1,
+                "endpointDigest": "1".repeat(64)
+            },
+            "channel": "SMTP_EMAIL",
+            "purpose": "RIGHT_OF_REPLY_REQUEST",
+            "draftText": "답변 요청 본문",
+            "rationale": "검증된 근거에 대한 답변권 보장",
+            "citationIds": ["00000000-0000-0000-0000-000000000003"],
+            "requiresApproval": true
+        })
+    }
+
+    #[test]
+    fn communication_payload_accepts_only_the_closed_schema() {
+        assert!(validate_communication_payload(&valid_communication()).is_ok());
+        let mut extra = valid_communication();
+        extra["provider"] = json!("smtp");
+        assert!(validate_communication_payload(&extra).is_err());
+    }
+
+    #[test]
+    fn communication_payload_rejects_aliases_and_invalid_bindings() {
+        let mut alias = valid_communication();
+        alias["channel"] = json!("EMAIL");
+        assert!(validate_communication_payload(&alias).is_err());
+
+        let mut invalid_binding = valid_communication();
+        invalid_binding["recipientBinding"]["endpointDigest"] = json!("not-a-digest");
+        assert!(validate_communication_payload(&invalid_binding).is_err());
+
+        let mut duplicate = valid_communication();
+        duplicate["citationIds"] = json!([
+            "00000000-0000-0000-0000-000000000003",
+            "00000000-0000-0000-0000-000000000003"
+        ]);
+        assert!(validate_communication_payload(&duplicate).is_err());
+    }
 }

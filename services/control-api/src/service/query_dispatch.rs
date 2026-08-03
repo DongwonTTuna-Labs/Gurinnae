@@ -8,7 +8,12 @@ pub(super) async fn query(
 ) -> Result<Output, ServiceError> {
     let parameters = query_parameters(request);
     let mut data = canonical_query(operation.id, &parameters, claims, pool).await?;
-    if let Some(object) = data.as_object_mut() {
+    // BinaryDownload is already a closed authority response.  Generic query
+    // provenance fields are materialized for envelope-backed responses, but
+    // must not be injected into this additionalProperties:false document.
+    if operation.id != "exportCostReport"
+        && let Some(object) = data.as_object_mut()
+    {
         object.entry("operationId").or_insert(json!(operation.id));
     }
     let data = if operation.id == "getActionProposal" {

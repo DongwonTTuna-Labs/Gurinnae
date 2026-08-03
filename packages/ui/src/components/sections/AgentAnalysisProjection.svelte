@@ -17,7 +17,7 @@ const showProvenance = $derived(
 </script>
 
 <SectionHeading {section} kicker="권위 분석 결과" />
-<p class="analysis-projection-note">서버가 검증한 분석 모델만 표시합니다. 표와 근거 행은 키보드·스크린 리더로도 확인할 수 있습니다.</p>
+<p class="analysis-projection-note"><strong>분석 범위</strong><span>서버 검증 모델 · 접근 가능한 표·근거 행</span></p>
 {#if projection}
   <OperationData {runtime} {projection} mode="cards" emptyLabel="현재 계약에서 확인 가능한 분석 항목이 없습니다." />
 {/if}
@@ -44,7 +44,7 @@ const showProvenance = $derived(
 
 {#if showProvenance && rows.length > 0}
   <section class="analysis-provenance" aria-labelledby={`${section.id}-provenance-heading`} data-testid={`${section.id}-provenance`}>
-    <h3 id={`${section.id}-provenance-heading`}>접근 가능한 provenance graph</h3>
+    <h3 id={`${section.id}-provenance-heading`}>근거 연결</h3>
     <div class="table-scroll" role="region" aria-label="근거 연결 표">
       <table data-testid={`${section.id}-provenance-table`}>
         <caption>실행에서 확인한 근거 연결</caption>
@@ -62,3 +62,121 @@ const showProvenance = $derived(
     </div>
   </section>
 {/if}
+
+<style>
+.analysis-projection-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding-block: 0.5rem;
+  border-block: 1px solid var(--paper-200);
+  color: var(--ink-700);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.analysis-projection-note strong {
+  color: var(--ink-900);
+}
+
+.analysis-visualizations,
+.analysis-provenance {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.analysis-visualizations > h3,
+.analysis-provenance > h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.analysis-visualization {
+  display: grid;
+  gap: 0.5rem;
+  padding-block: 0.75rem;
+  border-top: 1px solid var(--paper-200);
+}
+
+.analysis-visualization h4 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.analysis-narrative {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 0;
+  border-block: 1px solid var(--paper-200);
+  border-radius: 0;
+  background: transparent;
+}
+
+table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+caption {
+  padding: 0.5rem 0.625rem;
+  color: var(--ink-500);
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+th,
+td {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--paper-200);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  vertical-align: top;
+}
+
+thead th {
+  color: var(--ink-700);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.projection-provenance {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+code {
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .analysis-projection-note {
+    display: grid;
+  }
+
+  table {
+    min-width: 32rem;
+  }
+}
+</style>

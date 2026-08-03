@@ -6,10 +6,6 @@ struct SuggestionContext {
     stored_payload_sha256: String,
     suggestion_type: String,
     case_id: Uuid,
-    #[expect(
-        dead_code,
-        reason = "payload is retained for the legacy encrypted action-version writer"
-    )]
     payload: Value,
     input_snapshot_sha256: String,
 }
@@ -144,7 +140,7 @@ async fn materialize_accept(
     reason: &str,
     actor: Uuid,
     audit: Uuid,
-    _field_keys: &EnvelopeKeyRing,
+    field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let action_kind = match context.suggestion_type.as_str() {
@@ -172,7 +168,7 @@ async fn materialize_accept(
         },
         "rationale": reason,
         "draft": {
-            "actionKind": action_kind,
+            "kind": action_kind,
             "target": {
                 "type": target_type,
                 "id": context.case_id,
@@ -181,8 +177,10 @@ async fn materialize_accept(
             },
             "objectScopeDigest": object_scope_digest,
             "contentDigest": context.stored_payload_sha256,
+            "proposal": context.payload,
         },
     });
+    let action_request = seal_action_request("createActionProposal", action_request, field_keys)?;
     let action_receipt: Value =
         sqlx::query_scalar("SELECT ops.execute_action_approval_v1('createActionProposal',$1,$2)")
             .bind(action_request)
@@ -201,12 +199,18 @@ async fn materialize_accept(
         .filter(|value| is_sha256(value))
         .ok_or(ServiceError::Persistence)?
         .to_owned();
+    let content_digest = action_receipt
+        .get("contentDigest")
+        .and_then(Value::as_str)
+        .filter(|value| is_sha256(value))
+        .ok_or(ServiceError::Persistence)?
+        .to_owned();
     sqlx::query(
         "UPDATE ops.agent_suggestions SET status='ACCEPTED',decision_reason=$2,decided_by=$3,decided_at=clock_timestamp(),version=version+1,decision_kind='ACCEPT',decision_sha256=CAST($4 AS char(64)),decision_audit_event_id=$5,materialized_target_type='ACTION_PROPOSAL_DRAFT',materialized_target_id=$6,materialized_target_version=1,materialized_target_digest=CAST($7 AS char(64)),materialized_action_proposal_id=$6,materialization_receipt_sha256=CAST($8 AS char(64)) WHERE id=$1 AND version=$9",
     )
     .bind(context.id).bind(reason).bind(actor)
     .bind(sha256(format!("ACCEPT:{}:{}:{}", context.id, context.expected_version, reason).as_bytes()))
-    .bind(audit).bind(action_id).bind(&context.stored_payload_sha256).bind(&receipt_digest)
+    .bind(audit).bind(action_id).bind(content_digest).bind(&receipt_digest)
     .bind(context.expected_version).execute(&mut **tx).await.map_err(db)?;
     Ok(())
 }

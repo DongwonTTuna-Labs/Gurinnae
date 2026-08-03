@@ -32,7 +32,7 @@ impl Config {
         if !matches!(environment.as_str(), "development" | "test" | "production") {
             return Err(ConfigError::Invalid);
         }
-        let ai_enabled = boolean("AI_ENABLED", false)?;
+        let ai_enabled = boolean("AI_ENABLED", environment != "production")?;
         let egress_ai_url = env::var("EGRESS_AI_CHANNEL_URL")
             .ok()
             .filter(|value| !value.trim().is_empty())

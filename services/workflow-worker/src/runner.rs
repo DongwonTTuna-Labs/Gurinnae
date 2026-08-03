@@ -2,6 +2,7 @@ use std::{path::Path, sync::Arc, time::Duration};
 
 use arrow_array::{ArrayRef, RecordBatch, StringArray};
 use arrow_schema::{DataType, Field, Schema};
+use gurine_auth::envelope::{EnvelopeKey, EnvelopeKeyRing};
 use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_object_store::{
     filesystem,
@@ -54,6 +55,10 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
     .map_err(|_| WorkerError::Initialization)?;
     let store = open_store(&config.object_store).await?;
     let scanner = ClamAvScanner::new(config.clamav_host.clone(), config.clamav_port);
+    let field_keys = EnvelopeKeyRing {
+        current: EnvelopeKey::new(config.field_key_current),
+        previous: config.field_key_previous.map(EnvelopeKey::new),
+    };
     let worker = Worker::new(
         config.worker_id.clone(),
         "workflow-worker".to_owned(),
@@ -61,7 +66,7 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
     )
     .map_err(WorkerError::Job)?;
     loop {
-        let processed = if process_event_one(&pool, &store, &scanner, &worker).await? {
+        let processed = if process_event_one(&pool, &store, &scanner, &field_keys, &worker).await? {
             true
         } else {
             process_pending_scan(&pool, &store, &scanner).await?
@@ -96,12 +101,13 @@ async fn process_event_one(
     pool: &PgPool,
     store: &Store,
     scanner: &ClamAvScanner,
+    field_keys: &EnvelopeKeyRing,
     worker: &Worker,
 ) -> Result<bool, WorkerError> {
     let Some(job) = worker.claim(pool).await.map_err(WorkerError::Job)? else {
         return Ok(false);
     };
-    match handle_event(pool, store, scanner, &job).await {
+    match handle_event(pool, store, scanner, field_keys, &job).await {
         Ok(metrics) => worker
             .complete(pool, &job, metrics)
             .await
@@ -123,5 +129,6 @@ async fn process_event_one(
 }
 
 include!("workflow_events.rs");
+include!("workflow_action_execution.rs");
 include!("workflow_exports.rs");
 include!("workflow_pending.rs");

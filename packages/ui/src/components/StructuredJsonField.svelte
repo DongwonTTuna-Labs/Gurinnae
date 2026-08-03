@@ -258,3 +258,136 @@ function toConsent(input: unknown): Consent {
     </fieldset>
   {/if}
 </div>
+
+<style>
+  .structured-json-field,
+  fieldset {
+    min-width: 0;
+  }
+  fieldset {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 0.5rem 0.75rem;
+    margin: 0;
+    padding: 0.625rem;
+    border: 1px solid var(--paper-200);
+    border-radius: var(--radius-sm);
+  }
+  fieldset fieldset {
+    padding: 0.5rem 0 0;
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+  legend {
+    padding-inline: 0.25rem;
+    color: var(--ink-900);
+    font-size: 0.875rem;
+    font-weight: 650;
+  }
+  fieldset > label,
+  .attachment-consent-option,
+  .attachment-picker label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    font-size: 0.875rem;
+  }
+  fieldset > label > select {
+    width: min(100%, 16rem);
+    margin-left: auto;
+  }
+  input[type="checkbox"] {
+    flex: 0 0 auto;
+  }
+  .structured-answer-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 0.5rem 0.75rem;
+    padding-block: 0.625rem;
+    border-top: 1px solid var(--paper-200);
+  }
+  .structured-answer-row:first-of-type {
+    border-top: 0;
+  }
+  .structured-answer-row > label {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--ink-900);
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+  .field-readonly {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-column: 1 / -1;
+    gap: 0.75rem;
+    align-items: baseline;
+  }
+  .attachment-consent-options,
+  .structured-json-field > fieldset > .field-help {
+    grid-column: 1 / -1;
+  }
+  .attachment-consent-options {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+  .field-readonly span {
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+  .field-readonly output,
+  .field-help {
+    color: var(--ink-700);
+    font-size: 0.75rem;
+  }
+  .field-help {
+    margin: 0;
+    line-height: 1.5;
+  }
+  .field-error {
+    color: var(--red-700);
+  }
+  .serialization-control {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  @media (max-width: 620px) {
+    fieldset,
+    .structured-answer-row,
+    .attachment-consent-options {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    fieldset {
+      padding: 0.625rem;
+    }
+    fieldset > label,
+    .attachment-consent-option,
+    .attachment-picker label {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      min-height: 44px;
+    }
+    fieldset > label > select {
+      width: 100%;
+      margin-left: 0;
+    }
+    .field-readonly {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.25rem;
+    }
+  }
+  @media (forced-colors: active) {
+    fieldset {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+  }
+</style>

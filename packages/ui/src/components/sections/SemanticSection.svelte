@@ -12,7 +12,6 @@ const typedSection = $derived(
 
 <SectionHeading {section} kicker={typedSection?.region === "next-action" ? "다음 단계" : "확인할 내용"} />
 <div class="semantic-section" data-region={typedSection?.region ?? "state"}>
-  <p>{section.purpose}</p>
   <div class="semantic-section-state"><span>현재 상태</span><strong>{stateLabel(runtime.state)}</strong></div>
   {#if runtime.state === "loading" || runtime.state === "initial-loading"}<p role="status">서버가 확인한 내용을 불러오는 중입니다.</p>
   {:else if runtime.state === "empty" || runtime.state === "filtered-empty"}<p role="status">이 범위에 확인된 기록이 없습니다. 검색 조건과 기준 시각을 확인하세요.</p>
@@ -25,3 +24,73 @@ const typedSection = $derived(
   {:else if projection && projection.fields.length > 0}<dl class="structured-fields">{#each projection.fields as field}<div><dt>{field.label}</dt><dd>{field.value ?? "확인 필요"}</dd></div>{/each}</dl>
   {:else}<p role="status">이 영역에 표시할 권위 projection이 없습니다.</p>{/if}
 </div>
+
+<style>
+  .semantic-section {
+    display: grid;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+    font-size: var(--text-body, 0.9375rem);
+  }
+
+  .semantic-section > p {
+    margin: 0;
+    padding: 0.375rem 0.5rem;
+    border-block: 1px solid var(--paper-200);
+    background: var(--paper-50);
+    font-size: var(--text-data, 0.875rem);
+    line-height: 1.4;
+  }
+
+  .semantic-section-state {
+    display: grid;
+    grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: baseline;
+    padding: 0.375rem 0.5rem;
+    border-block: 1px solid var(--paper-200);
+  }
+
+  .semantic-section-state span,
+  .structured-fields dt {
+    color: var(--ink-500);
+    font-size: var(--text-meta, 0.75rem);
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .semantic-section-state strong {
+    font-size: var(--text-data, 0.875rem);
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+
+  .structured-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    margin: 0;
+  }
+
+  .structured-fields > div {
+    display: grid;
+    grid-template-columns: minmax(6rem, 38%) minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-top: 1px solid var(--paper-200);
+  }
+
+  .structured-fields dd {
+    margin: 0;
+    font-size: var(--text-data, 0.875rem);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 620px) {
+    .semantic-section-state,
+    .structured-fields > div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.25rem;
+    }
+  }
+</style>

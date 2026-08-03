@@ -483,6 +483,7 @@ services:
       target: egress-gateway
     environment:
       EGRESS_ALLOWLIST_PATH: /app/config/egress-allowlist.yaml
+      EGRESS_DATABASE_URL: ${EGRESS_DATABASE_URL}
       AI_PROVIDER_HOSTS: ${AI_PROVIDER_HOSTS:-}
       ALIO_HOST: ${ALIO_HOST:-}
       ALIO_OFFICIAL_MANIFEST_URL: ${ALIO_OFFICIAL_MANIFEST_URL:-}
@@ -515,6 +516,9 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_URL: ${SMTP_URL:-}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "/app/gurine-egress-gateway", "healthcheck", "--url", "http://127.0.0.1:8090/health/ready"]
       interval: 10s
@@ -523,6 +527,7 @@ services:
     networks:
     - internal
     - egress
+    - data
     read_only: true
     tmpfs:
     - /tmp

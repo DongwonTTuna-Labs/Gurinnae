@@ -92,6 +92,10 @@ INSERT INTO editorial.cases(id,public_slug,title,investigation_state,publication
 VALUES('148b09d5-aa28-5351-b471-9ef333a3e410','control-fixture-case','Control canonical case','INVESTIGATING','PUBLISHED_ANOMALY','Canonical integration case','HIGH',1)
 ON CONFLICT DO NOTHING;
 
+INSERT INTO editorial.cases(id,public_slug,title,investigation_state,publication_state,summary,priority,version)
+VALUES('cf321e0d-61f0-5c81-9d84-2a8087dd3a29','control-transition-guard-negative','Transition guard negative fixture','INVESTIGATING','NEVER_PUBLISHED','No response request is attached to this case','LOW',1)
+ON CONFLICT DO NOTHING;
+
 INSERT INTO editorial.review_snapshots(id,case_id,case_version,snapshot_sha256,snapshot_payload,automated_gate_results,created_by)
 VALUES('04935ea9-f702-552c-aedc-425382a2d2b3','148b09d5-aa28-5351-b471-9ef333a3e410',1,repeat('1',64),'{}','{}','75cccee2-bca8-53c5-90d4-0949f63d8e52')
 ON CONFLICT DO NOTHING;
@@ -178,6 +182,12 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO editorial.response_requests(id,case_id,party_type,party_name,recipient_email_hash,recipient_email_encrypted,questions,requested_publication_scope,due_at,status,version,created_by)
 VALUES('a3493bbe-83cc-5a9b-b251-de7cc46c62d8','148b09d5-aa28-5351-b471-9ef333a3e410','OTHER','Control fixture party',repeat('7',64),decode('00','hex'),'[]','{}',clock_timestamp()+interval '7 days','DRAFT',1,'11111111-1111-4111-8111-111111111111')
+ON CONFLICT DO NOTHING;
+
+-- Independent sent request used by the INVESTIGATING -> AWAITING_RESPONSE
+-- guard.  The DRAFT row above remains untouched for saveResponseRequestDraft.
+INSERT INTO editorial.response_requests(id,case_id,party_type,party_name,recipient_email_hash,recipient_email_encrypted,questions,requested_publication_scope,due_at,sent_at,status,version,created_by)
+VALUES('8f749b51-1351-582e-af83-512696fc93ef','148b09d5-aa28-5351-b471-9ef333a3e410','OTHER','Control sent fixture party',repeat('6',64),decode('00','hex'),'["Please provide the source record"]','{}',clock_timestamp()+interval '14 days',clock_timestamp(),'SENT',1,'11111111-1111-4111-8111-111111111111')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO editorial.responses(id,case_id,response_request_id,party_name,submitted_at,full_text_encrypted,public_excerpt,publication_consent,editorial_status,version)
@@ -369,7 +379,9 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.agent_suggestions(id,agent_run_id,case_id,suggestion_type,payload,evidence_ids,citation_checks,status,version)
 VALUES
- ('30ddda7c-3ee4-52a6-af23-f09f1f8cd9d4','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','TASK','{}','[]','[]','PENDING',1),
+ ('30ddda7c-3ee4-52a6-af23-f09f1f8cd9d4','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','COMMUNICATION',
+  '{"schemaVersion":"communication-proposal-payload.v1","kind":"COMMUNICATION","recipientBinding":{"subjectId":"4a8ebacf-fb74-5774-bf74-184bb778b896","endpointId":"2ca911e8-5871-50f2-b49f-587f5cb7f86f","endpointVersion":1,"endpointDigest":"9c90650b6836a60c3f39194fe1ba3c5f4766377363e5fda73c0451182f27f6c4"},"channel":"SMTP_EMAIL","purpose":"RIGHT_OF_REPLY_REQUEST","recipientLabel":"approval-recipient@example.test","draftText":"Please review the cited evidence before the response deadline.","rationale":"The subject must be able to inspect the cited evidence and respond.","citationIds":["1e44d0d1-9826-59fb-bc26-07c443a2134d"],"requiresApproval":true}',
+  '[]','[]','PENDING',1),
  ('ae58ffd5-e2a2-5bf2-8a4f-e11facaee532','8eee21b7-75c0-53c9-b079-d897a2c3c711','148b09d5-aa28-5351-b471-9ef333a3e410','TASK','{}','[]','[]','PENDING',1)
 ON CONFLICT DO NOTHING;
 

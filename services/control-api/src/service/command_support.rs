@@ -20,7 +20,8 @@ async fn enqueue_command_events(
     candidates: &Value,
     prepared: &PreparedCommand,
     transaction: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<Vec<PendingDomainEvent>, ServiceError> {
+    let mut pending = Vec::new();
     for event_type in producer_events(operation.id) {
         let event_payload =
             project_payload(event_type, candidates).map_err(|_| ServiceError::InvalidRequest)?;
@@ -35,6 +36,128 @@ async fn enqueue_command_events(
                 .fetch_one(&mut **transaction)
                 .await
                 .map_err(db)?;
+        } else {
+            pending.push(PendingDomainEvent {
+                event_type,
+                aggregate_id: prepared.persisted_id.to_string(),
+                version: prepared.version,
+                payload: event_payload,
+            });
+        }
+    }
+    Ok(pending)
+}
+
+async fn validate_transition_case(
+    operation: &str,
+    payload: &Map<String, Value>,
+    claims: &ActorClaims,
+    transaction: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    if operation != "transitionCase" {
+        return Ok(());
+    }
+    let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
+    let target = string_value(payload, "targetState").ok_or(ServiceError::InvalidRequest)?;
+    let reason = string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?;
+    let row = sqlx::query(
+        "SELECT c.investigation_state::text current_state,c.publication_state::text publication_state, \
+         c.resolution_code::text resolution_code,c.lead_investigator_id IS NOT NULL assigned_investigator, \
+         EXISTS(SELECT 1 FROM editorial.case_signals cs WHERE cs.case_id=c.id) at_least_one_signal, \
+         EXISTS(SELECT 1 FROM editorial.case_signals cs JOIN ops.signal_triages st ON st.signal_id=cs.signal_id \
+           WHERE cs.case_id=c.id AND st.result IN ('PROMOTE_TO_CASE','LINK_TO_CASE')) triage_decision_investigate, \
+         EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id \
+           AND r.status IN ('SENT','VIEWED') AND r.due_at>clock_timestamp()) validated_response_request, \
+         EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id \
+           AND r.status IN ('SENT','VIEWED') AND r.due_at>clock_timestamp()) due_at_in_future, \
+         EXISTS(SELECT 1 FROM editorial.responses r WHERE r.case_id=c.id AND r.verified_at IS NOT NULL) \
+           OR EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id \
+             AND (r.status IN ('SUBMITTED','CLOSED','EXPIRED') OR r.due_at<=clock_timestamp())) \
+           response_received_or_deadline_handled, \
+         EXISTS(SELECT 1 FROM editorial.claims cl WHERE cl.case_id=c.id) \
+           AND NOT EXISTS(SELECT 1 FROM editorial.claims cl WHERE cl.case_id=c.id \
+             AND cl.validation_status<>'VALID') claims_valid, \
+         EXISTS(SELECT 1 FROM editorial.evidence e WHERE e.case_id=c.id) \
+           AND NOT EXISTS(SELECT 1 FROM editorial.evidence e WHERE e.case_id=c.id \
+             AND e.verification_status<>'VERIFIED') evidence_verified, \
+         NOT EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id \
+           AND r.status IN ('DRAFT','SENT','VIEWED')) response_policy_satisfied, \
+         c.legal_review_required legal_review_required, \
+         EXISTS(SELECT 1 FROM editorial.review_snapshots s WHERE s.id=c.current_review_snapshot_id \
+           AND s.case_id=c.id AND s.case_version=c.version AND s.unresolved_blockers='[]'::jsonb) snapshot_current, \
+         EXISTS(SELECT 1 FROM editorial.review_decisions d \
+           JOIN ops.user_roles ur ON ur.user_id=d.reviewer_id AND ur.revoked_at IS NULL \
+             AND (ur.expires_at IS NULL OR ur.expires_at>clock_timestamp()) \
+           JOIN ops.roles role ON role.id=ur.role_id AND role.code='EDITOR' \
+           WHERE d.review_snapshot_id=c.current_review_snapshot_id AND d.decision='APPROVE') editorial_approved, \
+         EXISTS(SELECT 1 FROM editorial.review_decisions d \
+           JOIN ops.user_roles ur ON ur.user_id=d.reviewer_id AND ur.revoked_at IS NULL \
+             AND (ur.expires_at IS NULL OR ur.expires_at>clock_timestamp()) \
+           JOIN ops.roles role ON role.id=ur.role_id AND role.code='LEGAL_REVIEWER' \
+           WHERE d.review_snapshot_id=c.current_review_snapshot_id AND d.decision='APPROVE') legal_approved, \
+         EXISTS(SELECT 1 FROM editorial.evidence e WHERE e.case_id=c.id AND e.created_at>c.updated_at) \
+           new_material_evidence, \
+         c.publication_state='NEVER_PUBLISHED' OR COALESCE(to_timestamp($2),'-infinity'::timestamptz) > \
+           COALESCE((SELECT max(p.published_at) FROM editorial.publication_revisions p WHERE p.case_id=c.id),'-infinity'::timestamptz) \
+           reauth_if_previously_published \
+         FROM editorial.cases c WHERE c.id=$1",
+    )
+    .bind(case_id)
+    .bind(claims.auth_time as f64)
+    .fetch_optional(&mut **transaction)
+    .await
+    .map_err(db)?
+    .ok_or(ServiceError::NotFound)?;
+    let current_text: String = row.try_get("current_state").map_err(db)?;
+    let current = investigation_state(&current_text).ok_or(ServiceError::Persistence)?;
+    let target = investigation_state(target).ok_or(ServiceError::InvalidRequest)?;
+    let transition = CASE_TRANSITIONS
+        .iter()
+        .find(|candidate| candidate.from.contains(&current) && candidate.to == target)
+        .ok_or(ServiceError::InvalidStateTransition)?;
+    if !claims
+        .capabilities
+        .iter()
+        .any(|capability| capability == transition.capability)
+    {
+        return Err(ServiceError::CapabilityDenied);
+    }
+    let structured_reason = {
+        let reason = reason.trim();
+        (10..=4000).contains(&reason.chars().count())
+    };
+    let satisfied = |guard: &str| -> Result<bool, ServiceError> {
+        match guard {
+            "at_least_one_signal"
+            | "triage_decision_investigate"
+            | "assigned_investigator"
+            | "validated_response_request"
+            | "due_at_in_future"
+            | "response_received_or_deadline_handled"
+            | "claims_valid"
+            | "evidence_verified"
+            | "response_policy_satisfied"
+            | "editorial_approved"
+            | "legal_review_required"
+            | "snapshot_current"
+            | "legal_approved"
+            | "new_material_evidence"
+            | "reauth_if_previously_published" => row.try_get(guard).map_err(db),
+            "legal_review_not_required" => row
+                .try_get::<bool, _>("legal_review_required")
+                .map(|required| !required)
+                .map_err(db),
+            "changes_required_reason" | "structured_reason" => Ok(structured_reason),
+            "resolution_code_not_none" => row
+                .try_get::<String, _>("resolution_code")
+                .map(|code| code != "NONE")
+                .map_err(db),
+            _ => Err(ServiceError::Persistence),
+        }
+    };
+    for guard in transition.guards {
+        if !satisfied(guard)? {
+            return Err(ServiceError::PreconditionFailed);
         }
     }
     Ok(())
@@ -107,6 +230,51 @@ pub(super) async fn canonical_guard(
     }
     if let Some(version) = query.fetch_optional(&mut **transaction).await.map_err(db)? {
         return Ok(Some(version));
+    }
+    canonical_guard_miss(
+        contract,
+        &identity,
+        identity_column,
+        owner_guard,
+        status_guard,
+        owner_predicate,
+        actor,
+        transaction,
+    )
+    .await
+}
+
+async fn canonical_guard_miss(
+    contract: &ConcurrencyContract,
+    identity: &str,
+    identity_column: &str,
+    owner_guard: bool,
+    status_guard: Option<&str>,
+    owner_predicate: &str,
+    actor: Uuid,
+    transaction: &mut Transaction<'_, Postgres>,
+) -> Result<Option<i64>, ServiceError> {
+    if let Some(required_status) = status_guard {
+        let probe = format!(
+            "SELECT status::text FROM {relation} WHERE {identity_column}::text=$1{owner_predicate}",
+            relation = contract.guard_relation,
+        );
+        let mut query =
+            sqlx::query_scalar::<_, String>(AssertSqlSafe(probe.as_str())).bind(&identity);
+        if owner_guard {
+            query = query.bind(actor);
+        }
+        return match query
+            .fetch_optional(&mut **transaction)
+            .await
+            .map_err(db)?
+        {
+            None => Err(ServiceError::NotFound),
+            Some(actual) if actual != required_status => {
+                Err(ServiceError::InvalidStateTransition)
+            }
+            Some(_) => Err(ServiceError::VersionConflict),
+        };
     }
     let probe = format!(
         "SELECT EXISTS(SELECT 1 FROM {relation} WHERE {identity_column}::text=$1{owner_predicate})",

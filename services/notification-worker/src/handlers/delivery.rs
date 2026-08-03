@@ -26,6 +26,13 @@ pub struct ProviderBinding {
     pub preflight_digest: String,
 }
 
+#[derive(Clone, Debug)]
+pub struct ProviderRevision {
+    pub config_id: Uuid,
+    pub config_version: i64,
+    pub configuration_digest: String,
+}
+
 #[derive(Clone)]
 pub enum DeliveryGateway {
     File(FileGateway),
@@ -40,6 +47,17 @@ pub enum DeliveryError {
     Delivery,
     #[error("provider status poll is unsupported")]
     PollUnsupported,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderPreflightReceipt {
+    pub provider_connection_test_id: Uuid,
+    pub provider_config_id: Uuid,
+    pub provider_config_version: i64,
+    pub receipt_id: Uuid,
+    pub receipt_digest: String,
+    pub status: String,
 }
 
 #[derive(Serialize)]
@@ -314,6 +332,45 @@ impl SmtpGateway {
             .map_err(|_| DeliveryError::Delivery)
     }
 
+    pub async fn preflight_provider_revision(
+        &self,
+        provider_connection_test_id: Uuid,
+        revision: &ProviderRevision,
+    ) -> Result<ProviderPreflightReceipt, DeliveryError> {
+        let mut endpoint = self.url.clone();
+        endpoint.set_path("/communication/preflight");
+        endpoint.set_query(None);
+        let response = self
+            .client
+            .post(endpoint)
+            .header("x-gurine-egress-caller", "notification-worker")
+            .header(
+                "x-gurine-provider-config-id",
+                revision.config_id.to_string(),
+            )
+            .header(
+                "x-gurine-provider-config-version",
+                revision.config_version.to_string(),
+            )
+            .header(
+                "x-gurine-provider-configuration-digest",
+                &revision.configuration_digest,
+            )
+            .json(&ProviderPreflightRequest {
+                provider_connection_test_id,
+            })
+            .send()
+            .await
+            .map_err(|_| DeliveryError::Delivery)?;
+        if !response.status().is_success() {
+            return Err(DeliveryError::Delivery);
+        }
+        response
+            .json::<ProviderPreflightReceipt>()
+            .await
+            .map_err(|_| DeliveryError::Delivery)
+    }
+
     pub async fn send(&self, message: &EmailMessage) -> Result<String, DeliveryError> {
         self.send_for_channel(message, "EMAIL").await
     }
@@ -340,6 +397,12 @@ pub struct ProviderPollReceipt {
 #[serde(rename_all = "camelCase")]
 struct ProviderPollRequest<'a> {
     provider_message_id: &'a str,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProviderPreflightRequest {
+    provider_connection_test_id: Uuid,
 }
 
 fn sha256_hex(value: &[u8]) -> String {
@@ -448,6 +511,21 @@ impl DeliveryGateway {
             Self::Smtp(gateway) => {
                 gateway
                     .poll_for_channel_with_binding(channel, provider_message_id, binding)
+                    .await
+            }
+        }
+    }
+
+    pub async fn preflight_provider_revision(
+        &self,
+        provider_connection_test_id: Uuid,
+        revision: &ProviderRevision,
+    ) -> Result<ProviderPreflightReceipt, DeliveryError> {
+        match self {
+            Self::File(_) => Err(DeliveryError::Delivery),
+            Self::Smtp(gateway) => {
+                gateway
+                    .preflight_provider_revision(provider_connection_test_id, revision)
                     .await
             }
         }

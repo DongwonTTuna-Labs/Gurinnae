@@ -10,7 +10,7 @@ export const colorTokens = {
 
 export const layoutTokens = {
   contentMax: "1280px",
-  radiusSmall: "6px",
-  radiusMedium: "10px",
+  radiusSmall: "4px",
+  radiusMedium: "6px",
   minimumTarget: "44px",
 } as const;

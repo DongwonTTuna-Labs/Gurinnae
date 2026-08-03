@@ -199,6 +199,7 @@ fn append_target(
     status: String,
 ) -> Result<(), ServiceError> {
     let target_id = stable_uuid("analysis-output", &run_id.to_string());
+    let output_sha256 = canonical_json_digest(row.get("output").unwrap_or(&Value::Null))?;
     let target = node(NodeInput {
         node_id: target_id,
         node_type: "MATERIALIZED_TARGET",
@@ -206,7 +207,7 @@ fn append_target(
         state: status,
         object_id: target_id,
         object_version: Some(1),
-        object_sha256: sha_field(row, "output", &run_id.to_string()),
+        object_sha256: output_sha256,
         locator: None,
         occurred_at: string_field(row, "completedAt"),
         href: Some(href(case_id, run_id)),

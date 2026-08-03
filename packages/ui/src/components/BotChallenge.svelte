@@ -161,20 +161,35 @@ function currentTurnstile(): TurnstileApi | undefined {
 <style>
   .bot-challenge {
     display: grid;
-    gap: 0.55rem;
+    gap: 0.375rem;
     min-width: 0;
+    padding-block: 0.625rem;
+    border-top: 1px solid var(--paper-200);
   }
   .challenge-label {
-    font-weight: 700;
+    color: var(--ink-900);
+    font-size: 0.8125rem;
+    font-weight: 650;
   }
   .bot-challenge p {
     margin: 0;
+    color: var(--ink-700);
+    font-size: 0.75rem;
+    line-height: 1.5;
   }
   .challenge-error {
-    color: var(--color-danger, #9f1239);
+    color: var(--red-700);
   }
   button {
     min-height: 44px;
     justify-self: start;
+  }
+  @media (forced-colors: active) {
+    .bot-challenge {
+      border-color: CanvasText;
+    }
+    .challenge-error {
+      color: CanvasText;
+    }
   }
 </style>

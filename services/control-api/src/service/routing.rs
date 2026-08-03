@@ -270,11 +270,19 @@ pub(super) fn event_candidates(
             candidates.insert("caseVersion".into(), json!(resource_version));
         }
         "transitionCase" => {
-            candidates.insert("transition_id".into(), json!("case-transition"));
-            candidates.insert(
-                "from_state".into(),
-                json!(previous_case_state.ok_or(ServiceError::NotFound)?),
-            );
+            let previous = previous_case_state.ok_or(ServiceError::NotFound)?;
+            let from = investigation_state(previous).ok_or(ServiceError::Persistence)?;
+            let to = candidates
+                .get("targetState")
+                .and_then(Value::as_str)
+                .and_then(investigation_state)
+                .ok_or(ServiceError::InvalidRequest)?;
+            let transition = CASE_TRANSITIONS
+                .iter()
+                .find(|candidate| candidate.from.contains(&from) && candidate.to == to)
+                .ok_or(ServiceError::InvalidStateTransition)?;
+            candidates.insert("transition_id".into(), json!(transition.id));
+            candidates.insert("from_state".into(), json!(previous));
             candidates.insert(
                 "to_state".into(),
                 candidates

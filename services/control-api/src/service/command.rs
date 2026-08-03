@@ -7,6 +7,7 @@ pub(super) async fn command(
     claims: &ActorClaims,
     pool: &PgPool,
     field_keys: &EnvelopeKeyRing,
+    domain_events: &Mutex<InProcessDomainEventJournal>,
     request_id: Uuid,
 ) -> Result<Output, ServiceError> {
     let payload = parse_command_payload(body)?;
@@ -19,7 +20,10 @@ pub(super) async fn command(
     }
     validate_command(operation.id, payload_object)?;
     if gurine_api_contracts::addendum::is_control_operation(operation.id) {
-        return addendum_command(operation, request, body, claims, pool, request_id, payload).await;
+        return addendum_command(
+            operation, request, body, claims, pool, field_keys, request_id, payload,
+        )
+        .await;
     }
     let actor_id = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
     let session_id = Uuid::parse_str(&claims.sid).map_err(|_| ServiceError::InvalidRequest)?;
@@ -31,6 +35,7 @@ pub(super) async fn command(
     }
     let previous_case_state =
         previous_case_state(operation.id, payload_object, &mut transaction).await?;
+    validate_transition_case(operation.id, payload_object, claims, &mut transaction).await?;
     let mut prepared = prepare_command(
         operation,
         request,
@@ -58,7 +63,7 @@ pub(super) async fn command(
         &mut transaction,
     )
     .await?;
-    let response = finalize_command(
+    let (response, pending_domain_events) = finalize_command(
         operation,
         &payload,
         actor_id,
@@ -71,7 +76,37 @@ pub(super) async fn command(
     )
     .await?;
     transaction.commit().await.map_err(db)?;
+    emit_domain_events(domain_events, pending_domain_events)?;
     Ok(response)
+}
+
+fn emit_domain_events(
+    domain_events: &Mutex<InProcessDomainEventJournal>,
+    pending_domain_events: Vec<PendingDomainEvent>,
+) -> Result<(), ServiceError> {
+    let mut domain_event_sink = domain_events
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    for event in pending_domain_events {
+        if DomainEventSink::append(
+            &mut *domain_event_sink,
+            event.event_type,
+            &event.aggregate_id,
+            event.version,
+            &event.payload,
+        )
+        .is_err()
+        {
+            return Err(ServiceError::Persistence);
+        }
+        tracing::info!(
+            event_type = event.event_type,
+            aggregate_id = event.aggregate_id,
+            version = event.version,
+            "committed in-process domain event emitted"
+        );
+    }
+    Ok(())
 }
 
 fn valid_recipient_email(value: &str) -> bool {
@@ -141,8 +176,14 @@ async fn begin_idempotency<'a>(
         .execute(&mut *transaction)
         .await
         .map_err(db)?;
-    let inserted = sqlx::query(
-        "INSERT INTO ops.idempotency_keys(scope,key_hash,request_hash,expires_at) VALUES($1,$2,$3,clock_timestamp()+interval '24 hours') ON CONFLICT DO NOTHING",
+    let claimed = sqlx::query(
+        "INSERT INTO ops.idempotency_keys(scope,key_hash,request_hash,expires_at) \
+         VALUES($1,$2,$3,clock_timestamp()+interval '24 hours') \
+         ON CONFLICT(scope,key_hash) DO UPDATE SET \
+         request_hash=EXCLUDED.request_hash,response_status=NULL,response_body=NULL, \
+         resource_type=NULL,resource_id=NULL,created_at=clock_timestamp(), \
+         expires_at=EXCLUDED.expires_at \
+         WHERE ops.idempotency_keys.expires_at<=clock_timestamp()",
     )
     .bind(&key.scope)
     .bind(&key.key_hash)
@@ -152,13 +193,15 @@ async fn begin_idempotency<'a>(
     .map_err(db)?
     .rows_affected();
     let receipt = sqlx::query(
-        "SELECT request_hash,response_status,response_body FROM ops.idempotency_keys WHERE scope=$1 AND key_hash=$2 FOR UPDATE",
+        "SELECT request_hash,response_status,response_body FROM ops.idempotency_keys \
+         WHERE scope=$1 AND key_hash=$2 AND expires_at>clock_timestamp() FOR UPDATE",
     )
     .bind(&key.scope)
     .bind(&key.key_hash)
-    .fetch_one(&mut *transaction)
+    .fetch_optional(&mut *transaction)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or(ServiceError::IdempotencyConflict)?;
     if receipt
         .try_get::<String, _>("request_hash")
         .map_err(db)?
@@ -167,12 +210,12 @@ async fn begin_idempotency<'a>(
     {
         return Err(ServiceError::IdempotencyConflict);
     }
-    let replay = if inserted == 0 {
-        replay_output(&receipt)?
+    let replay = if claimed == 0 {
+        replay_output(&receipt)?.ok_or(ServiceError::IdempotencyConflict)?
     } else {
-        None
+        return Ok((transaction, key, None));
     };
-    Ok((transaction, key, replay))
+    Ok((transaction, key, Some(replay)))
 }
 
 fn replay_output(row: &sqlx::postgres::PgRow) -> Result<Option<Output>, ServiceError> {
@@ -229,6 +272,13 @@ struct PreparedCommand {
     status_code: u16,
     occurred_at: OffsetDateTime,
     occurred_text: String,
+}
+
+struct PendingDomainEvent {
+    event_type: &'static str,
+    aggregate_id: String,
+    version: i64,
+    payload: Value,
 }
 
 async fn prepare_command(
@@ -355,7 +405,7 @@ async fn finalize_command(
     key: &CommandKey,
     prepared: &mut PreparedCommand,
     transaction: &mut Transaction<'_, Postgres>,
-) -> Result<Output, ServiceError> {
+) -> Result<(Output, Vec<PendingDomainEvent>), ServiceError> {
     let audit_event_id = append_audit_event(
         operation,
         actor_id,
@@ -396,19 +446,40 @@ async fn finalize_command(
             previous_case_state,
         },
     )?;
-    enqueue_command_events(operation, &candidates, prepared, transaction).await?;
-    sqlx::query("UPDATE ops.idempotency_keys SET response_status=$3,response_body=$4,resource_type=$5,resource_id=$6 WHERE scope=$1 AND key_hash=$2")
-        .bind(&key.scope).bind(&key.key_hash).bind(i32::from(prepared.status_code)).bind(&response).bind(prepared.resource_type).bind(prepared.persisted_id.to_string()).execute(&mut **transaction).await.map_err(db)?;
-    Ok(Output {
-        status: prepared.status_code,
-        media_type: if prepared.status_code == 204 {
-            ""
-        } else {
-            "application/json"
+    let pending_domain_events =
+        enqueue_command_events(operation, &candidates, prepared, transaction).await?;
+    let completed = sqlx::query(
+        "UPDATE ops.idempotency_keys SET response_status=$4,response_body=$5,resource_type=$6,resource_id=$7 \
+         WHERE scope=$1 AND key_hash=$2 AND request_hash=$3 \
+         AND response_status IS NULL AND expires_at>clock_timestamp()",
+    )
+    .bind(&key.scope)
+    .bind(&key.key_hash)
+    .bind(&key.request_hash)
+    .bind(i32::from(prepared.status_code))
+    .bind(&response)
+    .bind(prepared.resource_type)
+    .bind(prepared.persisted_id.to_string())
+    .execute(&mut **transaction)
+    .await
+    .map_err(db)?
+    .rows_affected();
+    if completed != 1 {
+        return Err(ServiceError::IdempotencyConflict);
+    }
+    Ok((
+        Output {
+            status: prepared.status_code,
+            media_type: if prepared.status_code == 204 {
+                ""
+            } else {
+                "application/json"
+            },
+            body: response,
+            replay: false,
         },
-        body: response,
-        replay: false,
-    })
+        pending_domain_events,
+    ))
 }
 
 fn triage_result(decision: &str) -> Result<&'static str, ServiceError> {

@@ -14,6 +14,7 @@ let {
   dialogId?: string;
 } = $props();
 let dialog = $state<HTMLDialogElement>();
+let dialogForm = $state<HTMLFormElement>();
 let dialogTitle = $state<HTMLElement>();
 let opener = $state<HTMLElement>();
 let selected = $state<string>("");
@@ -193,6 +194,30 @@ const restoreOpener = () => {
     void tick().then(() => target.focus());
   }
 };
+function focusableDialogControls(): HTMLElement[] {
+  return Array.from(dialogForm?.elements ?? []).filter(
+    (control): control is HTMLElement =>
+      control instanceof HTMLElement &&
+      !control.hasAttribute("disabled") &&
+      !(control instanceof HTMLInputElement && control.type === "hidden") &&
+      control.tabIndex >= 0,
+  );
+}
+function trapFocus(event: KeyboardEvent) {
+  if (event.key !== "Tab") return;
+  const controls = focusableDialogControls();
+  const first = controls[0];
+  const last = controls.at(-1);
+  if (!first || !last) return;
+  const active = dialog?.ownerDocument.activeElement;
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 </script>
 
 {#if hasDecision}
@@ -212,8 +237,8 @@ const restoreOpener = () => {
       {/each}
     </div>
   </div>
-  <dialog bind:this={dialog} id={dialogId} class="decision-dialog" aria-modal="true" aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`} data-focus-target={dialogId} onclose={restoreOpener}>
-    <form method="POST" action={commandActionId ? formAction : "?"}>
+  <dialog bind:this={dialog} id={dialogId} class="decision-dialog" aria-modal="true" aria-labelledby={`${dialogId}-title`} aria-describedby={`${dialogId}-description`} data-focus-target={dialogId} onkeydown={trapFocus} onclose={restoreOpener}>
+    <form bind:this={dialogForm} method="POST" action={commandActionId ? formAction : "?"}>
       <h2 bind:this={dialogTitle} id={`${dialogId}-title`} tabindex="-1">{action?.label ?? "결정"}</h2>
       <p id={`${dialogId}-description`} class="decision-question">{question}</p>
       <p>대상: {screen.title}. 예·아니오 선택은 현재 표시된 snapshot과 권한에 결합되어 기록됩니다.</p>
@@ -257,3 +282,117 @@ const restoreOpener = () => {
     </form>
   </dialog>
 {/if}
+
+<style>
+  .decision-actions {
+    margin-block: 0.75rem;
+    padding-block: 0.75rem;
+    border-block: 1px solid var(--paper-200);
+  }
+  .decision-instruction {
+    margin: 0 0 0.625rem;
+    color: var(--ink-700);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .decision-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .decision-button {
+    min-height: 44px;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--paper-200);
+    border-radius: 4px;
+    background: var(--paper-0);
+    color: var(--ink-900);
+    font-size: 0.875rem;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .decision-button.item-primary {
+    border-color: var(--blue-700);
+    background: var(--blue-700);
+    color: var(--paper-0);
+  }
+  .decision-dialog {
+    width: min(92vw, 34rem);
+    max-height: min(90vh, 45rem);
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--paper-200);
+    border-radius: var(--radius-sm);
+    background: var(--paper-0);
+    color: var(--ink-950);
+    box-shadow: var(--shadow-dialog);
+  }
+  .decision-dialog::backdrop {
+    background: color-mix(in srgb, var(--ink-950) 48%, transparent);
+  }
+  .decision-dialog form {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  .decision-dialog h2,
+  .decision-dialog p {
+    margin: 0;
+  }
+  .decision-dialog h2 {
+    font-size: 1.125rem;
+    font-weight: 650;
+  }
+  .decision-dialog p {
+    color: var(--ink-700);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .decision-dialog .decision-question {
+    color: var(--ink-950);
+    font-size: 0.9375rem;
+    font-weight: 650;
+  }
+  .decision-dialog label {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--ink-900);
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+  .decision-dialog .field-help {
+    font-size: 0.75rem;
+  }
+  .decision-dialog .field-error {
+    color: var(--red-700);
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+  @media (max-width: 620px) {
+    .decision-button-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .decision-button {
+      width: 100%;
+    }
+    .decision-dialog form {
+      padding: 0.875rem;
+    }
+  }
+  @media (forced-colors: active) {
+    .decision-actions, .decision-button, .decision-dialog {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+    .decision-dialog::backdrop {
+      background: CanvasText;
+      opacity: 0.65;
+    }
+  }
+</style>

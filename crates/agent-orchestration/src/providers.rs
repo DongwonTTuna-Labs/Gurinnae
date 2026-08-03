@@ -1,7 +1,7 @@
 use serde_json::Value;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum ProviderError {
     #[error("provider is unavailable")]
     Unavailable,
@@ -15,15 +15,16 @@ pub trait Provider: Send + Sync {
 }
 
 pub struct DeterministicProvider {
-    pub response: Value,
+    pub provider_id: String,
+    pub outcome: Result<Value, ProviderError>,
 }
 
 impl Provider for DeterministicProvider {
     fn id(&self) -> &str {
-        "deterministic"
+        &self.provider_id
     }
     fn complete(&self, _request: &Value) -> Result<Value, ProviderError> {
-        Ok(self.response.clone())
+        self.outcome.clone()
     }
 }
 

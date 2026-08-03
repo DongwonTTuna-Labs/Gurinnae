@@ -1,44 +1,23 @@
-use gurine_agent_orchestration::{
-    policy::{EvaluationContext, evaluate},
-    prompt_isolation::rendered_hash,
-};
+use gurine_agent_orchestration::provider_double::{embedded_case_ids, execute_embedded_case};
 use serde_json::Value;
 
 #[test]
 fn all_fifty_agent_policy_cases_match() -> Result<(), Box<dyn std::error::Error>> {
-    let cases: Value =
+    let expected_cases: Value =
         serde_json::from_str(include_str!("../../../verification/agent-eval-bundle.json"))?;
-    let cases = cases.as_array().ok_or("bundle is not an array")?;
-    assert_eq!(cases.len(), 50);
-    for case in cases {
-        let scenario = case.get("scenario").ok_or("missing scenario")?;
-        let input = case.get("input").ok_or("missing input")?;
-        let prompt = case
-            .get("prompt")
-            .and_then(Value::as_str)
-            .ok_or("missing prompt")?;
-        let expected_prompt_hash = scenario
-            .get("expected_prompt_sha256")
-            .and_then(Value::as_str)
-            .ok_or("missing prompt hash")?;
-        assert_eq!(rendered_hash(prompt, input)?, expected_prompt_hash);
-        let actual = evaluate(EvaluationContext {
-            agent_id: case
-                .get("agent_id")
-                .and_then(Value::as_str)
-                .ok_or("missing agent")?,
-            scenario,
-            input,
-            provider_output: case.get("provider").ok_or("missing provider")?,
-            transcript: case.get("transcript").ok_or("missing transcript")?,
-        })?;
+    let expected_cases = expected_cases.as_array().ok_or("bundle is not an array")?;
+    let case_ids = embedded_case_ids()?;
+    assert_eq!(case_ids.len(), 50);
+    for (case_id, expected_case) in case_ids.iter().zip(expected_cases) {
+        let execution = execute_embedded_case(case_id)?;
+        assert_eq!(execution.case_id, *case_id);
+        assert_eq!(execution.network_calls, 0, "{case_id}");
+        assert!(execution.provider_attempts >= 1, "{case_id}");
+        assert!(execution.schema_validations >= 1, "{case_id}");
         assert_eq!(
-            actual,
-            *case.get("expected").ok_or("missing expected")?,
-            "{}",
-            case.get("case_id")
-                .and_then(Value::as_str)
-                .unwrap_or("unknown case")
+            execution.output,
+            *expected_case.get("expected").ok_or("missing expected")?,
+            "{case_id}"
         );
     }
     Ok(())

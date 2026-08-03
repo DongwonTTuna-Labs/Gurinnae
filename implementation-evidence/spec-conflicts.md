@@ -271,3 +271,14 @@ Exact tuple resolution:
   commercial payment mechanics remain explicit deployment inputs. Unconfigured
   capabilities fail closed and cannot be reported as operational.
 - Status: `OPEN_IMPLEMENTATION`.
+
+## SPEC-CONFLICT-UIR-001 — interface-restraint §3 full composition vs frozen v13 contracts
+
+- Lower statement: `specs/ui/interface-restraint.md` §1/§3 requires prev/next navigation,
+  compare shelf, global freshness timestamp and ledger naming.
+- Higher statement: hash-pinned v13 screen catalog/build manifest freeze section sets,
+  screen titles and data operations; the plan forbids new data calls this round.
+- Resolution: implement density/typography/copy restraint now (restraint §7 staged
+  application); defer prev/next, compare shelf, global freshness slot and ledger naming
+  to a contract-amendment round. No invented data, fail-closed preserved.
+- Status: OPEN_IMPLEMENTATION (follow-up: contract amendment round).

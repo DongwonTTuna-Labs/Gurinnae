@@ -275,123 +275,126 @@ mod source_use_tests {
     }
 }
 
-fn blocked_output(status: &str, reason: &str) -> Value {
-    json!({
-        "status":status,
-        "summary":"정책 또는 검증 조건을 충족하지 못해 결론을 생성하지 않았습니다.",
-        "citations":[],"unknowns":[],"abstention_reasons":[reason],"recommended_actions":[]
-    })
-}
-
 /// A local deterministic double is available only in non-production
 /// environments. It supplies a complete provider-shaped result so policy
 /// checks (prompt-injection, citation scope, and budget fences) can be tested
 /// without pretending that a real external model was called.
 fn deterministic_output(agent_type: &str, evidence: &Value) -> Value {
     let Some(first) = evidence.as_array().and_then(|items| items.first()) else {
-        return blocked_output("ABSTAINED", "EVIDENCE_REQUIRED");
+        return blocked_output_for(agent_type, "ABSTAINED", "EVIDENCE_REQUIRED");
     };
-    // The deterministic double is pinned to the FINAL authority fixture.  Do
-    // not read the review-only addendum-v2 fixture here: that file is outside
-    // the immutable authority pack and may drift independently of the base
-    // provider contract.
-    let path = format!(
-        "{}/../../specs/agents/fixtures/{agent_type}/{agent_type}-01-valid/provider-response.json",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    let Ok(bytes) = std::fs::read(path) else {
-        return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_FIXTURE_MISSING");
+    // The same immutable bundle is compiled into the product adapter and the
+    // 50-case hard gate. Containerized development therefore cannot drift
+    // from host fixtures or require a runtime source-tree mount.
+    let case_id = format!("{agent_type}-01-valid");
+    let Ok(mut output) = embedded_provider_response(&case_id) else {
+        return blocked_output_for(agent_type, "POLICY_BLOCKED", "DETERMINISTIC_FIXTURE_INVALID");
     };
-    let Ok(legacy) = serde_json::from_slice::<Value>(&bytes) else {
-        return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_FIXTURE_INVALID");
+    let Some(evidence_id) = first.get("id").and_then(Value::as_str) else {
+        return blocked_output_for(
+            agent_type,
+            "POLICY_BLOCKED",
+            "DETERMINISTIC_FIXTURE_CITATION_MISSING",
+        );
     };
-    let Some(source_use) = first.get("sourceUses").and_then(Value::as_array).and_then(|items| items.first()) else {
-        return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_FIXTURE_CITATION_MISSING");
+    let Some(locator) = first.get("locator").and_then(Value::as_str) else {
+        return blocked_output_for(
+            agent_type,
+            "POLICY_BLOCKED",
+            "DETERMINISTIC_FIXTURE_CITATION_MISSING",
+        );
     };
-    let source_use_id = source_use.get("sourceUseId").cloned().unwrap_or(Value::Null);
-    let source_use_sha = source_use.get("sourceUseSha256").cloned().unwrap_or(Value::String(sha256(b"deterministic-source-use")));
-    let selected_sha = source_use.get("selectedContentSha256").cloned().unwrap_or(Value::String(sha256(b"deterministic-content")));
-    let locator = source_use.get("locator").cloned().unwrap_or_else(|| json!({"kind":"TEXT","value":"snapshot"}));
-    let citation = json!({
-        "sourceUseId": source_use_id,
-        "sourceUseSha256": source_use_sha,
-        "selectedContentSha256": selected_sha,
+    let supports = output
+        .pointer("/citations/0/supports")
+        .and_then(Value::as_str)
+        .unwrap_or("검토 대상 근거 snapshot");
+    output["citations"] = json!([{
+        "evidence_id": evidence_id,
         "locator": locator,
-        "supports": "검토 대상 근거 snapshot"
-    });
-    let summary = legacy.get("summary").and_then(Value::as_str).unwrap_or("결정적 provider double 결과");
-    let unknowns = legacy.get("unknowns").cloned().unwrap_or_else(|| json!([]));
-    let base = json!({
-        "outcome":"COMPLETED", "summary":summary,
-        "investigationsPerformed":[], "citations":[citation],
-        "unknowns":unknowns, "nextActions":[], "abstentionReasons":[]
-    });
-    let mut output = base;
-    let object = output.as_object_mut().expect("base object");
-    match agent_type {
-        "market-researcher" => {
-            object.insert("schemaVersion".into(), json!("market-research-output.v2"));
-            object.insert("comparables".into(), json!([{"proposalKind":"COMPARABLE","proposalState":"PROPOSAL_ONLY","subjectDescription":"대상 시장","candidateDescription":"비교 후보","sourceUrl":"https://example.invalid/source","observedAt":"2026-07-20","unit":"건","unitPriceDecimal":"0","currencyCode":"KRW","compatibility":"UNKNOWN","comparisonBasis":"동일한 authority snapshot 범위","materialDifferences":[],"limitations":[],"citationIndexes":[0]}]));
+        "supports": supports
+    }]);
+    for (field, id_field) in [
+        ("hypotheses", "supporting_evidence_ids"),
+        ("challenges", "evidence_ids"),
+        ("claims", "evidence_ids"),
+        ("claim_results", "verified_evidence_ids"),
+    ] {
+        for item in output
+            .get_mut(field)
+            .and_then(Value::as_array_mut)
+            .into_iter()
+            .flatten()
+        {
+            item[id_field] = json!([evidence_id]);
+            if field == "hypotheses" {
+                item["contradicting_evidence_ids"] = json!([]);
+            }
         }
-        "investigator" => {
-            object.insert("schemaVersion".into(), json!("investigator-output.v2"));
-            object.insert("hypotheses".into(), json!([{"proposalKind":"HYPOTHESIS","proposalState":"PROPOSAL_ONLY","statement":"검토 대상의 원인을 추가 확인한다.","assessment":"UNRESOLVED","supportingCitationIndexes":[0],"contradictingCitationIndexes":[],"unknowns":[]}]));
-            object.insert("counterEvidence".into(), json!([])); object.insert("tasks".into(), json!([]));
-        }
-        "skeptic" => {
-            object.insert("schemaVersion".into(), json!("skeptic-output.v2"));
-            object.insert("challenges".into(), json!([{"kind":"CHALLENGE","claimOrHypothesis":"현재 결론","challenge":"추가 반증 자료가 필요하다.","challengeType":"ALTERNATIVE_EXPLANATION","citationIndexes":[0],"severity":"INFO"}]));
-        }
-        "claim-drafter" => {
-            object.insert("schemaVersion".into(), json!("claim-draft-output.v2"));
-            object.insert("claims".into(), json!([{"proposalKind":"CLAIM","proposalState":"PROPOSAL_ONLY","claimType":"ASSESSMENT","text":"현재 근거 범위에서 추가 확인이 필요하다.","citationIndexes":[0],"limitations":[],"responseContext":"NO_REQUEST","languageCheckResponseSha256":sha256(b"language-check")} ]));
-            object.insert("communications".into(), json!([]));
-        }
-        "citation-verifier" => {
-            object.insert("schemaVersion".into(), json!("citation-verification-output.v2"));
-            object.insert("claimResults".into(), json!([{"claimIndex":0,"status":"VERIFIED","verifiedCitationIndexes":[0],"unsupportedFragments":[]} ]));
-        }
-        _ => return blocked_output("POLICY_BLOCKED", "DETERMINISTIC_AGENT_UNKNOWN"),
     }
     output
 }
 
-fn blocked_output_for(agent_type: &str, _status: &str, reason: &str) -> Value {
-    let (schema, field) = match agent_type {
-        "market-researcher" => ("market-research-output.v2", "comparables"),
-        "investigator" => ("investigator-output.v2", "hypotheses"),
-        "skeptic" => ("skeptic-output.v2", "challenges"),
-        "claim-drafter" => ("claim-draft-output.v2", "claims"),
-        "citation-verifier" => ("citation-verification-output.v2", "claimResults"),
-        _ => return blocked_output("ABSTAINED", reason),
+fn blocked_output_for(agent_type: &str, status: &str, reason: &str) -> Value {
+    let field = match agent_type {
+        "market-researcher" => "comparables",
+        "investigator" => "hypotheses",
+        "skeptic" => "challenges",
+        "claim-drafter" => "claims",
+        "citation-verifier" => "claim_results",
+        _ => "recommended_actions",
     };
-    let mut output = json!({
-        "schemaVersion": schema,
-        "outcome": "ABSTAINED",
+    json!({
+        "status": status,
         "summary": "정책 또는 검증 조건을 충족하지 못해 결론을 생성하지 않았습니다.",
-        "investigationsPerformed": [],
         "citations": [],
         "unknowns": [],
-        "nextActions": [],
-        "abstentionReasons": [reason],
+        "abstention_reasons": [reason],
+        "recommended_actions": [],
         field: []
-    });
-    if agent_type == "investigator" {
-        output["counterEvidence"] = json!([]);
-        output["tasks"] = json!([]);
+    })
+}
+
+#[cfg(test)]
+mod authority_output_tests {
+    use super::*;
+
+    #[test]
+    fn deterministic_outputs_preserve_the_closed_authority_schema() {
+        let evidence = json!([{
+            "id": "7a2d7eba-184c-55b0-8955-86cbca587a6a",
+            "locator": "control-agent-scope",
+            "contentSha256": "7777777777777777777777777777777777777777777777777777777777777777",
+            "promptInjectionFlags": [],
+            "updatedAt": "2026-07-21T00:00:00Z",
+            "sourceUses": []
+        }]);
+        for agent_type in [
+            "market-researcher",
+            "investigator",
+            "skeptic",
+            "claim-drafter",
+            "citation-verifier",
+        ] {
+            let output = deterministic_output(agent_type, &evidence);
+            assert!(output.get("schemaVersion").is_none(), "{agent_type}");
+            validate_authority_agent_output(agent_type, &output)
+                .unwrap_or_else(|error| panic!("{agent_type}: {error}"));
+            assert_eq!(
+                output.pointer("/citations/0/evidence_id").and_then(Value::as_str),
+                Some("7a2d7eba-184c-55b0-8955-86cbca587a6a")
+            );
+        }
     }
-    if agent_type == "claim-drafter" {
-        output["communications"] = json!([]);
-    }
-    output
 }
 
 fn validate_agent_output_for(agent_type: Option<&str>, value: &Value) -> Result<(), Failure> {
     if value.get("schemaVersion").is_none() {
-        return Err(Failure::Terminal(
-            "AGENT_OUTPUT_SCHEMA_INVALID",
-            "schemaVersion missing; legacy generic envelope is forbidden".into(),
-        ));
+        let agent_type = agent_type.ok_or_else(|| {
+            Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "agent type missing".into())
+        })?;
+        return validate_authority_agent_output(agent_type, value).map_err(|error| {
+            Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", error.to_string())
+        });
     }
     let schema = value
         .get("schemaVersion")
