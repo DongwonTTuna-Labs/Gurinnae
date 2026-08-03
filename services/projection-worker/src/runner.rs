@@ -88,6 +88,23 @@ async fn handle(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
         ));
     }
     let event_id = parse_uuid(&job.payload, "/eventId")?;
+    let consumer_id = job
+        .payload
+        .get("consumerId")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "consumerId is missing".to_owned()))?;
+    if matches!(
+        consumer_id,
+        "audit-indexer" | "cost-projector" | "submission-projector"
+    ) {
+        return reconcile_addendum_projection(pool, job, event_id, consumer_id).await;
+    }
+    if consumer_id != "projection-worker" {
+        return Err(Failure::Terminal(
+            "CONSUMER_BINDING_INVALID",
+            consumer_id.to_owned(),
+        ));
+    }
     if inbox_processed(pool, event_id).await? {
         return Ok(json!({"deduplicated":true}));
     }
@@ -106,6 +123,136 @@ async fn handle(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
             "projection event type is not accepted".to_owned(),
         )),
     }
+}
+
+async fn reconcile_addendum_projection(
+    pool: &PgPool,
+    job: &ClaimedJob,
+    event_id: Uuid,
+    consumer_id: &str,
+) -> Result<Value, Failure> {
+    let event_type = job
+        .payload
+        .get("eventType")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "eventType is missing".to_owned()))?;
+    if !addendum_event_is_accepted(consumer_id, event_type) {
+        return Err(Failure::Terminal(
+            "CONSUMER_EVENT_BINDING_INVALID",
+            format!("{consumer_id}:{event_type}"),
+        ));
+    }
+    verify_addendum_event_envelope(pool, job, event_id, event_type).await?;
+    if consumer_id == "cost-projector" {
+        verify_cost_receipt(pool, job).await?;
+    }
+    mark_addendum_inbox_processed(pool, consumer_id, event_id).await?;
+    Ok(json!({"consumerId":consumer_id,"eventId":event_id,"eventType":event_type}))
+}
+
+fn addendum_event_is_accepted(consumer_id: &str, event_type: &str) -> bool {
+    match consumer_id {
+        "audit-indexer" => matches!(
+            event_type,
+            "communication.intent_created.v1"
+                | "communication.delivery_requested.v1"
+                | "communication.delivery_receipt_recorded.v1"
+                | "communication.authorization_changed.v1"
+                | "communication.subscription_update_requested.v1"
+        ),
+        "cost-projector" => event_type == "communication.delivery_receipt_recorded.v1",
+        "submission-projector" => event_type == "communication.authorization_changed.v1",
+        _ => false,
+    }
+}
+
+async fn verify_addendum_event_envelope(
+    pool: &PgPool,
+    job: &ClaimedJob,
+    event_id: Uuid,
+    event_type: &str,
+) -> Result<(), Failure> {
+    let aggregate_id = job
+        .payload
+        .get("aggregateId")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "aggregateId is missing".to_owned()))?;
+    let aggregate_version = job
+        .payload
+        .get("aggregateVersion")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| {
+            Failure::Terminal("INVALID_EVENT", "aggregateVersion is missing".to_owned())
+        })?;
+    let payload = job
+        .payload
+        .get("payload")
+        .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "payload is missing".to_owned()))?;
+    let exact: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM ops.outbox WHERE id=$1 AND event_type=$2 \
+           AND aggregate_id=$3 AND aggregate_version=$4 AND payload=$5)",
+    )
+    .bind(event_id)
+    .bind(event_type)
+    .bind(aggregate_id)
+    .bind(aggregate_version)
+    .bind(payload)
+    .fetch_one(pool)
+    .await
+    .map_err(database)?;
+    if !exact {
+        return Err(Failure::Terminal(
+            "EVENT_ENVELOPE_MISMATCH",
+            event_id.to_string(),
+        ));
+    }
+    Ok(())
+}
+
+async fn verify_cost_receipt(pool: &PgPool, job: &ClaimedJob) -> Result<(), Failure> {
+    let receipt_id = parse_uuid(&job.payload, "/payload/deliveryReceiptId")?;
+    let receipt_digest = job
+        .payload
+        .pointer("/payload/receiptDigest")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "receiptDigest is missing".to_owned()))?;
+    let receipt_exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM ops.outbound_delivery_receipts \
+         WHERE id=$1 AND receipt_digest=$2)",
+    )
+    .bind(receipt_id)
+    .bind(receipt_digest)
+    .fetch_one(pool)
+    .await
+    .map_err(database)?;
+    if !receipt_exists {
+        return Err(Failure::Terminal(
+            "DELIVERY_RECEIPT_MISMATCH",
+            receipt_id.to_string(),
+        ));
+    }
+    Ok(())
+}
+
+async fn mark_addendum_inbox_processed(
+    pool: &PgPool,
+    consumer_id: &str,
+    event_id: Uuid,
+) -> Result<(), Failure> {
+    let changed = sqlx::query(
+        "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
+         WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+    )
+    .bind(consumer_id)
+    .bind(event_id)
+    .execute(pool)
+    .await
+    .map_err(database)?
+    .rows_affected();
+    if changed != 1 {
+        return Err(Failure::Terminal("STALE_INBOX", event_id.to_string()));
+    }
+    Ok(())
 }
 
 async fn project_revision(

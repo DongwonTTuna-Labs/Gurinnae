@@ -1,6 +1,7 @@
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use gurine_agent_orchestration::{
     policy::{self, EvaluationContext},
+    provider_double::{embedded_provider_response, validate_authority_agent_output},
     runtime::{
         AgentFinalOutput, FinalStatus, MultiTurnConfig, MultiTurnRuntime, ProviderAdapter,
         ProviderEnvelope, ProviderOutcome, ProviderReceipt, ProviderReply, ProviderRequest,
@@ -9,6 +10,7 @@ use gurine_agent_orchestration::{
     },
     schema_validation::{ObjectSchema, validate_object},
 };
+use gurine_api_contracts::agent_snapshot::agent_case_snapshot_sha256;
 use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_object_store::gateway::GatewayObjectStore;
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
@@ -70,7 +72,7 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
         pool,
         worker,
         client: Client::builder()
-            .timeout(std::time::Duration::from_secs(120))
+            .timeout(std::time::Duration::from_secs(15))
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|_| WorkerError::Initialization)?,

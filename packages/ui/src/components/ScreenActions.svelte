@@ -51,9 +51,8 @@ const formAction = (actionId: string) => {
     .split("&")
     .filter((part) => part && !part.startsWith("/") && !part.startsWith("%2F"))
     .join("&");
-  // SvelteKit resolves a named action from the first query key (`/`).  Keep
-  // it first when preserving a selected target or filter query; putting the
-  // action after `proposalId=...` turns the POST into an unnamed action.
+  // SvelteKit resolves a named action from the first query key (`/`). Keep it first
+  // when preserving queries; putting it after `proposalId=...` makes the POST unnamed.
   return query ? `?/${actionId}&${query}` : `?/${actionId}`;
 };
 let challengeReady = $state<Record<string, boolean>>({});
@@ -78,6 +77,10 @@ const invalidField = (actionId: string, field: ScreenField): boolean => {
   return firstEditable?.name === field.name;
 };
 const primaryActionId = $derived(typedScreenViewModel(screen).primaryActionId);
+const actionButtonClass = (actionId: string) =>
+  actionId === primaryActionId && !screen.route.startsWith("/internal")
+    ? "primary-button"
+    : "secondary-button";
 function appendChallengeProof(actionId: string, event: FormDataEvent) {
   const proof = challengeProof[actionId];
   if (proof) event.formData.append("abuseProof", proof);
@@ -91,9 +94,8 @@ const supportsLocalCommand = (action: ScreenViewModel["actions"][number]) => {
 };
 const visibleActions = $derived(
   screen.actions
-    // DecisionReviewPanel owns the single approval dialog and its form. Keeping
-    // decision mutations out of this generic command rail prevents a second
-    // direct POST path that could bypass the required reason/step-up UX.
+    // DecisionReviewPanel owns the single approval dialog and form. Keeping decision
+    // mutations out of this rail prevents bypassing the required reason/step-up UX.
     .filter(
       (action) =>
         ![
@@ -105,10 +107,8 @@ const visibleActions = $derived(
           "reject-suggestion",
         ].includes(action.id),
     )
-    // INT-002 owns its decision mutation in ApprovalDecisionDialog. Other
-    // destructive routes (for example REV-003 publication) still need their
-    // server-bound form in the action rail; hiding every destructive action
-    // made the publish flow impossible to start from the screen.
+    // INT-002 owns its decision mutation in ApprovalDecisionDialog. Other destructive
+    // routes still need their server-bound form; hiding all made publishing impossible.
     .filter(
       (action) =>
         !(
@@ -137,7 +137,6 @@ const visibleActions = $derived(
         hrefFor(action) !== undefined,
     ),
 );
-
 function runLocalCommand(action: ScreenViewModel["actions"][number]) {
   if (typeof window === "undefined") return;
   if (action.id.startsWith("copy-")) {
@@ -181,7 +180,6 @@ function runLocalCommand(action: ScreenViewModel["actions"][number]) {
     if (destination) window.location.assign(destination);
   }
 }
-
 function downloadHref(
   action: ScreenViewModel["actions"][number],
 ): string | undefined {
@@ -192,7 +190,6 @@ function downloadHref(
   return encoded ? `data:${encoded.mime};base64,${encoded.binary}` : undefined;
 }
 </script>
-
 {#if visibleActions.length > 0 || attachmentUpload || attachmentRemoval}
   <section id="page-actions" class="command-panel" class:response-actions={screen.id.startsWith("RSP-")} aria-labelledby="command-heading" data-component="GuidedFormSection" data-testid="screen-actions">
     <div class="section-content">
@@ -205,7 +202,7 @@ function downloadHref(
             <p>파일은 서버 경계를 통해 전송되며 체크섬과 크기가 일치한 경우에만 격리 저장소에서 검사를 시작합니다.</p>
             {#if runtime.idempotencyKeys?.[attachmentUpload.actionId]}<input type="hidden" name="idempotencyKey" value={runtime.idempotencyKeys[attachmentUpload.actionId]} />{/if}
             <label><span>첨부 파일 (필수, 최대 {Math.floor(attachmentUpload.maxBytes / 1_048_576)} MiB)</span><input type="file" name="attachment" accept={attachmentUpload.accept} required /></label>
-            <button class={attachmentUpload.actionId === primaryActionId ? "primary-button" : "secondary-button"} type="submit">{attachmentUpload.label}</button>
+            <button class={actionButtonClass(attachmentUpload.actionId)} type="submit">{attachmentUpload.label}</button>
           </form>
         {/if}
         {#if attachmentRemoval}
@@ -265,7 +262,7 @@ function downloadHref(
                   {:else}<input id={formFieldId(screen.id, action.id, field.name)} type={field.type} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} readonly={field.readonly} value={field.value ?? ""} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />{/if}
                 </label>{/if}
               {/each}
-              <button class={action.id === primaryActionId ? "primary-button" : "secondary-button"} type="submit" disabled={Boolean(challengeField(action.id)) && !challengeReady[action.id]}>{action.label}</button>
+              <button class={actionButtonClass(action.id)} type="submit" disabled={Boolean(challengeField(action.id)) && !challengeReady[action.id]}>{action.label}</button>
             </form>
           {:else if interactionKind(action) === "DOWNLOAD" && downloadHref(action)}
             <a id={`action-${action.id}`} class="secondary-button local-action" href={downloadHref(action)} download={`${screen.id.toLowerCase()}-${action.id}`} data-action-id={action.id}>{action.label}</a>
@@ -281,3 +278,122 @@ function downloadHref(
     </div>
   </section>
 {/if}
+<style>
+  .command-panel {
+    padding-block: 0.5rem 0;
+    border-top: 1px solid var(--paper-200);
+  }
+  .section-content {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.25rem 0.625rem;
+    align-items: baseline;
+  }
+  .component-kicker, h2, h3, p {
+    margin: 0;
+  }
+  .component-kicker {
+    color: var(--ink-500);
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+  }
+  h2 {
+    font-size: 1.125rem;
+    font-weight: 650;
+  }
+  h3 {
+    font-size: 1rem;
+    font-weight: 650;
+  }
+  .action-grid {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: 0 1rem;
+  }
+  .action-grid form,
+  .data-card,
+  .download-unavailable {
+    min-width: 0;
+    padding-block: 0.5rem;
+    border-top: 1px solid var(--paper-200);
+  }
+  .action-grid form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    align-content: start;
+    gap: 0.375rem 0.75rem;
+  }
+  .action-grid form:has(> label:nth-of-type(4)) {
+    grid-column: 1 / -1;
+  }
+  .action-grid textarea {
+    height: var(--target-min);
+    min-height: var(--target-min);
+  }
+  .action-grid form > h3, .action-grid form > p, .action-grid form > button,
+  .action-grid form > :global(.bot-challenge),
+  .action-grid form > :global(.structured-json-field) {
+    grid-column: 1 / -1;
+  }
+  .action-grid form > p, .data-card p, .download-unavailable small {
+    color: var(--ink-700);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .action-grid label {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--ink-900);
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+  output {
+    min-height: 2.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--paper-200);
+    border-radius: var(--radius-sm);
+    background: var(--paper-50);
+    overflow-wrap: anywhere;
+  }
+  .field-help, .download-unavailable small {
+    font-size: 0.75rem;
+  }
+  .local-action, .action-grid form > button {
+    align-self: start;
+    justify-self: start;
+  }
+  .local-action { margin-top: 0.625rem; }
+  .download-unavailable { display: grid; gap: 0.25rem; }
+  .fragment-anchor { display: block; scroll-margin-top: 1.25rem; }
+  .response-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    margin-inline: -1rem;
+    padding: 0.75rem 1rem;
+    background: var(--paper-25);
+  }
+  @media (max-width: 620px) {
+    .section-content,
+    .action-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .action-grid form {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .action-grid label,
+    .local-action,
+    .action-grid form > button {
+      min-height: 44px;
+    }
+  }
+  @media (forced-colors: active) {
+    .action-grid form, .data-card, .download-unavailable, output {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+  }
+</style>

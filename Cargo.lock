@@ -1683,6 +1683,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "gurine-agent-orchestration",
+ "gurine-api-contracts",
  "gurine-detection",
  "gurine-jobs",
  "gurine-object-store",
@@ -1708,6 +1709,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.18",
 ]
 
@@ -1752,7 +1754,9 @@ dependencies = [
  "actix-web",
  "base64 0.22.1",
  "gurine-api-contracts",
+ "gurine-application",
  "gurine-auth",
+ "gurine-domain",
  "gurine-observability",
  "gurine-persistence-postgres",
  "rust_decimal",
@@ -2174,7 +2178,9 @@ version = "0.1.0"
 dependencies = [
  "arrow-array",
  "arrow-schema",
+ "base64 0.22.1",
  "bytes",
+ "gurine-auth",
  "gurine-jobs",
  "gurine-object-store",
  "gurine-persistence-postgres",

@@ -24,6 +24,7 @@ pub struct OperationSpec {
 /// separate prevents an unknown operation from being routed through a
 /// generic handler by accident.
 pub mod addendum;
+pub mod agent_snapshot;
 pub mod common;
 pub mod control;
 pub mod control_api;

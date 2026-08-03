@@ -1,0 +1,56 @@
+:root {
+  --paper-0: #fff;
+  --paper-25: #fcfbf7;
+  --paper-50: #f7f5ef;
+  --paper-100: #efece3;
+  --paper-200: #ddd8cc;
+  --ink-300: #a9a398;
+  --ink-500: #726d64;
+  --ink-700: #45413b;
+  --ink-900: #20252b;
+  --ink-950: #12171c;
+  --blue-50: #eef6fb;
+  --blue-100: #d8eaf6;
+  --blue-500: #3279a8;
+  --blue-700: #1e557c;
+  --blue-900: #143b57;
+  --focus-ring: #1769aa;
+  --green-50: #eef8f1;
+  --green-500: #2f7d50;
+  --green-900: #153c27;
+  --amber-50: #fff8e8;
+  --amber-500: #a66a00;
+  --amber-900: #4b3100;
+  --red-50: #fff1f1;
+  --red-500: #b54141;
+  --red-700: #7d2d2d;
+  --red-900: #511d1d;
+  --violet-50: #f6f1fa;
+  --violet-500: #71528d;
+
+  --font-sans:
+    "Noto Sans KR", "Noto Sans CJK KR", Pretendard, "Apple SD Gothic Neo",
+    "Malgun Gothic", system-ui, sans-serif;
+  --text-h1: clamp(1.5rem, 2vw, 1.875rem);
+  --text-h2: clamp(1rem, 1.2vw, 1.125rem);
+  --text-body: clamp(0.9375rem, 1vw, 1rem);
+  --text-data: 0.875rem;
+  --text-help: 0.8125rem;
+  --text-meta: 0.75rem;
+  --weight-heading: 650;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --density-gap: 6px;
+  --density-row-block: 6px;
+  --density-section-block: 10px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --target-min: 44px;
+  --max: 1280px;
+  --shadow-dialog: 0 12px 30px rgba(18, 23, 28, 0.18);
+}

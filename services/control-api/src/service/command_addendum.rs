@@ -16,6 +16,7 @@ async fn addendum_command(
     body: &[u8],
     claims: &ActorClaims,
     pool: &PgPool,
+    field_keys: &EnvelopeKeyRing,
     request_id: Uuid,
     payload: Value,
 ) -> Result<Output, ServiceError> {
@@ -27,7 +28,10 @@ async fn addendum_command(
         transaction.commit().await.map_err(db)?;
         return Ok(response);
     }
-    let mut payload = normalize_owner_payload(operation.id, payload);
+    let payload_object = payload.as_object().ok_or(ServiceError::InvalidRequest)?;
+    let mut payload = Value::Object(command_parameters(request, payload_object));
+    payload = normalize_owner_payload(operation.id, payload);
+    payload = seal_action_request(operation.id, payload, field_keys)?;
     if operation.id == "createResponseRequest"
         && let Some(email) = payload.get("recipientEmail").and_then(Value::as_str)
         && !valid_recipient_email(email)
@@ -43,6 +47,31 @@ async fn addendum_command(
         object.insert("issuer".to_owned(), json!(claims.iss));
         object.insert("audience".to_owned(), json!(claims.aud));
         object.insert("expiresAtUnix".to_owned(), json!(claims.exp));
+    }
+    // The HTTP boundary has already verified these Actor Assertion claims
+    // against the exact method/path/query/body/content type/operation,
+    // capability and Idempotency-Key.  Keep them outside the public request
+    // schema and pass them to the database owner so a STEP_UP decision cannot
+    // substitute caller-authored body fields for the signed assertion.
+    if operation.id == "submitActionDecision"
+        && let Some(object) = payload.as_object_mut()
+    {
+        object.insert("_actorAssertionJti".to_owned(), json!(claims.jti));
+        object.insert(
+            "_actorAssuranceLevel".to_owned(),
+            json!(claims.assurance_level),
+        );
+        object.insert("_actorActionDigest".to_owned(), json!(claims.action_digest));
+        object.insert(
+            "_actorStepUpAuthorizationId".to_owned(),
+            json!(claims.step_up_authorization_id),
+        );
+        object.insert(
+            "_actorIdempotencyKeySha256".to_owned(),
+            json!(claims.idempotency_key_sha256),
+        );
+        object.insert("_actorStepUpAtUnix".to_owned(), json!(claims.step_up_at));
+        object.insert("_actorRequestKeySha256".to_owned(), json!(key.key_hash));
     }
     let row = sqlx::query_as::<_, AddendumCommandRow>(
         "SELECT aggregate_id,aggregate_version,status,accepted_at,response_body,receipt_digest,audit_event_id,outbox_event_id \

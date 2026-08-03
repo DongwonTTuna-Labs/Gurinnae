@@ -11,6 +11,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::config::Config;
+use crate::consumer_catalog::consumers_for;
 
 #[derive(Debug, Error)]
 pub enum SchedulerError {
@@ -321,10 +322,9 @@ pub async fn schedule_source_runs(pool: &PgPool, limit: i64) -> Result<u64, Sche
     Ok(scheduled)
 }
 
-/// Emit one authenticated poll request for each due Solapi delivery.  The
-/// SECURITY DEFINER outbox helper deduplicates by the stable poll key, while
-/// the notification worker performs the provider call and owns the source
-/// receipt transaction.
+/// Queue one internal provider-poll job for each due Solapi delivery. Polling
+/// is orchestration, not a domain event: only an applied provider observation
+/// may emit the authority-declared delivery receipt event.
 pub async fn schedule_delivery_poll_requests(
     pool: &PgPool,
     limit: i64,
@@ -334,7 +334,8 @@ pub async fn schedule_delivery_poll_requests(
                 provider_config_version,provider_configuration_digest,
                 provider_preflight_receipt_id,provider_preflight_receipt_digest
            FROM ops.outbound_deliveries
-          WHERE state='PROVIDER_ACCEPTED' AND channel IN ('SMS','KAKAO')
+          WHERE state='PROVIDER_ACCEPTED'
+            AND channel IN ('SOLAPI_SMS','SOLAPI_KAKAO_BIZMESSAGE')
             AND provider_message_id IS NOT NULL AND dispatch_eligible
             AND next_attempt_at<=clock_timestamp()
           ORDER BY next_attempt_at,id LIMIT $1"#,
@@ -366,15 +367,13 @@ pub async fn schedule_delivery_poll_requests(
         let preflight_digest: String = row
             .try_get("provider_preflight_receipt_digest")
             .map_err(SchedulerError::Database)?;
-        let poll_key = format!("{id}:{version}:{provider_message_id}");
-        let event_id: Option<Uuid> = sqlx::query_scalar(
-            "SELECT ops.enqueue_outbox('OutboundDelivery',$1,$2,\
-             'communication.delivery_poll_requested.v1',$3,clock_timestamp())",
+        let poll_key = format!("communication-provider-poll:{id}:{version}:{provider_message_id}");
+        let inserted = sqlx::query(
+            "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) \
+             VALUES('COMMUNICATION_PROVIDER_POLL','notification-worker',$1,$2,8) \
+             ON CONFLICT DO NOTHING",
         )
-        .bind(id.to_string())
-        .bind(version)
         .bind(json!({
-            "pollKey": poll_key,
             "deliveryId": id,
             "expectedDeliveryVersion": version,
             "channel": channel,
@@ -385,12 +384,12 @@ pub async fn schedule_delivery_poll_requests(
             "providerPreflightReceiptId": preflight_id,
             "providerPreflightReceiptDigest": preflight_digest,
         }))
-        .fetch_one(pool)
+        .bind(poll_key)
+        .execute(pool)
         .await
-        .map_err(SchedulerError::Database)?;
-        if event_id.is_some() {
-            emitted += 1;
-        }
+        .map_err(SchedulerError::Database)?
+        .rows_affected();
+        emitted += inserted;
     }
     Ok(emitted)
 }
@@ -470,7 +469,7 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
         return Ok(false);
     };
     let event = event_from_row(&row)?;
-    for consumer in consumers_for(&event.event_type) {
+    for (consumer, queue) in consumers_for(&event.event_type) {
         let job_id = Uuid::new_v4();
         let inserted = sqlx::query(
             "INSERT INTO ops.inbox(consumer,event_id,result) VALUES($1,$2,$3) \
@@ -491,8 +490,9 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
              VALUES($1,'EVENT_DELIVERY',$2,$3,$4,8)",
         )
         .bind(job_id)
-        .bind(consumer)
+        .bind(queue)
         .bind(json!({
+            "consumerId": consumer,
             "eventId": event.id,
             "eventType": event.event_type,
             "aggregateType": event.aggregate_type,
@@ -542,58 +542,4 @@ fn event_from_row(row: &sqlx::postgres::PgRow) -> Result<Event, SchedulerError> 
             .try_get("occurred_at")
             .map_err(SchedulerError::Database)?,
     })
-}
-
-fn consumers_for(event_type: &str) -> &'static [&'static str] {
-    match event_type {
-        "workflow.rule_activation_applied.v1" => &["analysis-worker", "scheduler"],
-        "source.document_stored.v1" => &["document-extractor"],
-        "source.document_parsed.v1" => &["ingest-worker"],
-        "projection.publication_access_changed.v1"
-        | "projection.publication_revision_created.v1" => &["projection-worker"],
-        "agent.run_completed.v1"
-        | "attachment.correction_scan_requested.v1"
-        | "attachment.response_scan_requested.v1"
-        | "audit.export_requested.v1"
-        | "detection.signal_created.v1"
-        | "export.dataset_requested.v1"
-        | "source.schema_drift_detected.v1"
-        | "workflow.response_submitted.v1" => &["workflow-worker"],
-        "attachment.scan_completed.v1"
-        | "intake.contact_received.v1"
-        | "notification.correction_received.v1"
-        | "notification.correction_resolved.v1"
-        | "communication.callback_received.v1"
-        | "notification.publication_created.v1"
-        | "notification.response_extension_requested.v1"
-        | "notification.response_request_delivery_requested.v1"
-        | "notification.response_submitted.v1"
-        | "notification.subscription_verification_requested.v1"
-        | "notification.user_invitation_requested.v1"
-        | "communication.delivery_poll_requested.v1"
-        | "projection.publication_applied.v1" => &["notification-worker"],
-        _ => &[],
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn consumer_catalog_contract_is_embedded() {
-        assert_eq!(
-            consumers_for("source.document_stored.v1"),
-            &["document-extractor"]
-        );
-        assert_eq!(
-            consumers_for("source.document_parsed.v1"),
-            &["ingest-worker"]
-        );
-        assert_eq!(
-            consumers_for("workflow.rule_activation_applied.v1"),
-            &["analysis-worker", "scheduler"]
-        );
-        assert!(consumers_for("case.assigned.v1").is_empty());
-    }
 }

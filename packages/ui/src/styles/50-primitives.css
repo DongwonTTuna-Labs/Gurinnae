@@ -1,0 +1,248 @@
+.primary-button,
+.secondary-button,
+.icon-button {
+  min-height: var(--target-min);
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-heading);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+}
+
+.primary-button {
+  border: 1px solid var(--blue-700);
+  background: var(--blue-700);
+  color: var(--paper-0);
+}
+
+.secondary-button,
+.icon-button {
+  border: 1px solid var(--paper-200);
+  background: var(--paper-0);
+  color: var(--ink-900);
+}
+
+.icon-button {
+  width: var(--target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.badge {
+  min-height: 24px;
+  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-meta);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.badge.info {
+  border-color: var(--blue-100);
+  background: var(--blue-50);
+  color: var(--blue-900);
+}
+
+.badge.status {
+  border-color: var(--green-500);
+  background: var(--green-50);
+  color: var(--green-900);
+}
+
+.badge.neutral {
+  border-color: var(--paper-200);
+  background: var(--paper-100);
+  color: var(--ink-700);
+}
+
+.badge.caution {
+  border-color: var(--amber-500);
+  background: var(--amber-50);
+  color: var(--amber-900);
+}
+
+.badge.status-alert {
+  border-color: var(--red-500);
+  background: var(--red-50);
+  color: var(--red-900);
+}
+
+.notice,
+.error-summary {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.notice {
+  border-left: 3px solid var(--blue-500);
+  background: var(--blue-50);
+}
+
+.error-summary {
+  border: 2px solid var(--red-500);
+  background: var(--red-50);
+}
+
+.error-summary h2 {
+  margin-bottom: 3px;
+  font-size: 1rem;
+}
+
+.error-summary ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.error-summary a {
+  color: var(--red-900);
+  font-weight: 700;
+}
+
+.skeleton-record {
+  min-height: 56px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--paper-200);
+  border-radius: var(--radius-sm);
+  background: var(--paper-0);
+  animation: skeleton-pulse 1.4s ease-in-out infinite alternate;
+}
+
+.skeleton-record span {
+  display: block;
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--paper-100);
+}
+
+.skeleton-record span:nth-child(2) {
+  width: 76%;
+}
+
+.skeleton-record span:nth-child(3) {
+  width: 54%;
+}
+
+@keyframes skeleton-pulse {
+  from {
+    opacity: 0.62;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--paper-200);
+  border-radius: var(--radius-sm);
+  background: var(--paper-0);
+  overscroll-behavior-inline: contain;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-data);
+}
+
+th,
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--paper-200);
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  background: var(--paper-50);
+  color: var(--ink-700);
+  font-size: var(--text-meta);
+  font-weight: 700;
+}
+
+tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--paper-200);
+  border-radius: var(--radius-sm);
+}
+
+legend,
+label {
+  color: var(--ink-900);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: var(--target-min);
+  padding: 8px 10px;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radius-sm);
+  background: var(--paper-0);
+  color: var(--ink-950);
+  font-size: 0.9375rem;
+}
+
+textarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px;
+  min-height: 18px;
+  padding: 0;
+}
+
+.field-help,
+.field-readonly,
+.field-error {
+  margin: 4px 0 0;
+  font-size: var(--text-meta);
+  line-height: 1.45;
+}
+
+.field-help,
+.field-readonly {
+  color: var(--ink-500);
+}
+
+.field-error {
+  color: var(--red-700);
+  font-weight: 650;
+}

@@ -22,7 +22,7 @@ monorepo여야 한다.
 9. `specs/events/event-catalog.yaml`
 10. `specs/database/`
 11. `specs/agents/`, `specs/connectors/`, `specs/detection/`
-12. `specs/ui/`
+12. `specs/ui/` (`specs/ui/interface-restraint.md`는 §15에 따라 AGENTS.md 수준 binding)
 13. `specs/traceability/final-traceability.yaml`
 
 모순을 임의로 해결하지 않는다. fail-closed 동작을 유지하며 `implementation-evidence/spec-conflicts.md`에
@@ -99,6 +99,10 @@ Transitive dependency 내부 구현은 공급자가 관리하므로 완전한 ze
 - 서버 권위 데이터 fetch를 `onMount`로 이동해 SSR·progressive enhancement를 우회하지 않는다.
 - `returnTo`와 외부 redirect는 exact origin/path allowlist를 통과해야 한다.
 - component는 view와 interaction을 담당하고, domain/business rule은 view-model/application 계층에 둔다.
+- component 고유 스타일은 해당 component의 Svelte scoped `<style>`에 둔다. 전역 stylesheet는
+  tokens(:root custom properties), reset/base typography, 공유 primitive(버튼·배지·표·폼)만 담는다.
+  화면·surface 전용 규칙을 전역 CSS 모놀리스에 축적하지 않는다.
+- 여러 surface를 한 component에서 대형 분기문으로 렌더하지 않는다. surface별 shell component로 분리한다.
 - global store는 실제 cross-route client state가 있을 때만 허용한다. 서버가 권위인 데이터를 store에 복제하지 않는다.
 - slot legacy pattern 대신 Svelte 5 snippet/render pattern을 사용한다.
 - route component가 API DTO를 그대로 렌더하지 않는다. 화면별 typed view-model로 변환한다.
@@ -202,7 +206,22 @@ Svelte page는 view composition, server load/action은 BFF orchestration, packag
 
 재생성 후 diff가 있으면 실패다.
 
-## 15. 완료 조건
+## 15. UI 절제 계약 — 시각 언어 강제 (binding)
+
+`specs/ui/interface-restraint.md`는 이 문서와 같은 강제 수준의 BINDING 계약이다.
+모든 화면·컴포넌트·카피 작업 전에 그 계약의 §2(금지 목록)와 §3(화면 유형별 필수 구성)을 읽는다.
+
+핵심 요약 (전문이 권위):
+
+- 구린네는 잡지가 아니라 **장부(ledger)다.** 히어로 타이포(>40px), 마케팅·에세이 문단,
+  자기설명 UI 문구, 페이지 인트로 문단, 장식 요소, 카드 부풀리기, 부차 CTA를 금지한다.
+- 신뢰는 문장이 아니라 stat 타일·상태 점+라벨·커버리지 카운트·기준일·정정 로그로 표현한다.
+- 대장(목록) 화면은 1440×900 첫 화면에 데이터 행 8개 이상. 여백 연출 금지.
+- 법적 안전 문구는 삭제하지 않되 지정 슬롯 한 줄로 압축한다.
+- UI 변경 완료 보고에는 계약 §5 게이트별 자체 점검 결과와 실제 렌더 스크린샷 evidence를
+  포함한다. 스냅샷 갱신만으로 시각 검증을 대체하지 않는다.
+
+## 16. 완료 조건
 
 `make verify-final`이 format, lint, typecheck, unsafe/code-quality gate, unit/integration/property test,
 SQLx prepare, migration/role/RLS test, OpenAPI/client diff, Svelte SSR, 94-screen E2E/visual/accessibility,

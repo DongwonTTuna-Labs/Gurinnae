@@ -2,6 +2,7 @@ export { default as ScreenPage } from "./components/ScreenPage.svelte";
 export * from "./decision-contract";
 export * from "./generated-screen-journeys";
 export * from "./local-actions";
+export * from "./screen-chrome";
 export * from "./screen-contract";
 export * from "./screen-projection";
 export * from "./server-destinations";

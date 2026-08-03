@@ -385,11 +385,36 @@ describe("closed CAS screen projection", () => {
               output: {
                 status: "COMPLETED",
                 answerFirstSummary: "검증 결과",
-                hypotheses: [],
-                counterEvidence: [],
-                unknowns: [],
-                investigationsPerformed: [],
-                nextActions: [],
+                hypotheses: [
+                  {
+                    label: "계약 시점이 비정상적으로 근접함",
+                    confidenceLabel: "중간",
+                  },
+                ],
+                counterEvidence: [
+                  {
+                    label: "공개된 변경 공고가 존재함",
+                    supports: "정상 변경 가능성",
+                  },
+                ],
+                unknowns: [
+                  {
+                    label: "원계약 변경 사유",
+                    impact: "가설 판별에 필요",
+                  },
+                ],
+                investigationsPerformed: [
+                  {
+                    label: "공고·계약 리비전 대조",
+                    outcome: "시점 차이 확인",
+                  },
+                ],
+                nextActions: [
+                  {
+                    label: "담당자에게 변경 사유 확인",
+                    reason: "미확인 사항 해소",
+                  },
+                ],
                 validation: {
                   schema: "PASS",
                   citations: "PASS",
@@ -458,5 +483,13 @@ describe("closed CAS screen projection", () => {
     expect(
       detailProjection.sections.inputs?.analysis?.provenanceRows,
     ).toHaveLength(1);
+    const outputFields = JSON.stringify(
+      detailProjection.sections.output?.fields ?? [],
+    );
+    expect(outputFields).toContain("계약 시점이 비정상적으로 근접함");
+    expect(outputFields).toContain("공개된 변경 공고가 존재함");
+    expect(outputFields).toContain("원계약 변경 사유");
+    expect(outputFields).toContain("공고·계약 리비전 대조");
+    expect(outputFields).toContain("담당자에게 변경 사유 확인");
   });
 });

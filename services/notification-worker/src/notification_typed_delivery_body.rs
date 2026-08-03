@@ -5,16 +5,7 @@
         .and_then(serde_json::Value::as_str)
         .and_then(|value| Uuid::parse_str(value).ok())
         .unwrap_or(event.aggregate_id);
-    let expected_version = event
-        .payload
-        .get("expectedDeliveryVersion")
-        .and_then(serde_json::Value::as_i64)
-        .unwrap_or(1);
-    let expected_generation = event
-        .payload
-        .get("expectedGeneration")
-        .and_then(serde_json::Value::as_i64)
-        .unwrap_or(1);
+    let expected_version = event.aggregate_version;
     let worker_id = std::env::var("HOSTNAME")
         .ok()
         .filter(|value| !value.trim().is_empty())
@@ -31,6 +22,18 @@
         .and_then(serde_json::Value::as_str)
         .unwrap_or("communication-v1")
         .to_owned();
+    let snapshot = sqlx::query(
+        "SELECT rendering_id,rendering_digest,rendered_sha256,channel,generation, \
+                provider_config_id,provider_config_version,provider_configuration_digest, \
+                provider_preflight_receipt_id,provider_preflight_receipt_digest \
+           FROM ops.outbound_deliveries WHERE id=$1 AND version=$2",
+    )
+    .bind(delivery_id)
+    .bind(expected_version)
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|_| WorkerError::Database)?;
+    let expected_generation: i64 = snapshot.try_get("generation").map_err(|_| WorkerError::Database)?;
     let attempt = sqlx::query(
         "SELECT (ops.claim_outbound_delivery_attempt(ROW($1::uuid,$2::text,$3::char(64),$4::bigint,$5::bigint,$6::integer,$7::text)::ops.outbound_delivery_claim_v1)).*",
     )
@@ -48,13 +51,6 @@
     let provider_idempotency_key: String = attempt
         .try_get("provider_idempotency_key_sha256")
         .map_err(|_| WorkerError::Database)?;
-    let snapshot = sqlx::query(
-        "SELECT rendering_id, rendering_digest, rendered_sha256, channel FROM ops.outbound_deliveries WHERE id=$1",
-    )
-    .bind(delivery_id)
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|_| WorkerError::Database)?;
     let rendering_id: Uuid = snapshot.try_get("rendering_id").map_err(|_| WorkerError::Database)?;
     let rendering_digest: String = snapshot.try_get("rendering_digest").map_err(|_| WorkerError::Database)?;
     let rendered_sha256: String = snapshot.try_get("rendered_sha256").map_err(|_| WorkerError::Database)?;
@@ -78,23 +74,21 @@
         text_body: rendered.get("textBody").and_then(serde_json::Value::as_str).ok_or(WorkerError::Contract)?.to_owned(),
         html_body: rendered.get("htmlBody").and_then(serde_json::Value::as_str).unwrap_or("").to_owned(),
     };
-    let channel = event
+    let canonical_channel = event
         .payload
         .get("channel")
         .and_then(serde_json::Value::as_str)
-        .unwrap_or(&snapshot_channel)
-        .to_ascii_uppercase();
-    let channel = if channel == "SMTP_EMAIL" { "EMAIL".to_owned() } else { channel };
+        .unwrap_or(&snapshot_channel);
+    if canonical_channel != snapshot_channel {
+        return Err(WorkerError::Contract);
+    }
+    let channel = provider_adapter_channel(canonical_channel)?;
     let binding = ProviderBinding {
-        config_id: event.payload.get("providerConfigId").and_then(serde_json::Value::as_str)
-            .and_then(|value| Uuid::parse_str(value).ok()).ok_or(WorkerError::Contract)?,
-        config_version: event.payload.get("providerConfigVersion").and_then(serde_json::Value::as_i64).ok_or(WorkerError::Contract)?,
-        configuration_digest: event.payload.get("providerConfigurationDigest").and_then(serde_json::Value::as_str)
-            .ok_or(WorkerError::Contract)?.to_owned(),
-        preflight_id: event.payload.get("providerPreflightReceiptId").and_then(serde_json::Value::as_str)
-            .and_then(|value| Uuid::parse_str(value).ok()).ok_or(WorkerError::Contract)?,
-        preflight_digest: event.payload.get("providerPreflightReceiptDigest").and_then(serde_json::Value::as_str)
-            .ok_or(WorkerError::Contract)?.to_owned(),
+        config_id: snapshot.try_get("provider_config_id").map_err(|_| WorkerError::Database)?,
+        config_version: snapshot.try_get("provider_config_version").map_err(|_| WorkerError::Database)?,
+        configuration_digest: snapshot.try_get("provider_configuration_digest").map_err(|_| WorkerError::Database)?,
+        preflight_id: snapshot.try_get("provider_preflight_receipt_id").map_err(|_| WorkerError::Database)?,
+        preflight_digest: snapshot.try_get("provider_preflight_receipt_digest").map_err(|_| WorkerError::Database)?,
     };
     let provider_id = state
         .delivery
@@ -142,8 +136,9 @@
         .try_get("receipt_id")
         .map_err(|_| WorkerError::Database)?;
     let changed = sqlx::query(
-        "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' WHERE consumer='notification-worker' AND event_id=$1 AND processed_at IS NULL",
+        "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
     )
+    .bind(&event.consumer_id)
     .bind(event.id)
     .execute(&state.pool)
     .await

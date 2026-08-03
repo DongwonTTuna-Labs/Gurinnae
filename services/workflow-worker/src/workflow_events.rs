@@ -2,6 +2,7 @@ async fn handle_event(
     pool: &PgPool,
     store: &Store,
     scanner: &ClamAvScanner,
+    field_keys: &EnvelopeKeyRing,
     job: &ClaimedJob,
 ) -> Result<Value, Failure> {
     if job.job_type != "EVENT_DELIVERY" {
@@ -16,49 +17,113 @@ async fn handle_event(
         .and_then(Value::as_str)
         .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "eventType is missing".to_owned()))?;
     let event_id = value_uuid(&job.payload, "eventId")?;
+    let consumer_id = job
+        .payload
+        .get("consumerId")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "consumerId is missing".to_owned()))?;
     let aggregate_id = value_uuid(&job.payload, "aggregateId")?;
     let payload = job
         .payload
         .get("payload")
         .and_then(Value::as_object)
         .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "payload is missing".to_owned()))?;
-    let processed: bool = sqlx::query_scalar(
-        "SELECT processed_at IS NOT NULL FROM ops.inbox \
-         WHERE consumer='workflow-worker' AND event_id=$1",
+    if workflow_inbox_processed(pool, consumer_id, event_id).await? {
+        return Ok(json!({"deduplicated":true,"eventId":event_id}));
+    }
+    let metrics = reconcile_event(
+        pool,
+        store,
+        scanner,
+        field_keys,
+        event_type,
+        consumer_id,
+        aggregate_id,
+        payload,
     )
+    .await?;
+    mark_workflow_inbox_processed(pool, consumer_id, event_id).await?;
+    tracing::info!(%event_id,event_type,"workflow event reconciled");
+    Ok(metrics)
+}
+
+async fn workflow_inbox_processed(
+    pool: &PgPool,
+    consumer_id: &str,
+    event_id: Uuid,
+) -> Result<bool, Failure> {
+    sqlx::query_scalar(
+        "SELECT processed_at IS NOT NULL FROM ops.inbox \
+         WHERE consumer=$1 AND event_id=$2",
+    )
+    .bind(consumer_id)
     .bind(event_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
-    .ok_or_else(|| Failure::Terminal("INBOX_MISSING", event_id.to_string()))?;
-    if processed {
-        return Ok(json!({"deduplicated":true,"eventId":event_id}));
-    }
+    .ok_or_else(|| Failure::Terminal("INBOX_MISSING", event_id.to_string()))
+}
 
-    let metrics = match event_type {
-        "agent.run_completed.v1" => reconcile_agent_run(pool, payload).await?,
-        "attachment.correction_scan_requested.v1" => {
-            scan_attachment(pool, store, scanner, "CORRECTION", aggregate_id).await?
-        }
-        "attachment.response_scan_requested.v1" => {
-            scan_attachment(pool, store, scanner, "RESPONSE", aggregate_id).await?
-        }
-        "audit.export_requested.v1" => export_audit(pool, store, aggregate_id).await?,
-        "detection.signal_created.v1" => create_signal_task(pool, payload).await?,
-        "export.dataset_requested.v1" => export_dataset(pool, store, aggregate_id).await?,
-        "source.schema_drift_detected.v1" => reconcile_schema_drift(pool, payload).await?,
-        "workflow.response_submitted.v1" => reconcile_response(pool, aggregate_id).await?,
-        _ => {
+async fn reconcile_event(
+    pool: &PgPool,
+    store: &Store,
+    scanner: &ClamAvScanner,
+    field_keys: &EnvelopeKeyRing,
+    event_type: &str,
+    consumer_id: &str,
+    aggregate_id: Uuid,
+    payload: &serde_json::Map<String, Value>,
+) -> Result<Value, Failure> {
+    let metrics = if consumer_id == "action-execution-worker" {
+        if event_type != "action.execution_authorized.v1" {
             return Err(Failure::Terminal(
-                "UNSUPPORTED_EVENT_TYPE",
-                event_type.to_owned(),
+                "CONSUMER_BINDING_INVALID",
+                format!("{consumer_id}:{event_type}"),
             ));
         }
+        execute_approved_action(pool, field_keys, aggregate_id, payload).await?
+    } else if matches!(consumer_id, "response-request-materializer" | "response-clock-worker") {
+        reconcile_communication_delivery_receipt(pool, consumer_id, payload).await?
+    } else if consumer_id != "workflow-worker" {
+        return Err(Failure::Terminal(
+            "CONSUMER_BINDING_INVALID",
+            consumer_id.to_owned(),
+        ));
+    } else {
+        match event_type {
+            "agent.run_completed.v1" => reconcile_agent_run(pool, payload).await?,
+            "attachment.correction_scan_requested.v1" => {
+                scan_attachment(pool, store, scanner, "CORRECTION", aggregate_id).await?
+            }
+            "attachment.response_scan_requested.v1" => {
+                scan_attachment(pool, store, scanner, "RESPONSE", aggregate_id).await?
+            }
+            "audit.export_requested.v1" => export_audit(pool, store, aggregate_id).await?,
+            "detection.signal_created.v1" => create_signal_task(pool, payload).await?,
+            "export.dataset_requested.v1" => export_dataset(pool, store, aggregate_id).await?,
+            "source.schema_drift_detected.v1" => reconcile_schema_drift(pool, payload).await?,
+            "workflow.response_submitted.v1" => reconcile_response(pool, aggregate_id).await?,
+            _ => {
+                return Err(Failure::Terminal(
+                    "UNSUPPORTED_EVENT_TYPE",
+                    event_type.to_owned(),
+                ));
+            }
+        }
     };
+    Ok(metrics)
+}
+
+async fn mark_workflow_inbox_processed(
+    pool: &PgPool,
+    consumer_id: &str,
+    event_id: Uuid,
+) -> Result<(), Failure> {
     let changed = sqlx::query(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
-         WHERE consumer='workflow-worker' AND event_id=$1 AND processed_at IS NULL",
+         WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
     )
+    .bind(consumer_id)
     .bind(event_id)
     .execute(pool)
     .await
@@ -70,8 +135,60 @@ async fn handle_event(
             event_id.to_string(),
         ));
     }
-    tracing::info!(%event_id,event_type,"workflow event reconciled");
-    Ok(metrics)
+    Ok(())
+}
+
+async fn reconcile_communication_delivery_receipt(
+    pool: &PgPool,
+    consumer_id: &str,
+    payload: &serde_json::Map<String, Value>,
+) -> Result<Value, Failure> {
+    let receipt_id = object_uuid(payload, "deliveryReceiptId")?;
+    let delivery_id = object_uuid(payload, "deliveryId")?;
+    let sequence = payload
+        .get("deliveryReceiptSequence")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| Failure::Terminal("INVALID_DELIVERY_RECEIPT", "sequence".to_owned()))?;
+    let digest = payload
+        .get("receiptDigest")
+        .and_then(Value::as_str)
+        .filter(|value| is_sha256(value))
+        .ok_or_else(|| Failure::Terminal("INVALID_DELIVERY_RECEIPT", "digest".to_owned()))?;
+    let state = payload
+        .get("state")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Failure::Terminal("INVALID_DELIVERY_RECEIPT", "state".to_owned()))?;
+    let applied = payload
+        .get("receiptApplied")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| Failure::Terminal("INVALID_DELIVERY_RECEIPT", "applied".to_owned()))?;
+    let exact: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM ops.outbound_delivery_receipts \
+         WHERE id=$1 AND delivery_id=$2 AND receipt_sequence=$3 \
+           AND receipt_digest=$4 AND resulting_state=$5 AND applied=$6)",
+    )
+    .bind(receipt_id)
+    .bind(delivery_id)
+    .bind(sequence)
+    .bind(digest)
+    .bind(state)
+    .bind(applied)
+    .fetch_one(pool)
+    .await
+    .map_err(database)?;
+    if !exact {
+        return Err(Failure::Terminal(
+            "DELIVERY_RECEIPT_MISMATCH",
+            receipt_id.to_string(),
+        ));
+    }
+    Ok(json!({
+        "consumerId":consumer_id,
+        "deliveryId":delivery_id,
+        "deliveryReceiptId":receipt_id,
+        "receiptApplied":applied,
+        "state":state,
+    }))
 }
 
 async fn scan_attachment(
@@ -197,4 +314,3 @@ async fn reconcile_agent_run(
     }
     Ok(json!({"agentRunId":run_id,"suggestions":suggestions}))
 }
-

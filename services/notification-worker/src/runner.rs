@@ -15,7 +15,9 @@ use zeroize::Zeroize;
 
 use crate::{
     config::{Config, EmailAdapter},
-    handlers::delivery::{DeliveryGateway, FileGateway, ProviderBinding, SmtpGateway},
+    handlers::delivery::{
+        DeliveryError, DeliveryGateway, FileGateway, ProviderBinding, ProviderRevision, SmtpGateway,
+    },
 };
 
 struct State {
@@ -31,9 +33,11 @@ struct State {
 }
 
 struct ClaimedEvent {
+    consumer_id: String,
     id: Uuid,
     event_type: String,
     aggregate_id: Uuid,
+    aggregate_version: i64,
     payload: serde_json::Value,
 }
 

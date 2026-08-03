@@ -15,6 +15,11 @@ const fieldGroups = $derived(
     fields,
   })),
 );
+const showGuide = $derived(
+  screen.sections.find(
+    (candidate) => candidate.component === "GuidedFormSection",
+  )?.id === section.id,
+);
 const draft = $derived(record(runtime.formData?.responseDraft));
 const submitted = $derived(record(runtime.formData?.submitted));
 const saveAction = $derived(
@@ -133,13 +138,13 @@ function autocompleteFor(name: string): AutoCompleteToken {
 
 <SectionHeading {section} kicker="단계별 입력" />
 <div class="guided-form-intro">
-  <p>필수 입력, 검토, 제출 순서로 진행합니다. 세션과 권한은 각 단계에서 서버가 다시 확인합니다.</p>
+  {#if showGuide}<p>필수 입력과 검토 후 제출하며, 세션·권한은 단계마다 서버가 확인합니다.</p>{/if}
   {#if screen.id === "RSP-005" && (section.id === "consent" || section.id === "authority" || section.id === "consequence")}
     {#if section.id === "consent"}<p>본문 공개: {previewConsent?.bodyConsent === true ? "동의" : "미동의"}</p><p>민감정보 가림 확인: {previewConsent?.redactionAcknowledged === true ? "확인" : "미확인"} · 첨부 공개 {Array.isArray(previewConsent?.attachmentConsents) ? previewConsent.attachmentConsents.filter((item) => record(item)?.mayPublish === true).length : 0}개</p>
     {:else if section.id === "authority"}<p>제출 권한과 세션 범위는 서버가 preview 시점에 확인합니다. 권한이 확인되지 않으면 제출 버튼을 사용할 수 없습니다.</p>
     {:else}<p>제출 후에는 immutable receipt와 submission digest가 발급되며, 수정은 보충자료 경로에서 새 영수증으로 남습니다.</p>{/if}
   {:else if isAnswerScreen && saveAction}
-    <form id={`action-${saveAction.id}`} method="POST" action={formAction(saveAction.id)} class="guided-response-form" data-action-id={saveAction.id}>
+    <form id={`action-${saveAction.id}`} method="POST" action={formAction(saveAction.id)} class="guided-response-form answer-consent-form" data-action-id={saveAction.id}>
       {#if runtime.idempotencyKeys?.[saveAction.id]}<input type="hidden" name="idempotencyKey" value={runtime.idempotencyKeys[saveAction.id]} />{/if}
       {#if runtime.csrfToken}<input type="hidden" name="csrfToken" value={runtime.csrfToken} />{/if}
       <p id={`action-${saveAction.id}-field-help`} class="field-help" class:field-error={hasValidationError} aria-live="polite">{hasValidationError ? "입력값을 확인한 뒤 다시 시도하세요." : "필수 입력은 저장 전에 서버에서 다시 확인됩니다."}</p>
@@ -168,8 +173,119 @@ function autocompleteFor(name: string): AutoCompleteToken {
       </button>
     </form>
   {:else}
-    <p>현재 계약에서 <strong>{fieldCount}</strong>개 입력 필드를 준비했습니다.</p>
+    <p>입력 필드: <strong>{fieldCount}</strong>개</p>
     {#if fieldGroups.length > 0}<dl class="guided-field-summary" aria-label="입력 항목 안내">{#each fieldGroups as group (group.actionId)}<div><dt>{group.actionId}</dt><dd>{group.fields.map((field) => `${field.label && field.label !== field.name ? field.label : field.name}${field.required ? " · 필수" : ""}`).join(" · ")}</dd></div>{/each}</dl>
     {:else}<p role="status">현재 세션에서 입력할 항목이 없습니다.</p>{/if}
   {/if}
 </div>
+
+<style>
+  .guided-form-intro {
+    display: grid;
+    gap: 0.5rem;
+    padding-block: 0.625rem 0;
+    border-top: 1px solid var(--paper-200);
+  }
+  .guided-form-intro > p,
+  .field-help {
+    margin: 0;
+    color: var(--ink-700);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .guided-response-form {
+    display: grid;
+    gap: 0.625rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--paper-200);
+  }
+  .answer-consent-form {
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, 22rem), 1fr)
+    );
+    column-gap: 0.875rem;
+  }
+  .answer-consent-form > .field-help,
+  .answer-consent-form > button {
+    grid-column: 1 / -1;
+  }
+  .guided-response-form > label:not(.attestation-field) {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--ink-900);
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+  .attestation-field {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: start;
+    padding-block: 0.5rem;
+    border-top: 1px solid var(--paper-200);
+    color: var(--ink-900);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .attestation-field input {
+    margin-top: 0.125rem;
+  }
+  .field-help {
+    font-size: 0.75rem;
+  }
+  .field-error {
+    color: var(--red-700);
+  }
+  .guided-response-form > button {
+    justify-self: start;
+  }
+  .guided-field-summary {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, 24rem), 1fr)
+    );
+    column-gap: 1rem;
+    margin: 0;
+  }
+  .guided-field-summary div {
+    display: grid;
+    grid-template-columns: minmax(8rem, 0.35fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-block: 0.375rem;
+    border-top: 1px solid var(--paper-200);
+  }
+  .guided-field-summary dt {
+    color: var(--ink-500);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+  .guided-field-summary dd {
+    margin: 0;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 620px) {
+    .answer-consent-form,
+    .guided-field-summary {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .guided-response-form > button,
+    .attestation-field {
+      min-height: 44px;
+    }
+    .guided-field-summary div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.25rem;
+    }
+  }
+  @media (forced-colors: active) {
+    .guided-form-intro,
+    .guided-response-form,
+    .attestation-field,
+    .guided-field-summary div {
+      border-color: CanvasText;
+    }
+  }
+</style>

@@ -49,11 +49,8 @@ pub(super) async fn arm_startagentrun(
     {
         return Err(ServiceError::InvalidRequest);
     }
-    let snapshot = json!({
-        "caseId":case_id,
-        "evidence":evidence_snapshot,
-        "objective":string_value(payload,"objective").ok_or(ServiceError::InvalidRequest)?,
-    });
+    let snapshot_hash = agent_case_snapshot_sha256(&case_id.to_string(), &evidence_snapshot)
+        .map_err(|_| ServiceError::Persistence)?;
     sqlx::query(
         "INSERT INTO ops.agent_runs(id,case_id,agent_type,objective,evidence_scope_ids, \
          provider_policy,status,input_snapshot_hash,max_cost,created_by) \
@@ -65,7 +62,7 @@ pub(super) async fn arm_startagentrun(
     .bind(string_value(payload, "objective").ok_or(ServiceError::InvalidRequest)?)
     .bind(evidence)
     .bind(string_value(payload, "providerPolicy").ok_or(ServiceError::InvalidRequest)?)
-    .bind(canonical_json_digest(&snapshot)?)
+    .bind(snapshot_hash)
     .bind(decimal_string(payload, "maxCost")?)
     .bind(actor)
     .execute(&mut **tx)
@@ -330,12 +327,13 @@ pub(super) async fn arm_testproviderconnection(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let provider = uuid_value(payload, &["providerId"]).ok_or(ServiceError::InvalidRequest)?;
-    let enabled: bool = sqlx::query_scalar("SELECT enabled FROM ops.provider_configs WHERE id=$1")
-        .bind(provider)
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(db)?
-        .ok_or(ServiceError::NotFound)?;
+    let enabled: bool =
+        sqlx::query_scalar("SELECT enabled FROM ops.provider_configs WHERE id=$1 FOR UPDATE")
+            .bind(provider)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(db)?
+            .ok_or(ServiceError::NotFound)?;
     if !enabled {
         return Err(ServiceError::InvalidRequest);
     }
@@ -351,11 +349,35 @@ pub(super) async fn arm_testproviderconnection(
     .execute(&mut **tx)
     .await
     .map_err(db)?;
+    let communication_config_id: Option<Uuid> = sqlx::query_scalar(
+        "SELECT communication_provider_config_id \
+           FROM ops.communication_provider_bindings \
+          WHERE generic_provider_id=$1",
+    )
+    .bind(provider)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(db)?;
+    let (job_type, worker, job_payload) = match communication_config_id {
+        Some(config_id) => (
+            "COMMUNICATION_PROVIDER_PREFLIGHT",
+            "notification-worker",
+            json!({
+                "providerConnectionTestId": id,
+                "providerConfigId": config_id,
+            }),
+        ),
+        None => (
+            "PROVIDER_CONNECTION_TEST",
+            "analysis-worker",
+            json!({"providerConnectionTestId":id}),
+        ),
+    };
     enqueue_runtime_job(
         tx,
-        "PROVIDER_CONNECTION_TEST",
-        "analysis-worker",
-        json!({"providerConnectionTestId":id}),
+        job_type,
+        worker,
+        job_payload,
         format!("provider-connection-test:{id}"),
     )
     .await?;
@@ -381,7 +403,7 @@ pub(super) async fn arm_transitioncase(
             .await
             .map_err(db)?;
     if !valid_case_transition(&current, target) {
-        return Err(ServiceError::InvalidRequest);
+        return Err(ServiceError::InvalidStateTransition);
     }
     sqlx::query(
         "UPDATE editorial.cases SET investigation_state=$2::editorial.investigation_state \

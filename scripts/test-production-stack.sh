@@ -41,6 +41,7 @@ env -i PATH="$PATH" \
   WORKFLOW_DATABASE_URL=postgresql://workflow:secret@postgres/gurine \
   DOCUMENT_EXTRACTOR_DATABASE_URL=postgresql://extractor:secret@postgres/gurine \
   SCHEDULER_DATABASE_URL=postgresql://scheduler:secret@postgres/gurine \
+  EGRESS_DATABASE_URL=postgresql://gurine_egress_gateway:secret@postgres/gurine \
   PUBLIC_API_INTERNAL_URL=http://public-api:8080 CONTROL_API_INTERNAL_URL=http://control-api:8081 \
   IDENTITY_API_INTERNAL_URL=http://identity-api:8083 SUBMISSION_API_INTERNAL_URL=http://submission-api:8082 \
   PUBLIC_BASE_URL=https://public.gurine.test REVIEW_BASE_URL=https://review.gurine.test \

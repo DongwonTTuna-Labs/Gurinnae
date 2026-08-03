@@ -3,7 +3,11 @@ import type { ScreenSectionProps } from "../../index";
 import OperationData from "../OperationData.svelte";
 import SectionHeading from "./SectionHeading.svelte";
 
-let { section, runtime, projection }: ScreenSectionProps = $props();
+let { section, screen, runtime, projection }: ScreenSectionProps = $props();
+const showStateCopy = $derived(
+  screen.sections.find((candidate) => candidate.component === "DataCollection")
+    ?.id === section.id,
+);
 const blocking = $derived(
   projection &&
     ["BLOCKED", "UNKNOWN", "ERROR", "STALE", "LOADING"].includes(
@@ -27,7 +31,7 @@ const stateCopy = $derived(
 <SectionHeading {section} kicker="기록" />
 <section class="data-collection" data-testid={section.test_id} data-projection-state={projection?.state ?? "UNKNOWN"} aria-busy={runtime.state === "loading"}>
   {#if blocking}
-    <p class="inline-state conflict" role={projection?.state === "ERROR" || projection?.state === "BLOCKED" ? "alert" : "status"} aria-live="polite">{stateCopy}</p>
+    {#if showStateCopy}<p class="inline-state conflict" role={projection?.state === "ERROR" || projection?.state === "BLOCKED" ? "alert" : "status"} aria-live="polite">{stateCopy}</p>{/if}
   {:else if projection}
     <div class="collection-summary" role="status" aria-live="polite">
       <strong>서버 권위 목록</strong>
@@ -38,3 +42,86 @@ const stateCopy = $derived(
     <p class="inline-state conflict" role="status">서버 권위 projection이 없어 목록을 표시할 수 없습니다.</p>
   {/if}
 </section>
+
+<style>
+  .data-collection {
+    display: grid;
+    gap: 0.625rem;
+    min-width: 0;
+  }
+
+  .collection-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.625rem;
+    align-items: baseline;
+    margin: 0;
+    padding: 0.375rem 0.625rem;
+    border-block: 1px solid var(--paper-200);
+    color: var(--ink-700);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .collection-summary strong {
+    color: var(--ink-900);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  .inline-state {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0.5rem 0.625rem;
+    border-block: 1px solid var(--paper-200);
+    background: var(--paper-50);
+    color: var(--ink-700);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .inline-state::before {
+    width: 0.45rem;
+    height: 0.45rem;
+    flex: 0 0 auto;
+    margin-top: 0.4em;
+    border-radius: 50%;
+    background: var(--blue-500);
+    content: "";
+  }
+
+  [data-projection-state="BLOCKED"] .inline-state,
+  [data-projection-state="ERROR"] .inline-state {
+    border-color: var(--red-500);
+    background: var(--red-50);
+    color: var(--red-900);
+  }
+
+  [data-projection-state="BLOCKED"] .inline-state::before,
+  [data-projection-state="ERROR"] .inline-state::before {
+    background: var(--red-500);
+  }
+
+  [data-projection-state="UNKNOWN"] .inline-state,
+  [data-projection-state="STALE"] .inline-state {
+    border-color: var(--amber-500);
+    background: var(--amber-50);
+    color: var(--amber-900);
+  }
+
+  [data-projection-state="UNKNOWN"] .inline-state::before,
+  [data-projection-state="STALE"] .inline-state::before {
+    background: var(--amber-500);
+  }
+
+  @media (forced-colors: active) {
+    .collection-summary,
+    .inline-state {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+  }
+</style>

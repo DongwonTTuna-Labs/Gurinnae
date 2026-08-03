@@ -120,6 +120,7 @@ async fn handle(
         &claims,
         &state.pool,
         &state.field_keys,
+        &state.domain_events,
         request_id,
     )
     .await
@@ -146,6 +147,11 @@ async fn handle(
         Err(service::ServiceError::InvalidRequest) => problem("INVALID_REQUEST", 400),
         Err(service::ServiceError::NotFound) => problem("RESOURCE_NOT_FOUND", 404),
         Err(service::ServiceError::VersionConflict) => problem("VERSION_CONFLICT", 409),
+        Err(service::ServiceError::InvalidStateTransition) => {
+            problem("INVALID_STATE_TRANSITION", 409)
+        }
+        Err(service::ServiceError::PreconditionFailed) => problem("PRECONDITION_FAILED", 422),
+        Err(service::ServiceError::CapabilityDenied) => problem("CAPABILITY_DENIED", 403),
         Err(service::ServiceError::IdempotencyConflict) => {
             problem("IDEMPOTENCY_REQUEST_CONFLICT", 409)
         }
@@ -225,7 +231,10 @@ fn effective_assurance(operation: &OperationSpec, body: &[u8]) -> &'static str {
         .and_then(|decision| decision.get("kind"))
         .and_then(Value::as_str);
     if decision_kind == Some("APPROVE")
-        && matches!(action_kind, Some("HYPOTHESIS" | "COMMERCIAL_CONTROL"))
+        && matches!(
+            action_kind,
+            Some("HYPOTHESIS" | "CAPABILITY_ACTIVATION" | "COMMERCIAL_CONTROL")
+        )
     {
         "STEP_UP"
     } else {

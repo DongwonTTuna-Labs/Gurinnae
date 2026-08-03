@@ -2,6 +2,31 @@
 -- byte-immutable v13 authority migrations 0001-0024.  Statements are kept in
 -- their original ordinal order, then the submission-session hardening runs.
 BEGIN;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gurine_egress_gateway') THEN
+    CREATE ROLE gurine_egress_gateway LOGIN NOINHERIT CONNECTION LIMIT 8
+      NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+  END IF;
+  ALTER ROLE gurine_egress_gateway LOGIN NOINHERIT CONNECTION LIMIT 8
+    NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+END
+$$;
+
+GRANT USAGE ON SCHEMA ops TO gurine_egress_gateway;
+REVOKE ALL ON ops.communication_provider_configs,
+  ops.communication_provider_preflight_receipts, ops.kill_switches FROM gurine_egress_gateway;
+GRANT SELECT(id,version,configuration_digest,integration_id,channel,
+  credential_secret_reference,webhook_secret_reference,operational_state,
+  activation_effective_at,activation_expires_at)
+  ON ops.communication_provider_configs TO gurine_egress_gateway;
+GRANT SELECT(provider_config_id,provider_config_version,configuration_digest,id,
+  receipt_digest,result,expires_at,live_sandbox,callback_or_poll_verified,
+  sender_identity_verified,template_catalog_verified)
+  ON ops.communication_provider_preflight_receipts TO gurine_egress_gateway;
+GRANT SELECT(code,scope,state,expires_at)
+  ON ops.kill_switches TO gurine_egress_gateway;
+
 -- AI and communication egress perform a read-only incident fence immediately
 -- before dispatch.  The grant is intentionally limited to the kill-switch
 -- relation; mutation remains control-api-only.
@@ -548,19 +573,15 @@ BEGIN
       RAISE EXCEPTION 'attachment_scan_kind_invalid' USING ERRCODE='22023';
     END IF;
     IF NOT FOUND THEN RAISE EXCEPTION 'attachment_scan_state_conflict' USING ERRCODE='40001'; END IF;
-  ELSIF p_event_type='communication.delivery_poll_requested.v1' THEN
-    IF NOT pg_has_role(current_user,'gurine_scheduler','MEMBER') THEN
-      RAISE EXCEPTION 'scheduler_role_required' USING ERRCODE='42501';
-    END IF;
-    IF p_payload->>'pollKey' IS NULL OR p_payload->>'deliveryId' IS NULL
-       OR p_payload->>'providerMessageId' IS NULL THEN
-      RAISE EXCEPTION 'communication_poll_request_invalid' USING ERRCODE='22023';
-    END IF;
-    SELECT id INTO v_id FROM ops.outbox
-      WHERE event_type='communication.delivery_poll_requested.v1'
-        AND payload->>'pollKey'=p_payload->>'pollKey'
-      ORDER BY id DESC LIMIT 1;
-    IF v_id IS NOT NULL THEN RETURN v_id; END IF;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM ops.event_types e
+    WHERE e.event_type=p_event_type AND e.active AND e.payload_schema_uri IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'unknown_or_inactive_event_type: %',p_event_type USING ERRCODE='22023';
+  END IF;
+  IF p_payload IS NULL OR jsonb_typeof(p_payload)<>'object' THEN
+    RAISE EXCEPTION 'event_payload_must_be_object: %',p_event_type USING ERRCODE='22023';
   END IF;
   INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
     VALUES(p_aggregate_type,p_aggregate_id,p_aggregate_version,p_event_type,p_payload,p_occurred_at)
@@ -1932,7 +1953,13 @@ ON CONFLICT (event_type) DO UPDATE SET active = EXCLUDED.active;
 INSERT INTO ops.event_types(event_type,category,schema_version,active,payload_schema_uri)
 VALUES
   ('action.execution_cancel_requested.v1','DOMAIN',1,true,'payloads/action_execution_cancel_requested_v1.schema.json'),
-  ('action.execution_retry_requested.v1','DOMAIN',1,true,'payloads/action_execution_retry_requested_v1.schema.json')
+  ('action.execution_retry_requested.v1','DOMAIN',1,true,'payloads/action_execution_retry_requested_v1.schema.json'),
+  ('action.proposal_withdrawn.v1','DOMAIN',1,true,'payloads/action_proposal_withdrawn_v1.schema.json'),
+  ('action.decision_withdrawn.v1','DOMAIN',1,true,'payloads/action_decision_withdrawn_v1.schema.json'),
+  ('agent.run_control_changed.v2','DOMAIN',2,true,'payloads/agent_run_control_changed_v2.schema.json'),
+  ('journey.handoff_escalated.v1','DOMAIN',1,true,'payloads/journey_handoff_escalated_v1.schema.json'),
+  ('journey.handoff_expired.v1','DOMAIN',1,true,'payloads/journey_handoff_expired_v1.schema.json'),
+  ('journey.outcome_recorded.v1','DOMAIN',1,true,'payloads/journey_outcome_recorded_v1.schema.json')
 ON CONFLICT (event_type) DO UPDATE SET
   category = EXCLUDED.category,
   schema_version = EXCLUDED.schema_version,
@@ -2275,6 +2302,121 @@ CREATE TRIGGER editorial_legal_holds_research_domain_lock
   BEFORE INSERT OR UPDATE OF object_id,case_id,affected_ids ON editorial.legal_holds
   FOR EACH ROW EXECUTE FUNCTION ops.lock_research_hold_domain_v1();
 
+-- Project the active capability decisions into the nine closed asset-right
+-- dimensions.  Every ALLOW is backed by an explicit, currently active
+-- capability class; an absent decision remains UNKNOWN.  The complete
+-- ordered decision set is returned so the eventual immutable asset-rights
+-- digest binds every decision that contributed to the projection.
+CREATE OR REPLACE FUNCTION ops.research_rights_snapshot_v1(
+  p_source_id text,
+  p_at timestamptz DEFAULT clock_timestamp()
+) RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = pg_catalog, ops, extensions, pg_temp
+AS $$
+DECLARE
+  v_environment text := COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST');
+  v_decisions jsonb := '[]'::jsonb;
+  v_execution_receipts jsonb := '[]'::jsonb;
+  v_license_digests text[] := '{}'::text[];
+  v_effective_at timestamptz;
+  v_expires_at timestamptz;
+  v_access boolean := false;
+  v_storage boolean := false;
+  v_redistribution boolean := false;
+  v_model_egress boolean := false;
+  v_paid_processing boolean := false;
+  v_publication boolean := false;
+  v_primary jsonb;
+  v_decision_set_sha char(64);
+  v_execution_set_sha char(64);
+BEGIN
+  IF p_source_id IS NULL OR p_at IS NULL OR NOT EXISTS (
+    SELECT 1 FROM ops.source_registry s
+     WHERE s.source_id=p_source_id AND s.enabled AND s.legal_status='APPROVED'
+  ) THEN
+    RETURN NULL;
+  END IF;
+
+  WITH latest AS (
+    SELECT DISTINCT ON (d.capability_class)
+      d.*
+      FROM ops.capability_activation_decisions d
+     WHERE d.capability_class IN (
+       'SOURCE_ACCESS','SOURCE_STORAGE','SOURCE_REDISTRIBUTION',
+       'MODEL_EGRESS','PAID_WORKSPACE_PROCESSING','PUBLIC_PUBLICATION')
+       AND d.scope_type IN ('SOURCE','DATA_CLASS','WORKSPACE')
+       AND d.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research')
+       AND d.environment=v_environment
+       AND d.legal_state='APPROVED' AND d.operational_state='ACTIVE'
+       AND d.effective_at <= p_at AND (d.expires_at IS NULL OR d.expires_at > p_at)
+     ORDER BY d.capability_class,d.decision_version DESC,d.effective_at DESC,d.id
+  )
+  SELECT
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'capabilityClass',capability_class,
+      'decisionId',id,
+      'decisionVersion',decision_version,
+      'decisionSha256',decision_digest,
+      'rightsSha256',rights_digest,
+      'licenseSha256',license_digest,
+      'dpaSha256',dpa_digest,
+      'effectiveAt',effective_at,
+      'expiresAt',expires_at,
+      'executionReceiptId',execution_receipt_id,
+      'executionReceiptSha256',execution_receipt_digest
+    ) ORDER BY capability_class),'[]'::jsonb),
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'capabilityClass',capability_class,
+      'executionReceiptId',execution_receipt_id,
+      'executionReceiptSha256',execution_receipt_digest
+    ) ORDER BY capability_class),'[]'::jsonb),
+    COALESCE(array_agg(DISTINCT license_digest::text ORDER BY license_digest::text)
+      FILTER (WHERE license_digest IS NOT NULL),'{}'::text[]),
+    max(effective_at),min(expires_at) FILTER (WHERE expires_at IS NOT NULL),
+    COALESCE(bool_or(capability_class='SOURCE_ACCESS'),false),
+    COALESCE(bool_or(capability_class='SOURCE_STORAGE'),false),
+    COALESCE(bool_or(capability_class='SOURCE_REDISTRIBUTION'),false),
+    COALESCE(bool_or(capability_class='MODEL_EGRESS'),false),
+    COALESCE(bool_or(capability_class='PAID_WORKSPACE_PROCESSING'),false),
+    COALESCE(bool_or(capability_class='PUBLIC_PUBLICATION'),false)
+  INTO v_decisions,v_execution_receipts,v_license_digests,v_effective_at,v_expires_at,
+       v_access,v_storage,v_redistribution,v_model_egress,v_paid_processing,v_publication
+  FROM latest;
+
+  SELECT value INTO v_primary
+    FROM jsonb_array_elements(v_decisions)
+   WHERE value->>'capabilityClass'='SOURCE_ACCESS'
+   LIMIT 1;
+  v_decision_set_sha := encode(extensions.digest(ops.canonical_jsonb_v1(v_decisions),'sha256'),'hex');
+  v_execution_set_sha := encode(extensions.digest(ops.canonical_jsonb_v1(v_execution_receipts),'sha256'),'hex');
+
+  RETURN jsonb_build_object(
+    'schemaVersion','research-rights-snapshot.v1',
+    'sourceId',p_source_id,
+    'environment',v_environment,
+    'evaluatedAt',p_at,
+    'effectiveAt',v_effective_at,
+    'expiresAt',v_expires_at,
+    'primaryDecision',v_primary,
+    'capabilityDecisions',v_decisions,
+    'capabilityDecisionSetSha256',v_decision_set_sha,
+    'executionReceiptSetSha256',v_execution_set_sha,
+    'licenseEvidenceDigests',to_jsonb(v_license_digests),
+    'dimensions',jsonb_build_object(
+      'accessRight',CASE WHEN v_access THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'privateStorageRight',CASE WHEN v_storage THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'modelEgressRight',CASE WHEN v_model_egress THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'modelUseRight',CASE WHEN v_model_egress OR v_paid_processing THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'derivativeCreationRight',CASE WHEN v_redistribution THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'excerptRight',CASE WHEN v_redistribution THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'redistributionRight',CASE WHEN v_redistribution THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'commercialUseRight',CASE WHEN v_paid_processing THEN 'ALLOW' ELSE 'UNKNOWN' END,
+      'publicDisplayRight',CASE WHEN v_publication THEN 'ALLOW' ELSE 'UNKNOWN' END));
+END $$;
+ALTER FUNCTION ops.research_rights_snapshot_v1(text,timestamptz) OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.research_rights_snapshot_v1(text,timestamptz) FROM PUBLIC;
+
 CREATE OR REPLACE FUNCTION ops.assert_research_fetch_rights_v1(
   p_source_id text,
   p_request_kind text
@@ -2305,12 +2447,17 @@ BEGIN
      AND (h.affected_ids @> jsonb_build_array(p_source_id)
           OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)
    FOR UPDATE;
-  SELECT jsonb_build_object(
-      'decisionId', d.id, 'decisionVersion', d.decision_version,
-      'decisionSha256', d.decision_digest, 'effectiveAt', d.effective_at,
-      'expiresAt', d.expires_at, 'rightsDigest', d.rights_digest,
-      'policyDigest', d.policy_digest, 'scopeDigest', d.scope_digest,
-      'licenseDigest', d.license_digest, 'evidenceSetDigest', d.evidence_set_digest,
+  v := ops.research_rights_snapshot_v1(p_source_id,clock_timestamp());
+  IF v IS NULL
+     OR v->'dimensions'->>'accessRight'<>'ALLOW'
+     OR v->'dimensions'->>'modelEgressRight'<>'ALLOW'
+     OR (p_request_kind='FETCH_URL' AND (
+       v->'dimensions'->>'privateStorageRight'<>'ALLOW'
+       OR v->'dimensions'->>'modelUseRight'<>'ALLOW'))
+  THEN
+    RETURN NULL;
+  END IF;
+  v := v || jsonb_build_object(
       'holdCoverage', COALESCE((SELECT jsonb_agg(jsonb_build_object(
         'holdId',h.id,'holdVersion',h.version,'objectId',h.object_id,
         'caseId',h.case_id,'affectedIds',h.affected_ids,
@@ -2323,30 +2470,15 @@ BEGIN
         FROM editorial.legal_holds h
        WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > clock_timestamp())
          AND (h.affected_ids @> jsonb_build_array(p_source_id)
-              OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)), '[]'::jsonb),
-      'dimensions', jsonb_build_object(
-        'accessRight','ALLOW','privateStorageRight','ALLOW',
-        'modelEgressRight',CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class='MODEL_EGRESS' AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST') AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= clock_timestamp() AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())) THEN 'ALLOW' ELSE 'UNKNOWN' END,
-        'modelUseRight',CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class IN ('MODEL_EGRESS','PAID_WORKSPACE_PROCESSING') AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST') AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= clock_timestamp() AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())) THEN 'ALLOW' ELSE 'UNKNOWN' END,
-        'derivativeCreationRight','UNKNOWN','excerptRight','UNKNOWN',
-        'redistributionRight','UNKNOWN','commercialUseRight','UNKNOWN','publicDisplayRight','UNKNOWN'))
-    INTO v
-    FROM ops.capability_activation_decisions d
-    JOIN ops.source_registry s ON s.source_id = p_source_id
-   WHERE s.enabled AND s.legal_status = 'APPROVED'
-     AND d.capability_class = 'SOURCE_ACCESS'
-     AND d.scope_type IN ('SOURCE','DATA_CLASS','WORKSPACE')
-     AND d.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research')
-     AND d.environment = COALESCE(NULLIF(current_setting('gurine.environment', true), ''), 'TEST')
-     AND d.legal_state = 'APPROVED' AND d.operational_state = 'ACTIVE'
-     AND d.effective_at <= clock_timestamp()
-     AND (d.expires_at IS NULL OR d.expires_at > clock_timestamp())
-     AND NOT EXISTS (
-       SELECT 1 FROM editorial.legal_holds h
-        WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > clock_timestamp())
-          AND (h.affected_ids @> jsonb_build_array(p_source_id)
-               OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id))
-   ORDER BY d.decision_version DESC LIMIT 1;
+              OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)), '[]'::jsonb));
+  IF EXISTS (
+    SELECT 1 FROM editorial.legal_holds h
+     WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > clock_timestamp())
+       AND (h.affected_ids @> jsonb_build_array(p_source_id)
+            OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id)
+  ) THEN
+    RETURN NULL;
+  END IF;
   RETURN v;
 END $$;
 ALTER FUNCTION ops.assert_research_fetch_rights_v1(text,text) OWNER TO gurine_migrator;
@@ -2357,7 +2489,7 @@ CREATE OR REPLACE FUNCTION ops.research_fetch_capability_ready_v1(
   p_source_id text,
   p_request_kind text
 ) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
+LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path = pg_catalog, ops, pg_temp
 AS $$
   SELECT ops.assert_research_fetch_rights_v1(p_source_id,p_request_kind) IS NOT NULL;
@@ -2441,6 +2573,11 @@ DECLARE
   v_redistribution_right text;
   v_commercial_use_right text;
   v_public_display_right text;
+  v_rights_snapshot jsonb;
+  v_capability_decisions jsonb;
+  v_capability_decision_set_sha char(64);
+  v_execution_receipt_set_sha char(64);
+  v_license_evidence_digests text[] := '{}'::text[];
 BEGIN
   IF p_agent_run_id IS NULL OR p_provider_turn_id IS NULL OR p_tool_call_id IS NULL
      OR p_call_id IS NULL OR btrim(p_call_id)='' OR p_input_snapshot_sha256 !~ '^[0-9a-f]{64}$'
@@ -2490,32 +2627,44 @@ BEGIN
   IF v_tool_result_sha <> p_result_sha256 THEN
     RAISE EXCEPTION 'TOOL_RESULT_DIGEST_MISMATCH' USING ERRCODE='22023';
   END IF;
-  SELECT d.id,d.decision_version,d.effective_at,d.expires_at,
-         'ALLOW','ALLOW',
-         CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class='MODEL_EGRESS' AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=d.environment AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= v_now AND (m.expires_at IS NULL OR m.expires_at > v_now)) THEN 'ALLOW' ELSE 'UNKNOWN' END,
-         CASE WHEN EXISTS (SELECT 1 FROM ops.capability_activation_decisions m WHERE m.capability_class IN ('MODEL_EGRESS','PAID_WORKSPACE_PROCESSING') AND m.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research') AND m.environment=d.environment AND m.legal_state='APPROVED' AND m.operational_state='ACTIVE' AND m.effective_at <= v_now AND (m.expires_at IS NULL OR m.expires_at > v_now)) THEN 'ALLOW' ELSE 'UNKNOWN' END,
-         'UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN','UNKNOWN'
-    INTO v_capability_id,v_capability_version,v_capability_effective,v_capability_expires,
-         v_access_right,v_private_storage_right,v_model_egress_right,v_model_use_right,
-         v_derivative_creation_right,v_excerpt_right,v_redistribution_right,v_commercial_use_right,v_public_display_right
-    FROM ops.capability_activation_decisions d
-    JOIN ops.source_registry s ON s.source_id=p_source_id
-   WHERE s.enabled AND s.legal_status='APPROVED' AND d.capability_class='SOURCE_ACCESS'
-     AND d.scope_type IN ('SOURCE','DATA_CLASS','WORKSPACE') AND d.scope_id IN (p_source_id,'PUBLIC_RESEARCH','public-research')
-     AND d.environment=COALESCE(NULLIF(current_setting('gurine.environment',true),''),'TEST')
-     AND d.legal_state='APPROVED' AND d.operational_state='ACTIVE'
-     AND d.effective_at <= v_now AND (d.expires_at IS NULL OR d.expires_at > v_now)
-     AND NOT EXISTS (SELECT 1 FROM editorial.legal_holds h WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > v_now)
+  v_rights_snapshot := ops.research_rights_snapshot_v1(p_source_id,v_now);
+  IF v_rights_snapshot IS NULL
+     OR v_rights_snapshot->'dimensions'->>'accessRight'<>'ALLOW'
+     OR v_rights_snapshot->'dimensions'->>'modelEgressRight'<>'ALLOW'
+     OR (p_request_kind='FETCH_URL' AND (
+       v_rights_snapshot->'dimensions'->>'privateStorageRight'<>'ALLOW'
+       OR v_rights_snapshot->'dimensions'->>'modelUseRight'<>'ALLOW'))
+     OR EXISTS (SELECT 1 FROM editorial.legal_holds h WHERE h.active AND (h.expires_at IS NULL OR h.expires_at > v_now)
        AND (h.affected_ids @> jsonb_build_array(p_source_id) OR h.object_id::text = p_source_id OR h.case_id::text = p_source_id))
-   ORDER BY d.decision_version DESC LIMIT 1;
-  IF v_capability_id IS NULL THEN RAISE EXCEPTION 'SOURCE_RIGHTS_UNAVAILABLE' USING ERRCODE='42501'; END IF;
+  THEN
+    RAISE EXCEPTION 'SOURCE_RIGHTS_UNAVAILABLE' USING ERRCODE='42501';
+  END IF;
+  v_capability_id := (v_rights_snapshot->'primaryDecision'->>'decisionId')::uuid;
+  v_capability_version := (v_rights_snapshot->'primaryDecision'->>'decisionVersion')::bigint;
+  v_capability_effective := (v_rights_snapshot->>'effectiveAt')::timestamptz;
+  v_capability_expires := NULLIF(v_rights_snapshot->>'expiresAt','')::timestamptz;
+  v_capability_decisions := v_rights_snapshot->'capabilityDecisions';
+  v_capability_decision_set_sha := (v_rights_snapshot->>'capabilityDecisionSetSha256')::char(64);
+  v_execution_receipt_set_sha := (v_rights_snapshot->>'executionReceiptSetSha256')::char(64);
+  SELECT COALESCE(array_agg(value ORDER BY value),'{}'::text[])
+    INTO v_license_evidence_digests
+    FROM jsonb_array_elements_text(v_rights_snapshot->'licenseEvidenceDigests');
+  v_access_right := v_rights_snapshot->'dimensions'->>'accessRight';
+  v_private_storage_right := v_rights_snapshot->'dimensions'->>'privateStorageRight';
+  v_model_egress_right := v_rights_snapshot->'dimensions'->>'modelEgressRight';
+  v_model_use_right := v_rights_snapshot->'dimensions'->>'modelUseRight';
+  v_derivative_creation_right := v_rights_snapshot->'dimensions'->>'derivativeCreationRight';
+  v_excerpt_right := v_rights_snapshot->'dimensions'->>'excerptRight';
+  v_redistribution_right := v_rights_snapshot->'dimensions'->>'redistributionRight';
+  v_commercial_use_right := v_rights_snapshot->'dimensions'->>'commercialUseRight';
+  v_public_display_right := v_rights_snapshot->'dimensions'->>'publicDisplayRight';
   -- The capability decision is provenance; each immutable artifact receives
   -- its own asset-rights decision identity so two fetches cannot collide on a
   -- capability UUID primary key.
   v_rights_id := v_asset_id;
-  SELECT decision_digest INTO v_rights_sha
-    FROM ops.capability_activation_decisions
-   WHERE id=v_capability_id AND decision_version=v_capability_version;
+  v_rights_sha := (v_rights_snapshot->'primaryDecision'->>'decisionSha256')::char(64);
+  v_locator_sha := encode(extensions.digest(convert_to(v_locator,'UTF8'),'sha256'),'hex');
+  v_policy_sha := encode(extensions.digest(convert_to(p_policy_version,'UTF8'),'sha256'),'hex');
   -- Artifact identity is a typed authority projection.  Raw bytes remain
   -- content_sha256; artifact_sha256 covers the canonical metadata envelope.
   v_artifact_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
@@ -2544,10 +2693,11 @@ BEGIN
     'policySha256',v_policy_sha,'legalBasisCode','PUBLIC_RESEARCH','legalBasisReference',p_source_id,
     'jurisdiction','GLOBAL','attributionRequired',false,'effectiveAt',coalesce(v_capability_effective,v_now),
     'expiresAt',v_capability_expires,'capabilityDecisionId',v_capability_id,
-    'capabilityDecisionVersion',v_capability_version,'capabilityDecisionSha256',v_rights_sha));
+    'capabilityDecisionVersion',v_capability_version,'capabilityDecisionSha256',v_rights_sha,
+    'capabilityDecisions',v_capability_decisions,
+    'capabilityDecisionSetSha256',v_capability_decision_set_sha,
+    'executionReceiptSetSha256',v_execution_receipt_set_sha));
   v_asset_rights_sha := encode(extensions.digest(v_asset_rights_canonical,'sha256'),'hex');
-  v_locator_sha := encode(extensions.digest(convert_to(v_locator,'UTF8'),'sha256'),'hex');
-  v_policy_sha := encode(extensions.digest(convert_to(p_policy_version,'UTF8'),'sha256'),'hex');
   INSERT INTO raw.source_fetches(id,source_id,source_run_id,external_locator,requested_at,completed_at,http_status,content_type,payload_sha256,payload_size_bytes,object_key)
   VALUES(v_fetch_id,p_source_id,NULL,p_external_locator,v_now,v_now,p_http_status,p_content_media_type,v_content_sha,octet_length(p_content),p_object_key)
   ON CONFLICT (source_id,external_locator,payload_sha256) DO UPDATE SET completed_at=EXCLUDED.completed_at
@@ -2605,10 +2755,10 @@ BEGIN
       'redistributionRight',v_redistribution_right,'commercialUseRight',v_commercial_use_right,
       'publicDisplayRight',v_public_display_right)),'sha256'),'hex'),'PUBLIC_RESEARCH',p_source_id,
     encode(extensions.digest(convert_to(p_source_id,'UTF8'),'sha256'),'hex'),
-    ARRAY[encode(extensions.digest(convert_to(p_source_id,'UTF8'),'sha256'),'hex')],
-    encode(extensions.digest(ops.canonical_jsonb_v1(to_jsonb(ARRAY[encode(extensions.digest(convert_to(p_source_id,'UTF8'),'sha256'),'hex')]::text[])),'sha256'),'hex'),
+    v_license_evidence_digests,
+    encode(extensions.digest(ops.canonical_jsonb_v1(to_jsonb(v_license_evidence_digests)),'sha256'),'hex'),
     'GLOBAL',false,encode(extensions.digest(convert_to('','UTF8'),'sha256'),'hex'),p_policy_version,v_policy_sha,
-    v_artifact_sha,v_artifact_sha,v_fetch_id,v_fetch_receipt,v_reviewer_user_id,coalesce(v_capability_effective,v_now),
+    v_capability_decision_set_sha,v_execution_receipt_set_sha,v_fetch_id,v_fetch_receipt,v_reviewer_user_id,coalesce(v_capability_effective,v_now),
     v_asset_rights_sha);
   v_source_use_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
     'schemaVersion','source-use.v2','sourceUseId',v_source_use_id,'agentRunId',p_agent_run_id,
@@ -2622,6 +2772,7 @@ BEGIN
     'selectedContentSha256',v_content_sha,'classification','PUBLIC',
     'rightsDecision',jsonb_build_object('decisionId',v_rights_id,'capabilityDecisionId',v_capability_id,'decisionVersion',1,
       'decisionSha256',v_asset_rights_sha,'effectiveAt',coalesce(v_capability_effective,v_now),'expiresAt',v_capability_expires,
+      'capabilityDecisionSetSha256',v_capability_decision_set_sha,
       'accessRight',v_access_right,'privateStorageRight',v_private_storage_right,'modelEgressRight',v_model_egress_right,
       'modelUseRight',v_model_use_right,'derivativeCreationRight',v_derivative_creation_right,'excerptRight',v_excerpt_right,
       'redistributionRight',v_redistribution_right,'commercialUseRight',v_commercial_use_right,'publicDisplayRight',v_public_display_right),
@@ -2653,6 +2804,7 @@ END $$;
 ALTER FUNCTION ops.record_research_fetch_v1(uuid,uuid,uuid,text,char(64),text,text,text,text,text,integer,text,char(64),bytea,text,text,char(64),uuid,uuid,uuid,uuid,char(64),char(64),jsonb,jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.record_research_fetch_v1(uuid,uuid,uuid,text,char(64),text,text,text,text,text,integer,text,char(64),bytea,text,text,char(64),uuid,uuid,uuid,uuid,char(64),char(64),jsonb,jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ops.record_research_fetch_v1(uuid,uuid,uuid,text,char(64),text,text,text,text,text,integer,text,char(64),bytea,text,text,char(64),uuid,uuid,uuid,uuid,char(64),char(64),jsonb,jsonb) TO gurine_analysis_worker;
+GRANT SELECT ON ops.source_registry TO gurine_migrator;
 COMMIT;
 
 -- Replace the historical empty action-proposal projection with the complete
@@ -3015,14 +3167,10 @@ BEGIN
   INSERT INTO ops.audit_events(id,actor_type,actor_id,action,object_type,object_id,capability,outcome,reason,request_id,details,event_hash)
     VALUES(v_audit_id,'SERVICE','commercial-importer','RECORD_COMMERCIAL_QUALIFICATION_RECEIPT',
       'COMMERCIAL_QUALIFICATION_RECEIPT',v_id::text,'commercial.import', 'SUCCESS','SIGNED_QUALIFICATION',v_request_id,v_response,v_event_hash);
-  v_outbox_id := ops.enqueue_outbox(
-    'commercial_qualification_receipt',v_id::text,1,
-    'product.commercial_qualification_recorded.v1',
-    jsonb_build_object('receiptId',v_id,'receiptDigest',v_receipt_digest,
-      'qualificationEpisodeId',(p_input).qualification_episode_id,
-      'deploymentId',(p_input).deployment_id,
-      'organizationId',(p_input).organization_id,'sku',(p_input).sku),
-    v_recorded_at);
+  -- The commercial qualification importer is deliberately eventless in the
+  -- 0029 authority contract.  The immutable receipt, stored response and
+  -- audit row are the complete atomic write set.
+  v_outbox_id := NULL;
   v_response := v_response || jsonb_build_object('auditEventId',v_audit_id,'outboxId',v_outbox_id);
   INSERT INTO ops.idempotency_keys(scope,key_hash,request_hash,response_status,response_body,resource_type,resource_id,expires_at)
     VALUES('ECONOMICS.RECORD_COMMERCIAL_QUALIFICATION_RECEIPT.V1',v_key_hash,v_request_hash,201,v_response,
@@ -3406,8 +3554,12 @@ BEGIN
     jsonb_build_object('journeyCode',p_journey_code,'receiptDigest',v_receipt_digest));
   v_outbox_id := ops.enqueue_outbox('JourneyInstance',v_instance_id::text,1,
     'journey.instance_started.v1',jsonb_build_object('journeyInstanceId',v_instance_id,
-      'journeyCode',p_journey_code,'receiptId',v_receipt_id,'receiptDigest',v_receipt_digest,
-      'requestId',p_request_id),v_now);
+      'journeyInstanceVersion',1,'journeyCode',p_journey_code,
+      'rootObjectKind',p_root_object_kind,'rootObjectId',p_root_object_id,
+      'rootObjectVersion',p_root_object_version,'rootObjectDigest',p_root_object_digest,
+      'currentNodeId',p_current_node_id,'currentOwnerBindingDigest',p_current_owner_ref_hmac,
+      'nextDueAt',p_due_at,'receiptId',v_receipt_id,'receiptDigest',v_receipt_digest,
+      'occurredAt',v_now),v_now);
   INSERT INTO ops.journey_instances(
     id,journey_code,root_object_kind,root_object_id,root_object_version,root_object_digest,
     current_object_kind,current_object_id,current_object_version,current_object_digest,
@@ -3703,8 +3855,18 @@ BEGIN
     jsonb_build_object('journeyInstanceId',i.id,'edgeId',p_edge_id,'bindingDigest',v_binding_digest));
   v_outbox_id := ops.enqueue_outbox('JourneyInstance',i.id::text,i.version+1,
     'journey.handoff_requested.v1',jsonb_build_object('journeyInstanceId',i.id,
-      'handoffId',v_handoff_id,'edgeId',p_edge_id,'generation',v_generation,
-      'receiptId',v_receipt_id,'receiptDigest',v_receipt_digest,'requestId',p_request_id),v_now);
+      'journeyInstanceVersion',i.version+1,'journeyCode',i.journey_code,
+      'handoffId',v_handoff_id,'handoffVersion',1,'handoffKind',v_handoff_kind,
+      'edgeId',p_edge_id,'generation',v_generation,
+      'fromOwnerBindingDigest',i.current_owner_ref_hmac,
+      'receiverBindingDigest',v_receiver_ref,'subjectKind',i.current_object_kind,
+      'subjectId',i.current_object_id,'subjectVersion',i.current_object_version,
+      'subjectDigest',v_subject_digest,'ackAuthorityKind','DOMAIN_RECEIPT_HANDLER',
+      'ackAuthorityId','ops.decide_journey_handoff_v1',
+      'hardExpiryAt',GREATEST(i.due_at,v_now+interval '1 hour'),
+      'nextSchedulerAt',GREATEST(i.due_at,v_now+interval '1 hour'),
+      'resultingEscalationState','NOT_DUE','bindingDigest',v_binding_digest,
+      'receiptId',v_receipt_id,'receiptDigest',v_receipt_digest,'occurredAt',v_now),v_now);
   INSERT INTO ops.journey_handoffs(
     id,journey_instance_id,journey_code,edge_id,handoff_kind,generation,from_node_id,to_node_id,
     from_owner_kind,from_owner_function,from_owner_ref_hmac,receiver_kind,receiver_function,
@@ -3790,7 +3952,6 @@ DECLARE
   v_source_use_sha char(64);
   v_audit uuid;
   v_outbox uuid := gen_random_uuid();
-  v_segment_outbox uuid;
   v_now timestamptz := clock_timestamp();
   v_receipt jsonb;
   v_receipt_sha char(64);
@@ -3945,12 +4106,6 @@ BEGIN
     'cases.evidence.manage','SUCCESS',NULL,p_request_id,jsonb_build_object(
       'caseId',v_case.id,'artifactId',v_art.id,'artifactSha256',v_art.artifact_sha256,
       'selectedSegmentSetSha256',v_selected_set_sha,'reasonSha256',v_reason_sha));
-  INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
-  VALUES(v_outbox,'ResearchArtifactPromotion',v_promotion_id::text,v_case.version+1,
-    'research.artifact_promoted.v1',jsonb_build_object('promotionId',v_promotion_id,
-      'caseId',v_case.id,'caseVersion',v_case.version+1,'researchArtifactId',v_art.id,
-      'researchArtifactSha256',v_art.artifact_sha256,'evidenceId',v_evidence_id,
-      'evidenceDigest',v_evidence_digest,'requestId',p_request_id),v_now);
   v_receipt := jsonb_build_object('schemaVersion','promote-research-artifact.receipt.v1',
     'promotionId',v_promotion_id,'caseId',v_case.id,'caseVersion',v_case.version+1,
     'agentRunId',v_art.agent_run_id,'researchArtifactId',v_art.id,
@@ -3964,6 +4119,45 @@ BEGIN
     'idempotencyKeySha256',p_idempotency_key_sha256,'promotedAt',v_now,
     'reasonSha256',v_reason_sha,'requestDigest',p_request_digest);
   v_receipt_sha := encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
+  VALUES(v_outbox,'ResearchArtifactPromotion',v_promotion_id::text,v_case.version+1,
+    'research.artifact_promoted.v1',jsonb_build_object(
+      'promotionId',v_promotion_id,
+      'researchArtifactId',v_art.id,
+      'researchArtifactSha256',v_art.artifact_sha256,
+      'sourceDocumentId',v_source_document_id,
+      'sourceAssetId',v_source_asset_id,
+      'sourceAssetRevision',v_source_asset_revision,
+      'sourceContentSha256',v_source_content,
+      'evidenceId',v_evidence_id,
+      'evidenceVersion',1,
+      'evidenceDigest',v_evidence_digest,
+      'selectedSegmentCount',v_segment_count,
+      'selectedSegmentSetSha256',v_selected_set_sha,
+      'rightsDecisionId',v_rights.id,
+      'rightsDecisionDigest',v_rights.decision_sha256,
+      'reviewerUserId',p_actor,
+      'auditEventId',v_audit,
+      'occurredAt',v_now,
+      'receiptDigest',v_receipt_sha),v_now);
+  -- A promotion is also the transaction owner for the immutable evidence
+  -- segment facts selected by the reviewer.  Emit one canonical event for
+  -- every persisted binding, after the receipt digest is fixed and before
+  -- any promotion lineage row can commit.
+  FOR v_item IN SELECT value FROM jsonb_array_elements(v_bindings) LOOP
+    INSERT INTO ops.outbox(
+      aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at
+    ) VALUES(
+      'EvidenceSegment',v_item->>'evidenceSegmentId',1,
+      'evidence.segment_created.v1',jsonb_build_object(
+        'evidenceSegmentId',v_item->>'evidenceSegmentId',
+        'sourceAssetId',v_source_asset_id,
+        'sourceAssetRevision',v_source_asset_revision,
+        'locatorDigest',v_item->>'locatorSha256',
+        'contentSha256',v_item->>'selectedContentSha256'
+      ),v_now
+    );
+  END LOOP;
   INSERT INTO raw.research_artifact_promotions(
     promotion_id,case_id,expected_case_version,case_version,agent_run_id,
     research_artifact_id,research_asset_id,research_asset_revision,research_artifact_sha256,
@@ -4004,13 +4198,6 @@ BEGIN
     v_rights.excerpt_right,v_rights.redistribution_right,v_rights.commercial_use_right,
     v_rights.public_display_right,v_rights.policy_version,v_rights.policy_sha256,v_now,
     convert_to(v_receipt::text,'UTF8'),encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex'));
-  FOR v_item IN SELECT value FROM jsonb_array_elements(v_bindings) LOOP
-    v_segment_outbox := ops.enqueue_outbox('EvidenceSegment',v_item->>'evidenceSegmentId',
-      v_case.version+1,'evidence.segment_created.v1',jsonb_build_object(
-        'promotionId',v_promotion_id,'evidenceId',v_evidence_id,
-        'evidenceSegmentId',(v_item->>'evidenceSegmentId')::uuid,
-        'ordinal',(v_item->>'ordinal')::integer,'requestId',p_request_id),v_now);
-  END LOOP;
   UPDATE editorial.cases SET version=version+1,updated_at=v_now WHERE id=v_case.id AND version=v_expected;
   IF NOT FOUND THEN RAISE EXCEPTION 'version_conflict' USING ERRCODE='40001'; END IF;
   RETURN v_receipt || jsonb_build_object('receiptSha256',v_receipt_sha,
@@ -4128,13 +4315,22 @@ BEGIN
     'JOURNEY_HANDOFF_DECIDED','JourneyHandoff',h.id::text,'journeys.handoff.decide','SUCCESS',
     p_reason_code,p_request_id,jsonb_build_object('decision',p_decision,'bindingDigest',h.binding_digest,
       'effectDigest',v_effect_digest,'assertionJti',p_assertion_jti));
-  v_outbox := ops.enqueue_outbox('JourneyHandoff',h.id::text,h.version+1,
-    'journey.handoff_decided.v1',jsonb_build_object('handoffId',h.id,'journeyInstanceId',i.id,
-      'handoffVersion',h.version+1,'decision',p_decision,'resultingHandoffState',v_handoff_state,
-      'resultingJourneyState',v_result_state,'effectDigest',v_effect_digest,'requestId',p_request_id),v_now);
   v_receipt_digest := encode(extensions.digest(convert_to(
     v_receipt_id::text||':'||i.id::text||':'||(i.version+1)::text||':'||h.id::text||':'||
       (h.version+1)::text||':'||v_handoff_state||':'||v_effect_digest,'UTF8'),'sha256'),'hex');
+  v_outbox := ops.enqueue_outbox('JourneyHandoff',h.id::text,h.version+1,
+    'journey.handoff_decided.v1',jsonb_build_object('occurredAt',v_now,
+      'journeyInstanceId',i.id,'journeyInstanceVersion',i.version+1,
+      'journeyCode',i.journey_code,'edgeId',h.edge_id,'handoffId',h.id,
+      'handoffVersion',h.version+1,'handoffKind',h.handoff_kind,'generation',h.generation,
+      'decision',p_decision,'resultingHandoffState',v_handoff_state,
+      'resultingJourneyState',v_result_state,'priorEscalationState',i.escalation_state,
+      'resultingEscalationState','RESOLVED','resultingNextDueAt',i.due_at,
+      'currentOwnerBindingDigest',CASE WHEN p_decision='ACKNOWLEDGE' THEN h.receiver_ref_hmac ELSE i.current_owner_ref_hmac END,
+      'nextOwnerBindingDigest',NULL,'effectDigest',v_effect_digest,
+      'replacementHandoffId',NULL,'replacementRequestReceiptId',NULL,
+      'replacementRequestReceiptDigest',NULL,'receiptId',v_receipt_id,
+      'receiptDigest',v_receipt_digest),v_now);
   INSERT INTO ops.journey_transition_receipts(
     id,journey_instance_id,journey_instance_version,handoff_id,handoff_version,edge_id,sequence,
     receipt_kind,prior_receipt_id,prior_receipt_digest,subject_digest,prior_owner_binding_digest,
@@ -4237,12 +4433,19 @@ BEGIN
   END IF;
   v_state := CASE WHEN i.escalation_state='NOT_DUE' THEN 'DUE' ELSE 'ESCALATED' END;
   v_effect := encode(extensions.digest(convert_to(h.id::text||':'||h.version::text||':'||v_state||':'||p_scheduler_run_id::text,'UTF8'),'sha256'),'hex');
+  v_digest := encode(extensions.digest(convert_to(v_receipt_id::text||':'||i.id::text||':'||(i.version+1)::text||':'||h.id::text||':'||(h.version+1)::text||':'||v_effect,'UTF8'),'sha256'),'hex');
   v_audit := ops.append_audit_event('scheduler:journey-handoff:'||h.id::text,'SERVICE',p_scheduler_run_id::text,NULL::uuid,
     'JOURNEY_HANDOFF_ESCALATED','JourneyHandoff',h.id::text,'journeys.handoff.escalate','SUCCESS',NULL,p_scheduler_run_id,
     jsonb_build_object('handoffId',h.id,'priorEscalationState',i.escalation_state,'resultingEscalationState',v_state));
   v_outbox := ops.enqueue_outbox('JourneyHandoff',h.id::text,i.version+1,'journey.handoff_escalated.v1',
-    jsonb_build_object('handoffId',h.id,'journeyInstanceId',i.id,'escalationState',v_state,'requestId',p_scheduler_run_id),v_now);
-  v_digest := encode(extensions.digest(convert_to(v_receipt_id::text||':'||i.id::text||':'||(i.version+1)::text||':'||h.id::text||':'||(h.version+1)::text||':'||v_effect,'UTF8'),'sha256'),'hex');
+    jsonb_build_object(
+      'occurredAt',v_now,'journeyInstanceId',i.id,'journeyInstanceVersion',i.version+1,
+      'handoffId',h.id,'handoffVersion',h.version+1,'handoffKind',h.handoff_kind,
+      'generation',h.generation,'priorEscalationState',i.escalation_state,
+      'resultingEscalationState',v_state,'hardExpiryAt',h.due_at,
+      'priorSchedulerAt',h.due_at,'nextSchedulerAt',h.due_at,
+      'escalationOwnerBindingDigest',h.receiver_ref_hmac,
+      'receiptId',v_receipt_id,'receiptDigest',v_digest),v_now);
   INSERT INTO ops.journey_transition_receipts(id,journey_instance_id,journey_instance_version,handoff_id,handoff_version,edge_id,sequence,receipt_kind,prior_receipt_id,prior_receipt_digest,subject_digest,prior_owner_binding_digest,current_owner_binding_digest,next_owner_binding_digest,prior_instance_state,resulting_instance_state,prior_handoff_state,resulting_handoff_state,escalation_state,prior_due_at,resulting_due_at,effect_digest,audit_event_id,outbox_event_id,occurred_at,receipt_digest)
   VALUES(v_receipt_id,i.id,i.version+1,h.id,h.version+1,h.edge_id,i.version+1,'HANDOFF_ESCALATED',i.last_receipt_id,i.last_receipt_digest,h.subject_digest,i.current_owner_ref_hmac,i.current_owner_ref_hmac,h.receiver_ref_hmac,i.state,i.state,h.state,h.state,v_state,i.due_at,h.due_at,v_effect,v_audit,v_outbox,v_now,v_digest) RETURNING * INTO r;
   UPDATE ops.journey_handoffs SET version=version+1,last_receipt_id=v_receipt_id,last_receipt_digest=v_digest WHERE id=h.id AND version=p_expected_handoff_version;
@@ -4276,9 +4479,18 @@ BEGIN
   END IF;
   IF v_now < h.due_at THEN RETURN ROW('NO_OP','NOT_DUE',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)::ops.journey_scheduler_result_v1; END IF;
   v_effect := encode(extensions.digest(convert_to(h.id::text||':'||h.version::text||':EXPIRED:'||p_scheduler_run_id::text,'UTF8'),'sha256'),'hex');
-  v_audit := ops.append_audit_event('scheduler:journey-handoff:'||h.id::text,'SERVICE',p_scheduler_run_id::text,NULL::uuid,'JOURNEY_HANDOFF_EXPIRED','JourneyHandoff',h.id::text,'journeys.handoff.expire','SUCCESS','HANDOFF_EXPIRED',p_scheduler_run_id,jsonb_build_object('handoffId',h.id));
-  v_outbox := ops.enqueue_outbox('JourneyHandoff',h.id::text,i.version+1,'journey.handoff_expired.v1',jsonb_build_object('handoffId',h.id,'journeyInstanceId',i.id,'requestId',p_scheduler_run_id),v_now);
   v_digest := encode(extensions.digest(convert_to(v_receipt_id::text||':'||i.id::text||':'||(i.version+1)::text||':'||h.id::text||':'||(h.version+1)::text||':'||v_effect,'UTF8'),'sha256'),'hex');
+  v_audit := ops.append_audit_event('scheduler:journey-handoff:'||h.id::text,'SERVICE',p_scheduler_run_id::text,NULL::uuid,'JOURNEY_HANDOFF_EXPIRED','JourneyHandoff',h.id::text,'journeys.handoff.expire','SUCCESS','HANDOFF_EXPIRED',p_scheduler_run_id,jsonb_build_object('handoffId',h.id));
+  v_outbox := ops.enqueue_outbox('JourneyHandoff',h.id::text,i.version+1,'journey.handoff_expired.v1',
+    jsonb_build_object(
+      'occurredAt',v_now,'journeyInstanceId',i.id,'journeyInstanceVersion',i.version+1,
+      'handoffId',h.id,'handoffVersion',h.version+1,'handoffKind',h.handoff_kind,
+      'generation',h.generation,'hardExpiryAt',h.due_at,
+      'priorEscalationState',i.escalation_state,'resultingEscalationState','RESOLVED',
+      'resultingNextDueAt',i.due_at,'resultingJourneyState','ACTIVE',
+      'replacementHandoffId',NULL,'replacementRequestReceiptId',NULL,
+      'replacementRequestReceiptDigest',NULL,'receiptId',v_receipt_id,
+      'receiptDigest',v_digest),v_now);
   INSERT INTO ops.journey_transition_receipts(id,journey_instance_id,journey_instance_version,handoff_id,handoff_version,edge_id,sequence,receipt_kind,prior_receipt_id,prior_receipt_digest,subject_digest,prior_owner_binding_digest,current_owner_binding_digest,next_owner_binding_digest,prior_instance_state,resulting_instance_state,prior_handoff_state,resulting_handoff_state,escalation_state,prior_due_at,resulting_due_at,effect_digest,audit_event_id,outbox_event_id,occurred_at,receipt_digest)
   VALUES(v_receipt_id,i.id,i.version+1,h.id,h.version+1,h.edge_id,i.version+1,'HANDOFF_EXPIRED',i.last_receipt_id,i.last_receipt_digest,h.subject_digest,i.current_owner_ref_hmac,i.current_owner_ref_hmac,NULL,i.state,'ACTIVE',h.state,'EXPIRED','RESOLVED',i.due_at,i.due_at,v_effect,v_audit,v_outbox,v_now,v_digest) RETURNING * INTO r;
   UPDATE ops.journey_handoffs SET state='EXPIRED',version=version+1,decided_at=v_now,decision_actor_binding_hmac=encode(extensions.digest(convert_to(p_scheduler_run_id::text,'UTF8'),'sha256'),'hex'),decision_reason_code='HANDOFF_EXPIRED',last_receipt_id=v_receipt_id,last_receipt_digest=v_digest WHERE id=h.id AND version=p_expected_handoff_version;
@@ -4301,7 +4513,7 @@ AS $$
 DECLARE
   i ops.journey_instances; h ops.journey_handoffs; r ops.journey_transition_receipts;
   v_now timestamptz := clock_timestamp(); v_receipt_id uuid := gen_random_uuid(); v_cancel_id uuid := gen_random_uuid();
-  v_audit uuid; v_outbox uuid; v_cancel_outbox uuid; v_digest char(64); v_cancel_digest char(64); v_hash char(64); v_state text; v_to_node text;
+  v_audit uuid; v_outbox uuid; v_cancel_outbox uuid; v_digest char(64); v_cancel_digest char(64); v_hash char(64); v_state text; v_to_node text; v_outcome_class text;
   v_existing_resource text; v_existing_hash char(64);
 BEGIN
   IF current_setting('transaction_isolation') <> 'serializable' THEN RAISE EXCEPTION 'JOURNEY_SERIALIZABLE_REQUIRED' USING ERRCODE='25001'; END IF;
@@ -4471,11 +4683,10 @@ BEGIN
   IF h.id IS NOT NULL THEN
     v_cancel_digest := encode(extensions.digest(convert_to(v_cancel_id::text||':'||h.id::text||':CANCELLED:'||p_effect_digest,'UTF8'),'sha256'),'hex');
     v_audit := ops.append_audit_event('journey:'||i.id::text,'SERVICE',COALESCE(p_actor_assertion_jti::text,current_user),NULL::uuid,'JOURNEY_HANDOFF_CANCELLED','JourneyHandoff',h.id::text,'journeys.outcome','SUCCESS','SOURCE_CANCELLED',p_request_id,jsonb_build_object('outcomeCode',p_outcome_code));
-    v_cancel_outbox := ops.enqueue_outbox('JourneyHandoff',h.id::text,i.version+1,
-      'journey.handoff_cancelled.v1',jsonb_build_object(
-        'handoffId',h.id,'journeyInstanceId',i.id,'edgeId',h.edge_id,
-        'outcomeCode',p_outcome_code,'requestId',p_request_id,
-        'receiptId',v_cancel_id,'receiptDigest',v_cancel_digest),v_now);
+    -- HANDOFF_CANCELLED is an internal compound-transition receipt.  The
+    -- authority declares no standalone event for it; only the following
+    -- OUTCOME_RECORDED step owns an outbox event.
+    v_cancel_outbox := NULL;
     INSERT INTO ops.journey_transition_receipts(id,journey_instance_id,journey_instance_version,handoff_id,handoff_version,edge_id,sequence,receipt_kind,prior_receipt_id,prior_receipt_digest,subject_digest,prior_owner_binding_digest,current_owner_binding_digest,next_owner_binding_digest,prior_instance_state,resulting_instance_state,prior_handoff_state,resulting_handoff_state,escalation_state,prior_due_at,resulting_due_at,effect_digest,audit_event_id,outbox_event_id,occurred_at,receipt_digest)
     VALUES(v_cancel_id,i.id,i.version+1,h.id,h.version+1,h.edge_id,i.version+1,'HANDOFF_CANCELLED',i.last_receipt_id,i.last_receipt_digest,h.subject_digest,i.current_owner_ref_hmac,i.current_owner_ref_hmac,NULL,i.state,'ACTIVE',h.state,'CANCELLED','RESOLVED',i.due_at,i.due_at,p_effect_digest,v_audit,v_cancel_outbox,v_now,v_cancel_digest) RETURNING * INTO r;
     UPDATE ops.journey_handoffs SET state='CANCELLED',version=version+1,decided_at=v_now,decision_actor_binding_hmac=encode(extensions.digest(convert_to(COALESCE(p_actor_assertion_jti::text,current_user),'UTF8'),'sha256'),'hex'),decision_reason_code='SOURCE_CANCELLED',last_receipt_id=v_cancel_id,last_receipt_digest=v_cancel_digest WHERE id=h.id AND version=h.version;
@@ -4483,8 +4694,26 @@ BEGIN
     i.version := i.version+1; i.last_receipt_id := v_cancel_id; i.last_receipt_digest := v_cancel_digest; i.last_receipt_sequence := i.last_receipt_sequence+1; i.state := 'ACTIVE'; i.active_handoff_id := NULL;
   END IF;
   v_receipt_id := gen_random_uuid(); v_audit := ops.append_audit_event('journey:'||i.id::text,'SERVICE',COALESCE(p_actor_assertion_jti::text,current_user),NULL::uuid,'JOURNEY_OUTCOME_RECORDED','JourneyInstance',i.id::text,'journeys.outcome','SUCCESS',p_outcome_code,p_request_id,jsonb_build_object('edgeId',p_edge_id,'effectDigest',p_effect_digest));
-  v_outbox := ops.enqueue_outbox('JourneyInstance',i.id::text,i.version+1,'journey.outcome_recorded.v1',jsonb_build_object('journeyInstanceId',i.id,'outcomeCode',p_outcome_code,'requestId',p_request_id),v_now);
   v_digest := encode(extensions.digest(convert_to(v_receipt_id::text||':'||i.id::text||':'||(i.version+1)::text||':'||p_effect_digest,'UTF8'),'sha256'),'hex');
+  v_outcome_class := CASE
+    WHEN v_state='RECONCILIATION_REQUIRED' OR v_to_node LIKE '%RECONCILIATION_REQUIRED%' THEN 'RECONCILIATION_REQUIRED'
+    WHEN v_state IN ('ACTIVE','BLOCKED') THEN 'RECOVERABLE'
+    WHEN upper(p_outcome_code) IN ('COMPLETED','SUCCESS','SUCCEEDED','OUTCOME_RECORDED',
+      'SUCCEEDED_SETTLED','RECONCILED_SUCCEEDED','VALIDATED_WITH_ELIGIBLE_ARTIFACT',
+      'NON_COMMUNICATION_SUCCEEDED','DELIVERED','READ','ACTION_SUCCEEDED',
+      'DELIVERY_DELIVERED_OR_READ','QUALIFIED','CONFIGURED','DATA_READY','FIRST_PAID_VALUE',
+      'ACTIVATED','RETAINED','READY') THEN 'DURABLE_SUCCESS'
+    ELSE 'NON_VALUE_TERMINAL'
+  END;
+  v_outbox := ops.enqueue_outbox('JourneyInstance',i.id::text,i.version+1,
+    'journey.outcome_recorded.v1',jsonb_build_object(
+      'occurredAt',v_now,'journeyInstanceId',i.id,'journeyInstanceVersion',i.version+1,
+      'journeyCode',i.journey_code,'edgeId',p_edge_id,'outcomeCode',p_outcome_code,
+      'outcomeClass',v_outcome_class,'subjectKind',p_subject_kind,
+      'subjectId',i.current_object_id,'subjectVersion',p_subject_version,
+      'subjectDigest',p_subject_digest,'effectDigest',p_effect_digest,
+      'resultingJourneyState',v_state,'resultingNextDueAt',i.due_at,
+      'receiptId',v_receipt_id,'receiptDigest',v_digest),v_now);
   INSERT INTO ops.journey_transition_receipts(id,journey_instance_id,journey_instance_version,edge_id,sequence,receipt_kind,prior_receipt_id,prior_receipt_digest,subject_digest,prior_owner_binding_digest,current_owner_binding_digest,next_owner_binding_digest,prior_instance_state,resulting_instance_state,prior_handoff_state,resulting_handoff_state,escalation_state,prior_due_at,resulting_due_at,effect_digest,audit_event_id,outbox_event_id,occurred_at,receipt_digest)
   VALUES(v_receipt_id,i.id,i.version+1,p_edge_id,i.version+1,'OUTCOME_RECORDED',i.last_receipt_id,i.last_receipt_digest,p_subject_digest,i.current_owner_ref_hmac,i.current_owner_ref_hmac,NULL,i.state,v_state,NULL,NULL,'RESOLVED',i.due_at,i.due_at,p_effect_digest,v_audit,v_outbox,v_now,v_digest) RETURNING * INTO r;
   UPDATE ops.journey_instances SET state=v_state,version=version+1,current_object_kind=p_subject_kind,current_object_version=p_subject_version,current_object_digest=p_subject_digest,current_node_id=COALESCE(v_to_node,COALESCE(h.to_node_id,i.current_node_id)),last_receipt_id=v_receipt_id,last_receipt_sequence=last_receipt_sequence+1,last_receipt_digest=v_digest,terminal_at=CASE WHEN v_state IN ('COMPLETED','CANCELLED') THEN v_now ELSE NULL END,updated_at=v_now WHERE id=i.id AND version=i.version;
@@ -4774,7 +5003,20 @@ BEGIN
     'activationReceiptDigest',d.activation_receipt_digest,'budgetReservationId',d.budget_reservation_id,
     'createdAt',d.queued_at,'updatedAt',v_now);
   v_audit := ops.append_audit_event('control:communication:'||d.id::text,'USER',p_actor::text,p_session_id,'COMMUNICATION_DELIVERY_RECONCILED','OutboundDelivery',d.id::text,'communications.operate','SUCCESS',v_reason,p_request_id,v_body);
-  v_event := jsonb_build_object('operationId','reconcileCommunicationDelivery','deliveryId',d.id,'deliveryVersion',d.version+1,'deliveryReceiptId',v_receipt_id,'deliveryReceiptDigest',v_receipt_digest,'state',v_result,'requestId',p_request_id);
+  v_event := jsonb_build_object(
+    'deliveryId',d.id,
+    'deliveryVersion',d.version+1,
+    'attemptId',(SELECT id FROM ops.outbound_delivery_attempts
+      WHERE delivery_id=d.id ORDER BY attempt_ordinal DESC LIMIT 1),
+    'deliveryReceiptId',v_receipt_id,
+    'deliveryReceiptSequence',v_receipt_sequence,
+    'channel',d.channel,
+    'priorState',d.state,
+    'state',v_result,
+    'providerEvidenceDigest',v_evidence_digest,
+    'receiptDigest',v_receipt_digest,
+    'receiptApplied',true,
+    'observedAt',v_now);
   INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at) VALUES(v_outbox,'OutboundDelivery',d.id::text,d.version+1,'communication.delivery_receipt_recorded.v1',v_event,v_now);
   INSERT INTO ops.communication_reconciliation_decisions(id,delivery_id,decision_sequence,expected_delivery_version,prior_state,resolution,resulting_state,evidence_kind,evidence,evidence_digest,safe_retry_kind,safe_retry_proof,safe_retry_proof_digest,safe_retry_pre_egress_receipt_id,safe_retry_pre_egress_receipt_sequence,safe_retry_pre_egress_receipt_digest,safe_retry_pre_egress_evidence_kind,safe_retry_pre_egress_applied,callback_event_ids,attempt_ids,actor_id,capability,assurance,assurance_receipt_digest,reason_code,reason,idempotency_key_hash,request_digest,request_id,trace_id,decision_digest,audit_event_id,outbox_event_id,receipt_digest,decided_at)
   VALUES(v_decision_id,d.id,v_decision_sequence,d.version,d.state,v_resolution,v_result,v_evidence_kind,v_evidence,v_evidence_digest,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN COALESCE(p_payload->>'safeRetryKind','NO_PROVIDER_ATTEMPT') END,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN p_payload->'safeRetryProof' END,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN encode(extensions.digest(convert_to((p_payload->'safeRetryProof')::text,'UTF8'),'sha256'),'hex') END,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN r.id END,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN r.receipt_sequence END,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN r.receipt_digest END,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN r.evidence_kind END,CASE WHEN v_resolution='NOT_TRANSMITTED' THEN r.applied END,v_callback_ids,v_attempt_ids,p_actor,'communications.operate','STEP_UP',encode(extensions.digest(convert_to('STEP_UP:'||p_actor::text,'UTF8'),'sha256'),'hex'),v_reason_code,v_reason,p_idempotency_key_hash,p_request_digest,p_request_id,v_trace,v_decision_digest,v_audit,v_outbox,v_receipt_digest,v_now);
@@ -4837,7 +5079,23 @@ BEGIN
     'activationReceiptDigest',d.activation_receipt_digest,'budgetReservationId',d.budget_reservation_id,
     'createdAt',d.queued_at,'updatedAt',v_now);
   v_audit := ops.append_audit_event('control:communication:'||d.id::text,'USER',p_actor::text,p_session_id,'COMMUNICATION_DELIVERY_CANCELLED','OutboundDelivery',d.id::text,'communications.operate','SUCCESS',COALESCE(NULLIF(p_payload->>'reason',''),'delivery cancellation requested'),p_request_id,v_body);
-  INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at) VALUES(v_outbox,'OutboundDelivery',d.id::text,d.version+1,'communication.delivery_receipt_recorded.v1',v_body,v_now);
+  INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
+  VALUES(v_outbox,'OutboundDelivery',d.id::text,d.version+1,
+    'communication.delivery_receipt_recorded.v1',jsonb_build_object(
+      'deliveryId',d.id,
+      'deliveryVersion',d.version+1,
+      'attemptId',(SELECT id FROM ops.outbound_delivery_attempts
+        WHERE delivery_id=d.id ORDER BY attempt_ordinal DESC LIMIT 1),
+      'deliveryReceiptId',v_receipt_id,
+      'deliveryReceiptSequence',v_seq,
+      'channel',d.channel,
+      'priorState',d.state,
+      'state',v_result,
+      'providerEvidenceDigest',encode(extensions.digest(convert_to(
+        'cancellation:'||p_request_digest,'UTF8'),'sha256'),'hex'),
+      'receiptDigest',v_digest,
+      'receiptApplied',true,
+      'observedAt',v_now),v_now);
   UPDATE ops.outbound_deliveries SET state=v_result,version=version+1,event_sequence=event_sequence+1,receipt_sequence=v_seq,cancel_requested_at=v_now,cancel_reason_code=COALESCE(NULLIF(p_payload->>'reasonCode',''),'USER_REQUEST'),cancellation_generation=cancellation_generation+1,updated_at=v_now,terminal_at=CASE WHEN v_result='CANCELLED' THEN v_now ELSE terminal_at END WHERE id=d.id AND version=v_expected;
   IF NOT FOUND THEN RAISE EXCEPTION 'delivery_version_conflict' USING ERRCODE='40001'; END IF;
   INSERT INTO ops.outbound_delivery_receipts(id,delivery_id,receipt_sequence,event_aggregate_version,prior_delivery_version,delivery_version,source_kind,observation_key_digest,projection_disposition,evidence_kind,evidence_rank,prior_state,asserted_state,resulting_state,prior_proof_level,resulting_proof_level,applied,provider_evidence_digest,rendering_digest,endpoint_id,endpoint_version,endpoint_snapshot_digest,endpoint_identity_hash,provider_preflight_receipt_id,provider_config_id,provider_config_version,provider_configuration_digest,provider_preflight_receipt_digest,provider_identity_hash,authorization_snapshot_digest,activation_receipt_digest,budget_reservation_id,observed_at,actor_type,actor_id,request_id,trace_id,previous_receipt_digest,receipt_digest,audit_event_id,outbox_event_id)
@@ -5020,10 +5278,13 @@ BEGIN
   v_outbox := ops.enqueue_outbox(
     'action_execution',v_execution_id::text,v_effect.state_version,
     'action.execution_cancel_requested.v1',
-    jsonb_build_object('executionId',v_execution_id,'generation',v_effect.current_generation,
-      'aggregateState',v_new_effect_state,'aggregateStateVersion',v_effect.state_version,
-      'attemptState',v_new_attempt_state,'cancellationGeneration',v_effect.cancellation_generation,
-      'receiptDigest',v_receipt_digest,'requestId',p_request_id,'reasonCode',v_reason_code),v_now);
+    jsonb_build_object(
+      'executionId',v_execution_id,
+      'generation',v_effect.current_generation,
+      'stateVersion',v_effect.state_version,
+      'cancellationGeneration',v_effect.cancellation_generation,
+      'reasonCode',v_reason_code,
+      'receiptDigest',v_receipt_digest),v_now);
   v_audit := ops.append_audit_event(
     'control:action-execution:'||v_execution_id::text,'USER',p_actor::text,NULL::uuid,
     'ACTION_EXECUTION_CANCEL_REQUESTED','ActionExecution',v_execution_id::text,
@@ -5218,10 +5479,14 @@ BEGIN
     'occurredAt',v_now);
   v_receipt_digest:=encode(extensions.digest(convert_to(v_receipt_payload::text,'UTF8'),'sha256'),'hex');
   v_outbox:=ops.enqueue_outbox('action_execution',v_execution_id::text,v_effect.state_version,
-    'action.execution_retry_requested.v1',jsonb_build_object('executionId',v_execution_id,
-      'generation',v_next_generation,'retryOfGeneration',v_expected_generation,
-      'aggregateState','QUEUED','aggregateStateVersion',v_effect.state_version,
-      'receiptDigest',v_receipt_digest,'requestId',p_request_id),v_now);
+    'action.execution_retry_requested.v1',jsonb_build_object(
+      'executionId',v_execution_id,
+      'priorGeneration',v_expected_generation,
+      'generation',v_next_generation,
+      'stateVersion',v_effect.state_version,
+      'safeRetryProofDigest',v_proof_digest,
+      'reasonCode',v_reason_code,
+      'receiptDigest',v_receipt_digest),v_now);
   v_audit:=ops.append_audit_event('control:action-execution:'||v_execution_id::text,
     'USER',p_actor::text,NULL::uuid,'ACTION_EXECUTION_RETRY_REQUESTED','ActionExecution',
     v_execution_id::text,'actions.operate','SUCCESS',v_reason,p_request_id,
@@ -5425,7 +5690,17 @@ BEGIN
   END IF;
   v_digest:=encode(extensions.digest(convert_to(v_decision_id::text||':'||a.id::text||':'||(v_seq+1)::text||':'||p_request_digest,'UTF8'),'sha256'),'hex');
   v_audit:=ops.append_audit_event('control:appeal:'||a.id::text,'USER',p_actor_id::text,NULL::uuid,'command.transitionResponseAppeal','ResponseAppeal',a.id::text,'responses.review','SUCCESS',v_reason,p_request_id,jsonb_build_object('transition',v_kind,'decisionId',v_decision_id));
-  v_outbox:=ops.enqueue_outbox('response_appeal',a.id::text,v_seq+1,'response.appeal_decision_recorded.v1',jsonb_build_object('appealId',a.id,'decisionId',v_decision_id,'decisionSequence',v_seq+1,'transition',v_kind,'state',v_state,'requestId',p_request_id),v_now);
+  v_outbox:=ops.enqueue_outbox(
+    'response_appeal',a.id::text,v_seq+1,'response.appeal_decision_recorded.v1',
+    jsonb_build_object(
+      'appealId',a.id,
+      'decisionSequence',v_seq+1,
+      'priorState',v_prior,
+      'state',v_state,
+      'decisionKind',v_kind,
+      'evidenceSetDigest',encode(extensions.digest(convert_to(v_evidence::text,'UTF8'),'sha256'),'hex'),
+      'receiptDigest',v_digest),
+    v_now);
   INSERT INTO intake.appeal_decisions(id,appeal_id,decision_sequence,expected_prior_sequence,prior_state,state,decision_kind,reason_code,reason_ciphertext,reason_sha256,encryption_key_id,evidence_receipt_ids,evidence_set_digest,information_task_id,information_task_digest,actor_id,capability,assurance,idempotency_key_hash,request_digest,decision_digest,audit_event_id,outbox_event_id,receipt_digest)
   VALUES(v_decision_id,a.id,v_seq+1,v_seq,v_prior,v_state,v_kind,COALESCE(NULLIF(p_payload->>'reasonCode',''),'CONTROL_COMMAND'),convert_to(v_reason,'UTF8'),v_reason_digest,'control-v1',ARRAY(SELECT value::uuid FROM jsonb_array_elements_text(v_evidence)),encode(extensions.digest(convert_to(v_evidence::text,'UTF8'),'sha256'),'hex'),v_task_id,v_task_digest,p_actor_id,'responses.review','STEP_UP',p_idempotency_key,p_request_digest,v_digest,v_audit,v_outbox,v_digest);
   PERFORM set_config('gurine.owner_transition','1',true);
@@ -5468,7 +5743,18 @@ BEGIN
   SELECT COALESCE(max(decision_sequence),0)+1 INTO v_seq FROM editorial.response_extension_decisions WHERE response_request_id=e.response_request_id;
   v_digest:=encode(extensions.digest(convert_to(v_id::text||':'||e.id::text||':'||v_seq::text||':'||p_request_digest,'UTF8'),'sha256'),'hex');
   v_audit:=ops.append_audit_event('control:extension:'||e.id::text,'USER',p_actor_id::text,NULL::uuid,'command.decideResponseExtension','ResponseExtension',e.id::text,'responses.policy.manage','SUCCESS',v_reason,p_request_id,jsonb_build_object('decision',v_decision));
-  v_outbox:=ops.enqueue_outbox('response_extension',e.id::text,v_seq,'response.extension_decided.v1',jsonb_build_object('extensionRequestId',e.id,'decision',v_decision,'newDueAt',v_new_due,'requestId',p_request_id),v_now);
+  v_outbox:=ops.enqueue_outbox(
+    'response_extension',e.id::text,v_seq,'response.extension_decided.v1',
+    jsonb_build_object(
+      'extensionRequestId',e.id,
+      'responseRequestId',e.response_request_id,
+      'priorDueAt',v_prior_due,
+      'decision',v_decision,
+      'newDueAt',v_new_due,
+      'calendarVersionId',cal.id,
+      'decisionDigest',v_digest,
+      'receiptDigest',v_digest),
+    v_now);
   INSERT INTO editorial.response_extension_decisions(id,extension_request_id,extension_request_version,response_request_id,response_request_version,clock_decision_id,decision_sequence,decision,requested_due_at,prior_effective_due_at,new_due_at,calendar_version_id,calendar_digest,reason_code,reason,actor_id,capability,assurance,decision_digest,idempotency_key_hash,request_digest,audit_event_id,outbox_event_id,receipt_digest)
   VALUES(v_id,e.id,e.version,e.response_request_id,c.response_request_version,c.id,v_seq,v_decision,e.requested_due_at,v_prior_due,v_new_due,cal.id,cal.calendar_digest,COALESCE(NULLIF(p_payload->>'reasonCode',''),'CONTROL_COMMAND'),v_reason,p_actor_id,'responses.policy.manage','STEP_UP',v_digest,p_idempotency_key,p_request_digest,v_audit,v_outbox,v_digest);
   UPDATE intake.response_extension_requests SET status=CASE WHEN v_decision='APPROVE' THEN 'APPROVED' ELSE 'REJECTED' END,version=version+1,decided_at=v_now,updated_at=v_now WHERE id=e.id;
@@ -5508,7 +5794,18 @@ BEGIN
   END IF;
   v_digest:=encode(extensions.digest(convert_to(v_id::text||':'||r.id::text||':'||(v_ver+1)::text||':'||p_request_digest,'UTF8'),'sha256'),'hex');
   v_audit:=ops.append_audit_event('control:retention:'||r.id::text,'USER',p_actor_id::text,NULL::uuid,'command.transitionRetentionRequest','RetentionRequest',r.id::text,'privacy.requests.manage','SUCCESS',v_reason,p_request_id,jsonb_build_object('transition',v_kind));
-  v_outbox:=ops.enqueue_outbox('privacy_request',r.id::text,v_ver+1,'privacy.request_decision_recorded.v1',jsonb_build_object('retentionRequestId',r.id,'decisionId',v_id,'transition',v_kind,'state',v_state,'requestId',p_request_id),v_now);
+  v_outbox:=ops.enqueue_outbox(
+    'privacy_request',r.id::text,v_ver+1,'privacy.request_decision_recorded.v1',
+    jsonb_build_object(
+      'retentionRequestId',r.id,
+      'decisionVersion',v_ver+1,
+      'priorState',COALESCE(prior.state,'RECEIVED'),
+      'state',v_state,
+      'inventorySnapshotDigest',v_inv,
+      'holdCoverageDigest',v_hold,
+      'decisionDigest',v_digest,
+      'receiptDigest',v_digest),
+    v_now);
   INSERT INTO ops.retention_request_decisions(id,retention_request_id,request_type,decision_version,prior_decision_id,prior_state,state,transition_kind,inventory_snapshot_digest,hold_coverage_digest,restore_suppression_required,policy_digest,reason_code,reason_encrypted,reason_digest,decided_by_user_id,step_up_authorization_id,step_up_authorization_receipt_digest,step_up_issued_at,step_up_expires_at,action_digest,idempotency_key_sha256,actor_assertion_jti,request_id,audit_event_id,decision_digest,receipt_digest)
   VALUES(v_id,r.id,r.request_type,v_ver+1,prior.id,COALESCE(prior.state,'RECEIVED'),v_state,v_kind,v_inv,v_hold,r.request_type IN ('CORRECTION','DELETION','RESTRICTION'),v_policy,COALESCE(NULLIF(p_payload->>'reasonCode',''),'CONTROL_COMMAND'),convert_to(v_reason,'UTF8'),encode(extensions.digest(convert_to(v_reason,'UTF8'),'sha256'),'hex'),p_actor_id,gen_random_uuid(),encode(extensions.digest(convert_to(p_request_id::text,'UTF8'),'sha256'),'hex'),v_now,v_now+interval '15 minutes',v_digest,p_idempotency_key,gen_random_uuid(),p_request_id,v_audit,v_digest,v_digest);
   PERFORM set_config('gurine.owner_transition','1',true);
@@ -5553,7 +5850,17 @@ BEGIN
     VALUES(c.id,p_actor_id,'LEGAL_HOLD',h.id::text,h.version,v_orig,'releaseLegalHold','LEGAL_REVIEWER','{}'::uuid[],v_conflict_digest,'{}'::jsonb,v_conflict_digest,v_conflict_digest,v_conflict_digest,v_conflict_digest,v_conflict_digest,v_conflict_digest,v_conflict_digest,'CLEAR','{}'::text[],0,v_now,v_now+interval '1 hour','HUMAN',p_actor_id::text,v_conflict_digest,v_conflict_digest) RETURNING * INTO c;
   END IF;
   v_digest:=encode(extensions.digest(convert_to(v_id::text||':'||h.id::text||':'||v_seq::text||':'||p_request_digest,'UTF8'),'sha256'),'hex');
-  v_outbox:=ops.enqueue_outbox('legal_hold',h.id::text,v_seq,'legal.hold_released.v1',jsonb_build_object('holdId',h.id,'releaseId',v_id,'releaseSequence',v_seq,'requestId',p_request_id),v_now);
+  v_outbox:=ops.enqueue_outbox('legal_hold',h.id::text,v_seq,'legal.hold_released.v1',
+    jsonb_build_object(
+      'holdId',h.id,
+      'releaseSequence',v_seq,
+      'releasedScopeAtoms',to_jsonb(v_scope),
+      'affectedSetDigest',encode(extensions.digest(convert_to(v_affected::text,'UTF8'),'sha256'),'hex'),
+      'priorCoverageDigest',v_orig,
+      'resultingCoverageDigest',v_digest,
+      'authorityReferenceDigest',encode(extensions.digest(convert_to(
+        COALESCE(p_payload->>'releaseAuthorityReference','control-command'),'UTF8'),'sha256'),'hex'),
+      'receiptDigest',v_digest),v_now);
   INSERT INTO editorial.legal_hold_releases(id,hold_id,hold_version,original_hold_digest,target_anchor_id,target_anchor_digest,release_context_kind,release_sequence,case_id,review_snapshot_id,expected_case_version,released_scope_atoms,affected_ids,affected_set_digest,prior_coverage_digest,resulting_coverage_digest,release_authority_reference,authority_reference_digest,reason_code,reason,released_by_user_id,conflict_snapshot_id,conflict_snapshot_digest,conflict_target_id,conflict_target_version,conflict_target_digest,conflict_valid_until,approval_receipt_digest,step_up_authorization_id,step_up_authorization_receipt_digest,step_up_issued_at,step_up_expires_at,action_digest,idempotency_key_sha256,actor_assertion_jti,request_id,audit_event_id,release_digest,receipt_digest)
   VALUES(v_id,h.id,h.version,v_orig,a.id,a.anchor_digest,CASE WHEN h.case_id IS NOT NULL THEN 'CASE_GOVERNED' ELSE 'NON_CASE_GOVERNED' END,v_seq,CASE WHEN h.case_id IS NOT NULL THEN h.case_id END,CASE WHEN h.case_id IS NOT NULL THEN h.review_snapshot_id END,CASE WHEN h.case_id IS NOT NULL THEN COALESCE((p_payload->>'expectedCaseVersion')::bigint,1) END,v_scope,v_affected,encode(extensions.digest(convert_to(v_affected::text,'UTF8'),'sha256'),'hex'),v_orig,v_digest,COALESCE(NULLIF(p_payload->>'releaseAuthorityReference',''),'control-command'),encode(extensions.digest(convert_to(COALESCE(p_payload->>'releaseAuthorityReference','control-command'),'UTF8'),'sha256'),'hex'),COALESCE(NULLIF(p_payload->>'reasonCode',''),'OTHER'),COALESCE(NULLIF(p_payload->>'reason',''),'control command'),p_actor_id,c.id,c.snapshot_sha256,h.id::text,h.version,v_orig,c.valid_until,v_digest,gen_random_uuid(),v_digest,v_now,v_now+interval '15 minutes',v_digest,p_idempotency_key,gen_random_uuid(),p_request_id,v_audit,v_digest,v_digest);
   UPDATE editorial.legal_holds SET active=false,released_by=p_actor_id,released_at=v_now,version=version+1 WHERE id=h.id;
@@ -5782,8 +6089,16 @@ DECLARE
   v_proposal uuid; v_action_kind text; v_target_type text; v_target_id text;
   v_target_version bigint; v_assignment_version bigint; v_result_state text;
   v_content_digest char(64); v_approval_digest char(64); v_expires_at timestamptz;
-  v_reason text; v_receipt_body jsonb;
+  v_reason text; v_reason_code text; v_receipt_body jsonb; v_event_payload jsonb;
+  v_cancelled_assignment_ids uuid[]; v_cancelled_assignment_set_digest char(64);
   v_decision_id uuid; v_original_decision ops.action_decisions%ROWTYPE;
+  v_assignment uuid; v_original_assignment ops.action_review_assignments%ROWTYPE;
+  v_execution_effect ops.in_flight_effects%ROWTYPE;
+  v_execution_attempt ops.execution_attempts%ROWTYPE;
+  v_execution_cancel jsonb;
+  v_next_assignment_id uuid; v_next_assignment_generation bigint;
+  v_next_assignment_state text; v_next_reviewer uuid;
+  v_exclusion_digest char(64); v_assignment_digest char(64);
   v_decision_body jsonb;
   v_incident ops.incident_events;
   v_conflict editorial.conflict_declarations;
@@ -5843,20 +6158,50 @@ BEGIN
     THEN
       RAISE EXCEPTION 'action_proposal_stale' USING ERRCODE='40001';
     END IF;
+    SELECT COALESCE(array_agg(a.id ORDER BY a.id),'{}'::uuid[])
+      INTO v_cancelled_assignment_ids
+      FROM (
+        SELECT id FROM ops.action_review_assignments
+         WHERE proposal_id=v_proposal AND state IN ('ASSIGNED','IN_PROGRESS')
+         ORDER BY id FOR UPDATE
+      ) a;
+    IF cardinality(v_cancelled_assignment_ids)>16 THEN
+      RAISE EXCEPTION 'action_proposal_assignment_set_invalid' USING ERRCODE='22023';
+    END IF;
+    v_cancelled_assignment_set_digest := encode(extensions.digest(
+      convert_to(to_jsonb(v_cancelled_assignment_ids)::text,'UTF8'),'sha256'),'hex');
     v_reason := COALESCE(NULLIF(p_payload->>'reason',''),'proposal withdrawn');
+    v_reason_code := COALESCE(NULLIF(p_payload->>'reasonCode',''),'OTHER');
+    IF v_reason_code NOT IN ('OBJECTIVE_CHANGED','SOURCE_INVALIDATED','DUPLICATE','CREATED_IN_ERROR','OTHER') THEN
+      RAISE EXCEPTION 'invalid_parameter' USING ERRCODE='22023';
+    END IF;
     v_reason_digest := encode(extensions.digest(convert_to(v_reason,'UTF8'),'sha256'),'hex');
     v_receipt_body := jsonb_build_object(
       'proposalId',v_proposal,'proposalVersion',v_version,'state','WITHDRAWN',
       'actionKind',v_action_kind,'contentDigest',v_content_digest,
       'approvalDigest',COALESCE(v_approval_digest,v_content_digest),
       'targetType',v_target_type,'targetId',v_target_id,'targetVersion',v_target_version,
-      'expiresAt',v_expires_at,'reasonCode',COALESCE(p_payload->>'reasonCode','OTHER'),
+      'expiresAt',v_expires_at,'reasonCode',v_reason_code,
       'reason',v_reason,'acceptedAt',v_now);
     v_receipt := encode(extensions.digest(convert_to(v_receipt_body::text,'UTF8'),'sha256'),'hex');
     v_audit := ops.append_audit_event('control:action:'||v_proposal::text,'USER',p_actor_id::text,p_session_id,
       'ACTION_PROPOSAL_WITHDRAWN','ActionProposal',v_proposal::text,'actions.propose','SUCCESS',v_reason,p_request_id,v_receipt_body);
+    v_event_payload := jsonb_build_object(
+      'proposalId',v_proposal,
+      'proposalVersion',v_version,
+      'priorState',v_result_state,
+      'state','WITHDRAWN',
+      'contentDigest',v_content_digest,
+      'withdrawnByActorId',p_actor_id,
+      'cancelledAssignmentIds',to_jsonb(v_cancelled_assignment_ids),
+      'cancelledAssignmentSetDigest',v_cancelled_assignment_set_digest,
+      'reasonCode',v_reason_code,
+      'reasonDigest',v_reason_digest,
+      'auditEventId',v_audit,
+      'occurredAt',v_now,
+      'receiptDigest',v_receipt);
     v_outbox := ops.enqueue_outbox('ActionProposal',v_proposal::text,v_version,
-      'action.proposal_withdrawn.v1',v_receipt_body,v_now);
+      'action.proposal_withdrawn.v1',v_event_payload,v_now);
     UPDATE ops.action_proposal_versions
        SET state='WITHDRAWN',state_version=state_version+1,terminal_at=v_now,
            terminal_reason_code='WITHDRAWN',terminal_receipt_digest=v_receipt,updated_at=v_now
@@ -5887,35 +6232,93 @@ BEGIN
     IF v_proposal IS NULL OR v_decision_id IS NULL THEN
       RAISE EXCEPTION 'invalid_parameter' USING ERRCODE='22023';
     END IF;
+    SELECT p.action_kind,p.target_type,p.target_id,p.target_version,p.current_version,
+           v.state,v.state_version,v.content_digest,v.approval_digest,v.expires_at
+      INTO v_action_kind,v_target_type,v_target_id,v_target_version,v_version,
+           v_result_state,v_assignment_version,v_content_digest,v_approval_digest,v_expires_at
+      FROM ops.action_proposals p JOIN ops.action_proposal_versions v
+        ON v.proposal_id=p.id AND v.version=p.current_version
+     WHERE p.id=v_proposal FOR UPDATE OF p,v;
+    IF NOT FOUND THEN RAISE EXCEPTION 'resource_not_found' USING ERRCODE='P0002'; END IF;
+    IF v_result_state <> 'PENDING_QUORUM'
+       OR v_version<>COALESCE(NULLIF(p_payload->>'expectedProposalVersion','')::bigint,0)
+       OR v_assignment_version<>COALESCE(NULLIF(p_payload->>'expectedProposalStateVersion','')::bigint,0)
+       OR btrim(COALESCE(v_approval_digest,v_content_digest)::text) IS DISTINCT FROM btrim(NULLIF(p_payload->>'expectedApprovalDigest','')) THEN
+      RAISE EXCEPTION 'action_decision_withdrawal_stale' USING ERRCODE='40001';
+    END IF;
+    SELECT d.assignment_id INTO v_assignment FROM ops.action_decisions d
+     WHERE d.id=v_decision_id AND d.proposal_id=v_proposal AND d.record_kind='DECISION';
+    IF v_assignment IS NULL THEN RAISE EXCEPTION 'resource_not_found' USING ERRCODE='P0002'; END IF;
+    SELECT * INTO v_original_assignment FROM ops.action_review_assignments
+     WHERE id=v_assignment AND proposal_id=v_proposal AND proposal_version=v_version FOR UPDATE;
+    IF NOT FOUND OR v_original_assignment.state<>'COMPLETED'
+       OR v_original_assignment.version<>COALESCE(NULLIF(p_payload->>'expectedAssignmentVersion','')::bigint,0) THEN
+      RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001';
+    END IF;
     SELECT * INTO v_original_decision FROM ops.action_decisions
      WHERE id=v_decision_id AND proposal_id=v_proposal AND record_kind='DECISION' FOR SHARE;
-    IF NOT FOUND OR v_original_decision.decision_kind <> 'APPROVE' THEN
-      RAISE EXCEPTION 'resource_not_found' USING ERRCODE='P0002';
+    IF NOT FOUND OR v_original_decision.decision_kind<>'APPROVE'
+       OR v_original_decision.actor_id<>p_actor_id
+       OR btrim(v_original_decision.receipt_digest::text) IS DISTINCT FROM btrim(NULLIF(p_payload->>'expectedDecisionReceiptDigest',''))
+       OR EXISTS (SELECT 1 FROM ops.action_decisions d WHERE d.withdrawn_decision_id=v_decision_id) THEN
+      RAISE EXCEPTION 'action_decision_withdrawal_stale' USING ERRCODE='40001';
     END IF;
     v_id := gen_random_uuid();
+    v_next_assignment_id := gen_random_uuid();
+    v_next_assignment_generation := v_original_assignment.assignment_generation+1;
+    SELECT u.id INTO v_next_reviewer FROM ops.users u
+     WHERE u.status='ACTIVE' AND u.id<>p_actor_id
+       AND u.id<>(SELECT owner_user_id FROM ops.action_proposals WHERE id=v_proposal)
+     ORDER BY u.id LIMIT 1;
+    v_next_assignment_state := CASE WHEN v_next_reviewer IS NULL THEN 'VACANT' ELSE 'ASSIGNED' END;
+    v_exclusion_digest := encode(extensions.digest(convert_to(to_jsonb(ARRAY[p_actor_id]::uuid[])::text,'UTF8'),'sha256'),'hex');
+    v_assignment_digest := encode(extensions.digest(convert_to(
+      v_next_assignment_id::text||':'||v_proposal::text||':'||v_next_assignment_generation::text||':'||v_original_decision.approval_digest::text,
+      'UTF8'),'sha256'),'hex');
     v_reason := COALESCE(NULLIF(p_payload->>'reason',''),'approval withdrawn');
+    v_reason_code := COALESCE(NULLIF(p_payload->>'reasonCode',''),'OTHER');
+    IF v_reason_code NOT IN ('CONFLICT_DISCOVERED','EVIDENCE_CHANGED','DECISION_ERROR','NO_LONGER_ELIGIBLE','OTHER') THEN
+      RAISE EXCEPTION 'invalid_parameter' USING ERRCODE='22023';
+    END IF;
+    v_reason_digest := encode(extensions.digest(convert_to(v_reason,'UTF8'),'sha256'),'hex');
+    -- A final approval now materializes its execution authorization and
+    -- QUEUED attempt atomically.  Withdrawal remains safe while the attempt
+    -- has no dispatch ordinal: cancel that exact generation through the
+    -- typed execution owner before reopening quorum.  Once dispatch started,
+    -- the approval cannot be withdrawn because an external effect may exist.
+    IF v_original_decision.execution_id IS NOT NULL THEN
+      SELECT * INTO v_execution_effect FROM ops.in_flight_effects
+       WHERE id=v_original_decision.execution_id FOR UPDATE;
+      SELECT * INTO v_execution_attempt FROM ops.execution_attempts
+       WHERE execution_id=v_original_decision.execution_id
+         AND generation=v_execution_effect.current_generation FOR UPDATE;
+      IF v_execution_effect.id IS NULL OR v_execution_effect.state<>'QUEUED'
+         OR v_execution_attempt.id IS NULL OR v_execution_attempt.attempt_state<>'QUEUED'
+         OR v_execution_attempt.dispatch_ordinal IS NOT NULL THEN
+        RAISE EXCEPTION 'action_decision_withdrawal_unsafe' USING ERRCODE='55000';
+      END IF;
+      v_execution_cancel := ops.cancel_action_execution_v1(
+        jsonb_build_object(
+          'executionId',v_execution_effect.id,
+          'expectedGeneration',v_execution_effect.current_generation,
+          'expectedStateVersion',v_execution_effect.state_version,
+          'reasonCode','OTHER','reasonNote',v_reason),
+        p_actor_id,p_request_id,p_idempotency_key_hash,p_request_digest);
+      IF v_execution_cancel->>'aggregateState'<>'CANCELLED'
+         OR v_execution_cancel->>'effectCertainty'<>'DEFINITIVE_NOT_ACCEPTED' THEN
+        RAISE EXCEPTION 'action_decision_withdrawal_unsafe' USING ERRCODE='55000';
+      END IF;
+    END IF;
     v_decision_body := jsonb_build_object(
       'recordKind','APPROVAL_WITHDRAWAL','decisionId',v_id,
       'assignmentId',v_original_decision.assignment_id,
       'assignmentGeneration',v_original_decision.assignment_generation,
       'decisionKind','APPROVAL_WITHDRAWN','actor',jsonb_build_object('actorType','HUMAN','actorId',p_actor_id,'displayName','Action reviewer'),
       'slotKind',v_original_decision.slot_kind,'capability','actions.review','assurance',v_original_decision.assurance,
-      'reasonCode',COALESCE(p_payload->>'reasonCode','OTHER'),'reason',v_reason,
+      'reasonCode',v_reason_code,'reason',v_reason,
       'approvalDigest',v_original_decision.approval_digest,'receiptDigest',v_receipt,
       'withdrawnDecisionId',v_decision_id,'withdrawnDecisionReceiptDigest',v_original_decision.receipt_digest,
       'acceptedAt',v_now,'decidedAt',v_now);
-    SELECT p.action_kind,p.target_type,p.target_id,p.target_version,p.current_version,
-           v.state,v.content_digest,v.approval_digest,v.expires_at
-      INTO v_action_kind,v_target_type,v_target_id,v_target_version,v_version,
-           v_result_state,v_content_digest,v_approval_digest,v_expires_at
-      FROM ops.action_proposals p JOIN ops.action_proposal_versions v
-        ON v.proposal_id=p.id AND v.version=p.current_version
-     WHERE p.id=v_proposal;
-    IF v_result_state <> 'APPROVED' OR EXISTS (
-      SELECT 1 FROM ops.execution_authorizations WHERE proposal_id=v_proposal
-    ) THEN
-      RAISE EXCEPTION 'action_decision_withdrawal_stale' USING ERRCODE='40001';
-    END IF;
     v_receipt_body := jsonb_build_object(
       'proposalId',v_proposal,'proposalVersion',v_version,'state','PENDING_QUORUM',
       'actionKind',v_action_kind,'contentDigest',v_content_digest,
@@ -5968,8 +6371,7 @@ BEGIN
       v_original_decision.step_up_expires_at,
       p_idempotency_key_hash,'APPROVAL_WITHDRAWN',v_decision_id,
       v_original_decision.receipt_digest,'DECISION','APPROVE',
-      COALESCE(p_payload->>'reasonCode','OTHER'),v_reason,
-      encode(extensions.digest(convert_to(v_reason,'UTF8'),'sha256'),'hex'),
+      v_reason_code,v_reason,v_reason_digest,
       v_decision_body,convert_to(v_decision_body::text,'UTF8'),
       v_receipt_body,convert_to(v_receipt_body::text,'UTF8'),
       v_original_decision.conflict_snapshot_id,v_original_decision.conflict_snapshot_digest,
@@ -5979,14 +6381,78 @@ BEGIN
       v_original_decision.quorum_snapshot_digest,false,false,'PENDING_QUORUM',NULL,
       v_receipt,p_request_id,v_audit,v_now,v_now
     );
+    IF v_next_assignment_state='ASSIGNED' THEN
+      INSERT INTO ops.action_review_assignments(
+        id,proposal_id,proposal_version,approval_digest,assignment_generation,
+        slot_id,slot_ordinal,required_capability,approve_assurance,allowed_role_codes,
+        reviewer_id,reviewer_role_snapshot_digest,eligibility_snapshot_digest,
+        conflict_snapshot_id,conflict_snapshot_digest,conflict_target_id,
+        conflict_target_version,conflict_target_digest,conflict_evaluation_state,
+        conflict_valid_until,excluded_actor_ids,exclusion_set_digest,quorum_plan_digest,
+        assignment_digest,state,version,assigned_by,due_at,last_receipt_digest,
+        last_audit_event_id,replacement_of_assignment_id)
+      VALUES(
+        v_next_assignment_id,v_proposal,v_version,v_original_decision.approval_digest,
+        v_next_assignment_generation,v_original_assignment.slot_id,v_original_assignment.slot_ordinal,
+        v_original_assignment.required_capability,v_original_assignment.approve_assurance,
+        v_original_assignment.allowed_role_codes,v_next_reviewer,
+        encode(extensions.digest(convert_to(v_next_reviewer::text,'UTF8'),'sha256'),'hex'),
+        encode(extensions.digest(convert_to(v_next_reviewer::text||':'||v_original_assignment.required_capability,'UTF8'),'sha256'),'hex'),
+        v_original_assignment.conflict_snapshot_id,v_original_assignment.conflict_snapshot_digest,
+        v_proposal,v_version,v_original_decision.approval_digest,'CLEAR',
+        GREATEST(v_original_assignment.conflict_valid_until,v_now+interval '7 days'),
+        ARRAY[p_actor_id]::uuid[],v_exclusion_digest,v_original_assignment.quorum_plan_digest,
+        v_assignment_digest,'ASSIGNED',1,p_actor_id,v_now+interval '7 days',v_receipt,v_audit,
+        v_original_assignment.id);
+    ELSE
+      INSERT INTO ops.action_review_assignments(
+        id,proposal_id,proposal_version,approval_digest,assignment_generation,
+        slot_id,slot_ordinal,required_capability,approve_assurance,allowed_role_codes,
+        reviewer_id,reviewer_role_snapshot_digest,eligibility_snapshot_digest,
+        conflict_snapshot_id,conflict_snapshot_digest,conflict_target_id,
+        conflict_target_version,conflict_target_digest,conflict_evaluation_state,
+        conflict_valid_until,excluded_actor_ids,exclusion_set_digest,quorum_plan_digest,
+        assignment_digest,state,version,blocking_reason_code,next_assignment_scan_at,
+        assigned_by,due_at,last_receipt_digest,last_audit_event_id,replacement_of_assignment_id)
+      VALUES(
+        v_next_assignment_id,v_proposal,v_version,v_original_decision.approval_digest,
+        v_next_assignment_generation,v_original_assignment.slot_id,v_original_assignment.slot_ordinal,
+        v_original_assignment.required_capability,v_original_assignment.approve_assurance,
+        v_original_assignment.allowed_role_codes,NULL,
+        'a987005ba2dc00498702eea9d50ed59c6732bb825059d52b491be1a37a2fddd6',
+        encode(extensions.digest(convert_to(v_proposal::text||':vacant:'||v_next_assignment_generation::text,'UTF8'),'sha256'),'hex'),
+        NULL,'e78bfc84252d3d52a9005d38ed5e102e334240826621d6e5570ff3ce42b94b21',
+        v_proposal,v_version,v_original_decision.approval_digest,'UNAVAILABLE',v_now+interval '7 days',
+        ARRAY[p_actor_id]::uuid[],v_exclusion_digest,v_original_assignment.quorum_plan_digest,
+        v_assignment_digest,'VACANT',1,'ACTION_QUORUM_UNAVAILABLE',v_now,p_actor_id,
+        v_now+interval '7 days',v_receipt,v_audit,v_original_assignment.id);
+    END IF;
+    v_event_payload := jsonb_build_object(
+      'proposalId',v_proposal,
+      'proposalVersion',v_version,
+      'proposalState','PENDING_QUORUM',
+      'originalDecisionId',v_decision_id,
+      'originalDecisionReceiptDigest',v_original_decision.receipt_digest,
+      'withdrawalDecisionId',v_id,
+      'withdrawalReceiptDigest',v_receipt,
+      'assignmentId',v_original_assignment.id,
+      'priorAssignmentGeneration',v_original_assignment.assignment_generation,
+      'nextAssignmentId',v_next_assignment_id,
+      'nextAssignmentGeneration',v_next_assignment_generation,
+      'nextAssignmentState',v_next_assignment_state,
+      'approvalDigest',v_original_decision.approval_digest,
+      'withdrawnByActorId',p_actor_id,
+      'reasonCode',v_reason_code,
+      'reasonDigest',v_reason_digest,
+      'auditEventId',v_audit,
+      'occurredAt',v_now);
     v_outbox := ops.enqueue_outbox('ActionDecision',v_id::text,v_original_decision.proposal_version,
-      'action.decision_withdrawn.v1',jsonb_build_object('decisionId',v_id,'withdrawnDecisionId',v_decision_id,
-        'proposalId',v_proposal,'receiptDigest',v_receipt),v_now);
+      'action.decision_withdrawn.v1',v_event_payload,v_now);
     UPDATE ops.action_proposal_versions
        SET state='PENDING_QUORUM',state_version=state_version+1,
            terminal_at=NULL,terminal_reason_code=NULL,terminal_receipt_digest=NULL,
            updated_at=v_now
-     WHERE proposal_id=v_proposal AND version=v_version AND state='APPROVED';
+     WHERE proposal_id=v_proposal AND version=v_version AND state='PENDING_QUORUM';
     IF NOT FOUND THEN RAISE EXCEPTION 'action_proposal_withdrawal_stale' USING ERRCODE='40001'; END IF;
     UPDATE ops.in_flight_effects
        SET state='CANCELLED',state_version=state_version+1,
@@ -6010,7 +6476,10 @@ BEGIN
   END IF;
   IF p_operation_id IN ('createActionProposal','updateActionDraft','previewActionDraft',
       'submitActionForReview','claimActionReview','submitActionDecision','withdrawActionProposal','withdrawActionDecision') THEN
-    p_payload := p_payload || jsonb_build_object('requestId',p_request_id);
+    p_payload := p_payload || jsonb_build_object(
+      'requestId',p_request_id,
+      '_idempotencyKeySha256',p_idempotency_key_hash,
+      '_requestSha256',p_request_digest);
     v_dispatch_op := CASE WHEN p_operation_id IN ('withdrawActionProposal','withdrawActionDecision') THEN 'submitActionDecision' ELSE p_operation_id END;
     IF p_operation_id='withdrawActionProposal' THEN p_payload := p_payload || jsonb_build_object('decision','CHANGES_REQUIRED'); END IF;
     IF p_operation_id='withdrawActionDecision' THEN p_payload := p_payload || jsonb_build_object('decision','REJECT'); END IF;
@@ -6234,7 +6703,19 @@ BEGIN
       COALESCE(p_payload->>'reasonCode','CONTROL_COMMAND'),COALESCE(p_payload->>'reason','control command'),
       'HUMAN',p_actor_id::text,p_idempotency_key_hash,p_request_id);
     v_version := v_incident.version; v_status := v_incident.state; v_receipt := v_incident.receipt_digest; v_audit := v_incident.audit_event_id;
-    v_outbox := ops.enqueue_outbox('incident',v_id::text,v_version,'control.addendum_command_applied.v1',jsonb_build_object('operationId',p_operation_id,'incidentId',v_id,'version',v_version),v_now);
+    v_outbox := ops.enqueue_outbox('Incident',v_id::text,v_version,
+      'incident.state_changed.v1',jsonb_build_object(
+        'incidentId',v_incident.incident_id,
+        'version',v_incident.version,
+        'priorState',v_incident.prior_state,
+        'state',v_incident.state,
+        'severity',v_incident.severity,
+        'affectedCapabilities',to_jsonb(v_incident.affected_capabilities),
+        'ownerUserId',v_incident.owner_user_id,
+        'commanderUserId',v_incident.commander_user_id,
+        'nextUpdateAt',v_incident.next_update_at,
+        'evidenceSetDigest',v_incident.evidence_set_digest,
+        'receiptDigest',v_incident.receipt_digest),v_now);
     v_raw := jsonb_build_object('operationId',p_operation_id,'requestId',p_request_id,'status',v_status,'aggregateId',v_id,'aggregateVersion',v_version,'acceptedAt',v_now,'receiptDigest',v_receipt,'auditEventId',v_audit,'emittedEventIds',jsonb_build_array(v_outbox),'links','[]'::jsonb,'incident',to_jsonb(v_incident),'transition',jsonb_build_object('kind',v_transition));
     RETURN QUERY SELECT v_id,v_version,v_status,v_now,v_raw,v_receipt,v_audit,v_outbox;
     RETURN;
@@ -6522,6 +7003,105 @@ CREATE TRIGGER ops_action_review_assignments_transition_guard BEFORE UPDATE OR D
 CREATE TRIGGER ops_action_decisions_transition_guard BEFORE UPDATE OR DELETE ON ops.action_decisions
   FOR EACH ROW EXECUTE FUNCTION ops.validate_action_decision_at_commit();
 
+-- Preserve only the non-secret, typed approval detail derived from an
+-- encrypted ActionPayload.  The full draft remains encrypted; this closed
+-- summary lets preview and final quorum re-bind the exact capability evidence
+-- without decrypting payload bytes inside PostgreSQL.
+ALTER TABLE ops.action_proposal_versions
+  ADD COLUMN IF NOT EXISTS review_detail jsonb,
+  ADD COLUMN IF NOT EXISTS review_detail_canonical bytea,
+  ADD COLUMN IF NOT EXISTS review_detail_digest char(64);
+DO $$ BEGIN
+  ALTER TABLE ops.action_proposal_versions
+    ADD CONSTRAINT action_proposal_versions_review_detail_shape_ck CHECK (
+      num_nonnulls(review_detail,review_detail_canonical,review_detail_digest) IN (0,3)
+      AND (review_detail IS NULL OR (
+        jsonb_typeof(review_detail)='object'
+        AND convert_from(review_detail_canonical,'UTF8')::jsonb=review_detail
+        AND review_detail_digest=encode(extensions.digest(review_detail_canonical,'sha256'),'hex')
+      ))
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE OR REPLACE FUNCTION ops.capability_activation_review_detail_v1(p_draft jsonb)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,ops,extensions,pg_temp AS $$
+DECLARE
+  v_class text;
+  v_evidence_digest char(64);
+  v_preflight_digest char(64);
+  v_first_receipt uuid;
+  v_expiry jsonb;
+BEGIN
+  IF p_draft IS NULL OR jsonb_typeof(p_draft)<>'object'
+     OR p_draft->>'schemaVersion'<>'action-payload.v1'
+     OR p_draft->>'kind'<>'CAPABILITY_ACTIVATION'
+     OR jsonb_typeof(p_draft->'target')<>'object'
+     OR jsonb_typeof(p_draft->'evidenceReceiptIds')<>'array'
+     OR jsonb_array_length(p_draft->'evidenceReceiptIds') NOT BETWEEN 1 AND 100
+     OR NULLIF(p_draft->>'capabilityId','') IS NULL
+     OR p_draft->>'environment' NOT IN ('DEVELOPMENT','TEST','STAGING','PRODUCTION')
+     OR COALESCE(p_draft->>'configurationDigest','') !~ '^[0-9a-f]{64}$'
+     OR COALESCE(p_draft->>'policyDigest','') !~ '^[0-9a-f]{64}$'
+     OR COALESCE(p_draft->>'contractDigest','') !~ '^[0-9a-f]{64}$'
+     OR COALESCE(p_draft->>'rightsDigest','') !~ '^[0-9a-f]{64}$'
+     OR COALESCE(p_draft->'target'->>'digest','') !~ '^[0-9a-f]{64}$'
+     OR COALESCE(NULLIF(p_draft->'target'->>'version','')::bigint,-1)<0
+     OR length(COALESCE(p_draft->>'jurisdiction','')) NOT BETWEEN 2 AND 64
+     OR NULLIF(p_draft->>'effectiveAt','')::timestamptz IS NULL THEN
+    RAISE EXCEPTION 'capability_activation_detail_invalid' USING ERRCODE='22023';
+  END IF;
+  v_class:=CASE p_draft->>'capabilityClass'
+    WHEN 'COMMUNICATION_CHANNEL' THEN 'DELIVERY_CHANNEL'
+    WHEN 'PUBLICATION' THEN 'PUBLIC_PUBLICATION'
+    WHEN 'CONNECTOR' THEN 'SOURCE_ACCESS'
+    WHEN 'AGENT_MODEL' THEN 'MODEL_EGRESS'
+    WHEN 'PROVIDER' THEN 'MODEL_EGRESS'
+    ELSE NULL END;
+  IF v_class IS NULL THEN
+    RAISE EXCEPTION 'capability_activation_class_invalid' USING ERRCODE='22023';
+  END IF;
+  v_evidence_digest:=encode(extensions.digest(
+    ops.canonical_jsonb_v1(p_draft->'evidenceReceiptIds'),'sha256'),'hex');
+  BEGIN
+    v_first_receipt:=(p_draft->'evidenceReceiptIds'->>0)::uuid;
+  EXCEPTION WHEN invalid_text_representation THEN
+    RAISE EXCEPTION 'capability_activation_evidence_invalid' USING ERRCODE='22023';
+  END;
+  SELECT btrim(r.receipt_digest::text)::char(64) INTO v_preflight_digest
+    FROM ops.communication_provider_preflight_receipts r
+   WHERE r.id=v_first_receipt AND r.result='PASS' AND r.expires_at>clock_timestamp();
+  IF v_class='DELIVERY_CHANNEL' AND v_preflight_digest IS NULL THEN
+    RAISE EXCEPTION 'capability_activation_preflight_missing' USING ERRCODE='55000';
+  END IF;
+  v_preflight_digest:=COALESCE(v_preflight_digest,v_evidence_digest);
+  v_expiry:=CASE WHEN p_draft->'expiresAt' IS NULL OR p_draft->'expiresAt'='null'::jsonb
+    THEN jsonb_build_object('kind','NEVER')
+    ELSE jsonb_build_object('kind','AT','at',p_draft->>'expiresAt') END;
+  RETURN jsonb_build_object(
+    'kind','CAPABILITY_ACTIVATION','capabilityClass',v_class,
+    'capabilityId',p_draft->>'capabilityId','environment',p_draft->>'environment',
+    'expectedCapabilityVersion',(p_draft->'target'->>'version')::bigint,
+    'currentCapabilityDigest',p_draft->'target'->>'digest','decision','ACTIVATE',
+    'configurationDigest',p_draft->>'configurationDigest',
+    'evidenceReceiptSetDigest',v_evidence_digest,
+    'preflightReceiptDigest',v_preflight_digest,
+    'policyDigest',p_draft->>'policyDigest','contractDigest',p_draft->>'contractDigest',
+    'rightsDigest',p_draft->>'rightsDigest',
+    'jurisdictionSetDigest',encode(extensions.digest(ops.canonical_jsonb_v1(
+      jsonb_build_array(p_draft->>'jurisdiction')),'sha256'),'hex'),
+    'killSwitchDigest',encode(extensions.digest(ops.canonical_jsonb_v1(jsonb_build_object(
+      'capabilityId',p_draft->>'capabilityId','environment',p_draft->>'environment',
+      'state','INACTIVE')),'sha256'),'hex'),
+    'effectiveAt',p_draft->>'effectiveAt','expiry',v_expiry);
+END $$;
+ALTER FUNCTION ops.capability_activation_review_detail_v1(jsonb) OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.capability_activation_review_detail_v1(jsonb) FROM PUBLIC;
+
+-- SECURITY DEFINER executes as gurine_migrator; these base identity tables
+-- are intentionally read-only inputs to reviewer selection and reauthorization.
+GRANT SELECT ON ops.users,ops.roles,ops.user_roles,ops.role_capabilities TO gurine_migrator;
+
 -- Typed, deterministic OPS-004 read boundary.  It deliberately derives the
 -- funnel from immutable qualification/packet/revenue rows and never creates a
 -- commercial-stage ledger or event.
@@ -6555,6 +7135,7 @@ DECLARE
   v_rationale_digest char(64);
   v_expires_at timestamptz;
   v_receipt jsonb;
+  v_response_receipt jsonb;
   v_receipt_digest char(64);
   v_audit_id uuid;
   v_event_id uuid := gen_random_uuid();
@@ -6565,6 +7146,9 @@ DECLARE
   v_detail_kind text;
   v_detail_canonical bytea;
   v_detail_digest char(64);
+  v_review_detail jsonb;
+  v_review_detail_canonical bytea;
+  v_review_detail_digest char(64);
   v_preview_id uuid;
   v_preview_digest char(64);
   v_policy_digest char(64);
@@ -6574,6 +7158,7 @@ DECLARE
   v_assurance text;
   v_required_assurance text;
   v_step_up_authorization_id uuid;
+  v_requested_step_up_authorization_id uuid;
   v_step_up_authorization_digest char(64);
   v_step_up_authorization_receipt_digest char(64);
   v_step_up_authorization_receipt_canonical bytea;
@@ -6584,8 +7169,63 @@ DECLARE
   v_result_state text;
   v_due_at timestamptz;
   v_execution_id uuid;
+  v_execution_attempt_id uuid;
+  v_execution_receipt_id uuid;
+  v_execution_binding jsonb;
+  v_execution_binding_canonical bytea;
+  v_execution_digest char(64);
+  v_execution_receipt_payload jsonb;
+  v_execution_receipt_canonical bytea;
+  v_execution_receipt_digest char(64);
+  v_execution_outbox_id uuid;
+  v_executor_id text;
+  v_executor_transport text;
+  v_executor_capability text;
+  v_target_request_encrypted bytea;
+  v_target_request_sha256 char(64);
+  v_counted_decision_set_digest char(64);
+  v_quorum_plan_digest char(64);
+  v_quorum_snapshot_digest char(64);
+  v_prior_decision ops.action_decisions%ROWTYPE;
+  v_prior_assignment ops.action_review_assignments%ROWTYPE;
   v_reviewer uuid;
+  v_second_reviewer uuid;
+  v_assigned_reviewer uuid;
+  v_second_assignment uuid;
+  v_second_conflict_id uuid;
+  v_slot_id text;
+  v_slot_ordinal smallint;
+  v_assignment_generation bigint;
+  v_allowed_role_codes text[];
+  v_excluded_actor_ids uuid[];
+  v_change_task_ids uuid[] := '{}'::uuid[];
+  v_quorum_complete boolean := false;
+  v_expected_step_up_digest char(64);
+  v_actor_assertion_jti uuid;
+  v_actor_action_digest char(64);
+  v_actor_step_up_authorization_id uuid;
+  v_actor_idempotency_key_sha256 char(64);
+  v_actor_request_key_sha256 char(64);
+  v_actor_assurance text;
+  v_step_up_idempotency_key_sha256 char(64);
+  v_step_up_last_issued_at timestamptz;
+  v_counted_decision_ids uuid[] := '{}'::uuid[];
+  v_counted_decision_receipt_digests text[] := '{}'::text[];
+  v_conflict_digest_one char(64);
+  v_conflict_digest_two char(64);
+  v_conflict_valid_until timestamptz;
   v_conflict_id uuid;
+  v_replacement_assignment_id uuid;
+  v_replacement_conflict_id uuid;
+  v_replacement_conflict_digest char(64);
+  v_replacement_reviewer uuid;
+  v_replacement_state text;
+  v_replacement_exclusions uuid[];
+  v_replacement_exclusion_digest char(64);
+  v_replacement_assignment_digest char(64);
+  v_task jsonb;
+  v_task_id uuid;
+  v_task_due_at timestamptz;
   v_digest char(64);
   v_zero_digest char(64);
   v_actor_text text := COALESCE(p_actor::text, p_request->>'actorId');
@@ -6600,6 +7240,11 @@ BEGIN
   END IF;
 
   IF p_operation = 'createActionProposal' THEN
+    v_id := NULLIF(p_request->>'_proposalId','')::uuid;
+    IF v_id IS NULL OR p_request->>'_payloadEncryptedBase64' IS NULL
+       OR p_request->>'_rationaleEncryptedBase64' IS NULL THEN
+      RAISE EXCEPTION 'sealed_action_payload_required' USING ERRCODE = '22023';
+    END IF;
     v_action_kind := COALESCE(p_request->>'actionKind', p_request->'draft'->>'actionKind');
     v_target_type := COALESCE(p_request->'draft'->'target'->>'type', p_request->>'targetType');
     v_target_id := COALESCE(p_request->'draft'->'target'->>'id', p_request->>'targetId');
@@ -6617,13 +7262,23 @@ BEGIN
     v_target_digest := COALESCE(v_target_digest, encode(extensions.digest(convert_to((p_request->'draft'->'target')::text,'UTF8'),'sha256'),'hex'));
     v_origin_digest := COALESCE(NULLIF(p_request->'origin'->>'digest',''),encode(extensions.digest(convert_to((p_request->'origin')::text,'UTF8'),'sha256'),'hex'));
     v_object_scope_digest := COALESCE(NULLIF(p_request->'draft'->>'objectScopeDigest',''),encode(extensions.digest(convert_to(COALESCE(p_request->'draft'->'objectScope','{}'::jsonb)::text,'UTF8'),'sha256'),'hex'));
-    v_content_digest := COALESCE(NULLIF(p_request->'draft'->>'contentDigest',''),encode(extensions.digest(convert_to((p_request->'draft')::text,'UTF8'),'sha256'),'hex'));
+    -- The execution authorization must bind the exact sealed ActionPayload,
+    -- never a caller-supplied nested digest or the preview request.  jsonb's
+    -- canonical text is also the value recovered after authenticated
+    -- decryption by the execution worker.
+    v_content_digest := encode(extensions.digest(ops.canonical_jsonb_v1(p_request->'draft'),'sha256'),'hex');
     v_rationale_digest := COALESCE(NULLIF(p_request->>'rationaleDigest',''),encode(extensions.digest(convert_to(p_request->>'rationale','UTF8'),'sha256'),'hex'));
     IF v_target_digest !~ '^[0-9a-f]{64}$' OR v_origin_digest !~ '^[0-9a-f]{64}$'
        OR v_object_scope_digest !~ '^[0-9a-f]{64}$' OR v_content_digest !~ '^[0-9a-f]{64}$'
        OR v_rationale_digest !~ '^[0-9a-f]{64}$' THEN
       RAISE EXCEPTION 'invalid_parameter' USING ERRCODE = '22023';
     END IF;
+    IF v_action_kind='CAPABILITY_ACTIVATION' THEN
+      v_review_detail:=ops.capability_activation_review_detail_v1(p_request->'draft');
+      v_review_detail_canonical:=ops.canonical_jsonb_v1(v_review_detail);
+      v_review_detail_digest:=encode(extensions.digest(v_review_detail_canonical,'sha256'),'hex');
+    END IF;
+    v_expires_at := COALESCE(NULLIF(p_request->>'expiresAt','')::timestamptz,v_now+interval '7 days');
     v_receipt := jsonb_build_object('proposalId',v_id,'proposalVersion',1,'state','DRAFT','actionKind',v_action_kind,'targetType',v_target_type,'targetId',v_target_id,'targetVersion',v_target_version,'contentDigest',v_content_digest,'acceptedAt',v_now);
     v_receipt_digest := encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex');
     v_audit_id := ops.append_audit_event(
@@ -6632,12 +7287,18 @@ BEGIN
       'SUCCESS'::ops.audit_outcome,NULL,v_event_id,v_receipt);
     INSERT INTO ops.action_proposals(id,action_kind,origin_kind,origin_id,origin_version,origin_digest,target_type,target_id,target_version,target_digest,object_scope_digest,current_version,aggregate_version,created_by,owner_user_id,last_receipt_digest,last_audit_event_id)
       VALUES(v_id,v_action_kind,COALESCE(p_request->'origin'->>'kind','HUMAN'),COALESCE(NULLIF(p_request->'origin'->>'id','')::uuid,p_actor),1,v_origin_digest,v_target_type,v_target_id,v_target_version,v_target_digest,v_object_scope_digest,1,1,p_actor,p_actor,v_receipt_digest,v_audit_id);
-    INSERT INTO ops.action_proposal_versions(proposal_id,version,state,state_version,payload_encrypted,content_digest,rationale_encrypted,rationale_digest,last_editor_id,expires_at)
-      VALUES(v_id,1,'DRAFT',1,convert_to(rpad((p_request->'draft')::text, greatest(32,length((p_request->'draft')::text)), ' '),'UTF8'),v_content_digest,
-        convert_to(rpad(p_request->>'rationale', greatest(32,length(p_request->>'rationale')), ' '),'UTF8'),v_rationale_digest,p_actor,
-        COALESCE(NULLIF(p_request->>'expiresAt','')::timestamptz,v_now+interval '7 days'));
+    INSERT INTO ops.action_proposal_versions(
+      proposal_id,version,state,state_version,payload_encrypted,content_digest,
+      rationale_encrypted,rationale_digest,last_editor_id,expires_at,
+      review_detail,review_detail_canonical,review_detail_digest)
+      VALUES(v_id,1,'DRAFT',1,decode(p_request->>'_payloadEncryptedBase64','base64'),v_content_digest,
+        decode(p_request->>'_rationaleEncryptedBase64','base64'),v_rationale_digest,p_actor,
+        v_expires_at,v_review_detail,v_review_detail_canonical,v_review_detail_digest);
     INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
-      VALUES(v_event_id,'ActionProposal',v_id::text,1,'action.proposal_created.v1',v_receipt,v_now);
+      VALUES(v_event_id,'ActionProposal',v_id::text,1,'action.proposal_created.v1',
+        jsonb_build_object('proposalId',v_id,'version',1,'actionKind',v_action_kind,
+          'contentDigest',v_content_digest,'targetId',v_target_id,
+          'targetVersion',v_target_version,'expiresAt',v_expires_at),v_now);
     RETURN v_receipt || jsonb_build_object('receiptDigest',v_receipt_digest,'auditEventId',v_audit_id,'outboxEventIds',jsonb_build_array(v_event_id));
   END IF;
 
@@ -6646,9 +7307,13 @@ BEGIN
   SELECT current_version INTO v_version FROM ops.action_proposals WHERE id=v_proposal FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'resource_not_found' USING ERRCODE='P0002'; END IF;
   SELECT p.action_kind, p.target_type, p.target_id, p.target_version, p.target_digest, p.object_scope_digest, p.origin_digest,
-         v.content_digest, v.rationale_digest, v.expires_at, v.state, v.preview_id, v.approval_digest, v.action_detail_kind, v.action_detail
+         v.content_digest, v.rationale_digest, v.expires_at, v.state, v.preview_id, v.approval_digest, v.action_detail_kind, v.action_detail,
+         v.payload_encrypted, v.target_request_digest,
+         v.review_detail,v.review_detail_canonical,v.review_detail_digest,v.quorum_plan_digest
     INTO v_action_kind,v_target_type,v_target_id,v_target_version,v_target_digest,v_object_scope_digest,v_origin_digest,
-         v_content_digest,v_rationale_digest,v_expires_at,v_result_state,v_preview_id,v_approval_digest,v_detail_kind,v_detail
+         v_content_digest,v_rationale_digest,v_expires_at,v_result_state,v_preview_id,v_approval_digest,v_detail_kind,v_detail,
+         v_target_request_encrypted,v_target_request_sha256,
+         v_review_detail,v_review_detail_canonical,v_review_detail_digest,v_quorum_plan_digest
     FROM ops.action_proposals p
     JOIN ops.action_proposal_versions v ON v.proposal_id=p.id AND v.version=p.current_version
    WHERE p.id=v_proposal
@@ -6663,10 +7328,22 @@ BEGIN
     v_version := v_version + 1;
     v_content_digest := encode(extensions.digest(convert_to((p_request->'draft')::text,'UTF8'),'sha256'),'hex');
     v_rationale_digest := encode(extensions.digest(convert_to(COALESCE(p_request->>'rationale','{}'),'UTF8'),'sha256'),'hex');
+    v_review_detail:=NULL;
+    v_review_detail_canonical:=NULL;
+    v_review_detail_digest:=NULL;
+    IF v_action_kind='CAPABILITY_ACTIVATION' THEN
+      v_review_detail:=ops.capability_activation_review_detail_v1(p_request->'draft');
+      v_review_detail_canonical:=ops.canonical_jsonb_v1(v_review_detail);
+      v_review_detail_digest:=encode(extensions.digest(v_review_detail_canonical,'sha256'),'hex');
+    END IF;
     v_expires_at := COALESCE(NULLIF(p_request->>'expiresAt','')::timestamptz, v_expires_at);
-    INSERT INTO ops.action_proposal_versions(proposal_id,version,state,state_version,payload_encrypted,content_digest,rationale_encrypted,rationale_digest,last_editor_id,expires_at)
-      VALUES(v_proposal,v_version,'DRAFT',1,convert_to(rpad((p_request->'draft')::text,greatest(32,length((p_request->'draft')::text)),' '),'UTF8'),v_content_digest,
-        convert_to(rpad(COALESCE(p_request->>'rationale','{}'),greatest(32,length(COALESCE(p_request->>'rationale','{}'))),' '),'UTF8'),v_rationale_digest,p_actor,v_expires_at);
+    INSERT INTO ops.action_proposal_versions(
+      proposal_id,version,state,state_version,payload_encrypted,content_digest,
+      rationale_encrypted,rationale_digest,last_editor_id,expires_at,
+      review_detail,review_detail_canonical,review_detail_digest)
+      VALUES(v_proposal,v_version,'DRAFT',1,decode(p_request->>'_payloadEncryptedBase64','base64'),v_content_digest,
+        decode(p_request->>'_rationaleEncryptedBase64','base64'),v_rationale_digest,p_actor,v_expires_at,
+        v_review_detail,v_review_detail_canonical,v_review_detail_digest);
     UPDATE ops.action_proposals SET current_version=v_version,aggregate_version=aggregate_version+1,updated_at=v_now WHERE id=v_proposal;
     v_receipt := jsonb_build_object('proposalId',v_proposal,'proposalVersion',v_version,'state','DRAFT','actionKind',v_action_kind,
       'targetType',(SELECT target_type FROM ops.action_proposals WHERE id=v_proposal),'targetId',(SELECT target_id FROM ops.action_proposals WHERE id=v_proposal),
@@ -6676,7 +7353,9 @@ BEGIN
   END IF;
 
   IF p_operation = 'previewActionDraft' THEN
-    IF v_result_state <> 'DRAFT' OR v_preview_id IS NOT NULL OR btrim(v_content_digest::text) IS DISTINCT FROM btrim(NULLIF(p_request->>'expectedContentDigest','')) THEN
+    IF v_result_state <> 'DRAFT' OR v_preview_id IS NOT NULL
+       OR NULLIF(p_request->>'expectedVersion','')::bigint IS DISTINCT FROM v_version
+       OR btrim(v_content_digest::text) IS DISTINCT FROM btrim(NULLIF(p_request->>'expectedContentDigest','')) THEN
       RAISE EXCEPTION 'action_digest_mismatch' USING ERRCODE='40001';
     END IF;
     v_preview_id := gen_random_uuid();
@@ -6685,10 +7364,18 @@ BEGIN
     -- DEFINER function.  Build the digest-only ActionApprovalDetailV1 branch
     -- from the persisted proposal identity/version and content digest; the
     -- reviewer-facing readable detail is projected by the HTTP adapter.
+    IF v_action_kind='CAPABILITY_ACTIVATION' AND v_review_detail IS NULL THEN
+      RAISE EXCEPTION 'capability_activation_detail_missing' USING ERRCODE='55000';
+    END IF;
     v_detail := CASE v_action_kind
       WHEN 'HYPOTHESIS' THEN jsonb_build_object(
         'kind','HYPOTHESIS','caseId',v_proposal,'expectedCaseVersion',v_target_version,
         'statementDigest',v_content_digest,'evidenceSegmentSetDigest',v_digest,'unknownSetDigest',v_digest)
+      WHEN 'COMMUNICATION' THEN jsonb_build_object(
+        'kind','COMMUNICATION','proposalId',v_proposal,'proposalVersion',v_version,
+        'recipientBindingDigest',v_target_digest,'exactContentDigest',v_content_digest,
+        'authorizationDigest',v_approval_digest,'terminalReceiptPolicyDigest',v_policy_digest)
+      WHEN 'CAPABILITY_ACTIVATION' THEN v_review_detail
       ELSE jsonb_build_object(
         'kind','TASK','objectType','ACTION_PROPOSAL','objectId',v_proposal,
         'expectedObjectVersion',v_version,'taskType','REVIEW','titleDigest',v_content_digest,
@@ -6698,13 +7385,39 @@ BEGIN
     v_detail_canonical := convert_to(jsonb_build_object('actionDetailKind',v_detail_kind,'actionDetail',v_detail)::text,'UTF8');
     v_detail_digest := encode(extensions.digest(v_detail_canonical,'sha256'),'hex');
     v_policy_digest := encode(extensions.digest(convert_to('approval-policy.v1','UTF8'),'sha256'),'hex');
+    v_quorum_plan_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(
+      jsonb_build_object('schemaVersion','action-quorum-plan.v1','proposalId',v_proposal,
+        'proposalVersion',v_version,'actionKind',v_action_kind,'contentDigest',v_content_digest,
+        'policyDigest',v_policy_digest,'requiredSlots',CASE WHEN v_action_kind='CAPABILITY_ACTIVATION'
+          THEN jsonb_build_array('legal','operational') ELSE jsonb_build_array('primary') END)),
+      'sha256'),'hex');
     v_due_at := LEAST(v_now + interval '6 days', v_expires_at - interval '1 second');
-    v_binding := jsonb_build_object('schemaVersion','approval-binding.v1','proposalId',v_proposal,'proposalVersion',v_version,'actionKind',v_action_kind,'originDigest',v_origin_digest,'contentDigest',v_content_digest,'rationaleDigest',v_rationale_digest,'targetType',v_target_type,'targetId',v_target_id,'targetVersion',v_target_version,'targetDigest',v_target_digest,'objectScopeDigest',v_object_scope_digest,'operationId','submitActionDecision','requiredCapability','actions.review','targetRequestDigest',v_digest,'previewId',v_preview_id,'approvalSubjectDigest',v_digest,'evidenceSetDigest',v_digest,'contraryEvidenceSetDigest',v_digest,'uncertaintySetDigest',v_digest,'riskAssessmentDigest',v_digest,'policySnapshotDigest',v_policy_digest,'conflictSnapshotDigest',v_digest,'expectedEffectDigest',v_digest,'reversible',true,'quorumPlanDigest',v_digest,'effectIdempotencyKeySha256',v_digest,'notBefore',v_now,'expiresAt',v_expires_at,'actionDetailKind',v_detail_kind,'actionDetail',v_detail,'actionDetailDigest',v_detail_digest);
+    v_binding := jsonb_build_object('schemaVersion','approval-binding.v1','proposalId',v_proposal,'proposalVersion',v_version,'actionKind',v_action_kind,'originDigest',v_origin_digest,'contentDigest',v_content_digest,'rationaleDigest',v_rationale_digest,'targetType',v_target_type,'targetId',v_target_id,'targetVersion',v_target_version,'targetDigest',v_target_digest,'objectScopeDigest',v_object_scope_digest,'operationId','submitActionDecision','requiredCapability','actions.review','targetRequestDigest',v_content_digest,'previewId',v_preview_id,'approvalSubjectDigest',v_content_digest,'evidenceSetDigest',v_digest,'contraryEvidenceSetDigest',v_digest,'uncertaintySetDigest',v_digest,'riskAssessmentDigest',v_digest,'policySnapshotDigest',v_policy_digest,'conflictSnapshotDigest',v_digest,'expectedEffectDigest',v_digest,'reversible',true,'quorumPlanDigest',v_quorum_plan_digest,'effectIdempotencyKeySha256',v_digest,'notBefore',v_now,'expiresAt',v_expires_at,'actionDetailKind',v_detail_kind,'actionDetail',v_detail,'actionDetailDigest',v_detail_digest);
     v_binding_canonical := convert_to(v_binding::text,'UTF8');
     v_approval_digest := encode(extensions.digest(v_binding_canonical,'sha256'),'hex');
     v_receipt := jsonb_build_object('proposalId',v_proposal,'proposalVersion',v_version,'previewId',v_preview_id,'previewDigest',v_approval_digest,'approvalDigest',v_approval_digest,'state','DRAFT','acceptedAt',clock_timestamp());
     v_receipt_digest := encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex');
-    UPDATE ops.action_proposal_versions SET preview_id=v_preview_id,preview_digest=v_approval_digest,preview_policy_digest=v_policy_digest,preview_encrypted=convert_to(rpad(convert_from(v_detail_canonical,'UTF8'), greatest(32,octet_length(v_detail_canonical)), ' '),'UTF8'),previewed_at=v_now,previewed_by=p_actor,preview_receipt_digest=v_receipt_digest,preview_audit_event_id=v_event_id,approval_binding=v_binding,approval_binding_canonical=v_binding_canonical,approval_digest=v_approval_digest,operation_id='submitActionDecision',required_capability='actions.review',target_request_digest=v_digest,evidence_set_digest=v_digest,contrary_evidence_set_digest=v_digest,uncertainty_set_digest=v_digest,risk_assessment_digest=v_digest,policy_snapshot_digest=v_policy_digest,conflict_snapshot_digest=v_digest,expected_effect_digest=v_digest,reversible=true,quorum_plan_digest=v_digest,effect_idempotency_key_sha256=v_digest,action_detail_kind=v_detail_kind,action_detail=v_detail,action_detail_canonical=v_detail_canonical,action_detail_digest=v_detail_digest,quorum_policy_version='approval-policy.v1',not_before=v_now,due_at=v_due_at,submitted_at=v_now,state_version=state_version+1,updated_at=v_now WHERE proposal_id=v_proposal AND version=v_version;
+    UPDATE ops.action_proposal_versions SET preview_id=v_preview_id,preview_digest=v_approval_digest,preview_policy_digest=v_policy_digest,preview_encrypted=convert_to(rpad(convert_from(v_detail_canonical,'UTF8'), greatest(32,octet_length(v_detail_canonical)), ' '),'UTF8'),previewed_at=v_now,previewed_by=p_actor,preview_receipt_digest=v_receipt_digest,preview_audit_event_id=v_event_id,approval_binding=v_binding,approval_binding_canonical=v_binding_canonical,approval_digest=v_approval_digest,operation_id='submitActionDecision',required_capability='actions.review',target_request_digest=v_content_digest,evidence_set_digest=v_digest,contrary_evidence_set_digest=v_digest,uncertainty_set_digest=v_digest,risk_assessment_digest=v_digest,policy_snapshot_digest=v_policy_digest,conflict_snapshot_digest=v_digest,expected_effect_digest=v_digest,reversible=true,quorum_plan_digest=v_quorum_plan_digest,effect_idempotency_key_sha256=v_digest,action_detail_kind=v_detail_kind,action_detail=v_detail,action_detail_canonical=v_detail_canonical,action_detail_digest=v_detail_digest,quorum_policy_version='approval-policy.v1',not_before=v_now,due_at=v_due_at,submitted_at=v_now,state_version=state_version+1,updated_at=v_now WHERE proposal_id=v_proposal AND version=v_version;
+    IF v_action_kind='CAPABILITY_ACTIVATION' THEN
+      INSERT INTO ops.action_approval_capability_activation_details(
+        proposal_id,proposal_version,detail_kind,detail_binding_canonical,
+        action_detail_digest,capability_class,capability_id,environment,
+        expected_capability_version,current_capability_digest,decision,
+        configuration_digest,evidence_receipt_set_digest,preflight_receipt_digest,
+        policy_digest,contract_digest,rights_digest,jurisdiction_set_digest,
+        kill_switch_digest,effective_at,expiry_kind,expires_at)
+      VALUES(v_proposal,v_version,'CAPABILITY_ACTIVATION',v_detail_canonical,
+        v_detail_digest,v_detail->>'capabilityClass',v_detail->>'capabilityId',
+        v_detail->>'environment',(v_detail->>'expectedCapabilityVersion')::bigint,
+        v_detail->>'currentCapabilityDigest',v_detail->>'decision',
+        v_detail->>'configurationDigest',v_detail->>'evidenceReceiptSetDigest',
+        v_detail->>'preflightReceiptDigest',v_detail->>'policyDigest',
+        v_detail->>'contractDigest',v_detail->>'rightsDigest',
+        v_detail->>'jurisdictionSetDigest',v_detail->>'killSwitchDigest',
+        (v_detail->>'effectiveAt')::timestamptz,v_detail->'expiry'->>'kind',
+        CASE WHEN v_detail->'expiry'->>'kind'='AT'
+          THEN (v_detail->'expiry'->>'at')::timestamptz ELSE NULL END);
+    END IF;
     UPDATE ops.action_proposals SET aggregate_version=aggregate_version+1,last_receipt_digest=v_receipt_digest,last_audit_event_id=v_event_id,updated_at=clock_timestamp() WHERE id=v_proposal;
     RETURN v_receipt || jsonb_build_object(
       'receiptDigest',v_receipt_digest,
@@ -6723,7 +7436,110 @@ BEGIN
   END IF;
 
   IF p_operation = 'submitActionForReview' THEN
-    IF v_result_state <> 'DRAFT' OR v_preview_id IS NULL OR v_approval_digest IS NULL THEN RAISE EXCEPTION 'action_preview_stale' USING ERRCODE='40001'; END IF;
+    IF v_result_state <> 'DRAFT' OR v_preview_id IS NULL OR v_approval_digest IS NULL
+       OR NULLIF(p_request->>'expectedVersion','')::bigint IS DISTINCT FROM v_version
+       OR btrim(NULLIF(p_request->>'expectedContentDigest','')) IS DISTINCT FROM btrim(v_content_digest::text)
+       OR NULLIF(p_request->>'previewId','')::uuid IS DISTINCT FROM v_preview_id
+       OR btrim(NULLIF(p_request->>'previewDigest','')) IS DISTINCT FROM btrim(v_approval_digest::text) THEN
+      RAISE EXCEPTION 'action_preview_stale' USING ERRCODE='40001';
+    END IF;
+    IF v_action_kind='CAPABILITY_ACTIVATION' THEN
+      SELECT u.id INTO v_reviewer
+        FROM ops.users u
+        JOIN ops.user_roles ur ON ur.user_id=u.id AND ur.revoked_at IS NULL
+          AND (ur.expires_at IS NULL OR ur.expires_at>v_now)
+        JOIN ops.roles r ON r.id=ur.role_id AND r.code='LEGAL_REVIEWER'
+       WHERE u.status='ACTIVE' AND u.id<>p_actor
+       ORDER BY u.id LIMIT 1;
+      SELECT u.id INTO v_second_reviewer
+        FROM ops.users u
+        JOIN ops.user_roles ur ON ur.user_id=u.id AND ur.revoked_at IS NULL
+          AND (ur.expires_at IS NULL OR ur.expires_at>v_now)
+        JOIN ops.roles r ON r.id=ur.role_id AND r.code='OPERATIONS'
+       WHERE u.status='ACTIVE' AND u.id<>p_actor AND u.id<>v_reviewer
+       ORDER BY u.id LIMIT 1;
+      IF v_reviewer IS NULL OR v_second_reviewer IS NULL THEN
+        RAISE EXCEPTION 'action_capability_activation_quorum_unavailable' USING ERRCODE='55000';
+      END IF;
+      v_assignment:=gen_random_uuid();
+      v_second_assignment:=gen_random_uuid();
+      v_conflict_id:=gen_random_uuid();
+      v_second_conflict_id:=gen_random_uuid();
+      v_due_at:=LEAST(v_now+interval '6 days',v_expires_at-interval '1 second');
+      v_conflict_digest_one:=encode(extensions.digest(convert_to(
+        v_conflict_id::text||':'||v_reviewer::text||':'||v_approval_digest,'UTF8'),'sha256'),'hex');
+      v_conflict_digest_two:=encode(extensions.digest(convert_to(
+        v_second_conflict_id::text||':'||v_second_reviewer::text||':'||v_approval_digest,'UTF8'),'sha256'),'hex');
+      INSERT INTO editorial.conflict_snapshots(
+        id,subject_actor_id,target_type,target_id,target_version,target_digest,
+        operation_id,action_kind,candidate_role,declaration_set_digest,finding_set,
+        finding_set_digest,authorship_digest,party_recipient_digest,role_digest,
+        relationship_digest,funding_customer_digest,policy_digest,evaluation_state,
+        valid_until,evaluated_at,evaluated_by_type,evaluated_by_id,snapshot_sha256,receipt_digest)
+      VALUES
+        (v_conflict_id,v_reviewer,'ACTION_PROPOSAL',v_proposal::text,v_version,
+         v_approval_digest,'submitActionDecision','CAPABILITY_ACTIVATION','LEGAL_REVIEWER',
+         v_zero_digest,'{}'::jsonb,v_zero_digest,v_digest,v_digest,
+         encode(extensions.digest(convert_to(v_reviewer::text||':LEGAL_REVIEWER','UTF8'),'sha256'),'hex'),
+         v_digest,v_digest,v_digest,'CLEAR',v_due_at,v_now,'SERVICE','action-approval',
+         v_conflict_digest_one,encode(extensions.digest(convert_to(v_conflict_digest_one||':receipt','UTF8'),'sha256'),'hex')),
+        (v_second_conflict_id,v_second_reviewer,'ACTION_PROPOSAL',v_proposal::text,v_version,
+         v_approval_digest,'submitActionDecision','CAPABILITY_ACTIVATION','APPROVER',
+         v_zero_digest,'{}'::jsonb,v_zero_digest,v_digest,v_digest,
+         encode(extensions.digest(convert_to(v_second_reviewer::text||':OPERATIONS','UTF8'),'sha256'),'hex'),
+         v_digest,v_digest,v_digest,'CLEAR',v_due_at,v_now,'SERVICE','action-approval',
+         v_conflict_digest_two,encode(extensions.digest(convert_to(v_conflict_digest_two||':receipt','UTF8'),'sha256'),'hex'));
+      INSERT INTO ops.action_review_assignments(
+        id,proposal_id,proposal_version,approval_digest,assignment_generation,slot_id,
+        slot_ordinal,required_capability,approve_assurance,allowed_role_codes,reviewer_id,
+        reviewer_role_snapshot_digest,eligibility_snapshot_digest,conflict_snapshot_id,
+        conflict_snapshot_digest,conflict_target_id,conflict_target_version,
+        conflict_target_digest,conflict_evaluation_state,conflict_valid_until,
+        excluded_actor_ids,exclusion_set_digest,quorum_plan_digest,assignment_digest,
+        state,version,assigned_by,due_at,last_receipt_digest,last_audit_event_id)
+      VALUES
+        (v_assignment,v_proposal,v_version,v_approval_digest,1,'legal',1,'actions.review',
+         'STEP_UP',ARRAY['LEGAL_REVIEWER'],v_reviewer,
+         encode(extensions.digest(convert_to(v_reviewer::text||':LEGAL_REVIEWER','UTF8'),'sha256'),'hex'),
+         v_conflict_digest_one,v_conflict_id,v_conflict_digest_one,v_proposal,v_version,
+         v_approval_digest,'CLEAR',v_due_at,ARRAY[p_actor],v_digest,v_quorum_plan_digest,
+         encode(extensions.digest(convert_to(v_assignment::text||':legal:'||v_approval_digest,'UTF8'),'sha256'),'hex'),
+         'ASSIGNED',1,p_actor,v_due_at,v_digest,v_event_id),
+        (v_second_assignment,v_proposal,v_version,v_approval_digest,1,'operational',2,'actions.review',
+         'STEP_UP',ARRAY['OPERATIONS'],v_second_reviewer,
+         encode(extensions.digest(convert_to(v_second_reviewer::text||':OPERATIONS','UTF8'),'sha256'),'hex'),
+         v_conflict_digest_two,v_second_conflict_id,v_conflict_digest_two,v_proposal,v_version,
+         v_approval_digest,'CLEAR',v_due_at,
+         ARRAY(SELECT x FROM unnest(ARRAY[p_actor,v_reviewer]) x ORDER BY x),v_digest,v_quorum_plan_digest,
+         encode(extensions.digest(convert_to(v_second_assignment::text||':operational:'||v_approval_digest,'UTF8'),'sha256'),'hex'),
+         'ASSIGNED',1,p_actor,v_due_at,v_digest,v_event_id);
+      UPDATE ops.action_proposal_versions SET state='PENDING_QUORUM',state_version=state_version+1,
+        updated_at=v_now WHERE proposal_id=v_proposal AND version=v_version;
+      UPDATE ops.action_proposals SET aggregate_version=aggregate_version+1,
+        last_receipt_digest=v_approval_digest,last_audit_event_id=v_event_id,updated_at=v_now
+        WHERE id=v_proposal;
+      v_receipt:=jsonb_build_object(
+        'proposalId',v_proposal,'proposalVersion',v_version,
+        'assignmentIds',jsonb_build_array(v_assignment,v_second_assignment),
+        'state','PENDING_QUORUM','actionKind',v_action_kind,'contentDigest',v_content_digest,
+        'approvalDigest',v_approval_digest,'targetType',v_target_type,'targetId',v_target_id,
+        'targetVersion',v_target_version,'expiresAt',v_expires_at,'acceptedAt',v_now,
+        'assignments',jsonb_build_array(
+          jsonb_build_object('assignmentId',v_assignment,'version',1,'assignmentGeneration',1,
+            'slotKind','legal','requiredCapability','actions.review','reviewer',
+            jsonb_build_object('actorType','HUMAN','actorId',v_reviewer,'displayName','Legal reviewer'),
+            'state','ASSIGNED','dueAt',v_due_at,'approvalDigest',v_approval_digest),
+          jsonb_build_object('assignmentId',v_second_assignment,'version',1,'assignmentGeneration',1,
+            'slotKind','operational','requiredCapability','actions.review','reviewer',
+            jsonb_build_object('actorType','HUMAN','actorId',v_second_reviewer,'displayName','Operations reviewer'),
+            'state','ASSIGNED','dueAt',v_due_at,'approvalDigest',v_approval_digest)),
+        'quorum',jsonb_build_object('planDigest',v_quorum_plan_digest,
+          'requiredSlots',jsonb_build_array('legal','operational'),
+          'satisfiedSlots','[]'::jsonb,'blockingSlots',jsonb_build_array('legal','operational'),
+          'conflictSnapshotDigest',v_digest,'complete',false));
+      v_receipt_digest:=encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex');
+      RETURN v_receipt||jsonb_build_object('receiptDigest',v_receipt_digest,'outboxEventIds','[]'::jsonb);
+    END IF;
     v_reviewer := (SELECT id FROM ops.users WHERE status='ACTIVE' AND id<>p_actor ORDER BY id LIMIT 1);
     IF v_reviewer IS NULL THEN RAISE EXCEPTION 'action_quorum_unavailable' USING ERRCODE='55000'; END IF;
     v_assignment := gen_random_uuid();
@@ -6759,14 +7575,30 @@ BEGIN
   IF p_operation = 'claimActionReview' THEN
     v_assignment := NULLIF(p_request->>'assignmentId','')::uuid;
     IF v_assignment IS NULL THEN RAISE EXCEPTION 'invalid_parameter' USING ERRCODE='22023'; END IF;
-    SELECT state, proposal_id, proposal_version, approval_digest, version
-      INTO v_result_state, v_proposal, v_version, v_approval_digest, v_target_version
+    SELECT state, proposal_id, proposal_version, approval_digest, version,
+           reviewer_id,allowed_role_codes
+      INTO v_result_state, v_proposal, v_version, v_approval_digest, v_target_version,
+           v_assigned_reviewer,v_allowed_role_codes
       FROM ops.action_review_assignments WHERE id=v_assignment FOR UPDATE;
     IF NOT FOUND OR v_result_state <> 'ASSIGNED' THEN
       RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001';
     END IF;
-    IF EXISTS (SELECT 1 FROM ops.action_review_assignments WHERE id=v_assignment AND reviewer_id IS NOT NULL AND reviewer_id<>p_actor) THEN
-      RAISE EXCEPTION 'action_review_already_claimed' USING ERRCODE='40001';
+    IF v_assigned_reviewer IS DISTINCT FROM p_actor THEN
+      RAISE EXCEPTION 'action_review_wrong_reviewer' USING ERRCODE='42501';
+    END IF;
+    IF NULLIF(p_request->>'expectedProposalVersion','')::bigint IS DISTINCT FROM v_version
+       OR NULLIF(p_request->>'expectedAssignmentVersion','')::bigint IS DISTINCT FROM v_target_version
+       OR btrim(NULLIF(p_request->>'expectedApprovalDigest','')) IS DISTINCT FROM btrim(v_approval_digest::text)
+       OR NULLIF(p_request->>'actionKind','') IS DISTINCT FROM v_action_kind THEN
+      RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM ops.user_roles ur JOIN ops.roles r ON r.id=ur.role_id
+        JOIN ops.role_capabilities rc ON rc.role_id=r.id AND rc.capability_code='actions.review'
+       WHERE ur.user_id=p_actor AND r.code=ANY(v_allowed_role_codes)
+         AND ur.revoked_at IS NULL AND (ur.expires_at IS NULL OR ur.expires_at>v_now)
+    ) THEN
+      RAISE EXCEPTION 'action_review_role_ineligible' USING ERRCODE='42501';
     END IF;
     v_receipt := jsonb_build_object('assignmentId',v_assignment,'proposalId',v_proposal,'proposalVersion',v_version,'state','IN_PROGRESS','claimedBy',p_actor,'acceptedAt',v_now);
     v_receipt_digest := encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex');
@@ -6774,7 +7606,7 @@ BEGIN
     UPDATE ops.action_review_assignments
        SET state='IN_PROGRESS', reviewer_id=p_actor, version=version+1, claimed_at=v_now,
            last_receipt_digest=v_receipt_digest, last_audit_event_id=v_audit_id, updated_at=v_now
-     WHERE id=v_assignment AND state='ASSIGNED';
+     WHERE id=v_assignment AND state='ASSIGNED' AND reviewer_id=p_actor AND version=v_target_version;
     IF NOT FOUND THEN RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001'; END IF;
     UPDATE ops.action_proposals SET aggregate_version=aggregate_version+1,last_receipt_digest=v_receipt_digest,last_audit_event_id=v_audit_id,updated_at=v_now WHERE id=v_proposal;
     RETURN v_receipt || jsonb_build_object(
@@ -6795,28 +7627,119 @@ BEGIN
     v_reason := COALESCE(NULLIF(p_request->>'reason',''), NULLIF(p_request->'decision'->>'reason',''), 'decision recorded');
     v_reason_digest := encode(extensions.digest(convert_to(v_reason,'UTF8'),'sha256'),'hex');
     IF v_assignment IS NULL OR v_decision NOT IN ('APPROVE','REJECT','CHANGES_REQUIRED','RECUSE') THEN RAISE EXCEPTION 'invalid_parameter' USING ERRCODE='22023'; END IF;
-    SELECT state, conflict_snapshot_id, conflict_snapshot_digest, version, approve_assurance INTO v_result_state, v_conflict_id, v_digest, v_assignment_version, v_required_assurance FROM ops.action_review_assignments WHERE id=v_assignment AND proposal_id=v_proposal FOR UPDATE;
+    SELECT state,conflict_snapshot_id,conflict_snapshot_digest,version,approve_assurance,
+           reviewer_id,allowed_role_codes,slot_id,assignment_generation,conflict_valid_until
+      INTO v_result_state,v_conflict_id,v_digest,v_assignment_version,v_required_assurance,
+           v_assigned_reviewer,v_allowed_role_codes,v_slot_id,v_assignment_generation,
+           v_conflict_valid_until
+      FROM ops.action_review_assignments
+     WHERE id=v_assignment AND proposal_id=v_proposal AND proposal_version=v_version
+       AND approval_digest=v_approval_digest FOR UPDATE;
     IF NOT FOUND OR v_result_state NOT IN ('ASSIGNED','IN_PROGRESS') THEN RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001'; END IF;
+    IF v_assigned_reviewer IS DISTINCT FROM p_actor THEN
+      RAISE EXCEPTION 'action_review_wrong_reviewer' USING ERRCODE='42501';
+    END IF;
+    IF v_conflict_valid_until<=v_now THEN
+      RAISE EXCEPTION 'action_conflict_snapshot_expired' USING ERRCODE='40001';
+    END IF;
+    IF NULLIF(p_request->>'expectedProposalVersion','')::bigint IS DISTINCT FROM v_version
+       OR NULLIF(p_request->>'expectedAssignmentVersion','')::bigint IS DISTINCT FROM v_assignment_version
+       OR btrim(NULLIF(p_request->>'expectedApprovalDigest','')) IS DISTINCT FROM btrim(v_approval_digest::text)
+       OR NULLIF(p_request->>'actionKind','') IS DISTINCT FROM v_action_kind THEN
+      RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM ops.user_roles ur JOIN ops.roles r ON r.id=ur.role_id
+        JOIN ops.role_capabilities rc ON rc.role_id=r.id AND rc.capability_code='actions.review'
+       WHERE ur.user_id=p_actor AND r.code=ANY(v_allowed_role_codes)
+         AND ur.revoked_at IS NULL AND (ur.expires_at IS NULL OR ur.expires_at>v_now)
+    ) THEN
+      RAISE EXCEPTION 'action_review_role_ineligible' USING ERRCODE='42501';
+    END IF;
+    IF EXISTS (
+         SELECT 1 FROM ops.action_review_assignments newer
+          WHERE newer.proposal_id=v_proposal AND newer.proposal_version=v_version
+            AND newer.slot_id=v_slot_id
+            AND newer.assignment_generation>v_assignment_generation
+       ) OR NOT EXISTS (
+         SELECT 1
+           FROM ops.action_review_assignments a
+           JOIN editorial.conflict_snapshots c ON c.id=a.conflict_snapshot_id
+          WHERE a.id=v_assignment AND a.reviewer_id=p_actor
+            AND a.quorum_plan_digest=v_quorum_plan_digest
+            AND a.conflict_snapshot_digest=c.snapshot_sha256
+            AND c.subject_actor_id=p_actor
+            AND c.target_type='ACTION_PROPOSAL'
+            AND c.target_id=v_proposal::text
+            AND c.target_version=v_version
+            AND c.target_digest=v_approval_digest
+            AND c.operation_id='submitActionDecision'
+            AND c.action_kind=v_action_kind
+            AND c.evaluation_state IN ('CLEAR','DISCLOSURE_REQUIRED')
+            AND c.valid_until>v_now
+       ) THEN
+      RAISE EXCEPTION 'action_assignment_authorization_stale' USING ERRCODE='40001';
+    END IF;
+    BEGIN
+      v_actor_assertion_jti:=NULLIF(p_request->>'_actorAssertionJti','')::uuid;
+      v_actor_assurance:=NULLIF(p_request->>'_actorAssuranceLevel','');
+      v_actor_action_digest:=NULLIF(p_request->>'_actorActionDigest','')::char(64);
+      v_actor_step_up_authorization_id:=NULLIF(p_request->>'_actorStepUpAuthorizationId','')::uuid;
+      v_actor_idempotency_key_sha256:=NULLIF(p_request->>'_actorIdempotencyKeySha256','')::char(64);
+      v_actor_request_key_sha256:=NULLIF(p_request->>'_actorRequestKeySha256','')::char(64);
+    EXCEPTION WHEN invalid_text_representation THEN
+      RAISE EXCEPTION 'actor_assertion_binding_invalid' USING ERRCODE='42501';
+    END;
+    IF v_actor_assertion_jti IS NULL OR v_actor_assurance IS NULL
+       OR v_actor_request_key_sha256 IS NULL
+       OR v_actor_request_key_sha256<>NULLIF(p_request->>'_idempotencyKeySha256','')::char(64) THEN
+      RAISE EXCEPTION 'actor_assertion_binding_invalid' USING ERRCODE='42501';
+    END IF;
     v_assurance := upper(COALESCE(NULLIF(p_request->>'assurance',''), NULLIF(p_request->'decision'->>'assurance',''), 'ACTIVE_SESSION'));
+    IF v_actor_assurance<>v_assurance THEN
+      RAISE EXCEPTION 'actor_assertion_assurance_mismatch' USING ERRCODE='42501';
+    END IF;
     IF v_decision='APPROVE' AND v_assurance NOT IN ('ACTIVE_SESSION','STEP_UP') THEN
       RAISE EXCEPTION 'step_up_required' USING ERRCODE='42501';
     END IF;
     IF v_decision='APPROVE' AND v_required_assurance='STEP_UP' AND v_assurance<>'STEP_UP' THEN
       RAISE EXCEPTION 'step_up_required' USING ERRCODE='42501';
     END IF;
+    v_expected_step_up_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(
+      jsonb_build_object('schemaVersion','action-review-step-up.v1','proposalId',v_proposal,
+        'proposalVersion',v_version,'approvalDigest',v_approval_digest,
+        'assignmentId',v_assignment,'assignmentVersion',v_assignment_version,
+        'assignmentGeneration',v_assignment_generation,'slotKind',v_slot_id,
+        'decisionKind',v_decision)),'sha256'),'hex');
     IF v_assurance='STEP_UP' THEN
-      v_step_up_authorization_id := NULLIF(COALESCE(p_request->>'stepUpAuthorizationId', p_request->'decision'->>'stepUpAuthorizationId'),'')::uuid;
-      SELECT id,session_id,action_digest,expires_at,assertion_issue_count
-        INTO v_step_up_authorization_id,v_step_up_session,v_step_up_authorization_digest,v_step_up_expires_at,v_step_up_issue_ordinal
-        FROM ops.step_up_authorizations WHERE id=v_step_up_authorization_id AND closed_at IS NULL FOR SHARE;
+      v_requested_step_up_authorization_id := NULLIF(COALESCE(
+        p_request->>'stepUpAuthorizationId',p_request->'decision'->>'stepUpAuthorizationId'),'')::uuid;
+      SELECT id,session_id,action_digest,expires_at,assertion_issue_count,
+             idempotency_key_sha256,last_issued_at
+        INTO v_step_up_authorization_id,v_step_up_session,v_step_up_authorization_digest,
+             v_step_up_expires_at,v_step_up_issue_ordinal,
+             v_step_up_idempotency_key_sha256,v_step_up_last_issued_at
+        FROM ops.step_up_authorizations
+       WHERE id=v_actor_step_up_authorization_id AND closed_at IS NULL FOR SHARE;
       IF NOT FOUND OR v_step_up_expires_at<=clock_timestamp()
+         OR v_step_up_authorization_id IS DISTINCT FROM v_actor_step_up_authorization_id
+         OR v_requested_step_up_authorization_id IS DISTINCT FROM v_actor_step_up_authorization_id
+         OR v_actor_action_digest IS NULL
+         OR v_step_up_authorization_digest<>v_actor_action_digest
+         OR v_actor_idempotency_key_sha256 IS NULL
+         OR v_step_up_idempotency_key_sha256<>v_actor_idempotency_key_sha256
+         OR v_actor_idempotency_key_sha256<>v_actor_request_key_sha256
+         OR v_step_up_issue_ordinal NOT BETWEEN 1 AND 3
+         OR v_step_up_last_issued_at IS NULL
          OR (COALESCE(p_request->>'assertedActionDigest', p_request->'decision'->>'assertedActionDigest') IS NOT NULL AND COALESCE(p_request->>'assertedActionDigest', p_request->'decision'->>'assertedActionDigest')<>v_step_up_authorization_digest)
          OR NOT EXISTS (SELECT 1 FROM ops.sessions s WHERE s.id=v_step_up_session AND s.user_id=p_actor AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp()) THEN
         RAISE EXCEPTION 'step_up_invalid' USING ERRCODE='42501';
       END IF;
-      v_step_up_issue_ordinal:=GREATEST(v_step_up_issue_ordinal,1);
-      v_step_up_issued_at:=COALESCE(NULLIF(COALESCE(p_request->>'stepUpAt', p_request->'decision'->>'stepUpAt'),'')::timestamptz,clock_timestamp());
-      IF v_step_up_issued_at>clock_timestamp() OR v_step_up_issued_at>=v_step_up_expires_at THEN RAISE EXCEPTION 'step_up_invalid' USING ERRCODE='42501'; END IF;
+      v_step_up_issued_at:=v_step_up_last_issued_at;
+      IF v_step_up_issued_at>clock_timestamp() OR v_step_up_issued_at>=v_step_up_expires_at
+         OR v_step_up_expires_at>v_step_up_issued_at+interval '5 minutes 5 seconds' THEN
+        RAISE EXCEPTION 'step_up_invalid' USING ERRCODE='42501';
+      END IF;
       v_step_up_authorization_receipt_canonical:=convert_to(jsonb_build_object(
         'schemaVersion','step-up-authorization-receipt.v1','authorizationId',v_step_up_authorization_id,
         'actionDigest',v_step_up_authorization_digest,'sessionId',v_step_up_session,'issueNumber',v_step_up_issue_ordinal,
@@ -6828,45 +7751,452 @@ BEGIN
     IF EXISTS (SELECT 1 FROM ops.action_proposals ap WHERE ap.id=v_proposal AND ap.owner_user_id=p_actor) THEN
       RAISE EXCEPTION 'sod_violation' USING ERRCODE='42501';
     END IF;
-    v_result_state := CASE WHEN v_decision='REJECT' THEN 'REJECTED' WHEN v_decision='CHANGES_REQUIRED' THEN 'CHANGES_REQUIRED' WHEN v_decision='APPROVE' THEN 'APPROVED' ELSE 'PENDING_QUORUM' END;
-    IF v_decision='APPROVE' THEN
-      v_execution_id := gen_random_uuid();
-      INSERT INTO ops.in_flight_effects(id,effect_type,effect_key_digest,action_kind,action_proposal_id,action_proposal_version,approval_digest,predecessor_relationship,state,provider_configuration_digest,provider_idempotency_key_sha256,policy_digest,kill_switch_digest,budget_digest,rights_digest,consent_digest,suppression_digest,conflict_digest,activation_digest,quorum_plan_digest,rendered_bytes_digest,run_after,last_receipt_digest)
-        VALUES(v_execution_id,'ACTION_EXECUTION',v_approval_digest,v_action_kind,v_proposal,v_version,v_approval_digest,'NONE','QUEUED','8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde','36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74',v_digest,v_digest,v_digest,v_digest,v_digest,v_digest,v_digest,v_digest,v_digest,v_digest,v_now + interval '1 second',v_digest);
+    v_quorum_complete:=false;
+    v_prior_decision.id:=NULL;
+    v_prior_assignment.id:=NULL;
+    IF v_decision='APPROVE' AND v_action_kind<>'CAPABILITY_ACTIVATION' THEN
+      v_quorum_complete:=true;
+    ELSIF v_decision='APPROVE' THEN
+      IF v_slot_id NOT IN ('legal','operational') THEN
+        RAISE EXCEPTION 'action_capability_activation_slot_invalid' USING ERRCODE='55000';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM ops.action_decisions d
+         WHERE d.proposal_id=v_proposal AND d.proposal_version=v_version
+           AND d.approval_digest=v_approval_digest AND d.record_kind='DECISION'
+           AND d.decision_kind='APPROVE' AND d.counts_toward_quorum
+           AND d.slot_kind<>v_slot_id
+      ) THEN
+        IF (SELECT count(*)
+          FROM ops.action_decisions d
+          JOIN ops.action_review_assignments a ON a.id=d.assignment_id
+          JOIN editorial.conflict_snapshots c ON c.id=a.conflict_snapshot_id
+          JOIN ops.users u ON u.id=d.actor_id AND u.status='ACTIVE'
+         WHERE d.proposal_id=v_proposal AND d.proposal_version=v_version
+           AND d.approval_digest=v_approval_digest AND d.record_kind='DECISION'
+           AND d.decision_kind='APPROVE' AND d.counts_toward_quorum
+           AND d.slot_kind=CASE v_slot_id WHEN 'legal' THEN 'operational' ELSE 'legal' END
+           AND d.actor_id<>p_actor AND a.state='COMPLETED'
+           AND a.assignment_generation=(SELECT max(latest.assignment_generation)
+             FROM ops.action_review_assignments latest
+            WHERE latest.proposal_id=a.proposal_id AND latest.proposal_version=a.proposal_version
+              AND latest.slot_id=a.slot_id)
+           AND a.quorum_plan_digest=v_quorum_plan_digest
+           AND a.reviewer_id=d.actor_id
+           AND a.allowed_role_codes=CASE a.slot_id
+             WHEN 'legal' THEN ARRAY['LEGAL_REVIEWER']::text[]
+             ELSE ARRAY['OPERATIONS']::text[] END
+           AND EXISTS (SELECT 1 FROM ops.user_roles ur
+             JOIN ops.roles r ON r.id=ur.role_id
+             JOIN ops.role_capabilities rc ON rc.role_id=r.id AND rc.capability_code='actions.review'
+            WHERE ur.user_id=d.actor_id AND r.code=ANY(a.allowed_role_codes)
+              AND ur.revoked_at IS NULL AND (ur.expires_at IS NULL OR ur.expires_at>v_now))
+           AND NOT EXISTS (SELECT 1 FROM ops.action_decisions w
+             WHERE w.record_kind='APPROVAL_WITHDRAWAL' AND w.withdrawn_decision_id=d.id)
+           AND a.conflict_snapshot_digest=c.snapshot_sha256
+           AND c.subject_actor_id=d.actor_id AND c.target_type='ACTION_PROPOSAL'
+           AND c.target_id=v_proposal::text AND c.target_version=v_version
+           AND c.target_digest=v_approval_digest AND c.operation_id='submitActionDecision'
+           AND c.action_kind='CAPABILITY_ACTIVATION'
+           AND c.evaluation_state IN ('CLEAR','DISCLOSURE_REQUIRED')
+           AND c.valid_until>v_now
+        )<>1 THEN
+          RAISE EXCEPTION 'action_quorum_reauthorization_failed' USING ERRCODE='42501';
+        END IF;
+        SELECT d.* INTO v_prior_decision
+          FROM ops.action_decisions d
+          JOIN ops.action_review_assignments a ON a.id=d.assignment_id
+          JOIN editorial.conflict_snapshots c ON c.id=a.conflict_snapshot_id
+          JOIN ops.users u ON u.id=d.actor_id AND u.status='ACTIVE'
+         WHERE d.proposal_id=v_proposal AND d.proposal_version=v_version
+           AND d.approval_digest=v_approval_digest AND d.record_kind='DECISION'
+           AND d.decision_kind='APPROVE' AND d.counts_toward_quorum
+           AND d.slot_kind=CASE v_slot_id WHEN 'legal' THEN 'operational' ELSE 'legal' END
+           AND d.actor_id<>p_actor AND a.state='COMPLETED'
+           AND a.assignment_generation=(SELECT max(latest.assignment_generation)
+             FROM ops.action_review_assignments latest
+            WHERE latest.proposal_id=a.proposal_id AND latest.proposal_version=a.proposal_version
+              AND latest.slot_id=a.slot_id)
+           AND a.quorum_plan_digest=v_quorum_plan_digest AND a.reviewer_id=d.actor_id
+           AND EXISTS (SELECT 1 FROM ops.user_roles ur
+             JOIN ops.roles r ON r.id=ur.role_id
+             JOIN ops.role_capabilities rc ON rc.role_id=r.id AND rc.capability_code='actions.review'
+            WHERE ur.user_id=d.actor_id AND r.code=ANY(a.allowed_role_codes)
+              AND ur.revoked_at IS NULL AND (ur.expires_at IS NULL OR ur.expires_at>v_now))
+           AND NOT EXISTS (SELECT 1 FROM ops.action_decisions w
+             WHERE w.record_kind='APPROVAL_WITHDRAWAL' AND w.withdrawn_decision_id=d.id)
+           AND a.conflict_snapshot_digest=c.snapshot_sha256
+           AND c.subject_actor_id=d.actor_id AND c.target_type='ACTION_PROPOSAL'
+           AND c.target_id=v_proposal::text AND c.target_version=v_version
+           AND c.target_digest=v_approval_digest AND c.operation_id='submitActionDecision'
+           AND c.action_kind='CAPABILITY_ACTIVATION'
+           AND c.evaluation_state IN ('CLEAR','DISCLOSURE_REQUIRED') AND c.valid_until>v_now;
+        SELECT * INTO STRICT v_prior_assignment
+          FROM ops.action_review_assignments WHERE id=v_prior_decision.assignment_id;
+        v_quorum_complete:=true;
+      END IF;
     END IF;
+    v_result_state := CASE
+      WHEN v_decision='REJECT' THEN 'REJECTED'
+      WHEN v_decision='CHANGES_REQUIRED' THEN 'CHANGES_REQUIRED'
+      WHEN v_decision='APPROVE' AND v_quorum_complete THEN 'APPROVED'
+      ELSE 'PENDING_QUORUM' END;
+    IF v_quorum_complete THEN
+      v_execution_id := gen_random_uuid();
+      v_execution_attempt_id := gen_random_uuid();
+      v_execution_receipt_id := gen_random_uuid();
+      SELECT executor_id,transport,capability
+        INTO v_executor_id,v_executor_transport,v_executor_capability
+        FROM (VALUES
+          ('HYPOTHESIS','createHypothesis','BASE_APPLICATION_COMMAND','cases.investigate'),
+          ('CLAIM','addClaim','BASE_APPLICATION_COMMAND','claims.author'),
+          ('TASK','private.CreateTaskFromApprovedAction','PRIVATE_APPLICATION_COMMAND','cases.assign'),
+          ('COMPARABLE','private.MaterializeComparableCandidate','PRIVATE_APPLICATION_COMMAND','cases.investigate'),
+          ('COMMUNICATION','private.DispatchCommunicationIntent','PRIVATE_APPLICATION_COMMAND','communications.approve'),
+          ('PUBLICATION','publishCase','BASE_APPLICATION_COMMAND','publication.publish'),
+          ('RETRACTION','private.PublishRetraction','PRIVATE_APPLICATION_COMMAND','publication.retract'),
+          ('RULE_ACTIVATION','activateRuleVersion','BASE_APPLICATION_COMMAND','rules.activate'),
+          ('ROLE_GRANT','grantRole','BASE_APPLICATION_COMMAND','roles.grant'),
+          ('KILL_SWITCH','private.ApplyKillSwitchCommand','PRIVATE_APPLICATION_COMMAND','kill_switch.execute'),
+          ('COMMUNICATION_AUTHORIZATION','private.RecordCommunicationAuthorizationDecision','PRIVATE_APPLICATION_COMMAND','communications.authorization.manage'),
+          ('ASSET_RIGHTS_DECISION','private.ReviseAssetRightsDecision','PRIVATE_APPLICATION_COMMAND','rights.decide'),
+          ('RETENTION_SCHEDULE','private.CreateRecordClassScheduleRevision','PRIVATE_APPLICATION_COMMAND','retention.policy.manage'),
+          ('FUNDING_DISCLOSURE','private.PublishFundingDisclosureRevision','PRIVATE_APPLICATION_COMMAND','funding.publish'),
+          ('CAPABILITY_ACTIVATION','private.DecideCapabilityActivation','PRIVATE_APPLICATION_COMMAND','providers.activate'),
+          ('RESPONSE_POLICY_CALENDAR','private.CreateBusinessCalendarVersion','PRIVATE_APPLICATION_COMMAND','responses.policy.manage'),
+          ('COMMERCIAL_CONTROL','private.ApplyCommercialControl','PRIVATE_APPLICATION_COMMAND','commercial.controls.review')
+        ) AS executor(action_kind,executor_id,transport,capability)
+       WHERE action_kind=v_action_kind;
+      IF v_executor_id IS NULL OR v_target_request_encrypted IS NULL THEN
+        RAISE EXCEPTION 'action_executor_binding_missing' USING ERRCODE='55000';
+      END IF;
+      -- The authorization binds the exact encrypted ActionPayload bytes, not
+      -- the preview command request that happened to materialize the detail.
+      v_target_request_sha256 := v_content_digest;
+    END IF;
+    v_quorum_snapshot_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(
+      jsonb_build_object(
+        'schemaVersion','action-quorum-snapshot.v1','planDigest',v_quorum_plan_digest,
+        'proposalId',v_proposal,'proposalVersion',v_version,'approvalDigest',v_approval_digest,
+        'decisionKind',v_decision,'currentAssignmentId',v_assignment,
+        'currentSlot',v_slot_id,'currentConflictSnapshotDigest',v_digest,
+        'priorDecisionId',CASE WHEN v_prior_decision.id IS NULL THEN NULL ELSE v_prior_decision.id END,
+        'priorSlot',CASE WHEN v_prior_decision.id IS NULL THEN NULL ELSE v_prior_decision.slot_kind END,
+        'priorConflictSnapshotDigest',CASE WHEN v_prior_decision.id IS NULL THEN NULL ELSE v_prior_decision.conflict_snapshot_digest END,
+        'complete',v_quorum_complete)),
+      'sha256'),'hex');
     v_receipt := jsonb_build_object(
       'decisionId',v_id,'proposalId',v_proposal,'proposalVersion',v_version,
       'assignmentId',v_assignment,'decision',v_decision,'decisionKind',v_decision,
       'recordKind','DECISION','resultingState',v_result_state,'reasonDigest',v_reason_digest,
       'reasonCode','OPERATOR_DECISION','reason',v_reason,'executionId',v_execution_id,'acceptedAt',clock_timestamp(),
-      'assignmentGeneration',1,'slotKind','primary','capability','actions.review',
+      'assignmentGeneration',v_assignment_generation,'slotKind',v_slot_id,'capability','actions.review',
       'assurance',v_assurance,'actor',jsonb_build_object('actorType','HUMAN','actorId',p_actor,'displayName','Action reviewer'),
       'stepUpAuthorization',CASE WHEN v_assurance='STEP_UP' THEN jsonb_build_object(
         'authorizationId',v_step_up_authorization_id,'authorizationDigest',v_step_up_authorization_digest,
         'authorizationReceiptDigest',v_step_up_authorization_receipt_digest,'issueNumber',v_step_up_issue_ordinal,
         'issuedAt',v_step_up_issued_at,'expiresAt',v_step_up_expires_at) ELSE NULL END,
       'approvalDigest',v_approval_digest,
-      'quorum',jsonb_build_object('planDigest',v_digest,'requiredSlots',jsonb_build_array('actions.review'),'satisfiedSlots',CASE WHEN v_decision='APPROVE' THEN jsonb_build_array('actions.review') ELSE jsonb_build_array() END,'blockingSlots',CASE WHEN v_decision='APPROVE' THEN jsonb_build_array() ELSE jsonb_build_array('actions.review') END,'conflictSnapshotDigest',v_digest,'complete',v_decision='APPROVE'),
-      'executionAuthorization',CASE WHEN v_execution_id IS NULL THEN NULL ELSE jsonb_build_object('executionId',v_execution_id,'generation',1,'stateVersion',1,'actionKind',v_action_kind,'state','QUEUED','executionDigest',v_approval_digest,'cancellationGeneration',0,'expiresAt',v_expires_at) END
+      'quorum',jsonb_build_object(
+        'planDigest',v_quorum_plan_digest,
+        'requiredSlots',CASE WHEN v_action_kind='CAPABILITY_ACTIVATION'
+          THEN jsonb_build_array('legal','operational') ELSE jsonb_build_array('primary') END,
+        'satisfiedSlots',CASE WHEN v_decision<>'APPROVE' THEN '[]'::jsonb
+          WHEN v_action_kind<>'CAPABILITY_ACTIVATION' THEN jsonb_build_array('primary')
+          WHEN v_quorum_complete THEN jsonb_build_array('legal','operational')
+          ELSE jsonb_build_array(v_slot_id) END,
+        'blockingSlots',CASE WHEN v_decision<>'APPROVE' THEN
+          CASE WHEN v_action_kind='CAPABILITY_ACTIVATION' THEN jsonb_build_array('legal','operational')
+               ELSE jsonb_build_array('primary') END
+          WHEN v_quorum_complete THEN '[]'::jsonb
+          WHEN v_slot_id='legal' THEN jsonb_build_array('operational')
+          ELSE jsonb_build_array('legal') END,
+        'conflictSnapshotDigest',v_quorum_snapshot_digest,'complete',v_quorum_complete)
     );
     v_receipt_digest := encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex');
-    INSERT INTO ops.action_decisions(id,proposal_id,proposal_version,approval_digest,assignment_id,assignment_version,assignment_generation,slot_kind,actor_id,assurance,step_up_authorization_id,step_up_authorization_digest,step_up_authorization_receipt_digest,step_up_authorization_receipt_canonical,step_up_issue_ordinal,step_up_issued_at,step_up_expires_at,actor_assertion_jti,actor_action_digest,idempotency_key_sha256,decision_kind,reason_code,reason,reason_digest,decision_payload,decision_payload_canonical,decision_receipt_binding,decision_receipt_binding_canonical,conflict_snapshot_id,conflict_snapshot_digest,conflict_target_id,conflict_target_version,conflict_target_digest,conflict_evaluation_state,conflict_valid_until,quorum_snapshot_digest,counts_toward_quorum,quorum_satisfied_after,resulting_proposal_state,execution_id,receipt_digest,request_id,audit_event_id,decided_at,created_at)
-      VALUES(v_id,v_proposal,v_version,v_approval_digest,v_assignment,v_assignment_version+1,1,'primary',p_actor,v_assurance,
+    IF v_execution_id IS NOT NULL THEN
+      SELECT COALESCE(array_agg(x.decision_id ORDER BY x.decision_id),'{}'::uuid[]),
+             COALESCE(array_agg(x.receipt_digest ORDER BY x.receipt_digest),'{}'::text[])
+        INTO v_counted_decision_ids,v_counted_decision_receipt_digests
+        FROM (VALUES
+          (CASE WHEN v_prior_decision.id IS NULL THEN NULL ELSE v_prior_decision.id END,
+           CASE WHEN v_prior_decision.id IS NULL THEN NULL ELSE v_prior_decision.slot_kind END,
+           CASE WHEN v_prior_decision.id IS NULL THEN NULL ELSE btrim(v_prior_decision.receipt_digest::text) END),
+          (v_id,v_slot_id,btrim(v_receipt_digest::text))
+        ) AS x(decision_id,slot_kind,receipt_digest)
+       WHERE x.decision_id IS NOT NULL;
+      v_counted_decision_set_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(
+        jsonb_build_object('decisionIds',to_jsonb(v_counted_decision_ids),
+          'decisionReceiptDigests',to_jsonb(v_counted_decision_receipt_digests))),
+        'sha256'),'hex');
+      IF (v_action_kind='CAPABILITY_ACTIVATION' AND cardinality(v_counted_decision_ids)<>2)
+         OR (v_action_kind<>'CAPABILITY_ACTIVATION' AND cardinality(v_counted_decision_ids)<>1) THEN
+        RAISE EXCEPTION 'action_counted_decision_set_invalid' USING ERRCODE='55000';
+      END IF;
+      v_execution_binding := jsonb_build_object(
+        'schemaVersion','execution-authorization-binding.v1','executionId',v_execution_id,
+        'generation',1,'proposalId',v_proposal,'proposalVersion',v_version,
+        'approvalDigest',v_approval_digest,'terminalDecisionId',v_id,
+        'terminalDecisionReceiptDigest',v_receipt_digest,
+        'countedDecisionIds',to_jsonb(v_counted_decision_ids),
+        'countedDecisionReceiptDigests',to_jsonb(v_counted_decision_receipt_digests),
+        'countedDecisionSetDigest',v_counted_decision_set_digest,
+        'quorumPlanDigest',v_quorum_plan_digest,
+        'quorumSnapshotDigest',v_quorum_snapshot_digest,
+        'actionKind',v_action_kind,'targetCommand',v_executor_id,
+        'targetRequestSha256',v_target_request_sha256,
+        'effectIdempotencyKeySha256',v_actor_request_key_sha256);
+      v_execution_binding_canonical := convert_to(v_execution_binding::text,'UTF8');
+      v_execution_digest := encode(extensions.digest(v_execution_binding_canonical,'sha256'),'hex');
+      v_response_receipt:=v_receipt||jsonb_build_object(
+        'executionAuthorization',jsonb_build_object(
+          'executionId',v_execution_id,'generation',1,'stateVersion',1,
+          'actionKind',v_action_kind,'state','QUEUED','executionDigest',v_execution_digest,
+          'countedDecisionSetDigest',v_counted_decision_set_digest,
+          'cancellationGeneration',0,'expiresAt',v_expires_at));
+      v_execution_receipt_payload := jsonb_build_object(
+        'schemaVersion','action-execution-receipt.v1','receiptKind','AUTHORIZATION_QUEUED',
+        'executionId',v_execution_id,'generation',1,'aggregateState','QUEUED',
+        'aggregateStateVersion',1,'attemptState','QUEUED','attemptStateVersion',1,
+        'cancellationGeneration',0,'effectCertainty','DEFINITIVE_NOT_ACCEPTED',
+        'decisionDigest',v_receipt_digest,'executionDigest',v_execution_digest,
+        'targetRequestSha256',v_target_request_sha256,
+        'requestId',NULLIF(p_request->>'requestId','')::uuid,'occurredAt',v_now);
+      v_execution_receipt_canonical := convert_to(v_execution_receipt_payload::text,'UTF8');
+      v_execution_receipt_digest := encode(extensions.digest(v_execution_receipt_canonical,'sha256'),'hex');
+      v_execution_outbox_id := ops.enqueue_outbox(
+        'action_execution',v_execution_id::text,1,'action.execution_authorized.v1',
+        jsonb_build_object('executionId',v_execution_id,'generation',1,'actionKind',v_action_kind,
+          'decisionDigest',v_receipt_digest,'executionDigest',v_execution_digest,
+          'targetCommand',v_executor_id,'targetRequestSha256',v_target_request_sha256,
+          'expiresAt',v_expires_at),v_now);
+      INSERT INTO ops.in_flight_effects(
+        id,effect_type,effect_key_digest,action_kind,action_proposal_id,
+        action_proposal_version,approval_digest,predecessor_relationship,state,
+        provider_configuration_digest,provider_idempotency_key_sha256,policy_digest,
+        kill_switch_digest,budget_digest,rights_digest,consent_digest,suppression_digest,
+        conflict_digest,activation_digest,quorum_plan_digest,rendered_bytes_digest,
+        run_after,last_receipt_sequence,last_receipt_digest)
+      VALUES(v_execution_id,'ACTION_EXECUTION',encode(extensions.digest(convert_to(
+          v_proposal::text||':'||v_version::text||':'||v_approval_digest,'UTF8'),'sha256'),'hex'),
+        v_action_kind,v_proposal,v_version,v_approval_digest,'NONE','QUEUED',
+        '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde',
+        '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74',
+        v_approval_digest,v_approval_digest,
+        'cd12c434cfd58a9f3a3e0222f236dcc3ea4f1f24f78ea74224dd110bebf61bde',
+        v_approval_digest,v_approval_digest,v_approval_digest,v_approval_digest,
+        v_approval_digest,v_quorum_plan_digest,v_target_request_sha256,
+        v_now+interval '1 second',1,v_execution_receipt_digest);
+    ELSE
+      v_response_receipt:=v_receipt||jsonb_build_object('executionAuthorization',NULL);
+    END IF;
+    v_audit_id := ops.append_audit_event(
+      'control:action:'||v_proposal::text,'USER',p_actor::text,NULL::uuid,
+      'ACTION_DECISION_SUBMITTED','ActionProposal',v_proposal::text,'actions.review',
+      'SUCCESS'::ops.audit_outcome,v_reason,NULLIF(p_request->>'requestId','')::uuid,v_response_receipt);
+    IF v_decision='CHANGES_REQUIRED' THEN
+      IF jsonb_typeof(COALESCE(p_request->'decision'->'tasks',p_request->'tasks'))<>'array'
+         OR jsonb_array_length(COALESCE(p_request->'decision'->'tasks',p_request->'tasks')) NOT BETWEEN 1 AND 100 THEN
+        RAISE EXCEPTION 'action_change_tasks_invalid' USING ERRCODE='22023';
+      END IF;
+      FOR v_task IN SELECT value FROM jsonb_array_elements(
+        COALESCE(p_request->'decision'->'tasks',p_request->'tasks')) AS task(value)
+      LOOP
+        IF jsonb_typeof(v_task)<>'object'
+           OR length(btrim(COALESCE(v_task->>'title',''))) NOT BETWEEN 1 AND 500
+           OR COALESCE(v_task->>'priority','NORMAL') NOT IN ('LOW','NORMAL','HIGH','URGENT') THEN
+          RAISE EXCEPTION 'action_change_task_invalid' USING ERRCODE='22023';
+        END IF;
+        v_task_id:=gen_random_uuid();
+        v_task_due_at:=COALESCE(NULLIF(v_task->>'dueAt','')::timestamptz,
+          LEAST(v_now+interval '7 days',v_expires_at));
+        INSERT INTO ops.tasks(
+          id,task_type,object_type,object_id,title,status,priority,due_at,
+          assignment_reason,assigned_by)
+        VALUES(
+          v_task_id,COALESCE(NULLIF(v_task->>'taskType',''),'ACTION_CHANGE_REQUEST'),
+          'ACTION_PROPOSAL',v_proposal,btrim(v_task->>'title'),'OPEN',
+          COALESCE(v_task->>'priority','NORMAL'),v_task_due_at,
+          COALESCE(NULLIF(v_task->>'reason',''),v_reason),p_actor);
+        v_change_task_ids:=array_append(v_change_task_ids,v_task_id);
+      END LOOP;
+      SELECT array_agg(task_id ORDER BY task_id) INTO v_change_task_ids
+        FROM unnest(v_change_task_ids) AS change_task(task_id);
+    END IF;
+    INSERT INTO ops.action_decisions(id,proposal_id,proposal_version,approval_digest,assignment_id,assignment_version,assignment_generation,slot_kind,actor_id,assurance,step_up_authorization_id,step_up_authorization_digest,step_up_authorization_receipt_digest,step_up_authorization_receipt_canonical,step_up_issue_ordinal,step_up_issued_at,step_up_expires_at,actor_assertion_jti,actor_action_digest,idempotency_key_sha256,decision_kind,reason_code,reason,reason_digest,decision_payload,decision_payload_canonical,decision_receipt_binding,decision_receipt_binding_canonical,conflict_snapshot_id,conflict_snapshot_digest,conflict_target_id,conflict_target_version,conflict_target_digest,conflict_evaluation_state,conflict_valid_until,quorum_snapshot_digest,counts_toward_quorum,quorum_satisfied_after,resulting_proposal_state,change_task_ids,execution_id,receipt_digest,request_id,audit_event_id,decided_at,created_at)
+      VALUES(v_id,v_proposal,v_version,v_approval_digest,v_assignment,v_assignment_version+1,
+        v_assignment_generation,v_slot_id,p_actor,v_assurance,
         v_step_up_authorization_id,v_step_up_authorization_digest,v_step_up_authorization_receipt_digest,v_step_up_authorization_receipt_canonical,
-        v_step_up_issue_ordinal,v_step_up_issued_at,v_step_up_expires_at,gen_random_uuid(),v_digest,v_digest,v_decision,'OPERATOR_DECISION',v_reason,v_reason_digest,
+        v_step_up_issue_ordinal,v_step_up_issued_at,v_step_up_expires_at,v_actor_assertion_jti,
+        COALESCE(v_actor_action_digest,v_expected_step_up_digest),v_actor_request_key_sha256,v_decision,'OPERATOR_DECISION',v_reason,v_reason_digest,
         p_request,convert_to(p_request::text,'UTF8'),v_receipt,convert_to(v_receipt::text,'UTF8'),v_conflict_id,v_digest,v_proposal,v_version,v_approval_digest,
-        CASE WHEN v_decision='RECUSE' THEN 'RECUSE_REQUIRED' ELSE 'CLEAR' END,clock_timestamp()+interval '7 days',v_digest,v_decision='APPROVE',v_decision='APPROVE',v_result_state,v_execution_id,v_receipt_digest,NULLIF(p_request->>'requestId','')::uuid,v_event_id,v_now,v_now);
-    UPDATE ops.action_review_assignments SET state=CASE WHEN v_decision='RECUSE' THEN 'RECUSED' ELSE 'COMPLETED' END,version=version+1,claimed_at=COALESCE(claimed_at,clock_timestamp()),terminal_at=clock_timestamp(),terminal_reason_code=v_decision,last_receipt_digest=v_receipt_digest,updated_at=clock_timestamp() WHERE id=v_assignment;
+        CASE WHEN v_decision='RECUSE' THEN 'RECUSE_REQUIRED' ELSE 'CLEAR' END,
+        v_conflict_valid_until,v_quorum_snapshot_digest,v_decision='APPROVE',v_quorum_complete,
+        v_result_state,v_change_task_ids,v_execution_id,v_receipt_digest,NULLIF(p_request->>'requestId','')::uuid,
+        v_audit_id,v_now,v_now);
+    IF v_execution_id IS NOT NULL THEN
+      INSERT INTO ops.execution_authorizations(
+        execution_id,generation,authorization_kind,proposal_id,proposal_version,action_kind,
+        approval_digest,counted_decision_ids,counted_decision_receipt_digests,
+        counted_decision_set_digest,terminal_decision_id,terminal_decision_receipt_digest,
+        executor_id,transport,required_capability,target_request_schema_version,
+        target_request_encrypted,target_request_sha256,rendered_bytes_digest,effect_boundary,
+        provider_configuration_digest,provider_idempotency_key_sha256,cost_class,
+        budget_reservation_digest,command_idempotency_key_sha256,execution_binding,
+        execution_binding_canonical,execution_digest,request_id,audit_event_id,outbox_id,expires_at)
+      VALUES(v_execution_id,1,'INITIAL_APPROVAL',v_proposal,v_version,v_action_kind,
+        v_approval_digest,v_counted_decision_ids,v_counted_decision_receipt_digests,v_counted_decision_set_digest,
+        v_id,v_receipt_digest,v_executor_id,v_executor_transport,v_executor_capability,
+        'action-payload.v1',v_target_request_encrypted,v_target_request_sha256,
+        v_target_request_sha256,'DATABASE_ONLY',
+        '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde',
+        '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74',
+        'NO_PAID_EGRESS','cd12c434cfd58a9f3a3e0222f236dcc3ea4f1f24f78ea74224dd110bebf61bde',
+        v_actor_request_key_sha256,v_execution_binding,
+        v_execution_binding_canonical,v_execution_digest,NULLIF(p_request->>'requestId','')::uuid,
+        v_audit_id,v_execution_outbox_id,v_expires_at);
+      INSERT INTO ops.execution_attempts(
+        id,execution_id,generation,attempt_state,state_version,run_after,fencing_token,
+        target_request_sha256,rendered_bytes_digest,provider_configuration_digest,
+        provider_idempotency_key_sha256,budget_reservation_digest,last_receipt_sequence,
+        last_receipt_digest,created_at,updated_at)
+      VALUES(v_execution_attempt_id,v_execution_id,1,'QUEUED',1,v_now+interval '1 second',0,
+        v_target_request_sha256,v_target_request_sha256,
+        '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde',
+        '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74',
+        'cd12c434cfd58a9f3a3e0222f236dcc3ea4f1f24f78ea74224dd110bebf61bde',1,
+        v_execution_receipt_digest,v_now,v_now);
+      INSERT INTO ops.execution_receipts(
+        id,execution_id,generation,attempt_id,receipt_sequence,receipt_kind,
+        mutates_aggregate_state,prior_aggregate_state,aggregate_state,aggregate_state_version,
+        prior_attempt_state,attempt_state,fencing_token,cancellation_generation,proof_kind,
+        proof_digest,receipt_payload,receipt_payload_canonical,budget_reservation_digest,
+        request_id,audit_event_id,outbox_id,observed_at,prior_receipt_digest,receipt_digest)
+      VALUES(v_execution_receipt_id,v_execution_id,1,v_execution_attempt_id,1,'AUTHORIZATION_QUEUED',
+        true,NULL,'QUEUED',1,NULL,'QUEUED',0,0,'NO_EGRESS',v_target_request_sha256,
+        v_execution_receipt_payload,v_execution_receipt_canonical,
+        'cd12c434cfd58a9f3a3e0222f236dcc3ea4f1f24f78ea74224dd110bebf61bde',
+        NULLIF(p_request->>'requestId','')::uuid,v_audit_id,v_execution_outbox_id,v_now,NULL,
+        v_execution_receipt_digest);
+    END IF;
+    UPDATE ops.action_review_assignments SET state=CASE WHEN v_decision='RECUSE' THEN 'RECUSED' ELSE 'COMPLETED' END,
+      version=version+1,claimed_at=COALESCE(claimed_at,v_now),terminal_at=v_now,
+      terminal_reason_code=v_decision,last_receipt_digest=v_receipt_digest,
+      last_audit_event_id=v_audit_id,updated_at=v_now
+      WHERE id=v_assignment AND version=v_assignment_version AND reviewer_id=p_actor;
+    IF NOT FOUND THEN RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001'; END IF;
+    IF v_result_state IN ('APPROVED','REJECTED','CHANGES_REQUIRED') THEN
+      UPDATE ops.action_review_assignments SET state='CANCELLED',version=version+1,
+        terminal_at=v_now,terminal_reason_code='QUORUM_TERMINAL',last_receipt_digest=v_receipt_digest,
+        last_audit_event_id=v_audit_id,updated_at=v_now
+       WHERE proposal_id=v_proposal AND proposal_version=v_version AND id<>v_assignment
+         AND state IN ('ASSIGNED','IN_PROGRESS');
+    END IF;
     IF v_decision='RECUSE' THEN
-      SELECT id INTO v_reviewer FROM ops.users WHERE status='ACTIVE' AND id<>p_actor ORDER BY id LIMIT 1;
-      IF v_reviewer IS NOT NULL THEN
-        INSERT INTO ops.action_review_assignments(id,proposal_id,proposal_version,approval_digest,assignment_generation,slot_id,slot_ordinal,required_capability,approve_assurance,allowed_role_codes,reviewer_id,reviewer_role_snapshot_digest,eligibility_snapshot_digest,conflict_snapshot_id,conflict_snapshot_digest,conflict_target_id,conflict_target_version,conflict_target_digest,conflict_evaluation_state,conflict_valid_until,excluded_actor_ids,exclusion_set_digest,quorum_plan_digest,assignment_digest,state,version,assigned_by,due_at,last_receipt_digest,last_audit_event_id,replacement_of_assignment_id)
-          VALUES(gen_random_uuid(),v_proposal,v_version,v_approval_digest,2,'primary',1,'actions.review','ACTIVE_SESSION',ARRAY['APPROVER'],v_reviewer,v_digest,v_digest,v_conflict_id,v_digest,v_proposal,v_version,v_approval_digest,'CLEAR',clock_timestamp()+interval '7 days',ARRAY[p_actor],v_digest,v_digest,v_digest,'ASSIGNED',1,p_actor,clock_timestamp()+interval '7 days',v_digest,v_event_id,v_assignment);
+      SELECT * INTO v_prior_assignment FROM ops.action_review_assignments WHERE id=v_assignment;
+      v_replacement_assignment_id:=gen_random_uuid();
+      v_replacement_conflict_id:=gen_random_uuid();
+      SELECT array_agg(actor_id ORDER BY actor_id) INTO v_replacement_exclusions
+        FROM (SELECT DISTINCT actor_id FROM unnest(
+          v_prior_assignment.excluded_actor_ids||ARRAY[p_actor]) AS excluded(actor_id)) x;
+      v_replacement_exclusion_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(
+        to_jsonb(v_replacement_exclusions)),'sha256'),'hex');
+      SELECT u.id INTO v_replacement_reviewer
+        FROM ops.users u
+        JOIN ops.user_roles ur ON ur.user_id=u.id AND ur.revoked_at IS NULL
+          AND (ur.expires_at IS NULL OR ur.expires_at>v_now)
+        JOIN ops.roles r ON r.id=ur.role_id AND r.code=ANY(v_prior_assignment.allowed_role_codes)
+        JOIN ops.role_capabilities rc ON rc.role_id=r.id AND rc.capability_code='actions.review'
+       WHERE u.status='ACTIVE'
+         AND NOT (u.id=ANY(v_replacement_exclusions))
+         AND u.id<>(SELECT owner_user_id FROM ops.action_proposals WHERE id=v_proposal)
+         AND NOT EXISTS (SELECT 1 FROM ops.action_review_assignments seen
+           WHERE seen.proposal_id=v_proposal AND seen.proposal_version=v_version
+             AND seen.reviewer_id=u.id)
+       ORDER BY u.id LIMIT 1;
+      v_replacement_state:=CASE WHEN v_replacement_reviewer IS NULL THEN 'VACANT' ELSE 'ASSIGNED' END;
+      v_due_at:=LEAST(v_now+interval '6 days',v_expires_at-interval '1 second');
+      v_replacement_assignment_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(
+        jsonb_build_object('schemaVersion','action-review-assignment.v1',
+          'assignmentId',v_replacement_assignment_id,'proposalId',v_proposal,
+          'proposalVersion',v_version,'approvalDigest',v_approval_digest,
+          'slotKind',v_prior_assignment.slot_id,
+          'assignmentGeneration',v_prior_assignment.assignment_generation+1,
+          'reviewerId',v_replacement_reviewer,
+          'excludedActorIds',to_jsonb(v_replacement_exclusions),
+          'quorumPlanDigest',v_prior_assignment.quorum_plan_digest)),
+        'sha256'),'hex');
+      IF v_replacement_state='ASSIGNED' THEN
+        v_replacement_conflict_digest:=encode(extensions.digest(convert_to(
+          v_replacement_conflict_id::text||':'||v_replacement_reviewer::text||':'||v_approval_digest,
+          'UTF8'),'sha256'),'hex');
+        INSERT INTO editorial.conflict_snapshots(
+          id,subject_actor_id,target_type,target_id,target_version,target_digest,
+          operation_id,action_kind,candidate_role,declaration_set_digest,finding_set,
+          finding_set_digest,authorship_digest,party_recipient_digest,role_digest,
+          relationship_digest,funding_customer_digest,policy_digest,evaluation_state,
+          valid_until,evaluated_at,evaluated_by_type,evaluated_by_id,snapshot_sha256,receipt_digest)
+        VALUES(
+          v_replacement_conflict_id,v_replacement_reviewer,'ACTION_PROPOSAL',v_proposal::text,
+          v_version,v_approval_digest,'submitActionDecision',v_action_kind,
+          v_prior_assignment.allowed_role_codes[1],v_zero_digest,'{}'::jsonb,v_zero_digest,
+          v_digest,v_digest,encode(extensions.digest(convert_to(
+            v_replacement_reviewer::text||':'||v_prior_assignment.allowed_role_codes[1],'UTF8'),'sha256'),'hex'),
+          v_digest,v_digest,v_digest,'CLEAR',v_due_at,v_now,'SERVICE','action-approval',
+          v_replacement_conflict_digest,encode(extensions.digest(convert_to(
+            v_replacement_conflict_digest||':receipt','UTF8'),'sha256'),'hex'));
+        INSERT INTO ops.action_review_assignments(
+          id,proposal_id,proposal_version,approval_digest,assignment_generation,slot_id,
+          slot_ordinal,required_capability,approve_assurance,allowed_role_codes,reviewer_id,
+          reviewer_role_snapshot_digest,eligibility_snapshot_digest,conflict_snapshot_id,
+          conflict_snapshot_digest,conflict_target_id,conflict_target_version,
+          conflict_target_digest,conflict_evaluation_state,conflict_valid_until,
+          excluded_actor_ids,exclusion_set_digest,quorum_plan_digest,assignment_digest,
+          state,version,assigned_by,due_at,last_receipt_digest,last_audit_event_id,
+          replacement_of_assignment_id)
+        VALUES(
+          v_replacement_assignment_id,v_proposal,v_version,v_approval_digest,
+          v_prior_assignment.assignment_generation+1,v_prior_assignment.slot_id,
+          v_prior_assignment.slot_ordinal,v_prior_assignment.required_capability,
+          v_prior_assignment.approve_assurance,v_prior_assignment.allowed_role_codes,
+          v_replacement_reviewer,encode(extensions.digest(convert_to(
+            v_replacement_reviewer::text||':'||v_prior_assignment.allowed_role_codes[1],'UTF8'),'sha256'),'hex'),
+          v_replacement_conflict_digest,v_replacement_conflict_id,v_replacement_conflict_digest,
+          v_proposal,v_version,v_approval_digest,'CLEAR',v_due_at,
+          v_replacement_exclusions,v_replacement_exclusion_digest,
+          v_prior_assignment.quorum_plan_digest,v_replacement_assignment_digest,
+          'ASSIGNED',1,p_actor,v_due_at,v_receipt_digest,v_audit_id,v_assignment);
+      ELSE
+        INSERT INTO ops.action_review_assignments(
+          id,proposal_id,proposal_version,approval_digest,assignment_generation,slot_id,
+          slot_ordinal,required_capability,approve_assurance,allowed_role_codes,reviewer_id,
+          reviewer_role_snapshot_digest,eligibility_snapshot_digest,conflict_snapshot_id,
+          conflict_snapshot_digest,conflict_target_id,conflict_target_version,
+          conflict_target_digest,conflict_evaluation_state,conflict_valid_until,
+          excluded_actor_ids,exclusion_set_digest,quorum_plan_digest,assignment_digest,
+          state,version,blocking_reason_code,next_assignment_scan_at,assigned_by,due_at,
+          last_receipt_digest,last_audit_event_id,replacement_of_assignment_id)
+        VALUES(
+          v_replacement_assignment_id,v_proposal,v_version,v_approval_digest,
+          v_prior_assignment.assignment_generation+1,v_prior_assignment.slot_id,
+          v_prior_assignment.slot_ordinal,v_prior_assignment.required_capability,
+          v_prior_assignment.approve_assurance,v_prior_assignment.allowed_role_codes,NULL,
+          'a987005ba2dc00498702eea9d50ed59c6732bb825059d52b491be1a37a2fddd6',
+          encode(extensions.digest(convert_to(v_proposal::text||':vacant:'||
+            (v_prior_assignment.assignment_generation+1)::text,'UTF8'),'sha256'),'hex'),
+          NULL,'e78bfc84252d3d52a9005d38ed5e102e334240826621d6e5570ff3ce42b94b21',
+          v_proposal,v_version,v_approval_digest,'UNAVAILABLE',v_due_at,
+          v_replacement_exclusions,v_replacement_exclusion_digest,
+          v_prior_assignment.quorum_plan_digest,v_replacement_assignment_digest,
+          'VACANT',1,'ACTION_QUORUM_UNAVAILABLE',v_now,p_actor,v_due_at,
+          v_receipt_digest,v_audit_id,v_assignment);
       END IF;
     END IF;
-    UPDATE ops.action_proposals SET aggregate_version=aggregate_version+1,last_receipt_digest=v_receipt_digest,last_audit_event_id=v_event_id,updated_at=clock_timestamp() WHERE id=v_proposal;
+    UPDATE ops.action_proposals SET aggregate_version=aggregate_version+1,last_receipt_digest=v_receipt_digest,last_audit_event_id=v_audit_id,updated_at=clock_timestamp() WHERE id=v_proposal;
     UPDATE ops.action_proposal_versions SET state=v_result_state,state_version=state_version+1,terminal_at=CASE WHEN v_result_state IN ('APPROVED','REJECTED','CHANGES_REQUIRED') THEN clock_timestamp() ELSE NULL END,terminal_reason_code=CASE WHEN v_result_state IN ('APPROVED','REJECTED','CHANGES_REQUIRED') THEN v_decision ELSE NULL END,terminal_receipt_digest=CASE WHEN v_result_state IN ('APPROVED','REJECTED','CHANGES_REQUIRED') THEN v_receipt_digest ELSE NULL END,updated_at=clock_timestamp() WHERE proposal_id=v_proposal AND version=v_version;
-    RETURN v_receipt || jsonb_build_object('receiptDigest',v_receipt_digest,'outboxEventIds','[]'::jsonb);
+    RETURN v_response_receipt || jsonb_build_object(
+      'receiptDigest',v_receipt_digest,'auditEventId',v_audit_id,
+      'outboxEventIds',CASE WHEN v_execution_outbox_id IS NULL THEN '[]'::jsonb ELSE jsonb_build_array(v_execution_outbox_id) END);
   END IF;
   RAISE EXCEPTION 'invalid_parameter' USING ERRCODE='22023';
 END;
@@ -7543,6 +8873,7 @@ DECLARE
   v_scope text;
   v_reserved_used numeric;
   v_settled_used numeric;
+  v_now timestamptz := clock_timestamp();
 BEGIN
   IF p_provider_turn_id IS NULL OR p_agent_run_id IS NULL OR p_job_id IS NULL OR p_case_id IS NULL
      OR p_provider_config_id IS NULL OR p_provider_config_version IS NULL OR p_provider_config_version < 1
@@ -7645,14 +8976,19 @@ BEGIN
     p_job_id,p_attempt,p_environment,p_case_id,p_provider_candidate_id,p_provider_config_id,
     p_provider_config_version,p_provider_configuration_digest,p_pricing_version,v_amount,'KRW',
     encode(extensions.digest(convert_to('ledger:'||p_agent_run_id::text,'UTF8'),'sha256'),'hex'),6,
-    'RESERVED',1,1,v_transition_id,v_transition_digest,clock_timestamp()+interval '15 minutes');
+    'RESERVED',1,1,v_transition_id,v_transition_digest,v_now+interval '15 minutes');
   INSERT INTO ops.audit_events(id,actor_type,action,object_type,object_id,outcome,request_id,event_hash,details)
     VALUES(v_audit_id,'SYSTEM','AGENT_PROVIDER_BUDGET_RESERVED','budget_reservation',v_reservation_id::text,'SUCCESS',p_provider_turn_id,
       encode(extensions.digest(convert_to('audit:reserve:'||v_reservation_id::text,'UTF8'),'sha256'),'hex'),
       jsonb_build_object('agentRunId',p_agent_run_id,'providerTurnId',p_provider_turn_id,'redacted',true));
   INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
-    VALUES('budget_reservation',v_reservation_id::text,1,'agent.budget_reserved.v1',
-      jsonb_build_object('reservationId',v_reservation_id,'effectId',v_effect_id,'agentRunId',p_agent_run_id),clock_timestamp())
+    VALUES('budget_reservation',v_reservation_id::text,1,'budget.reservation_created.v1',
+      jsonb_build_object(
+        'reservationId',v_reservation_id,'reservationKeyDigest',p_budget_digest,
+        'jobId',p_job_id,'attempt',p_attempt,'providerCandidateId',p_provider_candidate_id,
+        'pricingVersion',p_pricing_version,'amount',v_amount::text,'currency','KRW',
+        'ledgerScopeDigest',encode(extensions.digest(convert_to('ledger:'||p_agent_run_id::text,'UTF8'),'sha256'),'hex'),
+        'expiresAt',v_now+interval '15 minutes'),v_now)
     RETURNING id INTO v_outbox_id;
   FOREACH v_scope_kind IN ARRAY ARRAY['ENVIRONMENT','PROVIDER','CASE'] LOOP
     v_scope_id := CASE v_scope_kind WHEN 'ENVIRONMENT' THEN p_environment WHEN 'PROVIDER' THEN p_provider_config_id::text ELSE p_case_id::text END;
@@ -7734,6 +9070,7 @@ BEGIN
   IF v_reservation.state <> 'RESERVED' THEN RETURN; END IF;
   v_transition_digest := encode(extensions.digest(convert_to('budget-finalize:'||v_reservation.id::text||':'||p_status,'UTF8'),'sha256'),'hex');
   v_receipt_digest := encode(extensions.digest(convert_to(COALESCE(p_provider_turn_sha256::text,''),'UTF8'),'sha256'),'hex');
+  v_terminal_at := clock_timestamp();
   PERFORM set_config('gurine.owner_transition','1',true);
   IF p_status='COMPLETED' THEN
     IF p_cost_krw IS NULL OR p_cost_krw < 0 OR p_cost_krw > v_reservation.reserved_amount THEN
@@ -7805,9 +9142,34 @@ BEGIN
     VALUES(v_audit_id,'SYSTEM','AGENT_PROVIDER_BUDGET_FINALIZED','budget_reservation',v_reservation.id::text,'SUCCESS',p_provider_turn_id,
       encode(extensions.digest(convert_to('audit:finalize:'||v_reservation.id::text||':'||p_status,'UTF8'),'sha256'),'hex'),
       jsonb_build_object('status',p_status,'redacted',true));
+  SELECT * INTO v_reservation FROM ops.budget_reservations WHERE id=v_reservation.id;
   INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
-    VALUES('budget_reservation',v_reservation.id::text,v_reservation.version+1,'agent.budget_finalized.v1',
-      jsonb_build_object('reservationId',v_reservation.id,'status',p_status),clock_timestamp()) RETURNING id INTO v_outbox_id;
+    VALUES(
+      'budget_reservation',v_reservation.id::text,v_reservation.version,
+      CASE v_reservation.state
+        WHEN 'SETTLED' THEN 'budget.reservation_settled.v1'
+        WHEN 'RELEASED' THEN 'budget.reservation_released.v1'
+        ELSE 'budget.reservation_reconciliation_required.v1'
+      END,
+      CASE v_reservation.state
+        WHEN 'SETTLED' THEN jsonb_build_object(
+          'reservationId',v_reservation.id,'priorState','RESERVED',
+          'amount',v_reservation.settled_amount::text,'currency',v_reservation.currency,
+          'providerUsageDigest',v_reservation.provider_usage_digest,
+          'billedCostDigest',v_reservation.billed_cost_digest,'settledAt',v_terminal_at)
+        WHEN 'RELEASED' THEN jsonb_build_object(
+          'reservationId',v_reservation.id,'priorState','RESERVED',
+          'amount',v_reservation.reserved_amount::text,'currency',v_reservation.currency,
+          'noBillProofDigest',v_reservation.no_bill_proof_digest,'releasedAt',v_terminal_at)
+        ELSE jsonb_build_object(
+          'reservationId',v_reservation.id,'priorState','RESERVED',
+          'exposureAmount',v_reservation.exposure_amount::text,'currency',v_reservation.currency,
+          'reasonCode',v_reservation.reconciliation_reason_code,
+          'evidenceDigest',v_reservation.reconciliation_evidence_digest,
+          'incidentId',v_reservation.incident_id)
+      END,
+      v_terminal_at
+    ) RETURNING id INTO v_outbox_id;
   FOR v_entry IN SELECT * FROM ops.budget_reservation_ledger_entries WHERE reservation_id=v_reservation.id AND transition_sequence=1 ORDER BY entry_ordinal LOOP
     INSERT INTO ops.budget_reservation_ledger_entries(
       reservation_id,transition_id,transition_sequence,entry_ordinal,entry_kind,budget_limit_id,budget_limit_version,
@@ -10019,6 +11381,7 @@ ALTER FUNCTION ops.acceptance_runtime_probe_v1(text) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.acceptance_runtime_probe_v1(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ops.acceptance_runtime_probe_v1(text)
   TO gurine_control_api, gurine_workflow_worker, gurine_analysis_worker, gurine_auditor;
+COMMIT;
 
 -- Typed economics owner boundary.  The immutable revenue relation deliberately
 -- has no INSERT privilege for runtime roles; this routine is the sole
@@ -10123,7 +11486,14 @@ BEGIN
     'RECORD_REVENUE_FACT','REVENUE_FACT',v_id::text,'ECONOMICS.RECORD_REVENUE_FACT',
     'SUCCESS',NULL,gen_random_uuid(),jsonb_build_object('recordDigest',v_record_digest));
   v_outbox := ops.enqueue_outbox('revenue_fact',v_id::text,1,'commercial.revenue_fact_recorded.v1',
-    jsonb_build_object('revenueFactId',v_id,'recordDigest',v_record_digest),v_now);
+    jsonb_build_object(
+      'revenueFactId',v_id,'organizationId',(p_payload->>'organizationId')::uuid,
+      'contractId',(p_payload->>'contractId')::uuid,'invoiceId',(p_payload->>'invoiceId')::uuid,
+      'periodStart',(p_payload->>'recognitionPeriodStart')::date,
+      'periodEnd',(p_payload->>'recognitionPeriodEnd')::date,
+      'amount',(p_payload->>'amount')::numeric::text,'currency',p_payload->>'currency',
+      'recognitionPolicyDigest',p_payload->>'accountingPolicyDigest',
+      'recordDigest',v_record_digest),v_now);
   v_receipt_digest := encode(extensions.digest(convert_to(v_id::text||':'||v_record_digest,'UTF8'),'sha256'),'hex');
   v_body := jsonb_build_object('resourceId',v_id,'resourceType','REVENUE_FACT','resourceVersion',1,
     'recordDigest',v_record_digest,'auditEventId',v_audit,'outboxId',v_outbox,'receiptDigest',v_receipt_digest);
@@ -10141,7 +11511,6 @@ COMMIT;
 -- intentionally private, so grant the owner the read needed to verify the
 -- durable agent event binding instead of relying on superuser bypasses.
 GRANT SELECT ON ops.event_types TO gurine_migrator;
-COMMIT;
 
 -- Journey instances, handoffs and their transition receipts form one cyclic
 -- append-only graph.  The base 0028 migration creates the candidate keys and
@@ -10268,6 +11637,839 @@ ALTER FUNCTION ops.record_paid_evidence_packet_v1(jsonb) OWNER TO gurine_migrato
 REVOKE ALL ON FUNCTION ops.record_invoice_fact_v1(jsonb),ops.record_invoice_line_fact_v1(jsonb),ops.record_usage_fact_v1(jsonb),ops.record_invoice_usage_membership_v1(jsonb),ops.record_accounting_correction_v1(jsonb),ops.record_outcome_fact_v1(jsonb),ops.record_paid_evidence_packet_v1(jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ops.record_invoice_fact_v1(jsonb),ops.record_invoice_line_fact_v1(jsonb),ops.record_usage_fact_v1(jsonb),ops.record_invoice_usage_membership_v1(jsonb),ops.record_accounting_correction_v1(jsonb),ops.record_outcome_fact_v1(jsonb),ops.record_paid_evidence_packet_v1(jsonb) TO gurine_workflow_worker;
 
+-- Communication provider control-plane closure.  The authority exposes one
+-- generic provider aggregate, while delivery needs a richer immutable
+-- revision.  Keep their identity explicit and one-to-one instead of relying
+-- on coincidentally equal UUIDs or an untyped integration string.
+CREATE TABLE IF NOT EXISTS ops.communication_provider_bindings (
+  generic_provider_id uuid PRIMARY KEY REFERENCES ops.provider_configs(id) ON DELETE RESTRICT,
+  communication_provider_config_id uuid NOT NULL UNIQUE
+    REFERENCES ops.communication_provider_configs(id) ON DELETE RESTRICT,
+  binding_digest char(64) NOT NULL UNIQUE CHECK (ops.is_lower_sha256(binding_digest)),
+  created_by uuid NOT NULL REFERENCES ops.users(id),
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+ALTER TABLE ops.communication_provider_bindings OWNER TO gurine_migrator;
+REVOKE ALL ON ops.communication_provider_bindings FROM PUBLIC;
+REVOKE ALL ON ops.communication_provider_bindings FROM gurine_control_api,
+  gurine_notification_worker,gurine_workflow_worker,gurine_analysis_worker,
+  gurine_egress_gateway,gurine_public_projector,gurine_submission_api,gurine_auditor;
+GRANT SELECT ON ops.communication_provider_bindings TO gurine_control_api,
+  gurine_notification_worker,gurine_workflow_worker,gurine_egress_gateway,gurine_auditor;
+CREATE TRIGGER ops_communication_provider_bindings_immutable
+  BEFORE UPDATE OR DELETE ON ops.communication_provider_bindings
+  FOR EACH ROW EXECUTE FUNCTION ops.reject_mutation();
+
+-- The preflight snapshot is closed and its digest is derived from the exact
+-- canonical JSON bytes.  This replaces the additive schema's object-only
+-- placeholder and prevents an arbitrary object from masquerading as a pinned
+-- provider revision.
+CREATE OR REPLACE FUNCTION ops.communication_provider_revision_snapshot_is_valid(
+  p_snapshot jsonb, p_digest char(64)
+) RETURNS boolean
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+SET search_path=pg_catalog,ops,extensions,pg_temp AS $$
+  SELECT jsonb_typeof(p_snapshot)='object'
+     AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(p_snapshot) k) = ARRAY[
+       'adapterId','approvedTemplateCatalogDigest','callbackAllowlistDigest','callbackPath','channel',
+       'costPolicyDigest','credentialSecretReference','deploymentId','dpaEvidenceDigest',
+       'encryptionKeyId','environment','id','integrationId','jurisdictionSetDigest',
+       'killSwitchCode','providerAccountHmac','providerCapabilitiesDigest',
+       'rateLimitPolicyDigest','senderIdentityCiphertextDigest','senderIdentityHmac',
+       'version','webhookSecretReference'
+     ]::text[]
+     AND p_snapshot->>'id' ~ '^[0-9a-f-]{36}$'
+     AND p_snapshot->>'integrationId' ~ '^[0-9a-f-]{36}$'
+     AND (p_snapshot->>'version')::bigint > 0
+     AND p_snapshot->>'environment' IN ('development','test','staging','production')
+     AND p_snapshot->>'channel' IN ('SMTP_EMAIL','TELEGRAM_BOT_API',
+       'META_WHATSAPP_BUSINESS_CLOUD','LINE_MESSAGING_API','SOLAPI_SMS',
+       'SOLAPI_KAKAO_BIZMESSAGE','TWILIO_VOICE','SIGNED_WEBHOOK')
+     AND ops.secret_reference_is_version_pinned(p_snapshot->>'credentialSecretReference')
+     AND (p_snapshot->'webhookSecretReference'='null'::jsonb OR
+       ops.secret_reference_is_version_pinned(p_snapshot->>'webhookSecretReference'))
+     AND encode(extensions.digest(ops.canonical_jsonb_v1(p_snapshot),'sha256'),'hex')=btrim(p_digest::text)
+$$;
+ALTER FUNCTION ops.communication_provider_revision_snapshot_is_valid(jsonb,char(64)) OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.communication_provider_revision_snapshot_is_valid(jsonb,char(64)) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION ops.record_communication_provider_preflight_v1(
+  p_test_id uuid, p_config_id uuid, p_config_version bigint,
+  p_configuration_digest char(64), p_result text, p_checklist jsonb,
+  p_blockers jsonb, p_provider_evidence_digest char(64)
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,ops,extensions,pg_temp AS $$
+DECLARE
+  t ops.provider_connection_tests%ROWTYPE;
+  pc ops.communication_provider_configs%ROWTYPE;
+  v_snapshot jsonb;
+  v_snapshot_digest char(64);
+  v_generation bigint;
+  v_receipt_id uuid := gen_random_uuid();
+  v_started_at timestamptz := clock_timestamp();
+  v_completed_at timestamptz;
+  v_expires_at timestamptz;
+  v_checklist_digest char(64);
+  v_blocker_digest char(64);
+  v_contract_digest char(64);
+  v_receipt_payload jsonb;
+  v_receipt_digest char(64);
+  v_status text;
+BEGIN
+  IF session_user <> 'gurine_egress_gateway' THEN
+    RAISE EXCEPTION 'communication_preflight_caller_denied' USING ERRCODE='42501';
+  END IF;
+  IF p_result NOT IN ('PASS','FAIL') OR jsonb_typeof(p_checklist)<>'object'
+     OR jsonb_typeof(p_blockers)<>'array'
+     OR NOT ops.is_lower_sha256(btrim(p_provider_evidence_digest::text)) THEN
+    RAISE EXCEPTION 'communication_preflight_invalid' USING ERRCODE='22023';
+  END IF;
+  SELECT * INTO t FROM ops.provider_connection_tests
+   WHERE id=p_test_id AND status IN ('QUEUED','RUNNING') FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'communication_preflight_test_stale' USING ERRCODE='40001';
+  END IF;
+  SELECT pc0.* INTO pc
+    FROM ops.communication_provider_bindings b
+    JOIN ops.communication_provider_configs pc0
+      ON pc0.id=b.communication_provider_config_id
+   WHERE b.generic_provider_id=t.provider_id
+     AND pc0.id=p_config_id
+     AND pc0.version=p_config_version
+     AND pc0.configuration_digest=p_configuration_digest
+     AND pc0.operational_state IN ('DISABLED','UNCONFIGURED','PENDING_PROVIDER_APPROVAL')
+   FOR UPDATE OF pc0;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'communication_provider_revision_stale' USING ERRCODE='40001';
+  END IF;
+  v_snapshot := jsonb_build_object(
+    'id',pc.id,'integrationId',pc.integration_id,'deploymentId',pc.deployment_id,
+    'environment',pc.environment,'channel',pc.channel,'adapterId',pc.adapter_id,
+    'version',pc.version,'providerAccountHmac',btrim(pc.provider_account_hmac::text),
+    'senderIdentityCiphertextDigest',encode(extensions.digest(pc.sender_identity_ciphertext,'sha256'),'hex'),
+    'senderIdentityHmac',btrim(pc.sender_identity_hmac::text),'encryptionKeyId',pc.encryption_key_id,
+    'credentialSecretReference',pc.credential_secret_reference,
+    'webhookSecretReference',to_jsonb(pc.webhook_secret_reference),
+    'callbackPath',to_jsonb(pc.callback_path),
+    'callbackAllowlistDigest',to_jsonb(btrim(pc.callback_allowlist_digest::text)),
+    'jurisdictionSetDigest',btrim(pc.jurisdiction_set_digest::text),
+    'dpaEvidenceDigest',btrim(pc.dpa_evidence_digest::text),
+    'approvedTemplateCatalogDigest',btrim(pc.approved_template_catalog_digest::text),
+    'rateLimitPolicyDigest',btrim(pc.rate_limit_policy_digest::text),
+    'costPolicyDigest',btrim(pc.cost_policy_digest::text),
+    'providerCapabilitiesDigest',btrim(pc.provider_capabilities_digest::text),
+    'killSwitchCode',pc.kill_switch_code);
+  v_snapshot_digest := encode(extensions.digest(ops.canonical_jsonb_v1(v_snapshot),'sha256'),'hex');
+  IF v_snapshot_digest<>pc.configuration_digest
+     OR NOT ops.communication_provider_revision_snapshot_is_valid(v_snapshot,v_snapshot_digest) THEN
+    RAISE EXCEPTION 'communication_provider_configuration_digest_invalid' USING ERRCODE='23514';
+  END IF;
+  IF p_result='PASS' AND (
+       p_blockers<>'[]'::jsonb
+       OR p_checklist->>'credentialRevisionVerified'<>'true'
+       OR p_checklist->>'callbackOrPollVerified'<>'true'
+       OR p_checklist->>'killSwitchInactive'<>'true'
+       OR p_checklist->>'killSwitchCodePresent'<>'true'
+       OR p_checklist->>'liveSandbox'<>'true'
+       OR pc.dpa_evidence_digest IS NULL
+       OR pc.approved_template_catalog_digest IS NULL) THEN
+    RAISE EXCEPTION 'communication_preflight_false_pass' USING ERRCODE='23514';
+  END IF;
+  v_generation := COALESCE((SELECT max(test_generation)+1
+    FROM ops.communication_provider_preflight_receipts
+    WHERE provider_config_id=pc.id AND provider_config_version=pc.version),1);
+  v_completed_at := clock_timestamp();
+  v_expires_at := v_completed_at + interval '24 hours';
+  v_checklist_digest := encode(extensions.digest(ops.canonical_jsonb_v1(p_checklist),'sha256'),'hex');
+  v_blocker_digest := encode(extensions.digest(ops.canonical_jsonb_v1(p_blockers),'sha256'),'hex');
+  v_contract_digest := encode(extensions.digest(convert_to(
+    pc.adapter_id||':'||pc.channel||':communication-preflight-v1','UTF8'),'sha256'),'hex');
+  v_receipt_payload := jsonb_build_object(
+    'providerConnectionTestId',p_test_id,'providerConfigId',pc.id,
+    'providerConfigVersion',pc.version,'configurationDigest',v_snapshot_digest,
+    'testGeneration',v_generation,'result',p_result,'checklistDigest',v_checklist_digest,
+    'blockerSetDigest',v_blocker_digest,'providerEvidenceDigest',p_provider_evidence_digest,
+    'contractTestReceiptDigest',v_contract_digest,'startedAt',v_started_at,
+    'completedAt',v_completed_at,'expiresAt',v_expires_at);
+  v_receipt_digest := encode(extensions.digest(ops.canonical_jsonb_v1(v_receipt_payload),'sha256'),'hex');
+  INSERT INTO ops.communication_provider_preflight_receipts(
+    id,provider_config_id,provider_config_version,configuration_digest,
+    provider_revision_snapshot,provider_revision_snapshot_digest,test_generation,
+    test_environment,result,live_sandbox,callback_or_poll_verified,
+    sender_identity_verified,template_catalog_verified,idempotency_capability,
+    reconciliation_capability,highest_delivery_proof,checklist,checklist_digest,
+    blocker_set,blocker_set_digest,provider_evidence_digest,
+    contract_test_receipt_digest,receipt_digest,performed_by_service,requested_by,
+    started_at,completed_at,expires_at)
+  VALUES(v_receipt_id,pc.id,pc.version,v_snapshot_digest,v_snapshot,v_snapshot_digest,
+    v_generation,pc.environment,p_result,
+    COALESCE((p_checklist->>'liveSandbox')::boolean,false),
+    COALESCE((p_checklist->>'callbackOrPollVerified')::boolean,false),
+    COALESCE((p_checklist->>'credentialRevisionVerified')::boolean,false),
+    pc.approved_template_catalog_digest IS NOT NULL,
+    CASE WHEN pc.channel='SIGNED_WEBHOOK' THEN 'NATIVE_IDEMPOTENCY' ELSE 'LOOKUP_BEFORE_RETRY' END,
+    CASE WHEN pc.channel='SIGNED_WEBHOOK' THEN 'PROVIDER_LOOKUP'
+         WHEN pc.callback_path IS NOT NULL THEN 'SIGNED_CALLBACK' ELSE 'AUTHENTICATED_POLL' END,
+    'DELIVERED',p_checklist,v_checklist_digest,p_blockers,v_blocker_digest,
+    p_provider_evidence_digest,v_contract_digest,v_receipt_digest,'egress-gateway',
+    t.requested_by,v_started_at,v_completed_at,v_expires_at);
+  PERFORM set_config('gurine.owner_transition','1',true);
+  UPDATE ops.communication_provider_configs
+     SET operational_state=CASE WHEN p_result='PASS' THEN 'PENDING_PROVIDER_APPROVAL'
+                                ELSE operational_state END,
+         latest_preflight_receipt_id=v_receipt_id,updated_at=v_completed_at
+   WHERE id=pc.id AND version=pc.version AND configuration_digest=v_snapshot_digest;
+  IF NOT FOUND THEN RAISE EXCEPTION 'communication_preflight_config_stale' USING ERRCODE='40001'; END IF;
+  v_status := CASE WHEN p_result='PASS' THEN 'SUCCEEDED' ELSE 'FAILED' END;
+  UPDATE ops.provider_connection_tests
+     SET status=v_status,redacted_result=jsonb_build_object(
+       'preflightReceiptId',v_receipt_id,'preflightReceiptDigest',v_receipt_digest,
+       'result',p_result,'blockers',p_blockers,'redacted',true),
+       started_at=COALESCE(started_at,v_started_at),completed_at=v_completed_at
+   WHERE id=t.id AND status IN ('QUEUED','RUNNING');
+  UPDATE ops.provider_configs
+     SET last_connection_test_at=v_completed_at,last_connection_test_status=v_status
+   WHERE id=t.provider_id;
+  RETURN jsonb_build_object(
+    'providerConnectionTestId',p_test_id,'providerConfigId',pc.id,
+    'providerConfigVersion',pc.version,'receiptId',v_receipt_id,
+    'receiptDigest',v_receipt_digest,'status',v_status);
+END $$;
+ALTER FUNCTION ops.record_communication_provider_preflight_v1(uuid,uuid,bigint,char(64),text,jsonb,jsonb,char(64)) OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.record_communication_provider_preflight_v1(uuid,uuid,bigint,char(64),text,jsonb,jsonb,char(64)) FROM PUBLIC;
+REVOKE ALL ON FUNCTION ops.record_communication_provider_preflight_v1(uuid,uuid,bigint,char(64),text,jsonb,jsonb,char(64)) FROM gurine_control_api,gurine_notification_worker,gurine_workflow_worker,gurine_analysis_worker,gurine_public_projector,gurine_submission_api,gurine_auditor;
+GRANT EXECUTE ON FUNCTION ops.record_communication_provider_preflight_v1(uuid,uuid,bigint,char(64),text,jsonb,jsonb,char(64)) TO gurine_egress_gateway;
+GRANT SELECT(adapter_id,callback_path,kill_switch_code) ON ops.communication_provider_configs TO gurine_egress_gateway;
+
+-- The action approval application boundary already requires these exact
+-- capabilities.  Seed them into the identity role graph so production users
+-- can reach the same authorization path that the server enforces; slot-level
+-- legal/operations eligibility remains narrower than this coarse capability.
+INSERT INTO ops.capabilities(code,description,risk_level) VALUES
+  ('actions.read','Read action proposals, assignments, decisions, and receipts','HIGH'),
+  ('actions.propose','Create and submit evidence-bound action proposals','CRITICAL'),
+  ('actions.review','Claim and decide assigned action review slots','CRITICAL')
+ON CONFLICT (code) DO UPDATE SET description=EXCLUDED.description,risk_level=EXCLUDED.risk_level;
+INSERT INTO ops.role_capabilities(role_id,capability_code)
+SELECT r.id,m.capability_code FROM (VALUES
+  ('INVESTIGATOR','actions.read'),('INVESTIGATOR','actions.propose'),
+  ('LEGAL_REVIEWER','actions.read'),('LEGAL_REVIEWER','actions.review'),
+  ('OPERATIONS','actions.read'),('OPERATIONS','actions.propose'),('OPERATIONS','actions.review'),
+  ('AUDITOR','actions.read'),('EXECUTIVE_APPROVER','actions.read'),
+  ('EXECUTIVE_APPROVER','actions.review')) AS m(role_code,capability_code)
+JOIN ops.roles r ON r.code=m.role_code
+ON CONFLICT DO NOTHING;
+
+-- BEGIN GENERATED EVENT PAYLOAD REGISTRY
+-- Generated by scripts/generate_event_payload_registry.py.
+ALTER TABLE ops.event_types ADD COLUMN IF NOT EXISTS payload_schema jsonb;
+
+WITH effective_event_types(
+  event_type,category,schema_version,active,payload_schema_uri,payload_schema
+) AS (
+  VALUES
+    ('access.request_created.v1','DOMAIN',1,true,'payloads/access_request_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('access.review_started.v1','DOMAIN',1,true,'payloads/access_review_started_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('access.role_change_proposed.v1','DOMAIN',1,true,'payloads/access_role_change_proposed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"roleId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","roleId"],"type":"object"}$event_schema$::jsonb),
+    ('access.role_granted.v1','DOMAIN',1,true,'payloads/access_role_granted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"roleId":{"type":"string"},"userId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","roleId","userId"],"type":"object"}$event_schema$::jsonb),
+    ('access.role_revoked.v1','DOMAIN',1,true,'payloads/access_role_revoked_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"roleId":{"type":"string"},"userId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","roleId","userId"],"type":"object"}$event_schema$::jsonb),
+    ('accounting.correction_recorded.v1','DOMAIN',1,true,'payloads/accounting_correction_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"amount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"approverId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"correctionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"periodEnd":{"format":"date","type":"string"},"periodStart":{"format":"date","type":"string"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"targetFactId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["correctionId","targetFactId","periodStart","periodEnd","amount","currency","reasonCode","approverId","decisionDigest"],"type":"object"}$event_schema$::jsonb),
+    ('action.decision_recorded.v1','DOMAIN',1,true,'payloads/action_decision_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"assignmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decisionKind":{"enum":["APPROVE","REJECT","CHANGES_REQUIRED","RECUSE"],"type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalState":{"enum":["PENDING_QUORUM","APPROVED","REJECTED","CHANGES_REQUIRED"],"type":"string"},"proposalVersion":{"minimum":0,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"slotKind":{"maxLength":10000,"minLength":1,"type":"string"}},"required":["proposalId","proposalVersion","assignmentId","decisionId","decisionKind","slotKind","actorId","decisionDigest","receiptDigest","proposalState"],"type":"object"}$event_schema$::jsonb),
+    ('action.decision_withdrawn.v1','DOMAIN',1,true,'payloads/action_decision_withdrawn_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"approvalDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"assignmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"auditEventId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"nextAssignmentGeneration":{"minimum":2,"type":"integer"},"nextAssignmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"nextAssignmentState":{"enum":["ASSIGNED","VACANT"],"type":"string"},"occurredAt":{"format":"date-time","type":"string"},"originalDecisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"originalDecisionReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorAssignmentGeneration":{"minimum":1,"type":"integer"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalState":{"const":"PENDING_QUORUM","type":"string"},"proposalVersion":{"minimum":1,"type":"integer"},"reasonCode":{"enum":["CONFLICT_DISCOVERED","EVIDENCE_CHANGED","DECISION_ERROR","NO_LONGER_ELIGIBLE","OTHER"],"type":"string"},"reasonDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"withdrawalDecisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"withdrawalReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"withdrawnByActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["proposalId","proposalVersion","proposalState","originalDecisionId","originalDecisionReceiptDigest","withdrawalDecisionId","withdrawalReceiptDigest","assignmentId","priorAssignmentGeneration","nextAssignmentId","nextAssignmentGeneration","nextAssignmentState","approvalDigest","withdrawnByActorId","reasonCode","reasonDigest","auditEventId","occurredAt"],"type":"object"}$event_schema$::jsonb),
+    ('action.execution_authorized.v1','DOMAIN',1,true,'payloads/action_execution_authorized_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actionKind":{"maxLength":10000,"minLength":1,"type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"executionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"generation":{"minimum":0,"type":"integer"},"targetCommand":{"maxLength":10000,"minLength":1,"type":"string"},"targetRequestSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["executionId","generation","actionKind","decisionDigest","executionDigest","targetCommand","targetRequestSha256","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('action.execution_cancel_requested.v1','DOMAIN',1,true,'payloads/action_execution_cancel_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"cancellationGeneration":{"minimum":0,"type":"integer"},"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"generation":{"minimum":0,"type":"integer"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"stateVersion":{"minimum":0,"type":"integer"}},"required":["executionId","generation","stateVersion","cancellationGeneration","reasonCode","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('action.execution_completed.v1','DOMAIN',1,true,'payloads/action_execution_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"costFactIds":{"items":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"type":"array","uniqueItems":true},"executionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"generation":{"minimum":0,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptSequence":{"minimum":0,"type":"integer"},"stateVersion":{"minimum":0,"type":"integer"},"terminalOrReconciliationState":{"enum":["SUCCEEDED","RETRYABLE_FAILED","PERMANENT_FAILED","CANCELLED","EXPIRED","RECONCILIATION_REQUIRED"],"type":"string"}},"required":["executionId","generation","stateVersion","terminalOrReconciliationState","executionDigest","receiptSequence","receiptDigest","costFactIds"],"type":"object"}$event_schema$::jsonb),
+    ('action.execution_retry_requested.v1','DOMAIN',1,true,'payloads/action_execution_retry_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"generation":{"minimum":0,"type":"integer"},"priorGeneration":{"minimum":0,"type":"integer"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"safeRetryProofDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"stateVersion":{"minimum":0,"type":"integer"}},"required":["executionId","priorGeneration","generation","stateVersion","safeRetryProofDigest","reasonCode","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('action.proposal_created.v1','DOMAIN',1,true,'payloads/action_proposal_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actionKind":{"enum":["HYPOTHESIS","CLAIM","TASK","COMPARABLE","COMMUNICATION","PUBLICATION","RETRACTION","RULE_ACTIVATION","ROLE_GRANT","KILL_SWITCH","COMMUNICATION_AUTHORIZATION","ASSET_RIGHTS_DECISION","RETENTION_SCHEDULE","FUNDING_DISCLOSURE","CAPABILITY_ACTIVATION","RESPONSE_POLICY_CALENDAR"],"type":"string"},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"targetId":{"maxLength":10000,"minLength":1,"type":"string"},"targetVersion":{"minimum":0,"type":"integer"},"version":{"minimum":0,"type":"integer"}},"required":["proposalId","version","actionKind","contentDigest","targetId","targetVersion","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('action.proposal_updated.v1','DOMAIN',1,true,'payloads/action_proposal_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actionKind":{"maxLength":10000,"minLength":1,"type":"string"},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorContentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorState":{"enum":["DRAFT","PENDING_QUORUM"],"type":"string"},"priorVersion":{"minimum":0,"type":"integer"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["DRAFT","PENDING_QUORUM","EXPIRED","SUPERSEDED"],"type":"string"},"supersededVersion":{"anyOf":[{"minimum":0,"type":"integer"},{"type":"null"}]},"updateKind":{"enum":["DRAFT_SUPERSEDED","PREVIEW_RECORDED","EXPIRED","ORIGIN_SUPERSEDED","TARGET_SUPERSEDED"],"type":"string"},"version":{"minimum":0,"type":"integer"}},"required":["proposalId","priorVersion","version","actionKind","updateKind","priorState","state","priorContentDigest","contentDigest","supersededVersion","reasonCode","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('action.proposal_withdrawn.v1','DOMAIN',1,true,'payloads/action_proposal_withdrawn_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"auditEventId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"cancelledAssignmentIds":{"items":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"maxItems":16,"type":"array","uniqueItems":true},"cancelledAssignmentSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"priorState":{"enum":["DRAFT","PENDING_QUORUM"],"type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalVersion":{"minimum":1,"type":"integer"},"reasonCode":{"enum":["OBJECTIVE_CHANGED","SOURCE_INVALIDATED","DUPLICATE","CREATED_IN_ERROR","OTHER"],"type":"string"},"reasonDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"const":"WITHDRAWN","type":"string"},"withdrawnByActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["proposalId","proposalVersion","priorState","state","contentDigest","withdrawnByActorId","cancelledAssignmentIds","cancelledAssignmentSetDigest","reasonCode","reasonDigest","auditEventId","occurredAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('action.review_claimed.v1','DOMAIN',1,true,'payloads/action_review_claimed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"assignmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"assignmentVersion":{"minimum":0,"type":"integer"},"claimedAt":{"format":"date-time","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalVersion":{"minimum":0,"type":"integer"},"reviewerId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"slotKind":{"maxLength":10000,"minLength":1,"type":"string"}},"required":["proposalId","proposalVersion","assignmentId","assignmentVersion","slotKind","reviewerId","decisionDigest","claimedAt"],"type":"object"}$event_schema$::jsonb),
+    ('action.review_requested.v1','DOMAIN',1,true,'payloads/action_review_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actionKind":{"maxLength":10000,"minLength":1,"type":"string"},"assignmentIds":{"items":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"type":"array","uniqueItems":true},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"dueAt":{"format":"date-time","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"quorumPlanDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"version":{"minimum":0,"type":"integer"}},"required":["proposalId","version","actionKind","contentDigest","decisionDigest","quorumPlanDigest","assignmentIds","dueAt","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('action.review_vacancy_filled.v1','DOMAIN',1,true,'payloads/action_review_vacancy_filled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"approvalDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"conflictSnapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"eligibilitySnapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalVersion":{"minimum":1,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"replacementAssignmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"replacementGeneration":{"minimum":2,"type":"integer"},"replacementReviewerId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"slotId":{"maxLength":10000,"minLength":1,"type":"string"},"slotOrdinal":{"maximum":15,"minimum":0,"type":"integer"},"vacantAssignmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"vacantAssignmentVersion":{"minimum":1,"type":"integer"}},"required":["proposalId","proposalVersion","vacantAssignmentId","vacantAssignmentVersion","slotId","slotOrdinal","replacementAssignmentId","replacementGeneration","replacementReviewerId","approvalDigest","eligibilitySnapshotDigest","conflictSnapshotDigest","occurredAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('agent.output_validated.v1','DOMAIN',1,true,'payloads/agent_output_validated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"agentRunId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"citationCount":{"minimum":0,"type":"integer"},"outputSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"proposalCount":{"minimum":0,"type":"integer"},"providerTurnId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"schemaVersion":{"maxLength":10000,"minLength":1,"type":"string"},"status":{"enum":["VALID","INVALID"],"type":"string"},"validationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["agentRunId","providerTurnId","validationId","schemaVersion","outputSha256","status","citationCount","proposalCount"],"type":"object"}$event_schema$::jsonb),
+    ('agent.proposal_created.v2','DOMAIN',2,true,'payloads/agent_proposal_created_v2.schema.json',$event_schema${"additionalProperties":false,"properties":{"citationJoinDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"payloadSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalType":{"maxLength":10000,"minLength":1,"type":"string"},"proposalVersion":{"minimum":0,"type":"integer"},"snapshotSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"validationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["proposalId","proposalType","proposalVersion","payloadSha256","snapshotSha256","validationId","citationJoinDigest","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('agent.run_completed.v1','INTEGRATION',1,true,'payloads/agent_run_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"agent_run_id":{"type":"string"},"case_id":{"type":"string"},"output_digest":{"type":"string"},"status":{"type":"string"}},"required":["agent_run_id","case_id","output_digest","status"],"type":"object"}$event_schema$::jsonb),
+    ('agent.run_control_changed.v2','DOMAIN',2,true,'payloads/agent_run_control_changed_v2.schema.json',$event_schema${"additionalProperties":false,"properties":{"actorId":{"format":"uuid","type":["string","null"]},"actorKind":{"enum":["CONTROL_API","ANALYSIS_WORKER","RECONCILIATION_WORKER","SCHEDULER"],"type":"string"},"affectedProviderTurnId":{"format":"uuid","type":["string","null"]},"affectedToolCallId":{"format":"uuid","type":["string","null"]},"aggregateVersion":{"minimum":1,"type":"integer"},"budgetDisposition":{"enum":["NONE","RESERVED","SETTLED","RELEASED","RECONCILIATION_REQUIRED"],"type":"string"},"budgetResolutionSetSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"nextControlState":{"enum":["NONE","ACTIVE","CANCEL_REQUESTED","RECONCILIATION_REQUIRED","SETTLED"],"type":"string"},"nextStatus":{"enum":["QUEUED","RUNNING","SUCCEEDED","FAILED","CANCELLED","BUDGET_BLOCKED","POLICY_BLOCKED"],"type":"string"},"occurredAt":{"format":"date-time","type":"string"},"priorControlState":{"enum":["NONE","ACTIVE","CANCEL_REQUESTED","RECONCILIATION_REQUIRED","SETTLED",null],"type":["string","null"]},"priorStatus":{"enum":["QUEUED","RUNNING","SUCCEEDED","FAILED","CANCELLED","BUDGET_BLOCKED","POLICY_BLOCKED",null],"type":["string","null"]},"proofKind":{"enum":["COMMAND_INPUT","LEASE_CLAIM","PROVIDER_LOOKUP","IDEMPOTENCY_LOOKUP","TOOL_ADAPTER_LOOKUP","COST_USAGE_RECEIPT","DEFINITIVE_NO_DISPATCH","VALIDATED_FINAL_OUTPUT","DEFINITIVE_INTERNAL_FAILURE"],"type":"string"},"proofSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reasonCode":{"enum":["RUN_STARTED","TURN_ADVANCED","FINAL_OUTPUT_VALIDATED","DEFINITIVE_FAILURE","BUDGET_DENIED","POLICY_DENIED","PRE_DISPATCH_CANCELLED","CANCEL_REQUESTED","OUTCOME_AMBIGUOUS","SAFE_RETRY_AUTHORIZED","RECONCILED_SUCCEEDED","RECONCILED_FAILED","RECONCILED_CANCELLED","NO_STATE_CHANGE"],"type":"string"},"reasonSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reconciliationEvidenceId":{"format":"uuid","type":["string","null"]},"reconciliationEvidenceSha256":{"pattern":"^[0-9a-f]{64}$","type":["string","null"]},"runId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["runId","aggregateVersion","priorStatus","priorControlState","nextStatus","nextControlState","affectedProviderTurnId","affectedToolCallId","reconciliationEvidenceId","reconciliationEvidenceSha256","proofKind","proofSha256","budgetDisposition","budgetResolutionSetSha256","actorKind","actorId","reasonCode","reasonSha256","occurredAt","receiptSha256"],"type":"object"}$event_schema$::jsonb),
+    ('agent.suggestion_accepted.v1','DOMAIN',1,true,'payloads/agent_suggestion_accepted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"suggestionId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","suggestionId"],"type":"object"}$event_schema$::jsonb),
+    ('agent.suggestion_rejected.v1','DOMAIN',1,true,'payloads/agent_suggestion_rejected_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"suggestionId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","suggestionId"],"type":"object"}$event_schema$::jsonb),
+    ('agent.tool_call_completed.v1','DOMAIN',1,true,'payloads/agent_tool_call_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"agentRunId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"callId":{"maxLength":10000,"minLength":1,"type":"string"},"costFactId":{"anyOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"latencyMs":{"minimum":0,"type":"integer"},"providerTurnId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"requestSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"resultSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"status":{"enum":["SUCCEEDED","DENIED","TIMED_OUT","FAILED","OUTCOME_UNKNOWN"],"type":"string"},"toolId":{"maxLength":10000,"minLength":1,"type":"string"}},"required":["agentRunId","providerTurnId","callId","toolId","requestSha256","resultSha256","status","latencyMs","costFactId"],"type":"object"}$event_schema$::jsonb),
+    ('attachment.correction_scan_requested.v1','INTEGRATION',1,true,'payloads/attachment_correction_scan_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"requestId":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","requestId","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('attachment.response_scan_requested.v1','INTEGRATION',1,true,'payloads/attachment_response_scan_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"attachmentId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"requestToken":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","attachmentId","occurred_at","operation_id","requestToken","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('attachment.scan_completed.v1','INTEGRATION',1,true,'payloads/attachment_scan_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"attachment_id":{"type":"string"},"scan_status":{"type":"string"},"sha256":{"type":"string"}},"required":["attachment_id","scan_status","sha256"],"type":"object"}$event_schema$::jsonb),
+    ('audit.export_requested.v1','INTEGRATION',1,true,'payloads/audit_export_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"auditExportId":{"format":"uuid","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"format":{"enum":["CSV","JSONL"]},"from":{"format":"date-time","type":"string"},"objectId":{"type":["string","null"]},"objectType":{"type":["string","null"]},"reason":{"maxLength":2000,"minLength":1,"type":"string"},"requestedBy":{"format":"uuid","type":"string"},"scope":{"enum":["CASE","OBJECT","GLOBAL"]},"to":{"format":"date-time","type":"string"},"watermarkPolicy":{"enum":["ACTOR_AND_TIME","CLASSIFICATION_BANNER"]}},"required":["auditExportId","requestedBy","from","to","format","scope","reason","watermarkPolicy","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('budget.limit_updated.v1','DOMAIN',1,true,'payloads/budget_limit_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('budget.reservation_created.v1','DOMAIN',1,true,'payloads/budget_reservation_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"amount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"attempt":{"minimum":0,"type":"integer"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"jobId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"ledgerScopeDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"pricingVersion":{"maxLength":10000,"minLength":1,"type":"string"},"providerCandidateId":{"maxLength":10000,"minLength":1,"type":"string"},"reservationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"reservationKeyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["reservationId","reservationKeyDigest","jobId","attempt","providerCandidateId","pricingVersion","amount","currency","ledgerScopeDigest","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('budget.reservation_reconciliation_required.v1','DOMAIN',1,true,'payloads/budget_reservation_reconciliation_required_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"evidenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"exposureAmount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"incidentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"priorState":{"enum":["RESERVED"],"type":"string"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"reservationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["reservationId","priorState","exposureAmount","currency","reasonCode","evidenceDigest","incidentId"],"type":"object"}$event_schema$::jsonb),
+    ('budget.reservation_released.v1','DOMAIN',1,true,'payloads/budget_reservation_released_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"amount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"noBillProofDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorState":{"enum":["RESERVED","RECONCILIATION_REQUIRED"],"type":"string"},"releasedAt":{"format":"date-time","type":"string"},"reservationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["reservationId","priorState","amount","currency","noBillProofDigest","releasedAt"],"type":"object"}$event_schema$::jsonb),
+    ('budget.reservation_settled.v1','DOMAIN',1,true,'payloads/budget_reservation_settled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"amount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"billedCostDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"priorState":{"enum":["RESERVED","RECONCILIATION_REQUIRED"],"type":"string"},"providerUsageDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reservationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"settledAt":{"format":"date-time","type":"string"}},"required":["reservationId","priorState","amount","currency","providerUsageDigest","billedCostDigest","settledAt"],"type":"object"}$event_schema$::jsonb),
+    ('case.assigned.v1','DOMAIN',1,true,'payloads/case_assigned_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"assigneeUserId":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","assigneeUserId","caseId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('case.signal_linked.v1','DOMAIN',1,true,'payloads/case_signal_linked_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"signalId":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id","signalId"],"type":"object"}$event_schema$::jsonb),
+    ('case.signal_unlinked.v1','DOMAIN',1,true,'payloads/case_signal_unlinked_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"signalId":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id","signalId"],"type":"object"}$event_schema$::jsonb),
+    ('case.state_transitioned.v1','DOMAIN',1,true,'payloads/case_state_transitioned_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"case_version":{"minimum":1,"type":"integer"},"from_state":{"enum":["SIGNAL_DETECTED","TRIAGE","INVESTIGATING","AWAITING_RESPONSE","EDITORIAL_REVIEW","LEGAL_REVIEW","READY_TO_PUBLISH","CLOSED"],"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"reason":{"maxLength":4000,"minLength":1,"type":"string"},"request_id":{"type":"string"},"resolution_code":{"enum":["NONE","DATA_ERROR","DUPLICATE","EXPLAINED","INSUFFICIENT_EVIDENCE","REFERRED_CONFIDENTIAL","ARCHIVED",null],"type":["string","null"]},"to_state":{"enum":["SIGNAL_DETECTED","TRIAGE","INVESTIGATING","AWAITING_RESPONSE","EDITORIAL_REVIEW","LEGAL_REVIEW","READY_TO_PUBLISH","CLOSED"],"type":"string"},"transition_id":{"pattern":"^[a-z][a-z0-9-]{2,99}$","type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id","transition_id","from_state","to_state","reason","case_version"],"type":"object"}$event_schema$::jsonb),
+    ('claim.created.v1','DOMAIN',1,true,'payloads/claim_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('claim.updated.v1','DOMAIN',1,true,'payloads/claim_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"claimId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","claimId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('claim.validated.v1','DOMAIN',1,true,'payloads/claim_validated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"claimId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","claimId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.contract_period_recorded.v1','DOMAIN',1,true,'payloads/commercial_contract_period_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"contractId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"organizationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"periodEnd":{"format":"date","type":"string"},"periodStart":{"format":"date","type":"string"},"recordDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sku":{"maxLength":10000,"minLength":1,"type":"string"},"status":{"enum":["PILOT","ACTIVE","SUSPENDED","ENDED","CANCELLED"],"type":"string"}},"required":["contractId","organizationId","periodStart","periodEnd","sku","status","decisionDigest","recordDigest"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.control_execution_recorded.v1','DOMAIN',1,true,'payloads/commercial_control_execution_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"action":{"enum":["PAUSE_NEW_GA_SALES","PAUSE_PAID_ACQUISITION","SUSPEND_AFFECTED_PAID_CAPABILITY","RESUME_NEW_GA_SALES","RESUME_PAID_ACQUISITION","REACTIVATE_PAID_CAPABILITY"],"type":"string"},"approvalDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"controlExecutionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"controlExecutionVersion":{"minimum":1,"type":"integer"},"executionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"executionGeneration":{"minimum":1,"type":"integer"},"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"externalRequestDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"productFenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalVersion":{"minimum":1,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["PAUSE_ACKNOWLEDGEMENT_PENDING","RESUME_ACKNOWLEDGEMENT_PENDING"],"type":"string"},"targetScopeDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["controlExecutionId","controlExecutionVersion","action","targetScopeDigest","proposalId","proposalVersion","approvalDigest","executionId","executionGeneration","executionDigest","productFenceDigest","externalRequestDigest","state","receiptDigest","occurredAt"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.control_external_effect_acknowledged.v1','DOMAIN',1,true,'payloads/commercial_control_external_effect_acknowledged_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"acknowledgedByActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"acknowledgementReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"acknowledgementReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"action":{"enum":["PAUSE_NEW_GA_SALES","PAUSE_PAID_ACQUISITION","SUSPEND_AFFECTED_PAID_CAPABILITY","RESUME_NEW_GA_SALES","RESUME_PAID_ACQUISITION","REACTIVATE_PAID_CAPABILITY"],"type":"string"},"controlExecutionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"controlExecutionVersion":{"minimum":2,"type":"integer"},"externalVersionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"importReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"importReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"priorState":{"enum":["PAUSE_ACKNOWLEDGEMENT_PENDING","RESUME_ACKNOWLEDGEMENT_PENDING"],"type":"string"},"productFenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["PAUSED","NORMAL"],"type":"string"},"stepUpAuthorizationReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["controlExecutionId","controlExecutionVersion","action","importReceiptId","importReceiptDigest","acknowledgementReceiptId","acknowledgementReceiptDigest","acknowledgedByActorId","stepUpAuthorizationReceiptDigest","externalVersionDigest","priorState","state","productFenceDigest","receiptDigest","occurredAt"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.control_reconciliation_required.v1','DOMAIN',1,true,'payloads/commercial_control_reconciliation_required_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"action":{"enum":["PAUSE_NEW_GA_SALES","PAUSE_PAID_ACQUISITION","SUSPEND_AFFECTED_PAID_CAPABILITY","RESUME_NEW_GA_SALES","RESUME_PAID_ACQUISITION","REACTIVATE_PAID_CAPABILITY"],"type":"string"},"controlExecutionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"controlExecutionVersion":{"minimum":1,"type":"integer"},"nextReviewAt":{"format":"date-time","type":"string"},"observedEvidenceSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"priorState":{"enum":["PAUSE_ACKNOWLEDGEMENT_PENDING","RESUME_ACKNOWLEDGEMENT_PENDING","RECONCILIATION_REQUIRED"],"type":"string"},"productFenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reasonCode":{"enum":["EXTERNAL_IMPORT_MISSING","ACKNOWLEDGEMENT_MISSING","RECEIPT_MISMATCH","EXTERNAL_VERSION_STALE","PARTIAL_EFFECT","AMBIGUOUS_EFFECT","REPLAY_CONFLICT"],"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"const":"RECONCILIATION_REQUIRED","type":"string"}},"required":["controlExecutionId","controlExecutionVersion","action","priorState","state","reasonCode","observedEvidenceSetDigest","productFenceDigest","nextReviewAt","receiptDigest","occurredAt"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.discount_decided.v1','DOMAIN',1,true,'payloads/commercial_discount_decided_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"approverId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"basisPoints":{"maximum":10000,"minimum":0,"type":"integer"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"discountId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"effectiveFrom":{"format":"date","type":"string"},"effectiveUntil":{"format":"date","type":"string"},"eligibleLineKinds":{"items":{"maxLength":10000,"minLength":1,"type":"string"},"type":"array","uniqueItems":true},"organizationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"}},"required":["discountId","organizationId","eligibleLineKinds","basisPoints","reasonCode","approverId","effectiveFrom","effectiveUntil","decisionDigest"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.invoice_reconciled.v1','DOMAIN',1,true,'payloads/commercial_invoice_reconciled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"correctionTotal":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"discountTotal":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"invoiceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"invoiceTotal":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"lineSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"organizationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"periodEnd":{"format":"date","type":"string"},"periodStart":{"format":"date","type":"string"},"providerReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reconciliationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"subtotal":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"taxTotal":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"taxableAmount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"}},"required":["invoiceId","organizationId","periodStart","periodEnd","lineSetDigest","subtotal","discountTotal","taxableAmount","taxTotal","correctionTotal","invoiceTotal","currency","providerReceiptDigest","reconciliationDigest"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.revenue_fact_recorded.v1','DOMAIN',1,true,'payloads/commercial_revenue_fact_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"amount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"contractId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"invoiceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"organizationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"periodEnd":{"format":"date","type":"string"},"periodStart":{"format":"date","type":"string"},"recognitionPolicyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"recordDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"revenueFactId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["revenueFactId","organizationId","contractId","invoiceId","periodStart","periodEnd","amount","currency","recognitionPolicyDigest","recordDigest"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.sku_readiness_evaluated.v1','DOMAIN',1,true,'payloads/commercial_sku_readiness_evaluated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"blockerSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"deploymentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"evaluatedAt":{"format":"date-time","type":"string"},"evaluationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"itemSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sku":{"maxLength":10000,"minLength":1,"type":"string"},"state":{"enum":["READY","BLOCKED","NOT_APPLICABLE"],"type":"string"}},"required":["evaluationId","deploymentId","sku","evaluatedAt","itemSetDigest","state","blockerSetDigest","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.tariff_version_activated.v1','DOMAIN',1,true,'payloads/commercial_tariff_version_activated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"approverId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"componentSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"effectiveFrom":{"format":"date","type":"string"},"effectiveUntil":{"format":"date","type":"string"},"sku":{"maxLength":10000,"minLength":1,"type":"string"},"tariffVersionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["tariffVersionId","sku","currency","effectiveFrom","effectiveUntil","componentSetDigest","approverId","decisionDigest"],"type":"object"}$event_schema$::jsonb),
+    ('commercial.usage_fact_recorded.v1','DOMAIN',1,true,'payloads/commercial_usage_fact_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"meterKind":{"maxLength":10000,"minLength":1,"type":"string"},"organizationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"periodEnd":{"format":"date","type":"string"},"periodStart":{"format":"date","type":"string"},"quantity":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"sourceReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"tariffVersionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"usageFactId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["usageFactId","organizationId","periodStart","periodEnd","meterKind","quantity","sourceReceiptDigest","tariffVersionId"],"type":"object"}$event_schema$::jsonb),
+    ('communication.authorization_changed.v1','DOMAIN',1,true,'payloads/communication_authorization_changed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"authorizationEventId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"changeKind":{"enum":["GRANT","RESTRICT","REVOKE","EXPIRE","ENDPOINT_LINK_REQUESTED","ENDPOINT_VERIFIED","ENDPOINT_UNLINKED","SUPPRESSION_APPLIED","SUPPRESSION_RELEASED"],"type":"string"},"effectiveAt":{"format":"date-time","type":"string"},"endpointId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"expiresAt":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"policyVersion":{"maxLength":10000,"minLength":1,"type":"string"},"proofDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"purpose":{"enum":["SYSTEM_TRANSACTIONAL","SUBSCRIPTION_UPDATE","DISCRETIONARY_EXTERNAL","INTERNAL_ACTION_REQUEST"],"type":"string"},"subjectId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"topicDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["authorizationEventId","subjectId","endpointId","purpose","topicDigest","changeKind","proofDigest","policyVersion","effectiveAt","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('communication.delivery_receipt_recorded.v1','DOMAIN',1,true,'payloads/communication_delivery_receipt_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"attemptId":{"anyOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"channel":{"enum":["SMTP_EMAIL","TELEGRAM_BOT_API","META_WHATSAPP_BUSINESS_CLOUD","LINE_MESSAGING_API","SOLAPI_SMS","SOLAPI_KAKAO_BIZMESSAGE","TWILIO_VOICE","SIGNED_WEBHOOK"],"type":"string"},"deliveryId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"deliveryReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"deliveryReceiptSequence":{"minimum":1,"type":"integer"},"deliveryVersion":{"minimum":0,"type":"integer"},"observedAt":{"format":"date-time","type":"string"},"priorState":{"enum":["QUEUED","SENDING","PROVIDER_ACCEPTED","DELIVERED","READ","RETRY_SCHEDULED","FAILED_PERMANENT","RECONCILIATION_REQUIRED","SUPPRESSED","CANCELLED"],"type":"string"},"providerEvidenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptApplied":{"type":"boolean"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["QUEUED","SENDING","PROVIDER_ACCEPTED","DELIVERED","READ","RETRY_SCHEDULED","FAILED_PERMANENT","RECONCILIATION_REQUIRED","SUPPRESSED","CANCELLED"],"type":"string"}},"required":["deliveryId","deliveryVersion","attemptId","deliveryReceiptId","deliveryReceiptSequence","channel","priorState","state","providerEvidenceDigest","receiptDigest","receiptApplied","observedAt"],"type":"object"}$event_schema$::jsonb),
+    ('communication.delivery_requested.v1','DOMAIN',1,true,'payloads/communication_delivery_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"activationReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"authorizationSnapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"budgetReservationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"channel":{"enum":["SMTP_EMAIL","TELEGRAM_BOT_API","META_WHATSAPP_BUSINESS_CLOUD","LINE_MESSAGING_API","SOLAPI_SMS","SOLAPI_KAKAO_BIZMESSAGE","TWILIO_VOICE","SIGNED_WEBHOOK"],"type":"string"},"deliveryId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"deliveryKey":{"pattern":"^[0-9a-f]{64}$","type":"string"},"endpointId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"endpointVersion":{"minimum":0,"type":"integer"},"intentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"renderingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["deliveryId","intentDigest","deliveryKey","endpointId","endpointVersion","channel","renderingDigest","authorizationSnapshotDigest","activationReceiptDigest","budgetReservationId"],"type":"object"}$event_schema$::jsonb),
+    ('communication.intent_created.v1','DOMAIN',1,true,'payloads/communication_intent_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"communicationClass":{"enum":["PUBLIC_SERVICE_OR_TRANSACTIONAL","DISCRETIONARY_OR_RESTRICTED"],"type":"string"},"intentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"logicalIntentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"policyVersion":{"maxLength":10000,"minLength":1,"type":"string"},"purpose":{"enum":["SYSTEM_TRANSACTIONAL","SUBSCRIPTION_UPDATE","DISCRETIONARY_EXTERNAL","INTERNAL_ACTION_REQUEST"],"type":"string"},"recipientSubjectId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"sourceEventId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"topicDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["intentId","logicalIntentDigest","sourceEventId","communicationClass","purpose","topicDigest","recipientSubjectId","policyVersion"],"type":"object"}$event_schema$::jsonb),
+    ('communication.subscription_update_requested.v1','DOMAIN',1,true,'payloads/communication_subscription_update_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"audienceScopeDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceDecisionReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceObjectId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"sourceObjectType":{"maxLength":10000,"minLength":1,"type":"string"},"sourceObjectVersion":{"minimum":0,"type":"integer"},"updateKind":{"enum":["CREATED","UPDATED","CORRECTED","RETRACTED","ACCESS_RESTRICTED"],"type":"string"}},"required":["sourceObjectType","sourceObjectId","sourceObjectVersion","updateKind","audienceScopeDigest","sourceDecisionReceiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('correction.assigned.v1','DOMAIN',1,true,'payloads/correction_assigned_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"assigneeUserId":{"type":"string"},"correctionId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","assigneeUserId","correctionId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('correction.created.v1','DOMAIN',1,true,'payloads/correction_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"publicationId":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","publicationId","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('correction.draft_updated.v1','DOMAIN',1,true,'payloads/correction_draft_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"correctionId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","correctionId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('correction.request_submitted.v1','DOMAIN',1,true,'payloads/correction_request_submitted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('correction.resolved.v1','DOMAIN',1,true,'payloads/correction_resolved_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"correction_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","correction_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('correction.triaged.v1','DOMAIN',1,true,'payloads/correction_triaged_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"correctionId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","correctionId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('cost.allocation_period_closed.v1','DOMAIN',1,true,'payloads/cost_allocation_period_closed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"allocationSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"currency":{"pattern":"^[A-Z]{3}$","type":"string"},"directCoverage":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"driverSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"periodEnd":{"format":"date","type":"string"},"periodStart":{"format":"date","type":"string"},"poolSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"totalCoverage":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"unallocatedAmount":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"}},"required":["periodStart","periodEnd","currency","poolSetDigest","driverSetDigest","allocationSetDigest","directCoverage","totalCoverage","unallocatedAmount","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('cost.fx_rate_recorded.v1','DOMAIN',1,true,'payloads/cost_fx_rate_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"observedAt":{"format":"date-time","type":"string"},"rate":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"rateId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"sha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceCurrency":{"pattern":"^[A-Z]{3}$","type":"string"},"sourceId":{"maxLength":10000,"minLength":1,"type":"string"},"targetCurrency":{"pattern":"^[A-Z]{3}$","type":"string"},"validUntil":{"format":"date-time","type":"string"}},"required":["rateId","sourceCurrency","targetCurrency","rate","sourceId","observedAt","validUntil","sha256"],"type":"object"}$event_schema$::jsonb),
+    ('dataset.snapshot_created.v1','DOMAIN',1,true,'payloads/dataset_snapshot_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"errorCode":{"anyOf":[{"maxLength":10000,"minLength":1,"type":"string"},{"type":"null"}]},"errorDigest":{"anyOf":[{"pattern":"^[0-9a-f]{64}$","type":"string"},{"type":"null"}]},"memberCount":{"minimum":0,"type":"integer"},"producerDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"snapshotId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"snapshotKind":{"maxLength":10000,"minLength":1,"type":"string"},"snapshotSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceWatermarkDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["READY","FAILED"],"type":"string"}},"required":["snapshotId","snapshotKind","producerDigest","snapshotSha256","memberCount","sourceWatermarkDigest","state","errorCode","errorDigest"],"type":"object"}$event_schema$::jsonb),
+    ('detection.signal_created.v1','INTEGRATION',1,true,'payloads/detection_signal_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"rule_version_id":{"type":"string"},"signal_id":{"type":"string"},"target_id":{"type":"string"}},"required":["rule_version_id","signal_id","target_id"],"type":"object"}$event_schema$::jsonb),
+    ('editorial.response_materialized.v1','DOMAIN',1,true,'payloads/editorial_response_materialized_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"editorialResponseId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"materializedAt":{"format":"date-time","type":"string"},"ownedIntakeReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"responseSubmissionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"resultDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"submissionReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"submissionReceiptVersion":{"minimum":1,"type":"integer"}},"required":["responseSubmissionId","responseRequestId","editorialResponseId","submissionReceiptVersion","submissionReceiptDigest","ownedIntakeReceiptDigest","materializedAt","resultDigest"],"type":"object"}$event_schema$::jsonb),
+    ('evidence.created.v1','DOMAIN',1,true,'payloads/evidence_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('evidence.linked.v1','DOMAIN',1,true,'payloads/evidence_linked_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"evidenceId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"target_id":{"type":"string"}},"required":["actor_id","evidenceId","occurred_at","operation_id","request_id","target_id"],"type":"object"}$event_schema$::jsonb),
+    ('evidence.redaction_created.v1','DOMAIN',1,true,'payloads/evidence_redaction_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"evidenceId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","evidenceId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('evidence.segment_created.v1','DOMAIN',1,true,'payloads/evidence_segment_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"contentSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"evidenceSegmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"locatorDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceAssetId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"sourceAssetRevision":{"minimum":0,"type":"integer"}},"required":["evidenceSegmentId","sourceAssetId","sourceAssetRevision","locatorDigest","contentSha256"],"type":"object"}$event_schema$::jsonb),
+    ('evidence.updated.v1','DOMAIN',1,true,'payloads/evidence_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"evidenceId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","evidenceId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('evidence.verified.v1','DOMAIN',1,true,'payloads/evidence_verified_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"evidenceId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","evidenceId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('export.dataset_requested.v1','INTEGRATION',1,true,'payloads/export_dataset_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"dataset_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","dataset_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('governance.business_calendar_revised.v1','DOMAIN',1,true,'payloads/governance_business_calendar_revised_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"calendarDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"calendarId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"effectiveAt":{"format":"date-time","type":"string"},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reviewExpiresAt":{"format":"date-time","type":"string"},"timezone":{"maxLength":10000,"minLength":1,"type":"string"},"version":{"minimum":0,"type":"integer"}},"required":["calendarId","version","timezone","calendarDigest","policyDigest","effectiveAt","reviewExpiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('governance.capability_activation_decided.v1','DOMAIN',1,true,'payloads/governance_capability_activation_decided_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"capabilityClass":{"enum":["PROVIDER","CONNECTOR","AGENT_MODEL","COMMUNICATION_CHANNEL","PUBLICATION"],"type":"string"},"capabilityId":{"maxLength":10000,"minLength":1,"type":"string"},"configurationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"effectiveAt":{"format":"date-time","type":"string"},"environment":{"enum":["DEVELOPMENT","TEST","STAGING","PRODUCTION"],"type":"string"},"expiresAt":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"legalState":{"enum":["UNCONFIGURED","PENDING_REVIEW","APPROVED","SUSPENDED","EXPIRED"],"type":"string"}},"required":["decisionId","capabilityId","capabilityClass","environment","configurationDigest","legalState","effectiveAt","expiresAt","decisionDigest"],"type":"object"}$event_schema$::jsonb),
+    ('governance.capability_activation_review_requested.v1','DOMAIN',1,true,'payloads/governance_capability_activation_review_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"capabilityClass":{"enum":["PROVIDER","CONNECTOR","AGENT_MODEL","COMMUNICATION_CHANNEL","PUBLICATION"],"type":"string"},"capabilityId":{"maxLength":10000,"minLength":1,"type":"string"},"configurationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"environment":{"enum":["DEVELOPMENT","TEST","STAGING","PRODUCTION"],"type":"string"},"evidenceSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["capabilityId","capabilityClass","environment","configurationDigest","evidenceSetDigest","policyDigest","proposalId","decisionDigest"],"type":"object"}$event_schema$::jsonb),
+    ('governance.conflict_declared.v1','DOMAIN',1,true,'payloads/governance_conflict_declared_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"conflictType":{"enum":["AUTHORSHIP","EDITING","CASE_PARTY","RECIPIENT","ROLE","PERSONAL","FAMILY","EMPLOYMENT","ADVISORY","FINANCIAL","POLITICAL","FUNDING","CUSTOMER"],"type":"string"},"declarationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"declarationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"declarationSequence":{"minimum":1,"type":"integer"},"declaredByActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"effectiveAt":{"format":"date-time","type":"string"},"evidenceSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"materiality":{"enum":["MATERIAL","NON_MATERIAL","UNKNOWN"],"type":"string"},"nonwaivable":{"type":"boolean"},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"relationState":{"enum":["PRESENT","UNKNOWN"],"type":"string"},"sourceClass":{"enum":["SELF_DECLARED","INTERNAL_AUTHORITATIVE","EXTERNAL_AUTHORITATIVE"],"type":"string"},"subjectActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"supersedesDeclarationId":{"oneOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"targetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"targetId":{"maxLength":10000,"minLength":1,"type":"string"},"targetType":{"enum":["CASE","REVIEW_SNAPSHOT","ACTION_PROPOSAL","PUBLICATION","COMMUNICATION_INTENT","RESPONSE_REQUEST","LEGAL_HOLD","CAPABILITY","SOURCE_ASSET","RESEARCH_ARTIFACT","PRIVACY_REQUEST","COMMUNICATION_SUBJECT"],"type":"string"},"targetVersion":{"minimum":1,"type":"integer"},"temporalState":{"enum":["CURRENT","PAST","UNKNOWN"],"type":"string"}},"required":["declarationId","subjectActorId","declaredByActorId","targetType","targetId","targetVersion","targetDigest","conflictType","relationState","materiality","temporalState","sourceClass","nonwaivable","evidenceSetDigest","policyDigest","declarationSequence","supersedesDeclarationId","declarationDigest","effectiveAt","expiresAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('governance.conflict_expired.v1','DOMAIN',1,true,'payloads/governance_conflict_expired_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"conflictType":{"enum":["AUTHORSHIP","EDITING","CASE_PARTY","RECIPIENT","ROLE","PERSONAL","FAMILY","EMPLOYMENT","ADVISORY","FINANCIAL","POLITICAL","FUNDING","CUSTOMER"],"type":"string"},"declarationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"declarationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"declarationSequence":{"minimum":1,"type":"integer"},"expiredAt":{"format":"date-time","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"subjectActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"targetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"targetId":{"maxLength":10000,"minLength":1,"type":"string"},"targetType":{"enum":["CASE","REVIEW_SNAPSHOT","ACTION_PROPOSAL","PUBLICATION","COMMUNICATION_INTENT","RESPONSE_REQUEST","LEGAL_HOLD","CAPABILITY","SOURCE_ASSET","RESEARCH_ARTIFACT","PRIVACY_REQUEST","COMMUNICATION_SUBJECT"],"type":"string"},"targetVersion":{"minimum":1,"type":"integer"}},"required":["declarationId","subjectActorId","targetType","targetId","targetVersion","targetDigest","conflictType","declarationSequence","declarationDigest","policyDigest","expiresAt","expiredAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('governance.conflict_withdrawn.v1','DOMAIN',1,true,'payloads/governance_conflict_withdrawn_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"conflictType":{"enum":["AUTHORSHIP","EDITING","CASE_PARTY","RECIPIENT","ROLE","PERSONAL","FAMILY","EMPLOYMENT","ADVISORY","FINANCIAL","POLITICAL","FUNDING","CUSTOMER"],"type":"string"},"declarationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"declarationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"declarationSequence":{"minimum":2,"type":"integer"},"effectiveAt":{"format":"date-time","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"materiality":{"const":"NOT_APPLICABLE","type":"string"},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorDeclarationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorDeclarationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"reasonCode":{"enum":["NO_LONGER_PRESENT","DECLARED_IN_ERROR","SUPERSEDED_EVIDENCE","OVERSIGHT_DECISION","OTHER"],"type":"string"},"reasonDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"relationState":{"const":"ABSENT","type":"string"},"sourceClass":{"enum":["SELF_DECLARED","INTERNAL_AUTHORITATIVE"],"type":"string"},"subjectActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"targetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"targetId":{"maxLength":10000,"minLength":1,"type":"string"},"targetType":{"enum":["CASE","REVIEW_SNAPSHOT","ACTION_PROPOSAL","PUBLICATION","COMMUNICATION_INTENT","RESPONSE_REQUEST","LEGAL_HOLD","CAPABILITY","SOURCE_ASSET","RESEARCH_ARTIFACT","PRIVACY_REQUEST","COMMUNICATION_SUBJECT"],"type":"string"},"targetVersion":{"minimum":1,"type":"integer"},"temporalState":{"const":"NOT_APPLICABLE","type":"string"},"withdrawnByActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["declarationId","priorDeclarationId","subjectActorId","withdrawnByActorId","targetType","targetId","targetVersion","targetDigest","conflictType","relationState","materiality","temporalState","sourceClass","declarationSequence","priorDeclarationDigest","policyDigest","reasonCode","reasonDigest","declarationDigest","effectiveAt","expiresAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('governance.funding_disclosure_published.v1','DOMAIN',1,true,'payloads/governance_funding_disclosure_published_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"concentrationBand":{"maxLength":10000,"minLength":1,"type":"string"},"disclosureId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"effectiveAt":{"format":"date-time","type":"string"},"entrySetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorRevision":{"anyOf":[{"minimum":0,"type":"integer"},{"type":"null"}]},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"revision":{"minimum":0,"type":"integer"},"snapshotBatchId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"snapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["disclosureId","revision","snapshotBatchId","snapshotDigest","concentrationBand","entrySetDigest","priorRevision","effectiveAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('governance.funding_snapshot_created.v1','DOMAIN',1,true,'payloads/governance_funding_snapshot_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"asOf":{"format":"date-time","type":"string"},"denominator":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"denominatorApprovalDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"entrySetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"fiscalYear":{"minimum":0,"type":"integer"},"fxSnapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reportingCurrency":{"pattern":"^[A-Z]{3}$","type":"string"},"snapshotBatchId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"snapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["snapshotBatchId","fiscalYear","asOf","reportingCurrency","fxSnapshotDigest","denominator","denominatorApprovalDigest","entrySetDigest","snapshotDigest"],"type":"object"}$event_schema$::jsonb),
+    ('hypothesis.created.v1','DOMAIN',1,true,'payloads/hypothesis_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('hypothesis.updated.v1','DOMAIN',1,true,'payloads/hypothesis_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"hypothesisId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","hypothesisId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('identity.session_created.v1','DOMAIN',1,true,'payloads/identity_session_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('identity.session_revoked.v1','DOMAIN',1,true,'payloads/identity_session_revoked_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('identity.step_up_completed.v1','DOMAIN',1,true,'payloads/identity_step_up_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"transaction_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","transaction_id"],"type":"object"}$event_schema$::jsonb),
+    ('identity.user_disabled.v1','DOMAIN',1,true,'payloads/identity_user_disabled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"userId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","userId"],"type":"object"}$event_schema$::jsonb),
+    ('identity.user_invited.v1','DOMAIN',1,true,'payloads/identity_user_invited_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('identity.user_sessions_revoked.v1','DOMAIN',1,true,'payloads/identity_user_sessions_revoked_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"userId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","userId"],"type":"object"}$event_schema$::jsonb),
+    ('incident.state_changed.v1','DOMAIN',1,true,'payloads/incident_state_changed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"affectedCapabilities":{"items":{"maxLength":10000,"minLength":1,"type":"string"},"type":"array","uniqueItems":true},"commanderUserId":{"anyOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"evidenceSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"incidentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"nextUpdateAt":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"ownerUserId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"priorState":{"enum":["DETECTED","TRIAGED","CONTAINED","RECOVERING","RESOLVED"],"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"severity":{"enum":["SEV0","SEV1","SEV2","SEV3"],"type":"string"},"state":{"enum":["DETECTED","TRIAGED","CONTAINED","RECOVERING","RESOLVED","POSTMORTEM_CLOSED"],"type":"string"},"version":{"minimum":0,"type":"integer"}},"required":["incidentId","version","priorState","state","severity","affectedCapabilities","ownerUserId","commanderUserId","nextUpdateAt","evidenceSetDigest","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('intake.contact_received.v1','INTEGRATION',1,true,'payloads/intake_contact_received_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('job.bulk_retry_requested.v1','DOMAIN',1,true,'payloads/job_bulk_retry_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('job.cancelled.v1','DOMAIN',1,true,'payloads/job_cancelled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"jobId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","jobId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('job.dead_lettered.v1','INTEGRATION',1,true,'payloads/job_dead_lettered_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"error_code":{"type":"string"},"job_id":{"type":"string"},"job_type":{"type":"string"}},"required":["error_code","job_id","job_type"],"type":"object"}$event_schema$::jsonb),
+    ('job.quarantined.v1','DOMAIN',1,true,'payloads/job_quarantined_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"jobId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","jobId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('job.queue_paused.v1','DOMAIN',1,true,'payloads/job_queue_paused_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('job.retry_requested.v1','DOMAIN',1,true,'payloads/job_retry_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"jobId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","jobId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('journey.handoff_decided.v1','DOMAIN',1,true,'payloads/journey_handoff_decided_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"currentOwnerBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decision":{"enum":["ACKNOWLEDGE","DECLINE"],"type":"string"},"edgeId":{"maxLength":10000,"minLength":1,"type":"string"},"effectDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"generation":{"minimum":1,"type":"integer"},"handoffId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"handoffKind":{"maxLength":10000,"minLength":1,"type":"string"},"handoffVersion":{"minimum":1,"type":"integer"},"journeyCode":{"enum":["J-01","J-02","J-03","J-04","J-05","J-06","J-07","J-08","J-09","J-10","J-11","J-12"],"type":"string"},"journeyInstanceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"journeyInstanceVersion":{"minimum":1,"type":"integer"},"nextOwnerBindingDigest":{"oneOf":[{"pattern":"^[0-9a-f]{64}$","type":"string"},{"type":"null"}]},"occurredAt":{"format":"date-time","type":"string"},"priorEscalationState":{"enum":["NOT_DUE","DUE","ESCALATED"],"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"replacementHandoffId":{"oneOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"replacementRequestReceiptDigest":{"oneOf":[{"pattern":"^[0-9a-f]{64}$","type":"string"},{"type":"null"}]},"replacementRequestReceiptId":{"oneOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"resultingEscalationState":{"enum":["RESOLVED"],"type":"string"},"resultingHandoffState":{"enum":["ACKNOWLEDGED","DECLINED"],"type":"string"},"resultingJourneyState":{"enum":["ACTIVE","BLOCKED"],"type":"string"},"resultingNextDueAt":{"format":"date-time","type":"string"}},"required":["occurredAt","journeyInstanceId","journeyInstanceVersion","journeyCode","edgeId","handoffId","handoffVersion","handoffKind","generation","decision","resultingHandoffState","resultingJourneyState","priorEscalationState","resultingEscalationState","resultingNextDueAt","currentOwnerBindingDigest","nextOwnerBindingDigest","effectDigest","replacementHandoffId","replacementRequestReceiptId","replacementRequestReceiptDigest","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('journey.handoff_escalated.v1','DOMAIN',1,true,'payloads/journey_handoff_escalated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"escalationOwnerBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"generation":{"minimum":1,"type":"integer"},"handoffId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"handoffKind":{"maxLength":10000,"minLength":1,"type":"string"},"handoffVersion":{"minimum":1,"type":"integer"},"hardExpiryAt":{"format":"date-time","type":"string"},"journeyInstanceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"journeyInstanceVersion":{"minimum":1,"type":"integer"},"nextSchedulerAt":{"format":"date-time","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"priorEscalationState":{"enum":["NOT_DUE","DUE"],"type":"string"},"priorSchedulerAt":{"format":"date-time","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"resultingEscalationState":{"enum":["DUE","ESCALATED"],"type":"string"}},"required":["occurredAt","journeyInstanceId","journeyInstanceVersion","handoffId","handoffVersion","handoffKind","generation","priorEscalationState","resultingEscalationState","hardExpiryAt","priorSchedulerAt","nextSchedulerAt","escalationOwnerBindingDigest","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('journey.handoff_expired.v1','DOMAIN',1,true,'payloads/journey_handoff_expired_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"generation":{"minimum":1,"type":"integer"},"handoffId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"handoffKind":{"maxLength":10000,"minLength":1,"type":"string"},"handoffVersion":{"minimum":1,"type":"integer"},"hardExpiryAt":{"format":"date-time","type":"string"},"journeyInstanceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"journeyInstanceVersion":{"minimum":1,"type":"integer"},"occurredAt":{"format":"date-time","type":"string"},"priorEscalationState":{"enum":["NOT_DUE","DUE","ESCALATED"],"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"replacementHandoffId":{"oneOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"replacementRequestReceiptDigest":{"oneOf":[{"pattern":"^[0-9a-f]{64}$","type":"string"},{"type":"null"}]},"replacementRequestReceiptId":{"oneOf":[{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},{"type":"null"}]},"resultingEscalationState":{"enum":["RESOLVED"],"type":"string"},"resultingJourneyState":{"enum":["ACTIVE","BLOCKED","EXPIRED"],"type":"string"},"resultingNextDueAt":{"format":"date-time","type":"string"}},"required":["occurredAt","journeyInstanceId","journeyInstanceVersion","handoffId","handoffVersion","handoffKind","generation","hardExpiryAt","priorEscalationState","resultingEscalationState","resultingNextDueAt","resultingJourneyState","replacementHandoffId","replacementRequestReceiptId","replacementRequestReceiptDigest","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('journey.handoff_requested.v1','DOMAIN',1,true,'payloads/journey_handoff_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"ackAuthorityId":{"maxLength":10000,"minLength":1,"type":"string"},"ackAuthorityKind":{"enum":["EXTERNAL_OPERATION","PRIVATE_SERVICE_OPERATION","DOMAIN_RECEIPT_HANDLER","INBOX_CLAIM","EVENT_HANDLER"],"type":"string"},"bindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"edgeId":{"maxLength":10000,"minLength":1,"type":"string"},"fromOwnerBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"generation":{"minimum":1,"type":"integer"},"handoffId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"handoffKind":{"maxLength":10000,"minLength":1,"type":"string"},"handoffVersion":{"minimum":1,"type":"integer"},"hardExpiryAt":{"format":"date-time","type":"string"},"journeyCode":{"enum":["J-01","J-02","J-03","J-04","J-05","J-06","J-07","J-08","J-09","J-10","J-11","J-12"],"type":"string"},"journeyInstanceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"journeyInstanceVersion":{"minimum":1,"type":"integer"},"nextSchedulerAt":{"format":"date-time","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"receiverBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"resultingEscalationState":{"enum":["NOT_DUE"],"type":"string"},"subjectDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"subjectId":{"maxLength":10000,"minLength":1,"type":"string"},"subjectKind":{"maxLength":10000,"minLength":1,"type":"string"},"subjectVersion":{"minimum":1,"type":"integer"}},"required":["occurredAt","journeyInstanceId","journeyInstanceVersion","journeyCode","edgeId","handoffId","handoffVersion","handoffKind","generation","fromOwnerBindingDigest","receiverBindingDigest","subjectKind","subjectId","subjectVersion","subjectDigest","ackAuthorityKind","ackAuthorityId","hardExpiryAt","nextSchedulerAt","resultingEscalationState","bindingDigest","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('journey.instance_started.v1','DOMAIN',1,true,'payloads/journey_instance_started_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"currentNodeId":{"maxLength":10000,"minLength":1,"type":"string"},"currentOwnerBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"journeyCode":{"enum":["J-01","J-02","J-03","J-04","J-05","J-06","J-07","J-08","J-09","J-10","J-11","J-12"],"type":"string"},"journeyInstanceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"journeyInstanceVersion":{"minimum":1,"type":"integer"},"nextDueAt":{"format":"date-time","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"rootObjectDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"rootObjectId":{"maxLength":10000,"minLength":1,"type":"string"},"rootObjectKind":{"maxLength":10000,"minLength":1,"type":"string"},"rootObjectVersion":{"minimum":1,"type":"integer"}},"required":["occurredAt","journeyInstanceId","journeyInstanceVersion","journeyCode","rootObjectKind","rootObjectId","rootObjectVersion","rootObjectDigest","currentNodeId","currentOwnerBindingDigest","nextDueAt","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('journey.outcome_recorded.v1','DOMAIN',1,true,'payloads/journey_outcome_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"edgeId":{"maxLength":10000,"minLength":1,"type":"string"},"effectDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"journeyCode":{"enum":["J-01","J-02","J-03","J-04","J-05","J-06","J-07","J-08","J-09","J-10","J-11","J-12"],"type":"string"},"journeyInstanceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"journeyInstanceVersion":{"minimum":1,"type":"integer"},"occurredAt":{"format":"date-time","type":"string"},"outcomeClass":{"enum":["DURABLE_SUCCESS","NON_VALUE_TERMINAL","RECOVERABLE","RECONCILIATION_REQUIRED"],"type":"string"},"outcomeCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"resultingJourneyState":{"enum":["ACTIVE","BLOCKED","RECONCILIATION_REQUIRED","COMPLETED","CANCELLED","EXPIRED","REJECTED"],"type":"string"},"resultingNextDueAt":{"format":"date-time","type":"string"},"subjectDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"subjectId":{"maxLength":10000,"minLength":1,"type":"string"},"subjectKind":{"maxLength":10000,"minLength":1,"type":"string"},"subjectVersion":{"minimum":1,"type":"integer"}},"required":["occurredAt","journeyInstanceId","journeyInstanceVersion","journeyCode","edgeId","outcomeCode","outcomeClass","subjectKind","subjectId","subjectVersion","subjectDigest","effectDigest","resultingJourneyState","resultingNextDueAt","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('legal.hold_released.v1','DOMAIN',1,true,'payloads/legal_hold_released_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"affectedSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"authorityReferenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"holdId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"priorCoverageDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"releaseSequence":{"minimum":0,"type":"integer"},"releasedScopeAtoms":{"items":{"maxLength":10000,"minLength":1,"type":"string"},"type":"array","uniqueItems":true},"resultingCoverageDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["holdId","releaseSequence","releasedScopeAtoms","affectedSetDigest","priorCoverageDigest","resultingCoverageDigest","authorityReferenceDigest","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('legal.hold_review_due.v1','DOMAIN',1,true,'payloads/legal_hold_review_due_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"activeCoverageDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"authorityReferenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"holdId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"reviewDueAt":{"format":"date-time","type":"string"},"taskId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["holdId","activeCoverageDigest","reviewDueAt","authorityReferenceDigest","taskId"],"type":"object"}$event_schema$::jsonb),
+    ('legal_hold.placed.v1','DOMAIN',1,true,'payloads/legal_hold_placed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"affectedIds":{"items":{"format":"uuid","type":"string"},"type":"array","uniqueItems":true},"authorityReference":{"maxLength":1000,"minLength":1,"type":"string"},"caseId":{"format":"uuid","type":"string"},"caseVersion":{"minimum":1,"type":"integer"},"expiresAt":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"legalHoldId":{"format":"uuid","type":"string"},"objectId":{"format":"uuid","type":"string"},"objectType":{"enum":["CASE","PUBLICATION","EVIDENCE","RESPONSE"]},"placedAt":{"format":"date-time","type":"string"},"placedBy":{"format":"uuid","type":"string"},"reason":{"maxLength":4000,"minLength":1,"type":"string"},"reviewSnapshotId":{"format":"uuid","type":"string"},"scope":{"enum":["RETENTION","DISCLOSURE","DELETION","ALL"]}},"required":["legalHoldId","caseId","reviewSnapshotId","objectType","objectId","scope","authorityReference","placedBy","placedAt","caseVersion"],"type":"object"}$event_schema$::jsonb),
+    ('notification.correction_received.v1','INTEGRATION',1,true,'payloads/notification_correction_received_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('notification.correction_resolved.v1','INTEGRATION',1,true,'payloads/notification_correction_resolved_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"correction_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","correction_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('notification.delivery_completed.v1','INTEGRATION',1,true,'payloads/notification_delivery_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"email_delivery_id":{"type":"string"},"provider_message_id":{"type":"string"},"status":{"type":"string"}},"required":["email_delivery_id","provider_message_id","status"],"type":"object"}$event_schema$::jsonb),
+    ('notification.publication_created.v1','INTEGRATION',1,true,'payloads/notification_publication_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"reviewSnapshotId":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id","reviewSnapshotId"],"type":"object"}$event_schema$::jsonb),
+    ('notification.response_extension_requested.v1','INTEGRATION',1,true,'payloads/notification_response_extension_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"requestToken":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","requestToken","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('notification.response_request_delivery_requested.v1','INTEGRATION',1,true,'payloads/notification_response_request_delivery_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('notification.response_submitted.v1','INTEGRATION',1,true,'payloads/notification_response_submitted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"requestToken":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","requestToken","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('notification.response_submitted.v2','INTEGRATION',2,true,'payloads/notification_response_submitted_v2.schema.json',$event_schema${"additionalProperties":false,"properties":{"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptVersion":{"minimum":1,"type":"integer"},"responseRequestBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"responseRequestVersion":{"minimum":1,"type":"integer"},"responseSubmissionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"submissionSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"submittedAt":{"format":"date-time","type":"string"}},"required":["responseSubmissionId","responseRequestId","responseRequestVersion","responseRequestBindingDigest","submissionSha256","receiptVersion","receiptDigest","submittedAt"],"type":"object"}$event_schema$::jsonb),
+    ('notification.subscription_verification_requested.v1','INTEGRATION',1,true,'payloads/notification_subscription_verification_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('notification.user_invitation_requested.v1','INTEGRATION',1,true,'payloads/notification_user_invitation_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('operations.effect_policy_blocked.v1','DOMAIN',1,true,'payloads/operations_effect_policy_blocked_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"budgetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"effectId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"effectType":{"maxLength":10000,"minLength":1,"type":"string"},"fenceReason":{"maxLength":10000,"minLength":1,"type":"string"},"generation":{"minimum":0,"type":"integer"},"killSwitchDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"objectId":{"maxLength":10000,"minLength":1,"type":"string"},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["POLICY_BLOCKED"],"type":"string"}},"required":["effectId","effectType","objectId","generation","fenceReason","killSwitchDigest","policyDigest","budgetDigest","state"],"type":"object"}$event_schema$::jsonb),
+    ('operations.kill_switch_activated.v1','DOMAIN',1,true,'payloads/operations_kill_switch_activated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"killSwitchId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","killSwitchId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('operations.kill_switch_deactivated.v1','DOMAIN',1,true,'payloads/operations_kill_switch_deactivated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"killSwitchId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","killSwitchId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('operations.kill_switch_extended.v1','DOMAIN',1,true,'payloads/operations_kill_switch_extended_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"killSwitchId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","killSwitchId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('operations.sli_window_closed.v1','DOMAIN',1,true,'payloads/operations_sli_window_closed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"badCount":{"minimum":0,"type":"integer"},"buildRevision":{"maxLength":10000,"minLength":1,"type":"string"},"eligibleCount":{"minimum":0,"type":"integer"},"evidenceSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"goodCount":{"minimum":0,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sliId":{"maxLength":10000,"minLength":1,"type":"string"},"target":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"value":{"pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$","type":"string"},"windowEnd":{"format":"date-time","type":"string"},"windowStart":{"format":"date-time","type":"string"}},"required":["sliId","windowStart","windowEnd","eligibleCount","goodCount","badCount","value","target","evidenceSetDigest","buildRevision","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('privacy.request_created.v1','DOMAIN',1,true,'payloads/privacy_request_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"dueAt":{"format":"date-time","type":"string"},"jurisdiction":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"requestType":{"enum":["ACCESS","CORRECTION","DELETION","RESTRICTION"],"type":"string"},"retentionRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"scopeDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"subjectProofHash":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["retentionRequestId","requestType","subjectProofHash","jurisdiction","scopeDigest","dueAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('privacy.request_decision_recorded.v1','DOMAIN',1,true,'payloads/privacy_request_decision_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionVersion":{"minimum":0,"type":"integer"},"holdCoverageDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"inventorySnapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorState":{"enum":["RECEIVED","REVIEW","APPROVED"],"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"retentionRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"state":{"enum":["REVIEW","APPROVED","REJECTED","COMPLETED"],"type":"string"}},"required":["retentionRequestId","decisionVersion","priorState","state","inventorySnapshotDigest","holdCoverageDigest","decisionDigest","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('product.fact_corrected.v1','DOMAIN',1,true,'payloads/product_fact_corrected_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"correctionFactId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"factDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"inverseOrSuperseding":{"enum":["INVERSE","SUPERSEDING"],"type":"string"},"originalFactId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"}},"required":["correctionFactId","originalFactId","inverseOrSuperseding","reasonCode","decisionDigest","factDigest"],"type":"object"}$event_schema$::jsonb),
+    ('product.fact_recorded.v1','DOMAIN',1,true,'payloads/product_fact_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"deploymentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"effectiveFrom":{"format":"date-time","type":"string"},"effectiveUntil":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"factDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"factId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"factType":{"maxLength":10000,"minLength":1,"type":"string"},"formulaVersion":{"minimum":0,"type":"integer"},"subjectScopeDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"terminalReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["factId","factType","deploymentId","subjectScopeDigest","terminalReceiptId","effectiveFrom","effectiveUntil","formulaVersion","factDigest"],"type":"object"}$event_schema$::jsonb),
+    ('product.paid_evidence_packet_subject_persisted.v1','DOMAIN',1,true,'payloads/product_paid_evidence_packet_subject_persisted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"commercialContractDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"commercialContractId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"commercialContractVersion":{"minimum":1,"type":"integer"},"memberCount":{"const":10,"type":"integer"},"memberSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"organizationId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"packetId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"packetSubjectDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"packetVersion":{"minimum":1,"type":"integer"},"qualificationEpisodeDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"qualificationEpisodeId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"qualificationEpisodeVersion":{"minimum":1,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceEventId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"state":{"const":"AWAITING_TERMINAL_BINDING","type":"string"},"subjectKind":{"enum":["AUDITED_DELIVERY","COMPLETED_DECISION_CYCLE"],"type":"string"}},"required":["packetId","packetVersion","organizationId","qualificationEpisodeId","qualificationEpisodeVersion","qualificationEpisodeDigest","commercialContractId","commercialContractVersion","commercialContractDigest","subjectKind","packetSubjectDigest","memberCount","memberSetDigest","state","sourceEventId","receiptDigest","occurredAt"],"type":"object"}$event_schema$::jsonb),
+    ('product.paid_terminal_receipt_bound.v1','DOMAIN',1,true,'payloads/product_paid_terminal_receipt_bound_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"finalPacketDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"outcomeFactDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"outcomeFactId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"packetId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"packetSubjectDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"packetVersion":{"minimum":2,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"const":"FINALIZED","type":"string"},"terminalApplied":{"type":"boolean"},"terminalBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"terminalReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"terminalReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"terminalReceiptKind":{"enum":["OUTBOUND_DELIVERY","ORGANIZATION_DECISION"],"type":"string"},"terminalReceiptVersion":{"minimum":1,"type":"integer"},"terminalResultingState":{"enum":["DELIVERED","READ","REJECTED_FINAL","EFFECT_SUCCEEDED"],"type":"string"}},"required":["packetId","packetVersion","packetSubjectDigest","terminalReceiptKind","terminalReceiptId","terminalReceiptVersion","terminalReceiptDigest","terminalResultingState","terminalApplied","terminalBindingDigest","finalPacketDigest","outcomeFactId","outcomeFactDigest","state","receiptDigest","occurredAt"],"type":"object"}$event_schema$::jsonb),
+    ('projection.publication_access_changed.v1','INTEGRATION',1,true,'payloads/projection_publication_access_changed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"publication_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","publication_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('projection.publication_applied.v1','INTEGRATION',1,true,'payloads/projection_publication_applied_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"public_payload_sha256":{"type":"string"},"publication_revision_id":{"type":"string"}},"required":["public_payload_sha256","publication_revision_id"],"type":"object"}$event_schema$::jsonb),
+    ('projection.publication_revision_created.v1','INTEGRATION',1,true,'payloads/projection_publication_revision_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"reviewSnapshotId":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id","reviewSnapshotId"],"type":"object"}$event_schema$::jsonb),
+    ('provider.routing_disabled.v1','DOMAIN',1,true,'payloads/provider_routing_disabled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"providerId":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","providerId","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('publication.access_restricted.v1','DOMAIN',1,true,'payloads/publication_access_restricted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"publication_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","publication_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('publication.gate_decided.v1','DOMAIN',1,true,'payloads/publication_gate_decided_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"activationSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"blockerSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"caseId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"claimEvidenceMatrixDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"conflictDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"expectedCaseVersion":{"minimum":0,"type":"integer"},"fundingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"holdCoverageDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"killSwitchDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"previewDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responsePolicyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"rightsDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"snapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["PASS","BLOCKED"],"type":"string"}},"required":["decisionId","caseId","expectedCaseVersion","snapshotDigest","previewDigest","claimEvidenceMatrixDigest","responsePolicyDigest","rightsDigest","conflictDigest","fundingDigest","holdCoverageDigest","activationSetDigest","killSwitchDigest","state","blockerSetDigest","decisionDigest"],"type":"object"}$event_schema$::jsonb),
+    ('publication.retraction_draft_created.v1','DOMAIN',1,true,'payloads/publication_retraction_draft_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"publicationId":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","publicationId","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('publication.revision_created.v1','DOMAIN',1,true,'payloads/publication_revision_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"reviewSnapshotId":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id","reviewSnapshotId"],"type":"object"}$event_schema$::jsonb),
+    ('research.artifact_promoted.v1','DOMAIN',1,true,'payloads/research_artifact_promoted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"auditEventId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"evidenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"evidenceId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"evidenceVersion":{"minimum":1,"type":"integer"},"occurredAt":{"format":"date-time","type":"string"},"promotionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"researchArtifactId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"researchArtifactSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reviewerUserId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"rightsDecisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"rightsDecisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"selectedSegmentCount":{"maximum":100,"minimum":1,"type":"integer"},"selectedSegmentSetSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceAssetId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"sourceAssetRevision":{"minimum":1,"type":"integer"},"sourceContentSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceDocumentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["promotionId","researchArtifactId","researchArtifactSha256","sourceDocumentId","sourceAssetId","sourceAssetRevision","sourceContentSha256","evidenceId","evidenceVersion","evidenceDigest","selectedSegmentCount","selectedSegmentSetSha256","rightsDecisionId","rightsDecisionDigest","reviewerUserId","auditEventId","occurredAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.appeal_created.v1','DOMAIN',1,true,'payloads/response_appeal_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"appealId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"createdAt":{"format":"date-time","type":"string"},"priorDecisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"priorReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"requestedOutcome":{"maxLength":10000,"minLength":1,"type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["appealId","responseRequestId","priorDecisionId","priorReceiptDigest","reasonCode","requestedOutcome","receiptDigest","createdAt"],"type":"object"}$event_schema$::jsonb),
+    ('response.appeal_decision_recorded.v1','DOMAIN',1,true,'payloads/response_appeal_decision_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"appealId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decisionKind":{"enum":["START_REVIEW","RESOLVE","REJECT","MARK_DUPLICATE","WITHDRAW"],"type":"string"},"decisionSequence":{"minimum":0,"type":"integer"},"evidenceSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorState":{"enum":["RECEIVED","REVIEW"],"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["REVIEW","RESOLVED","REJECTED","DUPLICATE","WITHDRAWN"],"type":"string"}},"required":["appealId","decisionSequence","priorState","state","decisionKind","evidenceSetDigest","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.delivery_clock_started.v1','DOMAIN',1,true,'payloads/response_delivery_clock_started_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"calendarDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"calendarVersionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"clockDecisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"dueAt":{"format":"date-time","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"responseRequestVersion":{"minimum":0,"type":"integer"},"verifiedDeliveryAt":{"format":"date-time","type":"string"}},"required":["clockDecisionId","responseRequestId","responseRequestVersion","verifiedDeliveryAt","calendarVersionId","calendarDigest","dueAt","decisionDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.delivery_evidence_recorded.v1','DOMAIN',1,true,'payloads/response_delivery_evidence_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"deliveryReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"endpointIdentityHash":{"pattern":"^[0-9a-f]{64}$","type":"string"},"evidenceDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"evidenceKind":{"enum":["PROVIDER_SIGNED_RECEIPT","AUTHENTICATED_POLL","MANUAL_VERIFIED_IMPORT"],"type":"string"},"outboundDeliveryId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"providerIdentityHash":{"pattern":"^[0-9a-f]{64}$","type":"string"},"renderingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"verifiedDeliveryAt":{"format":"date-time","type":"string"}},"required":["responseRequestId","outboundDeliveryId","deliveryReceiptId","evidenceKind","renderingDigest","endpointIdentityHash","providerIdentityHash","verifiedDeliveryAt","evidenceDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.excerpt_approved.v1','DOMAIN',1,true,'payloads/response_excerpt_approved_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"response_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","response_id"],"type":"object"}$event_schema$::jsonb),
+    ('response.extension_decided.v1','DOMAIN',1,true,'payloads/response_extension_decided_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"calendarVersionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decision":{"enum":["APPROVE","REJECT"],"type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"extensionRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"newDueAt":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"priorDueAt":{"format":"date-time","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["extensionRequestId","responseRequestId","priorDueAt","decision","newDueAt","calendarVersionId","decisionDigest","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.extension_request_submitted.v2','DOMAIN',2,true,'payloads/response_extension_request_submitted_v2.schema.json',$event_schema${"additionalProperties":false,"properties":{"extensionRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"extensionRequestVersion":{"minimum":0,"type":"integer"},"priorDueAt":{"format":"date-time","type":"string"},"reasonDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"requestReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"requestedDueAt":{"format":"date-time","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"responseRequestVersion":{"minimum":0,"type":"integer"},"submittedAt":{"format":"date-time","type":"string"}},"required":["extensionRequestId","extensionRequestVersion","responseRequestId","responseRequestVersion","priorDueAt","requestedDueAt","reasonDigest","requestReceiptDigest","submittedAt"],"type":"object"}$event_schema$::jsonb),
+    ('response.extension_requested.v1','DOMAIN',1,true,'payloads/response_extension_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"requestToken":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","requestToken","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('response.reminder_due.v1','DOMAIN',1,true,'payloads/response_reminder_due_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"dueAt":{"format":"date-time","type":"string"},"originalDecisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"reminderOrdinal":{"minimum":0,"type":"integer"},"reminderPolicyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"requestVersion":{"minimum":0,"type":"integer"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["responseRequestId","requestVersion","reminderOrdinal","originalDecisionDigest","dueAt","reminderPolicyDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.request_created.v1','DOMAIN',1,true,'payloads/response_request_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('response.request_draft_updated.v1','DOMAIN',1,true,'payloads/response_request_draft_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"responseRequestId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","responseRequestId"],"type":"object"}$event_schema$::jsonb),
+    ('response.request_expired.v1','DOMAIN',1,true,'payloads/response_request_expired_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"clockDecisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"dueAt":{"format":"date-time","type":"string"},"expectedVersion":{"minimum":0,"type":"integer"},"expiredAt":{"format":"date-time","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"stateDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["responseRequestId","expectedVersion","clockDecisionId","dueAt","expiredAt","stateDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.request_sent.v1','DOMAIN',1,true,'payloads/response_request_sent_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"communicationIntentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"deliveryId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"deliveryReceiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"deliveryReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"deliveryVersion":{"minimum":1,"type":"integer"},"endpointId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"endpointSnapshotDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"endpointVersion":{"minimum":1,"type":"integer"},"priorState":{"const":"DRAFT","type":"string"},"providerAcceptedAt":{"format":"date-time","type":"string"},"providerConfigId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"providerConfigVersion":{"minimum":1,"type":"integer"},"providerConfigurationDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"renderingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"renderingId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"requestVersion":{"minimum":1,"type":"integer"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"state":{"const":"SENT","type":"string"}},"required":["responseRequestId","requestVersion","priorState","state","communicationIntentId","renderingId","renderingDigest","endpointId","endpointVersion","endpointSnapshotDigest","providerConfigId","providerConfigVersion","providerConfigurationDigest","deliveryId","deliveryVersion","deliveryReceiptId","deliveryReceiptDigest","providerAcceptedAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('response.submitted.v1','DOMAIN',1,true,'payloads/response_submitted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"requestToken":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","requestToken","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('response.submitted.v2','DOMAIN',2,true,'payloads/response_submitted_v2.schema.json',$event_schema${"additionalProperties":false,"properties":{"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptVersion":{"minimum":1,"type":"integer"},"responseRequestBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"responseRequestVersion":{"minimum":1,"type":"integer"},"responseSubmissionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"submissionSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"submittedAt":{"format":"date-time","type":"string"}},"required":["responseSubmissionId","responseRequestId","responseRequestVersion","responseRequestBindingDigest","submissionSha256","receiptVersion","receiptDigest","submittedAt"],"type":"object"}$event_schema$::jsonb),
+    ('retention.execution_completed.v1','DOMAIN',1,true,'payloads/retention_execution_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"backupSuppressionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"completionReceiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"derivativeCount":{"minimum":0,"type":"integer"},"locationCountDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"primaryCount":{"minimum":0,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"retentionRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["retentionRequestId","completionReceiptId","locationCountDigest","primaryCount","derivativeCount","backupSuppressionDigest","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('retention.restoration_suppression_created.v1','DOMAIN',1,true,'payloads/retention_restoration_suppression_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"effectiveAt":{"format":"date-time","type":"string"},"expiresAt":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"reason":{"maxLength":10000,"minLength":1,"type":"string"},"sourceDecisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"subjectScopeDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"suppressionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["suppressionId","subjectScopeDigest","reason","sourceDecisionId","effectiveAt","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('retention.schedule_revised.v1','DOMAIN',1,true,'payloads/retention_schedule_revised_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"effectiveAt":{"format":"date-time","type":"string"},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"recordClass":{"maxLength":10000,"minLength":1,"type":"string"},"reviewExpiresAt":{"format":"date-time","type":"string"},"revision":{"minimum":0,"type":"integer"},"scheduleDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["recordClass","revision","scheduleDigest","policyDigest","effectiveAt","reviewExpiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('review.assigned.v1','DOMAIN',1,true,'payloads/review_assigned_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"assignee_user_id":{"type":"string"},"case_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","assignee_user_id","case_id","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('review.decision_submitted.v1','DOMAIN',1,true,'payloads/review_decision_submitted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"reviewSnapshotId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","reviewSnapshotId"],"type":"object"}$event_schema$::jsonb),
+    ('review.snapshot_created.v1','DOMAIN',1,true,'payloads/review_snapshot_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"caseId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","caseId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('rights.asset_decided.v1','DOMAIN',1,true,'payloads/rights_asset_decided_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"assetId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"assetSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decision":{"enum":["ALLOW","RESTRICT","DENY","REVIEW_REQUIRED"],"type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionVersion":{"minimum":0,"type":"integer"},"dimensionsDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"effectiveAt":{"format":"date-time","type":"string"},"expiresAt":{"anyOf":[{"format":"date-time","type":"string"},{"type":"null"}]},"policyDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"}},"required":["assetId","assetSha256","decisionVersion","decision","dimensionsDigest","policyDigest","decisionDigest","effectiveAt","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('rule.activation_scheduled.v1','DOMAIN',1,true,'payloads/rule_activation_scheduled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"ruleVersionId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","ruleVersionId"],"type":"object"}$event_schema$::jsonb),
+    ('rule.shadow_started.v1','DOMAIN',1,true,'payloads/rule_shadow_started_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"dataset_snapshot_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"rule_version_id":{"type":"string"}},"required":["actor_id","dataset_snapshot_id","occurred_at","operation_id","request_id","rule_version_id"],"type":"object"}$event_schema$::jsonb),
+    ('rule.version_activated.v1','DOMAIN',1,true,'payloads/rule_version_activated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"ruleVersionId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","ruleVersionId"],"type":"object"}$event_schema$::jsonb),
+    ('rule.version_draft_created.v1','DOMAIN',1,true,'payloads/rule_version_draft_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"rule_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","rule_id"],"type":"object"}$event_schema$::jsonb),
+    ('rule.version_rolled_back.v1','DOMAIN',1,true,'payloads/rule_version_rolled_back_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"ruleVersionId":{"type":"string"},"targetVersionId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","ruleVersionId","targetVersionId"],"type":"object"}$event_schema$::jsonb),
+    ('signal.assigned.v1','DOMAIN',1,true,'payloads/signal_assigned_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"assigneeUserId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"signalId":{"type":"string"}},"required":["actor_id","assigneeUserId","occurred_at","operation_id","request_id","signalId"],"type":"object"}$event_schema$::jsonb),
+    ('signal.triaged.v1','DOMAIN',1,true,'payloads/signal_triaged_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"signalId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","signalId"],"type":"object"}$event_schema$::jsonb),
+    ('source.backfill_paused.v1','DOMAIN',1,true,'payloads/source_backfill_paused_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"backfillRunId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","backfillRunId","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('source.backfill_requested.v1','DOMAIN',1,true,'payloads/source_backfill_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"sourceId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","sourceId"],"type":"object"}$event_schema$::jsonb),
+    ('source.document_parsed.v1','INTEGRATION',1,true,'payloads/source_document_parsed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"output_digest":{"type":"string"},"parser_version":{"type":"string"},"source_document_id":{"type":"string"}},"required":["output_digest","parser_version","source_document_id"],"type":"object"}$event_schema$::jsonb),
+    ('source.document_stored.v1','INTEGRATION',1,true,'payloads/source_document_stored_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"content_sha256":{"type":"string"},"source_document_id":{"type":"string"},"source_id":{"type":"string"}},"required":["content_sha256","source_document_id","source_id"],"type":"object"}$event_schema$::jsonb),
+    ('source.incident_acknowledged.v1','DOMAIN',1,true,'payloads/source_incident_acknowledged_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"sourceId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","sourceId"],"type":"object"}$event_schema$::jsonb),
+    ('source.page_reconciled.v1','DOMAIN',1,true,'payloads/source_page_reconciled_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"connectorId":{"maxLength":10000,"minLength":1,"type":"string"},"itemCount":{"minimum":0,"type":"integer"},"operationId":{"maxLength":10000,"minLength":1,"type":"string"},"ordinal":{"minimum":0,"type":"integer"},"partitionKey":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"requestSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responseSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"sourceRunId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"terminalPredicateVersion":{"maxLength":10000,"minLength":1,"type":"string"}},"required":["sourceRunId","connectorId","operationId","partitionKey","ordinal","requestSha256","responseSha256","itemCount","terminalPredicateVersion","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('source.paused.v1','DOMAIN',1,true,'payloads/source_paused_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"source_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","source_id"],"type":"object"}$event_schema$::jsonb),
+    ('source.run_requested.v1','DOMAIN',1,true,'payloads/source_run_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"sourceId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","sourceId"],"type":"object"}$event_schema$::jsonb),
+    ('source.run_retry_requested.v1','DOMAIN',1,true,'payloads/source_run_retry_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"source_run_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","source_run_id"],"type":"object"}$event_schema$::jsonb),
+    ('source.schema_drift_detected.v1','INTEGRATION',1,true,'payloads/source_schema_drift_detected_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"fingerprint_after":{"type":"string"},"schema_drift_id":{"type":"string"},"source_id":{"type":"string"}},"required":["fingerprint_after","schema_drift_id","source_id"],"type":"object"}$event_schema$::jsonb),
+    ('source.schema_mapping_approved.v1','DOMAIN',1,true,'payloads/source_schema_mapping_approved_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"schemaDriftId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","schemaDriftId"],"type":"object"}$event_schema$::jsonb),
+    ('source.schema_mapping_rejected.v1','DOMAIN',1,true,'payloads/source_schema_mapping_rejected_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"schemaDriftId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","schemaDriftId"],"type":"object"}$event_schema$::jsonb),
+    ('subscription.activated.v1','DOMAIN',1,true,'payloads/subscription_activated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"verificationToken":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","verificationToken"],"type":"object"}$event_schema$::jsonb),
+    ('subscription.unsubscribed.v1','DOMAIN',1,true,'payloads/subscription_unsubscribed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"managementToken":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","managementToken","occurred_at","operation_id","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('supplier.identity_resolution_recorded.v1','DOMAIN',1,true,'payloads/supplier_identity_resolution_recorded_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"action":{"enum":["MERGE","SPLIT","KEEP_SEPARATE","MARK_AMBIGUOUS"],"type":"string"},"candidateSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"decisionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"decisionSequence":{"minimum":1,"type":"integer"},"evidenceLocatorSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["occurredAt","decisionId","decisionSequence","action","decisionDigest","candidateSetDigest","evidenceLocatorSetDigest","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('supplier.relationship_assertion_created.v1','DOMAIN',1,true,'payloads/supplier_relationship_assertion_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"assertionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"assertionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"assertionRevision":{"minimum":1,"type":"integer"},"evidenceLocatorSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"verificationStatus":{"enum":["PENDING"],"type":"string"}},"required":["occurredAt","assertionId","assertionRevision","assertionDigest","verificationStatus","evidenceLocatorSetDigest","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('supplier.relationship_assertion_decided.v1','DOMAIN',1,true,'payloads/supplier_relationship_assertion_decided_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"assertionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"assertionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"assertionRevision":{"minimum":1,"type":"integer"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"evidenceLocatorSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"verificationStatus":{"enum":["VERIFIED","REJECTED","CONFLICTED","SUPERSEDED"],"type":"string"}},"required":["occurredAt","assertionId","assertionRevision","assertionDigest","verificationStatus","evidenceLocatorSetDigest","decisionDigest","receiptId","receiptDigest"],"type":"object"}$event_schema$::jsonb),
+    ('task.reassigned.v1','DOMAIN',1,true,'payloads/task_reassigned_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"assigneeUserId":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"taskId":{"type":"string"}},"required":["actor_id","assigneeUserId","occurred_at","operation_id","request_id","taskId"],"type":"object"}$event_schema$::jsonb),
+    ('workflow.response_submitted.v1','INTEGRATION',1,true,'payloads/workflow_response_submitted_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"requestToken":{"type":"string"},"request_id":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","requestToken","request_id"],"type":"object"}$event_schema$::jsonb),
+    ('workflow.response_submitted.v2','INTEGRATION',2,true,'payloads/workflow_response_submitted_v2.schema.json',$event_schema${"additionalProperties":false,"properties":{"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptVersion":{"minimum":1,"type":"integer"},"responseRequestBindingDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"responseRequestId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"responseRequestVersion":{"minimum":1,"type":"integer"},"responseSubmissionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"submissionSha256":{"pattern":"^[0-9a-f]{64}$","type":"string"},"submittedAt":{"format":"date-time","type":"string"}},"required":["responseSubmissionId","responseRequestId","responseRequestVersion","responseRequestBindingDigest","submissionSha256","receiptVersion","receiptDigest","submittedAt"],"type":"object"}$event_schema$::jsonb),
+    ('workflow.rule_activation_applied.v1','INTEGRATION',1,true,'payloads/workflow_rule_activation_applied_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actor_id":{"type":"string"},"occurred_at":{"format":"date-time","type":"string"},"operation_id":{"type":"string"},"request_id":{"type":"string"},"ruleVersionId":{"type":"string"},"targetVersionId":{"type":"string"}},"required":["actor_id","occurred_at","operation_id","request_id","ruleVersionId","targetVersionId"],"type":"object"}$event_schema$::jsonb)
+)
+INSERT INTO ops.event_types(
+  event_type,category,schema_version,active,payload_schema_uri,payload_schema
+)
+SELECT event_type,category,schema_version,active,payload_schema_uri,payload_schema
+FROM effective_event_types
+ON CONFLICT (event_type) DO UPDATE SET
+  category=EXCLUDED.category,
+  schema_version=EXCLUDED.schema_version,
+  active=EXCLUDED.active,
+  payload_schema_uri=EXCLUDED.payload_schema_uri,
+  payload_schema=EXCLUDED.payload_schema;
+
+UPDATE ops.event_types
+SET active=false
+WHERE event_type NOT IN (
+    'access.request_created.v1',
+    'access.review_started.v1',
+    'access.role_change_proposed.v1',
+    'access.role_granted.v1',
+    'access.role_revoked.v1',
+    'accounting.correction_recorded.v1',
+    'action.decision_recorded.v1',
+    'action.decision_withdrawn.v1',
+    'action.execution_authorized.v1',
+    'action.execution_cancel_requested.v1',
+    'action.execution_completed.v1',
+    'action.execution_retry_requested.v1',
+    'action.proposal_created.v1',
+    'action.proposal_updated.v1',
+    'action.proposal_withdrawn.v1',
+    'action.review_claimed.v1',
+    'action.review_requested.v1',
+    'action.review_vacancy_filled.v1',
+    'agent.output_validated.v1',
+    'agent.proposal_created.v2',
+    'agent.run_completed.v1',
+    'agent.run_control_changed.v2',
+    'agent.suggestion_accepted.v1',
+    'agent.suggestion_rejected.v1',
+    'agent.tool_call_completed.v1',
+    'attachment.correction_scan_requested.v1',
+    'attachment.response_scan_requested.v1',
+    'attachment.scan_completed.v1',
+    'audit.export_requested.v1',
+    'budget.limit_updated.v1',
+    'budget.reservation_created.v1',
+    'budget.reservation_reconciliation_required.v1',
+    'budget.reservation_released.v1',
+    'budget.reservation_settled.v1',
+    'case.assigned.v1',
+    'case.signal_linked.v1',
+    'case.signal_unlinked.v1',
+    'case.state_transitioned.v1',
+    'claim.created.v1',
+    'claim.updated.v1',
+    'claim.validated.v1',
+    'commercial.contract_period_recorded.v1',
+    'commercial.control_execution_recorded.v1',
+    'commercial.control_external_effect_acknowledged.v1',
+    'commercial.control_reconciliation_required.v1',
+    'commercial.discount_decided.v1',
+    'commercial.invoice_reconciled.v1',
+    'commercial.revenue_fact_recorded.v1',
+    'commercial.sku_readiness_evaluated.v1',
+    'commercial.tariff_version_activated.v1',
+    'commercial.usage_fact_recorded.v1',
+    'communication.authorization_changed.v1',
+    'communication.delivery_receipt_recorded.v1',
+    'communication.delivery_requested.v1',
+    'communication.intent_created.v1',
+    'communication.subscription_update_requested.v1',
+    'correction.assigned.v1',
+    'correction.created.v1',
+    'correction.draft_updated.v1',
+    'correction.request_submitted.v1',
+    'correction.resolved.v1',
+    'correction.triaged.v1',
+    'cost.allocation_period_closed.v1',
+    'cost.fx_rate_recorded.v1',
+    'dataset.snapshot_created.v1',
+    'detection.signal_created.v1',
+    'editorial.response_materialized.v1',
+    'evidence.created.v1',
+    'evidence.linked.v1',
+    'evidence.redaction_created.v1',
+    'evidence.segment_created.v1',
+    'evidence.updated.v1',
+    'evidence.verified.v1',
+    'export.dataset_requested.v1',
+    'governance.business_calendar_revised.v1',
+    'governance.capability_activation_decided.v1',
+    'governance.capability_activation_review_requested.v1',
+    'governance.conflict_declared.v1',
+    'governance.conflict_expired.v1',
+    'governance.conflict_withdrawn.v1',
+    'governance.funding_disclosure_published.v1',
+    'governance.funding_snapshot_created.v1',
+    'hypothesis.created.v1',
+    'hypothesis.updated.v1',
+    'identity.session_created.v1',
+    'identity.session_revoked.v1',
+    'identity.step_up_completed.v1',
+    'identity.user_disabled.v1',
+    'identity.user_invited.v1',
+    'identity.user_sessions_revoked.v1',
+    'incident.state_changed.v1',
+    'intake.contact_received.v1',
+    'job.bulk_retry_requested.v1',
+    'job.cancelled.v1',
+    'job.dead_lettered.v1',
+    'job.quarantined.v1',
+    'job.queue_paused.v1',
+    'job.retry_requested.v1',
+    'journey.handoff_decided.v1',
+    'journey.handoff_escalated.v1',
+    'journey.handoff_expired.v1',
+    'journey.handoff_requested.v1',
+    'journey.instance_started.v1',
+    'journey.outcome_recorded.v1',
+    'legal.hold_released.v1',
+    'legal.hold_review_due.v1',
+    'legal_hold.placed.v1',
+    'notification.correction_received.v1',
+    'notification.correction_resolved.v1',
+    'notification.delivery_completed.v1',
+    'notification.publication_created.v1',
+    'notification.response_extension_requested.v1',
+    'notification.response_request_delivery_requested.v1',
+    'notification.response_submitted.v1',
+    'notification.response_submitted.v2',
+    'notification.subscription_verification_requested.v1',
+    'notification.user_invitation_requested.v1',
+    'operations.effect_policy_blocked.v1',
+    'operations.kill_switch_activated.v1',
+    'operations.kill_switch_deactivated.v1',
+    'operations.kill_switch_extended.v1',
+    'operations.sli_window_closed.v1',
+    'privacy.request_created.v1',
+    'privacy.request_decision_recorded.v1',
+    'product.fact_corrected.v1',
+    'product.fact_recorded.v1',
+    'product.paid_evidence_packet_subject_persisted.v1',
+    'product.paid_terminal_receipt_bound.v1',
+    'projection.publication_access_changed.v1',
+    'projection.publication_applied.v1',
+    'projection.publication_revision_created.v1',
+    'provider.routing_disabled.v1',
+    'publication.access_restricted.v1',
+    'publication.gate_decided.v1',
+    'publication.retraction_draft_created.v1',
+    'publication.revision_created.v1',
+    'research.artifact_promoted.v1',
+    'response.appeal_created.v1',
+    'response.appeal_decision_recorded.v1',
+    'response.delivery_clock_started.v1',
+    'response.delivery_evidence_recorded.v1',
+    'response.excerpt_approved.v1',
+    'response.extension_decided.v1',
+    'response.extension_request_submitted.v2',
+    'response.extension_requested.v1',
+    'response.reminder_due.v1',
+    'response.request_created.v1',
+    'response.request_draft_updated.v1',
+    'response.request_expired.v1',
+    'response.request_sent.v1',
+    'response.submitted.v1',
+    'response.submitted.v2',
+    'retention.execution_completed.v1',
+    'retention.restoration_suppression_created.v1',
+    'retention.schedule_revised.v1',
+    'review.assigned.v1',
+    'review.decision_submitted.v1',
+    'review.snapshot_created.v1',
+    'rights.asset_decided.v1',
+    'rule.activation_scheduled.v1',
+    'rule.shadow_started.v1',
+    'rule.version_activated.v1',
+    'rule.version_draft_created.v1',
+    'rule.version_rolled_back.v1',
+    'signal.assigned.v1',
+    'signal.triaged.v1',
+    'source.backfill_paused.v1',
+    'source.backfill_requested.v1',
+    'source.document_parsed.v1',
+    'source.document_stored.v1',
+    'source.incident_acknowledged.v1',
+    'source.page_reconciled.v1',
+    'source.paused.v1',
+    'source.run_requested.v1',
+    'source.run_retry_requested.v1',
+    'source.schema_drift_detected.v1',
+    'source.schema_mapping_approved.v1',
+    'source.schema_mapping_rejected.v1',
+    'subscription.activated.v1',
+    'subscription.unsubscribed.v1',
+    'supplier.identity_resolution_recorded.v1',
+    'supplier.relationship_assertion_created.v1',
+    'supplier.relationship_assertion_decided.v1',
+    'task.reassigned.v1',
+    'workflow.response_submitted.v1',
+    'workflow.response_submitted.v2',
+    'workflow.rule_activation_applied.v1'
+);
+
+UPDATE ops.event_types
+SET payload_schema=$event_schema${"additionalProperties":false,"properties":{"deploymentId":{"format":"uuid","type":"string"},"organizationId":{"format":"uuid","type":"string"},"qualificationEpisodeId":{"format":"uuid","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptId":{"format":"uuid","type":"string"},"sku":{"const":"EVIDENCE_WORKSPACE_ORGANIZATION_V1","type":"string"}},"required":["deploymentId","organizationId","qualificationEpisodeId","receiptId","receiptDigest","sku"],"type":"object"}$event_schema$::jsonb,
+    payload_schema_uri='legacy/product_commercial_qualification_recorded_v1.compat.schema.json'
+WHERE event_type='product.commercial_qualification_recorded.v1'
+  AND active=false;
+
+DO $$
+DECLARE v_missing text;
+BEGIN
+  SELECT string_agg(event_type,',' ORDER BY event_type) INTO v_missing
+  FROM ops.event_types WHERE active AND payload_schema IS NULL;
+  IF v_missing IS NOT NULL THEN
+    RAISE EXCEPTION 'active event payload schema missing: %',v_missing;
+  END IF;
+END $$;
+-- END GENERATED EVENT PAYLOAD REGISTRY
+
+CREATE OR REPLACE FUNCTION ops.json_schema_value_valid_v1(
+  p_schema jsonb,
+  p_value jsonb
+) RETURNS boolean
+LANGUAGE plpgsql IMMUTABLE STRICT
+SET search_path=pg_catalog,ops,pg_temp AS $$
+DECLARE
+  v_option jsonb;
+  v_property record;
+  v_required jsonb;
+  v_type text;
+  v_matches integer := 0;
+  v_text text;
+BEGIN
+  IF p_schema ? 'anyOf' THEN
+    FOR v_option IN SELECT value FROM jsonb_array_elements(p_schema->'anyOf') LOOP
+      IF ops.json_schema_value_valid_v1(v_option,p_value) THEN RETURN true; END IF;
+    END LOOP;
+    RETURN false;
+  END IF;
+  IF p_schema ? 'oneOf' THEN
+    FOR v_option IN SELECT value FROM jsonb_array_elements(p_schema->'oneOf') LOOP
+      IF ops.json_schema_value_valid_v1(v_option,p_value) THEN v_matches:=v_matches+1; END IF;
+    END LOOP;
+    IF v_matches<>1 THEN RETURN false; END IF;
+  END IF;
+  IF p_schema ? 'const' AND p_schema->'const' IS DISTINCT FROM p_value THEN RETURN false; END IF;
+  IF p_schema ? 'enum' AND NOT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(p_schema->'enum') allowed WHERE allowed=p_value
+  ) THEN RETURN false; END IF;
+
+  IF jsonb_typeof(p_schema->'type')='string' THEN
+    v_type:=p_schema->>'type';
+    IF NOT (
+      (v_type='object' AND jsonb_typeof(p_value)='object') OR
+      (v_type='array' AND jsonb_typeof(p_value)='array') OR
+      (v_type='string' AND jsonb_typeof(p_value)='string') OR
+      (v_type='integer' AND jsonb_typeof(p_value)='number' AND p_value::text ~ '^-?(0|[1-9][0-9]*)$') OR
+      (v_type='number' AND jsonb_typeof(p_value)='number') OR
+      (v_type='boolean' AND jsonb_typeof(p_value)='boolean') OR
+      (v_type='null' AND jsonb_typeof(p_value)='null')
+    ) THEN RETURN false; END IF;
+  ELSIF jsonb_typeof(p_schema->'type')='array' AND NOT EXISTS (
+    SELECT 1 FROM jsonb_array_elements_text(p_schema->'type') candidate
+    WHERE (candidate='object' AND jsonb_typeof(p_value)='object')
+       OR (candidate='array' AND jsonb_typeof(p_value)='array')
+       OR (candidate='string' AND jsonb_typeof(p_value)='string')
+       OR (candidate='integer' AND jsonb_typeof(p_value)='number' AND p_value::text ~ '^-?(0|[1-9][0-9]*)$')
+       OR (candidate='number' AND jsonb_typeof(p_value)='number')
+       OR (candidate='boolean' AND jsonb_typeof(p_value)='boolean')
+       OR (candidate='null' AND jsonb_typeof(p_value)='null')
+  ) THEN RETURN false; END IF;
+
+  IF jsonb_typeof(p_value)='object' THEN
+    IF p_schema->'additionalProperties'='false'::jsonb AND EXISTS (
+      SELECT 1 FROM jsonb_object_keys(p_value) key
+      WHERE NOT COALESCE(p_schema->'properties','{}'::jsonb) ? key
+    ) THEN RETURN false; END IF;
+    FOR v_required IN SELECT value FROM jsonb_array_elements(COALESCE(p_schema->'required','[]'::jsonb)) LOOP
+      IF NOT p_value ? (v_required #>> '{}') THEN RETURN false; END IF;
+    END LOOP;
+    FOR v_property IN SELECT key,value FROM jsonb_each(p_value) LOOP
+      IF COALESCE(p_schema->'properties','{}'::jsonb) ? v_property.key
+         AND NOT ops.json_schema_value_valid_v1(
+           p_schema->'properties'->v_property.key,v_property.value
+         ) THEN RETURN false; END IF;
+    END LOOP;
+  ELSIF jsonb_typeof(p_value)='array' THEN
+    IF p_schema ? 'minItems'
+       AND jsonb_array_length(p_value)<(p_schema->>'minItems')::integer
+    THEN RETURN false; END IF;
+    IF p_schema ? 'maxItems'
+       AND jsonb_array_length(p_value)>(p_schema->>'maxItems')::integer
+    THEN RETURN false; END IF;
+    IF p_schema ? 'items' THEN
+      FOR v_option IN SELECT value FROM jsonb_array_elements(p_value) LOOP
+        IF NOT ops.json_schema_value_valid_v1(p_schema->'items',v_option) THEN RETURN false; END IF;
+      END LOOP;
+    END IF;
+    IF p_schema->'uniqueItems'='true'::jsonb
+       AND jsonb_array_length(p_value)<>(SELECT count(DISTINCT value) FROM jsonb_array_elements(p_value))
+    THEN RETURN false; END IF;
+  ELSIF jsonb_typeof(p_value)='string' THEN
+    v_text:=p_value #>> '{}';
+    IF p_schema ? 'minLength' AND char_length(v_text)<(p_schema->>'minLength')::integer THEN RETURN false; END IF;
+    IF p_schema ? 'maxLength' AND char_length(v_text)>(p_schema->>'maxLength')::integer THEN RETURN false; END IF;
+    IF p_schema ? 'pattern' AND v_text !~ (p_schema->>'pattern') THEN RETURN false; END IF;
+    IF p_schema->>'format'='uuid' AND v_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN RETURN false; END IF;
+    IF p_schema->>'format'='date' THEN
+      IF v_text !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN RETURN false; END IF;
+      BEGIN PERFORM v_text::date; EXCEPTION WHEN others THEN RETURN false; END;
+    END IF;
+    IF p_schema->>'format'='date-time' THEN
+      IF v_text !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T.+(Z|[+-][0-9]{2}:[0-9]{2})$' THEN RETURN false; END IF;
+      BEGIN PERFORM v_text::timestamptz; EXCEPTION WHEN others THEN RETURN false; END;
+    END IF;
+  ELSIF jsonb_typeof(p_value)='number' THEN
+    IF p_schema ? 'minimum' AND (p_value #>> '{}')::numeric<(p_schema->>'minimum')::numeric THEN RETURN false; END IF;
+    IF p_schema ? 'maximum' AND (p_value #>> '{}')::numeric>(p_schema->>'maximum')::numeric THEN RETURN false; END IF;
+  END IF;
+  RETURN true;
+END $$;
+
+CREATE OR REPLACE FUNCTION ops.event_payload_admissible_v1(
+  p_event_type text,
+  p_payload jsonb
+) RETURNS boolean
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,ops,pg_temp AS $$
+DECLARE v_schema jsonb; v_active boolean;
+BEGIN
+  IF p_event_type IS NULL OR btrim(p_event_type)='' OR p_payload IS NULL THEN
+    RAISE EXCEPTION 'EVENT_TYPE_OR_PAYLOAD_MISSING' USING ERRCODE='22023';
+  END IF;
+  SELECT e.active,e.payload_schema INTO v_active,v_schema
+    FROM ops.event_types e WHERE e.event_type=p_event_type;
+  IF NOT FOUND OR NOT v_active OR v_schema IS NULL THEN
+    RAISE EXCEPTION 'EVENT_TYPE_INACTIVE_OR_SCHEMA_MISSING:%',p_event_type USING ERRCODE='22023';
+  END IF;
+  IF NOT ops.json_schema_value_valid_v1(v_schema,p_payload) THEN
+    RAISE EXCEPTION 'EVENT_PAYLOAD_SCHEMA_INVALID:%:%',p_event_type,p_payload USING ERRCODE='22023';
+  END IF;
+  RETURN true;
+END;
+$$;
+
+-- Historical validation is deliberately separate from write admission. A
+-- retired event may retain a migration-pinned compatibility schema for rows
+-- that already exist, but it can never pass the active-event write gate.
+CREATE OR REPLACE FUNCTION ops.event_payload_historical_valid_v1(
+  p_event_type text,
+  p_payload jsonb
+) RETURNS boolean
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,ops,pg_temp AS $$
+DECLARE v_schema jsonb;
+BEGIN
+  IF p_event_type IS NULL OR btrim(p_event_type)='' OR p_payload IS NULL THEN
+    RAISE EXCEPTION 'LEGACY_EVENT_TYPE_OR_PAYLOAD_MISSING' USING ERRCODE='22023';
+  END IF;
+  SELECT e.payload_schema INTO v_schema
+    FROM ops.event_types e WHERE e.event_type=p_event_type;
+  IF NOT FOUND OR v_schema IS NULL THEN
+    RAISE EXCEPTION 'LEGACY_EVENT_SCHEMA_MISSING:%',p_event_type USING ERRCODE='22023';
+  END IF;
+  IF NOT ops.json_schema_value_valid_v1(v_schema,p_payload) THEN
+    RAISE EXCEPTION 'LEGACY_EVENT_PAYLOAD_SCHEMA_INVALID:%:%',p_event_type,p_payload USING ERRCODE='22023';
+  END IF;
+  RETURN true;
+END;
+$$;
+ALTER FUNCTION ops.json_schema_value_valid_v1(jsonb,jsonb) OWNER TO gurine_migrator;
+ALTER FUNCTION ops.event_payload_admissible_v1(text,jsonb) OWNER TO gurine_migrator;
+ALTER FUNCTION ops.event_payload_historical_valid_v1(text,jsonb) OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.json_schema_value_valid_v1(jsonb,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION ops.event_payload_admissible_v1(text,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION ops.event_payload_historical_valid_v1(text,jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ops.event_payload_admissible_v1(text,jsonb)
+TO gurine_control_api,gurine_submission_api,gurine_identity_api,gurine_ingest_worker,
+   gurine_document_extractor,gurine_analysis_worker,gurine_workflow_worker,
+   gurine_scheduler,gurine_notification_worker,gurine_public_projector;
+
+-- Admission reads the migration-owned registry, so it is a write trigger, not
+-- a PostgreSQL CHECK expression whose truth would appear immutable while the
+-- referenced catalog can change in a later migration.
+CREATE OR REPLACE FUNCTION ops.enforce_outbox_event_payload_v1()
+RETURNS trigger
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,ops,pg_temp AS $$
+BEGIN
+  PERFORM ops.event_payload_admissible_v1(NEW.event_type,NEW.payload);
+  RETURN NEW;
+END $$;
+ALTER FUNCTION ops.enforce_outbox_event_payload_v1() OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.enforce_outbox_event_payload_v1() FROM PUBLIC;
+
+ALTER TABLE ops.outbox DROP CONSTRAINT IF EXISTS outbox_event_payload_schema_check;
+DROP TRIGGER IF EXISTS outbox_event_payload_schema_admission ON ops.outbox;
+CREATE TRIGGER outbox_event_payload_schema_admission
+  BEFORE INSERT OR UPDATE OF event_type,payload ON ops.outbox
+  FOR EACH ROW EXECUTE FUNCTION ops.enforce_outbox_event_payload_v1();
+
+-- Upgrades must prove that historical rows remain admissible before the
+-- migration can commit.  There is no NOT VALID or repair-through acceptance.
+DO $$
+DECLARE v_row record;
+BEGIN
+  FOR v_row IN SELECT id,event_type,payload FROM ops.outbox ORDER BY id LOOP
+    PERFORM ops.event_payload_historical_valid_v1(v_row.event_type,v_row.payload);
+  END LOOP;
+END $$;
+
 -- OPS-004 is a server-owned projection.  The control API never receives table
 -- privileges for immutable budget/cost ledgers; this SECURITY DEFINER routine
 -- is the sole read boundary and returns an explicit UNKNOWN instead of a
@@ -10349,6 +12551,7 @@ GRANT EXECUTE ON FUNCTION ops.read_cost_export_projection_v1(timestamptz,timesta
 -- Additive migration owns the runtime grant that the SECURITY DEFINER
 -- assertion owner uses; the authority-pinned base migration remains byte exact.
 GRANT SELECT, INSERT ON ops.assertion_replay_guard TO gurine_migrator;
+COMMIT;
 
 -- Typed communication admission and callback owner boundary. Runtime roles
 -- receive no direct DML on these append-only relations.
@@ -10429,7 +12632,7 @@ DECLARE items jsonb; item jsonb; idx integer := 0; ord integer; effect text; dis
 BEGIN
   IF jsonb_typeof($1)<>'object' OR $1->>'contractVersion' NOT IN ('communication-callback-items-v1','communication-callback-items.v1')
      OR jsonb_typeof($1->'items')<>'array' OR $2 IS NULL OR $2<0 OR jsonb_array_length($1->'items')<>$2
-     OR $3 !~ '^[0-9a-f]{64}$' OR encode(extensions.digest(convert_to($1::text,'UTF8'),'sha256'),'hex')<>$3 THEN RETURN false; END IF;
+     OR $3 !~ '^[0-9a-f]{64}$' OR encode(extensions.digest(ops.canonical_jsonb_v1($1),'sha256'),'hex')<>$3 THEN RETURN false; END IF;
   items := $1->'items';
   FOR item IN SELECT value FROM jsonb_array_elements(items) LOOP
     IF jsonb_typeof(item)<>'object' OR (item ? 'ordinal') IS NOT TRUE OR (item->>'ordinal') !~ '^[0-9]+$' THEN RETURN false; END IF;
@@ -10547,13 +12750,12 @@ BEGIN
     p_queue.provider_idempotency_key_sha256,digest,'QUEUED',p_queue.not_before,p_queue.not_before,p_queue.expires_at,now_at,now_at,'COMMUNICATION',
     COALESCE(p_queue.recipient_endpoint_hmac,repeat('0',64)::char(64)),'v1') RETURNING * INTO d;
   INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
-    VALUES('OutboundDelivery',d.id::text,d.version,'communication.delivery_requested.v1',jsonb_build_object('deliveryId',d.id,'deliveryVersion',d.version,
-      'deliveryKey',d.delivery_key,'intentId',d.intent_id,'renderingId',d.rendering_id,'renderingDigest',d.rendering_digest,'renderedSha256',d.rendered_sha256,'channel',d.channel,
-      'providerConfigId',d.provider_config_id,'providerConfigVersion',d.provider_config_version,
-      'providerConfigurationDigest',d.provider_configuration_digest,'providerPreflightReceiptId',d.provider_preflight_receipt_id,
-      'providerPreflightReceiptDigest',d.provider_preflight_receipt_digest,
+    VALUES('OutboundDelivery',d.id::text,d.version,'communication.delivery_requested.v1',jsonb_build_object(
+      'deliveryId',d.id,'intentDigest',d.intent_digest,'deliveryKey',d.delivery_key,
+      'endpointId',d.endpoint_id,'endpointVersion',d.endpoint_version,'channel',d.channel,
+      'renderingDigest',d.rendering_digest,
       'authorizationSnapshotDigest',d.authorization_snapshot_digest,'activationReceiptDigest',d.activation_receipt_digest,
-      'budgetReservationId',d.budget_reservation_id,'deliveryDigest',d.delivery_digest),now_at) RETURNING id INTO oid;
+      'budgetReservationId',d.budget_reservation_id),now_at) RETURNING id INTO oid;
   receipt := encode(extensions.digest(convert_to('QUEUE:'||d.id::text||':'||d.delivery_digest,'UTF8'),'sha256'),'hex');
   RETURN (d.id,d.version,d.delivery_key,d.state,d.delivery_digest,d.provider_idempotency_key_sha256,d.authorization_snapshot_digest,
     d.activation_receipt_digest,d.budget_reservation_id,aid,oid,receipt,false);
@@ -10656,9 +12858,10 @@ DECLARE
   pc ops.communication_provider_configs%ROWTYPE; pf ops.communication_provider_preflight_receipts%ROWTYPE;
   old ops.communication_callback_events%ROWTYPE; row ops.communication_callback_events%ROWTYPE;
   now_at timestamptz := clock_timestamp(); aid uuid; oid uuid;
+  item jsonb; item_delivery_id uuid; item_delivery_version bigint; observation jsonb;
   req uuid := COALESCE(NULLIF(current_setting('gurine.request_id',true),'')::uuid,gen_random_uuid());
 BEGIN
-  IF session_user <> 'gurine_notification_worker' THEN RAISE EXCEPTION 'communication_callback_role_required' USING ERRCODE='42501'; END IF;
+  IF session_user <> 'gurine_egress_gateway' THEN RAISE EXCEPTION 'communication_callback_role_required' USING ERRCODE='42501'; END IF;
   IF p_callback.provider_config_id IS NULL OR p_callback.provider_preflight_receipt_id IS NULL
      OR p_callback.callback_request_digest !~ '^[0-9a-f]{64}$' OR p_callback.replay_key_digest !~ '^[0-9a-f]{64}$'
      OR p_callback.request_target_digest !~ '^[0-9a-f]{64}$' OR p_callback.request_header_digest !~ '^[0-9a-f]{64}$'
@@ -10687,7 +12890,7 @@ BEGIN
     RETURN (old.id,old.provider_config_id,old.callback_request_digest,old.replay_key_digest,old.processing_disposition,
       old.acknowledgement_http_status,old.acknowledgement_content_type,old.acknowledgement_headers,old.acknowledgement_body_sha256,
       old.acknowledgement_body_length,old.acknowledgement_digest,old.verification_receipt_digest,old.callback_digest,old.received_at,
-      old.processed_at,NULL,NULL,true);
+      old.processed_at,NULL::uuid,NULL::uuid,true);
   END IF;
   aid := ops.append_audit_event('worker:communication:callback:'||pc.id::text,'SERVICE',current_user,NULL,'COMMUNICATION_CALLBACK_RECORDED',
     'CommunicationCallback',p_callback.callback_digest::text,'communications.callback','SUCCESS','authenticated callback request persisted',req,
@@ -10698,7 +12901,7 @@ BEGIN
     authentication_method,authentication_evidence,authentication_evidence_digest,provider_request_identity_hmac,replay_key_digest,normalized_items,
     normalized_item_set_digest,item_count,applied_item_count,stale_item_count,unmatched_item_count,processing_disposition,acknowledgement_http_status,
     acknowledgement_content_type,acknowledgement_headers,acknowledgement_body_ciphertext,acknowledgement_body_sha256,acknowledgement_body_length,
-    acknowledgement_encryption_key_id,acknowledgement_digest,verification_receipt_digest,callback_digest,processed_at)
+    acknowledgement_encryption_key_id,acknowledgement_digest,verification_receipt_digest,callback_digest,received_at,processed_at)
   VALUES(pf.id,pc.id,pc.version,pc.configuration_digest,pf.receipt_digest,pc.integration_id,p_callback.channel,p_callback.callback_operation_id,
     p_callback.callback_request_digest,p_callback.http_method,p_callback.request_content_type,p_callback.request_target_digest,p_callback.request_header_digest,
     p_callback.request_body_sha256,p_callback.request_body_length,p_callback.request_body_ciphertext,p_callback.request_encryption_key_id,
@@ -10707,19 +12910,37 @@ BEGIN
     p_callback.stale_item_count,p_callback.unmatched_item_count,p_callback.processing_disposition,p_callback.acknowledgement_http_status,
     p_callback.acknowledgement_content_type,p_callback.acknowledgement_headers,p_callback.acknowledgement_body_ciphertext,p_callback.acknowledgement_body_sha256,
     p_callback.acknowledgement_body_length,p_callback.acknowledgement_encryption_key_id,p_callback.acknowledgement_digest,p_callback.verification_receipt_digest,
-    p_callback.callback_digest,now_at) RETURNING * INTO row;
-  INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
-    VALUES('CommunicationCallback',row.id::text,1,'communication.callback_received.v1',jsonb_build_object('callbackEventId',row.id,
-      'providerConfigId',row.provider_config_id,'callbackRequestDigest',row.callback_request_digest,'processingDisposition',row.processing_disposition,
-      'itemCount',row.item_count,'acknowledgementDigest',row.acknowledgement_digest,'verificationReceiptDigest',row.verification_receipt_digest,
-      'callbackDigest',row.callback_digest),now_at) RETURNING id INTO oid;
+    p_callback.callback_digest,now_at,now_at) RETURNING * INTO row;
+  -- The authenticated callback ledger is the source receipt.  Apply every
+  -- matched delivery item in this same transaction so the only emitted
+  -- domain event is the authority-declared delivery receipt event.
+  oid := NULL;
+  FOR item IN SELECT value FROM jsonb_array_elements(row.normalized_items->'items') LOOP
+    IF item->>'effectKind'='DELIVERY_OBSERVATION'
+       AND NULLIF(item->>'matchedDeliveryId','') IS NOT NULL THEN
+      item_delivery_id := (item->>'matchedDeliveryId')::uuid;
+      SELECT version INTO item_delivery_version FROM ops.outbound_deliveries
+       WHERE id=item_delivery_id FOR UPDATE;
+      IF item_delivery_version IS NULL THEN
+        RAISE EXCEPTION 'communication_callback_delivery_missing' USING ERRCODE='P0002';
+      END IF;
+      observation := ops.record_outbound_delivery_observation_json(jsonb_build_object(
+        'delivery_id',item_delivery_id,'expected_delivery_version',item_delivery_version,
+        'source_kind','PROVIDER_CALLBACK','attempt_id',NULL,
+        'source_receipt_id',row.id,'source_receipt_digest',row.callback_digest,
+        'observation_key_digest',item->>'itemDigest','evidence_kind','SIGNED_PROVIDER_CALLBACK',
+        'asserted_state',item->>'assertedState',
+        'provider_evidence_digest',item->>'normalizedEvidenceDigest',
+        'provider_occurred_at',NULL));
+      oid := COALESCE(NULLIF(observation->>'emitted_event_id','')::uuid,oid);
+    END IF;
+  END LOOP;
   RETURN (row.id,row.provider_config_id,row.callback_request_digest,row.replay_key_digest,row.processing_disposition,row.acknowledgement_http_status,
     row.acknowledgement_content_type,row.acknowledgement_headers,row.acknowledgement_body_sha256,row.acknowledgement_body_length,row.acknowledgement_digest,
     row.verification_receipt_digest,row.callback_digest,row.received_at,row.processed_at,aid,oid,false);
 END $$;
 ALTER FUNCTION ops.record_communication_callback_request(ops.communication_callback_request_v1) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.record_communication_callback_request(ops.communication_callback_request_v1) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION ops.record_communication_callback_request(ops.communication_callback_request_v1) TO gurine_notification_worker;
 
 CREATE OR REPLACE FUNCTION ops.record_communication_callback_request_json(p_payload jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
@@ -10732,7 +12953,7 @@ BEGIN
 END $$;
 ALTER FUNCTION ops.record_communication_callback_request_json(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.record_communication_callback_request_json(jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION ops.record_communication_callback_request_json(jsonb) TO gurine_notification_worker;
+GRANT EXECUTE ON FUNCTION ops.record_communication_callback_request_json(jsonb) TO gurine_egress_gateway;
 COMMIT;
 
 -- JSON bridges are intentionally thin adapters.  They only populate the
@@ -10753,7 +12974,7 @@ BEGIN
 END $$;
 ALTER FUNCTION ops.record_communication_callback_request_json(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.record_communication_callback_request_json(jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION ops.record_communication_callback_request_json(jsonb) TO gurine_notification_worker;
+GRANT EXECUTE ON FUNCTION ops.record_communication_callback_request_json(jsonb) TO gurine_egress_gateway;
 
 -- Intent/rendering lifecycle owners.  The notification worker receives an
 -- intent event first; these typed owners advance the immutable aggregate and
@@ -10791,7 +13012,7 @@ BEGIN
   IF i.state<>'CREATED' OR p.request_digest !~ '^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'communication_intent_transition_invalid' USING ERRCODE='22023'; END IF;
   d:=encode(extensions.digest(convert_to('INTENT-MATERIALIZED:'||i.id::text||':'||(i.version+1)::text||':'||p.request_digest,'UTF8'),'sha256'),'hex');
   aid:=ops.append_audit_event('worker:communication:intent:'||i.id::text,'SERVICE',current_user,NULL,'COMMUNICATION_INTENT_MATERIALIZED','CommunicationIntent',i.id::text,'communications.materialize','SUCCESS','intent materialized',gen_random_uuid(),jsonb_build_object('intentId',i.id,'requestDigest',p.request_digest));
-  INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at) VALUES('CommunicationIntent',i.id::text,i.version+1,'communication.intent_materialized.v1',jsonb_build_object('intentId',i.id,'intentDigest',i.intent_digest,'purpose',i.purpose,'recipientSubjectId',i.recipient_subject_id,'requestDigest',p.request_digest),now_at) RETURNING id INTO oid;
+  oid:=NULL;
   UPDATE ops.communication_intents SET state='MATERIALIZED',version=version+1,materialized_at=now_at,state_changed_at=now_at,transition_receipt_digest=d WHERE id=i.id AND version=p.expected_version;
   RETURN (i.id,i.version,i.version+1,'MATERIALIZED',d,aid,oid,false);
 END $$;
@@ -10813,7 +13034,7 @@ BEGIN
   IF p.target_state IN ('POLICY_BLOCKED','CANCELLED') AND i.state NOT IN ('CREATED','MATERIALIZED') THEN RAISE EXCEPTION 'communication_intent_transition_invalid' USING ERRCODE='22023'; END IF;
   d:=encode(extensions.digest(convert_to('INTENT-TRANSITION:'||i.id::text||':'||(i.version+1)::text||':'||p.target_state||':'||p.evidence_digest,'UTF8'),'sha256'),'hex');
   aid:=ops.append_audit_event('worker:communication:intent:'||i.id::text,'SERVICE',current_user,NULL,'COMMUNICATION_INTENT_TRANSITIONED','CommunicationIntent',i.id::text,'communications.transition','SUCCESS',COALESCE(p.reason_code,'transition'),gen_random_uuid(),jsonb_build_object('intentId',i.id,'state',p.target_state,'evidenceDigest',p.evidence_digest));
-  INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at) VALUES('CommunicationIntent',i.id::text,i.version+1,'communication.intent_transition.v1',jsonb_build_object('intentId',i.id,'state',p.target_state,'transitionReceiptDigest',d),now_at) RETURNING id INTO oid;
+  oid:=NULL;
   UPDATE ops.communication_intents SET state=p.target_state,version=version+1,state_changed_at=now_at,transition_receipt_digest=d,terminal_reason_code=CASE WHEN p.target_state='MATERIALIZED' THEN NULL ELSE p.reason_code END,terminal_evidence_digest=CASE WHEN p.target_state='MATERIALIZED' THEN NULL ELSE p.evidence_digest END,cancelled_at=CASE WHEN p.target_state='CANCELLED' THEN now_at ELSE NULL END,policy_blocker_code=CASE WHEN p.target_state='POLICY_BLOCKED' THEN p.reason_code ELSE NULL END,policy_blocker_digest=CASE WHEN p.target_state='POLICY_BLOCKED' THEN p.evidence_digest ELSE NULL END WHERE id=i.id AND version=p.expected_version;
   RETURN (i.id,i.version,i.version+1,p.target_state,d,aid,oid,false);
 END $$;
@@ -10837,7 +13058,7 @@ BEGIN
   aid:=ops.append_audit_event('worker:communication:rendering:'||p.intent_id::text,'SERVICE',current_user,NULL,'COMMUNICATION_RENDERING_CREATED','CommunicationRendering',p.intent_id::text,'communications.rendering','SUCCESS','rendering created',gen_random_uuid(),jsonb_build_object('intentId',p.intent_id,'renderedSha256',p.rendered_sha256,'renderingDigest',d));
   INSERT INTO ops.communication_renderings(intent_id,rendering_revision,endpoint_id,endpoint_version,endpoint_snapshot_digest,channel,locale,template_id,template_revision,variable_set,variable_set_digest,attachment_manifest,attachment_manifest_digest,disclosure_class,semantic_payload_digest,recipient_binding_digest,rendered_envelope_ciphertext,encryption_key_id,rendered_sha256,rendered_byte_length,transport_content_type,state,state_version,rendering_digest,transition_receipt_digest,expires_at)
   VALUES(p.intent_id,COALESCE(old.rendering_revision,0)+1,p.endpoint_id,p.endpoint_version,p.endpoint_snapshot_digest,p.channel,p.locale,p.template_id,p.template_revision,COALESCE(p.variable_set,'{}'::jsonb),vd,COALESCE(p.attachment_manifest,'[]'::jsonb),ad,p.disclosure_class,p.semantic_payload_digest,p.recipient_binding_digest,p.rendered_envelope_ciphertext,p.encryption_key_id,p.rendered_sha256,p.rendered_byte_length,p.transport_content_type,'DRAFT',1,d,d,p.expires_at) RETURNING * INTO r;
-  INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at) VALUES('CommunicationRendering',r.id::text,r.state_version,'communication.rendering_created.v1',jsonb_build_object('renderingId',r.id,'intentId',r.intent_id,'renderingDigest',r.rendering_digest,'renderedSha256',r.rendered_sha256,'endpointId',r.endpoint_id,'endpointVersion',r.endpoint_version,'endpointSnapshotDigest',r.endpoint_snapshot_digest,'channel',r.channel),now_at) RETURNING id INTO oid;
+  oid:=NULL;
   RETURN (r.id,r.intent_id,r.rendering_revision,r.rendering_digest,r.state,aid,oid,false);
 END $$;
 ALTER FUNCTION ops.create_communication_rendering(ops.communication_rendering_create_v1) OWNER TO gurine_migrator;
@@ -10857,7 +13078,7 @@ BEGIN
   IF p.target_state='APPROVED' AND (p.approval_kind NOT IN ('POLICY','HUMAN') OR p.approval_digest !~ '^[0-9a-f]{64}$' OR p.approval_receipt_digest !~ '^[0-9a-f]{64}$' OR p.approval_expires_at IS NULL OR p.approval_expires_at>r.expires_at) THEN RAISE EXCEPTION 'communication_rendering_approval_invalid' USING ERRCODE='22023'; END IF;
   d:=encode(extensions.digest(convert_to('RENDERING-TRANSITION:'||r.id::text||':'||(r.state_version+1)::text||':'||p.target_state||':'||p.request_digest,'UTF8'),'sha256'),'hex');
   aid:=ops.append_audit_event('worker:communication:rendering:'||r.id::text,'SERVICE',current_user,NULL,'COMMUNICATION_RENDERING_TRANSITIONED','CommunicationRendering',r.id::text,'communications.rendering','SUCCESS','rendering transition',gen_random_uuid(),jsonb_build_object('renderingId',r.id,'state',p.target_state,'transitionReceiptDigest',d));
-  INSERT INTO ops.outbox(aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at) VALUES('CommunicationRendering',r.id::text,r.state_version+1,'communication.rendering_transition.v1',jsonb_build_object('renderingId',r.id,'state',p.target_state,'renderingDigest',r.rendering_digest,'renderedSha256',r.rendered_sha256,'transitionReceiptDigest',d),now_at) RETURNING id INTO oid;
+  oid:=NULL;
   UPDATE ops.communication_renderings SET state=p.target_state,state_version=state_version+1,approval_kind=CASE WHEN p.target_state='APPROVED' THEN p.approval_kind ELSE approval_kind END,approval_digest=CASE WHEN p.target_state='APPROVED' THEN p.approval_digest ELSE approval_digest END,policy_decision_digest=CASE WHEN p.target_state='APPROVED' THEN p.policy_decision_digest ELSE policy_decision_digest END,approval_receipt_digest=CASE WHEN p.target_state='APPROVED' THEN p.approval_receipt_digest ELSE approval_receipt_digest END,approval_expires_at=CASE WHEN p.target_state='APPROVED' THEN p.approval_expires_at ELSE approval_expires_at END,approved_at=CASE WHEN p.target_state='APPROVED' THEN now_at ELSE approved_at END,transition_receipt_digest=d WHERE id=r.id AND state_version=p.expected_version;
   RETURN (r.id,r.state_version,r.state_version+1,p.target_state,d,aid,oid,false);
 END $$;
@@ -10977,9 +13198,11 @@ BEGIN
     'command.createResponseRequest','ResponseRequest',v_request::text,'responses.request','SUCCESS',NULL,p_request_id,
     jsonb_build_object('caseId',v_case.id,'caseVersion',v_case_version,'responseRequestVersion',1,'requestDigest',p_request_digest));
   v_created_event := ops.enqueue_outbox('response_request',v_request::text,1,'response.request_created.v1',
-    jsonb_build_object('operationId','createResponseRequest','responseRequestId',v_request,'caseId',v_case.id,'caseVersion',v_case_version),clock_timestamp());
+    jsonb_build_object('actor_id',p_actor_id,'caseId',v_case.id,'occurred_at',clock_timestamp(),
+      'operation_id','createResponseRequest','request_id',p_request_id),clock_timestamp());
   v_delivery_event := ops.enqueue_outbox('response_request',v_request::text,1,'notification.response_request_delivery_requested.v1',
-    jsonb_build_object('operationId','createResponseRequest','responseRequestId',v_request,'caseId',v_case.id),clock_timestamp());
+    jsonb_build_object('actor_id',p_actor_id,'caseId',v_case.id,'occurred_at',clock_timestamp(),
+      'operation_id','createResponseRequest','request_id',p_request_id),clock_timestamp());
   v_response := jsonb_build_object('operationId','createResponseRequest','requestId',p_request_id,
     'status','SENT','aggregateId',v_request,'aggregateVersion',1,'caseId',v_case.id,
     'caseVersion',v_case_version,'auditEventId',v_audit,'acceptedAt',clock_timestamp(),
@@ -11060,7 +13283,9 @@ BEGIN
       VALUES(v_id,v_case,1,'PUBLISHED_ANOMALY',v_snapshot,v_public,v_digest,v_digest,p_actor_id);
     UPDATE editorial.cases SET current_publication_revision=1 WHERE id=v_case;
     v_audit := ops.append_audit_event('correction-case:'||v_case::text,'USER',p_actor_id::text,p_session_id,'command.createCorrectionCase','Case',v_case::text,'correction.intake','SUCCESS',NULL,p_request_id,jsonb_build_object('requestId',v_request,'correlationId',p_payload->>'correlationId'));
-    v_outbox := ops.enqueue_outbox('case',v_case::text,1,'correction.created.v1',jsonb_build_object('operationId',p_operation_id,'caseId',v_case,'publicationRevisionId',v_id,'requestId',v_request),v_now);
+    v_outbox := ops.enqueue_outbox('case',v_case::text,1,'correction.created.v1',
+      jsonb_build_object('actor_id',p_actor_id,'occurred_at',v_now,
+        'operation_id',p_operation_id,'publicationId',v_id,'request_id',p_request_id),v_now);
     RETURN jsonb_build_object('operationId',p_operation_id,'caseId',v_case,'publicationRevisionId',v_id,'snapshotId',v_snapshot,'aggregateVersion',1,'auditEventId',v_audit,'outboxEventId',v_outbox,'receiptDigest',encode(extensions.digest(convert_to(p_operation_id||':'||v_case::text||':'||p_request_digest,'UTF8'),'sha256'),'hex'));
   ELSIF p_operation_id='triageCorrection' THEN
     v_case := NULLIF(p_payload->>'caseId','')::uuid; IF v_case IS NULL THEN RAISE EXCEPTION 'correction_case_required' USING ERRCODE='22023'; END IF;
@@ -11068,7 +13293,9 @@ BEGIN
     INSERT INTO editorial.corrections(id,case_id,source_revision,summary,reason,affected_claim_ids,status,version,created_by)
       VALUES(v_correction,v_case,COALESCE(NULLIF(p_payload->>'sourceRevision','')::integer,1),COALESCE(p_payload->>'summary','Correction requested'),COALESCE(p_payload->>'reason','Verified material claim error'),COALESCE(p_payload->'affectedClaimIds','[]'::jsonb),'REVIEW',1,p_actor_id);
     v_audit := ops.append_audit_event('correction:'||v_correction::text,'USER',p_actor_id::text,p_session_id,'command.triageCorrection','Correction',v_correction::text,'correction.triage','SUCCESS',NULL,p_request_id,p_payload);
-    v_outbox := ops.enqueue_outbox('correction',v_correction::text,1,'correction.triaged.v1',jsonb_build_object('operationId',p_operation_id,'correctionId',v_correction,'requestId',v_request),v_now);
+    v_outbox := ops.enqueue_outbox('correction',v_correction::text,1,'correction.triaged.v1',
+      jsonb_build_object('actor_id',p_actor_id,'correctionId',v_correction,'occurred_at',v_now,
+        'operation_id',p_operation_id,'request_id',p_request_id),v_now);
     RETURN jsonb_build_object('operationId',p_operation_id,'correctionId',v_correction,'caseId',v_case,'aggregateVersion',1,'auditEventId',v_audit,'outboxEventId',v_outbox,'receiptDigest',encode(extensions.digest(convert_to(p_operation_id||':'||v_correction::text||':'||p_request_digest,'UTF8'),'sha256'),'hex'));
   ELSIF p_operation_id='publishCorrection' THEN
     v_case := NULLIF(p_payload->>'caseId','')::uuid; v_correction := NULLIF(p_payload->>'correctionId','')::uuid; v_reviewer := NULLIF(p_payload->>'reviewerId','')::uuid;
@@ -11097,10 +13324,19 @@ BEGIN
       SELECT id,case_id,source_revision,target_revision,summary,reason,v_now FROM editorial.corrections WHERE id=v_correction
       ON CONFLICT (id) DO UPDATE SET target_revision=EXCLUDED.target_revision,published_at=EXCLUDED.published_at;
     v_audit := ops.append_audit_event('correction:'||v_correction::text,'USER',p_actor_id::text,p_session_id,'command.resolveCorrectionRequest','Correction',v_correction::text,'correction.resolve','SUCCESS',NULL,p_request_id,jsonb_build_object('targetRevision',v_revision_no,'publicationRevisionId',v_revision));
-    v_outbox := ops.enqueue_outbox('publication_revision',v_revision::text,v_revision_no,'publication.revision_created.v1',jsonb_build_object('operationId',p_operation_id,'correctionId',v_correction,'publicationRevisionId',v_revision,'requestId',v_request),v_now);
-    PERFORM ops.enqueue_outbox('publication_revision',v_revision::text,v_revision_no,'projection.publication_revision_created.v1',jsonb_build_object('operationId','projectCorrection','correctionId',v_correction,'publicationRevisionId',v_revision),v_now);
-    PERFORM ops.enqueue_outbox('correction',v_correction::text,2,'correction.resolved.v1',jsonb_build_object('operationId','resolveCorrectionRequest','correctionId',v_correction,'targetRevision',v_revision_no,'correlationId',p_payload->>'correlationId'),v_now);
-    PERFORM ops.enqueue_outbox('correction',v_correction::text,2,'notification.correction_resolved.v1',jsonb_build_object('operationId','notifyCorrectionResolved','correctionId',v_correction,'targetRevision',v_revision_no,'correlationId',p_payload->>'correlationId'),v_now);
+    v_outbox := ops.enqueue_outbox('publication_revision',v_revision::text,v_revision_no,'publication.revision_created.v1',
+      jsonb_build_object('actor_id',p_actor_id,'caseId',v_case,'occurred_at',v_now,
+        'operation_id',p_operation_id,'request_id',p_request_id,'reviewSnapshotId',v_snapshot),v_now);
+    PERFORM ops.enqueue_outbox('publication_revision',v_revision::text,v_revision_no,
+      'projection.publication_revision_created.v1',jsonb_build_object(
+        'actor_id',p_actor_id,'caseId',v_case,'occurred_at',v_now,
+        'operation_id','projectCorrection','request_id',p_request_id,'reviewSnapshotId',v_snapshot),v_now);
+    PERFORM ops.enqueue_outbox('correction',v_correction::text,2,'correction.resolved.v1',
+      jsonb_build_object('actor_id',p_actor_id,'correction_id',v_correction,'occurred_at',v_now,
+        'operation_id','resolveCorrectionRequest','request_id',p_request_id),v_now);
+    PERFORM ops.enqueue_outbox('correction',v_correction::text,2,'notification.correction_resolved.v1',
+      jsonb_build_object('actor_id',p_actor_id,'correction_id',v_correction,'occurred_at',v_now,
+        'operation_id','notifyCorrectionResolved','request_id',p_request_id),v_now);
     RETURN jsonb_build_object('operationId',p_operation_id,'correctionId',v_correction,'caseId',v_case,'publicationRevisionId',v_revision,'snapshotId',v_snapshot,'revision',v_revision_no,'aggregateVersion',v_case_version+1,'auditEventId',v_audit,'outboxEventId',v_outbox,'receiptDigest',encode(extensions.digest(convert_to(p_operation_id||':'||v_revision::text||':'||p_request_digest,'UTF8'),'sha256'),'hex'));
   ELSE
     v_retraction := COALESCE(NULLIF(p_payload->>'retractionDraftId','')::uuid,gen_random_uuid());
@@ -11108,7 +13344,10 @@ BEGIN
     INSERT INTO editorial.retraction_drafts(id,publication_revision_id,scope,affected_claim_ids,reason,status,version,created_by)
       VALUES(v_retraction,v_revision,COALESCE(NULLIF(p_payload->>'scope',''),'PARTIAL'),COALESCE(p_payload->'affectedClaimIds','[]'::jsonb),COALESCE(p_payload->>'reason','Retraction review'),'REVIEW',1,p_actor_id);
     v_audit := ops.append_audit_event('retraction:'||v_retraction::text,'USER',p_actor_id::text,p_session_id,'command.createRetractionDraft','RetractionDraft',v_retraction::text,'publication.retraction','SUCCESS',NULL,p_request_id,p_payload);
-    v_outbox := ops.enqueue_outbox('publication_retraction_draft',v_retraction::text,1,'publication.retraction_draft_created.v1',jsonb_build_object('operationId',p_operation_id,'retractionDraftId',v_retraction,'publicationRevisionId',v_revision),v_now);
+    v_outbox := ops.enqueue_outbox('publication_retraction_draft',v_retraction::text,1,
+      'publication.retraction_draft_created.v1',jsonb_build_object(
+        'actor_id',p_actor_id,'occurred_at',v_now,'operation_id',p_operation_id,
+        'publicationId',v_revision,'request_id',p_request_id),v_now);
     RETURN jsonb_build_object('operationId',p_operation_id,'retractionDraftId',v_retraction,'publicationRevisionId',v_revision,'aggregateVersion',1,'auditEventId',v_audit,'outboxEventId',v_outbox,'receiptDigest',encode(extensions.digest(convert_to(p_operation_id||':'||v_retraction::text||':'||p_request_digest,'UTF8'),'sha256'),'hex'));
   END IF;
 END $$;
@@ -11538,7 +13777,7 @@ DECLARE
   v_callback_item_digest char(64);
   v_provider_event_identity_hash char(64);
 BEGIN
-  IF session_user NOT IN ('gurine_notification_worker','gurine_control_api') THEN
+  IF session_user NOT IN ('gurine_notification_worker','gurine_control_api','gurine_egress_gateway') THEN
     RAISE EXCEPTION 'communication_observer_role_required' USING ERRCODE='42501';
   END IF;
   IF (p_observation).delivery_id IS NULL OR (p_observation).expected_delivery_version IS NULL
@@ -11645,7 +13884,9 @@ BEGIN
   v_prior_rank := coalesce(ops.delivery_proof_rank(d.highest_proof_level),0);
   v_rank := CASE (p_observation).asserted_state WHEN 'READ' THEN 30 WHEN 'DELIVERED' THEN 20 WHEN 'PROVIDER_ACCEPTED' THEN 10 ELSE 0 END;
   v_applied := (p_observation).asserted_state IN ('PROVIDER_ACCEPTED','DELIVERED','READ','FAILED_PERMANENT','CANCELLED','SUPPRESSED')
-    AND (p_observation).asserted_state <> 'READ' OR (p_observation).evidence_kind IN ('SIGNED_PROVIDER_CALLBACK','AUTHENTICATED_PROVIDER_POLL');
+    AND ((p_observation).asserted_state <> 'READ'
+      OR (p_observation).evidence_kind IN ('SIGNED_PROVIDER_CALLBACK','AUTHENTICATED_PROVIDER_POLL'))
+    AND (p_observation).asserted_state <> d.state;
   IF d.state IN ('FAILED_PERMANENT','CANCELLED','SUPPRESSED','READ') AND (p_observation).asserted_state NOT IN ('READ',d.state) THEN v_applied := false; END IF;
   IF v_rank < v_prior_rank AND (p_observation).asserted_state IN ('PROVIDER_ACCEPTED','DELIVERED','READ') THEN v_applied := false; END IF;
   v_result_state := CASE WHEN v_applied THEN (p_observation).asserted_state ELSE d.state END;
@@ -11665,8 +13906,12 @@ BEGIN
     v_outbox := gen_random_uuid();
     INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
       VALUES(v_outbox,'OutboundDelivery',d.id::text,v_new_version,'communication.delivery_receipt_recorded.v1',
-        jsonb_build_object('deliveryId',d.id,'deliveryVersion',v_new_version,'deliveryReceiptId',v_receipt_id,
-          'deliveryReceiptSequence',v_seq,'deliveryReceiptDigest',v_receipt_digest,'state',v_result_state),v_now);
+        jsonb_build_object(
+          'deliveryId',d.id,'deliveryVersion',v_new_version,
+          'attemptId',(p_observation).attempt_id,'deliveryReceiptId',v_receipt_id,
+          'deliveryReceiptSequence',v_seq,'channel',d.channel,'priorState',d.state,
+          'state',v_result_state,'providerEvidenceDigest',(p_observation).provider_evidence_digest,
+          'receiptDigest',v_receipt_digest,'receiptApplied',true,'observedAt',v_observed),v_now);
     UPDATE ops.outbound_deliveries SET state=v_result_state,version=v_new_version,event_sequence=event_sequence+1,
       receipt_sequence=v_seq,current_evidence_rank=GREATEST(current_evidence_rank,v_rank),highest_proof_level=v_proof,
       provider_accepted_at=CASE WHEN v_result_state='PROVIDER_ACCEPTED' AND provider_accepted_at IS NULL THEN v_observed ELSE provider_accepted_at END,
@@ -11684,7 +13929,8 @@ BEGIN
     endpoint_id,endpoint_version,endpoint_snapshot_digest,endpoint_identity_hash,provider_preflight_receipt_id,
     provider_config_id,provider_config_version,provider_configuration_digest,provider_preflight_receipt_digest,
     provider_identity_hash,authorization_snapshot_digest,activation_receipt_digest,budget_reservation_id,
-    provider_occurred_at,observed_at,actor_type,request_id,trace_id,previous_receipt_digest,receipt_digest,audit_event_id,outbox_event_id)
+    provider_occurred_at,observed_at,actor_type,actor_id,request_id,trace_id,
+    previous_receipt_digest,receipt_digest,audit_event_id,outbox_event_id)
   VALUES(v_receipt_id,d.id,v_seq,CASE WHEN v_applied THEN v_new_version END,d.version,v_new_version,
     (p_observation).attempt_id,
     CASE WHEN (p_observation).source_kind='PROVIDER_CALLBACK' THEN (p_observation).source_receipt_id ELSE NULL END,
@@ -11712,6 +13958,7 @@ GRANT EXECUTE ON FUNCTION ops.record_outbound_delivery_observation(ops.outbound_
   TO gurine_notification_worker, gurine_control_api;
 COMMIT;
 
+BEGIN;
 CREATE OR REPLACE FUNCTION ops.record_outbound_delivery_observation_json(p_payload jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, ops, pg_temp AS $$
@@ -11741,8 +13988,10 @@ SET search_path=pg_catalog,ops,extensions,pg_temp AS $$
 DECLARE
   d ops.outbound_deliveries%ROWTYPE;
   prior ops.outbound_delivery_receipts%ROWTYPE;
+  existing_source ops.outbound_delivery_receipts%ROWTYPE;
+  existing_apply ops.outbound_delivery_receipts%ROWTYPE;
   source_id uuid := gen_random_uuid();
-  event_id uuid := gen_random_uuid();
+  emitted_event_id uuid;
   audit_id uuid;
   request_id uuid := gen_random_uuid();
   source_key char(64);
@@ -11755,6 +14004,7 @@ DECLARE
   provider_occurred_at timestamptz := NULLIF(p_payload->>'providerOccurredAt','')::timestamptz;
   now_at timestamptz := clock_timestamp();
   zero char(64) := repeat('0',64);
+  observation jsonb;
 BEGIN
   IF session_user <> 'gurine_notification_worker' THEN
     RAISE EXCEPTION 'communication_poll_producer_role_required' USING ERRCODE='42501';
@@ -11766,17 +14016,43 @@ BEGIN
   END IF;
   SELECT * INTO d FROM ops.outbound_deliveries WHERE id=delivery_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'delivery_not_found' USING ERRCODE='P0002'; END IF;
-  IF d.version <> expected_version THEN RAISE EXCEPTION 'delivery_version_conflict' USING ERRCODE='40001'; END IF;
   PERFORM ops.communication_require_delivery_context(d);
   source_key := encode(extensions.digest(convert_to('poll-source:'||d.id::text||':'||provider_digest,'UTF8'),'sha256'),'hex');
   apply_key := encode(extensions.digest(convert_to('poll-apply:'||d.id::text||':'||provider_digest,'UTF8'),'sha256'),'hex');
-  IF EXISTS (SELECT 1 FROM ops.outbound_delivery_receipts WHERE delivery_id=d.id AND observation_key_digest IN (source_key,apply_key)) THEN
-    SELECT r.id,r.receipt_digest INTO source_id,receipt_digest FROM ops.outbound_delivery_receipts r
-      WHERE r.delivery_id=d.id AND r.observation_key_digest=source_key;
-    IF source_id IS NULL THEN RAISE EXCEPTION 'communication_poll_receipt_conflict' USING ERRCODE='40001'; END IF;
-    RETURN jsonb_build_object('sourceReceiptId',source_id,'sourceReceiptDigest',receipt_digest,'observationKeyDigest',apply_key,'emittedEventId',NULL,'replayed',true);
+  SELECT r.* INTO existing_source FROM ops.outbound_delivery_receipts r
+   WHERE r.delivery_id=d.id AND r.observation_key_digest=source_key FOR UPDATE;
+  SELECT r.* INTO existing_apply FROM ops.outbound_delivery_receipts r
+   WHERE r.delivery_id=d.id AND r.observation_key_digest=apply_key FOR UPDATE;
+  IF existing_source.id IS NOT NULL OR existing_apply.id IS NOT NULL THEN
+    IF existing_source.id IS NULL
+       OR existing_source.provider_evidence_digest <> provider_digest
+       OR existing_source.asserted_state <> asserted_state
+       OR (existing_apply.id IS NOT NULL AND (
+         existing_apply.provider_evidence_digest <> provider_digest
+         OR existing_apply.asserted_state <> asserted_state)) THEN
+      RAISE EXCEPTION 'communication_poll_receipt_conflict' USING ERRCODE='40001';
+    END IF;
+    source_id := existing_source.id;
+    receipt_digest := existing_source.receipt_digest;
+    emitted_event_id := existing_apply.outbox_event_id;
+    IF existing_apply.id IS NULL THEN
+      IF d.version <> expected_version THEN
+        RAISE EXCEPTION 'delivery_version_conflict' USING ERRCODE='40001';
+      END IF;
+      observation := ops.record_outbound_delivery_observation_json(jsonb_build_object(
+        'delivery_id',d.id,'expected_delivery_version',d.version,
+        'source_kind','PROVIDER_POLL','attempt_id',NULL,'source_receipt_id',source_id,
+        'source_receipt_digest',receipt_digest,'observation_key_digest',apply_key,
+        'evidence_kind','AUTHENTICATED_PROVIDER_POLL','asserted_state',asserted_state,
+        'provider_evidence_digest',provider_digest,'provider_occurred_at',provider_occurred_at));
+      emitted_event_id := NULLIF(observation->>'emitted_event_id','')::uuid;
+    END IF;
+    RETURN jsonb_build_object('sourceReceiptId',source_id,'sourceReceiptDigest',receipt_digest,
+      'observationKeyDigest',apply_key,'emittedEventId',emitted_event_id,'replayed',true);
   END IF;
-  SELECT * INTO prior FROM ops.outbound_delivery_receipts WHERE delivery_id=d.id ORDER BY receipt_sequence DESC LIMIT 1;
+  IF d.version <> expected_version THEN RAISE EXCEPTION 'delivery_version_conflict' USING ERRCODE='40001'; END IF;
+  SELECT r.* INTO prior FROM ops.outbound_delivery_receipts r
+   WHERE r.delivery_id=d.id ORDER BY r.receipt_sequence DESC LIMIT 1;
   receipt_digest := encode(extensions.digest(convert_to(d.id::text||':poll:'||provider_digest||':'||now_at::text,'UTF8'),'sha256'),'hex');
   audit_id := ops.append_audit_event('worker:communication-poll:'||d.id::text,'SERVICE',NULL::text,NULL::uuid,
     'OUTBOUND_DELIVERY_POLL_RECEIPT_RECORDED','OutboundDelivery',d.id::text,'communications.observe','SUCCESS',
@@ -11799,12 +14075,15 @@ BEGIN
     d.provider_preflight_receipt_digest,zero,d.authorization_snapshot_digest,d.activation_receipt_digest,
     d.budget_reservation_id,provider_occurred_at,now_at,'AUTHORIZED_SERVICE',request_id,
     'provider-poll:'||d.id::text,prior.receipt_digest,receipt_digest,audit_id,NULL);
-  INSERT INTO ops.outbox(id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at)
-  VALUES(event_id,'OutboundDelivery',d.id::text,d.version,'communication.delivery_poll.v1',jsonb_build_object(
-    'deliveryId',d.id,'expectedDeliveryVersion',d.version,'sourceReceiptId',source_id,
-    'sourceReceiptDigest',receipt_digest,'assertedState',asserted_state,'providerEvidenceDigest',provider_digest,
-    'observationKeyDigest',apply_key,'providerOccurredAt',provider_occurred_at),now_at);
-  RETURN jsonb_build_object('sourceReceiptId',source_id,'sourceReceiptDigest',receipt_digest,'observationKeyDigest',apply_key,'emittedEventId',event_id,'replayed',false);
+  observation := ops.record_outbound_delivery_observation_json(jsonb_build_object(
+    'delivery_id',d.id,'expected_delivery_version',d.version,
+    'source_kind','PROVIDER_POLL','attempt_id',NULL,'source_receipt_id',source_id,
+    'source_receipt_digest',receipt_digest,'observation_key_digest',apply_key,
+    'evidence_kind','AUTHENTICATED_PROVIDER_POLL','asserted_state',asserted_state,
+    'provider_evidence_digest',provider_digest,'provider_occurred_at',provider_occurred_at));
+  emitted_event_id := NULLIF(observation->>'emitted_event_id','')::uuid;
+  RETURN jsonb_build_object('sourceReceiptId',source_id,'sourceReceiptDigest',receipt_digest,
+    'observationKeyDigest',apply_key,'emittedEventId',emitted_event_id,'replayed',false);
 END $$;
 ALTER FUNCTION ops.record_provider_poll_source_receipt_v1(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.record_provider_poll_source_receipt_v1(jsonb) FROM PUBLIC;

@@ -61,7 +61,8 @@ async fn load_agent_context(state: &State, job: &ClaimedJob) -> Result<AgentCont
     // The objective is separately bound into the provider request/prompt
     // digest; including it here would make two runs over the same READY
     // snapshot require different dataset snapshot rows.
-    let current_snapshot = sha256(&canonical_bytes(&json!({"caseId":case_id,"evidence":snapshot_evidence}))?);
+    let current_snapshot = agent_case_snapshot_sha256(&case_id.to_string(), &snapshot_evidence)
+        .map_err(|error| Failure::Terminal("AGENT_SNAPSHOT_CANONICALIZATION_FAILED", error.to_string()))?;
     let (allowed_ids, locator_map, input, transcript) = agent_inputs(
         &evidence,
         &evidence_ids,

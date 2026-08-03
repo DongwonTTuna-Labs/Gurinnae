@@ -11,6 +11,10 @@ let initialized = $state(false);
 const agentRunScreen = $derived(
   screen.id === "CAS-010" || screen.id === "CAS-011",
 );
+const showStateMessage = $derived(
+  screen.sections.find((candidate) => candidate.component === "UnifiedSearch")
+    ?.id === section.id,
+);
 $effect(() => {
   if (initialized) return;
   const searchParams = new URLSearchParams(
@@ -54,18 +58,126 @@ const stateMessage = $derived(
       {/if}
     </div>
   </details>
-  <p class="unified-search__status" aria-live="polite" role="status">{stateMessage}</p>
+  {#if showStateMessage}<p class="unified-search__status" aria-live="polite" role="status">{stateMessage}</p>{/if}
 </form>
 
 <style>
-  .unified-search__query { display: flex; gap: var(--space-2); align-items: end; }
-  .unified-search__query input { flex: 1; min-width: 0; }
-  .unified-search__filters { margin-top: var(--space-3); }
-  .unified-search__filter-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: var(--space-3); }
-  .unified-search__filter-grid label { display: grid; gap: var(--space-1); }
-  .unified-search__status { min-block-size: 1.5rem; margin-block: var(--space-3) 0; }
+  .unified-search {
+    display: grid;
+    width: 100%;
+    gap: 0.5rem;
+    padding-block: 0.625rem;
+    border-block: 1px solid var(--paper-200);
+  }
+
+  .unified-search > label {
+    color: var(--ink-700);
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+
+  .unified-search__query {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .unified-search__query input,
+  .unified-search__filter-grid select {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--target-min);
+    padding: 0.45rem 0.625rem;
+    border: 1px solid var(--paper-200);
+    border-radius: 4px;
+    background: var(--paper-0);
+    color: var(--ink-950);
+    font-size: 0.875rem;
+  }
+
+  .unified-search__query button {
+    min-height: var(--target-min);
+    padding-inline: 0.875rem;
+    border: 1px solid var(--blue-700);
+    border-radius: 4px;
+    background: var(--blue-700);
+    color: var(--paper-0);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 650;
+  }
+
+  .unified-search__filters {
+    padding-top: 0.375rem;
+    border-top: 1px solid var(--paper-200);
+  }
+
+  .unified-search__filters summary {
+    min-height: var(--target-min);
+    padding-block: 0.375rem;
+    color: var(--ink-700);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+
+  .unified-search__filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+  }
+
+  .unified-search__filter-grid label {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--ink-700);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  .unified-search__status {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    min-block-size: 1.5rem;
+    margin: 0;
+    color: var(--ink-700);
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .unified-search__status::before {
+    width: 0.45rem;
+    height: 0.45rem;
+    flex: 0 0 auto;
+    margin-top: 0.4em;
+    border-radius: 50%;
+    background: var(--blue-500);
+    content: "";
+  }
+
   @media (max-width: 640px) {
-    .unified-search__query { align-items: stretch; flex-direction: column; }
-    .unified-search__filter-grid { grid-template-columns: 1fr; }
+    .unified-search__query,
+    .unified-search__filter-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .unified-search__query button {
+      width: 100%;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .unified-search,
+    .unified-search__filters,
+    .unified-search__query input,
+    .unified-search__filter-grid select,
+    .unified-search__query button {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
   }
 </style>

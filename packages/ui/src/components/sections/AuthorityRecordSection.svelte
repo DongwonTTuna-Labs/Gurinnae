@@ -50,3 +50,122 @@ const stateMessage = $derived(
   {:else if runtime.state === "empty" || declaredFields.length === 0}<p role="status">이 범위에 확인 가능한 기록이 없습니다.</p>
   {:else if runtime.state === "stale" || runtime.state === "partial"}<p class="inline-state stale" role="status">일부 정보가 오래되었거나 누락되었습니다. 최신 상태를 확인하세요.</p>{/if}
 </section>
+
+<style>
+  .authority-record-section {
+    display: grid;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  .semantic-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    column-gap: 1px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-top: 1px solid var(--paper-200);
+    border-radius: 0;
+    background: var(--paper-200);
+  }
+
+  .semantic-facts > div {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+    gap: 0.625rem;
+    align-items: baseline;
+    min-width: 0;
+    padding: 0.375rem 0.5rem;
+    border-top: 0;
+    border-bottom: 1px solid var(--paper-200);
+    background: var(--paper-0);
+  }
+
+  .semantic-facts dt {
+    color: var(--ink-500);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  .semantic-facts dd {
+    min-width: 0;
+    margin: 0;
+    color: var(--ink-950);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .authority-record-section > p {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0.375rem 0.5rem;
+    border-block: 1px solid var(--paper-200);
+    background: var(--paper-50);
+    color: var(--ink-700);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .authority-record-section > p::before {
+    width: 0.45rem;
+    height: 0.45rem;
+    flex: 0 0 auto;
+    margin-top: 0.4em;
+    border-radius: 50%;
+    background: var(--blue-500);
+    content: "";
+  }
+
+  .authority-record-section > p.conflict {
+    border-color: var(--red-500);
+    background: var(--red-50);
+    color: var(--red-900);
+  }
+
+  .authority-record-section > p.conflict::before {
+    background: var(--red-500);
+  }
+
+  [data-projection-state="UNKNOWN"] > p.conflict,
+  [data-projection-state="STALE"] > p.conflict {
+    border-color: var(--amber-500);
+    background: var(--amber-50);
+    color: var(--amber-900);
+  }
+
+  [data-projection-state="UNKNOWN"] > p.conflict::before,
+  [data-projection-state="STALE"] > p.conflict::before {
+    background: var(--amber-500);
+  }
+
+  .authority-record-section > p.stale {
+    border-color: var(--amber-500);
+    background: var(--amber-50);
+    color: var(--amber-900);
+  }
+
+  .authority-record-section > p.stale::before {
+    background: var(--amber-500);
+  }
+
+  @media (max-width: 620px) {
+    .semantic-facts {
+      grid-template-columns: 1fr;
+      column-gap: 0;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .semantic-facts,
+    .semantic-facts > div,
+    .authority-record-section > p {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+  }
+</style>

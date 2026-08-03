@@ -4,6 +4,129 @@
 -- parser segment and source-use root before it writes evidence.
 BEGIN;
 
+-- The fetch fixture is admitted by the same closed capability evidence used
+-- in production.  Each right dimension is backed by its own active class;
+-- no synthetic all-ALLOW asset-rights row is inserted by the fixture.
+DO $$
+DECLARE
+  v_class text;
+  v_slug text;
+  v_target text;
+  v_target_digest char(64);
+  v_legal_snapshot_id uuid;
+  v_operational_snapshot_id uuid;
+  v_legal_snapshot_sha char(64);
+  v_operational_snapshot_sha char(64);
+  v_license_digest char(64);
+  v_dpa_digest char(64);
+  v_digest char(64);
+BEGIN
+  FOREACH v_class IN ARRAY ARRAY[
+    'SOURCE_ACCESS','SOURCE_STORAGE','SOURCE_REDISTRIBUTION',
+    'MODEL_EGRESS','PAID_WORKSPACE_PROCESSING','PUBLIC_PUBLICATION'
+  ] LOOP
+    v_slug := lower(v_class);
+    v_target := 'control.fixture.'||v_slug;
+    v_target_digest := encode(extensions.digest(convert_to('target:'||v_class,'UTF8'),'sha256'),'hex');
+    v_legal_snapshot_id := substring(encode(extensions.digest(convert_to('legal-snapshot-id:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid;
+    v_operational_snapshot_id := substring(encode(extensions.digest(convert_to('operational-snapshot-id:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid;
+    v_legal_snapshot_sha := encode(extensions.digest(convert_to('legal-snapshot:'||v_class,'UTF8'),'sha256'),'hex');
+    v_operational_snapshot_sha := encode(extensions.digest(convert_to('operational-snapshot:'||v_class,'UTF8'),'sha256'),'hex');
+
+    INSERT INTO editorial.conflict_snapshots(
+      id,subject_actor_id,target_type,target_id,target_version,target_digest,
+      operation_id,action_kind,candidate_role,declaration_ids,declaration_set_digest,
+      finding_set,finding_set_digest,authorship_digest,party_recipient_digest,
+      role_digest,relationship_digest,funding_customer_digest,policy_digest,
+      evaluation_state,blocker_codes,nonwaivable_blocker_count,evaluated_at,
+      valid_until,evaluated_by_type,evaluated_by_id,snapshot_sha256,receipt_digest)
+    VALUES
+      (v_legal_snapshot_id,'11111111-1111-4111-8111-111111111111','CAPABILITY',v_target,1,v_target_digest,
+       'private.ExecuteApprovedAction','CAPABILITY_ACTIVATION','LEGAL_REVIEWER','{}'::uuid[],
+       encode(extensions.digest(convert_to('legal-declarations:'||v_class,'UTF8'),'sha256'),'hex'),'{}'::jsonb,
+       encode(extensions.digest(convert_to('legal-findings:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('legal-authorship:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('legal-party:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('legal-role:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('legal-relationship:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('legal-funding:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('legal-policy:'||v_class,'UTF8'),'sha256'),'hex'),
+       'CLEAR','{}'::text[],0,'2026-01-01T00:00:00Z','2099-01-01T00:00:00Z',
+       'SERVICE','control-capability-fixture',v_legal_snapshot_sha,
+       encode(extensions.digest(convert_to('legal-receipt:'||v_class,'UTF8'),'sha256'),'hex')),
+      (v_operational_snapshot_id,'22222222-2222-4222-8222-222222222222','CAPABILITY',v_target,1,v_target_digest,
+       'private.ExecuteApprovedAction','CAPABILITY_ACTIVATION','EXECUTOR','{}'::uuid[],
+       encode(extensions.digest(convert_to('operational-declarations:'||v_class,'UTF8'),'sha256'),'hex'),'{}'::jsonb,
+       encode(extensions.digest(convert_to('operational-findings:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('operational-authorship:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('operational-party:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('operational-role:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('operational-relationship:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('operational-funding:'||v_class,'UTF8'),'sha256'),'hex'),
+       encode(extensions.digest(convert_to('operational-policy:'||v_class,'UTF8'),'sha256'),'hex'),
+       'CLEAR','{}'::text[],0,'2026-01-01T00:00:01Z','2099-01-01T00:00:00Z',
+       'SERVICE','control-capability-fixture',v_operational_snapshot_sha,
+       encode(extensions.digest(convert_to('operational-receipt:'||v_class,'UTF8'),'sha256'),'hex'))
+    ON CONFLICT DO NOTHING;
+
+    v_license_digest := CASE WHEN v_class IN ('SOURCE_ACCESS','SOURCE_STORAGE','SOURCE_REDISTRIBUTION')
+      THEN encode(extensions.digest(convert_to('license:'||v_class,'UTF8'),'sha256'),'hex') ELSE NULL END;
+    v_dpa_digest := CASE WHEN v_class IN ('MODEL_EGRESS','PAID_WORKSPACE_PROCESSING')
+      THEN encode(extensions.digest(convert_to('dpa:'||v_class,'UTF8'),'sha256'),'hex') ELSE NULL END;
+    v_digest := encode(extensions.digest(convert_to('capability-decision:'||v_class,'UTF8'),'sha256'),'hex');
+
+    INSERT INTO ops.capability_activation_decisions(
+      id,capability_id,capability_class,environment,configuration_digest,
+      decision_version,prior_decision_id,legal_state,operational_state,
+      legal_entity_id,controller_id,jurisdiction_codes,scope_type,scope_id,
+      scope_version,scope_digest,data_class_codes,policy_digest,contract_digest,
+      dpa_digest,license_digest,rights_digest,provider_preflight_receipt_digest,
+      routing_policy_digest,kill_switch_digest,conditions_encrypted,
+      conditions_digest,evidence_set_digest,proposal_id,proposal_version,
+      approval_digest,legal_action_decision_id,legal_action_decision_receipt_digest,
+      legal_approver_user_id,legal_action_decision_kind,legal_conflict_snapshot_id,
+      legal_conflict_snapshot_digest,operational_action_decision_id,
+      operational_action_decision_receipt_digest,operational_approver_user_id,
+      operational_action_decision_kind,operational_conflict_snapshot_id,
+      operational_conflict_snapshot_digest,counted_decision_set_digest,
+      execution_id,execution_generation,execution_digest,execution_receipt_id,
+      execution_receipt_digest,decided_by_service,reason_code,reason_encrypted,
+      reason_digest,effective_at,expires_at,decision_digest)
+    VALUES(
+      substring(encode(extensions.digest(convert_to('capability-decision-id:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid,
+      v_target,v_class,'TEST',encode(extensions.digest(convert_to('configuration:'||v_class,'UTF8'),'sha256'),'hex'),
+      1,NULL,'APPROVED','ACTIVE','gurinnae-fixture','gurinnae-fixture',ARRAY['GLOBAL'],
+      'SOURCE','control-fixture-source',1,
+      encode(extensions.digest(convert_to('scope:'||v_class,'UTF8'),'sha256'),'hex'),ARRAY['PUBLIC'],
+      encode(extensions.digest(convert_to('policy:'||v_class,'UTF8'),'sha256'),'hex'),
+      encode(extensions.digest(convert_to('contract:'||v_class,'UTF8'),'sha256'),'hex'),
+      v_dpa_digest,v_license_digest,
+      encode(extensions.digest(convert_to('rights:'||v_class,'UTF8'),'sha256'),'hex'),
+      encode(extensions.digest(convert_to('preflight:'||v_class,'UTF8'),'sha256'),'hex'),
+      encode(extensions.digest(convert_to('routing:'||v_class,'UTF8'),'sha256'),'hex'),
+      encode(extensions.digest(convert_to('kill-switch:'||v_class,'UTF8'),'sha256'),'hex'),
+      NULL,encode(extensions.digest(convert_to('conditions:'||v_class,'UTF8'),'sha256'),'hex'),
+      encode(extensions.digest(convert_to('evidence-set:'||v_class,'UTF8'),'sha256'),'hex'),
+      substring(encode(extensions.digest(convert_to('proposal:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid,1,
+      encode(extensions.digest(convert_to('approval:'||v_class,'UTF8'),'sha256'),'hex'),
+      substring(encode(extensions.digest(convert_to('legal-decision:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid,
+      encode(extensions.digest(convert_to('legal-decision-receipt:'||v_class,'UTF8'),'sha256'),'hex'),
+      '11111111-1111-4111-8111-111111111111','APPROVE',v_legal_snapshot_id,v_legal_snapshot_sha,
+      substring(encode(extensions.digest(convert_to('operational-decision:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid,
+      encode(extensions.digest(convert_to('operational-decision-receipt:'||v_class,'UTF8'),'sha256'),'hex'),
+      '22222222-2222-4222-8222-222222222222','APPROVE',v_operational_snapshot_id,v_operational_snapshot_sha,
+      encode(extensions.digest(convert_to('counted-decisions:'||v_class,'UTF8'),'sha256'),'hex'),
+      substring(encode(extensions.digest(convert_to('execution:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid,1,
+      encode(extensions.digest(convert_to('execution-digest:'||v_class,'UTF8'),'sha256'),'hex'),
+      substring(encode(extensions.digest(convert_to('execution-receipt-id:'||v_class,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid,
+      encode(extensions.digest(convert_to('execution-receipt:'||v_class,'UTF8'),'sha256'),'hex'),
+      'workflow-worker','CONTROL_FIXTURE',convert_to('Approved control research capability fixture','UTF8'),
+      encode(extensions.digest(convert_to('Approved control research capability fixture','UTF8'),'sha256'),'hex'),
+      '2026-01-01T00:00:02Z','2099-01-01T00:00:00Z',v_digest)
+    ON CONFLICT DO NOTHING;
+  END LOOP;
+END $$;
+
 INSERT INTO raw.source_fetches(
   id,source_id,external_locator,requested_at,completed_at,http_status,
   content_type,payload_sha256,payload_size_bytes,object_key)
@@ -112,19 +235,38 @@ DECLARE
   v_tool_id uuid := '043eb9f6-e47e-56de-a587-82969b7bc1b6';
   v_run_id uuid := '8eee21b7-75c0-53c9-b079-d897a2c3c711';
   v_source_use_id uuid := 'e3b5ed44-ec8b-5fb3-ad5c-924ca07afa9d';
-  v_rights_id uuid := substring(encode(extensions.digest(convert_to('source-rights:'||v_artifact_id::text||':'||v_content_sha,'UTF8'),'sha256'),'hex') FROM 1 FOR 32)::uuid;
+  v_rights_id uuid := v_asset_id;
   v_locator text := 'https://example.test/gurinnae/control-promotion-fixture';
   v_locator_sha char(64) := encode(extensions.digest(convert_to(v_locator,'UTF8'),'sha256'),'hex');
-  v_now timestamptz := timestamptz '2026-01-01 00:00:00+00' + (('x'||substring(v_content_sha FROM 1 FOR 8))::bit(32)::bigint % 31536000) * interval '1 second';
   v_policy text := 'research-policy-v1';
   v_policy_sha char(64) := encode(extensions.digest(convert_to(v_policy,'UTF8'),'sha256'),'hex');
-  v_rights_sha char(64) := encode(extensions.digest(convert_to(v_rights_id::text||':'||v_content_sha,'UTF8'),'sha256'),'hex');
+  v_rights_sha char(64);
   v_receipt char(64) := encode(extensions.digest(convert_to('content-safety-v2:'||v_content_sha||':CLEAN','UTF8'),'sha256'),'hex');
   v_artifact_canonical bytea;
   v_artifact_sha char(64);
+  v_asset_rights_canonical bytea;
   v_source_use_canonical bytea;
   v_source_use_sha char(64);
+  v_snapshot jsonb;
+  v_capability_id uuid;
+  v_capability_version bigint;
+  v_capability_sha char(64);
+  v_capability_set_sha char(64);
+  v_execution_set_sha char(64);
+  v_effective_at timestamptz;
+  v_expires_at timestamptz;
+  v_dimensions jsonb;
 BEGIN
+  v_snapshot := ops.research_rights_snapshot_v1('control-fixture-source',clock_timestamp());
+  IF v_snapshot IS NULL THEN RAISE EXCEPTION 'control research rights snapshot missing'; END IF;
+  v_capability_id := (v_snapshot->'primaryDecision'->>'decisionId')::uuid;
+  v_capability_version := (v_snapshot->'primaryDecision'->>'decisionVersion')::bigint;
+  v_capability_sha := (v_snapshot->'primaryDecision'->>'decisionSha256')::char(64);
+  v_capability_set_sha := (v_snapshot->>'capabilityDecisionSetSha256')::char(64);
+  v_execution_set_sha := (v_snapshot->>'executionReceiptSetSha256')::char(64);
+  v_effective_at := (v_snapshot->>'effectiveAt')::timestamptz;
+  v_expires_at := NULLIF(v_snapshot->>'expiresAt','')::timestamptz;
+  v_dimensions := v_snapshot->'dimensions';
   v_artifact_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
     'schemaVersion','research-artifact.v2','researchArtifactId',v_artifact_id,'assetId',v_asset_id,
     'assetRevision',1,'sourceFetchId',v_fetch_id,'artifactOrdinal',0,'fetchOutcome','STORED',
@@ -133,6 +275,24 @@ BEGIN
     'contentSha256',v_content_sha,'responseHeadersSha256',encode(extensions.digest(ops.canonical_jsonb_v1('[]'::jsonb),'sha256'),'hex'),
     'contentSafetyState','CLEAN','contentSafetyReceiptSha256',v_receipt));
   v_artifact_sha := encode(extensions.digest(v_artifact_canonical,'sha256'),'hex');
+  v_asset_rights_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
+    'schemaVersion','asset-rights-decision.v1','decisionId',v_rights_id,
+    'assetId',v_asset_id,'assetSha256',v_content_sha,'assetRevision',1,
+    'decisionVersion',1,'assetKind','RESEARCH_ARTIFACT','researchArtifactId',v_artifact_id,
+    'decisionKind','GRANT','accessRight',v_dimensions->>'accessRight',
+    'privateStorageRight',v_dimensions->>'privateStorageRight',
+    'modelEgressRight',v_dimensions->>'modelEgressRight','modelUseRight',v_dimensions->>'modelUseRight',
+    'derivativeCreationRight',v_dimensions->>'derivativeCreationRight','excerptRight',v_dimensions->>'excerptRight',
+    'redistributionRight',v_dimensions->>'redistributionRight','commercialUseRight',v_dimensions->>'commercialUseRight',
+    'publicDisplayRight',v_dimensions->>'publicDisplayRight','policyVersion',v_policy,
+    'policySha256',v_policy_sha,'legalBasisCode','PUBLIC_RESEARCH','legalBasisReference','control-fixture-source',
+    'jurisdiction','GLOBAL','attributionRequired',false,'effectiveAt',v_effective_at,
+    'expiresAt',v_expires_at,'capabilityDecisionId',v_capability_id,
+    'capabilityDecisionVersion',v_capability_version,'capabilityDecisionSha256',v_capability_sha,
+    'capabilityDecisions',v_snapshot->'capabilityDecisions',
+    'capabilityDecisionSetSha256',v_capability_set_sha,
+    'executionReceiptSetSha256',v_execution_set_sha));
+  v_rights_sha := encode(extensions.digest(v_asset_rights_canonical,'sha256'),'hex');
   v_source_use_canonical := ops.canonical_jsonb_v1(jsonb_build_object(
     'schemaVersion','source-use.v2','sourceUseId',v_source_use_id,'agentRunId',v_run_id,
     'providerTurnId',v_turn_id,'toolCallId',v_tool_id,'parentSourceUseId',NULL,'parentSourceUseSha256',NULL,
@@ -140,9 +300,15 @@ BEGIN
     'sourceIdentity',jsonb_build_object('kind','RESEARCH_ARTIFACT','researchArtifactId',v_artifact_id,'assetId',v_asset_id,'assetRevision',1,'artifactSha256',v_artifact_sha,'contentSha256',v_content_sha,'sourceFetchId',v_fetch_id),
     'locator',jsonb_build_object('kind','HTML_CSS_SELECTOR','value',v_locator,'locatorSha256',v_locator_sha),
     'selectedContentSha256',v_content_sha,'classification','PUBLIC',
-    'rightsDecision',jsonb_build_object('decisionId',v_rights_id,'decisionVersion',1,'decisionSha256',v_rights_sha,'effectiveAt',v_now,'expiresAt',NULL,
-      'accessRight','ALLOW','privateStorageRight','ALLOW','modelEgressRight','ALLOW','modelUseRight','ALLOW','derivativeCreationRight','ALLOW','excerptRight','ALLOW','redistributionRight','ALLOW','commercialUseRight','ALLOW','publicDisplayRight','ALLOW'),
-    'providerReceiptId',NULL,'occurredAt',v_now));
+    'rightsDecision',jsonb_build_object('decisionId',v_rights_id,'capabilityDecisionId',v_capability_id,
+      'decisionVersion',1,'decisionSha256',v_rights_sha,'effectiveAt',v_effective_at,'expiresAt',v_expires_at,
+      'capabilityDecisionSetSha256',v_capability_set_sha,
+      'accessRight',v_dimensions->>'accessRight','privateStorageRight',v_dimensions->>'privateStorageRight',
+      'modelEgressRight',v_dimensions->>'modelEgressRight','modelUseRight',v_dimensions->>'modelUseRight',
+      'derivativeCreationRight',v_dimensions->>'derivativeCreationRight','excerptRight',v_dimensions->>'excerptRight',
+      'redistributionRight',v_dimensions->>'redistributionRight','commercialUseRight',v_dimensions->>'commercialUseRight',
+      'publicDisplayRight',v_dimensions->>'publicDisplayRight'),
+    'providerReceiptId',NULL,'occurredAt',v_effective_at));
   v_source_use_sha := encode(extensions.digest(v_source_use_canonical,'sha256'),'hex');
   PERFORM ops.record_research_fetch_v1(
     p_agent_run_id => v_run_id, p_provider_turn_id => v_turn_id, p_tool_call_id => v_tool_id,

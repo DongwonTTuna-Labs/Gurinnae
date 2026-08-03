@@ -18,7 +18,7 @@ export type Cas011ViewModel = {
   readonly identity: Record<string, unknown> | null;
   readonly inputs: readonly Record<string, unknown>[];
   readonly model: Record<string, unknown> | null;
-  readonly output: { readonly summary: string } | null;
+  readonly output: Readonly<Record<string, unknown>> | null;
   readonly citations: readonly Record<string, unknown>[];
   readonly safety: Record<string, unknown> | null;
   readonly decisions: readonly Record<string, unknown>[];
@@ -136,6 +136,7 @@ export function toCas011ViewModel(
           typeof value === "string" ? [{ sourceId: value }] : [],
         )
       : [];
+    const outputRecord = record(envelope?.output);
     const outputText = text(envelope?.output);
     return {
       schemaVersion: "analysis-vm.cas-011.v2",
@@ -153,7 +154,7 @@ export function toCas011ViewModel(
         envelope?.provider || envelope?.model
           ? { provider: envelope.provider, model: envelope.model }
           : null,
-      output: outputText ? { summary: outputText } : null,
+      output: outputRecord ?? (outputText ? { summary: outputText } : null),
       citations,
       safety: {
         unknowns: Array.isArray(envelope?.unknowns) ? envelope.unknowns : [],
@@ -181,16 +182,9 @@ export function toCas011ViewModel(
     identity: record(vm.identity),
     inputs: records(vm.inputs),
     model: record(vm.model),
-    output: (() => {
-      const value = record(vm.output);
-      const summary = text(
-        value?.summary ??
-          value?.answerFirstSummary ??
-          value?.text ??
-          value?.content,
-      );
-      return summary ? { summary } : null;
-    })(),
+    // Keep the closed analysis projection intact. Collapsing this to a single
+    // summary discards the findings that make a human review meaningful.
+    output: record(vm.output),
     citations: records(vm.citations),
     safety: record(vm.safety),
     decisions: records(vm.decisions),

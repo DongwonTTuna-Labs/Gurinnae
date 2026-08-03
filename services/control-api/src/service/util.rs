@@ -1,4 +1,5 @@
 use super::*;
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 pub(super) fn command_parameters(
     request: &HttpRequest,
@@ -124,6 +125,62 @@ pub(super) fn encrypt_control_field(
     .map_err(|_| ServiceError::Persistence)
 }
 
+pub(super) fn seal_action_request(
+    operation: &str,
+    mut payload: Value,
+    field_keys: &EnvelopeKeyRing,
+) -> Result<Value, ServiceError> {
+    if !matches!(operation, "createActionProposal" | "updateActionDraft") {
+        return Ok(payload);
+    }
+    let proposal_id = if operation == "createActionProposal" {
+        Uuid::new_v4()
+    } else {
+        payload
+            .get("proposalId")
+            .and_then(Value::as_str)
+            .and_then(|value| Uuid::parse_str(value).ok())
+            .ok_or(ServiceError::InvalidRequest)?
+    };
+    let draft = serde_json::to_vec(payload.get("draft").ok_or(ServiceError::InvalidRequest)?)
+        .map_err(|_| ServiceError::InvalidRequest)?;
+    let rationale = serde_json::to_vec(
+        payload
+            .get("rationale")
+            .ok_or(ServiceError::InvalidRequest)?,
+    )
+    .map_err(|_| ServiceError::InvalidRequest)?;
+    let sealed_draft = encrypt_control_field(
+        field_keys,
+        "ops.action_proposal_versions",
+        "payload_encrypted",
+        proposal_id,
+        "json",
+        &draft,
+    )?;
+    let sealed_rationale = encrypt_control_field(
+        field_keys,
+        "ops.action_proposal_versions",
+        "rationale_encrypted",
+        proposal_id,
+        "json",
+        &rationale,
+    )?;
+    let object = payload
+        .as_object_mut()
+        .ok_or(ServiceError::InvalidRequest)?;
+    object.insert("_proposalId".to_owned(), json!(proposal_id));
+    object.insert(
+        "_payloadEncryptedBase64".to_owned(),
+        json!(BASE64.encode(sealed_draft)),
+    );
+    object.insert(
+        "_rationaleEncryptedBase64".to_owned(),
+        json!(BASE64.encode(sealed_rationale)),
+    );
+    Ok(payload)
+}
+
 pub(super) fn is_sha256(value: &str) -> bool {
     value.len() == 64
         && value
@@ -132,25 +189,20 @@ pub(super) fn is_sha256(value: &str) -> bool {
 }
 
 pub(super) fn valid_case_transition(current: &str, target: &str) -> bool {
-    matches!(
-        (current, target),
-        ("SIGNAL_DETECTED", "TRIAGE")
-            | ("TRIAGE", "INVESTIGATING" | "CLOSED")
-            | (
-                "INVESTIGATING",
-                "AWAITING_RESPONSE" | "EDITORIAL_REVIEW" | "CLOSED"
-            )
-            | (
-                "AWAITING_RESPONSE",
-                "INVESTIGATING" | "EDITORIAL_REVIEW" | "CLOSED"
-            )
-            | (
-                "EDITORIAL_REVIEW",
-                "INVESTIGATING" | "LEGAL_REVIEW" | "READY_TO_PUBLISH"
-            )
-            | ("LEGAL_REVIEW", "EDITORIAL_REVIEW" | "READY_TO_PUBLISH")
-            | ("READY_TO_PUBLISH", "EDITORIAL_REVIEW" | "CLOSED")
-    )
+    let (Some(current), Some(target)) = (investigation_state(current), investigation_state(target))
+    else {
+        return false;
+    };
+    CASE_TRANSITIONS
+        .iter()
+        .any(|transition| transition.from.contains(&current) && transition.to == target)
+}
+
+pub(super) fn investigation_state(value: &str) -> Option<InvestigationState> {
+    InvestigationState::ALL
+        .iter()
+        .copied()
+        .find(|state| state.as_str() == value)
 }
 
 pub(super) fn sha256(bytes: &[u8]) -> String {

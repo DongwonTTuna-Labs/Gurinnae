@@ -1,0 +1,309 @@
+use gurine_auth::envelope::{decrypt, encrypt};
+
+#[derive(Debug)]
+struct CommunicationAction {
+    subject_id: Uuid,
+    endpoint_id: Uuid,
+    endpoint_version: i64,
+    endpoint_digest: String,
+    channel: String,
+    communication_class: String,
+    purpose: String,
+    locale: String,
+    template_id: String,
+    template_revision: String,
+    subject: String,
+    body: String,
+    citations: Value,
+}
+
+async fn execute_approved_action(
+    pool: &PgPool,
+    field_keys: &EnvelopeKeyRing,
+    aggregate_id: Uuid,
+    payload: &serde_json::Map<String, Value>,
+) -> Result<Value, Failure> {
+    let execution_id = object_uuid(payload, "executionId")?;
+    if execution_id != aggregate_id {
+        return Err(Failure::Terminal(
+            "ACTION_EXECUTION_EVENT_MISMATCH",
+            execution_id.to_string(),
+        ));
+    }
+    let generation = payload
+        .get("generation")
+        .and_then(Value::as_i64)
+        .filter(|value| *value > 0)
+        .ok_or_else(|| Failure::Terminal("INVALID_ACTION_EXECUTION", "generation".to_owned()))?;
+    if payload.get("actionKind").and_then(Value::as_str) != Some("COMMUNICATION")
+        || payload.get("targetCommand").and_then(Value::as_str)
+            != Some("private.DispatchCommunicationIntent")
+    {
+        return Err(Failure::Terminal(
+            "ACTION_EXECUTOR_UNSUPPORTED",
+            payload
+                .get("actionKind")
+                .and_then(Value::as_str)
+                .unwrap_or("missing")
+                .to_owned(),
+        ));
+    }
+    let event_payload = Value::Object(payload.clone());
+    let row = sqlx::query(
+        "SELECT * FROM ops.load_action_execution_v1($1,$2,$3)",
+    )
+    .bind(execution_id)
+    .bind(generation)
+    .bind(&event_payload)
+    .fetch_one(pool)
+    .await
+    .map_err(database)?;
+    let proposal_id: Uuid = row.try_get("proposal_id").map_err(database)?;
+    let proposal_version: i64 = row.try_get("proposal_version").map_err(database)?;
+    let encrypted: Vec<u8> = row.try_get("target_request_encrypted").map_err(database)?;
+    let token = std::str::from_utf8(&encrypted).map_err(|_| {
+        Failure::Terminal("ACTION_PAYLOAD_DECRYPTION_FAILED", execution_id.to_string())
+    })?;
+    let proposal_id_text = proposal_id.to_string();
+    let plaintext = decrypt(
+        "gurine-fe-v1",
+        field_keys,
+        &[
+            "ops.action_proposal_versions",
+            "payload_encrypted",
+            &proposal_id_text,
+            "json",
+            "1",
+        ],
+        token,
+    )
+    .map_err(|_| Failure::Terminal("ACTION_PAYLOAD_DECRYPTION_FAILED", execution_id.to_string()))?;
+    let action_payload: Value = serde_json::from_slice(&plaintext)
+        .map_err(|_| Failure::Terminal("ACTION_PAYLOAD_INVALID", execution_id.to_string()))?;
+    let action = communication_action(&action_payload)?;
+    let endpoint = sqlx::query(
+        "SELECT * FROM ops.load_action_communication_endpoint_v1($1,$2,$3,$4,$5,$6::char(64),$7)",
+    )
+    .bind(execution_id)
+    .bind(generation)
+    .bind(action.subject_id)
+    .bind(action.endpoint_id)
+    .bind(action.endpoint_version)
+    .bind(&action.endpoint_digest)
+    .bind(&action.channel)
+    .fetch_one(pool)
+    .await
+    .map_err(database)?;
+    let endpoint_ciphertext: Vec<u8> = endpoint.try_get("endpoint_ciphertext").map_err(database)?;
+    let endpoint_token = std::str::from_utf8(&endpoint_ciphertext).map_err(|_| {
+        Failure::Terminal("COMMUNICATION_ENDPOINT_DECRYPTION_FAILED", action.endpoint_id.to_string())
+    })?;
+    let endpoint_id_text = action.endpoint_id.to_string();
+    let endpoint_plaintext = decrypt(
+        "gurine-fe-v1",
+        field_keys,
+        &[
+            "intake.communication_endpoints",
+            "endpoint_ciphertext",
+            &endpoint_id_text,
+            endpoint_logical_type(&action.channel),
+            "1",
+        ],
+        endpoint_token,
+    )
+    .map_err(|_| {
+        Failure::Terminal("COMMUNICATION_ENDPOINT_DECRYPTION_FAILED", action.endpoint_id.to_string())
+    })?;
+    let destination = String::from_utf8(endpoint_plaintext).map_err(|_| {
+        Failure::Terminal("COMMUNICATION_ENDPOINT_INVALID", action.endpoint_id.to_string())
+    })?;
+    if destination.trim().is_empty() || destination.len() > 16_384 {
+        return Err(Failure::Terminal(
+            "COMMUNICATION_ENDPOINT_INVALID",
+            action.endpoint_id.to_string(),
+        ));
+    }
+    let rendering_id = Uuid::new_v4();
+    let rendered = json!({
+        "to": destination,
+        "subject": action.subject,
+        "textBody": action.body,
+        "htmlBody": "",
+        "citations": action.citations,
+    });
+    let rendered_bytes = serde_json::to_vec(&rendered)
+        .map_err(|_| Failure::Terminal("COMMUNICATION_RENDERING_INVALID", execution_id.to_string()))?;
+    let rendered_sha256 = sha256(&rendered_bytes);
+    let rendering_id_text = rendering_id.to_string();
+    let rendered_ciphertext = encrypt(
+        "gurine-fe-v1",
+        &field_keys.current,
+        &[
+            "ops.communication_renderings",
+            "rendered_envelope_ciphertext",
+            &rendering_id_text,
+            "communication-rendering",
+            "1",
+        ],
+        &rendered_bytes,
+    )
+    .map(String::into_bytes)
+    .map_err(|_| Failure::Terminal("COMMUNICATION_RENDERING_ENCRYPTION_FAILED", execution_id.to_string()))?;
+    let endpoint_snapshot_digest: String = endpoint
+        .try_get("endpoint_snapshot_digest")
+        .map_err(database)?;
+    let request_digest = sha256(
+        format!("{execution_id}:{generation}:{rendering_id}:{rendered_sha256}").as_bytes(),
+    );
+    let receipt: Value = sqlx::query_scalar(
+        "SELECT ops.dispatch_approved_communication_intent_v1($1,$2)",
+    )
+    .bind(json!({
+        "executionId": execution_id,
+        "generation": generation,
+        "proposalId": proposal_id,
+        "proposalVersion": proposal_version,
+        "renderingId": rendering_id,
+        "subjectId": action.subject_id,
+        "endpointId": action.endpoint_id,
+        "endpointVersion": action.endpoint_version,
+        "endpointDigest": action.endpoint_digest,
+        "endpointSnapshotDigest": endpoint_snapshot_digest,
+        "channel": action.channel,
+        "communicationClass": action.communication_class,
+        "purpose": action.purpose,
+        "locale": action.locale,
+        "templateId": action.template_id,
+        "templateRevision": action.template_revision,
+        "topicScope": {"caseId": action_payload.pointer("/target/id")},
+        "semanticPayloadDigest": sha256(action.body.as_bytes()),
+        "recipientBindingDigest": sha256(format!("{}:{}:{}:{}", action.subject_id, action.endpoint_id, action.endpoint_version, action.endpoint_digest).as_bytes()),
+        "renderedSha256": rendered_sha256,
+        "renderedByteLength": rendered_bytes.len(),
+        "transportContentType": "application/json; charset=utf-8",
+        "requestDigest": request_digest,
+    }))
+    .bind(rendered_ciphertext)
+    .fetch_one(pool)
+    .await
+    .map_err(database)?;
+    Ok(receipt)
+}
+
+fn communication_action(payload: &Value) -> Result<CommunicationAction, Failure> {
+    if payload.get("kind").and_then(Value::as_str) != Some("COMMUNICATION") {
+        return Err(Failure::Terminal(
+            "ACTION_PAYLOAD_KIND_MISMATCH",
+            "COMMUNICATION".to_owned(),
+        ));
+    }
+    if let Some(proposal) = payload.get("proposal") {
+        let binding = proposal.get("recipientBinding").ok_or_else(|| {
+            Failure::Terminal("COMMUNICATION_RECIPIENT_BINDING_MISSING", "recipientBinding".to_owned())
+        })?;
+        let purpose = required_text(proposal, "purpose")?;
+        return Ok(CommunicationAction {
+            subject_id: required_uuid(binding, "subjectId")?,
+            endpoint_id: required_uuid(binding, "endpointId")?,
+            endpoint_version: required_positive_i64(binding, "endpointVersion")?,
+            endpoint_digest: required_digest(binding, "endpointDigest")?,
+            channel: required_text(proposal, "channel")?,
+            communication_class: communication_class(&purpose)?.to_owned(),
+            purpose,
+            locale: proposal
+                .get("locale")
+                .and_then(Value::as_str)
+                .unwrap_or("ko-KR")
+                .to_owned(),
+            template_id: "agent-approved-draft".to_owned(),
+            template_revision: "1".to_owned(),
+            subject: proposal
+                .get("subject")
+                .and_then(Value::as_str)
+                .unwrap_or("구린네 근거 확인 요청")
+                .to_owned(),
+            body: required_text(proposal, "draftText")?,
+            citations: proposal.get("citationIds").cloned().unwrap_or_else(|| json!([])),
+        });
+    }
+    let recipients = payload
+        .get("recipients")
+        .and_then(Value::as_array)
+        .filter(|values| values.len() == 1)
+        .ok_or_else(|| Failure::Terminal("COMMUNICATION_RECIPIENT_COUNT_UNSUPPORTED", "one exact recipient required".to_owned()))?;
+    let recipient = recipients.first().ok_or_else(|| {
+        Failure::Terminal("COMMUNICATION_RECIPIENT_MISSING", "recipients".to_owned())
+    })?;
+    let purpose = required_text(payload, "purpose")?;
+    Ok(CommunicationAction {
+        subject_id: required_uuid(recipient, "subjectId")?,
+        endpoint_id: required_uuid(recipient, "endpointId")?,
+        endpoint_version: required_positive_i64(recipient, "endpointVersion")?,
+        endpoint_digest: required_digest(recipient, "destinationIdentitySha256")?,
+        channel: required_text(payload, "provider")?,
+        communication_class: communication_class(&purpose)?.to_owned(),
+        purpose,
+        locale: required_text(payload, "locale")?,
+        template_id: required_text(payload, "templateId")?,
+        template_revision: required_positive_i64(payload, "templateRevision")?.to_string(),
+        subject: required_text(payload, "subject")?,
+        body: required_text(payload, "bodyPlainText")?,
+        citations: payload.get("attachmentIds").cloned().unwrap_or_else(|| json!([])),
+    })
+}
+
+fn communication_class(purpose: &str) -> Result<&'static str, Failure> {
+    match purpose {
+        "SUBSCRIPTION_UPDATE" => Ok("SUBSCRIPTION_UPDATE"),
+        "PRODUCT_MARKETING" | "DISCRETIONARY_OUTREACH" => Ok("DISCRETIONARY_EXTERNAL"),
+        "INTERNAL_ACTION_REQUEST" => Ok("INTERNAL_ACTION_REQUEST"),
+        "ENDPOINT_VERIFICATION" | "RIGHT_OF_REPLY_REQUEST" | "RIGHT_OF_REPLY_REMINDER"
+        | "RESPONSE_RECEIPT" | "CORRECTION_STATUS" | "CORRECTION_RETRACTION_NOTICE"
+        | "PRIVACY_TRANSACTIONAL_NOTICE" | "SECURITY_TRANSACTIONAL_NOTICE"
+        | "INCIDENT_RECOVERY" | "SYSTEM_TRANSACTIONAL" => Ok("SYSTEM_TRANSACTIONAL"),
+        _ => Err(Failure::Terminal("COMMUNICATION_PURPOSE_INVALID", purpose.to_owned())),
+    }
+}
+
+fn endpoint_logical_type(channel: &str) -> &'static str {
+    match channel {
+        "SMTP_EMAIL" => "email-address",
+        "SOLAPI_SMS" | "SOLAPI_KAKAO_BIZMESSAGE" | "TWILIO_VOICE"
+        | "META_WHATSAPP_BUSINESS_CLOUD" => "phone-number",
+        "SIGNED_WEBHOOK" => "uri",
+        _ => "provider-identifier",
+    }
+}
+
+fn required_text(value: &Value, key: &'static str) -> Result<String, Failure> {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|text| !text.trim().is_empty())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| Failure::Terminal("ACTION_PAYLOAD_FIELD_INVALID", key.to_owned()))
+}
+
+fn required_uuid(value: &Value, key: &'static str) -> Result<Uuid, Failure> {
+    required_text(value, key)?
+        .parse()
+        .map_err(|_| Failure::Terminal("ACTION_PAYLOAD_FIELD_INVALID", key.to_owned()))
+}
+
+fn required_positive_i64(value: &Value, key: &'static str) -> Result<i64, Failure> {
+    value
+        .get(key)
+        .and_then(Value::as_i64)
+        .filter(|number| *number > 0)
+        .ok_or_else(|| Failure::Terminal("ACTION_PAYLOAD_FIELD_INVALID", key.to_owned()))
+}
+
+fn required_digest(value: &Value, key: &'static str) -> Result<String, Failure> {
+    required_text(value, key).and_then(|digest| {
+        if is_sha256(&digest) {
+            Ok(digest)
+        } else {
+            Err(Failure::Terminal("ACTION_PAYLOAD_FIELD_INVALID", key.to_owned()))
+        }
+    })
+}

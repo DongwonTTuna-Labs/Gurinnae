@@ -16,6 +16,8 @@ pub enum SchemaValidationError {
     MissingRequiredField,
     #[error("agent output contains an undeclared field")]
     UnknownField,
+    #[error("agent output contains a field with an invalid value")]
+    InvalidField,
 }
 
 pub fn validate_object(

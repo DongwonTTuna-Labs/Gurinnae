@@ -115,7 +115,18 @@ BEGIN
   END IF;
   SELECT count(*) INTO actual FROM ops.access_requests
    WHERE requester_user_id='11111111-1111-4111-8111-111111111111' AND status='PENDING';
-  IF actual <> 1 THEN RAISE EXCEPTION 'access request rows %, expected 1', actual; END IF;
+  -- One row is the catalog-wide command witness and one is the deliberately
+  -- expired idempotency claim reclaimed through HTTP.  The intervening exact
+  -- replay must not add a third effect.
+  IF actual <> 2 THEN RAISE EXCEPTION 'access request rows %, expected 2 (initial plus expired-claim reclaim)', actual; END IF;
+  SELECT count(*) INTO actual FROM ops.idempotency_keys
+   WHERE scope='control:11111111-1111-4111-8111-111111111111:createAccessRequest'
+     AND response_status=201 AND response_body IS NOT NULL;
+  IF actual <> 2 THEN RAISE EXCEPTION 'completed access idempotency owners %, expected 2', actual; END IF;
+  SELECT count(*) INTO actual FROM ops.idempotency_keys
+   WHERE scope='control:11111111-1111-4111-8111-111111111111:createAccessRequest'
+     AND response_status IS NULL AND response_body IS NULL AND expires_at>clock_timestamp();
+  IF actual <> 1 THEN RAISE EXCEPTION 'active in-flight access idempotency owners %, expected 1', actual; END IF;
   IF (SELECT status FROM ops.users WHERE id='75cccee2-bca8-53c5-90d4-0949f63d8e52') <> 'DISABLED' THEN
     RAISE EXCEPTION 'target user was not disabled';
   END IF;
@@ -214,9 +225,17 @@ BEGIN
 
   SELECT count(*) INTO actual FROM editorial.response_requests
    WHERE case_id='148b09d5-aa28-5351-b471-9ef333a3e410';
-  IF actual <> 2 THEN RAISE EXCEPTION 'response request rows %, expected 2', actual; END IF;
+  IF actual <> 3 THEN RAISE EXCEPTION 'response request rows %, expected 3', actual; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM editorial.response_requests
+     WHERE id='8f749b51-1351-582e-af83-512696fc93ef'
+       AND case_id='148b09d5-aa28-5351-b471-9ef333a3e410'
+       AND status='SENT' AND sent_at IS NOT NULL AND due_at>clock_timestamp()
+  ) THEN
+    RAISE EXCEPTION 'transition guard response request fixture was not preserved';
+  END IF;
   SELECT count(*) INTO actual FROM editorial.response_requests
-   WHERE convert_from(recipient_email_encrypted,'UTF8') LIKE 'gurine-fe-v1.%'
+   WHERE substring(recipient_email_encrypted FROM 1 FOR 13)=convert_to('gurine-fe-v1.','UTF8')
      AND octet_length(recipient_email_encrypted) > 40;
   IF actual <> 2 THEN RAISE EXCEPTION 'encrypted response recipient rows %, expected 2', actual; END IF;
   IF (SELECT public_excerpt_sha256 FROM editorial.responses
@@ -226,12 +245,31 @@ BEGIN
   END IF;
 
   SELECT count(*) INTO actual FROM ops.source_runs;
-  IF actual <> 6 THEN RAISE EXCEPTION 'source run rows %, expected 6', actual; END IF;
+  IF actual <> 9 THEN RAISE EXCEPTION 'source run rows %, expected 9 after scheduler', actual; END IF;
+  SELECT count(*) INTO actual FROM ops.source_runs
+   WHERE scheduled_for IS NOT NULL AND schedule_expression='0 * * * *'
+     AND mode='INCREMENTAL' AND status='QUEUED'
+     AND source_id IN ('control-backfill-source','control-fixture-source','control-run-source');
+  IF actual <> 3 THEN RAISE EXCEPTION 'scheduler source run rows %, expected 3', actual; END IF;
+  IF EXISTS (
+    SELECT source_id FROM ops.source_runs WHERE scheduled_for IS NOT NULL
+     GROUP BY source_id,scheduled_for HAVING count(*)<>1
+  ) THEN
+    RAISE EXCEPTION 'scheduler replay created duplicate source cron slots';
+  END IF;
+  SELECT count(*) INTO actual FROM ops.jobs j
+   JOIN ops.source_runs r ON r.id=(j.payload->>'sourceRunId')::uuid
+   WHERE j.job_type='SOURCE_RUN' AND j.queue='ingest-worker'
+     AND j.dedupe_key LIKE 'source-run:%' AND r.scheduled_for IS NOT NULL
+     AND j.payload->>'scheduledFor' IS NOT NULL;
+  IF actual <> 3 THEN RAISE EXCEPTION 'scheduler source jobs %, expected 3', actual; END IF;
   SELECT count(*) INTO actual FROM ops.source_runs WHERE retry_of_source_run_id IS NOT NULL AND status='QUEUED';
   IF actual <> 1 THEN RAISE EXCEPTION 'source retry rows %, expected 1', actual; END IF;
   SELECT count(*) INTO actual FROM ops.source_runs
-   WHERE (source_id='control-backfill-source' AND mode='DRY_RUN' AND status='QUEUED')
-      OR (source_id='control-run-source' AND mode='INCREMENTAL' AND status='QUEUED')
+   WHERE (source_id='control-backfill-source' AND mode='DRY_RUN' AND status='QUEUED'
+          AND scheduled_for IS NULL)
+      OR (source_id='control-run-source' AND mode='INCREMENTAL' AND status='QUEUED'
+          AND scheduled_for IS NULL)
       OR (id='fcd024f0-de94-5f6d-88b8-25016c38094f' AND status='PAUSED');
   IF actual <> 3 THEN RAISE EXCEPTION 'source lifecycle rows %, expected 3', actual; END IF;
   IF (SELECT status FROM ops.jobs WHERE id='14c72bb6-efea-52a0-8913-1bee07d0a87d') <> 'QUEUED'
@@ -274,9 +312,61 @@ BEGIN
   SELECT count(*) INTO actual FROM editorial.legal_holds WHERE active;
   IF actual <> 1 THEN RAISE EXCEPTION 'active legal hold rows %, expected 1', actual; END IF;
   SELECT count(*) INTO actual FROM ops.audit_events WHERE action LIKE 'command.%';
+  -- Typed domain audit actions such as ACTION_DECISION_WITHDRAWN are
+  -- asserted by their owning integration path and intentionally do not use
+  -- the generic command.* action namespace.
   IF actual <> 85 THEN RAISE EXCEPTION 'command audit rows %, expected 85', actual; END IF;
+  BEGIN
+    PERFORM ops.enqueue_outbox('case','schema-negative-missing',1,
+      'case.state_transitioned.v1','{}'::jsonb,clock_timestamp());
+    RAISE EXCEPTION 'known event admitted a payload missing required fields';
+  EXCEPTION WHEN SQLSTATE '22023' THEN NULL;
+  END;
+  BEGIN
+    PERFORM ops.enqueue_outbox('access','schema-negative-extra',1,
+      'access.request_created.v1',jsonb_build_object(
+        'actor_id','fixture','occurred_at','2026-07-12T00:00:00Z',
+        'operation_id','createAccessRequest','request_id','fixture','extra',true),clock_timestamp());
+    RAISE EXCEPTION 'known event admitted an additional payload field';
+  EXCEPTION WHEN SQLSTATE '22023' THEN NULL;
+  END;
+  BEGIN
+    PERFORM ops.enqueue_outbox('access','schema-negative-type',1,
+      'access.request_created.v1',jsonb_build_object(
+        'actor_id',7,'occurred_at','2026-07-12T00:00:00Z',
+        'operation_id','createAccessRequest','request_id','fixture'),clock_timestamp());
+    RAISE EXCEPTION 'known event admitted a wrong payload field type';
+  EXCEPTION WHEN SQLSTATE '22023' THEN NULL;
+  END;
+  INSERT INTO ops.event_types(event_type,category,schema_version,active,payload_schema_uri,payload_schema)
+  VALUES('test.inactive_event.v1','DOMAIN',1,false,'payloads/test_inactive_event_v1.schema.json',
+    '{"type":"object","additionalProperties":false,"required":[],"properties":{}}'::jsonb)
+  ON CONFLICT(event_type) DO UPDATE SET active=false;
+  BEGIN
+    PERFORM ops.enqueue_outbox('test','inactive-event',1,
+      'test.inactive_event.v1','{}'::jsonb,clock_timestamp());
+    RAISE EXCEPTION 'inactive event type was admitted';
+  EXCEPTION WHEN SQLSTATE '22023' THEN NULL;
+  END;
+  IF EXISTS(SELECT 1 FROM ops.outbox WHERE aggregate_id LIKE 'schema-negative-%' OR aggregate_id='inactive-event') THEN
+    RAISE EXCEPTION 'rejected event payload left an outbox row';
+  END IF;
+  SELECT count(*) INTO actual FROM ops.outbox
+   WHERE event_type='evidence.segment_created.v1'
+     AND aggregate_type='EvidenceSegment'
+     AND aggregate_version=1
+     AND payload=jsonb_build_object(
+       'evidenceSegmentId','1e44d0d1-9826-59fb-bc26-07c443a2134d',
+       'sourceAssetId','a9bdbc4c-076b-5d00-93da-c8074941d1c0',
+       'sourceAssetRevision',1,
+       'locatorDigest','4656013e261fa8c167a4157ef90e11af4fba55d5c9ac9b7d60e1e2ea39fc274d',
+       'contentSha256','4951601014f8f3dfce1477715f11e812d5c8a29f00bd88803405fd32d4af07c6'
+     );
+  IF actual <> 1 THEN RAISE EXCEPTION 'canonical evidence segment event rows %, expected 1', actual; END IF;
   SELECT count(*) INTO actual FROM ops.outbox;
-  IF actual <> 31 THEN RAISE EXCEPTION 'control outbox rows %, expected 31', actual; END IF;
+  -- Final APPROVE now adds the atomic action.execution_authorized.v1 event
+  -- that the workflow worker consumes.
+  IF actual <> 33 THEN RAISE EXCEPTION 'control outbox rows %, expected 33', actual; END IF;
 
   BEGIN
     INSERT INTO editorial.publication_revisions(

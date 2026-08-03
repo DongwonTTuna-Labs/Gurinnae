@@ -15,3 +15,6 @@ apps/*/.svelte-kit/
 apps/*/build/
 playwright-report/
 test-results/
+
+# fable-sol working artifacts
+.fable-sol/
