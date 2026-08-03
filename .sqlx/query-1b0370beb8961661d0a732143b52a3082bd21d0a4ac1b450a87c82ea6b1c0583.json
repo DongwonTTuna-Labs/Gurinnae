@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('modelId',m.model_id,'family',m.family,'track',m.track,'createdAt',m.created_at,'firstSeenAt',m.first_seen_at,'lastSeenAt',m.last_seen_at,'active',m.active,'new',NOT EXISTS(SELECT 1 FROM ops.provider_model_upgrade_receipts r WHERE r.target_model_id=m.model_id AND r.outcome='APPLIED')) ORDER BY m.created_at DESC NULLS LAST,m.model_id ASC),'[]'::jsonb) FROM ops.relay_model_catalog m",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1b0370beb8961661d0a732143b52a3082bd21d0a4ac1b450a87c82ea6b1c0583"
+}

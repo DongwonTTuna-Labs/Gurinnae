@@ -30,11 +30,11 @@ Test prefix: `rule_002`
 
 | 순서 | Section ID | 제목 | 구현 Component | 목적 |
 |---:|---|---|---|---|
-| 1 | `identity` | version identity | `StatusAndRevisionHeader` | status·owner·hash. |
+| 1 | `identity` | 버전 식별 정보 | `StatusAndRevisionHeader` | status·owner·hash. |
 | 2 | `definition` | 정의 | `GuidedFormSection` | input/formula/trigger. |
-| 3 | `cohort` | cohort | `ComparisonWorkbench` | include/exclude. |
-| 4 | `blockers` | blocker | `StructuredContentSection` | quality guard. |
-| 5 | `diff` | version diff | `StructuredContentSection` | previous. |
+| 3 | `cohort` | 비교 집단 | `ComparisonWorkbench` | include/exclude. |
+| 4 | `blockers` | 차단 요인 | `StructuredContentSection` | quality guard. |
+| 5 | `diff` | 버전 차이 | `StructuredContentSection` | previous. |
 | 6 | `usage` | 사용 | `SignalTriagePanel` | runs/signals/public cases. |
 | 7 | `approval` | 승인 이력 | `RevisionTimeline` | reviewers. |
 

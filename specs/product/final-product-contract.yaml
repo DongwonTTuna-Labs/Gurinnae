@@ -50,14 +50,14 @@ frontend:
   formatter_linter: Biome 2.5.3
   clients: four generated Fetch clients (public, submission, control, internal identity)
 counts:
-  operations: 212
+  operations: 215
   public_operations: 41
   submission_operations: 34
-  control_operations: 131
+  control_operations: 134
   identity_flows: 6
-  query_operations: 107
-  command_operations: 105
-  http_write_operations: 102
+  query_operations: 108
+  command_operations: 107
+  http_write_operations: 104
   screens: 94
   database_migrations: 24
   database_tables: 107
@@ -86,7 +86,7 @@ immutable_principles:
 - Crawled documents are untrusted data, never instructions.
 final_acceptance:
 - All 94 screens implemented.
-- All 205 external operation contracts and the internal identity service contract implemented.
+- All 215 external operation contracts and the internal identity service contract implemented.
 - All PostgreSQL migrations and grants tested.
 - All generated artifacts reproducible.
 - Development and production Docker paths work.

@@ -5,9 +5,22 @@ terminal_observability_events:
 - job.dead_lettered.v1
 - notification.delivery_completed.v1
 consumers:
+- id: action-execution-worker
+  accepted_event_types:
+  - action.execution_authorized.v1
+  dispatch_predicate: payload.actionKind != PROVIDER_CONTROL
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
 - id: analysis-worker
   accepted_event_types:
   - workflow.rule_activation_applied.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: audit-indexer
+  accepted_event_types:
+  - action.execution_authorized.v1
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
@@ -43,6 +56,13 @@ consumers:
   accepted_event_types:
   - projection.publication_access_changed.v1
   - projection.publication_revision_created.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: provider-control-execution-worker
+  accepted_event_types:
+  - action.execution_authorized.v1
+  dispatch_predicate: payload.actionKind == PROVIDER_CONTROL
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation

@@ -159,6 +159,7 @@ fn addendum_event_is_accepted(consumer_id: &str, event_type: &str) -> bool {
                 | "communication.delivery_receipt_recorded.v1"
                 | "communication.authorization_changed.v1"
                 | "communication.subscription_update_requested.v1"
+                | "action.execution_authorized.v1"
         ),
         "cost-projector" => event_type == "communication.delivery_receipt_recorded.v1",
         "submission-projector" => event_type == "communication.authorization_changed.v1",
@@ -562,4 +563,21 @@ fn sha256(bytes: &[u8]) -> String {
 
 fn database(error: sqlx::Error) -> Failure {
     Failure::Retryable("DATABASE_UNAVAILABLE", error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::addendum_event_is_accepted;
+
+    #[test]
+    fn action_execution_authorization_is_accepted_by_audit_indexer() {
+        assert!(addendum_event_is_accepted(
+            "audit-indexer",
+            "action.execution_authorized.v1"
+        ));
+        assert!(!addendum_event_is_accepted(
+            "cost-projector",
+            "action.execution_authorized.v1"
+        ));
+    }
 }

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_connection_tests SET status='SUCCEEDED',redacted_result=$2, completed_at=clock_timestamp() WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dc9ec5a3335153cc2acfa8f9a3e39df4742df2338d34e74bef9f41cc5b11b20e"
+}

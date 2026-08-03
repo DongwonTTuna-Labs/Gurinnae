@@ -1,28 +1,26 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT enabled FROM ops.provider_configs WHERE id=$1 FOR UPDATE",
+  "query": "SELECT routing_policy FROM ops.provider_configs WHERE provider_type='relay'",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "enabled",
-        "type_info": "Bool",
+        "name": "routing_policy",
+        "type_info": "Jsonb",
         "origin": {
           "Table": {
             "table": "ops.provider_configs",
-            "name": "enabled"
+            "name": "routing_policy"
           }
         }
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
       false
     ]
   },
-  "hash": "5f5d13a5bf60b1a030809d75548acd4d987ece841828f226ceeb94ae57947aeb"
+  "hash": "cbb381397ded357b4a8e02dac956955c3617c81050b7a17f2b49f39c8d8d3571"
 }

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) VALUES('PROVIDER_MODEL_UPGRADE','analysis-worker',$1,$2,8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "42d58262e3adb2e8a39e0b5b9e96064c6653fd450c26009edd88b31139652be1"
+}

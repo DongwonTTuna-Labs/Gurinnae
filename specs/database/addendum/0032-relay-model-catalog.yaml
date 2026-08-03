@@ -1,0 +1,238 @@
+schema_version: 1
+proposal_version: 2026-07-29.0032-relay-model-catalog.v1
+status: FINAL
+scope:
+  migration: 0032_relay_model_catalog.sql
+  exact_relations:
+    - ops.relay_model_catalog
+    - ops.relay_model_catalog_sync_runs
+    - ops.provider_model_upgrade_attempts
+    - ops.provider_model_upgrade_receipts
+
+existing_relation_changes:
+  - relation: ops.provider_configs
+    changes:
+      - relay rows obey provider_configs_relay_shape_ck
+      - provider_type relay is a singleton
+      - deterministic disabled relay seed has no model or track and has an UNCONFIGURED data policy
+      - model, track, configured data policy and enabled state advance atomically under the existing version fence
+
+tables:
+  ops.relay_model_catalog:
+    domain: RelayModelCatalogEntry
+    repository: services/analysis-worker::relay_model_catalog
+    logical_owner: provider-operations
+    writer_components: [analysis-worker]
+    mutation: UPSERTED_PROJECTION
+    columns:
+      model_id: {type: text, nullable: false}
+      family: {type: text, nullable: true}
+      track: {type: text, nullable: true}
+      created_at: {type: timestamptz, nullable: true}
+      first_seen_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+      last_seen_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+      active: {type: boolean, nullable: false, default: true}
+      raw: {type: jsonb, nullable: false, rust_type: sqlx::types::Json<RelayModelEnvelope>}
+    primary_key: {name: relay_model_catalog_pkey, columns: [model_id]}
+    checks:
+      - {name: relay_model_catalog_model_id_ck, expression: "model_id ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$'"}
+      - {name: relay_model_catalog_family_ck, expression: "family IS NULL OR family ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'"}
+      - {name: relay_model_catalog_track_ck, expression: "track IS NULL OR track ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'"}
+      - {name: relay_model_catalog_seen_ck, expression: "last_seen_at >= first_seen_at"}
+      - {name: relay_model_catalog_raw_ck, expression: "jsonb_typeof(raw) = 'object' AND raw ? 'id' AND raw->>'id' = model_id"}
+    indexes:
+      - {name: relay_model_catalog_active_track_created_idx, method: btree, keys: [track, created_at DESC NULLS LAST, model_id], predicate: active}
+      - {name: relay_model_catalog_first_seen_idx, method: btree, keys: [first_seen_at DESC, model_id]}
+    grants:
+      gurine_analysis_worker: [SELECT, INSERT, UPDATE]
+      gurine_control_api: [SELECT]
+      gurine_auditor: [SELECT]
+    rls: {enabled: false, forced: false, reason: internal relay metadata with no browser or tenant-direct table access}
+    retention: {record_class: PROVIDER_MODEL_CATALOG, trigger: provider remains configured or audit retention is active, terminal_action: DELETE, legal_hold_key: model_id, backup_behavior: restore before provider routing resumes}
+    repository_roundtrip: {write: catalog sync upserts one row per exact model_id, read: active catalog ordered by track then relay created_at then model_id, assertions: [missing created_at remains visible but is excluded from automatic upgrade, disappeared models become inactive, raw id equals model_id]}
+
+  ops.relay_model_catalog_sync_runs:
+    domain: RelayModelCatalogSyncRun
+    repository: services/analysis-worker::relay_model_catalog
+    logical_owner: provider-operations
+    writer_components: [scheduler, analysis-worker]
+    mutation: VERSIONLESS_STATE_MACHINE
+    columns:
+      id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      scheduled_bucket: {type: timestamptz, nullable: false}
+      status: {type: text, nullable: false, default: "'QUEUED'"}
+      model_count: {type: bigint, nullable: false, default: 0}
+      gateway_receipt_sha256: {type: char(64), nullable: true}
+      payload_sha256: {type: char(64), nullable: true}
+      error_code: {type: text, nullable: true}
+      started_at: {type: timestamptz, nullable: true}
+      completed_at: {type: timestamptz, nullable: true}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: relay_model_catalog_sync_runs_pkey, columns: [id]}
+    uniques:
+      - {name: relay_model_catalog_sync_runs_scheduled_bucket_key, columns: [scheduled_bucket]}
+    checks:
+      - {name: relay_model_catalog_sync_runs_bucket_ck, expression: "mod(extract(epoch FROM scheduled_bucket)::bigint, 21600) = 0"}
+      - {name: relay_model_catalog_sync_runs_status_ck, expression: "status IN ('QUEUED','RUNNING','SUCCEEDED','FAILED')"}
+      - {name: relay_model_catalog_sync_runs_count_ck, expression: "model_count >= 0"}
+      - {name: relay_model_catalog_sync_runs_digest_ck, expression: "(gateway_receipt_sha256 IS NULL OR ops.is_lower_sha256(gateway_receipt_sha256)) AND (payload_sha256 IS NULL OR ops.is_lower_sha256(payload_sha256))"}
+      - {name: relay_model_catalog_sync_runs_error_ck, expression: "error_code IS NULL OR error_code ~ '^[A-Z][A-Z0-9_]{0,127}$'"}
+      - {name: relay_model_catalog_sync_runs_lifecycle_ck, expression: "(status = 'QUEUED' AND model_count = 0 AND gateway_receipt_sha256 IS NULL AND payload_sha256 IS NULL AND error_code IS NULL AND started_at IS NULL AND completed_at IS NULL) OR (status = 'RUNNING' AND error_code IS NULL AND started_at IS NOT NULL AND completed_at IS NULL) OR (status = 'SUCCEEDED' AND gateway_receipt_sha256 IS NOT NULL AND payload_sha256 IS NOT NULL AND error_code IS NULL AND started_at IS NOT NULL AND completed_at >= started_at) OR (status = 'FAILED' AND error_code IS NOT NULL AND started_at IS NOT NULL AND completed_at >= started_at)"}
+    indexes:
+      - {name: relay_model_catalog_sync_runs_status_idx, method: btree, keys: [status, scheduled_bucket, id]}
+    grants:
+      gurine_scheduler: [SELECT, INSERT]
+      gurine_analysis_worker: [SELECT, INSERT, UPDATE]
+      gurine_control_api: [SELECT]
+      gurine_auditor: [SELECT]
+    rls: {enabled: false, forced: false, reason: internal scheduled job ledger with no direct external or tenant access}
+    retention: {record_class: PROVIDER_MODEL_SYNC_RUN, trigger: provider audit retention expiry, terminal_action: DELETE, legal_hold_key: id, backup_behavior: restore with catalog before scheduling resumes}
+    repository_roundtrip: {write: scheduler inserts one exact six-hour bucket and analysis-worker advances its terminal status, read: latest bucket first, assertions: [bucket uniqueness, success requires actual gateway and payload digests, failure preserves an error code]}
+
+  ops.provider_model_upgrade_attempts:
+    domain: ProviderModelUpgradeAttempt
+    repository: services/analysis-worker::relay_model_upgrade
+    logical_owner: provider-operations
+    writer_components: [control-api, analysis-worker]
+    mutation: VERSIONLESS_STATE_MACHINE
+    columns:
+      id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      provider_id: {type: uuid, nullable: false}
+      target_model_id: {type: text, nullable: false}
+      attempt_kind: {type: text, nullable: false}
+      requested_by: {type: uuid, nullable: true}
+      owner_user_id: {type: uuid, nullable: false}
+      expected_provider_version: {type: bigint, nullable: false}
+      requested_data_policy: {type: jsonb, nullable: true, rust_type: sqlx::types::Json<RequestedRelayDataPolicy>}
+      catalog_sync_run_id: {type: uuid, nullable: true}
+      status: {type: text, nullable: false, default: "'QUEUED'"}
+      connection_test_id: {type: uuid, nullable: true}
+      gateway_receipt_sha256: {type: char(64), nullable: true}
+      usage_evidence_sha256: {type: char(64), nullable: true}
+      last_error_code: {type: text, nullable: true}
+      cooldown_until: {type: timestamptz, nullable: true}
+      started_at: {type: timestamptz, nullable: true}
+      completed_at: {type: timestamptz, nullable: true}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: provider_model_upgrade_attempts_pkey, columns: [id]}
+    foreign_keys:
+      - {name: provider_model_upgrade_attempts_provider_id_fkey, columns: [provider_id], references: "ops.provider_configs(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_attempts_target_model_id_fkey, columns: [target_model_id], references: "ops.relay_model_catalog(model_id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_attempts_requested_by_fkey, columns: [requested_by], references: "ops.users(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_attempts_owner_user_id_fkey, columns: [owner_user_id], references: "ops.users(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_attempts_catalog_sync_run_id_fkey, columns: [catalog_sync_run_id], references: "ops.relay_model_catalog_sync_runs(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_attempts_connection_test_id_fkey, columns: [connection_test_id], references: "ops.provider_connection_tests(id)", on_delete: RESTRICT}
+    checks:
+      - {name: provider_model_upgrade_attempts_kind_ck, expression: "attempt_kind IN ('MANUAL','AUTO')"}
+      - {name: provider_model_upgrade_attempts_version_ck, expression: "expected_provider_version > 0"}
+      - {name: provider_model_upgrade_attempts_actor_ck, expression: "(attempt_kind = 'MANUAL' AND requested_by IS NOT NULL) OR (attempt_kind = 'AUTO' AND requested_by IS NULL AND catalog_sync_run_id IS NOT NULL)"}
+      - {name: provider_model_upgrade_attempts_policy_ck, expression: "(attempt_kind = 'AUTO' AND requested_data_policy IS NULL) OR (attempt_kind = 'MANUAL' AND (requested_data_policy IS NULL OR (jsonb_typeof(requested_data_policy) = 'object' AND requested_data_policy ?& ARRAY['processingRegion','retentionMode','policyVersion'] AND requested_data_policy - ARRAY['processingRegion','retentionMode','policyVersion'] = '{}'::jsonb AND requested_data_policy->>'processingRegion' ~ '^[A-Z]{2}(?:-[A-Z0-9]{1,12})?$' AND requested_data_policy->>'retentionMode' IN ('ZERO_RETENTION','BOUNDED_PROVIDER_RETENTION','LOCAL_ONLY') AND length(requested_data_policy->>'policyVersion') BETWEEN 1 AND 64)))"}
+      - {name: provider_model_upgrade_attempts_status_ck, expression: "status IN ('QUEUED','RUNNING','SUCCEEDED','FAILED','SUPPRESSED')"}
+      - {name: provider_model_upgrade_attempts_digest_ck, expression: "(gateway_receipt_sha256 IS NULL OR ops.is_lower_sha256(gateway_receipt_sha256)) AND (usage_evidence_sha256 IS NULL OR ops.is_lower_sha256(usage_evidence_sha256))"}
+      - {name: provider_model_upgrade_attempts_error_ck, expression: "last_error_code IS NULL OR last_error_code ~ '^[A-Z][A-Z0-9_]{0,127}$'"}
+      - {name: provider_model_upgrade_attempts_lifecycle_ck, expression: "(status = 'QUEUED' AND connection_test_id IS NOT NULL AND gateway_receipt_sha256 IS NULL AND usage_evidence_sha256 IS NULL AND last_error_code IS NULL AND cooldown_until IS NULL AND started_at IS NULL AND completed_at IS NULL) OR (status = 'RUNNING' AND connection_test_id IS NOT NULL AND last_error_code IS NULL AND cooldown_until IS NULL AND started_at IS NOT NULL AND completed_at IS NULL) OR (status = 'SUCCEEDED' AND connection_test_id IS NOT NULL AND gateway_receipt_sha256 IS NOT NULL AND usage_evidence_sha256 IS NOT NULL AND last_error_code IS NULL AND cooldown_until IS NULL AND started_at IS NOT NULL AND completed_at >= started_at) OR (status = 'FAILED' AND connection_test_id IS NOT NULL AND last_error_code IS NOT NULL AND started_at IS NOT NULL AND completed_at >= started_at AND ((attempt_kind = 'MANUAL' AND cooldown_until IS NULL) OR (attempt_kind = 'AUTO' AND cooldown_until = completed_at + interval '6 hours'))) OR (status = 'SUPPRESSED' AND connection_test_id IS NULL AND gateway_receipt_sha256 IS NULL AND usage_evidence_sha256 IS NULL AND last_error_code IS NOT NULL AND completed_at IS NOT NULL AND ((attempt_kind = 'MANUAL' AND cooldown_until IS NULL) OR (attempt_kind = 'AUTO' AND cooldown_until = completed_at + interval '6 hours')))"}
+    indexes:
+      - {name: provider_model_upgrade_attempts_active_uq, method: btree, keys: [provider_id], unique: true, predicate: "status IN ('QUEUED','RUNNING')"}
+      - {name: provider_model_upgrade_attempts_cooldown_idx, method: btree, keys: [provider_id, target_model_id, completed_at DESC, id DESC], predicate: "attempt_kind = 'AUTO' AND status IN ('FAILED','SUPPRESSED')"}
+    grants:
+      gurine_control_api: [SELECT, INSERT]
+      gurine_analysis_worker: [SELECT, INSERT, UPDATE]
+      gurine_auditor: [SELECT]
+    rls: {enabled: false, forced: false, reason: internal provider control state; authorization and optimistic version checks are enforced by the command owner}
+    retention: {record_class: PROVIDER_MODEL_UPGRADE_ATTEMPT, trigger: provider and incident audit retention expiry, terminal_action: DELETE, legal_hold_key: id, backup_behavior: restore with receipts and audit bindings}
+    repository_roundtrip: {write: one active provider fence with manual or automatic actor ownership, read: newest terminal attempt per provider and target, assertions: [every queued attempt binds a precreated connection test, automatic attempts reuse the configured data policy, automatic failure sets exactly six-hour cooldown, manual failure has no cooldown, concurrent active attempts for one provider are rejected across all target models]}
+
+  ops.provider_model_upgrade_receipts:
+    domain: ProviderModelUpgradeReceipt
+    repository: services/analysis-worker::relay_model_upgrade
+    logical_owner: provider-operations
+    writer_components: [analysis-worker]
+    mutation: IMMUTABLE
+    columns:
+      id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      attempt_id: {type: uuid, nullable: false}
+      provider_id: {type: uuid, nullable: false}
+      target_model_id: {type: text, nullable: false}
+      attempt_kind: {type: text, nullable: false}
+      outcome: {type: text, nullable: false}
+      before_provider_version: {type: bigint, nullable: false}
+      after_provider_version: {type: bigint, nullable: false}
+      before_model_id: {type: text, nullable: true}
+      after_model_id: {type: text, nullable: true}
+      policy_sha256: {type: char(64), nullable: true}
+      gateway_receipt_sha256: {type: char(64), nullable: true}
+      usage_evidence_sha256: {type: char(64), nullable: true}
+      audit_event_id: {type: uuid, nullable: true}
+      incident_event_id: {type: uuid, nullable: true}
+      cost_event_id: {type: uuid, nullable: true}
+      receipt_canonical: {type: bytea, nullable: false, rust_type: Vec<u8>}
+      canonical_receipt: {type: jsonb, nullable: false, rust_type: sqlx::types::Json<ProviderModelUpgradeReceiptV1>}
+      receipt_sha256: {type: char(64), nullable: false}
+      recorded_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: provider_model_upgrade_receipts_pkey, columns: [id]}
+    uniques:
+      - {name: provider_model_upgrade_receipts_attempt_id_key, columns: [attempt_id]}
+      - {name: provider_model_upgrade_receipts_receipt_sha256_key, columns: [receipt_sha256]}
+    foreign_keys:
+      - {name: provider_model_upgrade_receipts_attempt_id_fkey, columns: [attempt_id], references: "ops.provider_model_upgrade_attempts(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_receipts_provider_id_fkey, columns: [provider_id], references: "ops.provider_configs(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_receipts_target_model_id_fkey, columns: [target_model_id], references: "ops.relay_model_catalog(model_id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_receipts_audit_event_id_fkey, columns: [audit_event_id], references: "ops.audit_events(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_receipts_incident_event_id_fkey, columns: [incident_event_id], references: "ops.incident_events(id)", on_delete: RESTRICT}
+      - {name: provider_model_upgrade_receipts_cost_event_id_fkey, columns: [cost_event_id], references: "ops.cost_events(id)", on_delete: RESTRICT}
+    checks:
+      - {name: provider_model_upgrade_receipts_outcome_ck, expression: "outcome IN ('APPLIED','FAILED','SUPPRESSED')"}
+      - {name: provider_model_upgrade_receipts_attempt_kind_ck, expression: "attempt_kind IN ('MANUAL','AUTO')"}
+      - {name: provider_model_upgrade_receipts_version_ck, expression: "before_provider_version > 0 AND after_provider_version >= before_provider_version"}
+      - {name: provider_model_upgrade_receipts_model_ck, expression: "(before_model_id IS NULL OR before_model_id ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$') AND (after_model_id IS NULL OR after_model_id ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$')"}
+      - {name: provider_model_upgrade_receipts_digest_ck, expression: "(policy_sha256 IS NULL OR ops.is_lower_sha256(policy_sha256)) AND (gateway_receipt_sha256 IS NULL OR ops.is_lower_sha256(gateway_receipt_sha256)) AND (usage_evidence_sha256 IS NULL OR ops.is_lower_sha256(usage_evidence_sha256)) AND ops.is_lower_sha256(receipt_sha256)"}
+      - {name: provider_model_upgrade_receipts_result_ck, expression: "(outcome = 'APPLIED' AND after_provider_version = before_provider_version + 1 AND after_model_id = target_model_id AND policy_sha256 IS NOT NULL AND gateway_receipt_sha256 IS NOT NULL AND usage_evidence_sha256 IS NOT NULL AND audit_event_id IS NOT NULL AND incident_event_id IS NULL) OR (outcome = 'FAILED' AND after_provider_version = before_provider_version AND after_model_id IS NOT DISTINCT FROM before_model_id AND ((attempt_kind = 'AUTO' AND audit_event_id IS NOT NULL AND incident_event_id IS NOT NULL) OR (attempt_kind = 'MANUAL' AND audit_event_id IS NULL AND incident_event_id IS NULL))) OR (outcome = 'SUPPRESSED' AND attempt_kind = 'AUTO' AND after_provider_version = before_provider_version AND after_model_id IS NOT DISTINCT FROM before_model_id AND audit_event_id IS NULL AND incident_event_id IS NULL AND cost_event_id IS NULL AND gateway_receipt_sha256 IS NULL AND usage_evidence_sha256 IS NULL)"}
+      - name: provider_model_upgrade_receipts_canonical_ck
+        expression: >-
+          convert_from(receipt_canonical,'UTF8')::jsonb = canonical_receipt
+          AND receipt_sha256 = encode(extensions.digest(receipt_canonical,'sha256'),'hex')
+          AND jsonb_typeof(canonical_receipt) = 'object'
+          AND canonical_receipt ?& ARRAY['schemaVersion','receiptId','attemptId','providerId','targetModelId','attemptKind','outcome','beforeProviderVersion','afterProviderVersion','beforeModelId','afterModelId','policySha256','gatewayReceiptSha256','usageEvidenceSha256','auditEventId','incidentEventId','costEventId','recordedAt']
+          AND canonical_receipt - ARRAY['schemaVersion','receiptId','attemptId','providerId','targetModelId','attemptKind','outcome','beforeProviderVersion','afterProviderVersion','beforeModelId','afterModelId','policySha256','gatewayReceiptSha256','usageEvidenceSha256','auditEventId','incidentEventId','costEventId','recordedAt'] = '{}'::jsonb
+          AND canonical_receipt->>'schemaVersion' = 'provider-model-upgrade-receipt.v1'
+          AND canonical_receipt->>'receiptId' = id::text
+          AND canonical_receipt->>'attemptId' = attempt_id::text
+          AND canonical_receipt->>'providerId' = provider_id::text
+          AND canonical_receipt->>'targetModelId' = target_model_id
+          AND canonical_receipt->>'attemptKind' = attempt_kind
+          AND canonical_receipt->>'outcome' = outcome
+          AND (canonical_receipt->>'beforeProviderVersion')::bigint = before_provider_version
+          AND (canonical_receipt->>'afterProviderVersion')::bigint = after_provider_version
+          AND canonical_receipt->'beforeModelId' = COALESCE(to_jsonb(before_model_id),'null'::jsonb)
+          AND canonical_receipt->'afterModelId' = COALESCE(to_jsonb(after_model_id),'null'::jsonb)
+          AND canonical_receipt->'policySha256' = COALESCE(to_jsonb(btrim(policy_sha256::text)),'null'::jsonb)
+          AND canonical_receipt->'gatewayReceiptSha256' = COALESCE(to_jsonb(btrim(gateway_receipt_sha256::text)),'null'::jsonb)
+          AND canonical_receipt->'usageEvidenceSha256' = COALESCE(to_jsonb(btrim(usage_evidence_sha256::text)),'null'::jsonb)
+          AND canonical_receipt->'auditEventId' = COALESCE(to_jsonb(audit_event_id::text),'null'::jsonb)
+          AND canonical_receipt->'incidentEventId' = COALESCE(to_jsonb(incident_event_id::text),'null'::jsonb)
+          AND canonical_receipt->'costEventId' = COALESCE(to_jsonb(cost_event_id::text),'null'::jsonb)
+          AND (canonical_receipt->>'recordedAt')::timestamptz = recorded_at
+    triggers:
+      - {name: provider_model_upgrade_receipts_binding, timing: BEFORE, events: [INSERT], function: ops.guard_provider_model_upgrade_receipt_v1(), guarantees: [attempt exists and provider target kind before-version gateway digest and usage digest match, APPLIED requires the current provider version target model CONFIGURED policy hash and exact success audit policy gateway usage proof tuple, AUTO FAILED requires the same attempt owner-bound DETECTED SEV3 jobs.operate incident and its exact failure audit and evidence digest, SUPPRESSED requires the suppressed attempt and null audit incident cost gateway and usage evidence]}
+      - {name: provider_model_upgrade_receipts_immutable, timing: BEFORE, events: [UPDATE, DELETE], function: ops.reject_mutation()}
+    grants:
+      gurine_analysis_worker: [SELECT, INSERT]
+      gurine_control_api: [SELECT]
+      gurine_auditor: [SELECT]
+    rls: {enabled: false, forced: false, reason: immutable internal receipt with no direct external or tenant access}
+    retention: {record_class: PROVIDER_MODEL_UPGRADE_RECEIPT, trigger: "provider, audit, incident and cost retention expiry", terminal_action: PRESERVE_PUBLIC_REVISION, legal_hold_key: receipt_sha256, backup_behavior: restore and verify canonical digest before provider routing resumes}
+    repository_roundtrip: {write: exactly one immutable receipt per terminal attempt with byte-exact canonical digest and typed attempt binding, read: receipt by attempt or digest, assertions: [applied advances one version and binds the current configured provider policy to the exact success audit gateway and usage proof tuple, automatic terminal failure preserves version and binds the same owner-scoped DETECTED SEV3 jobs.operate incident and its exact failure audit and evidence digest, manual failure preserves version with no incident or audit event, suppressed automatic attempt preserves version with null audit incident cost gateway and usage evidence, canonical JSON and receipt digest match receipt_canonical and every typed column, update and delete denied]}
+
+owner_routines:
+  ops.guard_provider_model_upgrade_receipt_v1:
+    signature: ops.guard_provider_model_upgrade_receipt_v1() RETURNS trigger
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, pg_temp], public_execute: false, runtime_execute: []}
+    effect: BEFORE INSERT trigger only; binds APPLIED to the current configured provider policy and exact success audit proof tuple, AUTO FAILED to the attempt owner-bound DETECTED SEV3 jobs.operate incident and exact failure audit, and SUPPRESSED to the all-null external evidence shape
+  ops.record_relay_model_upgrade_success_audit_v1:
+    signature: ops.record_relay_model_upgrade_success_audit_v1(uuid, char(64), char(64), char(64)) RETURNS uuid
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: idempotently appends the exact success audit proof tuple only after the provider version, target model, configured policy and real gateway and usage evidence all match the succeeded attempt; the receipt trigger revalidates the current provider and every audit detail
+  ops.record_relay_model_upgrade_failure_incident_v1:
+    signature: ops.record_relay_model_upgrade_failure_incident_v1(uuid, uuid, text, char(64)) RETURNS uuid
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: idempotently appends one owner-bound DETECTED SEV3 jobs.operate incident and its exact failure audit only for an AUTO terminal failure and returns the incident event row id; the receipt trigger revalidates both rows against the attempt

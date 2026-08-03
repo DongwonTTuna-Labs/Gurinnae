@@ -1,3 +1,5 @@
+import { handleRelayCompletion } from "./ai-provider-relay-upstream";
+
 const port = Number(required("AI_PROVIDER_TEST_PORT"));
 const expectedKey = required("AI_PROVIDER_EXPECTED_KEY");
 const evidenceId = process.env.AI_PROVIDER_EVIDENCE_ID;
@@ -11,7 +13,13 @@ Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/health") return Response.json({ status: "ready" });
-    if (url.pathname !== "/agent" || request.method !== "POST") {
+    const legacyRequest =
+      url.pathname === "/agent" && request.method === "POST";
+    const relayModels =
+      url.pathname === "/v1/models" && request.method === "GET";
+    const relayCompletion =
+      url.pathname === "/v1/chat/completions" && request.method === "POST";
+    if (!legacyRequest && !relayModels && !relayCompletion) {
       return new Response("not found", { status: 404 });
     }
     if (request.headers.get("authorization") !== `Bearer ${expectedKey}`) {
@@ -23,6 +31,26 @@ Bun.serve({
       request.headers.has("x-gurine-ai-provider")
     ) {
       return Response.json({ code: "internal_header_leak" }, { status: 400 });
+    }
+    if (relayModels) {
+      return Response.json({
+        object: "list",
+        data: [
+          {
+            id: "approved-runtime-v1",
+            object: "model",
+            created: 1_784_073_600,
+          },
+          {
+            id: "approved-runtime-v2",
+            object: "model",
+            created: 1_784_160_000,
+          },
+        ],
+      });
+    }
+    if (relayCompletion) {
+      return handleRelayCompletion(request, { evidenceId, agentOutput });
     }
     const body = (await request.json()) as Record<string, unknown>;
     if (body.operation === "connection_test") {
@@ -249,8 +277,24 @@ Bun.serve({
         providerReceipt: receipt,
       });
     }
-    const firstReference = selectedContentRefs[0] as Record<string, unknown>;
-    const citation = expectedContentSha256
+    const output = agentOutput(agentType, selectedContentRefs);
+    return Response.json({
+      output,
+      providerReceipt: receipt,
+      costKrw: 17,
+    });
+  },
+});
+
+function agentOutput(
+  agentType: string,
+  selectedContentRefs: unknown[],
+): Record<string, unknown> {
+  const firstReference = selectedContentRefs[0] as
+    | Record<string, unknown>
+    | undefined;
+  const citation =
+    expectedContentSha256 && firstReference
       ? [
           {
             ...(agentType === "claim-drafter"
@@ -268,53 +312,40 @@ Bun.serve({
           },
         ]
       : [];
-    const output: Record<string, unknown> = {
+  const output: Record<string, unknown> = {
+    outcome: "COMPLETED",
+    summary:
+      "승인된 고정 근거 snapshot만 검토했으며 독립적인 사람 검토가 필요합니다.",
+    citations: citation,
+    unknowns: [],
+    nextActions: [],
+    abstentionReasons: [],
+    investigationsPerformed: [],
+  };
+  const shapes: Record<string, Record<string, unknown>> = {
+    "market-researcher": {
+      schemaVersion: "market-research-output.v2",
+      comparables: [],
+    },
+    investigator: {
       schemaVersion: "investigator-output.v2",
-      outcome: "COMPLETED",
-      summary:
-        "승인된 고정 근거 snapshot만 검토했으며 독립적인 사람 검토가 필요합니다.",
-      citations: citation,
-      unknowns: [],
-      nextActions: [],
-      abstentionReasons: [],
-      investigationsPerformed: [],
-    };
-    const agentOutputShape: Record<string, Record<string, unknown>> = {
-      "market-researcher": {
-        schemaVersion: "market-research-output.v2",
-        comparables: [],
-      },
-      investigator: {
-        schemaVersion: "investigator-output.v2",
-        hypotheses: [],
-        counterEvidence: [],
-        tasks: [],
-      },
-      skeptic: {
-        schemaVersion: "skeptic-output.v2",
-        challenges: [],
-      },
-      "claim-drafter": {
-        schemaVersion: "claim-draft-output.v2",
-        claims: [],
-        communications: [],
-      },
-      "citation-verifier": {
-        schemaVersion: "citation-verification-output.v2",
-        claimResults: [],
-      },
-    };
-    Object.assign(
-      output,
-      agentOutputShape[agentType] ?? agentOutputShape.investigator,
-    );
-    return Response.json({
-      output,
-      providerReceipt: receipt,
-      costKrw: 17,
-    });
-  },
-});
+      hypotheses: [],
+      counterEvidence: [],
+      tasks: [],
+    },
+    skeptic: { schemaVersion: "skeptic-output.v2", challenges: [] },
+    "claim-drafter": {
+      schemaVersion: "claim-draft-output.v2",
+      claims: [],
+      communications: [],
+    },
+    "citation-verifier": {
+      schemaVersion: "citation-verification-output.v2",
+      claimResults: [],
+    },
+  };
+  return Object.assign(output, shapes[agentType] ?? shapes.investigator);
+}
 
 function required(name: string): string {
   const value = process.env[name];

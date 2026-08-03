@@ -50,7 +50,7 @@ pub(super) async fn command(
         &mut transaction,
     )
     .await?;
-    domains::apply_command(
+    let command_effect = domains::apply_command(
         handler,
         operation.id,
         &prepared.canonical_payload,
@@ -61,6 +61,7 @@ pub(super) async fn command(
         &mut transaction,
     )
     .await?;
+    prepared.apply_effect(command_effect)?;
     schedule_rule_activation(
         operation,
         payload_object,
@@ -273,6 +274,25 @@ struct PreparedCommand {
     occurred_text: String,
 }
 
+impl PreparedCommand {
+    fn apply_effect(&mut self, effect: Map<String, Value>) -> Result<(), ServiceError> {
+        let payload = self
+            .payload
+            .as_object_mut()
+            .ok_or(ServiceError::Persistence)?;
+        for (key, value) in effect {
+            match payload.get(&key) {
+                Some(existing) if existing == &value => {}
+                Some(_) => return Err(ServiceError::Persistence),
+                None => {
+                    payload.insert(key, value);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 struct PendingDomainEvent {
     event_type: &'static str,
     aggregate_id: String,
@@ -327,8 +347,7 @@ async fn prepare_command(
     let expected_version = payload_object
         .get("expectedVersion")
         .and_then(Value::as_i64);
-    let version =
-        canonical_version.unwrap_or_else(|| expected_version.map_or(1, |value| value + 1));
+    let version = prepared_resource_version(operation.id, canonical_version, expected_version)?;
     let mut data = payload.clone();
     let occurred_at = OffsetDateTime::now_utc();
     let occurred_text = occurred_at
@@ -355,6 +374,14 @@ async fn prepare_command(
         occurred_at,
         occurred_text,
     })
+}
+
+fn prepared_resource_version(
+    _operation: &str,
+    canonical_version: Option<i64>,
+    expected_version: Option<i64>,
+) -> Result<i64, ServiceError> {
+    Ok(canonical_version.unwrap_or_else(|| expected_version.map_or(1, |value| value + 1)))
 }
 
 async fn schedule_rule_activation(

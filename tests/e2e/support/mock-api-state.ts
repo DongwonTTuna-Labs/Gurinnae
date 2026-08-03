@@ -31,6 +31,111 @@ type CommandAttempt = {
   actorAssertionSha256: string;
 };
 
+export const providerControlOperationIds = [
+  "disableProviderRouting",
+  "testProviderConnection",
+  "upgradeProviderModel",
+  "setModelAutoUpgrade",
+] as const;
+export type ProviderControlOperationId =
+  (typeof providerControlOperationIds)[number];
+export const providerControlPolicies = Object.freeze({
+  disableProviderRouting: {
+    capability: "kill_switch.execute",
+    assurance: "STEP_UP",
+  },
+  testProviderConnection: {
+    capability: "jobs.operate",
+    assurance: "ACTIVE_SESSION",
+  },
+  upgradeProviderModel: {
+    capability: "kill_switch.execute",
+    assurance: "STEP_UP",
+  },
+  setModelAutoUpgrade: {
+    capability: "kill_switch.execute",
+    assurance: "STEP_UP",
+  },
+} as const satisfies Record<
+  ProviderControlOperationId,
+  {
+    capability: string;
+    assurance: "ACTIVE_SESSION" | "STEP_UP";
+  }
+>);
+export type ProviderControlTarget = {
+  targetType: "CAPABILITY";
+  targetId: string;
+  expectedVersion: number;
+};
+export type RelayDataPolicyInput = {
+  processingRegion: string;
+  retentionMode: "ZERO_RETENTION" | "BOUNDED_PROVIDER_RETENTION" | "LOCAL_ONLY";
+  policyVersion: string;
+};
+export type ProviderControlCommand =
+  | {
+      operationId: "disableProviderRouting";
+      providerId: string;
+      reason: string;
+      expectedVersion: number;
+    }
+  | {
+      operationId: "testProviderConnection";
+      providerId: string;
+      testModel: string;
+      reason?: string;
+      expectedVersion: number;
+    }
+  | {
+      operationId: "upgradeProviderModel";
+      providerId: string;
+      modelId: string;
+      expectedVersion: number;
+      reason: string;
+      dataPolicy?: RelayDataPolicyInput;
+    }
+  | {
+      operationId: "setModelAutoUpgrade";
+      providerId: string;
+      expectedVersion: number;
+      enabled: boolean;
+      track?: string;
+      reason: string;
+    };
+export type ProviderControlProposal = {
+  proposalId: string;
+  version: number;
+  state: "DRAFT" | "PENDING_QUORUM" | "APPROVED" | "REJECTED";
+  contentDigest: string;
+  approvalDigest: string;
+  target: ProviderControlTarget;
+  origin: Record<string, unknown>;
+  payload: {
+    schemaVersion: "action-payload.v1";
+    kind: "PROVIDER_CONTROL";
+    target: ProviderControlTarget;
+    rationale: Record<string, unknown>;
+    effect: Record<string, unknown>;
+    providerControl: ProviderControlCommand;
+  };
+  rationale: Record<string, unknown>;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+  previewId: string | null;
+  previewVersion: number | null;
+  previewDigest: string | null;
+  assignmentId: string | null;
+  assignmentVersion: number | null;
+  assignmentState: "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | null;
+  decisionId: string | null;
+  decision: "APPROVE" | "REJECT" | null;
+  executionId: string | null;
+  executionJobId: string | null;
+  executionReceiptId: string | null;
+};
+
 /**
  * Stateful addendum fixture used by the INT-002 browser journey.  The
  * review-console is still exercised through its BFF and generated control
@@ -102,6 +207,17 @@ export const runtime = {
   attachmentUploads: new Map<string, AttachmentUpload>(),
   correctionDraftVersion: 1,
   responseDraftVersion: 3,
+  providerControlProposals: new Map<string, ProviderControlProposal>(),
+  providerControlEvents: [] as Array<{
+    operationId: string;
+    providerOperationId: ProviderControlOperationId;
+    proposalId: string;
+    state: ProviderControlProposal["state"];
+  }>,
+  directProviderCommandAttempts: [] as Array<{
+    operationId: ProviderControlOperationId;
+    bodySha256: string;
+  }>,
   actionJourney: {
     proposalState: "PENDING_QUORUM" as
       | "PENDING_QUORUM"
@@ -129,6 +245,8 @@ function resetAll() {
   runtime.sessionRevoked = false;
   runtime.consumedOneTimeTokens.clear();
   runtime.exchangeReplays.clear();
+  runtime.providerControlProposals.clear();
+  runtime.providerControlEvents = [];
   runtime.actionJourney.proposalState = "PENDING_QUORUM";
   runtime.actionJourney.decision = null;
   runtime.actionJourney.handoffState = "PENDING_ACK";
@@ -146,6 +264,7 @@ function clearObservations() {
   runtime.sessionRevokeCount = 0;
   runtime.commandAttempts = [];
   runtime.assertionOperations = [];
+  runtime.directProviderCommandAttempts = [];
 }
 function actor() {
   return {
@@ -188,6 +307,12 @@ function actor() {
 function problem(status: number, code: string, title = code) {
   return Response.json(
     { type: "about:blank", title, status, requestId: randomUUID(), code },
+    { status, headers: { "content-type": "application/problem+json" } },
+  );
+}
+function addendumProblem(status: number, code: string, title = code) {
+  return Response.json(
+    { code, title, status, requestId: randomUUID() },
     { status, headers: { "content-type": "application/problem+json" } },
   );
 }
@@ -237,6 +362,11 @@ export function testState() {
     submissionReads: runtime.submissionReads,
     submissionWrites: runtime.submissionWrites,
     attachmentUploads: [...runtime.attachmentUploads.values()],
+    providerControl: {
+      proposals: [...runtime.providerControlProposals.values()],
+      events: [...runtime.providerControlEvents],
+      directCommandAttempts: [...runtime.directProviderCommandAttempts],
+    },
     actionJourney: {
       ...runtime.actionJourney,
       events: [...runtime.actionJourney.events],
@@ -245,6 +375,7 @@ export function testState() {
 }
 export {
   actor,
+  addendumProblem,
   asserted,
   attachmentStatus,
   body,

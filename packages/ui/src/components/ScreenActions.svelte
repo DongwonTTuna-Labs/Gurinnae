@@ -51,6 +51,9 @@ const formAction = (actionId: string) => {
   // when preserving queries; putting it after `proposalId=...` makes the POST unnamed.
   return query ? `?/${actionId}&${query}` : `?/${actionId}`;
 };
+const formCaption = (action: ScreenViewModel["actions"][number]) =>
+  runtime.formCaptions?.[action.id] ??
+  "필수 입력은 저장 전에 서버에서 다시 검증됩니다.";
 let challengeReady = $state<Record<string, boolean>>({});
 let challengeProof = $state<Record<string, string>>({});
 const challengeField = (actionId: string) =>
@@ -234,7 +237,7 @@ function downloadHref(
               {#if runtime.csrfToken}<input type="hidden" name="csrfToken" value={runtime.csrfToken} />{/if}
               <h3>{action.label}</h3>
               {#if runtime.idempotencyKeys?.[action.id]}<input type="hidden" name="idempotencyKey" value={runtime.idempotencyKeys[action.id]} />{/if}
-              <p id={`action-${action.id}-field-help`} class="field-help" class:field-error={hasValidationError} aria-live="polite">{hasValidationError ? "입력값을 확인한 뒤 다시 시도하세요." : "필수 입력은 저장 전에 서버에서 다시 검증됩니다."}</p>
+              <p id={`action-${action.id}-field-help`} class="field-help" class:field-error={hasValidationError} aria-live="polite">{hasValidationError ? "입력값을 확인한 뒤 다시 시도하세요." : formCaption(action)}</p>
               {#each fieldsFor(action.id) as field (field.name)}
                 {#if field.name === "abuseProof"}
                   <BotChallenge
@@ -255,7 +258,7 @@ function downloadHref(
                   {:else if field.type === "boolean"}<input id={formFieldId(screen.id, action.id, field.name)} type="checkbox" name={field.name} value="true" checked={field.value === true} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />
                   {:else if field.type === "json" && (field.name === "answers" || field.name.toLowerCase().includes("consent"))}<StructuredJsonField idPrefix={formFieldId(screen.id, action.id, field.name)} name={field.name} label={humanFieldLabel(field.name)} value={field.value} required={field.required} invalid={invalidField(action.id, field)} />
                   {:else if field.type === "json"}<textarea id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} rows="4" aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{typeof field.value === "string" ? field.value : ""}</textarea>
-                  {:else if field.options}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{#each field.options as option}<option value={option} selected={String(field.value ?? "") === option}>{option}</option>{/each}</select>
+                  {:else if field.options}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{#if field.payloadPath && !field.required}<option value="" selected={field.value === undefined}>변경 안 함</option>{/if}{#each field.options as option}<option value={option} selected={String(field.value ?? "") === option}>{option}</option>{/each}</select>
                   {:else}<input id={formFieldId(screen.id, action.id, field.name)} type={field.type} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} readonly={field.readonly} value={field.value ?? ""} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />{/if}
                 </label>{/if}
               {/each}

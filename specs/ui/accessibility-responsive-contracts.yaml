@@ -18100,6 +18100,7 @@ screens:
   - privacy
   - fallback
   - incidents
+  - model-catalog
   authority_above_fold_order:
   - status
   - quotas
@@ -18159,6 +18160,10 @@ screens:
       grid_column: 1 / -1
       visual_order: 6
       available: true
+    - section_id: model-catalog
+      grid_column: 1 / -1
+      visual_order: 7
+      available: true
   - check: 768x1024
     container_mode: MEDIUM_REFLOW
     screen_specific_layout_statement: 8-column; critical incident full width
@@ -18200,6 +18205,12 @@ screens:
       grid_area: ops_005--incidents
       grid_column: 1 / -1
       visual_order: 6
+      available: true
+      sticky: false
+    - section_id: model-catalog
+      grid_area: ops_005--model_catalog
+      grid_column: 1 / -1
+      visual_order: 7
       available: true
       sticky: false
   - check: 1440x900
@@ -18245,6 +18256,12 @@ screens:
       visual_order: 6
       available: true
       sticky: false
+    - section_id: model-catalog
+      grid_area: ops_005--model_catalog
+      grid_column: 1 / -1
+      visual_order: 7
+      available: true
+      sticky: false
   - check: 1280x1024@200%
     effective_css_viewport: 640x512
     container_mode: MEDIUM_REFLOW
@@ -18277,6 +18294,10 @@ screens:
       grid_column: 1 / -1
       visual_order: 6
       available: true
+    - section_id: model-catalog
+      grid_column: 1 / -1
+      visual_order: 7
+      available: true
   - check: 1280x1024@400%
     effective_css_viewport: 320x256
     container_mode: COMPACT_SINGLE_COLUMN
@@ -18308,6 +18329,10 @@ screens:
     - section_id: incidents
       grid_column: 1 / -1
       visual_order: 6
+      available: true
+    - section_id: model-catalog
+      grid_column: 1 / -1
+      visual_order: 7
       available: true
   interaction_contract:
     minimum_target_css_px: 44x44 except adequately separated inline links
@@ -21601,9 +21626,9 @@ navigation_focus_contracts:
   history_restore_focus_test_id: adm_003__action__open_role
 dom_ownership_set_equality:
   concrete_reference_occurrences: 3712
-  concrete_owned_ids: 2048
+  concrete_owned_ids: 2049
   focus_reference_occurrences: 2459
-  focus_owned_ids: 1867
+  focus_owned_ids: 1868
   live_reference_occurrences: 1253
   live_owned_ids: 181
   missing_owner_ids: 0
@@ -30546,7 +30571,7 @@ dom_ownership_registry:
   runtime_file: apps/review-console/src/routes/internal/my-work/+page.svelte
   runtime_status: OPEN_IMPLEMENTATION
   reference_paths:
-  - actions.commands[24].placements[0].request_bindings[6].error_test_id
+  - actions.commands[24].placements[0].request_bindings[7].error_test_id
   usage_kinds:
   - FOCUS_OR_TEST_TARGET
 - test_id: int_002__field_error__withdraw_action_decision__handoff__reason
@@ -30947,6 +30972,17 @@ dom_ownership_registry:
   - actions.commands[33].placements[0].success_destination.receipt_focus_test_id
   usage_kinds:
   - FOCUS_OR_TEST_TARGET
+- test_id: int_002__receipt__handle__ops_005__create_action_proposal__status__heading
+  screen_id: INT-002
+  owner_component: DecisionReceipt
+  owner_scope: tasks
+  element_role: receipt-heading
+  runtime_file: apps/review-console/src/routes/internal/my-work/+page.svelte
+  runtime_status: OPEN_IMPLEMENTATION
+  reference_paths:
+  - actions.commands[6].placements[8].success_destination.receipt_focus_test_id
+  usage_kinds:
+  - FOCUS_OR_TEST_TARGET
 - test_id: int_002__section__handoff
   screen_id: INT-002
   owner_component: StructuredContentSection
@@ -30971,6 +31007,17 @@ dom_ownership_registry:
   - actions.commands[3].placements[0].success_destination.section_heading_test_id
   - actions.commands[9].placements[0].section_test_id
   - actions.commands[9].placements[0].success_destination.section_heading_test_id
+  usage_kinds:
+  - FOCUS_OR_TEST_TARGET
+- test_id: int_002__section__tasks
+  screen_id: INT-002
+  owner_component: StructuredContentSection
+  owner_scope: tasks
+  element_role: section-heading
+  runtime_file: apps/review-console/src/routes/internal/my-work/+page.svelte
+  runtime_status: OPEN_IMPLEMENTATION
+  reference_paths:
+  - actions.commands[6].placements[8].success_destination.section_heading_test_id
   usage_kinds:
   - FOCUS_OR_TEST_TARGET
 - test_id: int_002__special__blocked__heading
@@ -33387,17 +33434,6 @@ dom_ownership_registry:
   - actions.commands[2].placements[1].success_destination.receipt_focus_test_id
   usage_kinds:
   - FOCUS_OR_TEST_TARGET
-- test_id: ops_005__receipt__handle__ops_005__create_action_proposal__status__heading
-  screen_id: OPS-005
-  owner_component: DecisionReceipt
-  owner_scope: status
-  element_role: receipt-heading
-  runtime_file: apps/review-console/src/routes/internal/operations/providers/+page.svelte
-  runtime_status: OPEN_IMPLEMENTATION
-  reference_paths:
-  - actions.commands[6].placements[8].success_destination.receipt_focus_test_id
-  usage_kinds:
-  - FOCUS_OR_TEST_TARGET
 - test_id: ops_005__receipt__handle__ops_005__preview_action_draft__status__heading
   screen_id: OPS-005
   owner_component: DecisionReceipt
@@ -33472,7 +33508,6 @@ dom_ownership_registry:
   - actions.commands[30].placements[8].section_test_id
   - actions.commands[30].placements[8].success_destination.section_heading_test_id
   - actions.commands[6].placements[8].section_test_id
-  - actions.commands[6].placements[8].success_destination.section_heading_test_id
   usage_kinds:
   - FOCUS_OR_TEST_TARGET
 - test_id: ops_005__special__privacy_policy_expired__heading

@@ -30,11 +30,11 @@ gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가
 
 | 순서 | Section ID | 제목 | 구현 Component | 목적 |
 |---:|---|---|---|---|
-| 1 | `dataset` | 평가 dataset | `CoverageStatement` | version·coverage. |
-| 2 | `metrics` | 품질 metric | `StructuredContentSection` | precision/recall where valid. |
+| 1 | `dataset` | 평가 자료 | `CoverageStatement` | version·coverage. |
+| 2 | `metrics` | 품질 지표 | `StructuredContentSection` | precision/recall where valid. |
 | 3 | `errors` | 오탐·누락 | `StructuredContentSection` | category/examples. |
 | 4 | `threshold` | 민감도 | `StructuredContentSection` | distribution. |
-| 5 | `shadow` | shadow | `StructuredContentSection` | count·cost·diff. |
+| 5 | `shadow` | 병행 평가 | `StructuredContentSection` | count·cost·diff. |
 | 6 | `limitations` | 한계 | `StructuredContentSection` | small sample/bias. |
 | 7 | `signoff` | 검토 | `DecisionReviewPanel` | editorial/data. |
 

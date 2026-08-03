@@ -65,107 +65,25 @@ where
     Ok(())
 }
 
-fn unknown_provider_receipt(
-    run_id: Uuid,
-    turn: &ProviderTurnIdentity,
-    provider_config_id: Uuid,
-    provider: &str,
-    model: &str,
-    semantic_request_sha256: &str,
-    reason: &str,
-) -> Result<(Uuid, Value), Failure> {
-    let receipt_id = Uuid::new_v4();
-    let observed_at = time::OffsetDateTime::now_utc()
-        .format(&time::format_description::well_known::Rfc3339)
-        .map_err(|error| Failure::Terminal("PROVIDER_RECEIPT_INVALID", error.to_string()))?;
-    let mut receipt = json!({
-        "schemaVersion":"provider-receipt.v2",
-        "receiptId":receipt_id,
-        "agentRunId":run_id,
-        "providerTurnId":turn.turn_id,
-        "providerMode":"EXTERNAL_APPROVED",
-        "providerConfigId":provider_config_id,
-        "providerCandidateId":provider,
-        "modelId":model,
-        "modelConfigurationSha256":sha256(model.as_bytes()),
-        "semanticRequestSha256":semantic_request_sha256,
-        "idempotencyKeySha256":turn.idempotency_hash,
-        "outcome":"OUTCOME_UNKNOWN",
-        "proofKind":"IDEMPOTENCY_LOOKUP",
-        "proofSha256":sha256(reason.as_bytes()),
-        "providerRequestIdHash":null,
-        "usage":{"state":"UNKNOWN","inputUnits":null,"outputUnits":null,"cachedInputUnits":null,"billableUnits":null,"usageEvidenceSha256":null},
-        "pricing":{"pricingVersion":"unknown","pricingSha256":sha256(b"unknown-pricing"),"currency":"KRW","fxRateFactId":null,"reservedMicrosKrw":0,"actualMicrosKrw":null,"costState":"RECONCILIATION_REQUIRED"},
-        "dataPolicy":{"classification":"INTERNAL","processingRegion":"ZZ","retentionMode":"ZERO_RETENTION","trainingUse":"PROHIBITED","policyVersion":"unknown","policySha256":sha256(b"unknown-policy"),"rightsDecisionSetSha256":sha256(b"unknown-rights")},
-        "dispatchedAt":observed_at,
-        "observedAt":observed_at,
-        "completedAt":null
-    });
-    let receipt_sha256 = sha256(&canonical_bytes(&receipt)?);
-    receipt["receiptSha256"] = json!(receipt_sha256);
-    Ok((receipt_id, receipt))
+fn unresolved_provider_outcome(detail: impl Into<String>) -> Failure {
+    // No authenticated response means there is no honest proof, usage,
+    // pricing, policy, or rights tuple from which ProviderReceiptV2 can be
+    // built. Keep the durable turn DISPATCHED and let the agent-run
+    // reconciliation marker carry the uncertainty. A terminal worker failure
+    // prevents an automatic re-dispatch of a request that may have arrived.
+    Failure::Terminal("PROVIDER_OUTCOME_UNKNOWN", detail.into())
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "unknown-outcome reconciliation binds the original provider attempt"
-)]
-async fn mark_provider_turn_outcome_unknown(
-    state: &State,
-    turn: &ProviderTurnIdentity,
-    run_id: Uuid,
-    provider_config_id: Uuid,
-    provider: &str,
-    model: &str,
-    semantic_request_sha256: &str,
-    reason: &str,
-) -> Result<(), Failure> {
-    let (receipt_id, receipt) = unknown_provider_receipt(
-        run_id,
-        turn,
-        provider_config_id,
-        provider,
-        model,
-        semantic_request_sha256,
-        reason,
-    )?;
-    let receipt_canonical = canonical_bytes(&receipt)?;
-    let receipt_sha256 = sha256(&receipt_canonical);
-    let turn_payload = json!({
-        "providerTurnId":turn.turn_id,
-        "status":"OUTCOME_UNKNOWN",
-        "errorCode":"PROVIDER_OUTCOME_UNKNOWN",
-        "providerReceiptSha256":receipt_sha256
-    });
-    let turn_canonical = canonical_bytes(&turn_payload)?;
-    let turn_sha256 = sha256(&turn_canonical);
-    let error_sha256 = sha256(b"PROVIDER_OUTCOME_UNKNOWN");
-    complete_provider_turn_owner(
-        &state.pool,
-        turn,
-        1,
-        "OUTCOME_UNKNOWN",
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        receipt_id,
-        &receipt,
-        &receipt_canonical,
-        &receipt_sha256,
-        &turn_canonical,
-        &turn_sha256,
-        None,
-        None,
-        None,
-        None,
-        None,
-        Some("PROVIDER_OUTCOME_UNKNOWN"),
-        Some(&error_sha256),
-    )
-    .await
+#[cfg(test)]
+mod provider_outcome_unknown_tests {
+    use super::*;
+
+    #[test]
+    fn unresolved_outcome_stays_terminal_without_synthetic_receipt_material() {
+        assert!(matches!(
+            unresolved_provider_outcome("send result unavailable"),
+            Failure::Terminal("PROVIDER_OUTCOME_UNKNOWN", detail)
+                if detail == "send result unavailable"
+        ));
+    }
 }

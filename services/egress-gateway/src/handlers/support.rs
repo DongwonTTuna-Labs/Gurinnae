@@ -33,11 +33,37 @@ pub(super) fn caller_credential_header(channel: Channel, name: &str) -> bool {
         )
 }
 
-pub(super) fn allowed_method(channel: Channel, method: &str) -> bool {
+pub(super) fn outbound_header_allowed(channel: Channel, name: &str) -> bool {
+    if matches!(channel, Channel::Ai) {
+        return matches!(
+            name.to_ascii_lowercase().as_str(),
+            "content-type" | "accept"
+        );
+    }
+    !hop_or_internal(name) && !caller_credential_header(channel, name)
+}
+
+pub(super) fn allowed_method(
+    channel: Channel,
+    method: &str,
+    ai_provider: Option<&str>,
+    target: &str,
+) -> bool {
     match channel {
         Channel::Oidc => matches!(method, "GET" | "POST"),
         Channel::Source => method == "GET",
-        Channel::Ai | Channel::Challenge => method == "POST",
+        Channel::Ai => match ai_provider {
+            Some(provider) if provider.eq_ignore_ascii_case("relay") => url::Url::parse(target)
+                .is_ok_and(|url| {
+                    matches!(
+                        (method, url.path()),
+                        ("GET", "/v1/models") | ("POST", "/v1/chat/completions")
+                    ) && url.query().is_none()
+                        && url.fragment().is_none()
+                }),
+            _ => method == "POST",
+        },
+        Channel::Challenge => method == "POST",
     }
 }
 
@@ -107,4 +133,123 @@ pub(super) fn problem(code: &str, status: u16) -> HttpResponse {
     HttpResponse::build(status)
         .insert_header(("content-type", "application/problem+json"))
         .json(serde_json::json!({"code":code,"title":code,"status":status.as_u16()}))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn relay_model_catalog_get_is_limited_to_the_exact_path() {
+        assert!(allowed_method(
+            Channel::Ai,
+            "GET",
+            Some("relay"),
+            "https://relay-ai.dongwontuna.net/v1/models"
+        ));
+        assert!(!allowed_method(
+            Channel::Ai,
+            "GET",
+            Some("openai"),
+            "https://relay-ai.dongwontuna.net/v1/models"
+        ));
+        assert!(!allowed_method(
+            Channel::Ai,
+            "GET",
+            Some("relay"),
+            "https://relay-ai.dongwontuna.net/v1/models/"
+        ));
+        assert!(!allowed_method(
+            Channel::Ai,
+            "GET",
+            Some("relay"),
+            "https://relay-ai.dongwontuna.net/v1/models/latest"
+        ));
+        assert!(!allowed_method(
+            Channel::Ai,
+            "GET",
+            Some("relay"),
+            "https://relay-ai.dongwontuna.net/v1/models?limit=1"
+        ));
+        assert!(!allowed_method(
+            Channel::Ai,
+            "GET",
+            Some("relay"),
+            "https://relay-ai.dongwontuna.net/v1/models#catalog"
+        ));
+        assert!(!allowed_method(
+            Channel::Ai,
+            "GET",
+            Some("relay"),
+            "not-a-url"
+        ));
+    }
+
+    #[test]
+    fn relay_post_is_exact_and_legacy_ai_post_policy_is_preserved() {
+        assert!(allowed_method(
+            Channel::Ai,
+            "POST",
+            Some("relay"),
+            "https://relay-ai.dongwontuna.net/v1/chat/completions"
+        ));
+        for target in [
+            "https://relay-ai.dongwontuna.net/v1/chat/completions/",
+            "https://relay-ai.dongwontuna.net/v1/responses",
+            "https://relay-ai.dongwontuna.net/v1/chat/completions?stream=true",
+            "https://relay-ai.dongwontuna.net/v1/chat/completions#result",
+        ] {
+            assert!(!allowed_method(Channel::Ai, "POST", Some("relay"), target));
+        }
+        for provider in ["openai", "anthropic", "google"] {
+            assert!(allowed_method(
+                Channel::Ai,
+                "POST",
+                Some(provider),
+                "https://provider.example/v1/chat/completions"
+            ));
+        }
+        assert!(!allowed_method(
+            Channel::Ai,
+            "DELETE",
+            Some("relay"),
+            "https://relay-ai.dongwontuna.net/v1/models"
+        ));
+    }
+
+    #[test]
+    fn relay_model_catalog_caller_remains_analysis_worker_only() {
+        assert!(caller_allowed(Channel::Ai, Some("analysis-worker")));
+        assert!(!caller_allowed(Channel::Ai, Some("scheduler")));
+        assert!(!caller_allowed(Channel::Ai, None));
+    }
+
+    #[test]
+    fn ai_outbound_headers_are_closed_to_media_negotiation() {
+        assert!(outbound_header_allowed(Channel::Ai, "content-type"));
+        assert!(outbound_header_allowed(Channel::Ai, "Accept"));
+        for name in [
+            "authorization",
+            "proxy-authorization",
+            "cookie",
+            "x-auth-token",
+            "x-api-key",
+            "x-goog-api-key",
+            "x-random-header",
+            "x-gurine-ai-model-id",
+            "traceparent",
+        ] {
+            assert!(!outbound_header_allowed(Channel::Ai, name), "{name}");
+        }
+    }
+
+    #[test]
+    fn source_header_policy_is_unchanged() {
+        assert!(outbound_header_allowed(Channel::Source, "accept"));
+        assert!(!outbound_header_allowed(Channel::Source, "authorization"));
+        assert!(!outbound_header_allowed(
+            Channel::Source,
+            "x-gurine-egress-target"
+        ));
+    }
 }

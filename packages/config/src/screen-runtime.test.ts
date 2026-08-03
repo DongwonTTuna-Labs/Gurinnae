@@ -33,6 +33,52 @@ const document = {
   },
 } satisfies OpenApiDocument;
 
+const nestedObjectDocument = {
+  paths: {
+    "/provider-model": {
+      post: {
+        operationId: "upgradeProviderModel",
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  providerId: { type: "string" },
+                  dataPolicy: {
+                    $ref: "#/components/schemas/RelayDataPolicyInput",
+                  },
+                },
+                required: ["providerId"],
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  components: {
+    schemas: {
+      RelayDataPolicyInput: {
+        type: "object",
+        properties: {
+          processingRegion: { type: "string" },
+          retentionMode: {
+            type: "string",
+            enum: [
+              "ZERO_RETENTION",
+              "BOUNDED_PROVIDER_RETENTION",
+              "LOCAL_ONLY",
+            ],
+          },
+          policyVersion: { type: "string" },
+        },
+        required: ["processingRegion", "retentionMode", "policyVersion"],
+      },
+    },
+  },
+} satisfies OpenApiDocument;
+
 describe("screen runtime form payloads", () => {
   const indexed = indexOperations([document]).get("updateResource");
   if (!indexed) throw new Error("test operation was not indexed");
@@ -163,6 +209,134 @@ describe("screen runtime form payloads", () => {
     expect(() =>
       formPayload(form, fixedFields, { name: "server-bound" }),
     ).toThrow("서버 대상과 일치하지 않습니다");
+  });
+
+  it("keeps object request fields as JSON unless the screen opts in", () => {
+    const operation = indexOperations([nestedObjectDocument]).get(
+      "upgradeProviderModel",
+    );
+    if (!operation) throw new Error("nested operation was not indexed");
+    const objectFields = operationFields(operation, {});
+    expect(objectFields).toContainEqual({
+      name: "dataPolicy",
+      label: "data Policy",
+      type: "json",
+      required: false,
+    });
+    const form = new FormData();
+    form.set("providerId", "provider-a");
+    form.set(
+      "dataPolicy",
+      JSON.stringify({
+        processingRegion: "kr",
+        retentionMode: "ZERO_RETENTION",
+        policyVersion: "relay-policy-v1",
+      }),
+    );
+    expect(formPayload(form, objectFields)).toEqual({
+      providerId: "provider-a",
+      dataPolicy: {
+        processingRegion: "kr",
+        retentionMode: "ZERO_RETENTION",
+        policyVersion: "relay-policy-v1",
+      },
+    });
+  });
+
+  it("expands one opted-in object into typed leaf fields", () => {
+    const operation = indexOperations([nestedObjectDocument]).get(
+      "upgradeProviderModel",
+    );
+    if (!operation) throw new Error("nested operation was not indexed");
+    const objectFields = operationFields(operation, {}, {}, ["dataPolicy"]);
+    expect(objectFields).toEqual([
+      {
+        name: "providerId",
+        label: "provider Id",
+        type: "text",
+        required: true,
+      },
+      {
+        name: "processingRegion",
+        label: "processing Region",
+        type: "text",
+        required: false,
+        payloadPath: ["dataPolicy", "processingRegion"],
+      },
+      {
+        name: "retentionMode",
+        label: "retention Mode",
+        type: "text",
+        required: false,
+        options: ["ZERO_RETENTION", "BOUNDED_PROVIDER_RETENTION", "LOCAL_ONLY"],
+        payloadPath: ["dataPolicy", "retentionMode"],
+      },
+      {
+        name: "policyVersion",
+        label: "policy Version",
+        type: "text",
+        required: false,
+        payloadPath: ["dataPolicy", "policyVersion"],
+      },
+    ]);
+  });
+
+  it("rebuilds an opted-in object and omits it when every leaf is empty", () => {
+    const operation = indexOperations([nestedObjectDocument]).get(
+      "upgradeProviderModel",
+    );
+    if (!operation) throw new Error("nested operation was not indexed");
+    const objectFields = operationFields(operation, {}, {}, ["dataPolicy"]);
+    const filled = new FormData();
+    filled.set("providerId", "provider-a");
+    filled.set("processingRegion", "kr");
+    filled.set("retentionMode", "ZERO_RETENTION");
+    filled.set("policyVersion", "relay-policy-v1");
+    expect(formPayload(filled, objectFields)).toEqual({
+      providerId: "provider-a",
+      dataPolicy: {
+        processingRegion: "kr",
+        retentionMode: "ZERO_RETENTION",
+        policyVersion: "relay-policy-v1",
+      },
+    });
+
+    const empty = new FormData();
+    empty.set("providerId", "provider-a");
+    expect(formPayload(empty, objectFields)).toEqual({
+      providerId: "provider-a",
+    });
+  });
+
+  it("fails closed when an expanded object is absent from the request", () => {
+    const operation = indexOperations([nestedObjectDocument]).get(
+      "upgradeProviderModel",
+    );
+    if (!operation) throw new Error("nested operation was not indexed");
+    expect(() =>
+      operationFields(operation, {}, {}, ["missingPolicy"]),
+    ).toThrowError("expanded request objects are missing: missingPolicy");
+  });
+
+  it("fails closed when an expanded leaf collides with a top-level field", () => {
+    const collisionDocument = structuredClone(nestedObjectDocument);
+    const request =
+      collisionDocument.paths?.["/provider-model"]?.post?.requestBody
+        ?.content?.["application/json"]?.schema;
+    if (!request?.properties)
+      throw new Error("nested request schema was not indexed");
+    Object.assign(request.properties, {
+      processingRegion: { type: "string" },
+    });
+    const operation = indexOperations([collisionDocument]).get(
+      "upgradeProviderModel",
+    );
+    if (!operation) throw new Error("nested operation was not indexed");
+    expect(() =>
+      operationFields(operation, {}, {}, ["dataPolicy"]),
+    ).toThrowError(
+      "expanded request field dataPolicy.processingRegion collides",
+    );
   });
 
   it("prefers a nested current target version over wrapper metadata", () => {

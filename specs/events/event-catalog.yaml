@@ -668,8 +668,7 @@ events:
   replay_policy: idempotent-by-event-id
 - event_type: provider.routing_disabled.v1
   category: DOMAIN
-  producer_operations:
-  - disableProviderRouting
+  producer_operations: []
   producer_services: []
   schema_version: 1
   payload_schema: payloads/provider_routing_disabled_v1.schema.json

@@ -5,6 +5,12 @@ from typing import Any
 
 from .design_operations import OperationFacts
 from .design_lifecycle_journeys import validate_journey_events
+from .design_lifecycle_provider_contract import (
+    validate_provider_control_contracts,
+)
+from .design_lifecycle_provider_governance import (
+    validate_provider_control_governance,
+)
 from .design_support import DesignDocuments, nonempty, unique_string_registry
 
 
@@ -209,6 +215,11 @@ def validate_lifecycle(
         and set(executor_catalog) == action_kinds,
         "action payload/quorum/executor registries are duplicated or not set-equal",
     )
+    provider_operation_policies = validate_provider_control_contracts(documents)
+    validate_provider_control_governance(
+        documents,
+        provider_operation_policies,
+    )
     known_capability_ids = base_capability_ids | set(additive_capability_ids)
     capability_role_map: dict[str, set[str]] = {}
     for role in role_contract["roles"]:
@@ -227,16 +238,33 @@ def validate_lifecycle(
             and executor["capability"] in known_capability_ids,
             f"{action_kind}: action variant/quorum/executor binding mismatch",
         )
-        policy_used_capabilities.update(
-            {quorum["proposer_capability"], executor["capability"]}
-        )
-        result.require(
-            bool(
-                action_role_sets["actions.propose"]
-                & capability_role_map[quorum["proposer_capability"]]
-            ),
-            f"{action_kind}: no role can satisfy actions.propose and the variant proposer capability",
-        )
+        if action_kind == "PROVIDER_CONTROL":
+            provider_capabilities = {
+                policy["capability"]
+                for policy in provider_operation_policies.values()
+            }
+            policy_used_capabilities.update(
+                provider_capabilities | {executor["capability"]}
+            )
+            for capability_id in provider_capabilities:
+                result.require(
+                    bool(
+                        action_role_sets["actions.propose"]
+                        & capability_role_map[capability_id]
+                    ),
+                    f"PROVIDER_CONTROL.{capability_id}: no role can satisfy actions.propose and the operation proposer capability",
+                )
+        else:
+            policy_used_capabilities.update(
+                {quorum["proposer_capability"], executor["capability"]}
+            )
+            result.require(
+                bool(
+                    action_role_sets["actions.propose"]
+                    & capability_role_map[quorum["proposer_capability"]]
+                ),
+                f"{action_kind}: no role can satisfy actions.propose and the variant proposer capability",
+            )
         quorum_classes = quorum.get(
             "classes", {"DEFAULT": {"slots": quorum.get("slots", [])}}
         )

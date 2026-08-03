@@ -3,6 +3,7 @@ export const FIELD_LABELS_U_Z = {
   unit: "단위",
   unitCompatibility: "단위 호환성",
   unitPrice: "단가",
+  unpriced: "단가 미설정 여부",
   unknownReason: "미확인 사유",
   unknownSetDigest: "미확인 집합 무결성 지문",
   unknowns: "미확인 사항",

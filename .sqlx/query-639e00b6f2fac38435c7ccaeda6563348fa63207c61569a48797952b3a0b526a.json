@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.relay_model_catalog_sync_runs SET status='FAILED',error_code=$2, started_at=COALESCE(started_at,clock_timestamp()),completed_at=clock_timestamp() WHERE id=$1 AND status IN ('QUEUED','RUNNING')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "639e00b6f2fac38435c7ccaeda6563348fa63207c61569a48797952b3a0b526a"
+}

@@ -30,7 +30,7 @@ Test prefix: `auth_004`
 | 순서 | Section ID | 제목 | 구현 Component | 목적 |
 |---:|---|---|---|---|
 | 1 | `status` | 만료 안내 | `StatusAndRevisionHeader` | 시각·이유 범주. |
-| 2 | `draft` | draft 상태 | `StatusAndRevisionHeader` | server/local 안전 보존. |
+| 2 | `draft` | 초안 상태 | `StatusAndRevisionHeader` | server/local 안전 보존. |
 | 3 | `signin` | 재로그인 | `StructuredContentSection` | return URL. |
 | 4 | `support` | 지원 | `StructuredContentSection` | 반복 만료. |
 

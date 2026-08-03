@@ -19,12 +19,12 @@ counts:
   commands: 35
   visible_placements: 82
   journey_visible_actions: 17
-  legacy_side_door_fences: 28
-  base_actions: 250
-  effective_actions: 349
+  legacy_side_door_fences: 30
+  base_actions: 252
+  effective_actions: 351
 action_registry_set_equality:
   base_source: specs/ui/screen-catalog.yaml#screens[].actions[]
-  base_keys: 250
+  base_keys: 252
   additive_source: command placement registry
   additive_keys: 82
   journey_source: explicit canonical journey visible-action registry
@@ -33,7 +33,7 @@ action_registry_set_equality:
   effective_rule: effective actions = disjoint union(base actions, additive command actions, journey visible actions)
   runtime_status: OPEN_IMPLEMENTATION
 browser_secret_binding_oracle:
-  request_bindings: 493
+  request_bindings: 494
   server_only_consumed_before_render: 9
   browser_visible_secret_bindings: 0
   failure_rule: Any raw token, proof, credential, assertion or session value in a view-model/form/action/DOM binding fails
@@ -3036,14 +3036,15 @@ commands:
     receipt_source: action_result.create_action_proposal__status.validated_receipt
     handler_id: handle__ops_005__create_action_proposal__status
     success_destination:
-      screen_id: OPS-005
-      section_id: status
-      route: /internal/operations/providers
-      required_route_bindings: {}
-      section_heading_test_id: ops_005__section__status
-      receipt_focus_test_id: ops_005__receipt__handle__ops_005__create_action_proposal__status__heading
+      screen_id: INT-002
+      section_id: tasks
+      route: /internal/my-work?proposalId={proposalId}
+      required_route_bindings:
+        proposalId: action_result.create_action_proposal__status.validated_receipt.proposalId
+      section_heading_test_id: int_002__section__tasks
+      receipt_focus_test_id: int_002__receipt__handle__ops_005__create_action_proposal__status__heading
       receipt_anchor: action-receipt-handle__ops_005__create_action_proposal__status
-      history: REPLACE_STATE_AFTER_RECEIPT
+      history: PUSH_AFTER_RECEIPT
     failure_focus_test_id: ops_005__command_error__create_action_proposal__status
     implementation_status: OPEN_IMPLEMENTATION
   - placement_key: createActionProposal@OPS-006.approval
@@ -9375,6 +9376,9 @@ commands:
   - name: actionKind
     type: enum action_payloads.kinds
     required: true
+  - name: providerOperationId
+    type: optional<ProviderControlOperationIdV1>
+    required: false
   - name: assignmentId
     type: uuid
     required: true
@@ -9434,6 +9438,13 @@ commands:
       binding_class: USER_EDITABLE_FORM_FIELD
       browser_visible: true
       error_test_id: int_002__field_error__submit_action_decision__handoff__actionKind
+    - field: providerOperationId
+      type: optional<ProviderControlOperationIdV1>
+      required: false
+      source: view_model.sections.handoff.forms.submit_action_decision__handoff.providerOperationId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__submit_action_decision__handoff__providerOperationId
     - field: assignmentId
       type: uuid
       required: true
@@ -16130,6 +16141,9 @@ legacy_side_door_fences:
   required_entry_operation: createActionProposal
   direct_effect_forbidden: true
   completion_requires: ActionExecutionReceiptV1 with the same proposal/action digest
+  proposal_binding:
+    actionKind: PROVIDER_CONTROL
+    providerControl.operationId: disableProviderRouting
 - screen_id: OPS-005
   legacy_action_id: test
   legacy_operation_id: testProviderConnection
@@ -16137,6 +16151,29 @@ legacy_side_door_fences:
   required_entry_operation: createActionProposal
   direct_effect_forbidden: true
   completion_requires: ActionExecutionReceiptV1 with the same proposal/action digest
+  proposal_binding:
+    actionKind: PROVIDER_CONTROL
+    providerControl.operationId: testProviderConnection
+- screen_id: OPS-005
+  legacy_action_id: upgrade-model
+  legacy_operation_id: upgradeProviderModel
+  policy: PROPOSAL_ONLY_UNTIL_AUTHORIZED_EXECUTION
+  required_entry_operation: createActionProposal
+  direct_effect_forbidden: true
+  completion_requires: ActionExecutionReceiptV1 with the same proposal/action digest
+  proposal_binding:
+    actionKind: PROVIDER_CONTROL
+    providerControl.operationId: upgradeProviderModel
+- screen_id: OPS-005
+  legacy_action_id: auto-upgrade
+  legacy_operation_id: setModelAutoUpgrade
+  policy: PROPOSAL_ONLY_UNTIL_AUTHORIZED_EXECUTION
+  required_entry_operation: createActionProposal
+  direct_effect_forbidden: true
+  completion_requires: ActionExecutionReceiptV1 with the same proposal/action digest
+  proposal_binding:
+    actionKind: PROVIDER_CONTROL
+    providerControl.operationId: setModelAutoUpgrade
 - screen_id: OPS-006
   legacy_action_id: activate
   legacy_operation_id: activateKillSwitch

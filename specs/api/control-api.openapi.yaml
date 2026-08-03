@@ -3508,129 +3508,18 @@ paths:
           minLength: 8
           maxLength: 200
       responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/disableProviderRoutingReceipt'
-        '400':
-          description: 'Problem response: INVALID_PARAMETER, INVALID_REQUEST'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - INVALID_PARAMETER
-          - INVALID_REQUEST
-        '401':
-          description: 'Problem response: ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID,
-            ACTOR_ASSERTION_EXPIRED, ACTOR_ASSERTION_AUDIENCE_MISMATCH, ACTOR_ASSERTION_REQUEST_MISMATCH'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - ACTOR_ASSERTION_REQUIRED
-          - ACTOR_ASSERTION_INVALID
-          - ACTOR_ASSERTION_EXPIRED
-          - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-          - ACTOR_ASSERTION_REQUEST_MISMATCH
-        '403':
-          description: 'Problem response: CAPABILITY_DENIED, STEP_UP_REQUIRED'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - CAPABILITY_DENIED
-          - STEP_UP_REQUIRED
-        '404':
-          description: 'Problem response: RESOURCE_NOT_FOUND'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - RESOURCE_NOT_FOUND
         '409':
-          description: 'Problem response: ACTOR_ASSERTION_REPLAYED, IDEMPOTENCY_CONFLICT,
-            VERSION_CONFLICT, INVALID_STATE_TRANSITION'
+          description: Provider control requires an approved action proposal
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
-          - ACTOR_ASSERTION_REPLAYED
-          - IDEMPOTENCY_CONFLICT
-          - VERSION_CONFLICT
-          - INVALID_STATE_TRANSITION
-        '413':
-          description: 'Problem response: PAYLOAD_TOO_LARGE'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - PAYLOAD_TOO_LARGE
-        '415':
-          description: 'Problem response: UNSUPPORTED_MEDIA_TYPE'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - UNSUPPORTED_MEDIA_TYPE
-        '422':
-          description: 'Problem response: PRECONDITION_FAILED, VALIDATION_FAILED'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - PRECONDITION_FAILED
-          - VALIDATION_FAILED
-        '500':
-          description: 'Problem response: INTERNAL_ERROR'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - INTERNAL_ERROR
-        '503':
-          description: 'Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - DEPENDENCY_UNAVAILABLE
-          - DEPENDENCY_RATE_LIMITED
+          - ACTION_PROPOSAL_REQUIRED
       x-operation-kind: COMMAND
       x-capability: kill_switch.execute
       x-error-codes:
-      - INVALID_PARAMETER
-      - INVALID_REQUEST
-      - UNSUPPORTED_MEDIA_TYPE
-      - PAYLOAD_TOO_LARGE
-      - ACTOR_ASSERTION_REQUIRED
-      - ACTOR_ASSERTION_INVALID
-      - ACTOR_ASSERTION_EXPIRED
-      - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-      - ACTOR_ASSERTION_REQUEST_MISMATCH
-      - ACTOR_ASSERTION_REPLAYED
-      - CAPABILITY_DENIED
-      - STEP_UP_REQUIRED
-      - IDEMPOTENCY_CONFLICT
-      - VERSION_CONFLICT
-      - RESOURCE_NOT_FOUND
-      - PRECONDITION_FAILED
-      - VALIDATION_FAILED
-      - INVALID_STATE_TRANSITION
-      - DEPENDENCY_UNAVAILABLE
-      - DEPENDENCY_RATE_LIMITED
-      - INTERNAL_ERROR
+      - ACTION_PROPOSAL_REQUIRED
       requestBody:
         required: true
         content:
@@ -3646,6 +3535,8 @@ paths:
         step_up_possible: true
       x-assurance-level: STEP_UP
       x-step-up-required: true
+      x-provider-control-entrypoint: ACTION_PROPOSAL
+      x-state-effect: UNCHANGED
   /v1/internal/commands/disable-user:
     post:
       operationId: disableUser
@@ -8199,6 +8090,58 @@ paths:
         step_up_possible: true
       x-assurance-level: STEP_UP
       x-step-up-required: true
+  /v1/internal/commands/set-model-auto-upgrade:
+    post:
+      operationId: setModelAutoUpgrade
+      tags:
+      - operations
+      summary: configure relay model automatic upgrade policy
+      description: 'Final v13 contract. Kind: COMMAND. Capability: kill_switch.execute.
+        Review Console BFF supplies a request-bound actor assertion.'
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      responses:
+        '409':
+          description: Provider control requires an approved action proposal
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - ACTION_PROPOSAL_REQUIRED
+      x-operation-kind: COMMAND
+      x-capability: kill_switch.execute
+      x-error-codes:
+      - ACTION_PROPOSAL_REQUIRED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/setModelAutoUpgradeRequest'
+      security:
+      - ActorAssertion: []
+      x-assurance-policy:
+        mode: STATIC
+        default: STEP_UP
+        conditions: []
+        step_up_possible: true
+      x-assurance-level: STEP_UP
+      x-step-up-required: true
+      x-provider-control-entrypoint: ACTION_PROPOSAL
+      x-state-effect: UNCHANGED
   /v1/internal/commands/start-access-review:
     post:
       operationId: startAccessReview
@@ -9146,122 +9089,18 @@ paths:
           minLength: 8
           maxLength: 200
       responses:
-        '202':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/testProviderConnectionReceipt'
-        '400':
-          description: 'Problem response: INVALID_PARAMETER, INVALID_REQUEST'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - INVALID_PARAMETER
-          - INVALID_REQUEST
-        '401':
-          description: 'Problem response: ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID,
-            ACTOR_ASSERTION_EXPIRED, ACTOR_ASSERTION_AUDIENCE_MISMATCH, ACTOR_ASSERTION_REQUEST_MISMATCH'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - ACTOR_ASSERTION_REQUIRED
-          - ACTOR_ASSERTION_INVALID
-          - ACTOR_ASSERTION_EXPIRED
-          - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-          - ACTOR_ASSERTION_REQUEST_MISMATCH
-        '403':
-          description: 'Problem response: CAPABILITY_DENIED'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - CAPABILITY_DENIED
-        '404':
-          description: 'Problem response: RESOURCE_NOT_FOUND'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - RESOURCE_NOT_FOUND
         '409':
-          description: 'Problem response: ACTOR_ASSERTION_REPLAYED, IDEMPOTENCY_CONFLICT'
+          description: Provider control requires an approved action proposal
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
-          - ACTOR_ASSERTION_REPLAYED
-          - IDEMPOTENCY_CONFLICT
-        '413':
-          description: 'Problem response: PAYLOAD_TOO_LARGE'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - PAYLOAD_TOO_LARGE
-        '415':
-          description: 'Problem response: UNSUPPORTED_MEDIA_TYPE'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - UNSUPPORTED_MEDIA_TYPE
-        '422':
-          description: 'Problem response: PRECONDITION_FAILED, VALIDATION_FAILED'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - PRECONDITION_FAILED
-          - VALIDATION_FAILED
-        '500':
-          description: 'Problem response: INTERNAL_ERROR'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - INTERNAL_ERROR
-        '503':
-          description: 'Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED'
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-          x-error-codes:
-          - DEPENDENCY_UNAVAILABLE
-          - DEPENDENCY_RATE_LIMITED
+          - ACTION_PROPOSAL_REQUIRED
       x-operation-kind: COMMAND
       x-capability: jobs.operate
       x-error-codes:
-      - INVALID_PARAMETER
-      - INVALID_REQUEST
-      - UNSUPPORTED_MEDIA_TYPE
-      - PAYLOAD_TOO_LARGE
-      - ACTOR_ASSERTION_REQUIRED
-      - ACTOR_ASSERTION_INVALID
-      - ACTOR_ASSERTION_EXPIRED
-      - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-      - ACTOR_ASSERTION_REQUEST_MISMATCH
-      - ACTOR_ASSERTION_REPLAYED
-      - CAPABILITY_DENIED
-      - IDEMPOTENCY_CONFLICT
-      - RESOURCE_NOT_FOUND
-      - PRECONDITION_FAILED
-      - VALIDATION_FAILED
-      - DEPENDENCY_UNAVAILABLE
-      - DEPENDENCY_RATE_LIMITED
-      - INTERNAL_ERROR
+      - ACTION_PROPOSAL_REQUIRED
       requestBody:
         required: true
         content:
@@ -9277,6 +9116,8 @@ paths:
         step_up_possible: false
       x-assurance-level: ACTIVE_SESSION
       x-step-up-required: false
+      x-provider-control-entrypoint: ACTION_PROPOSAL
+      x-state-effect: UNCHANGED
   /v1/internal/commands/transition-case:
     post:
       operationId: transitionCase
@@ -10610,6 +10451,58 @@ paths:
         step_up_possible: false
       x-assurance-level: ACTIVE_SESSION
       x-step-up-required: false
+  /v1/internal/commands/upgrade-provider-model:
+    post:
+      operationId: upgradeProviderModel
+      tags:
+      - operations
+      summary: queue a version-fenced relay model upgrade after connection validation
+      description: 'Final v13 contract. Kind: COMMAND. Capability: kill_switch.execute.
+        Review Console BFF supplies a request-bound actor assertion.'
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      responses:
+        '409':
+          description: Provider control requires an approved action proposal
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - ACTION_PROPOSAL_REQUIRED
+      x-operation-kind: COMMAND
+      x-capability: kill_switch.execute
+      x-error-codes:
+      - ACTION_PROPOSAL_REQUIRED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/upgradeProviderModelRequest'
+      security:
+      - ActorAssertion: []
+      x-assurance-policy:
+        mode: STATIC
+        default: STEP_UP
+        conditions: []
+        step_up_possible: true
+      x-assurance-level: STEP_UP
+      x-step-up-required: true
+      x-provider-control-entrypoint: ACTION_PROPOSAL
+      x-state-effect: UNCHANGED
   /v1/internal/commands/validate-claims:
     post:
       operationId: validateClaims
@@ -16351,6 +16244,100 @@ paths:
       x-error-codes:
       - INVALID_PARAMETER
       - INVALID_CURSOR
+      - ACTOR_ASSERTION_REQUIRED
+      - ACTOR_ASSERTION_INVALID
+      - ACTOR_ASSERTION_EXPIRED
+      - ACTOR_ASSERTION_AUDIENCE_MISMATCH
+      - ACTOR_ASSERTION_REQUEST_MISMATCH
+      - ACTOR_ASSERTION_REPLAYED
+      - CAPABILITY_DENIED
+      - DEPENDENCY_UNAVAILABLE
+      - DEPENDENCY_RATE_LIMITED
+      - INTERNAL_ERROR
+      security:
+      - ActorAssertion: []
+      x-assurance-level: ACTIVE_SESSION
+      x-step-up-required: false
+  /v1/internal/queries/list-relay-models:
+    get:
+      operationId: listRelayModels
+      tags:
+      - operations
+      summary: relay model catalog and provider selection state
+      description: 'Final v13 contract. Kind: QUERY. Capability: cases.read. Review
+        Console BFF supplies a request-bound actor assertion.'
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelayModelsPage'
+        '400':
+          description: 'Problem response: INVALID_PARAMETER'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - INVALID_PARAMETER
+        '401':
+          description: 'Problem response: ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID,
+            ACTOR_ASSERTION_EXPIRED, ACTOR_ASSERTION_AUDIENCE_MISMATCH, ACTOR_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - ACTOR_ASSERTION_REQUIRED
+          - ACTOR_ASSERTION_INVALID
+          - ACTOR_ASSERTION_EXPIRED
+          - ACTOR_ASSERTION_AUDIENCE_MISMATCH
+          - ACTOR_ASSERTION_REQUEST_MISMATCH
+        '403':
+          description: 'Problem response: CAPABILITY_DENIED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - CAPABILITY_DENIED
+        '409':
+          description: 'Problem response: ACTOR_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - ACTOR_ASSERTION_REPLAYED
+        '500':
+          description: 'Problem response: INTERNAL_ERROR'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '503':
+          description: 'Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - DEPENDENCY_UNAVAILABLE
+          - DEPENDENCY_RATE_LIMITED
+      x-operation-kind: QUERY
+      x-capability: cases.read
+      x-error-codes:
+      - INVALID_PARAMETER
       - ACTOR_ASSERTION_REQUIRED
       - ACTOR_ASSERTION_INVALID
       - ACTOR_ASSERTION_EXPIRED
@@ -24948,6 +24935,170 @@ components:
       - readyCount
       - leasedCount
       - deadLetterCount
+    RelayDataPolicyInput:
+      type: object
+      additionalProperties: false
+      properties:
+        processingRegion:
+          type: string
+          minLength: 1
+          maxLength: 15
+          pattern: ^[A-Z]{2}(?:-[A-Z0-9]{1,12})?$
+        retentionMode:
+          type: string
+          enum:
+          - ZERO_RETENTION
+          - BOUNDED_PROVIDER_RETENTION
+          - LOCAL_ONLY
+        policyVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+      - processingRegion
+      - retentionMode
+      - policyVersion
+    RelayModelCatalogItem:
+      type: object
+      additionalProperties: false
+      properties:
+        modelId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$
+        family:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+          - type: 'null'
+        track:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+          - type: 'null'
+        createdAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        firstSeenAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        new:
+          type: boolean
+      required:
+      - modelId
+      - family
+      - track
+      - createdAt
+      - firstSeenAt
+      - lastSeenAt
+      - active
+      - new
+    RelayModelCurrentProvider:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currentModel:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$
+          - type: 'null'
+        enabled:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+        autoUpgrade:
+          type: boolean
+        autoUpgradeConflict:
+          type: boolean
+          description: true when automatic upgrade is enabled and two or more active
+            models with created timestamps share the latest created timestamp in the
+            provider track; no model is selected automatically.
+        track:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+          - type: 'null'
+        dataPolicyState:
+          type: string
+          enum:
+          - UNCONFIGURED
+          - CONFIGURED
+        pricingVersion:
+          type: string
+        unpriced:
+          type: boolean
+      required:
+      - providerId
+      - name
+      - currentModel
+      - enabled
+      - version
+      - autoUpgrade
+      - autoUpgradeConflict
+      - track
+      - dataPolicyState
+      - pricingVersion
+      - unpriced
+    RelayModelSyncStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+          - NOT_RUN
+          - QUEUED
+          - RUNNING
+          - SUCCEEDED
+          - FAILED
+        lastCompletedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        lastErrorCode:
+          anyOf:
+          - type: string
+            pattern: ^[A-Z][A-Z0-9_]{0,127}$
+          - type: 'null'
+      required:
+      - status
+      - lastCompletedAt
+      - lastErrorCode
+    RelayModelsPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelayModelCatalogItem'
+        currentProviders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelayModelCurrentProvider'
+        syncStatus:
+          $ref: '#/components/schemas/RelayModelSyncStatus'
+        asOf:
+          type: string
+          format: date-time
+      required:
+      - items
+      - currentProviders
+      - syncStatus
+      - asOf
     Redaction:
       type: object
       additionalProperties: false
@@ -28778,6 +28929,10 @@ components:
       - signalId
       - reason
       - expectedVersion
+    listRelayModelsQuery:
+      type: object
+      additionalProperties: false
+      properties: {}
     markNotificationReadReceipt:
       type: object
       additionalProperties: false
@@ -30200,6 +30355,63 @@ components:
       - evaluationDigest
       - reason
       - expectedVersion
+    setModelAutoUpgradeReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+        autoUpgrade:
+          type: boolean
+        track:
+          anyOf:
+          - type: string
+          - type: 'null'
+        status:
+          type: string
+          enum:
+          - completed
+        acceptedAt:
+          type: string
+          format: date-time
+      required:
+      - providerId
+      - version
+      - autoUpgrade
+      - track
+      - status
+      - acceptedAt
+    setModelAutoUpgradeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        enabled:
+          type: boolean
+        track:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+      required:
+      - providerId
+      - expectedVersion
+      - enabled
+      - reason
     startAccessReviewReceipt:
       type: object
       additionalProperties: false
@@ -30626,9 +30838,14 @@ components:
           type: string
         reason:
           type: string
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
       required:
       - providerId
       - testModel
+      - expectedVersion
     transitionCaseReceipt:
       type: object
       additionalProperties: false
@@ -31276,6 +31493,66 @@ components:
           format: int64
       required:
       - expectedVersion
+    upgradeProviderModelReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        providerId:
+          type: string
+          format: uuid
+        modelId:
+          type: string
+        connectionTestId:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - QUEUED
+        acceptedAt:
+          type: string
+          format: date-time
+      required:
+      - attemptId
+      - providerId
+      - modelId
+      - connectionTestId
+      - jobId
+      - status
+      - acceptedAt
+    upgradeProviderModelRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        modelId:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        dataPolicy:
+          $ref: '#/components/schemas/RelayDataPolicyInput'
+      required:
+      - providerId
+      - modelId
+      - expectedVersion
+      - reason
     uuid-or-slug:
       type: string
       minLength: 1
@@ -31469,14 +31746,10 @@ components:
           type: string
           format: date-time
         nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
         totalApproximate:
-          anyOf:
-          - type: integer
-            format: int64
-          - type: 'null'
+          type: integer
+          format: int64
         operationId:
           type: string
         links:
@@ -31515,6 +31788,7 @@ components:
           - CAPABILITY_ACTIVATION
           - RESPONSE_POLICY_CALENDAR
           - COMMERCIAL_CONTROL
+          - PROVIDER_CONTROL
         origin:
           $ref: '#/components/schemas/ActionOriginV1'
         draft:
@@ -31768,6 +32042,9 @@ components:
           - CAPABILITY_ACTIVATION
           - RESPONSE_POLICY_CALENDAR
           - COMMERCIAL_CONTROL
+          - PROVIDER_CONTROL
+        providerOperationId:
+          $ref: '#/components/schemas/ProviderControlOperationIdV1'
         assignmentId:
           type: string
           format: uuid
@@ -31934,6 +32211,7 @@ components:
           - CAPABILITY_ACTIVATION
           - RESPONSE_POLICY_CALENDAR
           - COMMERCIAL_CONTROL
+          - PROVIDER_CONTROL
         expectedGeneration:
           type: integer
           format: int64
@@ -32493,14 +32771,10 @@ components:
           type: string
           format: date-time
         nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
         totalApproximate:
-          anyOf:
-          - type: integer
-            format: int64
-          - type: 'null'
+          type: integer
+          format: int64
         operationId:
           type: string
         links:
@@ -32738,14 +33012,10 @@ components:
           type: string
           format: date-time
         nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
         totalApproximate:
-          anyOf:
-          - type: integer
-            format: int64
-          - type: 'null'
+          type: integer
+          format: int64
         operationId:
           type: string
         links:
@@ -32923,9 +33193,7 @@ components:
           type: string
           format: date-time
         nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
         operationId:
           type: string
         links:
@@ -33731,6 +33999,7 @@ components:
       - CAPABILITY_ACTIVATION
       - RESPONSE_POLICY_CALENDAR
       - COMMERCIAL_CONTROL
+      - PROVIDER_CONTROL
     ActionTargetV1:
       type: object
       additionalProperties: false
@@ -35145,6 +35414,30 @@ components:
         - resumeEvidenceSetDigest
         - expiresAt
         - commercialControlBindingDigest
+      - type: object
+        additionalProperties: false
+        properties:
+          schemaVersion:
+            type: string
+            const: action-payload.v1
+          kind:
+            type: string
+            const: PROVIDER_CONTROL
+          target:
+            $ref: '#/components/schemas/ActionTargetV1'
+          rationale:
+            $ref: '#/components/schemas/ActionRationaleV1'
+          effect:
+            $ref: '#/components/schemas/ActionEffectV1'
+          providerControl:
+            $ref: '#/components/schemas/ProviderControlActionV1'
+        required:
+        - schemaVersion
+        - kind
+        - target
+        - rationale
+        - effect
+        - providerControl
     ActionRationaleV1:
       type: object
       additionalProperties: false
@@ -36569,6 +36862,17 @@ components:
         - acknowledgementRequirementDigest
         - ackDueAt
         - expectedTerminalState
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: PROVIDER_CONTROL
+          providerControl:
+            $ref: '#/components/schemas/ProviderControlApprovalDetailV1'
+        required:
+        - kind
+        - providerControl
     ActionApprovalSubjectViewV1:
       type: object
       additionalProperties: false
@@ -37505,6 +37809,17 @@ components:
         - requiredQuorum
         - importReceiptStatus
         - acknowledgementStatus
+      - type: object
+        additionalProperties: false
+        properties:
+          kind:
+            type: string
+            const: PROVIDER_CONTROL
+          providerControl:
+            $ref: '#/components/schemas/ProviderControlActionV1'
+        required:
+        - kind
+        - providerControl
     ActionAssignmentHistoryPageV1:
       type: object
       additionalProperties: false
@@ -37523,9 +37838,7 @@ components:
           type: string
           pattern: ^[0-9a-f]{64}$
         nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
         complete:
           type: boolean
       required:
@@ -37553,9 +37866,7 @@ components:
           type: string
           pattern: ^[0-9a-f]{64}$
         nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
         complete:
           type: boolean
       required:
@@ -40613,3 +40924,193 @@ components:
         - closureReceiptSetDigest
         - remedyVerificationDigest
         - resumeEvidenceSetDigest
+    ProviderControlActionV1:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: disableProviderRouting
+          providerId:
+            $ref: '#/components/schemas/uuid-or-slug'
+          reason:
+            type: string
+          expectedVersion:
+            type: integer
+            format: int64
+        required:
+        - operationId
+        - providerId
+        - reason
+        - expectedVersion
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: testProviderConnection
+          providerId:
+            type: string
+            format: uuid
+          testModel:
+            type: string
+          reason:
+            type: string
+          expectedVersion:
+            type: integer
+            format: int64
+        required:
+        - operationId
+        - providerId
+        - testModel
+        - expectedVersion
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: upgradeProviderModel
+          providerId:
+            type: string
+            format: uuid
+          modelId:
+            type: string
+          expectedVersion:
+            type: integer
+            format: int64
+          reason:
+            type: string
+          dataPolicy:
+            $ref: '#/components/schemas/RelayDataPolicyInput'
+        required:
+        - operationId
+        - providerId
+        - modelId
+        - expectedVersion
+        - reason
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: setModelAutoUpgrade
+          providerId:
+            type: string
+            format: uuid
+          expectedVersion:
+            type: integer
+            format: int64
+          enabled:
+            type: boolean
+          track:
+            type: string
+          reason:
+            type: string
+        required:
+        - operationId
+        - providerId
+        - expectedVersion
+        - enabled
+        - reason
+    ProviderControlApprovalDetailV1:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: disableProviderRouting
+          providerId:
+            $ref: '#/components/schemas/uuid-or-slug'
+          expectedVersion:
+            type: integer
+            format: int64
+          reasonDigest:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+        required:
+        - operationId
+        - providerId
+        - expectedVersion
+        - reasonDigest
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: testProviderConnection
+          providerId:
+            type: string
+            format: uuid
+          expectedVersion:
+            type: integer
+            format: int64
+          testModel:
+            type: string
+          reasonDigest:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+        required:
+        - operationId
+        - providerId
+        - expectedVersion
+        - testModel
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: upgradeProviderModel
+          providerId:
+            type: string
+            format: uuid
+          expectedVersion:
+            type: integer
+            format: int64
+          modelId:
+            type: string
+          reasonDigest:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+          dataPolicyDigest:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+        required:
+        - operationId
+        - providerId
+        - expectedVersion
+        - modelId
+        - reasonDigest
+      - type: object
+        additionalProperties: false
+        properties:
+          operationId:
+            type: string
+            const: setModelAutoUpgrade
+          providerId:
+            type: string
+            format: uuid
+          expectedVersion:
+            type: integer
+            format: int64
+          enabled:
+            type: boolean
+          track:
+            type: string
+          reasonDigest:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+        required:
+        - operationId
+        - providerId
+        - expectedVersion
+        - enabled
+        - reasonDigest
+    ProviderControlOperationIdV1:
+      type: string
+      enum:
+      - disableProviderRouting
+      - testProviderConnection
+      - upgradeProviderModel
+      - setModelAutoUpgrade

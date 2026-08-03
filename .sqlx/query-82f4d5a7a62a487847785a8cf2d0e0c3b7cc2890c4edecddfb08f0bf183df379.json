@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT status,cooldown_until FROM ops.provider_model_upgrade_attempts WHERE provider_id=$1 AND target_model_id=$2 AND attempt_kind='AUTO' AND status <> 'SUPPRESSED' ORDER BY created_at DESC,id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "cooldown_until",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "cooldown_until"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "82f4d5a7a62a487847785a8cf2d0e0c3b7cc2890c4edecddfb08f0bf183df379"
+}

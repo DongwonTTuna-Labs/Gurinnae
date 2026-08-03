@@ -19,6 +19,8 @@ PHYSICAL_TABLE_PATHS = (
     "specs/database/addendum/0029-commercial-core.yaml",
     "specs/database/addendum/0029-invoice-revenue-sku.yaml",
     "specs/database/addendum/0029-funding-disclosure.yaml",
+    "specs/database/addendum/0032-relay-model-catalog.yaml",
+    "specs/database/addendum/0033-provider-control-execution.yaml",
 )
 
 APPROVAL_BINDING_V1_FIELDS = (
@@ -74,6 +76,7 @@ APPROVAL_DETAIL_RELATIONS = {
     "CAPABILITY_ACTIVATION": "ops.action_approval_capability_activation_details",
     "RESPONSE_POLICY_CALENDAR": "ops.action_approval_response_policy_calendar_details",
     "COMMERCIAL_CONTROL": "ops.action_approval_commercial_control_details",
+    "PROVIDER_CONTROL": "ops.action_approval_provider_control_details",
 }
 
 
@@ -265,6 +268,3 @@ def _parse_reference(foreign_key: dict[str, Any]) -> tuple[str, tuple[str, ...]]
     if isinstance(target, str) and isinstance(target_columns, list):
         return target, tuple(str(column) for column in target_columns)
     return None
-
-
-

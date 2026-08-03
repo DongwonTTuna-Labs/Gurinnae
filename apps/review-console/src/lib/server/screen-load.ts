@@ -4,6 +4,7 @@ import {
   canonicalizeScreenViewModel,
   emptyScreenProjection,
   projectFetchedData,
+  relayModelCatalogViewModel,
   type ScreenRuntime,
   type ScreenViewModel,
   serverActionDestinations,
@@ -13,6 +14,7 @@ import type { RequestEvent } from "@sveltejs/kit";
 import { reviewRuntimeState } from "$lib/view-models/runtime";
 import { requestContext } from "./actor-context";
 import { clearAuth } from "./cookies";
+import { providerOperationBinding } from "./provider-control-approval";
 import { operations } from "./screen-contract";
 import { controlRequest, identityCall } from "./screen-control";
 import {
@@ -20,6 +22,7 @@ import {
   actionIdempotencyKeys,
   csrf,
   definedParams,
+  formCaptionsFor,
   formsFor,
   operationQuery,
   problemTitle,
@@ -232,6 +235,12 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     /^[0-9a-f]{64}$/i.test(proposal.approvalDigest)
       ? proposal.approvalDigest
       : undefined;
+  const actionKind =
+    typeof proposal.actionKind === "string" ? proposal.actionKind : null;
+  const providerBinding = providerOperationBinding(
+    actionKind,
+    recordValue(detail, "payload"),
+  );
   const queueProjection = recordValue(data, "listActionApprovalQueue");
   const queueItems = Array.isArray(queueProjection.items)
     ? queueProjection.items
@@ -294,15 +303,16 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   const digestCurrent =
     approvalDigest !== undefined &&
     queueDigest !== undefined &&
-    queueDigest === approvalDigest;
-  const selectedTarget: ScreenRuntime["selectedTarget"] =
+    queueDigest === approvalDigest &&
+    providerBinding.valid;
+  type SelectedApprovalTarget = NonNullable<ScreenRuntime["selectedTarget"]> & {
+    providerOperationId?: string;
+  };
+  const selectedTarget: SelectedApprovalTarget | undefined =
     proposalId && proposalVersion !== undefined && approvalDigest
       ? {
           proposalId,
-          actionKind:
-            typeof proposal.actionKind === "string"
-              ? proposal.actionKind
-              : null,
+          actionKind,
           assignmentId:
             typeof assignment.assignmentId === "string"
               ? assignment.assignmentId
@@ -335,12 +345,21 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
               : typeof assignment.bindingDigest === "string"
                 ? assignment.bindingDigest
                 : null,
+          ...(providerBinding.providerOperationId
+            ? { providerOperationId: providerBinding.providerOperationId }
+            : {}),
           digestCurrent,
           loadState: digestCurrent ? "READY" : "BLOCKED",
         }
       : undefined;
   if (selectedTarget) data.selectedTarget = selectedTarget;
   const navigationOptions = buildRowSelectionNavigationOptions(screen.id, data);
+  const relayModelCatalog =
+    screen.id === "OPS-005"
+      ? relayModelCatalogViewModel(data.listRelayModels)
+      : undefined;
+  const forms = formsFor(screen, event, data, new Set(allowedActionIds));
+  const formCaptions = formCaptionsFor(forms, screen);
   const runtime: ScreenRuntime = {
     csrfToken,
     state:
@@ -360,10 +379,12 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     data: {},
     projection: projectFetchedData(screen, data),
     errors,
-    forms: formsFor(screen, event, data, new Set(allowedActionIds)),
+    forms,
+    ...(Object.keys(formCaptions).length > 0 ? { formCaptions } : {}),
     idempotencyKeys: actionIdempotencyKeys(screen, new Set(allowedActionIds)),
     allowedActionIds,
     ...(Object.keys(navigationOptions).length > 0 ? { navigationOptions } : {}),
+    ...(relayModelCatalog ? { relayModelCatalog } : {}),
     ...(approvalQueue.length > 0 ? { approvalQueue } : {}),
     ...(selectedTarget ? { selectedTarget } : {}),
     ...(typeof actor.displayName === "string"

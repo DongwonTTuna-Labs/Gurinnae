@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_model_upgrade_attempts SET status='FAILED',last_error_code=$2, started_at=COALESCE(started_at,CAST($3 AS timestamptz)), completed_at=CAST($3 AS timestamptz), cooldown_until=CASE WHEN attempt_kind='AUTO' THEN CAST($3 AS timestamptz) + interval '6 hours' ELSE NULL END WHERE id=$1 AND status IN ('QUEUED','RUNNING')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2143bc01f68a44b7eecb3be32434bb5e47e81adc5cd4f28ca92f6cacd9671f40"
+}

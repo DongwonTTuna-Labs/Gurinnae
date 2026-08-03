@@ -54,7 +54,7 @@ async fn insert_provider_turn(
     let (prompt_id, prompt_version, prompt_sha256) = pinned_prompt_contract(agent_type)
         .ok_or_else(|| Failure::Terminal("AGENT_REGISTRY_DRIFT", agent_type.to_owned()))?;
     let (output_schema_id, output_schema_version, output_schema_sha256) = output_schema_contract(agent_type);
-    let rights_sha256 = sha256(b"model-use-rights-required");
+    let rights_sha256 = model_use_rights_decision_set_sha256(evidence)?;
     sqlx::query_scalar::<_, Uuid>(
         "SELECT ops.start_agent_provider_turn(
            $1,$2,CAST($3 AS char(64)),CAST($28 AS integer),CAST($28 AS integer),CAST($4 AS char(64)),

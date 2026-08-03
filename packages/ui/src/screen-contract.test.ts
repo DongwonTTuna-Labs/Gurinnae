@@ -59,7 +59,7 @@ describe("typed screen contract", () => {
     );
     expect(ids).toHaveLength(94);
     expect(new Set(ids).size).toBe(94);
-    expect(sections).toBe(496);
+    expect(sections).toBe(497);
     expect(
       ids.every((id) =>
         ROUTE_SCREEN_CONTRACTS[

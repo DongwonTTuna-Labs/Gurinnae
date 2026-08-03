@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,65 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC_VERSION = "13.0.0"
+OPENAPI_DOCUMENTS = {
+    "public-api": "specs/generated/public-api.openapi.json",
+    "submission-api": "specs/generated/submission-api.openapi.json",
+    "control-api": "specs/generated/control-api.openapi.json",
+    "identity-provider": "specs/generated/identity-provider.openapi.json",
+    "identity-service-internal": "specs/generated/identity-service-internal.openapi.json",
+}
+
+
+# These values exist only in generated test evidence and mock responses. They do
+# not seed a production provider or claim that the unauthenticated relay catalog
+# contains either model.
+TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
+    "listRelayModels": {
+        "items": [
+            {
+                "modelId": "relay-test-stable",
+                "family": "relay-test",
+                "track": "relay-test-",
+                "createdAt": "2026-07-12T00:00:00Z",
+                "firstSeenAt": "2026-07-12T00:00:00Z",
+                "lastSeenAt": "2026-07-14T00:00:00Z",
+                "active": True,
+                "new": False,
+            },
+            {
+                "modelId": "relay-test-latest",
+                "family": "relay-test",
+                "track": "relay-test-",
+                "createdAt": "2026-07-13T00:00:00Z",
+                "firstSeenAt": "2026-07-13T00:00:00Z",
+                "lastSeenAt": "2026-07-14T00:00:00Z",
+                "active": True,
+                "new": True,
+            },
+        ],
+        "currentProviders": [
+            {
+                "providerId": "90000000-0000-4000-8000-000000000005",
+                "name": "릴레이 테스트 공급자",
+                "currentModel": "relay-test-stable",
+                "enabled": True,
+                "version": 2,
+                "autoUpgrade": False,
+                "autoUpgradeConflict": False,
+                "track": "relay-test-",
+                "dataPolicyState": "CONFIGURED",
+                "pricingVersion": "relay-unpriced-v1",
+                "unpriced": True,
+            }
+        ],
+        "syncStatus": {
+            "status": "SUCCEEDED",
+            "lastCompletedAt": "2026-07-14T00:00:00Z",
+            "lastErrorCode": None,
+        },
+        "asOf": "2026-07-14T00:00:00Z",
+    }
+}
 
 
 GENERATED_PATH_PATTERNS = (
@@ -136,36 +196,113 @@ def sample_for_schema(schema: Any, document: dict[str, Any], depth: int = 0) -> 
     return None
 
 
+def primary_response(
+    operation: dict[str, Any], *, operation_id: str
+) -> tuple[int, dict[str, Any]]:
+    responses = operation.get("responses")
+    if not isinstance(responses, dict) or not responses:
+        raise ValueError(f"operation has no declared responses: {operation_id}")
+
+    preferred = [
+        (code, response)
+        for code, response in responses.items()
+        if re.fullmatch(r"[23][0-9]{2}", str(code))
+    ]
+    if preferred:
+        code, response = preferred[0]
+    else:
+        explicit = [
+            (code, response)
+            for code, response in responses.items()
+            if str(code) != "default" and re.fullmatch(r"[0-9]{3}", str(code))
+        ]
+        if len(explicit) != 1:
+            declared = ", ".join(str(code) for code in responses)
+            raise ValueError(
+                f"operation without a 2xx/3xx response must declare exactly one "
+                f"explicit primary response: {operation_id} ({declared})"
+            )
+        code, response = explicit[0]
+
+    if not isinstance(response, dict):
+        raise ValueError(f"primary response is not an object: {operation_id}:{code}")
+    return int(code), response
+
+
+def response_sample(
+    status: int, response: dict[str, Any], document: dict[str, Any]
+) -> tuple[str, Any]:
+    content = response.get("content", {})
+    if not isinstance(content, dict) or not content:
+        return "", None
+    media_type = next(iter(content))
+    media = content[media_type]
+    if not isinstance(media, dict):
+        raise ValueError(f"response media declaration is not an object: {status}:{media_type}")
+    body = sample_for_schema(media.get("schema", {}), document)
+    if media_type == "application/problem+json" and isinstance(body, dict):
+        body["status"] = status
+        error_codes = response.get("x-error-codes", [])
+        if (
+            isinstance(error_codes, list)
+            and len(error_codes) == 1
+            and isinstance(error_codes[0], str)
+        ):
+            body["code"] = error_codes[0]
+        description = response.get("description")
+        if isinstance(description, str) and description:
+            body["title"] = description
+    return media_type, body
+
+
 def operation_response_samples() -> dict[str, tuple[int, str, Any]]:
     mapping: dict[str, tuple[int, str, Any]] = {}
-    documents = {
-        "public-api": "specs/generated/public-api.openapi.json",
-        "submission-api": "specs/generated/submission-api.openapi.json",
-        "control-api": "specs/generated/control-api.openapi.json",
-        "identity-provider": "specs/generated/identity-provider.openapi.json",
-        "identity-service-internal": "specs/generated/identity-service-internal.openapi.json",
-    }
-    for api, path in documents.items():
+    for api, path in OPENAPI_DOCUMENTS.items():
         document = json.loads((ROOT / path).read_text(encoding="utf-8"))
         for route in document["paths"].values():
             for method in route.values():
                 if not isinstance(method, dict) or "operationId" not in method:
                     continue
-                responses = method.get("responses", {})
-                success = next(
-                    ((int(code), response) for code, response in responses.items() if str(code)[0] in "23"),
-                    (200, {}),
-                )
-                status, response = success
-                content = response.get("content", {})
-                media_type = next(iter(content), "")
-                schema = content.get(media_type, {}).get("schema", {})
-                mapping[method["operationId"]] = (
-                    status,
-                    media_type,
-                    sample_for_schema(schema, document),
-                )
+                operation_id = method["operationId"]
+                if operation_id in mapping:
+                    raise ValueError(f"duplicate OpenAPI operation id: {operation_id}")
+                status, response = primary_response(method, operation_id=operation_id)
+                media_type, body = response_sample(status, response, document)
+                mapping[operation_id] = (status, media_type, body)
+    for operation_id, body in TEST_ONLY_OPERATION_RESPONSE_BODIES.items():
+        generated = mapping.get(operation_id)
+        if generated is None:
+            raise ValueError(f"test-only response sample operation is not cataloged: {operation_id}")
+        status, media_type, _ = generated
+        if media_type != "application/json":
+            raise ValueError(
+                f"test-only response sample must target application/json: {operation_id}"
+            )
+        mapping[operation_id] = (status, media_type, body)
     return mapping
+
+
+def operation_sample_evidence(
+    samples: dict[str, tuple[int, str, Any]],
+) -> dict[str, dict[str, Any]]:
+    evidence: dict[str, dict[str, Any]] = {}
+    for api, path in OPENAPI_DOCUMENTS.items():
+        document = json.loads((ROOT / path).read_text(encoding="utf-8"))
+        for route in document["paths"].values():
+            for operation in route.values():
+                if not isinstance(operation, dict) or "operationId" not in operation:
+                    continue
+                operation_id = operation["operationId"]
+                if operation_id in evidence:
+                    raise ValueError(f"duplicate OpenAPI operation id: {operation_id}")
+                status, media_type, body = samples[operation_id]
+                evidence[operation_id] = {
+                    "api": api,
+                    "status": status,
+                    "mediaType": media_type,
+                    "body": body,
+                }
+    return evidence
 
 
 def root_workspace(members: list[str]) -> None:
@@ -226,6 +363,82 @@ subtle = {{ path = "vendor/subtle-2.6.0" }}
     )
 
 
+def operation_catalog() -> list[dict[str, Any]]:
+    operations = list(load_yaml("specs/api/operation-contracts.yaml")["operations"])
+    identity_document = json.loads(
+        (ROOT / OPENAPI_DOCUMENTS["identity-service-internal"]).read_text(encoding="utf-8")
+    )
+    for route_path, route in identity_document["paths"].items():
+        for method_name, method in route.items():
+            if not isinstance(method, dict) or "operationId" not in method:
+                continue
+            operations.append(
+                {
+                    "operation_id": method["operationId"],
+                    "api": "identity-service-internal",
+                    "method": method_name.upper(),
+                    "path": route_path,
+                    "auth": "service-assertion",
+                    "capability": "identity.internal",
+                    "idempotency": "required" if method_name.lower() != "get" else "not-applicable",
+                    "operation_kind": "COMMAND" if method_name.lower() != "get" else "QUERY",
+                    "assurance_level": "SERVICE_ASSERTION",
+                    "step_up_required": False,
+                }
+            )
+    operation_ids = [operation["operation_id"] for operation in operations]
+    if len(operation_ids) != len(set(operation_ids)):
+        raise ValueError("operation catalog contains duplicate operation ids")
+    return operations
+
+
+def operation_spec_sources(
+    operations: list[dict[str, Any]], samples: dict[str, tuple[int, str, Any]]
+) -> dict[str, str]:
+    by_api: dict[str, list[dict[str, Any]]] = {}
+    for operation in operations:
+        by_api.setdefault(operation["api"], []).append(operation)
+    sources: dict[str, str] = {}
+    for api, records in sorted(by_api.items()):
+        entries = []
+        for operation in records:
+            status, media_type, sample = samples[operation["operation_id"]]
+            sample_json = json.dumps(sample, ensure_ascii=False, separators=(",", ":"))
+            fields = (
+                ("id", json.dumps(operation["operation_id"])),
+                ("api", json.dumps(api)),
+                ("method", json.dumps(operation["method"])),
+                ("path", json.dumps(operation["path"])),
+                ("auth", json.dumps(operation["auth"])),
+                ("capability", json.dumps(operation.get("capability") or "")),
+                (
+                    "idempotency_required",
+                    str(operation.get("idempotency") == "required").lower(),
+                ),
+                (
+                    "assurance_level",
+                    json.dumps(operation.get("assurance_level") or "ANONYMOUS_PROOF"),
+                ),
+                ("step_up_required", str(bool(operation.get("step_up_required"))).lower()),
+                ("operation_kind", json.dumps(operation["operation_kind"])),
+                ("success_status", str(status)),
+                ("media_type", json.dumps(media_type)),
+                ("response_json", json.dumps(sample_json, ensure_ascii=False)),
+            )
+            entry = ["    OperationSpec {"]
+            entry.extend(f"        {name}: {value}," for name, value in fields)
+            entry.append("    },")
+            entries.append("\n".join(entry))
+        module = rust_ident(api)
+        sources[module] = (
+            "// Generated from the v13 operation catalog; do not edit by hand.\n"
+            "use crate::OperationSpec;\n\npub const OPERATIONS: &[OperationSpec] = &[\n"
+            + "\n".join(entries)
+            + "\n];\n"
+        )
+    return sources
+
+
 def api_contracts(operations: list[dict[str, Any]], samples: dict[str, tuple[int, str, Any]]) -> None:
     path = "crates/api-contracts"
     write(
@@ -243,37 +456,10 @@ serde_json.workspace = true
 workspace = true
 ''',
     )
-    by_api: dict[str, list[dict[str, Any]]] = {}
-    for operation in operations:
-        by_api.setdefault(operation["api"], []).append(operation)
-    modules = []
-    for api, records in sorted(by_api.items()):
-        module = rust_ident(api)
-        modules.append(module)
-        entries = []
-        for operation in records:
-            status, media_type, sample = samples[operation["operation_id"]]
-            sample_json = json.dumps(sample, ensure_ascii=False, separators=(",", ":"))
-            entries.append(
-                "    OperationSpec { "
-                f'id: {json.dumps(operation["operation_id"])}, '
-                f'api: {json.dumps(api)}, method: {json.dumps(operation["method"])}, '
-                f'path: {json.dumps(operation["path"])}, auth: {json.dumps(operation["auth"])}, '
-                f'capability: {json.dumps(operation.get("capability") or "")}, '
-                f'idempotency_required: {str(operation.get("idempotency") == "required").lower()}, '
-                f'assurance_level: {json.dumps(operation.get("assurance_level") or "ANONYMOUS_PROOF")}, '
-                f'step_up_required: {str(bool(operation.get("step_up_required"))).lower()}, '
-                f'operation_kind: {json.dumps(operation["operation_kind"])}, '
-                f'success_status: {status}, media_type: {json.dumps(media_type)}, '
-                f'response_json: {json.dumps(sample_json)} '
-                "},"
-            )
+    for module, source in operation_spec_sources(operations, samples).items():
         write(
             f"{path}/src/{module}.rs",
-            "// Generated from the v13 operation catalog; do not edit by hand.\n"
-            "use crate::OperationSpec;\n\npub const OPERATIONS: &[OperationSpec] = &[\n"
-            + "\n".join(entries)
-            + "\n];",
+            source,
         )
     write(
         f"{path}/src/lib.rs",
@@ -324,15 +510,7 @@ pub struct Problem<'a> {
     write(f"{path}/src/openapi.rs", "pub const OPENAPI_VERSION: &str = \"3.1.0\";")
     for module in ("public", "control", "submission", "identity"):
         write(f"{path}/src/{module}/mod.rs", f'pub const SURFACE: &str = "{module}";')
-    evidence = {
-        operation["operation_id"]: {
-            "api": operation["api"],
-            "status": samples[operation["operation_id"]][0],
-            "mediaType": samples[operation["operation_id"]][1],
-            "body": samples[operation["operation_id"]][2],
-        }
-        for operation in operations
-    }
+    evidence = operation_sample_evidence(samples)
     write("verification/generated-operation-samples.json", json.dumps(evidence, ensure_ascii=False, indent=2))
 
 
@@ -559,28 +737,7 @@ def rust_workspace() -> None:
     workspace_members = final_tree["cargo_workspace"]["members"]
     members = list(workspace_members)
     root_workspace(members)
-    operations = load_yaml("specs/api/operation-contracts.yaml")["operations"]
-    identity_document = json.loads(
-        (ROOT / "specs/api/identity-service-internal.openapi.json").read_text(encoding="utf-8")
-    )
-    for route_path, route in identity_document["paths"].items():
-        for method_name, method in route.items():
-            if not isinstance(method, dict) or "operationId" not in method:
-                continue
-            operations.append(
-                {
-                    "operation_id": method["operationId"],
-                    "api": "identity-service-internal",
-                    "method": method_name.upper(),
-                    "path": route_path,
-                    "auth": "service-assertion",
-                    "capability": "identity.internal",
-                    "idempotency": "required" if method_name.lower() != "get" else "not-applicable",
-                    "operation_kind": "COMMAND" if method_name.lower() != "get" else "QUERY",
-                    "assurance_level": "SERVICE_ASSERTION",
-                    "step_up_required": False,
-                }
-            )
+    operations = operation_catalog()
     samples = operation_response_samples()
     api_contracts(operations, samples)
     application_crate()
@@ -612,6 +769,7 @@ def route_directory(route: str) -> str:
 
 
 def frontend_workspace(screens: list[dict[str, Any]]) -> None:
+    generated_screen_paths: list[str] = []
     package_json = {
         "name": "gurine",
         "private": True,
@@ -737,11 +895,13 @@ export default defineConfig({ plugins: [sveltekit()] });
                 "states": screen["states"],
                 "dataOperations": screen["data_operations"],
             }
+            screen_path = f"{base}/screen.ts"
             write(
-                f"{base}/screen.ts",
+                screen_path,
                 "import type { ScreenViewModel } from \"@gurine/ui\";\n\n"
                 + f"export const screen = {json.dumps(view_model, ensure_ascii=False, indent=2)} as const satisfies ScreenViewModel;",
             )
+            generated_screen_paths.append(str(ROOT / screen_path))
             write(f"{base}/+page.server.ts", '''import { screen } from "./screen";
 
 export const load = async () => ({ screen });
@@ -753,6 +913,11 @@ export const load = async () => ({ screen });
 
 <ScreenPage screen={data.screen} />
 ''')
+    subprocess.run(
+        ["bunx", "biome", "format", "--write", *generated_screen_paths],
+        cwd=ROOT,
+        check=True,
+    )
     packages = ["api-client-public", "api-client-control", "api-client-submission", "api-client-identity-internal", "config"]
     for package in packages:
         generated_client = package.startswith("api-client-")

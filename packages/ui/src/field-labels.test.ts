@@ -407,25 +407,25 @@ function missingLabels(fields: ReadonlySet<string>): string[] {
 describe("closed Korean field-label registry", () => {
   it("covers every field rendered by the 94-screen operation forms", () => {
     const fields = screenOperationFields();
-    expect(fields.size).toBe(224);
+    expect(fields.size).toBe(227);
     expect(missingLabels(fields)).toEqual([]);
   });
 
   it("covers every generated screen projection field", () => {
     const fields = projectionFields();
-    expect(fields.size).toBe(289);
+    expect(fields.size).toBe(293);
     expect(missingLabels(fields)).toEqual([]);
   });
 
   it("covers every generated operation-sample response field", () => {
     const fields = operationSampleFields();
-    expect(fields.size).toBe(786);
+    expect(fields.size).toBe(802);
     expect(missingLabels(fields)).toEqual([]);
   });
 
   it("covers every generated and handwritten mock response field", () => {
     const fields = mockResponseFields();
-    expect(fields.size).toBe(921);
+    expect(fields.size).toBe(938);
     expect(missingLabels(fields)).toEqual([]);
   });
 

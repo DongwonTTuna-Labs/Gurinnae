@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::config::Config;
 use crate::consumer_catalog::consumers_for;
+use crate::relay_model_catalog_sync::schedule_relay_model_catalog_sync;
 
 #[derive(Debug, Error)]
 pub enum SchedulerError {
@@ -19,6 +20,8 @@ pub enum SchedulerError {
     Initialization,
     #[error("scheduler database operation failed: {0}")]
     Database(#[source] sqlx::Error),
+    #[error("scheduler event routing failed: {0}")]
+    EventRouting(&'static str),
 }
 
 struct Event {
@@ -59,6 +62,10 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
             tracing::error!(stage="schedule_delivery_poll_requests", error=%error, "scheduler stage failed");
             error
         })?;
+        let catalog_syncs = schedule_relay_model_catalog_sync(&pool).await.map_err(|error| {
+            tracing::error!(stage="schedule_relay_model_catalog_sync", error=%error, "scheduler stage failed");
+            error
+        })?;
         let expired: Option<Uuid> = sqlx::query_scalar!(
             "SELECT ops.enqueue_outbox('internal.publication_access_expiry',$1,0, \
              'internal.expire_due_publication_access.v1',$2,clock_timestamp())",
@@ -76,6 +83,7 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
         if config.once {
             if scheduled == 0
                 && polls == 0
+                && catalog_syncs == 0
                 && expired.is_none()
                 && dispatched == 0
                 && !consumed
@@ -85,6 +93,7 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
             }
         } else if scheduled == 0
             && polls == 0
+            && catalog_syncs == 0
             && expired.is_none()
             && dispatched == 0
             && !consumed
@@ -460,7 +469,9 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
         tx.commit().await.map_err(SchedulerError::Database)?;
         return Ok(false);
     };
-    for (consumer, queue) in consumers_for(&event.event_type) {
+    let consumers =
+        consumers_for(&event.event_type, &event.payload).map_err(SchedulerError::EventRouting)?;
+    for (consumer, queue) in consumers {
         let job_id = Uuid::new_v4();
         let inserted = sqlx::query!(
             "INSERT INTO ops.inbox(consumer,event_id,result) VALUES($1,$2,$3) \

@@ -1,7 +1,7 @@
 schema_version: 3
 specification_version: 13.0.0
 status: FINAL
-operation_count: 212
+operation_count: 215
 operations:
 - operation_id: acceptAgentSuggestion
   api: control-api
@@ -1755,57 +1755,21 @@ operations:
 - operation_id: disableProviderRouting
   api: control-api
   method: POST
-  repository_methods:
-  - ProviderRepository::disable_routing
-  statements:
-  - verb: SELECT_FOR_UPDATE
-    relation: ops.provider_configs
-    purpose: lock provider config
-    expected_rows: exactly-one
-    identity_predicate: id = :providerId
-    version_predicate: version = :expectedVersion
-  - verb: UPDATE
-    relation: ops.provider_configs
-    purpose: disable routing and increment version
-    expected_rows: exactly-one
-    version_predicate: version = :expectedVersion
-    identity_predicate: id = :providerId
-    version_mutation: version = version + 1
-  transaction: READ COMMITTED
-  domain_events:
-  - provider.routing_disabled.v1
+  repository_methods: []
+  statements: []
+  transaction: NONE
+  domain_events: []
   integration_events: []
-  audit_action: command.disableProviderRouting
-  concurrency:
-    mode: OPTIMISTIC
-    version_field: expectedVersion
-    guard_relation: ops.provider_configs
-    guard_identity_predicate: id = :providerId
-    guard_version_predicate: version = :expectedVersion
-    mutation_relation: ops.provider_configs
-    mutation_identity_predicate: id = :providerId
-    success_effect: increment version by exactly one; DELETE commands delete exactly one current version
-    zero_rows_resolution:
-      probe: read identity without version predicate
-      missing_error: RESOURCE_NOT_FOUND
-      existing_error: VERSION_CONFLICT
-    version_mutation: version = version + 1
-    request_placeholders:
-    - expectedVersion
-    - providerId
-    context_placeholders: []
-    guard_columns:
-    - id
-    - version
-    mutation_columns:
-    - id
-    - version
+  audit_action: none
+  concurrency: null
   mode: COMMAND
   operation_kind: COMMAND
-  read_relations:
-  - ops.provider_configs
-  write_relations:
-  - ops.provider_configs
+  read_relations: []
+  write_relations: []
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: disableUser
   api: control-api
   method: POST
@@ -3565,6 +3529,41 @@ operations:
   operation_kind: QUERY
   read_relations: []
   write_relations: []
+- operation_id: listRelayModels
+  api: control-api
+  method: GET
+  repository_methods:
+  - ProviderRepository::list_relay_models
+  statements:
+  - verb: SELECT
+    relation: ops.relay_model_catalog
+    purpose: list relay models and adoption state
+    expected_rows: zero-or-more
+  - verb: SELECT
+    relation: ops.provider_configs
+    purpose: read current relay provider model, policy, pricing and version
+    expected_rows: zero-or-more
+  - verb: SELECT
+    relation: ops.provider_model_upgrade_receipts
+    purpose: derive the never-adopted new-model flag from successful immutable receipts
+    expected_rows: zero-or-more
+  - verb: SELECT
+    relation: ops.relay_model_catalog_sync_runs
+    purpose: read latest catalog synchronization status
+    expected_rows: zero-or-one
+  transaction: read-only
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: null
+  mode: QUERY
+  operation_kind: QUERY
+  read_relations:
+  - ops.provider_configs
+  - ops.provider_model_upgrade_receipts
+  - ops.relay_model_catalog
+  - ops.relay_model_catalog_sync_runs
+  write_relations: []
 - operation_id: listReviewQueue
   api: control-api
   method: GET
@@ -5184,6 +5183,24 @@ operations:
   operation_kind: QUERY
   read_relations: []
   write_relations: []
+- operation_id: setModelAutoUpgrade
+  api: control-api
+  method: POST
+  repository_methods: []
+  statements: []
+  transaction: NONE
+  domain_events: []
+  integration_events: []
+  audit_action: none
+  concurrency: null
+  mode: COMMAND
+  operation_kind: COMMAND
+  read_relations: []
+  write_relations: []
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: startAccessReview
   api: control-api
   method: POST
@@ -5549,28 +5566,21 @@ operations:
 - operation_id: testProviderConnection
   api: control-api
   method: POST
-  repository_methods:
-  - ProviderRepository::request_test
-  statements:
-  - verb: INSERT
-    relation: ops.provider_connection_tests
-    purpose: create redacted connection test request
-    expected_rows: exactly-one
-  - verb: INSERT
-    relation: ops.jobs
-    purpose: enqueue provider test job
-    expected_rows: exactly-one
-  transaction: READ COMMITTED
+  repository_methods: []
+  statements: []
+  transaction: NONE
   domain_events: []
   integration_events: []
-  audit_action: provider.connection_test.requested
+  audit_action: none
   concurrency: null
   mode: COMMAND
   operation_kind: COMMAND
   read_relations: []
-  write_relations:
-  - ops.jobs
-  - ops.provider_connection_tests
+  write_relations: []
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: transitionCase
   api: control-api
   method: POST
@@ -6177,6 +6187,24 @@ operations:
   write_relations:
   - intake.submission_sessions
   - intake.subscriptions
+- operation_id: upgradeProviderModel
+  api: control-api
+  method: POST
+  repository_methods: []
+  statements: []
+  transaction: NONE
+  domain_events: []
+  integration_events: []
+  audit_action: none
+  concurrency: null
+  mode: COMMAND
+  operation_kind: COMMAND
+  read_relations: []
+  write_relations: []
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: validateClaims
   api: control-api
   method: POST

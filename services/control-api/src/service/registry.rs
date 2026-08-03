@@ -111,7 +111,7 @@ mod tests {
             "duplicate catalog IDs: {catalog_duplicates:?}"
         );
         assert_eq!(registry_ids, catalog_ids);
-        assert_eq!(registry_ids.len(), 168);
+        assert_eq!(registry_ids.len(), 171);
     }
 
     #[test]

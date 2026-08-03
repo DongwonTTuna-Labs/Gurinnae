@@ -8,18 +8,18 @@
 |---|---:|---|---|---|
 | Public API | 41 | 승인된 public projection과 정적 정책 콘텐츠 조회 | Public Web, 공개 API 사용자 | `api-client-public` |
 | Submission API | 34 | 소명·정정·문의·구독 intake | Public/Response SvelteKit server only | `api-client-submission` |
-| Control API | 131 | 조사·검토·공개·운영 command/query | Review Console server only | `api-client-control` |
+| Control API | 134 | 조사·검토·공개·운영 command/query | Review Console server only | `api-client-control` |
 | Identity Provider BFF routes | 6 | 익명 login, callback, action-bound step-up, logout, security management redirect | Browser ↔ Review Console BFF | BFF route contract; generated browser client 없음 |
 | Private Identity Service | 9 | OIDC transaction, session, step-up authorization를 Rust Identity API에서 처리 | Review Console BFF server only | `api-client-identity-internal` |
 
-외부 operation contract 합계는 **212개**다. Private Identity Service 9개 operation은 외부 212개와 분리된 service-assertion API다.
+외부 operation contract 합계는 **215개**다. Private Identity Service 9개 operation은 외부 215개와 분리된 service-assertion API다.
 
 ## 권위 파일
 
-- `operation-contracts.yaml`: 외부 212개 operation의 method/path/auth/schema/audit/idempotency
+- `operation-contracts.yaml`: 외부 215개 operation의 method/path/auth/schema/audit/idempotency
 - `public-api.openapi.yaml|json`: 41 operations
 - `submission-api.openapi.yaml|json`: 34 operations
-- `control-api.openapi.yaml|json`: 131 operations
+- `control-api.openapi.yaml|json`: 134 operations
 - `identity-provider.openapi.yaml|json`: Review Console BFF의 6개 browser-facing identity route
 - `identity-service-internal.openapi.yaml|json`: private Identity API의 9개 service-assertion operation
 

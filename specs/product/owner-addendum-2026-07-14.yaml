@@ -373,15 +373,16 @@ decision_variants:
     - CAPABILITY_ACTIVATION
     - RESPONSE_POLICY_CALENDAR
     - COMMERCIAL_CONTROL
+    - PROVIDER_CONTROL
   rule: Each action kind has an exact schema and application command; there is no fallback payload.
 
 database_delta:
   base_migrations: 24
-  additive_migrations: 6
-  final_migrations: 30
+  additive_migrations: 8
+  final_migrations: 32
   base_active_tables: 107
-  additive_table_count: 128
-  final_active_tables: 235
+  additive_table_count: 133
+  final_active_tables: 240
   migrations:
     - 0025_evidence_snapshots_and_search.sql
     - 0026_agent_action_approval.sql
@@ -389,6 +390,8 @@ database_delta:
     - 0028_governance_operations.sql
     - 0029_product_economics.sql
     - 0030_v13_submission_session_hardening.sql
+    - 0032_relay_model_catalog.sql
+    - 0033_provider_control_execution.sql
   additive_tables:
     - raw.evidence_segments
     - raw.research_artifacts
@@ -438,6 +441,7 @@ database_delta:
     - ops.action_approval_capability_activation_details
     - ops.action_approval_response_policy_calendar_details
     - ops.action_approval_commercial_control_details
+    - ops.action_approval_provider_control_details
     - ops.action_review_assignments
     - ops.action_decisions
     - ops.execution_authorizations
@@ -518,6 +522,10 @@ database_delta:
     - ops.offer_profile_capabilities
     - ops.paid_evidence_packets
     - ops.paid_evidence_packet_members
+    - ops.relay_model_catalog
+    - ops.relay_model_catalog_sync_runs
+    - ops.provider_model_upgrade_attempts
+    - ops.provider_model_upgrade_receipts
   renamed_tables:
     - from: ops.email_deliveries
       to: ops.outbound_deliveries
@@ -685,6 +693,7 @@ private_application_commands:
     - {operation_id: private.DecideCapabilityActivation, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.capability-activation-executor, kind: COMMAND}
     - {operation_id: private.CreateBusinessCalendarVersion, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.business-calendar-executor, kind: COMMAND}
     - {operation_id: private.ApplyCommercialControl, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.commercial-control-executor, kind: COMMAND}
+    - {operation_id: private.ExecuteProviderControl, transport: PRIVATE_APPLICATION_COMMAND, owner: analysis-worker.provider-control-executor, kind: COMMAND}
     - {operation_id: private.MaterializePaidEvidencePacket, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.paid-evidence-packet-materializer, kind: COMMAND}
   rule: These commands have no HTTP route. They are invoked only by an authenticated inbox delivery or an immutable ExecutionAuthorization and are set-equal to addendum-command-semantics.private_application_commands.
 

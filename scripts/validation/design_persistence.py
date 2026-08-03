@@ -148,7 +148,11 @@ def validate_persistence(
         inventory_lock["migration_sequence"] == expected_migration_sequence
         and len(expected_migration_sequence) == len(set(expected_migration_sequence))
         and owner_migration_names
-        == global_migration_names[: len(owner_migration_names)],
+        == [
+            migration
+            for migration in global_migration_names
+            if migration in owner_migration_set
+        ],
         "global migration sequence is not the exact base plus enumerated post-base registry",
     )
     result.require(

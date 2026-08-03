@@ -29,6 +29,22 @@ bool() {
   [[ "$value" == "true" || "$value" == "false" ]] || fail "$name must be true or false"
 }
 
+csv_contains() {
+  local csv="$1"
+  local expected="$2"
+  local token
+  local -a tokens
+  IFS=',' read -r -a tokens <<< "$csv"
+  for token in "${tokens[@]}"; do
+    token="${token#"${token%%[![:space:]]*}"}"
+    token="${token%"${token##*[![:space:]]}"}"
+    if [[ "${token,,}" == "${expected,,}" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 [[ "${GURINE_ENV:-}" == "production" ]] || fail "GURINE_ENV must be production"
 
 for name in \
@@ -93,9 +109,16 @@ esac
 bool AI_ENABLED
 if [[ "$AI_ENABLED" == "true" ]]; then
   required AI_PROVIDER_ORDER
+  required AI_PROVIDER_HOSTS
   required EGRESS_AI_CHANNEL_URL
   required AI_CASE_BUDGET_KRW
   required AI_DAILY_BUDGET_KRW
+  if csv_contains "$AI_PROVIDER_ORDER" relay; then
+    required AI_RELAY_HOST
+    required AI_RELAY_API_KEY
+    csv_contains "$AI_PROVIDER_HOSTS" "$AI_RELAY_HOST" ||
+      fail "AI_RELAY_HOST must be an exact member of AI_PROVIDER_HOSTS"
+  fi
 fi
 
 connector_gate() {

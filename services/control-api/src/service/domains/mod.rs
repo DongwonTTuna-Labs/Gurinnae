@@ -81,10 +81,10 @@ pub(super) async fn apply_command(
     session_id: Uuid,
     field_keys: &EnvelopeKeyRing,
     transaction: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<Map<String, Value>, ServiceError> {
     match handler {
         CommandHandler::Agents(command) => {
-            agents::apply(
+            let result = agents::apply(
                 command,
                 operation,
                 payload,
@@ -94,17 +94,20 @@ pub(super) async fn apply_command(
                 field_keys,
                 transaction,
             )
-            .await
+            .await;
+            no_command_effect(result)
         }
-        CommandHandler::Cases(command) => cases::apply(command, payload, actor, transaction).await,
+        CommandHandler::Cases(command) => {
+            no_command_effect(cases::apply(command, payload, actor, transaction).await)
+        }
         CommandHandler::Signals(command) => {
-            signals::apply(command, payload, id, actor, transaction).await
+            no_command_effect(signals::apply(command, payload, id, actor, transaction).await)
         }
-        CommandHandler::ClaimsEvidence(command) => {
-            claims_evidence::apply(command, payload, id, actor, field_keys, transaction).await
-        }
+        CommandHandler::ClaimsEvidence(command) => no_command_effect(
+            claims_evidence::apply(command, payload, id, actor, field_keys, transaction).await,
+        ),
         CommandHandler::Editorial(command) => {
-            editorial::apply(
+            let result = editorial::apply(
                 command,
                 operation,
                 payload,
@@ -114,19 +117,20 @@ pub(super) async fn apply_command(
                 field_keys,
                 transaction,
             )
-            .await
+            .await;
+            no_command_effect(result)
         }
-        CommandHandler::Rules(command) => {
-            rules::apply(command, operation, payload, id, actor, transaction).await
-        }
-        CommandHandler::Sources(command) => {
-            sources::apply(command, operation, payload, id, actor, transaction).await
-        }
+        CommandHandler::Rules(command) => no_command_effect(
+            rules::apply(command, operation, payload, id, actor, transaction).await,
+        ),
+        CommandHandler::Sources(command) => no_command_effect(
+            sources::apply(command, operation, payload, id, actor, transaction).await,
+        ),
         CommandHandler::Operations(command) => {
             operations::apply(command, operation, payload, id, actor, transaction).await
         }
         CommandHandler::IdentityGovernance(command) => {
-            identity_governance::apply(
+            let result = identity_governance::apply(
                 command,
                 operation,
                 payload,
@@ -135,18 +139,24 @@ pub(super) async fn apply_command(
                 session_id,
                 transaction,
             )
-            .await
+            .await;
+            no_command_effect(result)
         }
-        CommandHandler::AuditRetention(command) => {
-            audit_retention::apply(command, payload, id, actor, transaction).await
-        }
-        CommandHandler::ResilienceCost(command) => {
-            resilience_cost::apply(command, payload, id, actor, transaction).await
-        }
-        CommandHandler::WorkManagement(command) => {
-            work_management::apply(command, payload, id, actor, transaction).await
-        }
+        CommandHandler::AuditRetention(command) => no_command_effect(
+            audit_retention::apply(command, payload, id, actor, transaction).await,
+        ),
+        CommandHandler::ResilienceCost(command) => no_command_effect(
+            resilience_cost::apply(command, payload, id, actor, transaction).await,
+        ),
+        CommandHandler::WorkManagement(command) => no_command_effect(
+            work_management::apply(command, payload, id, actor, transaction).await,
+        ),
     }
+}
+
+fn no_command_effect(result: Result<(), ServiceError>) -> Result<Map<String, Value>, ServiceError> {
+    result?;
+    Ok(Map::new())
 }
 
 pub(super) async fn query(

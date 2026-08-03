@@ -7,6 +7,7 @@ export type PendingAction = {
   actionContext: Record<string, unknown>;
   returnTo: string;
   pathParams: Record<string, string>;
+  requiredAssuranceLevel?: "ACTIVE_SESSION" | "STEP_UP";
 };
 
 export type ElevatedAuthorization = {

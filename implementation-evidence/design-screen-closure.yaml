@@ -1287,7 +1287,7 @@ screens:
       - authorized object identity
     state:
       section: status
-      answer_pattern: 사건 상세의 상태·revision·freshness에서 정정·철회와 최신성을 가장 먼저 표시한다. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 상세의 상태·개정·최신성에서 정정·철회와 최신성을 가장 먼저 표시한다. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - PublicCaseResponse.publicState
       - PublicCaseResponse.revision
@@ -1296,7 +1296,7 @@ screens:
       - PublicCaseResponse.corrections[]
     matters_now:
       section: known
-      answer_pattern: 먼저 답할 질문은 ‘현재 무엇이 확인됐는가?’이며, 상태·revision·freshness에서 정정·철회와 최신성을 가장 먼저 표시한다.
+      answer_pattern: 먼저 답할 질문은 ‘현재 무엇이 확인됐는가?’이며, 상태·개정·최신성에서 정정·철회와 최신성을 가장 먼저 표시한다.
       sources:
       - PublicCaseResponse.confirmedFacts[]
       - PublicCaseResponse.claims[]
@@ -1571,7 +1571,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-004: 2110b5de616b8120fb02606d33af2d8d390c3674cb385aee63ec9484268b6bed
+    specs/ui/screen-catalog.yaml#screens/PUB-004: 36105f6e8bf7de44d9ad7cc6877a542e10fecfb71e3d37349cd5765f58453c7a
   implementation_source_digest: 9ca97efa2fb3ada845f6a69827bd18089fc157d77d44acc15cba3ef5181414d1
   authored_section_ids:
   - status
@@ -1828,7 +1828,7 @@ screens:
       - authorized object identity
     state:
       section: revision-banner
-      answer_pattern: 사건 공개 개정본의 revision 안내에서 과거본 여부와 최신본 링크. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 공개 개정본의 개정본 안내에서 과거본 여부와 최신본 링크. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseRevisionsPage.asOf
       - CaseRevisionsPage.items[].state
@@ -1844,7 +1844,7 @@ screens:
       - PublicCaseRevisionResponse.content.freshness.lagSeconds
     matters_now:
       section: revision-banner
-      answer_pattern: 먼저 답할 질문은 ‘이 revision은 언제 공개됐는가?’이며, revision 안내에서 과거본 여부와 최신본 링크.
+      answer_pattern: 먼저 답할 질문은 ‘이 revision은 언제 공개됐는가?’이며, 개정본 안내에서 과거본 여부와 최신본 링크.
       sources:
       - CaseRevisionsPage.items[].summary
       - PublicCaseRevisionResponse.content.case.summary
@@ -2050,7 +2050,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-005: 30640dba195516633b7d6e16b5b4dde889cb5c0d8e60b6e416af4522b14fb96d
+    specs/ui/screen-catalog.yaml#screens/PUB-005: b6d40b31a70400c2f13d65c5736ec93f773ece941f5b5e1fd408930b9f988b4d
   implementation_source_digest: 5d832f7fc6c5e14aede5976dfa39ddf1b0aa8d8e1132b3736ace7fc055dcec72
   authored_section_ids:
   - revision-banner
@@ -2512,7 +2512,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-006: 6c610f1afc153e150d484281b2a971bb2d21c8b470ffae19557aa068661307cd
+    specs/ui/screen-catalog.yaml#screens/PUB-006: 47a501b1aff8e12b0c6908be105708ba5eaa0826f83d150ddf57582d05f67faa
   implementation_source_digest: c0e3f97f7d6b9916ce918646e00e7d4ca3b8b501e9d528a8f9851ae0d95f1e4a
   authored_section_ids:
   - summary
@@ -3044,7 +3044,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 기관 상세의 기관 identity에서 공식명·유형·관할·변경 이력. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 기관 상세의 기관 식별 정보에서 공식명·유형·관할·변경 이력. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - AgencyCasesPage.asOf
       - AgencyCasesPage.items[].correctionStatus
@@ -3060,7 +3060,7 @@ screens:
       - AgencyResponse.caseCountsByState.investigation.legalReview
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘이 기관의 어떤 계약을 관측했는가?’이며, 기관 identity에서 공식명·유형·관할·변경 이력.
+      answer_pattern: 먼저 답할 질문은 ‘이 기관의 어떤 계약을 관측했는가?’이며, 기관 식별 정보에서 공식명·유형·관할·변경 이력.
       sources:
       - AgencyCasesPage.items[].summary
       - AgencyCasesPage.items[].title
@@ -3076,7 +3076,7 @@ screens:
       - AgencyResponse.caseCountsByState.publication.corrected
     evidence:
       section: coverage
-      answer_pattern: coverage의 source·기간·누락.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 수집 범위의 source·기간·누락.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - AgencyResponse.caseCountsByState.resolution.insufficientEvidence
       - AgencyResponse.coverage.recordCount
@@ -3084,7 +3084,7 @@ screens:
       - AgencyResponse.identifiers[].source
     unknown_or_disputed:
       section: coverage
-      answer_pattern: coverage에서 source·기간·누락. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 수집 범위에서 source·기간·누락. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - AgencyCasesPage.items[].responseStatus
       - AgencyResponse.agencyType
@@ -3353,7 +3353,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-008.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-008
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-008: f2c71e3d96dfd862fd87ef24eef71eb53855d0a2e4d5f2cecdd5d4ccb036922b
+    specs/ui/screen-catalog.yaml#screens/PUB-008: fde56ebdeaae189a9ea750328ee919ce8393e25662da0bfb2dba3ae0944ae03b
   implementation_source_digest: dd563b5734588bc1d9fb64b84ce342f13cb782a11ce9c84f796a110774e4f8d1
   authored_section_ids:
   - identity
@@ -3928,7 +3928,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 업체 상세의 업체 identity에서 공식명·식별·변경 이력·확인 한계. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 업체 상세의 업체 식별 정보에서 공식명·식별·변경 이력·확인 한계. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SupplierCasesPage.asOf
       - SupplierCasesPage.items[].correctionStatus
@@ -3944,7 +3944,7 @@ screens:
       - SupplierResponse.caseCountsByState.investigation.investigating
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘이 업체가 어떤 공공계약을 체결했는가?’이며, 업체 identity에서 공식명·식별·변경 이력·확인 한계.
+      answer_pattern: 먼저 답할 질문은 ‘이 업체가 어떤 공공계약을 체결했는가?’이며, 업체 식별 정보에서 공식명·식별·변경 이력·확인 한계.
       sources:
       - SupplierCasesPage.items[].summary
       - SupplierCasesPage.items[].title
@@ -3960,7 +3960,7 @@ screens:
       - SupplierResponse.caseCountsByState.publication.corrected
     evidence:
       section: coverage
-      answer_pattern: coverage의 source·기간.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 수집 범위의 source·기간.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - SupplierResponse.caseCountsByState.resolution.insufficientEvidence
       - SupplierResponse.coverage.recordCount
@@ -3968,7 +3968,7 @@ screens:
       - SupplierResponse.identifiers[].source
     unknown_or_disputed:
       section: identity
-      answer_pattern: 업체 identity에서 공식명·식별·변경 이력·확인 한계. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 업체 식별 정보에서 공식명·식별·변경 이력·확인 한계. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - SupplierCasesPage.items[].responseStatus
       - SupplierResponse.businessStatus
@@ -4246,7 +4246,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-010.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-010
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-010: 5455ae771873c974536daa2c944f12acd4979440ad95089f7ea5848fa48d106f
+    specs/ui/screen-catalog.yaml#screens/PUB-010: 13763beac98e2ff9ffbbef6a47a3d8554b04a2b54edffd046a397285cdac30ef
   implementation_source_digest: 36ecf4a688d204314222146f1c9f714dd0337e4d287d9d928f5297772463c170
   authored_section_ids:
   - identity
@@ -4476,7 +4476,7 @@ screens:
       - authorized object identity
     state:
       section: scope
-      answer_pattern: 계약의 계약 coverage에서 사건 여부와 무관한 관측 범위. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 계약의 계약 관측 범위에서 사건 여부와 무관한 관측 범위. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - BinaryDownload.status
       - BinaryDownload.version
@@ -4485,7 +4485,7 @@ screens:
       - ContractsPage.items[].status
     matters_now:
       section: scope
-      answer_pattern: 먼저 답할 질문은 ‘특정 계약이 수집됐는가?’이며, 계약 coverage에서 사건 여부와 무관한 관측 범위.
+      answer_pattern: 먼저 답할 질문은 ‘특정 계약이 수집됐는가?’이며, 계약 관측 범위에서 사건 여부와 무관한 관측 범위.
       sources:
       - BinaryDownload.rowCount
       - ContractsPage.items[].title
@@ -4501,7 +4501,7 @@ screens:
       - BinaryDownload.format
     unknown_or_disputed:
       section: scope
-      answer_pattern: 계약 coverage에서 사건 여부와 무관한 관측 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 계약 관측 범위에서 사건 여부와 무관한 관측 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - BinaryDownload.binary
       - BinaryDownload.byteLength
@@ -4656,7 +4656,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-011.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-011
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-011: 8e3dfb767664ca8505d01af8e47cf72e56b072a9d7e5922203956547cce1a224
+    specs/ui/screen-catalog.yaml#screens/PUB-011: d3b6f31d56ae3d20c48315ef8af3b244312536d93fe20bbff214b7cab7d0dcb7
   implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
   authored_section_ids:
   - scope
@@ -4856,7 +4856,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 계약 상세의 계약 identity에서 source ID·기관·업체·상태. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 계약 상세의 계약 식별 정보에서 source ID·기관·업체·상태. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ContractChangesPage.asOf
       - ContractResponse.currentAmount.status
@@ -4872,7 +4872,7 @@ screens:
       - ContractResponse.status
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘원본 계약에는 무엇이 기재됐는가?’이며, 계약 identity에서 source ID·기관·업체·상태.
+      answer_pattern: 먼저 답할 질문은 ‘원본 계약에는 무엇이 기재됐는가?’이며, 계약 식별 정보에서 source ID·기관·업체·상태.
       sources:
       - ContractChangesPage.items[].reason
       - ContractResponse.changes[].reason
@@ -4884,7 +4884,7 @@ screens:
       - ContractResponse.title
     evidence:
       section: identity
-      answer_pattern: 계약 identity의 source ID·기관·업체·상태.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 계약 식별 정보의 source ID·기관·업체·상태.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - ContractChangesPage.items[].sourceDocumentId
       - ContractResponse.changes[].sourceDocumentId
@@ -5154,7 +5154,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-012.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-012
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-012: 7239339badb7b8b22646601aa1fd5396be9fdeecd60c86f6fabd3addd0db13da
+    specs/ui/screen-catalog.yaml#screens/PUB-012: 5749921c0b595529c3ff09b81f6e578f64479a067ddb032375599f7ab3caa0a1
   implementation_source_digest: e241eda69fb257c59c9ce1711e067a798b7e2f9fd43dd8f347d0b2ff4a1c228d
   authored_section_ids:
   - identity
@@ -5598,7 +5598,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-013.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-013
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-013: 7411a50b5ab5b5627dca01ebc0b8cbce49f274cd235da88be8f71db8f702a62f
+    specs/ui/screen-catalog.yaml#screens/PUB-013: f945f5b4fffa9d51a8f0979b5cc15d0c4533ac6f8700371313562b7399777907
   implementation_source_digest: 0b3fa7ee8a0d2245a9c96b05622d3136e7957d46335e84bb27347f477c62fe8f
   authored_section_ids:
   - overview
@@ -6076,7 +6076,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-014.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-014
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-014: 47beb8b8ac9f6dc3c83d36ca1a168ecadf3912e5564c51d0292029bd281ccdc4
+    specs/ui/screen-catalog.yaml#screens/PUB-014: 30fddb75ddba66ae974bc92d2ba825b54790a90b9fba8cc9a514f8fd90f22d49
   implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
   authored_section_ids:
   - purpose
@@ -6254,7 +6254,7 @@ screens:
       - authorized object identity
     state:
       section: summary
-      answer_pattern: 데이터 범위의 coverage 요약에서 전체 범위와 current status. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 데이터 범위의 수집 범위 요약에서 전체 범위와 current status. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CoverageResponse.asOf
       - CoverageResponse.knownGaps[].status
@@ -6270,7 +6270,7 @@ screens:
       - SourceStatusPage.asOf
     matters_now:
       section: summary
-      answer_pattern: 먼저 답할 질문은 ‘어떤 데이터를 언제부터 포함하는가?’이며, coverage 요약에서 전체 범위와 current status.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 데이터를 언제부터 포함하는가?’이며, 수집 범위 요약에서 전체 범위와 current status.
       sources:
       - CoverageResponse.knownGaps[].impact
       - CoverageResponse.knownGaps[].reason
@@ -6285,7 +6285,7 @@ screens:
       - CoverageResponse.sources[].recordCount
     evidence:
       section: sources
-      answer_pattern: source별 범위의 기간·기관·갱신.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 출처별 범위의 기간·기관·갱신.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - CoverageResponse.recordCounts.agencies
       - CoverageResponse.recordCounts.contractLineItems
@@ -6300,8 +6300,8 @@ screens:
       - CoverageResponse.sources[].freshness.asOf
       - CoverageResponse.sources[].freshness.expectedFrequencySeconds
     unknown_or_disputed:
-      section: summary
-      answer_pattern: coverage 요약에서 전체 범위와 current status. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      section: sources
+      answer_pattern: 출처별 범위에서 기간·기관·갱신. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - CoverageResponse.asOf
       - CoverageResponse.dateRange.from
@@ -6497,7 +6497,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-015.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-015
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-015: 3f70f29c1db418cfb542f1e397c8f6ac7b6f109b3c269fce1d5c78f0e3414ad8
+    specs/ui/screen-catalog.yaml#screens/PUB-015: f5b73f560e8e9d29ce6845010fb7e71a73121028d55acff83d41a54ab0a91abc
   implementation_source_digest: 63f5ba90498bc6ae24592bc387644bb3fdf927facdcc8c9f1c993ee7bfac7328
   authored_section_ids:
   - summary
@@ -6665,7 +6665,7 @@ screens:
       - authorized object identity
     state:
       section: status
-      answer_pattern: 데이터 출처의 source 상태 요약에서 healthy/stale/incident. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 데이터 출처의 출처 상태 요약에서 healthy/stale/incident. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
@@ -6679,7 +6679,7 @@ screens:
       - SourceStatusPage.totalApproximate
     matters_now:
       section: status
-      answer_pattern: 먼저 답할 질문은 ‘어떤 기관의 어떤 데이터를 쓰는가?’이며, source 상태 요약에서 healthy/stale/incident.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 기관의 어떤 데이터를 쓰는가?’이며, 출처 상태 요약에서 healthy/stale/incident.
       sources:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
@@ -6689,8 +6689,7 @@ screens:
       - SourceStatusPage.items[].publicMessage
     evidence:
       section: status
-      answer_pattern: source 상태 요약의 healthy/stale/incident.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께
-        연다.
+      answer_pattern: 출처 상태 요약의 healthy/stale/incident.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
@@ -6704,7 +6703,7 @@ screens:
       - SourceStatusPage.totalApproximate
     unknown_or_disputed:
       section: list
-      answer_pattern: source 목록에서 owner·type·coverage·last sync. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 출처 목록에서 owner·type·coverage·last sync. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
@@ -6850,7 +6849,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-016.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-016
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-016: df33135b0adbd41b94fcb44fb7109e606273e3a62d56488452b90cb77664652c
+    specs/ui/screen-catalog.yaml#screens/PUB-016: d090c0dcef1e2dfd8234ae33716e0af9dd1f7085a3845da38613ed66dd495b9a
   implementation_source_digest: 043bfde8fd8d08aab5cad09efe9ba24223ac78c5aa6084efc6a95767fcf21a34
   authored_section_ids:
   - status
@@ -7002,7 +7001,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 데이터 출처 상세의 source 설명에서 owner·접근 방식. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 데이터 출처 상세의 출처 설명에서 owner·접근 방식. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SourceResponse.data.coverage.freshness
       - SourceResponse.data.freshness.asOf
@@ -7018,15 +7017,15 @@ screens:
       - SourceResponse.status
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘이 source는 무엇을 제공하는가?’이며, source 설명에서 owner·접근 방식.
+      answer_pattern: 먼저 답할 질문은 ‘이 source는 무엇을 제공하는가?’이며, 출처 설명에서 owner·접근 방식.
       sources:
       - SourceResponse.data.coverage.recordCount
       - SourceResponse.id.title
       - SourceResponse.summary
       - SourceResponse.title
     evidence:
-      section: identity
-      answer_pattern: source 설명의 owner·접근 방식.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      section: coverage
+      answer_pattern: 범위의 기간·기관·record.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - SourceResponse.createdAt
       - SourceResponse.data.accessType
@@ -7287,7 +7286,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-017.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-017
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-017: 0ce9f0e8aeb323ea30e12a5ac84f18f82facbeed05e5f5f7af947a9310772a38
+    specs/ui/screen-catalog.yaml#screens/PUB-017: e291a599fc75be975abab6d13406bba87cff123960b140b0db57bd10db20a651
   implementation_source_digest: 096942e76ea4fadc8c9e7d79c57b03d9f8c2acd72d0a3982288150e03ba07bf0
   authored_section_ids:
   - identity
@@ -7634,7 +7633,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-018.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-018
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-018: 24da071e38868959f2182c1f6040a03191e57eac796918fd1d1b2e60f83d4f4f
+    specs/ui/screen-catalog.yaml#screens/PUB-018: 4b562ae36988e9c02ad0ac0628220799e9abd18dcfe729ec31a3738dd28e6264
   implementation_source_digest: c1ff93f1002a31b247a19a96b6e701316a825b28b5fa3ddf1f08394aee93ac97
   authored_section_ids:
   - principle
@@ -8474,7 +8473,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-020.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-020
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-020: 41fcd72fde35fe5e45d2d1997bd726bec6f73412620ac1b0f36b2befb64eca4f
+    specs/ui/screen-catalog.yaml#screens/PUB-020: 91335e245a4c6910c24d5f49e2fc7165e6508069ad19df065c9484a0610049cd
   implementation_source_digest: ec137f194ebc78db9fac756e67ee2817611e06d12a8320273a9221506b887b31
   authored_section_ids:
   - datasets
@@ -8697,7 +8696,7 @@ screens:
       - PublicApiDocumentationResponse.title
     evidence:
       section: resources
-      answer_pattern: resource의 case/contract/entity/method/correction.가 판단 근거이며 각 항목은 출처, revision, exact locator와
+      answer_pattern: 제공 자원의 case/contract/entity/method/correction.가 판단 근거이며 각 항목은 출처, revision, exact locator와
         검증 상태를 함께 연다.
       sources:
       - PublicApiDocumentationResponse.data.sourceLinks[].href
@@ -8920,7 +8919,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-021.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-021
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-021: 83011c0f7fed0bbf7b3876259a85dd3eee168a6431c4de269342f0d8e2dd19d6
+    specs/ui/screen-catalog.yaml#screens/PUB-021: b97f504ae2a4cc2aff136a4072bfe0b0687c33a4fdaae972b02f347c5773516d
   implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
   authored_section_ids:
   - getting-started
@@ -9102,7 +9101,7 @@ screens:
       - AboutContentResponse.version
     matters_now:
       section: mission
-      answer_pattern: 먼저 답할 질문은 ‘누가 왜 운영하는가?’이며, 미션에서 제품 정의.
+      answer_pattern: 먼저 답할 질문은 ‘누가 왜 운영하는가?’이며, 운영 목적에서 제품 정의.
       sources:
       - AboutContentResponse.data.title
       - AboutContentResponse.id.title
@@ -9110,14 +9109,14 @@ screens:
       - AboutContentResponse.title
     evidence:
       section: mission
-      answer_pattern: 미션의 제품 정의.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 운영 목적의 제품 정의.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - AboutContentResponse.data.sourceLinks[].href
       - AboutContentResponse.data.sourceLinks[].label
       - AboutContentResponse.data.sourceLinks[].rel
     unknown_or_disputed:
       section: mission
-      answer_pattern: 미션에서 제품 정의. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 운영 목적에서 제품 정의. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - AboutContentResponse.createdAt
       - AboutContentResponse.data.sections[].body
@@ -9296,7 +9295,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-022.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-022
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-022: 7a8a7122b8789fd98180dadc47fd360ce0f0dd11f65df9cb5b8e5a6b47e41ee8
+    specs/ui/screen-catalog.yaml#screens/PUB-022: 9bb161ebc501962d1c5878feef4d3318ae6c926c7ef712a3f735ebb193378efe
   implementation_source_digest: 7f9a2c513482c02bf025c1cb51affb14ff57eabeee71345f9283fb911c82d920
   authored_section_ids:
   - mission
@@ -11974,7 +11973,7 @@ screens:
       - createSubscriptionReceipt.links[].label
     unknown_or_disputed:
       section: events
-      answer_pattern: event에서 공개·소명·정정·공식확인. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 알림 유형에서 공개·소명·정정·공식확인. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - createSubscriptionReceipt.acceptedAt
       - createSubscriptionReceipt.aggregateId
@@ -12158,7 +12157,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-029.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-029
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-029: bcac4dbbcdff553d04ec80a6045533d06cb2a5a32f592103d4dcad651cb4ac28
+    specs/ui/screen-catalog.yaml#screens/PUB-029: d27245424c1f86f3dea4af8d86278dc55899d79f5ae0bd879b13c5b1d33ab85b
   implementation_source_digest: ca24a3ba6f474e27910cb66829b0c8919eea3c3c0ccf392bfb1213f1fc93d855
   authored_section_ids:
   - topic
@@ -12524,7 +12523,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-030.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-030
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-030: f16b1a3072d4d510bffb34c1cf6343a7c9d1c4a25ba91e14e4876fa872e24c98
+    specs/ui/screen-catalog.yaml#screens/PUB-030: 7750002862d2e0773d21e13a385b043a5ac70c1fbddc5d33c9a0bf8f89a25b54
   implementation_source_digest: 314be97a48ba9b8ce57836e9cb8a49ba952f2efcf3de0442f69167e1f39950f8
   authored_section_ids:
   - identity
@@ -13554,7 +13553,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-032.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-032
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-032: f137443eb922b1cc54ce51a187a531c808c6ce04c840e3c824a159cef89594f1
+    specs/ui/screen-catalog.yaml#screens/PUB-032: ee6402f26be957e85019a9202d4cfb70d127eee2a4f627a75a8e51aa2a4dd97c
   implementation_source_digest: 3c9b0d126cf023dc87ea3b09eb96110bf4d4cf995e1f95ac568a5702a31b8044
   authored_section_ids:
   - service
@@ -14499,7 +14498,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 소명 요청 확인의 요청 identity에서 요청 ID·조직·사건 공개 범위. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 소명 요청 확인의 요청 식별 정보에서 요청 ID·조직·사건 공개 범위. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ResponseAccessStatusResponse.createdAt
       - ResponseAccessStatusResponse.data.expiresAt
@@ -14515,13 +14514,13 @@ screens:
       - ResponseAccessStatusResponse.summary
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘이 요청이 진짜인가?’이며, 요청 identity에서 요청 ID·조직·사건 공개 범위.
+      answer_pattern: 먼저 답할 질문은 ‘이 요청이 진짜인가?’이며, 요청 식별 정보에서 요청 ID·조직·사건 공개 범위.
       sources:
       - ResponseAccessStatusResponse.summary
       - ResponseAccessStatusResponse.title
     evidence:
       section: identity
-      answer_pattern: 요청 identity의 요청 ID·조직·사건 공개 범위.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 요청 식별 정보의 요청 ID·조직·사건 공개 범위.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - ExchangeSubmissionSessionResult
       - ResponseAccessStatusResponse.createdAt
@@ -14531,7 +14530,7 @@ screens:
       - ResponseAccessStatusResponse.data.requiresEmailProof
     unknown_or_disputed:
       section: identity
-      answer_pattern: 요청 identity에서 요청 ID·조직·사건 공개 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 요청 식별 정보에서 요청 ID·조직·사건 공개 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - ResponseAccessStatusResponse.createdAt
       - ResponseAccessStatusResponse.data.expiresAt
@@ -14718,7 +14717,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rsp-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RSP-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RSP-001: 54dffcc744ff2f1e67d9c6483d2d6293cc41d65e808c957e89a3af2f76e15571
+    specs/ui/screen-catalog.yaml#screens/RSP-001: 11b0eb26140cb999ba41e43ba6f8dc67ff268282e6b12d05006574efd15cc12b
   implementation_source_digest: b97a247479b5fee3a507ff0450f0e9d110df387a2f2de49fb318d55fd58a6081
   authored_section_ids:
   - identity
@@ -17814,7 +17813,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/auth-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/AUTH-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/AUTH-001: e214fafe2838c11ba9e66c031455b3d3abdda19556c7c857e5bd815404e71dad
+    specs/ui/screen-catalog.yaml#screens/AUTH-001: 8c16ed699c58c6b9e72de0bd0dd0223169e5b9f2d332425367c6d8ed2539dd3c
   implementation_source_digest: fa2ea37d96c6bec69825e6981a1f6be4eb63244b14ba7d398a6644f382480530
   authored_section_ids:
   - environment
@@ -18632,7 +18631,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/auth-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/AUTH-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/AUTH-004: 04b29e4df86de283fa47f9f19307923c7fc40250cbd6f3ba149c9193f18cd9b0
+    specs/ui/screen-catalog.yaml#screens/AUTH-004: b9809b0db5687705d8f77c8915714175daf1216a238f055e9abe9f9913fe6dc2
   implementation_source_digest: 4bfcf583c5c0fdfab926153dd933991e266e9a68c567d8b2071f1817c02dcea9
   authored_section_ids:
   - status
@@ -18770,7 +18769,7 @@ screens:
       - authorized object identity
     state:
       section: incidents
-      answer_pattern: 운영 대시보드의 source/ops incident에서 영향. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 운영 대시보드의 출처·운영 장애에서 영향. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalDashboardResponse.budget.asOf
       - InternalDashboardResponse.budget.status
@@ -18786,7 +18785,7 @@ screens:
       - InternalDashboardResponse.overdueTasks[].objectId
     matters_now:
       section: critical
-      answer_pattern: 먼저 답할 질문은 ‘지금 무엇을 먼저 처리해야 하는가?’이며, 긴급 blocker에서 publication/correction/security.
+      answer_pattern: 먼저 답할 질문은 ‘지금 무엇을 먼저 처리해야 하는가?’이며, 긴급 차단 요인에서 publication/correction/security.
       sources:
       - InternalDashboardResponse.budget.lastChangeReason
       - InternalDashboardResponse.budget.reservationSummary
@@ -18801,8 +18800,9 @@ screens:
       - InternalDashboardResponse.reviewQueue[].blockerCount
       - InternalDashboardResponse.reviewQueue[].caseTitle
     evidence:
-      section: incidents
-      answer_pattern: source/ops incident의 영향.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      section: critical
+      answer_pattern: 긴급 차단 요인의 publication/correction/security.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증
+        상태를 함께 연다.
       sources:
       - InternalDashboardResponse.sourceHealth[].displayName
       - InternalDashboardResponse.sourceHealth[].lagSeconds
@@ -18811,8 +18811,8 @@ screens:
       - InternalDashboardResponse.sourceHealth[].sourceId
       - InternalDashboardResponse.sourceHealth[].status
     unknown_or_disputed:
-      section: critical
-      answer_pattern: 긴급 blocker에서 publication/correction/security. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      section: queues
+      answer_pattern: 대기열 상태에서 review/response/job. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - InternalDashboardResponse.budget.alertThreshold
       - InternalDashboardResponse.budget.asOf
@@ -19013,7 +19013,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/int-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/INT-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/INT-001: 96a6a04c8a9cfc9ace800dbc0b1934727d441bc286e224c569df88b31faa0ebb
+    specs/ui/screen-catalog.yaml#screens/INT-001: a10fed0fbdcbe7e3fed3487ad4775f35c52c1f9612981182ad48284f65dca05a
   implementation_source_digest: 611fc3a28c3f0925027ccedd422e7b50c33372f63385a62ad6d13ba0fb3fe808
   authored_section_ids:
   - critical
@@ -19698,7 +19698,7 @@ screens:
     request_contract:
       required: []
       optional:
-        actionKind: unique-array<action_payloads.kinds>[1..17]
+        actionKind: unique-array<action_payloads.kinds>[1..18]
         proposalState: unique-array<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>[1..8]
         assignmentState: unique-array<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>[1..6]
         dueBefore: datetime
@@ -19811,11 +19811,15 @@ screens:
       fields:
         proposalId: uuid
         actionKind: enum action_payloads.kinds
+        providerOperationId: optional<ProviderControlOperationIdV1>
         assignmentId: uuid
         expectedProposalVersion: int64>=1
         expectedAssignmentVersion: int64>=1
         expectedApprovalDigest: sha256
         decision: ActionDecisionV1
+      invariants:
+      - providerOperationId is required exactly when actionKind is PROVIDER_CONTROL and equals the immutable ProviderControlApprovalDetailV1
+        operationId; it is forbidden for every other action kind
     response_schema: ActionDecisionReceiptV1
     section_bindings:
     - handoff
@@ -20599,7 +20603,7 @@ screens:
     request_contract:
       required: []
       optional:
-        actionKind: unique-array<action_payloads.kinds>[1..17]
+        actionKind: unique-array<action_payloads.kinds>[1..18]
         proposalState: unique-array<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>[1..8]
         assignmentState: unique-array<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>[1..6]
         dueBefore: datetime
@@ -20633,7 +20637,7 @@ screens:
       - authorized object identity
     state:
       section: scope
-      answer_pattern: 신호 대기열의 queue 상태에서 SLA·count. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 신호 대기열의 대기열 상태에서 SLA·count. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SignalsPage.appliedFilters.signalStatus
       - SignalsPage.asOf
@@ -20642,7 +20646,7 @@ screens:
       - assignSignalReceipt.status
     matters_now:
       section: scope
-      answer_pattern: 먼저 답할 질문은 ‘어떤 신호가 오래되거나 blocker가 없는가?’이며, queue 상태에서 SLA·count.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 신호가 오래되거나 blocker가 없는가?’이며, 대기열 상태에서 SLA·count.
       sources:
       - SignalsPage.appliedFilters.assignedUserId
       - SignalsPage.appliedFilters.ruleId
@@ -20662,7 +20666,7 @@ screens:
       - SignalsPage.items[].assignedUserId
     unknown_or_disputed:
       section: scope
-      answer_pattern: queue 상태에서 SLA·count. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 대기열 상태에서 SLA·count. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - SignalsPage.appliedFilters.assignedUserId
       - SignalsPage.appliedFilters.ruleId
@@ -20819,7 +20823,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/sig-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SIG-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SIG-001: aea790e1ff791e13489fa4acb645c54a249eddf45c6981e0affbbc250c0fb05a
+    specs/ui/screen-catalog.yaml#screens/SIG-001: 02ff19e3bd46c6a5e4de152966092aa7add4213b9fce9f4e1119a9a1787db6f2
   implementation_source_digest: 19e10de7908a52146ec175132562c67ad1ea8e45235cbac71f50e69cb0f63452
   authored_section_ids:
   - scope
@@ -21016,7 +21020,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 신호 검토의 source·rule·freshness에서 입력 version. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 신호 검토의 출처·규칙·최신성에서 입력 version. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SignalTriageViewResponse.blockers[].ownerUserId
       - SignalTriageViewResponse.dataQuality.blockers[].ownerUserId
@@ -21032,7 +21036,7 @@ screens:
       - SignalTriageViewResponse.targetRecord.status
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘계산이 재현되는가?’이며, source·rule·freshness에서 입력 version.
+      answer_pattern: 먼저 답할 질문은 ‘계산이 재현되는가?’이며, 출처·규칙·최신성에서 입력 version.
       sources:
       - SignalTriageViewResponse.auditSummary[].action
       - SignalTriageViewResponse.auditSummary[].actor.actorId
@@ -21047,8 +21051,8 @@ screens:
       - SignalTriageViewResponse.auditSummary[].reason
       - SignalTriageViewResponse.auditSummary[].requestId
     evidence:
-      section: identity
-      answer_pattern: source·rule·freshness의 입력 version.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      section: calculation
+      answer_pattern: 결정적 계산의 input/formula/result.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - SignalTriageViewResponse.comparison.excluded[].record
       - SignalTriageViewResponse.targetRecord.agency.entityType
@@ -21064,7 +21068,7 @@ screens:
       - SignalTriageViewResponse.targetRecord.changes[].reason
     unknown_or_disputed:
       section: identity
-      answer_pattern: source·rule·freshness에서 입력 version. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 출처·규칙·최신성에서 입력 version. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - SignalTriageViewResponse.auditSummary[].action
       - SignalTriageViewResponse.auditSummary[].actor.actorId
@@ -21353,7 +21357,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/sig-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SIG-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SIG-002: 48ae068e1cf0cdf011ddbb631db15d78ab42b3594322a36703ad0b6df9bfda27
+    specs/ui/screen-catalog.yaml#screens/SIG-002: 0c8169a126bc7eb1bba8d7aa683084caa1443d4e7c9ef68e3ed3da69a919ac60
   implementation_source_digest: c93345ec38795fa1e94ad8b302473a1edf8b4feff62b9fa3f7db8c1b9480e8df
   authored_section_ids:
   - identity
@@ -21557,13 +21561,13 @@ screens:
       - assignCaseReceipt.status
     matters_now:
       section: views
-      answer_pattern: 먼저 답할 질문은 ‘어떤 사건이 어떤 단계에서 막혔는가?’이며, queue 보기에서 investigation/editorial/review/publish.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 사건이 어떤 단계에서 막혔는가?’이며, 업무 대기열에서 investigation/editorial/review/publish.
       sources:
       - InternalCasesPage.items[].summary
       - InternalCasesPage.items[].title
     evidence:
       section: views
-      answer_pattern: queue 보기의 investigation/editorial/review/publish.가 판단 근거이며 각 항목은 출처, revision, exact locator와
+      answer_pattern: 업무 대기열의 investigation/editorial/review/publish.가 판단 근거이며 각 항목은 출처, revision, exact locator와
         검증 상태를 함께 연다.
       sources:
       - InternalCasesPage.appliedFilters.assigneeUserId
@@ -21739,7 +21743,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-001: 4316ebb2fe380ad222983124ca2ced91afd2f30a69056b09a2b692c8d6e3003c
+    specs/ui/screen-catalog.yaml#screens/CAS-001: e55c74677cc467d58d86fab43ad0a1b9ad9a00ab802d2546e38091798b5f7c07
   implementation_source_digest: 4562af4c07364e3739f983e33bf149dafc196f37ed0b6acc67bf443e31d6ae75
   authored_section_ids:
   - views
@@ -21945,7 +21949,7 @@ screens:
       - authorized object identity
     state:
       section: header
-      answer_pattern: 사건 개요의 identity·state·version에서 assignment·due. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 개요의 식별 정보·상태·버전에서 assignment·due. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseWorkspaceOverviewResponse.assignments[].dueAt
       - CaseWorkspaceOverviewResponse.blockers[].ownerUserId
@@ -21961,7 +21965,7 @@ screens:
       - CaseWorkspaceOverviewResponse.responseStatus.blockers[].ownerUserId
     matters_now:
       section: header
-      answer_pattern: 먼저 답할 질문은 ‘이 사건은 무엇을 조사하는가?’이며, identity·state·version에서 assignment·due.
+      answer_pattern: 먼저 답할 질문은 ‘이 사건은 무엇을 조사하는가?’이며, 식별 정보·상태·버전에서 assignment·due.
       sources:
       - CaseWorkspaceOverviewResponse.activity[].description
       - CaseWorkspaceOverviewResponse.activity[].title
@@ -21977,13 +21981,12 @@ screens:
       - CaseWorkspaceOverviewResponse.responseStatus.sentCount
     evidence:
       section: header
-      answer_pattern: identity·state·version의 assignment·due.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를
-        함께 연다.
+      answer_pattern: 식별 정보·상태·버전의 assignment·due.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - CaseWorkspaceOverviewResponse.confirmedFacts[].evidenceIds
     unknown_or_disputed:
       section: known-unknown
-      answer_pattern: Known/Unknown/Response에서 핵심 요약. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 확인·미확인·소명에서 핵심 요약. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - CaseWorkspaceOverviewResponse.activity[].actor
       - CaseWorkspaceOverviewResponse.activity[].description
@@ -22187,7 +22190,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-002: 2d17477c2a2b7e860b4749298e29f09c1dccd5bb7cb107d95f125b320ce557be
+    specs/ui/screen-catalog.yaml#screens/CAS-002: 62b41ce459f416fd531c673467df9cb4099969fdaa5291e572cf3bc2ac83778d
   implementation_source_digest: 3e2d7272894a99d766a599483e004fba82ed3e42b1ccd76e30d9c82b8cfd00c5
   authored_section_ids:
   - header
@@ -22498,7 +22501,7 @@ screens:
       - authorized object identity
     state:
       section: signals
-      answer_pattern: 연결된 신호의 signal 목록에서 metric·state·link reason. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 연결된 신호의 탐지 신호 목록에서 metric·state·link reason. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseSignalsPage.appliedFilters.signalStatus
       - CaseSignalsPage.asOf
@@ -22658,7 +22661,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-003: 1dda0b32aa8d9cb1fc80df8a9b58450a122093c5be864336977bde2bb8bf307a
+    specs/ui/screen-catalog.yaml#screens/CAS-003: 0033e39f7f770ec01a0906a86259f3f06a1edb8e96b7bc3b6b60310a3549de3d
   implementation_source_digest: 014f764d1d8f58d82bee3d6da79f84464e59727c6eade7321b25123b2fd4c5f1
   authored_section_ids:
   - summary
@@ -22865,15 +22868,14 @@ screens:
       - CaseEvidencePage.items[].verificationStatus
     matters_now:
       section: matrix
-      answer_pattern: 먼저 답할 질문은 ‘어떤 evidence가 무엇을 지지·반박하는가?’이며, evidence matrix에서 hypothesis/claim 관계.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 evidence가 무엇을 지지·반박하는가?’이며, 근거 관계표에서 hypothesis/claim 관계.
       sources:
       - CaseEvidencePage.items[].id
       - CaseEvidencePage.items[].verificationStatus
       - CaseEvidencePage.items[].version
     evidence:
       section: list
-      answer_pattern: evidence matrix의 hypothesis/claim 관계.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께
-        연다.
+      answer_pattern: 근거 관계표의 hypothesis/claim 관계.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - CaseEvidencePage.items[].id
       - CaseEvidencePage.items[].title
@@ -22883,7 +22885,7 @@ screens:
       - CaseEvidencePage.items[].verificationStatus
     unknown_or_disputed:
       section: gaps
-      answer_pattern: 근거 gap에서 unresolved questions. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 근거 부족에서 unresolved questions. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - CaseEvidencePage.items[].verificationStatus
       - CaseEvidencePage.totalApproximate
@@ -23016,7 +23018,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-004: 5cea3bba4ab5e63fe1effe24bbdf74ae70a53e840f2cd144b46d612f21e07b6c
+    specs/ui/screen-catalog.yaml#screens/CAS-004: 0fa3610e4db070c8ede7cd6896df55564fe549c892fd66a1642e7d6f684d89e1
   implementation_source_digest: 5074b37ddf3052ae6385115f6c68f3c77e5fda5989ed88574e759240e81ee7d7
   authored_section_ids:
   - matrix
@@ -23512,7 +23514,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-005: 7478b2d86966be3af7ee6a13e6a6b6b37ba88ff9cc8539bf8ea173e84d23db47
+    specs/ui/screen-catalog.yaml#screens/CAS-005: 006528e6a0309cf46918b1786972bf5e4578b8ff6861c76cf717706a9f732830
   implementation_source_digest: a09492876acd52e9a6b6be14a668c1336cb05cf14d2626436710b67c62c5955d
   authored_section_ids:
   - source
@@ -23712,7 +23714,7 @@ screens:
       - authorized object identity
     state:
       section: summary
-      answer_pattern: 공개 주장 작성의 claim readiness에서 invalid/blocking. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 공개 주장 작성의 주장 준비도에서 invalid/blocking. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseClaimsPage.appliedFilters.validationStatus
       - CaseClaimsPage.asOf
@@ -23726,7 +23728,7 @@ screens:
       - validateClaimsReceipt.status
     matters_now:
       section: summary
-      answer_pattern: 먼저 답할 질문은 ‘이 문장은 사실·계산·해석·당사자 주장 중 무엇인가?’이며, claim readiness에서 invalid/blocking.
+      answer_pattern: 먼저 답할 질문은 ‘이 문장은 사실·계산·해석·당사자 주장 중 무엇인가?’이며, 주장 준비도에서 invalid/blocking.
       sources:
       - CaseClaimsPage.items[].evidenceCount
       - CaseClaimsPage.items[].limitationCount
@@ -23749,7 +23751,7 @@ screens:
       - CaseClaimsPage.items[].version
     unknown_or_disputed:
       section: summary
-      answer_pattern: claim readiness에서 invalid/blocking. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 주장 준비도에서 invalid/blocking. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - CaseClaimsPage.items[].limitationCount
       - CaseClaimsPage.items[].responseCount
@@ -23935,7 +23937,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-006: bae078803c4b61be0fea3b89faa4e5e6f81080d5531c08b06a7b9b7c8578e7c6
+    specs/ui/screen-catalog.yaml#screens/CAS-006: 0862fde9add603025a0e2ef4a496e521881a04cb6e65e4ce0998bb7e92fb8a72
   implementation_source_digest: 22cceed10ef278f6f6071fb41384279bd66719d97419695f05cda90b322d60db
   authored_section_ids:
   - summary
@@ -24220,7 +24222,7 @@ screens:
       - authorized object identity
     state:
       section: board
-      answer_pattern: 조사 가설의 가설 board에서 OPEN/SUPPORTED/CONTRADICTED/RESOLVED. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 조사 가설의 가설 현황판에서 OPEN/SUPPORTED/CONTRADICTED/RESOLVED. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseHypothesesPage.appliedFilters.status
       - CaseHypothesesPage.asOf
@@ -24235,7 +24237,7 @@ screens:
       - updateHypothesisReceipt.status
     matters_now:
       section: board
-      answer_pattern: 먼저 답할 질문은 ‘어떤 설명들이 가능한가?’이며, 가설 board에서 OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 설명들이 가능한가?’이며, 가설 현황판에서 OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
       sources:
       - CaseHypothesesPage.items[].contradictingEvidenceCount
       - CaseHypothesesPage.items[].supportingEvidenceCount
@@ -24380,7 +24382,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-007.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-007
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-007: 8595420bd4dba62beee28aa6a66ce110190c2bd9ff608019028fe4a11e00a4a4
+    specs/ui/screen-catalog.yaml#screens/CAS-007: 94be6cbc3f4c3269a90c3dc3ba03e8996654ef65a09265d41ba52884e2d9df55
   implementation_source_digest: b5abcbf2c2538a89ec4a613efb04254f8eea4b9e07e55560b68f3b900d9e95ea
   authored_section_ids:
   - board
@@ -24896,7 +24898,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-008.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-008
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-008: f8d0005293c508872e666e73d9cfb8d71b8a33b022c77c3c5e8913a35ce863fc
+    specs/ui/screen-catalog.yaml#screens/CAS-008: 8a8aa9187dd6ec0bdedb4485e5992af55c1d4032085eab36d9bb66225e0d5588
   implementation_source_digest: 8f63c1c9cc7130189c3b3ec4357e3ddaff4cfe065dd0450359437a14c3780ca9
   authored_section_ids:
   - requests
@@ -25208,7 +25210,7 @@ screens:
       - authorized object identity
     state:
       section: disclosure
-      answer_pattern: 소명 요청 작성의 공개·privacy 안내에서 template. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 소명 요청 작성의 공개·개인정보 안내에서 template. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ResponseRequestComposerResponse.data.defaultDueAt
       - ResponseRequestComposerResponse.data.defaultPublicationScope.updatedAt
@@ -25221,14 +25223,14 @@ screens:
       - saveResponseRequestDraftReceipt.status
     matters_now:
       section: target
-      answer_pattern: 먼저 답할 질문은 ‘정확한 contact와 질문인가?’이며, 대상·contact에서 source·latest verification.
+      answer_pattern: 먼저 답할 질문은 ‘정확한 contact와 질문인가?’이며, 대상·연락처에서 source·latest verification.
       sources:
       - ResponseRequestComposerResponse.summary
       - ResponseRequestComposerResponse.title
     evidence:
       section: target
-      answer_pattern: 대상·contact의 source·latest verification.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를
-        함께 연다.
+      answer_pattern: 대상·연락처의 source·latest verification.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께
+        연다.
       sources:
       - ResponseRequestComposerResponse.createdAt
       - ResponseRequestComposerResponse.data.caseId
@@ -25238,7 +25240,7 @@ screens:
       - ResponseRequestComposerResponse.data.defaultPublicationScope.redactionAcknowledged
     unknown_or_disputed:
       section: target
-      answer_pattern: 대상·contact에서 source·latest verification. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 대상·연락처에서 source·latest verification. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - ResponseRequestComposerResponse.createdAt
       - ResponseRequestComposerResponse.data.caseId
@@ -25468,7 +25470,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-009.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-009
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-009: 373340266cb550dc2dd8dd3ca6c9bcd4e8441db5455a5acc5c89b97dabf30d06
+    specs/ui/screen-catalog.yaml#screens/CAS-009: 62753562ff773b8df3c9f845f33320ac65777449c0ea30948142fabc176e844d
   implementation_source_digest: 4a3be416f2c8ab698257ebab8da4fd7331c235c72a3cefdb6533568cf1b64552
   authored_section_ids:
   - target
@@ -26172,7 +26174,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 에이전트 실행 상세의 실행 identity에서 purpose·version·timestamps. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 에이전트 실행 상세의 실행 식별 정보에서 purpose·version·timestamps. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - AgentRunResponse.data.status
       - AgentRunResponse.status
@@ -26186,7 +26188,7 @@ screens:
       - startAgentRunReceipt.status
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘입력과 policy는 무엇인가?’이며, 실행 identity에서 purpose·version·timestamps.
+      answer_pattern: 먼저 답할 질문은 ‘입력과 policy는 무엇인가?’이며, 실행 식별 정보에서 purpose·version·timestamps.
       sources:
       - AgentRunResponse.summary
       - AgentRunResponse.title
@@ -26198,7 +26200,7 @@ screens:
       - AgentRunResponse.data.evidenceScopeIds
     unknown_or_disputed:
       section: identity
-      answer_pattern: 실행 identity에서 purpose·version·timestamps. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 실행 식별 정보에서 purpose·version·timestamps. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - AgentRunResponse.createdAt
       - AgentRunResponse.data.agentType
@@ -26473,7 +26475,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-011.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-011
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-011: ed0f2776c23dde017088c1e136f3bc5a9bec4f519a6087520caefc78aeaac945
+    specs/ui/screen-catalog.yaml#screens/CAS-011: e31739c2eabe922ed65be8c738dedb56cc1694e0ad415f82d81486ed66422ff7
   implementation_source_digest: 4a35981fcfa399368338e72613fb318f3bc1aa5a2d02f8d1f20b8029ba8bdad5
   authored_section_ids:
   - identity
@@ -27006,7 +27008,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-012.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-012
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-012: bdfc2eef7a7eea26dfd729aa6ce0614c156f6dd00457615462e5cc593ceb7032
+    specs/ui/screen-catalog.yaml#screens/CAS-012: 7a3f120ea85b66cc592082c279be32ffde50f9f4e99dfa1c2322242ce39abd5e
   implementation_source_digest: e6a84eabe01948f14d5769ac5a5f61dbdda3013530af6e82739b4ffb6f21e79a
   authored_section_ids:
   - filters
@@ -27200,7 +27202,7 @@ screens:
       - authorized object identity
     state:
       section: summary
-      answer_pattern: 검토 준비도의 readiness에서 complete/blocking. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 검토 준비도의 준비도에서 complete/blocking. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ReviewReadinessResponse.data.blockers[].ownerUserId
       - ReviewReadinessResponse.data.caseVersion
@@ -27212,7 +27214,7 @@ screens:
       - createReviewSnapshotReceipt.status
     matters_now:
       section: summary
-      answer_pattern: 먼저 답할 질문은 ‘어떤 gate가 완료·차단됐는가?’이며, readiness에서 complete/blocking.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 gate가 완료·차단됐는가?’이며, 준비도에서 complete/blocking.
       sources:
       - ReviewReadinessResponse.data.blockers[].description
       - ReviewReadinessResponse.data.blockers[].title
@@ -27221,13 +27223,13 @@ screens:
       - ReviewReadinessResponse.title
     evidence:
       section: gates
-      answer_pattern: gate checklist의 evidence/response/privacy/language.가 판단 근거이며 각 항목은 출처, revision, exact locator와
+      answer_pattern: 통과 조건 점검표의 evidence/response/privacy/language.가 판단 근거이며 각 항목은 출처, revision, exact locator와
         검증 상태를 함께 연다.
       sources:
       - ReviewReadinessResponse.data.gateResults[].evidenceIds
     unknown_or_disputed:
       section: summary
-      answer_pattern: readiness에서 complete/blocking. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 준비도에서 complete/blocking. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - ReviewReadinessResponse.createdAt
       - ReviewReadinessResponse.data.blockers[].code
@@ -27428,7 +27430,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-013.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-013
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-013: a4a972f78f727e1c6f220b2e4e7f59b671c1545c88a920a949c0d1c59edfafe9
+    specs/ui/screen-catalog.yaml#screens/CAS-013: 5944b237dffa3bb8750482b0ecb65e7776ae59c990b95a3904c7db088596ac0e
   implementation_source_digest: afcd62f1fcc8f6df86d7b76e701f8d9edcbc2af0a6674d99b8c6b1fa208c472f
   authored_section_ids:
   - summary
@@ -27614,7 +27616,7 @@ screens:
       - authorized object identity
     state:
       section: watermark
-      answer_pattern: 공개 미리보기의 preview 상태에서 DRAFT·snapshot hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 공개 미리보기의 미리보기 상태에서 DRAFT·snapshot hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - PublicationPreviewResponse.publicPayload.case.correctionStatus
       - PublicationPreviewResponse.publicPayload.case.publicState
@@ -27630,7 +27632,7 @@ screens:
       - PublicationPreviewResponse.publicPayload.freshness.status
     matters_now:
       section: watermark
-      answer_pattern: 먼저 답할 질문은 ‘공개될 정확한 내용과 상태는 무엇인가?’이며, preview 상태에서 DRAFT·snapshot hash.
+      answer_pattern: 먼저 답할 질문은 ‘공개될 정확한 내용과 상태는 무엇인가?’이며, 미리보기 상태에서 DRAFT·snapshot hash.
       sources:
       - PublicationPreviewResponse.publicPayload.case.summary
       - PublicationPreviewResponse.publicPayload.case.title
@@ -27663,7 +27665,7 @@ screens:
       - PublicationPreviewResponse.publicPayload.counterEvidence[].supports
     unknown_or_disputed:
       section: watermark
-      answer_pattern: preview 상태에서 DRAFT·snapshot hash. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 미리보기 상태에서 DRAFT·snapshot hash. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - PublicationPreviewResponse.caseId
       - PublicationPreviewResponse.expiresAt
@@ -27859,7 +27861,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-014.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-014
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-014: 8a028aac3b09d1cf69a37de30f158fbe3544bef3733eef126b3bbddbefa9250b
+    specs/ui/screen-catalog.yaml#screens/CAS-014: 6c05a0f88fd3bd68b459f4abb5f7fdc140a80fa01932f699968dc7d26636113d
   implementation_source_digest: 6b40fce1be3a7fc2e882b888131a0360a476bf414363b0933d63b493fe1ae222
   authored_section_ids:
   - watermark
@@ -28053,7 +28055,7 @@ screens:
       - authorized object identity
     state:
       section: history
-      answer_pattern: 사건 정정·철회의 revision·정정 이력에서 immutable. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 정정·철회의 개정·정정 이력에서 immutable. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseCorrectionsPage.appliedFilters.status
       - CaseCorrectionsPage.asOf
@@ -28065,12 +28067,12 @@ screens:
       - createRetractionDraftReceipt.status
     matters_now:
       section: history
-      answer_pattern: 먼저 답할 질문은 ‘어떤 정정 요청과 revision이 있는가?’이며, revision·정정 이력에서 immutable.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 정정 요청과 revision이 있는가?’이며, 개정·정정 이력에서 immutable.
       sources:
       - CaseCorrectionsPage.items[].summary
     evidence:
       section: history
-      answer_pattern: revision·정정 이력의 immutable.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 개정·정정 이력의 immutable.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - CaseCorrectionsPage.items[].sourceRevision
     unknown_or_disputed:
@@ -28274,7 +28276,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-015.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-015
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-015: ab9b11df6697938e592b6980485d6e3a208fb131f8a54bf6ecfcd4ada2a85e8c
+    specs/ui/screen-catalog.yaml#screens/CAS-015: f3d260037201a7d1adb1e34469747b8441792b62a001b216d3859ec35d0a858a
   implementation_source_digest: 9beb5c4e824921619691e955ed5ee335c8ca2da6877620b72df5bd04beaad986
   authored_section_ids:
   - history
@@ -28568,7 +28570,7 @@ screens:
       - authorized object identity
     state:
       section: scope
-      answer_pattern: 사건 감사의 audit scope에서 case-linked. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 감사의 감사 범위에서 case-linked. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - AuditExportResponse.status
       - CaseAuditEventsPage.asOf
@@ -28576,13 +28578,13 @@ screens:
       - createAuditExportReceipt.status
     matters_now:
       section: scope
-      answer_pattern: 먼저 답할 질문은 ‘누가 어떤 권한으로 무엇을 했는가?’이며, audit scope에서 case-linked.
+      answer_pattern: 먼저 답할 질문은 ‘누가 어떤 권한으로 무엇을 했는가?’이며, 감사 범위에서 case-linked.
       sources:
       - AuditExportResponse.rowCount
       - CaseAuditEventsPage.items[].reason
     evidence:
       section: scope
-      answer_pattern: audit scope의 case-linked.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 감사 범위의 case-linked.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - AuditExportResponse.completedAt
       - AuditExportResponse.contentSha256
@@ -28758,7 +28760,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-016.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-016
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-016: 5f11dca5675535451af1cc460c2e5a51c143b1e30522537157f2abc486e2f655
+    specs/ui/screen-catalog.yaml#screens/CAS-016: 9f007b0c9e4ee7d9c26564b621e1b4140f4ce6a073a5ab55e309e3d6ac1daf26
   implementation_source_digest: 00ed34db070aefbbed6f9b9ad94233b5b75fd001cd3986f1ae93b6a945b97c71
   authored_section_ids:
   - scope
@@ -29143,7 +29145,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rev-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/REV-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/REV-001: 04be372a80d5355c0b1fe89d29200f38d001dd8e424dc936c617aad371cd8e18
+    specs/ui/screen-catalog.yaml#screens/REV-001: b08b8fddf479bb074f5a18b92d9f5ff18de3ac09e6f1fe7357e1d7c25db6b45d
   implementation_source_digest: 5318a397642873179a340e177af56accebc9a76713a9e6036155d3e93a5e8a95
   authored_section_ids:
   - views
@@ -29326,7 +29328,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 독립 스냅샷 검토의 snapshot에서 hash·version·author·stale. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 독립 스냅샷 검토의 스냅샷 정보에서 hash·version·author·stale. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ReviewSnapshotResponse.automatedGates[].status
       - ReviewSnapshotResponse.caseVersion
@@ -29342,7 +29344,7 @@ screens:
       - ReviewSnapshotResponse.unresolvedBlockers[].ownerUserId
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘정확히 어떤 snapshot을 검토하는가?’이며, snapshot에서 hash·version·author·stale.
+      answer_pattern: 먼저 답할 질문은 ‘정확히 어떤 snapshot을 검토하는가?’이며, 스냅샷 정보에서 hash·version·author·stale.
       sources:
       - ReviewSnapshotResponse.automatedGates[].summary
       - ReviewSnapshotResponse.claims[].claim.evidenceCount
@@ -29355,8 +29357,8 @@ screens:
       - ReviewSnapshotResponse.unresolvedBlockers[].description
       - ReviewSnapshotResponse.unresolvedBlockers[].title
     evidence:
-      section: matrix
-      answer_pattern: claim/evidence/response의 coverage.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      section: risks
+      answer_pattern: 위험·차단 요인의 legal/privacy/source.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - ReviewSnapshotResponse.automatedGates[].evidenceIds
       - ReviewSnapshotResponse.claims[].claim.claimType
@@ -29372,7 +29374,7 @@ screens:
       - ReviewSnapshotResponse.claims[].evidence[].id
     unknown_or_disputed:
       section: matrix
-      answer_pattern: claim/evidence/response에서 coverage. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 주장·증거·답변에서 coverage. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - ReviewSnapshotResponse.automatedGates[].details
       - ReviewSnapshotResponse.automatedGates[].evidenceIds
@@ -29621,7 +29623,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rev-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/REV-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/REV-002: b3fc8a9aac8a93937249ade0e8f49a9973ad82f9244b437044944b9c20adc007
+    specs/ui/screen-catalog.yaml#screens/REV-002: 26866eefd77ab9324b26ad3edd8fe6c4d71b45b647c87d89770c62a2bb01ff68
   implementation_source_digest: c63f91c5a63c89ed29ca0045ba87bf87031da2d70c393a64b254293ed0e8c6db
   authored_section_ids:
   - identity
@@ -29927,7 +29929,7 @@ screens:
       - PublishConfirmationResponse.title
     evidence:
       section: gates
-      answer_pattern: 최종 gate의 review·response·privacy·source.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를
+      answer_pattern: 최종 검증의 review·response·privacy·source.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를
         함께 연다.
       sources:
       - PublicationReceiptResponse.createdAt
@@ -29938,7 +29940,7 @@ screens:
       - PublicationReceiptResponse.data.publicationId
     unknown_or_disputed:
       section: gates
-      answer_pattern: 최종 gate에서 review·response·privacy·source. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 최종 검증에서 review·response·privacy·source. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - PublicationReceiptResponse.createdAt
       - PublicationReceiptResponse.data.auditEventId
@@ -30133,7 +30135,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rev-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/REV-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/REV-003: a0a8a2f8d3bc12f045f4c3d768893bc11fbb56e10794ef583e6fa11b4480177f
+    specs/ui/screen-catalog.yaml#screens/REV-003: 9256e22b4c56623d6c0d18a424f89fb5bbc707727c396c84425bfae12a9134c4
   implementation_source_digest: 29325bb3eab6074a05c03fb1f4f22e190d01102951db3bc045c081eb43e78b98
   authored_section_ids:
   - target
@@ -30440,7 +30442,7 @@ screens:
       - authorized object identity
     state:
       section: urgent
-      answer_pattern: 정정 대기열의 긴급 queue에서 privacy/identity/legal. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 정정 대기열의 긴급 대기열에서 privacy/identity/legal. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CorrectionQueuePage.appliedFilters.overdueOnly
       - CorrectionQueuePage.appliedFilters.status
@@ -30453,7 +30455,7 @@ screens:
       - triageCorrectionReceipt.status
     matters_now:
       section: urgent
-      answer_pattern: 먼저 답할 질문은 ‘어떤 요청이 긴급하거나 오래됐는가?’이며, 긴급 queue에서 privacy/identity/legal.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 요청이 긴급하거나 오래됐는가?’이며, 긴급 대기열에서 privacy/identity/legal.
       sources:
       - CorrectionQueuePage.items[].caseTitle
       - CorrectionQueuePage.items[].summary
@@ -30645,7 +30647,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cor-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/COR-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/COR-001: ea6f5c0c3acfde2fb9dbb11f4dc0d4b8a7f8a66d9a65d5f7d9868b1b94027cc1
+    specs/ui/screen-catalog.yaml#screens/COR-001: 06478d41b0699f91e5a59eee8251eed0fb04e62f9b1ace42e3e2ed8223ffbb85
   implementation_source_digest: f132cf89359f1275a48236f7e3004a08dbc2c7f81511b3f0f28d9535c7ba7ff2
   authored_section_ids:
   - urgent
@@ -31538,9 +31540,8 @@ screens:
       - InternalSourcesPage.items[].checkpoint
       - InternalSourcesPage.items[].displayName
     evidence:
-      section: registry
-      answer_pattern: source 목록의 sync·schema·lag·quarantine.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를
-        함께 연다.
+      section: health
+      answer_pattern: 상태 요약의 healthy/stale/incident.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - InternalSourcesPage.appliedFilters.connectorType
       - InternalSourcesPage.appliedFilters.enabled
@@ -31753,7 +31754,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-001: 582142c5a86e062d3d3a820e01934677d3ea6034ef0c36622923006b1cc12eeb
+    specs/ui/screen-catalog.yaml#screens/SRC-001: b0889074d12abf9a62de702e028b85c10b8d46264b463ccfb710be8b393ae64b
   implementation_source_digest: 1a39d6bb48069398e4ea348964feeb0c4660bffd16c94fb71d9af54556ee1c0c
   authored_section_ids:
   - health
@@ -31965,7 +31966,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 출처 상세의 source identity에서 owner·access·terms. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 출처 상세의 출처 식별 정보에서 owner·access·terms. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalSourceResponse.data.freshness.asOf
       - InternalSourceResponse.data.freshness.expectedFrequencySeconds
@@ -31981,15 +31982,14 @@ screens:
       - InternalSourceResponse.version
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘현재 configuration과 checkpoint는 무엇인가?’이며, source identity에서 owner·access·terms.
+      answer_pattern: 먼저 답할 질문은 ‘현재 configuration과 checkpoint는 무엇인가?’이며, 출처 식별 정보에서 owner·access·terms.
       sources:
       - InternalSourceResponse.data.incidents[].summary
       - InternalSourceResponse.summary
       - InternalSourceResponse.title
     evidence:
       section: identity
-      answer_pattern: source identity의 owner·access·terms.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께
-        연다.
+      answer_pattern: 출처 식별 정보의 owner·access·terms.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - InternalSourceResponse.createdAt
       - InternalSourceResponse.data.checkpoint
@@ -32005,7 +32005,7 @@ screens:
       - InternalSourceResponse.data.incidents[].severity
     unknown_or_disputed:
       section: identity
-      answer_pattern: source identity에서 owner·access·terms. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 출처 식별 정보에서 owner·access·terms. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - InternalSourceResponse.createdAt
       - InternalSourceResponse.data.checkpoint
@@ -32254,7 +32254,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-002: bd2c01ce175f8aa0db62c92683bf0073059c94be98315f80fe22b9c208aa262c
+    specs/ui/screen-catalog.yaml#screens/SRC-002: 16fe16cfb540c67a674c81cb043e86fde6548d178c7e81cf76ba95d9bc7f8cb3
   implementation_source_digest: c155bdda714beb515e6d776ced284d35087edaa7d51d1496b70165ac7a3e8b09
   authored_section_ids:
   - identity
@@ -32475,7 +32475,7 @@ screens:
       - authorized object identity
     state:
       section: summary
-      answer_pattern: 출처 실행 기록의 run health에서 success/failure/lag. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 출처 실행 기록의 실행 상태에서 success/failure/lag. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SourceRunsPage.appliedFilters.status
       - SourceRunsPage.asOf
@@ -32484,7 +32484,7 @@ screens:
       - retrySourceRunReceipt.status
     matters_now:
       section: summary
-      answer_pattern: 먼저 답할 질문은 ‘어떤 실행이 실패·지연됐는가?’이며, run health에서 success/failure/lag.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 실행이 실패·지연됐는가?’이며, 실행 상태에서 success/failure/lag.
       sources:
       - SourceRunsPage.appliedFilters.mode
       - SourceRunsPage.appliedFilters.sourceId
@@ -32494,8 +32494,8 @@ screens:
       - SourceRunsPage.items[].checkpointBefore
     evidence:
       section: runs
-      answer_pattern: run 목록의 records·checkpoint·duration·error.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증
-        상태를 함께 연다.
+      answer_pattern: 실행 목록의 records·checkpoint·duration·error.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를
+        함께 연다.
       sources:
       - SourceRunsPage.appliedFilters.mode
       - SourceRunsPage.appliedFilters.sourceId
@@ -32511,7 +32511,7 @@ screens:
       - SourceRunsPage.items[].recordsSeen
     unknown_or_disputed:
       section: summary
-      answer_pattern: run health에서 success/failure/lag. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 실행 상태에서 success/failure/lag. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - SourceRunsPage.items[].errorDetail
     next_action:
@@ -32668,7 +32668,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-003: 0eb3db3e9537b2b852cfa00621bd49ef08732386f11a4ddb6695b624152032fc
+    specs/ui/screen-catalog.yaml#screens/SRC-003: 4f027154040cf739cf965e2d9babd86c2a84bd6f53252a3c2287644080b77a9a
   implementation_source_digest: 4a200851b9fbbec27d487623407e361501853273a741923127baa2b33ce16162
   authored_section_ids:
   - summary
@@ -32868,7 +32868,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 출처 실행 상세의 run identity에서 trigger·version·time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 출처 실행 상세의 실행 식별 정보에서 trigger·version·time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - BinaryDownload.status
       - BinaryDownload.version
@@ -32880,15 +32880,14 @@ screens:
       - retrySourceRunReceipt.status
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘무엇을 어디서부터 수집했는가?’이며, run identity에서 trigger·version·time.
+      answer_pattern: 먼저 답할 질문은 ‘무엇을 어디서부터 수집했는가?’이며, 실행 식별 정보에서 trigger·version·time.
       sources:
       - BinaryDownload.rowCount
       - SourceRunResponse.summary
       - SourceRunResponse.title
     evidence:
-      section: counts
-      answer_pattern: record flow의 fetched/new/duplicate/quarantined.가 판단 근거이며 각 항목은 출처, revision, exact locator와
-        검증 상태를 함께 연다.
+      section: identity
+      answer_pattern: 실행 식별 정보의 trigger·version·time.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - SourceRunResponse.createdAt
       - SourceRunResponse.data.checkpointAfter
@@ -32904,7 +32903,7 @@ screens:
       - SourceRunResponse.data.status
     unknown_or_disputed:
       section: impact
-      answer_pattern: downstream에서 jobs/rules/public. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 후속 영향에서 jobs/rules/public. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - SourceRunResponse.createdAt
       - SourceRunResponse.data.checkpointAfter
@@ -33153,7 +33152,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-004: 5cfbe8ae82e216cde5bf0a39cefffd35d974330543e4d6318d35376ec115141b
+    specs/ui/screen-catalog.yaml#screens/SRC-004: 76a345795a17157409c338d72ecb9f4ddc0b19bacdf228a2c966dec7f9b4b539
   implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
   authored_section_ids:
   - identity
@@ -33373,7 +33372,7 @@ screens:
       - authorized object identity
     state:
       section: alert
-      answer_pattern: 스키마 드리프트의 drift identity에서 detected version/time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 스키마 드리프트의 변경 감지 정보에서 detected version/time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SchemaDriftResponse.data.status
       - SchemaDriftResponse.status
@@ -33387,14 +33386,14 @@ screens:
       - rejectSchemaMappingReceipt.status
     matters_now:
       section: alert
-      answer_pattern: 먼저 답할 질문은 ‘어떤 field가 추가·삭제·변경됐는가?’이며, drift identity에서 detected version/time.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 field가 추가·삭제·변경됐는가?’이며, 변경 감지 정보에서 detected version/time.
       sources:
       - SchemaDriftResponse.data.impact
       - SchemaDriftResponse.summary
       - SchemaDriftResponse.title
     evidence:
       section: shadow
-      answer_pattern: shadow result의 fixture/records.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 병행 검증 결과의 fixture/records.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - SchemaDriftResponse.data.sourceId
       - pauseSourceReceipt.acceptedAt
@@ -33410,7 +33409,7 @@ screens:
       - pauseSourceReceipt.status
     unknown_or_disputed:
       section: impact
-      answer_pattern: dependency impact에서 parser/field/rule/public. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 의존 관계 영향에서 parser/field/rule/public. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - SchemaDriftResponse.createdAt
       - SchemaDriftResponse.data.addedFields
@@ -33672,7 +33671,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-005: 5b4c9da28377e550b6a10af37fcaef72ced4737ff46f7fa37da26743c923debc
+    specs/ui/screen-catalog.yaml#screens/SRC-005: 3764493786e0627deda469a69ddb05ca246a7601fa9ff719914618f584fe407c
   implementation_source_digest: 7f1df63345deeeec28588c6459fc2d980293c8387c6fe1e3f6533713fa0332cb
   authored_section_ids:
   - alert
@@ -34173,7 +34172,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-006: b825b89e2f22fc759a90b801506746484cffca36848a7477fa14d6cf344c09ff
+    specs/ui/screen-catalog.yaml#screens/SRC-006: b6605f57a5506e9e7d268bd7097f86b036944edd6a3b2a7fe12688892332e82c
   implementation_source_digest: a68ccb11f7d12a54dcbefb34c52e74b5c4fce46915851f7cee25ba6d222e16ca
   authored_section_ids:
   - scope
@@ -34743,7 +34742,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 규칙 버전 상세의 version identity에서 status·owner·hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 규칙 버전 상세의 버전 식별 정보에서 status·owner·hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalRuleVersionResponse.createdAt
       - InternalRuleVersionResponse.data.codeDigest
@@ -34759,14 +34758,14 @@ screens:
       - InternalRuleVersionResponse.links[].href
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘이 version은 무엇이 바뀌었는가?’이며, version identity에서 status·owner·hash.
+      answer_pattern: 먼저 답할 질문은 ‘이 version은 무엇이 바뀌었는가?’이며, 버전 식별 정보에서 status·owner·hash.
       sources:
       - InternalRuleVersionResponse.data.description
       - InternalRuleVersionResponse.summary
       - InternalRuleVersionResponse.title
     evidence:
       section: cohort
-      answer_pattern: cohort의 include/exclude.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 비교 집단의 include/exclude.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - InternalRuleVersionResponse.createdAt
       - InternalRuleVersionResponse.data.codeDigest
@@ -34776,7 +34775,7 @@ screens:
       - InternalRuleVersionResponse.data.effectiveAt
     unknown_or_disputed:
       section: blockers
-      answer_pattern: blocker에서 quality guard. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 차단 요인에서 quality guard. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - InternalRuleVersionResponse.createdAt
       - InternalRuleVersionResponse.data.codeDigest
@@ -35028,7 +35027,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rule-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RULE-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RULE-002: fe60a104b74bc93ef7ba051e4b2638c0548b422bc50740c41babf5a9f04965d3
+    specs/ui/screen-catalog.yaml#screens/RULE-002: b75aa64223744d01f5a6df5e33ad1fdddf1d50e5ba895858a63deea694977e66
   implementation_source_digest: a965c51464b5a67cee87730c2ed70970c5299b2e0b20aee495396fff55af2ce5
   authored_section_ids:
   - identity
@@ -35242,7 +35241,7 @@ screens:
       - authorized object identity
     state:
       section: dataset
-      answer_pattern: 규칙 평가·섀도 실행의 평가 dataset에서 version·coverage. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 규칙 평가·섀도 실행의 평가 자료에서 version·coverage. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - RuleEvaluationResponse.data.version
       - RuleEvaluationResponse.status
@@ -35254,7 +35253,7 @@ screens:
       - startRuleShadowReceipt.status
     matters_now:
       section: dataset
-      answer_pattern: 먼저 답할 질문은 ‘정확도와 오탐 유형은 무엇인가?’이며, 평가 dataset에서 version·coverage.
+      answer_pattern: 먼저 답할 질문은 ‘정확도와 오탐 유형은 무엇인가?’이며, 평가 자료에서 version·coverage.
       sources:
       - RuleEvaluationResponse.data.caseCount
       - RuleEvaluationResponse.data.falsePositiveCount
@@ -35263,7 +35262,7 @@ screens:
       - RuleEvaluationResponse.title
     evidence:
       section: dataset
-      answer_pattern: 평가 dataset의 version·coverage.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 평가 자료의 version·coverage.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - RuleEvaluationResponse.createdAt
       - RuleEvaluationResponse.data.caseCount
@@ -35273,7 +35272,7 @@ screens:
       - RuleEvaluationResponse.data.datasetDigest
     unknown_or_disputed:
       section: dataset
-      answer_pattern: 평가 dataset에서 version·coverage. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 평가 자료에서 version·coverage. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - RuleEvaluationResponse.createdAt
       - RuleEvaluationResponse.data.caseCount
@@ -35527,7 +35526,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rule-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RULE-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RULE-003: 3b06ed61e689e5918761f2b30674e4f5ea32c32a131929314c8bd5b0818bbd00
+    specs/ui/screen-catalog.yaml#screens/RULE-003: 0a3de3dddbd32d1b85902578a411298ddf3f5c6ec8479df2eb28ef4ae25afb0d
   implementation_source_digest: 5500cdcef99148f7b380431f98f534d9b61714704d8166cd6b042d707f78d469
   authored_section_ids:
   - dataset
@@ -36062,7 +36061,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rule-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RULE-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RULE-004: 7e06cdfb724438559ded5a6913aba48202d7f65258ed186fdd00768766bf71a2
+    specs/ui/screen-catalog.yaml#screens/RULE-004: 562968f04251faf3e2cfcfcfdfafcf447eccfdbe0082eed973b4f641477ffd2b
   implementation_source_digest: b34973b52229ae217fd9909eb14fa2e0bff73b2de04d75c42af3ac974f7f7476
   authored_section_ids:
   - target
@@ -36347,7 +36346,7 @@ screens:
       - authorized object identity
     state:
       section: incidents
-      answer_pattern: 운영 개요의 active incident에서 영향·owner·started. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 운영 개요의 진행 중 장애에서 영향·owner·started. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - OperationsOverviewResponse.incidents[].status
       - OperationsOverviewResponse.incidents[].updatedAt
@@ -36358,7 +36357,7 @@ screens:
       - OperationsOverviewResponse.telemetryGaps[].owner
     matters_now:
       section: incidents
-      answer_pattern: 먼저 답할 질문은 ‘현재 사용자와 공개 데이터에 영향을 주는 incident가 있는가?’이며, active incident에서 영향·owner·started.
+      answer_pattern: 먼저 답할 질문은 ‘현재 사용자와 공개 데이터에 영향을 주는 incident가 있는가?’이며, 진행 중 장애에서 영향·owner·started.
       sources:
       - OperationsOverviewResponse.incidents[].summary
       - OperationsOverviewResponse.queues[].deadLetterCount
@@ -36368,7 +36367,7 @@ screens:
       - OperationsOverviewResponse.telemetryGaps[].impact
     evidence:
       section: incidents
-      answer_pattern: active incident의 영향·owner·started.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 진행 중 장애의 영향·owner·started.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - OperationsOverviewResponse.sources[].displayName
       - OperationsOverviewResponse.sources[].lagSeconds
@@ -36378,7 +36377,7 @@ screens:
       - OperationsOverviewResponse.sources[].status
     unknown_or_disputed:
       section: incidents
-      answer_pattern: active incident에서 영향·owner·started. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 진행 중 장애에서 영향·owner·started. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - OperationsOverviewResponse.incidents[].affectedCapabilities
       - OperationsOverviewResponse.incidents[].id
@@ -36652,7 +36651,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-001: b369cf5d245e09407e67265badaec7ca403b247e520e8e55f84b2f92084ea8f0
+    specs/ui/screen-catalog.yaml#screens/OPS-001: 345a00f97a34704a78355b11d6e454f689154133cc6210dd055953ef56eb87a1
   implementation_source_digest: 184f581c26e17d5215d09da8f34bb2324eac98df16190645475bb885d0892b29
   authored_section_ids:
   - incidents
@@ -37080,12 +37079,12 @@ screens:
       - retryJobsReceipt.status
     matters_now:
       section: summary
-      answer_pattern: 먼저 답할 질문은 ‘어떤 job이 오래되거나 반복 실패하는가?’이며, queue health에서 backlog/oldest/DLQ.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 job이 오래되거나 반복 실패하는가?’이며, 대기열 상태에서 backlog/oldest/DLQ.
       sources:
       - JobsPage.items[].attemptCount
     evidence:
       section: summary
-      answer_pattern: queue health의 backlog/oldest/DLQ.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 대기열 상태의 backlog/oldest/DLQ.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - JobsPage.appliedFilters.jobStatus
       - JobsPage.appliedFilters.jobType
@@ -37095,7 +37094,7 @@ screens:
       - JobsPage.items[].createdAt
     unknown_or_disputed:
       section: summary
-      answer_pattern: queue health에서 backlog/oldest/DLQ. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 대기열 상태에서 backlog/oldest/DLQ. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - JobsPage.items[].lastErrorCode
     next_action:
@@ -37291,7 +37290,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-002: cb54c369ba14281805150b2fd43fcde52229ba19dadf721631d672314a22db1a
+    specs/ui/screen-catalog.yaml#screens/OPS-002: 8d3aaa3ef3db3d0ca1066928e3400d131fbdd383e465f3e52c7c0124ad3b47fd
   implementation_source_digest: 90ac55701daeee9f0f0b01f1405d36981703777ba8788157d4c8f730ff98b243
   authored_section_ids:
   - summary
@@ -37509,7 +37508,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 작업 상세의 job identity에서 type·aggregate·created. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 작업 상세의 작업 식별 정보에서 type·aggregate·created. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - JobResponse.data.leaseOwner
       - JobResponse.data.status
@@ -37525,14 +37524,14 @@ screens:
       - retryJobReceipt.status
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘이 job은 무엇을 처리하는가?’이며, job identity에서 type·aggregate·created.
+      answer_pattern: 먼저 답할 질문은 ‘이 job은 무엇을 처리하는가?’이며, 작업 식별 정보에서 type·aggregate·created.
       sources:
       - JobResponse.data.attemptCount
       - JobResponse.summary
       - JobResponse.title
     evidence:
-      section: payload
-      answer_pattern: payload reference의 redacted.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      section: identity
+      answer_pattern: 작업 식별 정보의 type·aggregate·created.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - JobResponse.createdAt
       - JobResponse.data.attemptCount
@@ -37542,7 +37541,7 @@ screens:
       - JobResponse.data.jobType
     unknown_or_disputed:
       section: identity
-      answer_pattern: job identity에서 type·aggregate·created. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 작업 식별 정보에서 type·aggregate·created. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - JobResponse.createdAt
       - JobResponse.data.attemptCount
@@ -37791,7 +37790,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-003: a8c902de075500244b34b6435e104dc21e5cbe5545a3133c6cb88e28ed4ff64a
+    specs/ui/screen-catalog.yaml#screens/OPS-003: 008c4898663cde8c0d3bf393cf7d94145397dbaf4f6135b5ac129512080399cc
   implementation_source_digest: ba9a5b2a94ba2111073817f667c06026ba89fd8d37d0cc01f823014688b1cb34
   authored_section_ids:
   - identity
@@ -38050,7 +38049,7 @@ screens:
       - authorized object identity
     state:
       section: envelope
-      answer_pattern: 비용·예산의 예산 envelope에서 daily/monthly. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 비용·예산의 예산 범위에서 daily/monthly. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - BinaryDownload.status
       - BinaryDownload.version
@@ -38066,7 +38065,7 @@ screens:
       - updateBudgetLimitReceipt.status
     matters_now:
       section: envelope
-      answer_pattern: 먼저 답할 질문은 ‘현재 spend와 forecast는 얼마인가?’이며, 예산 envelope에서 daily/monthly.
+      answer_pattern: 먼저 답할 질문은 ‘현재 spend와 forecast는 얼마인가?’이며, 예산 범위에서 daily/monthly.
       sources:
       - BinaryDownload.rowCount
       - BudgetOverviewResponse.data.summary.alertThreshold
@@ -38082,7 +38081,7 @@ screens:
       - BudgetOverviewResponse.data.summary.lastChangedBy
     evidence:
       section: envelope
-      answer_pattern: 예산 envelope의 daily/monthly.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 예산 범위의 daily/monthly.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - BinaryDownload.binary
       - BinaryDownload.byteLength
@@ -38092,7 +38091,7 @@ screens:
       - BinaryDownload.format
     unknown_or_disputed:
       section: envelope
-      answer_pattern: 예산 envelope에서 daily/monthly. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 예산 범위에서 daily/monthly. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - BudgetOverviewResponse.createdAt
       - BudgetOverviewResponse.data.dailySeries[].amount
@@ -38311,7 +38310,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-004: 9bc65b78dc511b2b40e92af6f5d44ef250ee3ee4434bf91cacd0eb7aa716d1d1
+    specs/ui/screen-catalog.yaml#screens/OPS-004: d2998613b168d749be9d54caa106ee03b26fbbe2f5be055ab8aade935744ccd5
   implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
   authored_section_ids:
   - envelope
@@ -38514,63 +38513,52 @@ screens:
       - authorized object identity
     state:
       section: status
-      answer_pattern: 외부 공급자 상태의 provider health에서 service/status/last checked. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 외부 공급자 상태의 공급자 상태에서 service/status/last checked. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ProvidersPage.appliedFilters.routingStatus
       - ProvidersPage.asOf
       - ProvidersPage.items[].lastTestStatus
       - ProvidersPage.items[].routingStatus
-      - disableProviderRoutingReceipt.aggregateVersion
-      - disableProviderRoutingReceipt.status
-      - testProviderConnectionReceipt.aggregateVersion
-      - testProviderConnectionReceipt.status
+      - RelayModelsPage.asOf
+      - RelayModelsPage.currentProviders[].dataPolicyState
+      - RelayModelsPage.currentProviders[].pricingVersion
+      - RelayModelsPage.currentProviders[].version
+      - RelayModelsPage.syncStatus.lastCompletedAt
+      - RelayModelsPage.syncStatus.lastErrorCode
+      - RelayModelsPage.syncStatus.status
     matters_now:
       section: status
-      answer_pattern: 먼저 답할 질문은 ‘어떤 provider가 장애 또는 quota 위험인가?’이며, provider health에서 service/status/last checked.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 provider가 장애 또는 quota 위험인가?’이며, 공급자 상태에서 service/status/last checked.
       sources:
+      - ActionProposalReceiptV1
       - ProvidersPage.appliedFilters.enabled
       - ProvidersPage.appliedFilters.providerType
       - ProvidersPage.appliedFilters.routingStatus
       - ProvidersPage.asOf
       - ProvidersPage.items[].enabled
-      - ProvidersPage.items[].id
     evidence:
-      section: status
-      answer_pattern: provider health의 service/status/last checked.가 판단 근거이며 각 항목은 출처, revision, exact locator와
-        검증 상태를 함께 연다.
+      section: model-catalog
+      answer_pattern: '모델 카탈로그의 track prefix 내 relay created 최대. 단가 미설정: 비용 0으로 기록.가 판단 근거이며 각 항목은 출처, revision,
+        exact locator와 검증 상태를 함께 연다.'
       sources:
+      - ActionProposalReceiptV1
       - ProvidersPage.appliedFilters.enabled
       - ProvidersPage.appliedFilters.providerType
       - ProvidersPage.appliedFilters.routingStatus
       - ProvidersPage.asOf
       - ProvidersPage.items[].enabled
-      - ProvidersPage.items[].id
     unknown_or_disputed:
       section: incidents
-      answer_pattern: incident에서 impact/history. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 장애 이력에서 impact/history. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
-      - ProvidersPage.appliedFilters.enabled
-      - ProvidersPage.appliedFilters.providerType
-      - ProvidersPage.appliedFilters.routingStatus
-      - ProvidersPage.asOf
-      - ProvidersPage.items[].enabled
-      - ProvidersPage.items[].id
+      - RelayModelsPage.currentProviders[].autoUpgradeConflict
+      - RelayModelsPage.syncStatus.lastErrorCode
     next_action:
       section: status
-      answer_pattern: '연결 테스트: safe connectivity test 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '연결 테스트 제안: safe connectivity test 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
+      - ActionProposalReceiptV1
       - ProvidersPage.nextCursor
-      - disableProviderRoutingReceipt.acceptedAt
-      - disableProviderRoutingReceipt.aggregateId
-      - disableProviderRoutingReceipt.aggregateVersion
-      - disableProviderRoutingReceipt.auditEventId
-      - disableProviderRoutingReceipt.links[].href
-      - disableProviderRoutingReceipt.links[].label
-      - disableProviderRoutingReceipt.links[].rel
-      - disableProviderRoutingReceipt.operationId
-      - disableProviderRoutingReceipt.receiptToken
-      - disableProviderRoutingReceipt.requestId
-      - disableProviderRoutingReceipt.status
   section_mapping:
   - order: 1
     id: status
@@ -38586,17 +38574,19 @@ screens:
     - ProvidersPage.appliedFilters.routingStatus
     - ProvidersPage.items[].lastTestStatus
     - ProvidersPage.items[].routingStatus
-    - disableProviderRoutingReceipt.aggregateVersion
-    - disableProviderRoutingReceipt.status
-    - testProviderConnectionReceipt.aggregateVersion
-    - testProviderConnectionReceipt.status
+    - RelayModelsPage.currentProviders[].dataPolicyState
+    - RelayModelsPage.currentProviders[].pricingVersion
+    - RelayModelsPage.currentProviders[].version
+    - RelayModelsPage.syncStatus.lastCompletedAt
+    - RelayModelsPage.syncStatus.lastErrorCode
+    - RelayModelsPage.syncStatus.status
     implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/operations/providers/+page.server.ts
     - apps/review-console/src/routes/internal/operations/providers/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 9af4f4444ba8893b07a63bfc46c5808e6e59a8526bed11ef0fd6ef21cf7a9624
+    source_fields_digest: 76fb67feb8ba63b1701f22e0f9346fc7badc6d288940eae232fb62b92862b271
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38618,19 +38608,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_005.quotas
     source_fields:
+    - ProvidersPage.appliedFilters.enabled
     - ProvidersPage.appliedFilters.providerType
     - ProvidersPage.appliedFilters.routingStatus
     - ProvidersPage.asOf
     - ProvidersPage.items[].enabled
     - ProvidersPage.items[].id
-    - ProvidersPage.items[].lastTestAt
     implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/operations/providers/+page.server.ts
     - apps/review-console/src/routes/internal/operations/providers/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: dc64cc39a41111dd65b891f759c5d8088f23bfc6d6f4b57747652c1374570f59
+    source_fields_digest: 0063a8d77b8b4982ee615cd275b2241a4b46b2a7b971f4b2f16a846095ff7587
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38648,19 +38638,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_005.latency
     source_fields:
+    - ProvidersPage.appliedFilters.providerType
     - ProvidersPage.appliedFilters.routingStatus
     - ProvidersPage.asOf
     - ProvidersPage.items[].enabled
     - ProvidersPage.items[].id
     - ProvidersPage.items[].lastTestAt
-    - ProvidersPage.items[].lastTestStatus
     implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/operations/providers/+page.server.ts
     - apps/review-console/src/routes/internal/operations/providers/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: b6342ca35a897e8ab3cff7eee0366cb76c34358bfcfdc9a1c87bba9fa57eb462
+    source_fields_digest: dc64cc39a41111dd65b891f759c5d8088f23bfc6d6f4b57747652c1374570f59
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38682,15 +38672,16 @@ screens:
     - ProvidersPage.appliedFilters.routingStatus
     - ProvidersPage.items[].lastTestStatus
     - ProvidersPage.items[].routingStatus
-    - disableProviderRoutingReceipt.status
-    - testProviderConnectionReceipt.status
+    - RelayModelsPage.syncStatus.lastCompletedAt
+    - RelayModelsPage.syncStatus.lastErrorCode
+    - RelayModelsPage.syncStatus.status
     implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/operations/providers/+page.server.ts
     - apps/review-console/src/routes/internal/operations/providers/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e7e4f9a898f28bc5916c17379f1184f1f7fe676f7c61a562ffc2604fbf734a4c
+    source_fields_digest: 38dd17649d4aca08cf87be3220bda9482c034491f558bd062fa55dba30fd23bc
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38708,19 +38699,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_005.fallback
     source_fields:
+    - ProvidersPage.asOf
     - ProvidersPage.items[].enabled
     - ProvidersPage.items[].id
     - ProvidersPage.items[].lastTestAt
     - ProvidersPage.items[].lastTestStatus
     - ProvidersPage.items[].name
-    - ProvidersPage.items[].providerType
     implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/operations/providers/+page.server.ts
     - apps/review-console/src/routes/internal/operations/providers/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e70e580da453ba917551fd21ce71746bc2b83284ceee91154ddc8424a02bc296
+    source_fields_digest: 6a8b7d710a0deae8517a9fbc379fb1ed0edf0a9802601e23696d17eb153632d7
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38741,15 +38732,16 @@ screens:
     - ProvidersPage.appliedFilters.routingStatus
     - ProvidersPage.items[].lastTestStatus
     - ProvidersPage.items[].routingStatus
-    - disableProviderRoutingReceipt.status
-    - testProviderConnectionReceipt.status
+    - RelayModelsPage.syncStatus.lastCompletedAt
+    - RelayModelsPage.syncStatus.lastErrorCode
+    - RelayModelsPage.syncStatus.status
     implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/operations/providers/+page.server.ts
     - apps/review-console/src/routes/internal/operations/providers/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e7e4f9a898f28bc5916c17379f1184f1f7fe676f7c61a562ffc2604fbf734a4c
+    source_fields_digest: 38dd17649d4aca08cf87be3220bda9482c034491f558bd062fa55dba30fd23bc
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38759,6 +38751,36 @@ screens:
     additive_command_operations:
     - cancelCommunicationDelivery
     - reconcileCommunicationDelivery
+  - order: 7
+    id: model-catalog
+    surface: internal
+    semantic_region: model-catalog
+    authority_component_contract: EvidenceLedger
+    component_contract: EvidenceLedger
+    component_variant: internal
+    surface_resolution:
+      kind: AUTHORITY_COMPATIBLE
+    typed_slice: ops_005.model_catalog
+    source_fields:
+    - ProvidersPage.items[].id
+    - ProvidersPage.items[].lastTestAt
+    - ProvidersPage.items[].lastTestStatus
+    - ProvidersPage.items[].name
+    - ProvidersPage.items[].providerType
+    - ProvidersPage.items[].retentionPolicy
+    implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
+    source_paths:
+    - apps/review-console/src/routes/+error.svelte
+    - apps/review-console/src/routes/internal/operations/providers/+page.server.ts
+    - apps/review-console/src/routes/internal/operations/providers/+page.svelte
+    - packages/ui/src/view-models/generated.ts
+    source_fields_digest: d1245fe084b8ecf00dd32744488fbc123ca7aef2383ac2040985cd0513c34789
+    source_classification: DISPLAY_SAFE_ALLOWLIST
+    heading_level: 2
+    landmark: region
+    test_id: ops_005__section__model-catalog
+    additive_query_operations: []
+    additive_command_operations: []
   view_model: apps/review-console/src/lib/view-models/ops-005.ts
   typed_view_model:
     path: packages/ui/src/view-models/generated.ts
@@ -38767,7 +38789,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-005: 7ec7d365fc21719a4d47c585e6585835f8ee1ea1034f632decc2ab3c5d1fa4ab
+    specs/ui/screen-catalog.yaml#screens/OPS-005: 522546e344c0940f6407c2f0bcd0fa52b82b71bd4203e61049eee8b682d2b006
   implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
   authored_section_ids:
   - status
@@ -38776,10 +38798,13 @@ screens:
   - privacy
   - fallback
   - incidents
+  - model-catalog
   action_ids:
   - open-provider
   - disable-routing
   - test
+  - upgrade-model
+  - auto-upgrade
   state_occurrence_ids:
   - OPS-005::loading
   - OPS-005::success
@@ -38799,6 +38824,7 @@ screens:
     - privacy
     - fallback
     - incidents
+    - model-catalog
   implementation_source_sha256:
     apps/review-console/src/routes/+error.svelte: dfd8e4a5aed27c59e2c4acbcd39065107e0e6ddfaf8705efc827ea08fa9451e1
     apps/review-console/src/routes/internal/operations/providers/+page.server.ts: 036d89a46869114d454434b2ab5c692bbe4228b1dff97802b9c30838e55bac4f
@@ -38823,10 +38849,10 @@ screens:
     - fallback-active
   primary_action:
     id: test
-    label: 연결 테스트
+    label: 연결 테스트 제안
     operation_id: testProviderConnection
     interaction_kind: COMMAND
-    capability: jobs.operate
+    capability: actions.propose
     assurance_level: ACTIVE_SESSION
     consequence: safe connectivity test 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
@@ -38841,25 +38867,46 @@ screens:
     consequence: 외부 공급자 상태로 이동해 LLM·OCR·email·object storage 등 공급자의 health·latency·quota·privacy mode를 관리한다.
     test_id: ops_005__action__open_provider
   - action_id: disable-routing
-    label: 라우팅 중지
-    interaction_kind: DESTRUCTIVE_CONFIRMATION
+    label: 라우팅 중지 제안
+    interaction_kind: COMMAND
     operation_id: disableProviderRouting
-    capability: kill_switch.execute
-    assurance_level: STEP_UP
-    step_up_required: true
-    confirmation_required: true
+    capability: actions.propose
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
     consequence: provider route disable 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: ops_005__action__disable_routing
   - action_id: test
-    label: 연결 테스트
+    label: 연결 테스트 제안
     interaction_kind: COMMAND
     operation_id: testProviderConnection
-    capability: jobs.operate
+    capability: actions.propose
     assurance_level: ACTIVE_SESSION
     step_up_required: false
     confirmation_required: false
     consequence: safe connectivity test 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: ops_005__action__test
+  - action_id: upgrade-model
+    label: 모델 업그레이드 제안
+    interaction_kind: COMMAND
+    operation_id: upgradeProviderModel
+    capability: actions.propose
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
+    consequence: queue a version-fenced relay model upgrade after connection validation 요청을 제출하고 저장된 결과 상태와 영수증을
+      확인한다.
+    test_id: ops_005__action__upgrade_model
+  - action_id: auto-upgrade
+    label: 자동 업그레이드 설정 제안
+    interaction_kind: COMMAND
+    operation_id: setModelAutoUpgrade
+    capability: actions.propose
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
+    consequence: configure relay model automatic upgrade policy 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
+    test_id: ops_005__action__auto_upgrade
   navigation_actions:
   - action_id: open-provider
     label: 공급자 상세
@@ -38892,6 +38939,8 @@ screens:
   other_actions:
   - open-provider
   - disable-routing
+  - upgrade-model
+  - auto-upgrade
   responsive:
     compact: single-column incident and bounded actions; dense diagnostics collapse
     medium: 8-column; critical incident full width
@@ -38905,6 +38954,7 @@ screens:
     - privacy
     - fallback
     - incidents
+    - model-catalog
   focus_contract:
     entry: skip-link -> ops_005__heading -> ops_005__section__status
     validation_failure: ops_005__error_summary; preserve all valid input and link each field error
@@ -38927,24 +38977,24 @@ screens:
     response_schema: ProvidersPage
     section_bindings: []
   - source: v13-authority
-    operation_id: disableProviderRouting
+    operation_id: createActionProposal
     api: control-api
     method: POST
-    path: /v1/internal/commands/disable-provider-routing
+    path: /v1/internal/action-proposals
     kind: COMMAND
     blocking: false
-    request_schema: disableProviderRoutingRequest
-    response_schema: disableProviderRoutingReceipt
+    request_schema: CreateActionProposalRequestV1
+    response_schema: ActionProposalReceiptV1
     section_bindings: []
   - source: v13-authority
-    operation_id: testProviderConnection
+    operation_id: listRelayModels
     api: control-api
-    method: POST
-    path: /v1/internal/commands/test-provider-connection
-    kind: COMMAND
-    blocking: false
-    request_schema: testProviderConnectionRequest
-    response_schema: testProviderConnectionReceipt
+    method: GET
+    path: /v1/internal/queries/list-relay-models
+    kind: QUERY
+    blocking: true
+    request_schema: listRelayModelsQuery
+    response_schema: RelayModelsPage
     section_bindings: []
   - source: owner-addendum
     operation_id: cancelCommunicationDelivery
@@ -39105,6 +39155,7 @@ screens:
   - ops_005__section__privacy
   - ops_005__section__fallback
   - ops_005__section__incidents
+  - ops_005__section__model-catalog
 - screen_id: OPS-006
   surface: internal
   route: /internal/operations/kill-switches
@@ -39126,7 +39177,7 @@ screens:
       - authorized object identity
     state:
       section: active
-      answer_pattern: 킬 스위치의 활성 switch에서 scope·reason·expiry. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 킬 스위치의 활성 비상 중지에서 scope·reason·expiry. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - KillSwitchesPage.appliedFilters.state
       - KillSwitchesPage.asOf
@@ -39140,12 +39191,12 @@ screens:
       - extendKillSwitchReceipt.status
     matters_now:
       section: active
-      answer_pattern: 먼저 답할 질문은 ‘어떤 switch가 활성화됐고 영향은 무엇인가?’이며, 활성 switch에서 scope·reason·expiry.
+      answer_pattern: 먼저 답할 질문은 ‘어떤 switch가 활성화됐고 영향은 무엇인가?’이며, 활성 비상 중지에서 scope·reason·expiry.
       sources:
       - KillSwitchesPage.items[].reason
     evidence:
       section: active
-      answer_pattern: 활성 switch의 scope·reason·expiry.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 활성 비상 중지의 scope·reason·expiry.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - KillSwitchesPage.appliedFilters.scope
       - KillSwitchesPage.appliedFilters.state
@@ -39378,7 +39429,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-006: 22ef16609c6c246b2b24d73e4eb955576fe01befe011e2a225cd39671d26cad4
+    specs/ui/screen-catalog.yaml#screens/OPS-006: 37bc1659074ac06481cd7881032e4318eee2fb48342c073c75b3efac70275a7a
   implementation_source_digest: 16a0bb0d46f41918a88bbfb8c818c7136e26b80fe246abeb3a668b011466a55b
   authored_section_ids:
   - active
@@ -39684,7 +39735,7 @@ screens:
       - AuditEventsSearchResultPage.appliedFilters.q
     unknown_or_disputed:
       section: filters
-      answer_pattern: risk·surface·result에서 high impact. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 위험·영역·결과에서 high impact. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - AuditExportResponse.completedAt
       - AuditExportResponse.contentSha256
@@ -39902,7 +39953,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/aud-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/AUD-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/AUD-001: 86d9f8cdaa55e99a89d50fc642655ec09b8c7d840ae5f17cc93629f63effb9a2
+    specs/ui/screen-catalog.yaml#screens/AUD-001: b3c6c86865b0a47c10224dab18dae16e5fc72cb71bce51ad64cf1e2815e99e2c
   implementation_source_digest: c4db21d07fcce91fe303491f436a0f5c486c01318c0a07630a54431973b81578
   authored_section_ids:
   - query
@@ -40589,7 +40640,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 사용자 상세·역할의 identity에서 IdP·status. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사용자 상세·역할의 신원 정보에서 IdP·status. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - UserAccessDetailResponse.data.user.status
       - UserAccessDetailResponse.data.user.updatedAt
@@ -40605,14 +40656,14 @@ screens:
       - revokeUserSessionsReceipt.aggregateVersion
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘현재 어떤 capability와 scope가 있는가?’이며, identity에서 IdP·status.
+      answer_pattern: 먼저 답할 질문은 ‘현재 어떤 capability와 scope가 있는가?’이며, 신원 정보에서 IdP·status.
       sources:
       - UserAccessDetailResponse.data.roleGrants[].reason
       - UserAccessDetailResponse.summary
       - UserAccessDetailResponse.title
     evidence:
       section: identity
-      answer_pattern: identity의 IdP·status.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 신원 정보의 IdP·status.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - UserAccessDetailResponse.createdAt
       - UserAccessDetailResponse.data.accessReviewFindings
@@ -40622,7 +40673,7 @@ screens:
       - UserAccessDetailResponse.data.activeSessions[].id
     unknown_or_disputed:
       section: activity
-      answer_pattern: 고위험 audit에서 최소 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 고위험 감사에서 최소 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - UserAccessDetailResponse.createdAt
       - UserAccessDetailResponse.data.accessReviewFindings
@@ -40884,7 +40935,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/adm-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/ADM-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/ADM-002: 49215540e89db941c490998099d28eb782c3e1d51599b6f8eb23a7d5c5cf1076
+    specs/ui/screen-catalog.yaml#screens/ADM-002: 394c0918ba591eb9943180feaf58c09e21b5efdd0d3b5d5663a305dc96be1692
   implementation_source_digest: 6ff9eab28065364822db7c204ea88657ebf7347062c8c0ffae83523a8d955900
   authored_section_ids:
   - identity
@@ -41258,19 +41309,19 @@ screens:
       - authorized object identity
     state:
       section: catalog
-      answer_pattern: 역할 정의의 role catalog에서 description/status. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 역할 정의의 역할 목록에서 description/status. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - RoleDefinitionsPage.asOf
       - proposeRoleDefinitionChangeReceipt.aggregateVersion
       - proposeRoleDefinitionChangeReceipt.status
     matters_now:
       section: catalog
-      answer_pattern: 먼저 답할 질문은 ‘이 role은 어떤 권한을 주는가?’이며, role catalog에서 description/status.
+      answer_pattern: 먼저 답할 질문은 ‘이 role은 어떤 권한을 주는가?’이며, 역할 목록에서 description/status.
       sources:
       - RoleDefinitionsPage.items[].description
     evidence:
       section: catalog
-      answer_pattern: role catalog의 description/status.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 역할 목록의 description/status.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - RoleDefinitionsPage.appliedFilters.riskLevel
       - RoleDefinitionsPage.appliedFilters.systemRole
@@ -41280,7 +41331,7 @@ screens:
       - RoleDefinitionsPage.items[].description
     unknown_or_disputed:
       section: capabilities
-      answer_pattern: capability matrix에서 read/write/high impact. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 권한 행렬에서 read/write/high impact. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - RoleDefinitionsPage.appliedFilters.riskLevel
       - RoleDefinitionsPage.items[].riskLevel
@@ -41479,7 +41530,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/adm-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/ADM-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/ADM-003: 50532b83424d9485ebee42f6b21eb97feffa22d6f41fc376f117284060fd6be3
+    specs/ui/screen-catalog.yaml#screens/ADM-003: 82186516b89a421626518d4b6191c3359303fea2dcf661621e6fa96f7bbc5ee4
   implementation_source_digest: 53919c78658f245ad92acdc7b98f13fd717b355cf25a833dcb08ba68c68a83ae
   authored_section_ids:
   - catalog
@@ -41672,7 +41723,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 내 계정·세션의 내 identity에서 IdP·조직. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 내 계정·세션의 신원 정보에서 IdP·조직. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CurrentAccountResponse.status
       - CurrentAccountResponse.updatedAt
@@ -41683,7 +41734,7 @@ screens:
       - revokeOwnSessionReceipt.status
     matters_now:
       section: identity
-      answer_pattern: 먼저 답할 질문은 ‘현재 어떤 역할과 세션이 있는가?’이며, 내 identity에서 IdP·조직.
+      answer_pattern: 먼저 답할 질문은 ‘현재 어떤 역할과 세션이 있는가?’이며, 신원 정보에서 IdP·조직.
       sources:
       - CurrentAccountResponse.createdAt
       - CurrentAccountResponse.data.capabilities
@@ -41699,7 +41750,7 @@ screens:
       - CurrentAccountResponse.links[].href
     evidence:
       section: identity
-      answer_pattern: 내 identity의 IdP·조직.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
+      answer_pattern: 신원 정보의 IdP·조직.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - CurrentAccountResponse.createdAt
       - CurrentAccountResponse.data.capabilities
@@ -41709,7 +41760,7 @@ screens:
       - CurrentAccountResponse.data.stepUpAt
     unknown_or_disputed:
       section: identity
-      answer_pattern: 내 identity에서 IdP·조직. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
+      answer_pattern: 신원 정보에서 IdP·조직. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - CurrentAccountResponse.createdAt
       - CurrentAccountResponse.data.capabilities
@@ -41929,7 +41980,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/acc-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/ACC-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/ACC-001: 296d10bf5b3743020903cf14d87f163ed601a5ff7513965fa0ee806859e50d02
+    specs/ui/screen-catalog.yaml#screens/ACC-001: 8e6d5460b2c497a8fef580124a2cf68c20ac25d0e990d26c34a744f7140d3e2f
   implementation_source_digest: 076cfae6496319b0dfab8a7995cfd1ca1d7bb91153bcb38574d281fa97d04dc2
   authored_section_ids:
   - identity

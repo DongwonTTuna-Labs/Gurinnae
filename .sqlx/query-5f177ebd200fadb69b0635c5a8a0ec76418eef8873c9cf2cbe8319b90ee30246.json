@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.provider_model_upgrade_receipts( id,attempt_id,provider_id,target_model_id,attempt_kind,outcome,before_provider_version, after_provider_version,before_model_id,after_model_id,policy_sha256,gateway_receipt_sha256, usage_evidence_sha256,audit_event_id,cost_event_id,receipt_canonical,canonical_receipt, receipt_sha256,recorded_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$4,CAST($10 AS char(64)),CAST($11 AS char(64)), CAST($12 AS char(64)),$13,$14,$15,$16,CAST($17 AS char(64)),$18)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8",
+        "Text",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Uuid",
+        "Uuid",
+        "Bytea",
+        "Jsonb",
+        "Bpchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f177ebd200fadb69b0635c5a8a0ec76418eef8873c9cf2cbe8319b90ee30246"
+}

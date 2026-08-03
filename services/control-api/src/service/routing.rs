@@ -158,7 +158,6 @@ pub(super) fn creates_resource(operation: &str) -> bool {
                 | "startBackfill"
                 | "startSourceRun"
                 | "runRuleEvaluation"
-                | "testProviderConnection"
                 | "verifyAuditIntegrity"
         )
 }

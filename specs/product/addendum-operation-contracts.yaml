@@ -51,6 +51,7 @@ action_payloads:
     - CAPABILITY_ACTIVATION
     - RESPONSE_POLICY_CALENDAR
     - COMMERCIAL_CONTROL
+    - PROVIDER_CONTROL
   common:
     additional_properties: false
     required: [schemaVersion, kind, target, rationale, effect]
@@ -129,6 +130,15 @@ action_payloads:
       required: [triggerId, triggerVersion, triggerDigest, triggerKind, exactMetricResultDigests, dependencyInputSetDigest, evidenceSetDigest, affectedScopeDigest, requestedActions, expectedKillSwitchGeneration, expectedCapabilityVersionSetDigest, expectedContractVersionSetDigest, reason, consequence, existingCustomerContinuityPlanDigest, originalControlReceiptDigest, resumeEvidenceSetDigest, expiresAt, commercialControlBindingDigest]
       executor: private.ApplyCommercialControl
       proposer_capability: commercial.controls.propose
+    PROVIDER_CONTROL:
+      required: [providerControl]
+      executor: private.ExecuteProviderControl
+      proposer_capability: selected by providerControl.operationId
+      operation_policies:
+        disableProviderRouting: {capability: kill_switch.execute, assurance: STEP_UP}
+        testProviderConnection: {capability: jobs.operate, assurance: ACTIVE_SESSION}
+        upgradeProviderModel: {capability: kill_switch.execute, assurance: STEP_UP}
+        setModelAutoUpgrade: {capability: kill_switch.execute, assurance: STEP_UP}
 
 action_digest_contract:
   normative_source: specs/product/addendum-approval-policy.yaml#digest_contracts
@@ -137,6 +147,23 @@ action_digest_contract:
   actionDetailDigest: GURINE_CANONICAL_JSON_V1({actionDetailKind,actionDetail}) and actionDetailKind equals actionKind
   actorActionDigest: GURINE_CANONICAL_JSON_V1(ActionAuthorizationContext) whose businessPayloadSha256 is approvalDigest
   executionDigest: GURINE_CANONICAL_JSON_V1(ExecutionBindingV1)
+
+provider_control_http_side_door:
+  operation_ids: [disableProviderRouting, testProviderConnection, upgradeProviderModel, setModelAutoUpgrade]
+  logical_role: The existing operation IDs and request schemas are closed provider-control form and ActionPayloadV1 discriminator anchors only; they are not effect entrypoints.
+  direct_http:
+    status: 409
+    error_code: ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    transaction: NONE
+    writes: []
+    outbox_events: []
+    external_effects: []
+  only_effect_path: PROVIDER_CONTROL ActionProposal -> independent review -> current ExecutionAuthorization -> one jobs.operate provider-control job -> analysis-worker private.ExecuteProviderControl three-phase version fence
+  invariants:
+    - A direct HTTP invocation never creates a proposal, authorization, job, receipt, audit, outbox event or provider effect.
+    - The four request schemas remain byte-compatible with ProviderControlActionV1 branches so the BFF can create a typed proposal without calling the effect endpoint.
+    - No browser, BFF or Control API handler may invoke relay or mutate provider state outside the authorized analysis-worker executor path.
 
 operations:
   - operation_id: listActionApprovalQueue
@@ -149,7 +176,7 @@ operations:
     request:
       required: []
       optional:
-        actionKind: unique-array<action_payloads.kinds>[1..17]
+        actionKind: unique-array<action_payloads.kinds>[1..18]
         proposalState: unique-array<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>[1..8]
         assignmentState: unique-array<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>[1..6]
         dueBefore: datetime
@@ -244,7 +271,8 @@ operations:
     assurance: conditional-by-action-and-decision
     request:
       required: [proposalId, actionKind, assignmentId, expectedProposalVersion, expectedAssignmentVersion, expectedApprovalDigest, decision]
-      fields: {proposalId: 'uuid', actionKind: 'enum action_payloads.kinds', assignmentId: 'uuid', expectedProposalVersion: 'int64>=1', expectedAssignmentVersion: 'int64>=1', expectedApprovalDigest: 'sha256', decision: 'ActionDecisionV1'}
+      fields: {proposalId: 'uuid', actionKind: 'enum action_payloads.kinds', providerOperationId: 'optional<ProviderControlOperationIdV1>', assignmentId: 'uuid', expectedProposalVersion: 'int64>=1', expectedAssignmentVersion: 'int64>=1', expectedApprovalDigest: 'sha256', decision: 'ActionDecisionV1'}
+      invariants: [providerOperationId is required exactly when actionKind is PROVIDER_CONTROL and equals the immutable ProviderControlApprovalDetailV1 operationId; it is forbidden for every other action kind]
     response: ActionDecisionReceiptV1
     transition: IN_PROGRESS->COMPLETED or ASSIGNED|IN_PROGRESS->RECUSED; quorum may terminalize proposal
     errors: [ACTION_KIND_MISMATCH, ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, ACTION_CONFLICT_UNRESOLVED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
@@ -1022,6 +1050,7 @@ private_application_commands:
   private.DecideCapabilityActivation: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.capability-activation-executor, authorization: private_action_executor_contract, action_kind: CAPABILITY_ACTIVATION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CapabilityActivationActionTargetV1}, response_schema: CapabilityActivationDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_UNCONFIGURED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.CreateBusinessCalendarVersion: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.business-calendar-executor, authorization: private_action_executor_contract, action_kind: RESPONSE_POLICY_CALENDAR, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: BusinessCalendarActionTargetV1}, response_schema: BusinessCalendarVersionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.ApplyCommercialControl: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.commercial-control-executor, authorization: private_action_executor_contract, action_kind: COMMERCIAL_CONTROL, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CommercialControlActionTargetV1}, response_schema: CommercialControlExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMERCIAL_CONTROL_TRIGGER_STALE, COMMERCIAL_CONTROL_RECEIPT_INVALID, RECONCILIATION_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.ExecuteProviderControl: {transport: PRIVATE_APPLICATION_COMMAND, caller: analysis-worker.provider-control-executor, authorization: private_action_executor_contract plus exact providerOperationId capability and assurance policy, action_kind: PROVIDER_CONTROL, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: ProviderControlActionTargetV1}, response_schema: ProviderControlExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_DENIED, STEP_UP_REQUIRED, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.MaterializePaidEvidencePacket: {transport: PRIVATE_APPLICATION_COMMAND, caller: workflow-worker.paid-evidence-packet-materializer, authorization: claimed allowlisted source event plus exact organization qualification contract outcome subject and member candidate digests, request_schema: {additional_properties: false, required: [sourceEventId, packetId, organizationId, qualificationEpisodeId, qualificationEpisodeVersion, qualificationEpisodeDigest, commercialContractId, commercialContractVersion, commercialContractDigest, subject, orderedMembers, expectedPacketSubjectDigest], targetRequest: MaterializePaidEvidencePacketRequestV1}, response_schema: PaidEvidencePacketMaterializationReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, PAID_EVIDENCE_SUBJECT_INVALID, PAID_EVIDENCE_MEMBER_SET_INVALID, EVENT_REPLAY_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
 
 base_operation_atomic_extensions:

@@ -110,6 +110,7 @@ verify-bun: build-ui
 
 verify-codegen:
 	bun run scripts/generate-clients.ts --check
+	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_addendum_samples.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/verify_generated_responses.py
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_supplemental_execution_mapping.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_effective_execution_registry.py --check

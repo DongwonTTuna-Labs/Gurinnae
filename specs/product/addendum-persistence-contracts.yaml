@@ -3,11 +3,11 @@ specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 counts:
   base_tables: 107
-  additive_tables: 128
-  final_active_tables: 235
-  migrations: 30
+  additive_tables: 133
+  final_active_tables: 240
+  migrations: 32
 rules:
-- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029 and the reviewed submission hardening is migration 0030.
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029 and 0032 through 0033, and the reviewed submission hardening is migration 0030.
 - Runtime roles never own schema objects and receive only declared table/view/function grants.
 - Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
 - Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
@@ -152,6 +152,13 @@ migration_ownership:
   - ops.paid_evidence_packets
   - ops.paid_evidence_packet_members
   0030_v13_submission_session_hardening.sql: []
+  0032_relay_model_catalog.sql:
+  - ops.relay_model_catalog
+  - ops.relay_model_catalog_sync_runs
+  - ops.provider_model_upgrade_attempts
+  - ops.provider_model_upgrade_receipts
+  0033_provider_control_execution.sql:
+  - ops.action_approval_provider_control_details
 canonical_existing_relations:
 - ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
 - ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.
@@ -2876,6 +2883,19 @@ exact_persistence_registry:
     private.DecideCapabilityActivation: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.DecideCapabilityActivation']", contract: private_action_executor_persistence_contract, target_relations: [ops.capability_activation_decisions, ops.capability_activation_evidence], procedure: ops.decide_approved_capability_activation_v1, receipt: CapabilityActivationDecisionReceiptV1}
     private.CreateBusinessCalendarVersion: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateBusinessCalendarVersion']", contract: private_action_executor_persistence_contract, target_relations: [ops.business_calendar_versions], procedure: ops.create_approved_business_calendar_version_v1, receipt: BusinessCalendarVersionReceiptV1}
     private.ApplyCommercialControl: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ApplyCommercialControl']", contract: private_action_executor_persistence_contract, target_relations: [ops.commercial_control_executions, ops.commercial_control_execution_items, ops.commercial_control_import_receipts, ops.commercial_control_acknowledgements], procedure: ops.apply_approved_commercial_control_v1, receipt: CommercialControlExecutionReceiptV1}
+    private.ExecuteProviderControl:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ExecuteProviderControl']"
+      contract: private_action_executor_persistence_contract
+      authorization: analysis-worker jobs.operate identity plus exact current PROVIDER_CONTROL ExecutionAuthorization and operation-selected human capability and assurance
+      target_relations: [ops.provider_configs, ops.provider_connection_tests, ops.provider_model_upgrade_attempts, ops.provider_model_upgrade_receipts, ops.jobs]
+      procedures:
+        claim: ops.claim_provider_control_execution_v1
+        complete: ops.complete_provider_control_execution_v1
+        fail: ops.fail_provider_control_execution_v1
+      phase_contract: claim commits the current generation and fencing token before egress; analysis-worker performs the selected connection test outside a transaction; complete or fail consumes the same fence and appends the immutable terminal receipt
+      operation_selector: exact ProviderControlOperationIdV1 with providerId and expectedVersion equality
+      receipt: ProviderControlExecutionReceiptV1
+      exact_replay_writes: 0
     private.MaterializePaidEvidencePacket: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.MaterializePaidEvidencePacket']", isolation: SERIALIZABLE, authorization: workflow-worker service identity plus claimed ops.inbox event and exact qualification contract subject plus ten typed immutable member candidate keys, target_relations: [ops.paid_evidence_packets, ops.paid_evidence_packet_members], procedure: ops.materialize_paid_evidence_packet_subject_v1, digest_rule: PostgreSQL resolves the ten source candidate keys and recomputes packetSubjectDigest before comparing expectedPacketSubjectDigest, receipt: PaidEvidencePacketMaterializationReceiptV1, exact_replay_writes: 0, outbox: [product.paid_evidence_packet_subject_persisted.v1]}
   base_operation_atomic_extension_persistence:
     submitResponse:

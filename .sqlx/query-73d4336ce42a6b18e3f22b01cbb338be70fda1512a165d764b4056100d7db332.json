@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.inbox SET processed_at=COALESCE(processed_at,clock_timestamp()), result=$2 WHERE consumer=$3 AND event_id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "73d4336ce42a6b18e3f22b01cbb338be70fda1512a165d764b4056100d7db332"
+}

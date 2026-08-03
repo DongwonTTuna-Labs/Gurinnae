@@ -87,6 +87,9 @@ async fn handle(
     body: web::Bytes,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    if let Err(error) = service::reject_direct_provider_control(operation.id) {
+        return service_problem(error);
+    }
     let request_id = request
         .headers()
         .get("x-request-id")
@@ -128,18 +131,26 @@ async fn handle(
                     .body(output.body.as_str().unwrap_or_default().to_owned())
             }
         }
-        Err(service::ServiceError::InvalidRequest) => problem("INVALID_REQUEST", 400),
-        Err(service::ServiceError::NotFound) => problem("RESOURCE_NOT_FOUND", 404),
-        Err(service::ServiceError::VersionConflict) => problem("VERSION_CONFLICT", 409),
-        Err(service::ServiceError::InvalidStateTransition) => {
-            problem("INVALID_STATE_TRANSITION", 409)
-        }
-        Err(service::ServiceError::PreconditionFailed) => problem("PRECONDITION_FAILED", 422),
-        Err(service::ServiceError::CapabilityDenied) => problem("CAPABILITY_DENIED", 403),
-        Err(service::ServiceError::IdempotencyConflict) => {
-            problem("IDEMPOTENCY_REQUEST_CONFLICT", 409)
-        }
-        Err(service::ServiceError::Persistence) => problem("DEPENDENCY_UNAVAILABLE", 503),
+        Err(error) => service_problem(error),
+    }
+}
+
+fn service_problem(error: service::ServiceError) -> HttpResponse {
+    let (code, status) = service_error_contract(&error);
+    problem(code, status)
+}
+
+fn service_error_contract(error: &service::ServiceError) -> (&'static str, u16) {
+    match error {
+        service::ServiceError::InvalidRequest => ("INVALID_REQUEST", 400),
+        service::ServiceError::NotFound => ("RESOURCE_NOT_FOUND", 404),
+        service::ServiceError::VersionConflict => ("VERSION_CONFLICT", 409),
+        service::ServiceError::InvalidStateTransition => ("INVALID_STATE_TRANSITION", 409),
+        service::ServiceError::PreconditionFailed => ("PRECONDITION_FAILED", 422),
+        service::ServiceError::CapabilityDenied => ("CAPABILITY_DENIED", 403),
+        service::ServiceError::ProposalRequired => ("ACTION_PROPOSAL_REQUIRED", 409),
+        service::ServiceError::IdempotencyConflict => ("IDEMPOTENCY_REQUEST_CONFLICT", 409),
+        service::ServiceError::Persistence => ("DEPENDENCY_UNAVAILABLE", 503),
     }
 }
 
@@ -214,15 +225,25 @@ fn effective_assurance(operation: &OperationSpec, body: &[u8]) -> &'static str {
         .and_then(Value::as_object)
         .and_then(|decision| decision.get("kind"))
         .and_then(Value::as_str);
-    if decision_kind == Some("APPROVE")
-        && matches!(
-            action_kind,
-            Some("HYPOTHESIS" | "CAPABILITY_ACTIVATION" | "COMMERCIAL_CONTROL")
-        )
-    {
-        "STEP_UP"
-    } else {
-        "ACTIVE_SESSION"
+    if decision_kind != Some("APPROVE") {
+        return "ACTIVE_SESSION";
+    }
+    match action_kind {
+        Some("HYPOTHESIS" | "CAPABILITY_ACTIVATION" | "COMMERCIAL_CONTROL") => "STEP_UP",
+        Some("PROVIDER_CONTROL") => {
+            match payload.get("providerOperationId").and_then(Value::as_str) {
+                Some("testProviderConnection") => "ACTIVE_SESSION",
+                Some("disableProviderRouting" | "upgradeProviderModel" | "setModelAutoUpgrade") => {
+                    "STEP_UP"
+                }
+                // A malformed or future provider operation must never inherit the
+                // connection-test downgrade. The closed request validator rejects
+                // it after assertion verification; this boundary first requires
+                // the stronger assurance so invalid input cannot lower auth.
+                Some(_) | None => "STEP_UP",
+            }
+        }
+        _ => "ACTIVE_SESSION",
     }
 }
 
@@ -246,4 +267,136 @@ fn problem(code: &str, status: u16) -> HttpResponse {
             "title": code,
             "status": status,
         }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use actix_web::{App, test as actix_test};
+    use gurine_auth::{
+        assertion::service::{AssertionKey, KeyRing},
+        envelope::{EnvelopeKey, EnvelopeKeyRing},
+    };
+    use sqlx::postgres::PgPoolOptions;
+
+    use super::*;
+    use crate::state::InProcessDomainEventJournal;
+
+    const CONDITIONAL_OPERATION: OperationSpec = OperationSpec {
+        id: "submitActionDecision",
+        api: "control-api",
+        method: "POST",
+        path: "/v1/internal/action-proposals/{proposalId}:decide",
+        auth: "actor-assertion",
+        capability: "actions.review",
+        idempotency_required: true,
+        assurance_level: "conditional-by-action-and-decision",
+        step_up_required: false,
+        operation_kind: "COMMAND",
+        success_status: 200,
+        media_type: "application/json",
+        response_json: "{}",
+    };
+
+    #[test]
+    fn proposal_required_error_uses_the_closed_problem_contract() {
+        assert_eq!(
+            service_error_contract(&service::ServiceError::ProposalRequired),
+            ("ACTION_PROPOSAL_REQUIRED", 409)
+        );
+    }
+
+    #[actix_web::test]
+    async fn registered_provider_control_routes_return_conflict_without_a_database()
+    -> Result<(), sqlx::Error> {
+        let state = web::Data::new(AppState {
+            pool: PgPoolOptions::new()
+                .connect_lazy("postgresql://gurine:unused@127.0.0.1:1/gurine")?,
+            assertion_keys: KeyRing {
+                current: AssertionKey::new([1_u8; 32]),
+                previous: None,
+            },
+            field_keys: EnvelopeKeyRing {
+                current: EnvelopeKey::new([2_u8; 32]),
+                previous: None,
+            },
+            domain_events: Mutex::new(InProcessDomainEventJournal::default()),
+        });
+        let app = actix_test::init_service(App::new().app_data(state).configure(configure)).await;
+
+        for operation_id in [
+            "disableProviderRouting",
+            "testProviderConnection",
+            "upgradeProviderModel",
+            "setModelAutoUpgrade",
+        ] {
+            let operation = OPERATIONS
+                .iter()
+                .find(|operation| operation.id == operation_id)
+                .ok_or(sqlx::Error::RowNotFound)?;
+            let request = actix_test::TestRequest::post()
+                .uri(operation.path)
+                .set_payload("{}")
+                .to_request();
+            let response = actix_test::call_service(&app, request).await;
+            assert_eq!(
+                response.status(),
+                StatusCode::CONFLICT,
+                "direct route was not fenced for {operation_id}"
+            );
+            let body: Value = actix_test::read_body_json(response).await;
+            assert_eq!(
+                body.get("code").and_then(Value::as_str),
+                Some("ACTION_PROPOSAL_REQUIRED")
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn provider_control_approval_selects_the_closed_operation_assurance() {
+        for (provider_operation_id, expected) in [
+            ("testProviderConnection", "ACTIVE_SESSION"),
+            ("disableProviderRouting", "STEP_UP"),
+            ("upgradeProviderModel", "STEP_UP"),
+            ("setModelAutoUpgrade", "STEP_UP"),
+        ] {
+            let body = format!(
+                r#"{{"actionKind":"PROVIDER_CONTROL","providerOperationId":"{provider_operation_id}","decision":{{"kind":"APPROVE"}}}}"#
+            );
+            assert_eq!(
+                effective_assurance(&CONDITIONAL_OPERATION, body.as_bytes()),
+                expected,
+                "wrong assurance for {provider_operation_id}"
+            );
+        }
+    }
+
+    #[test]
+    fn provider_control_approval_fails_closed_for_missing_or_unknown_operation() {
+        for body in [
+            br#"{"actionKind":"PROVIDER_CONTROL","decision":{"kind":"APPROVE"}}"#.as_slice(),
+            br#"{"actionKind":"PROVIDER_CONTROL","providerOperationId":"futureProviderCommand","decision":{"kind":"APPROVE"}}"#.as_slice(),
+        ] {
+            assert_eq!(
+                effective_assurance(&CONDITIONAL_OPERATION, body),
+                "STEP_UP"
+            );
+        }
+    }
+
+    #[test]
+    fn provider_control_non_approval_decisions_remain_active_session() {
+        for decision in ["REJECT", "CHANGES_REQUIRED", "RECUSE"] {
+            let body = format!(
+                r#"{{"actionKind":"PROVIDER_CONTROL","providerOperationId":"upgradeProviderModel","decision":{{"kind":"{decision}"}}}}"#
+            );
+            assert_eq!(
+                effective_assurance(&CONDITIONAL_OPERATION, body.as_bytes()),
+                "ACTIVE_SESSION",
+                "wrong assurance for {decision}"
+            );
+        }
+    }
 }

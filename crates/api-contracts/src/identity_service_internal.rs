@@ -1,3 +1,4 @@
+// Generated from the v13 operation catalog; do not edit by hand.
 use crate::OperationSpec;
 
 pub const OPERATIONS: &[OperationSpec] = &[

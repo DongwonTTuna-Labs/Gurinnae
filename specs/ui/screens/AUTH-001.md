@@ -30,7 +30,7 @@ Test prefix: `auth_001`
 | 순서 | Section ID | 제목 | 구현 Component | 목적 |
 |---:|---|---|---|---|
 | 1 | `environment` | 환경 | `StructuredContentSection` | production/staging 명확 표시. |
-| 2 | `signin` | SSO 로그인 | `StructuredContentSection` | OIDC 시작. |
+| 2 | `signin` | 조직 계정 로그인 | `StructuredContentSection` | OIDC 시작. |
 | 3 | `support` | 지원 | `AccessManagementPanel` | 계정·보안 문의. |
 
 이 순서는 wide, medium, compact에서 의미적으로 동일하다. 화면 폭은 배치를 바꾸지만 중요도를 바꾸지 않는다.

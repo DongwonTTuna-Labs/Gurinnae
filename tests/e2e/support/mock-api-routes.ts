@@ -1,6 +1,8 @@
 import { handleAuthRoutes } from "./mock-api-auth";
 import { handleCommandRoutes } from "./mock-api-command";
 import { validateMockResponse } from "./mock-api-openapi";
+import { handleProviderProposalCommands } from "./mock-api-provider-proposal-command";
+import { handleProviderProposalReads } from "./mock-api-provider-proposal-routes";
 import { handleReadRoutes } from "./mock-api-reads";
 import {
   asserted,
@@ -33,9 +35,11 @@ export async function handleMockRequest(request: Request): Promise<Response> {
   } else {
     response =
       (await handleAuthRoutes(request, url)) ??
+      (await handleProviderProposalCommands(request, url)) ??
       (await handleCommandRoutes(request, url)) ??
       (await handleCoreSubmissionRoutes(request, url)) ??
       (await handleExtraSubmissionRoutes(request, url)) ??
+      (await handleProviderProposalReads(request, url)) ??
       (await handleReadRoutes(request, url));
   }
   return validateMockResponse(request, response);

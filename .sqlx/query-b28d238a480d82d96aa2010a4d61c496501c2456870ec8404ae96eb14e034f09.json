@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.record_relay_model_upgrade_failure_incident_v1( $1,$2,$3,CAST($4 AS char(64)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "record_relay_model_upgrade_failure_incident_v1",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b28d238a480d82d96aa2010a4d61c496501c2456870ec8404ae96eb14e034f09"
+}

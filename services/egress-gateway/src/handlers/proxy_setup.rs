@@ -14,7 +14,12 @@ async fn proxy(
     let Some(target) = header(&request, "x-gurine-egress-target") else {
         return problem("EGRESS_TARGET_REQUIRED", 400);
     };
-    if !allowed_method(channel, request.method().as_str()) {
+    if !allowed_method(
+        channel,
+        request.method().as_str(),
+        header(&request, "x-gurine-ai-provider"),
+        target,
+    ) {
         return problem("EGRESS_METHOD_DENIED", 405);
     }
     let target = match validate_target(channel, target, state).await {
@@ -105,6 +110,9 @@ async fn proxy_upstream(
             return problem("EGRESS_REDIRECT_INVALID", 502);
         };
         let next = match target.join(location) { Ok(value) => value, Err(_) => return problem("EGRESS_REDIRECT_INVALID", 502) };
+        if !redirect_method_allowed(channel, &request, &next) {
+            return problem("EGRESS_REDIRECT_DENIED", 403);
+        }
         let hop_to = match validate_target(channel, next.as_str(), state).await {
             Ok(value) => value,
             Err(code) => return problem(code, 403),
@@ -118,6 +126,15 @@ async fn proxy_upstream(
     };
     proxy_response(response, requested_limit, &target_for_receipt, &receipt_key, &request_digest,
         &serde_json::to_string(&redirect_chain).unwrap_or_else(|_| "[]".to_owned()), state).await
+}
+
+fn redirect_method_allowed(channel: Channel, request: &HttpRequest, target: &Url) -> bool {
+    allowed_method(
+        channel,
+        request.method().as_str(),
+        header(request, "x-gurine-ai-provider"),
+        target.as_str(),
+    )
 }
 
 fn response_media_type_allowed(response: &reqwest::Response, expected: &[String]) -> bool {
@@ -193,8 +210,14 @@ async fn send_upstream(
     let method = reqwest::Method::from_bytes(request.method().as_str().as_bytes()).map_err(|_| "EGRESS_METHOD_DENIED")?;
     let mut outbound = client.request(method, target);
     for (name, value) in request.headers() {
-        if !hop_or_internal(name.as_str()) && !caller_credential_header(channel, name.as_str()) {
-            outbound = outbound.header(name.as_str(), value.as_bytes());
+        let name = name.as_str();
+        let allowed = if matches!(channel, Channel::Ai) {
+            support::outbound_header_allowed(channel, name)
+        } else {
+            !hop_or_internal(name) && !caller_credential_header(channel, name)
+        };
+        if allowed {
+            outbound = outbound.header(name, value.as_bytes());
         }
     }
     outbound = match credential {
@@ -320,15 +343,22 @@ fn bind_ai_credential<'a>(
         .ok_or("EGRESS_AI_PROVIDER_REQUIRED")?
         .to_ascii_lowercase();
     let expected_host = match provider.as_str() {
+        "relay" => state.config.ai_relay_host.as_str(),
         "openai" => "api.openai.com",
         "anthropic" => "api.anthropic.com",
         "google" => "generativelanguage.googleapis.com",
         _ => return Err("EGRESS_AI_PROVIDER_DENIED"),
     };
-    if !state.config.development() && !host.eq_ignore_ascii_case(expected_host) {
+    let host_mismatch = !host.eq_ignore_ascii_case(expected_host);
+    if host_mismatch && (provider == "relay" || !state.config.development()) {
         return Err("EGRESS_AI_HOST_MISMATCH");
     }
     let credential = match provider.as_str() {
+        "relay" => state
+            .config
+            .ai_relay_api_key
+            .as_deref()
+            .map(Credential::Bearer),
         "openai" => state
             .config
             .openai_api_key
@@ -348,4 +378,200 @@ fn bind_ai_credential<'a>(
     }
     .ok_or("EGRESS_CREDENTIAL_NOT_CONFIGURED")?;
     Ok(Some(credential))
+}
+
+#[cfg(test)]
+mod ai_credential_tests {
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use actix_web::{http::Method, test::TestRequest};
+
+    use super::*;
+    use crate::config::Config;
+
+    fn state(environment: &str) -> GatewayState {
+        GatewayState {
+            config: Config {
+                bind: "127.0.0.1:0".to_owned(),
+                environment: environment.to_owned(),
+                oidc_issuer_host: "issuer.example".to_owned(),
+                source_hosts: BTreeSet::new(),
+                source_host_bindings: BTreeMap::new(),
+                public_research_hosts: BTreeSet::new(),
+                ai_hosts: BTreeSet::from([
+                    "relay-ai.dongwontuna.net".to_owned(),
+                    "api.openai.com".to_owned(),
+                    "api.anthropic.com".to_owned(),
+                    "generativelanguage.googleapis.com".to_owned(),
+                ]),
+                challenge_hosts: BTreeSet::new(),
+                communication_hosts: BTreeSet::new(),
+                object_store: None,
+                smtp_url: None,
+                data_go_kr_service_key: None,
+                open_dart_api_key: None,
+                brave_search_api_key: None,
+                ai_relay_host: "relay-ai.dongwontuna.net".to_owned(),
+                ai_relay_api_key: Some("relay-token".to_owned()),
+                openai_api_key: Some("openai-token".to_owned()),
+                anthropic_api_key: Some("anthropic-token".to_owned()),
+                google_api_key: Some("google-token".to_owned()),
+                database_url: None,
+            },
+            object_store: None,
+            smtp: None,
+            database: None,
+        }
+    }
+
+    fn request(provider: &str) -> HttpRequest {
+        TestRequest::default()
+            .insert_header(("x-gurine-ai-provider", provider))
+            .to_http_request()
+    }
+
+    fn request_with_method(provider: &str, method: Method) -> HttpRequest {
+        TestRequest::default()
+            .method(method)
+            .insert_header(("x-gurine-ai-provider", provider))
+            .to_http_request()
+    }
+
+    fn assert_bearer(credential: Option<Credential<'_>>, expected: &str) {
+        match credential {
+            Some(Credential::Bearer(value)) => assert_eq!(value, expected),
+            Some(Credential::Header(_, _)) | None => panic!("expected bearer credential"),
+        }
+    }
+
+    #[test]
+    fn relay_uses_the_single_bearer_credential() {
+        let state = state("production");
+        let credential = bind_ai_credential(
+            &request("relay"),
+            &state,
+            "relay-ai.dongwontuna.net",
+        )
+        .expect("relay credential must bind");
+
+        assert_bearer(credential, "relay-token");
+    }
+
+    #[test]
+    fn relay_rejects_a_host_mismatch_in_production() {
+        let state = state("production");
+        let result = bind_ai_credential(&request("relay"), &state, "api.openai.com");
+
+        assert!(matches!(result, Err("EGRESS_AI_HOST_MISMATCH")));
+    }
+
+    #[test]
+    fn relay_rejects_a_host_mismatch_in_development() {
+        let state = state("development");
+        let result = bind_ai_credential(&request("relay"), &state, "localhost");
+
+        assert!(matches!(result, Err("EGRESS_AI_HOST_MISMATCH")));
+    }
+
+    #[test]
+    fn relay_mock_host_requires_an_explicit_host_override() {
+        let mut state = state("test");
+        state.config.ai_relay_host = "localhost".to_owned();
+
+        let credential = bind_ai_credential(&request("relay"), &state, "localhost")
+            .expect("explicit relay mock host must bind");
+
+        assert_bearer(credential, "relay-token");
+    }
+
+    #[test]
+    fn relay_fails_closed_without_its_api_key() {
+        let mut state = state("production");
+        state.config.ai_relay_api_key = None;
+
+        let result = bind_ai_credential(
+            &request("relay"),
+            &state,
+            "relay-ai.dongwontuna.net",
+        );
+
+        assert!(matches!(result, Err("EGRESS_CREDENTIAL_NOT_CONFIGURED")));
+    }
+
+    #[test]
+    fn legacy_provider_credentials_are_preserved() {
+        let state = state("production");
+
+        assert_bearer(
+            bind_ai_credential(&request("openai"), &state, "api.openai.com")
+                .expect("OpenAI credential must bind"),
+            "openai-token",
+        );
+        assert!(matches!(
+            bind_ai_credential(&request("anthropic"), &state, "api.anthropic.com"),
+            Ok(Some(Credential::Header("x-api-key", "anthropic-token")))
+        ));
+        assert!(matches!(
+            bind_ai_credential(
+                &request("google"),
+                &state,
+                "generativelanguage.googleapis.com"
+            ),
+            Ok(Some(Credential::Header("x-goog-api-key", "google-token")))
+        ));
+    }
+
+    #[test]
+    fn legacy_provider_development_mock_host_behavior_is_preserved() {
+        let state = state("development");
+        let credential = bind_ai_credential(&request("openai"), &state, "localhost")
+            .expect("legacy development mock host must bind");
+
+        assert_bearer(credential, "openai-token");
+    }
+
+    #[test]
+    fn relay_model_get_redirect_cannot_change_the_allowed_path() {
+        let request = request_with_method("relay", Method::GET);
+        let models = Url::parse("https://relay-ai.dongwontuna.net/v1/models")
+            .expect("test URL must parse");
+        let other_path = Url::parse("https://relay-ai.dongwontuna.net/internal/models")
+            .expect("test URL must parse");
+
+        assert!(redirect_method_allowed(Channel::Ai, &request, &models));
+        assert!(!redirect_method_allowed(
+            Channel::Ai,
+            &request,
+            &other_path
+        ));
+    }
+
+    #[test]
+    fn relay_chat_redirect_cannot_change_the_allowed_path() {
+        let request = request_with_method("relay", Method::POST);
+        let chat = Url::parse("https://relay-ai.dongwontuna.net/v1/chat/completions")
+            .expect("test URL must parse");
+        let other_path = Url::parse("https://relay-ai.dongwontuna.net/v1/responses")
+            .expect("test URL must parse");
+
+        assert!(redirect_method_allowed(Channel::Ai, &request, &chat));
+        assert!(!redirect_method_allowed(
+            Channel::Ai,
+            &request,
+            &other_path
+        ));
+    }
+
+    #[test]
+    fn legacy_ai_post_redirect_behavior_is_preserved() {
+        let request = request_with_method("openai", Method::POST);
+        let redirected = Url::parse("https://api.openai.com/v1/responses")
+            .expect("test URL must parse");
+
+        assert!(redirect_method_allowed(
+            Channel::Ai,
+            &request,
+            &redirected
+        ));
+    }
 }

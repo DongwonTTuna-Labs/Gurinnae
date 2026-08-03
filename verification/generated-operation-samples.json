@@ -696,7 +696,7 @@
         "displayName": "",
         "owner": "",
         "accessType": "",
-        "officialUrl": "https://www.data.go.kr/",
+        "officialUrl": "https://gurinnae.example/",
         "status": "",
         "coverage": {
           "dateRange": {
@@ -1844,14 +1844,13 @@
   },
   "disableProviderRouting": {
     "api": "control-api",
-    "status": 200,
-    "mediaType": "application/json",
+    "status": 409,
+    "mediaType": "application/problem+json",
     "body": {
-      "operationId": "",
-      "requestId": "00000000-0000-4000-8000-000000000001",
-      "status": "accepted",
-      "acceptedAt": "2026-07-12T00:00:00Z",
-      "links": []
+      "code": "ACTION_PROPOSAL_REQUIRED",
+      "title": "Provider control requires an approved action proposal",
+      "status": 409,
+      "requestId": "00000000-0000-4000-8000-000000000001"
     }
   },
   "disableUser": {
@@ -2217,6 +2216,17 @@
       "links": []
     }
   },
+  "setModelAutoUpgrade": {
+    "api": "control-api",
+    "status": 409,
+    "mediaType": "application/problem+json",
+    "body": {
+      "code": "ACTION_PROPOSAL_REQUIRED",
+      "title": "Provider control requires an approved action proposal",
+      "status": 409,
+      "requestId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
   "startAccessReview": {
     "api": "control-api",
     "status": 200,
@@ -2291,14 +2301,13 @@
   },
   "testProviderConnection": {
     "api": "control-api",
-    "status": 202,
-    "mediaType": "application/json",
+    "status": 409,
+    "mediaType": "application/problem+json",
     "body": {
-      "operationId": "",
-      "requestId": "00000000-0000-4000-8000-000000000001",
-      "status": "accepted",
-      "acceptedAt": "2026-07-12T00:00:00Z",
-      "links": []
+      "code": "ACTION_PROPOSAL_REQUIRED",
+      "title": "Provider control requires an approved action proposal",
+      "status": 409,
+      "requestId": "00000000-0000-4000-8000-000000000001"
     }
   },
   "transitionCase": {
@@ -2409,6 +2418,17 @@
       "links": []
     }
   },
+  "upgradeProviderModel": {
+    "api": "control-api",
+    "status": 409,
+    "mediaType": "application/problem+json",
+    "body": {
+      "code": "ACTION_PROPOSAL_REQUIRED",
+      "title": "Provider control requires an approved action proposal",
+      "status": 409,
+      "requestId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
   "validateClaims": {
     "api": "control-api",
     "status": 200,
@@ -2483,19 +2503,7 @@
     "body": {
       "id": "",
       "status": "",
-      "version": 0,
-      "binary": "",
-      "filename": "gurinnae-cost-report-2026-07-12.csv",
-      "mediaType": "text/csv; charset=utf-8",
-      "byteLength": 0,
-      "contentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "receiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "contentBase64": "",
-      "format": "CSV",
-      "rowCount": 0,
-      "from": "2026-07-12",
-      "to": "2026-07-12",
-      "groupBy": "DAY"
+      "version": 0
     }
   },
   "getAgentRun": {
@@ -2780,20 +2788,20 @@
         "monthlyLimit": "0",
         "monthlyUsed": "0",
         "status": "",
-        "unknownReason": null,
-        "forecastConfidence": "UNKNOWN",
-        "forecastAssumption": null,
-        "softLimit": null,
-        "hardLimit": null,
-        "fallbackAction": null,
-        "alertThreshold": null,
-        "lastChangedBy": null,
-        "lastChangeReason": null,
+        "unknownReason": "",
+        "forecastConfidence": "",
+        "forecastAssumption": "",
+        "softLimit": "",
+        "hardLimit": "",
+        "fallbackAction": "",
+        "alertThreshold": "",
+        "lastChangedBy": "",
+        "lastChangeReason": "",
         "asOf": "2026-07-12T00:00:00Z",
         "reservationSummary": {
-          "reserved": null,
-          "settled": null,
-          "exposure": null,
+          "reserved": "",
+          "settled": "",
+          "exposure": "",
           "ledgerEntryCount": 0,
           "reconciliationRequired": false,
           "asOf": "2026-07-12T00:00:00Z"
@@ -3460,6 +3468,56 @@
         "routingStatus": []
       },
       "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "listRelayModels": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "items": [
+        {
+          "modelId": "relay-test-stable",
+          "family": "relay-test",
+          "track": "relay-test-",
+          "createdAt": "2026-07-12T00:00:00Z",
+          "firstSeenAt": "2026-07-12T00:00:00Z",
+          "lastSeenAt": "2026-07-14T00:00:00Z",
+          "active": true,
+          "new": false
+        },
+        {
+          "modelId": "relay-test-latest",
+          "family": "relay-test",
+          "track": "relay-test-",
+          "createdAt": "2026-07-13T00:00:00Z",
+          "firstSeenAt": "2026-07-13T00:00:00Z",
+          "lastSeenAt": "2026-07-14T00:00:00Z",
+          "active": true,
+          "new": true
+        }
+      ],
+      "currentProviders": [
+        {
+          "providerId": "90000000-0000-4000-8000-000000000005",
+          "name": "릴레이 테스트 공급자",
+          "currentModel": "relay-test-stable",
+          "enabled": true,
+          "version": 2,
+          "autoUpgrade": false,
+          "autoUpgradeConflict": false,
+          "track": "relay-test-",
+          "dataPolicyState": "CONFIGURED",
+          "pricingVersion": "relay-unpriced-v1",
+          "unpriced": true
+        }
+      ],
+      "syncStatus": {
+        "status": "SUCCEEDED",
+        "lastCompletedAt": "2026-07-14T00:00:00Z",
+        "lastErrorCode": null
+      },
+      "asOf": "2026-07-14T00:00:00Z"
     }
   },
   "listReviewQueue": {

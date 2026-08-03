@@ -2,6 +2,7 @@
 import { tick } from "svelte";
 import type { ScreenSectionProps } from "../../index";
 import OperationData from "../OperationData.svelte";
+import RelayModelCatalogLedger from "./RelayModelCatalogLedger.svelte";
 import SectionHeading from "./SectionHeading.svelte";
 
 let { section, screen, runtime, projection }: ScreenSectionProps = $props();
@@ -13,6 +14,9 @@ const isPublicEvidence = $derived(
 );
 const openEvidenceAction = $derived(
   screen.actions.find((action) => action.id === "open-evidence"),
+);
+const isRelayModelCatalog = $derived(
+  screen.id === "OPS-005" && section.id === "model-catalog",
 );
 
 function openEvidenceDrawer() {
@@ -62,7 +66,7 @@ function trapEvidenceFocus(event: KeyboardEvent) {
   }
 }
 </script>
-<SectionHeading {section} kicker="근거 원장" /><p class="evidence-note">보호 필드는 브라우저에 원문으로 표시하지 않습니다.</p>{#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="현재 범위에 연결된 검증 근거가 없습니다." />{/if}
+<SectionHeading {section} kicker="근거 원장" /><p class="evidence-note">보호 필드는 브라우저에 원문으로 표시하지 않습니다.</p>{#if isRelayModelCatalog}{#if runtime.relayModelCatalog}<RelayModelCatalogLedger catalog={runtime.relayModelCatalog} />{:else}<RelayModelCatalogLedger />{/if}{:else if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="현재 범위에 연결된 검증 근거가 없습니다." />{/if}
 {#if isPublicEvidence && openEvidenceAction}
   <div class="evidence-actions">
     <button

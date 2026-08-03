@@ -20,8 +20,8 @@ impl LocalPricing {
             .ok_or_else(|| Failure::Terminal("PROVIDER_PRICING_INVALID", "object".into()))?;
         let version = required_text(object, "pricingVersion")?;
         let digest = required_hash(object, "pricingSha256")?;
-        let input_micros_per_unit = required_positive_i64(object, "inputMicrosKrwPerUnit")?;
-        let output_micros_per_unit = required_positive_i64(object, "outputMicrosKrwPerUnit")?;
+        let input_micros_per_unit = required_nonnegative_i64(object, "inputMicrosKrwPerUnit")?;
+        let output_micros_per_unit = required_nonnegative_i64(object, "outputMicrosKrwPerUnit")?;
         let canonical = json!({
             "currency": "KRW",
             "inputMicrosKrwPerUnit": input_micros_per_unit,
@@ -64,14 +64,14 @@ fn required_hash(object: &serde_json::Map<String, Value>, key: &str) -> Result<S
     Ok(value)
 }
 
-fn required_positive_i64(
+fn required_nonnegative_i64(
     object: &serde_json::Map<String, Value>,
     key: &str,
 ) -> Result<i64, Failure> {
     object
         .get(key)
         .and_then(Value::as_i64)
-        .filter(|value| *value > 0)
+        .filter(|value| *value >= 0)
         .ok_or_else(|| Failure::Terminal("PROVIDER_PRICING_INVALID", key.into()))
 }
 
@@ -86,6 +86,14 @@ fn provider_failure_code(outcome: &str) -> Result<&'static str, Failure> {
             "PROVIDER_OUTCOME_UNKNOWN",
             "unrecognized receipt outcome".into(),
         )),
+    }
+}
+
+fn failure_detail(failure: &Failure) -> String {
+    match failure {
+        Failure::Terminal(code, detail) | Failure::Retryable(code, detail) => {
+            format!("{code}:{detail}")
+        }
     }
 }
 

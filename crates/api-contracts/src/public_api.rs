@@ -330,7 +330,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"sourceId\":\"\",\"displayName\":\"\",\"owner\":\"\",\"accessType\":\"\",\"status\":\"\",\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"knownIssues\":[]},\"links\":[]}",
+        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"sourceId\":\"\",\"displayName\":\"\",\"owner\":\"\",\"accessType\":\"\",\"officialUrl\":\"https://gurinnae.example/\",\"status\":\"\",\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"knownIssues\":[]},\"links\":[]}",
     },
     OperationSpec {
         id: "getSupplier",

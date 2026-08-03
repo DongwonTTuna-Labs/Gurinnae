@@ -38,7 +38,7 @@ Design token, component anatomy, grid와 responsive order는 machine-readable co
 
 ## 결정 9 — 원샷 완제품
 
-내부 구현 순서는 허용하지만 납품 범위는 나누지 않는다. 94개 화면, 212개 operation,
+내부 구현 순서는 허용하지만 납품 범위는 나누지 않는다. 94개 화면, 215개 operation,
 DB·jobs·auth·deployment가 한 source tree에 완성돼야 한다.
 
 ## 결정 10 — 설정만 외부 입력

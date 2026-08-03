@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_connection_tests SET status='FAILED',redacted_result=$2, started_at=COALESCE(started_at,$3),completed_at=$3 WHERE id=$1 AND status IN ('QUEUED','RUNNING')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "90094bd07b8b0d89405000d8443f84ebe9c85533c0ae358bc932647ea9bf7979"
+}

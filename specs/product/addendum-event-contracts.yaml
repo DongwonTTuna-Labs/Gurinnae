@@ -83,6 +83,9 @@ logical_component_bindings:
   action-execution-worker:
     physical_service: workflow-worker
     module: action_execution
+  provider-control-execution-worker:
+    physical_service: analysis-worker
+    module: provider_control
   action-review-assignment-coordinator:
     physical_service: workflow-worker
     module: action_review_assignment
@@ -1569,16 +1572,29 @@ events:
       changed_event_identity: same event_id with changed canonical envelope digest is EVENT_REPLAY_CONFLICT and incident evidence
     consumers:
     - action-execution-worker
+    - provider-control-execution-worker
     - audit-indexer
     consumer_bindings:
     - consumer: action-execution-worker
       physical_service: workflow-worker
       module: action_execution
       handler: handle_action_execution_authorized_v1
+      dispatch_predicate: payload.actionKind != PROVIDER_CONTROL
       inbox_key:
       - consumer
       - event_id
       on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
+      failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
+      ordering: reject regression; park gaps for aggregate reconciliation
+    - consumer: provider-control-execution-worker
+      physical_service: analysis-worker
+      module: provider_control
+      handler: handle_action_execution_authorized_v1
+      dispatch_predicate: payload.actionKind == PROVIDER_CONTROL
+      inbox_key:
+      - consumer
+      - event_id
+      on_exact_replay: return stored result without repeating projection, notification, job or external effect
       failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
       ordering: reject regression; park gaps for aggregate reconciliation
     - consumer: audit-indexer

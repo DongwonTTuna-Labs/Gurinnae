@@ -23,6 +23,12 @@ screen_section_field_overrides:
     evidence: [claims, evidence]
     timeline: [timeline]
     revision: [revision, corrections]
+  OPS-005:
+    model-catalog: [items, currentProviders, syncStatus, asOf]
+
+screen_section_operation_overrides:
+  OPS-005:
+    model-catalog: listRelayModels
 
 surface_personas:
   public: 공개 독자·연구자

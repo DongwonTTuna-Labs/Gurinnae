@@ -70,7 +70,7 @@ dispatcher_transaction_protocol:
   claim:
     isolation: SERIALIZABLE
     lock_order: [ops.agent_runs, current effective registry row, budget ledger, ops.agent_provider_turns]
-    statements: Verify expected run version/status/control/snapshot/transcript/deadline/bounds; calculate worst-case cost from the activated price schedule; reserve once; insert one DISPATCHED ProviderTurnV2 plus ordered MODEL_INPUT source uses and claim receipt; commit before network I/O.
+    statements: Verify expected run version/status/control/snapshot/transcript/deadline/bounds and the ordered selected source-use set; calculate worst-case cost from the activated price schedule; reserve once; insert one DISPATCHED ProviderTurnV2 and claim receipt; commit before network I/O. Receipt-bound MODEL_INPUT rows are inserted only during authenticated provider observation.
     serialization_retry: Allowed only before any provider or gateway byte may have been sent and reuses the same semantic turn identity.
   provider_dispatch:
     database_transaction: none

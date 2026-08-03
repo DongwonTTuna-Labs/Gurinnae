@@ -94,18 +94,6 @@ export const screen = {
       confirmation_required: false,
     },
     {
-      id: "mark-duplicate",
-      label: "중복 신호로 표시",
-      capability: "signals.triage",
-      operation_id: "triageSignal",
-      guard: "duplicate target + reason + expected version",
-      interaction_kind: "COMMAND",
-      assurance_level: "ACTIVE_SESSION",
-      step_up_required: false,
-      confirmation_required: true,
-      preset: { decision: "duplicate" },
-    },
-    {
       id: "needs-data",
       label: "추가 자료 필요",
       capability: "signals.triage",

@@ -114,6 +114,7 @@ action_vocabulary_contract:
     - CAPABILITY_ACTIVATION
     - RESPONSE_POLICY_CALENDAR
     - COMMERCIAL_CONTROL
+    - PROVIDER_CONTROL
   canonical_target_type_source: specs/product/addendum-resource-error-contracts.yaml#schemas.ActionTargetV1
   target_types: [CASE, CLAIM, TASK, LINE_ITEM, COMMUNICATION_INTENT, PUBLICATION, RULE_VERSION, USER, KILL_SWITCH, COMMUNICATION_SUBJECT, ASSET, RECORD_CLASS, FUNDING_DISCLOSURE, CAPABILITY, BUSINESS_CALENDAR, BUSINESS_CONTROL_TRIGGER]
   governed_business_effects:
@@ -123,6 +124,7 @@ action_vocabulary_contract:
     retention_policy: [RETENTION_SCHEDULE]
     funding: [FUNDING_DISCLOSURE]
     commercial_control: [COMMERCIAL_CONTROL]
+    provider_control: [PROVIDER_CONTROL]
     correction:
       current_contract: "createCorrection/updateCorrectionDraft/triageCorrection/resolveCorrectionRequest plus publication-gate atomicity"
       action_kind_status: NOT_PRESENT_IN_CURRENT_ACTION_KIND_V1
@@ -160,7 +162,7 @@ resolved_design_decisions:
   - id: D0026-015
     decision: "All runtime writes use exact SECURITY DEFINER owner routines with fixed search_path and typed composite inputs. Runtime roles have no direct INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES or TRIGGER privilege on the ten relations."
   - id: D0026-016
-    decision: "CORRECTION is not an ActionKind. COMMERCIAL_CONTROL is the seventeenth closed ActionKind; correction remains governed through the correction and publication-gate machines."
+    decision: "CORRECTION is not an ActionKind. COMMERCIAL_CONTROL remains the seventeenth closed ActionKind and PROVIDER_CONTROL is the eighteenth additive extension; correction remains governed through the correction and publication-gate machines."
   - id: D0026-017
     decision: "withdrawActionProposal terminalizes DRAFT or PENDING_QUORUM as WITHDRAWN and cancels or vacancies every live assignment in one SERIALIZABLE transaction. withdrawActionDecision appends an APPROVAL_WITHDRAWAL record only for an unwithdrawn APPROVE while the version remains PENDING_QUORUM, removes it from the counted predicate, and opens the same slot as a new ASSIGNED or VACANT generation. Final authorization, terminal proposal state, rejection, requested changes, recusal and non-APPROVE decisions are not withdrawable."
   - id: D0026-018
@@ -226,7 +228,7 @@ approval_subject_contract:
     - {id: exact_content, facts: [renderedSubject, renderedBody, orderedAttachmentNameMediaTypeSizeDigestAndSafeView, exactRenderedBytesDigest]}
     - {id: governance, facts: [riskClassAndReasons, maximumCostAndCurrency, notBefore, expiry, policyBlockers, conflictAndRecusal, requiredAssurance, quorumSlotsAndCurrentStatus]}
     - {id: decision_help, facts: [effectOfApprove, effectOfReject, effectOfChangesRequired, effectOfRecuse, nextOwnerAndNextAction]}
-  action_kind_closure: "Every one of the seventeen ActionKind variants has a closed typed subject branch; a generic map, opaque payload, raw JSON dump or schema-field-name UI is invalid."
+  action_kind_closure: "Every one of the eighteen ActionKind variants has a closed typed subject branch; a generic map, opaque payload, raw JSON dump or schema-field-name UI is invalid."
   digest_binding: "preview_digest = approvalSubjectDigest = SHA256(exact canonical plaintext bytes before encryption); ApprovalBindingV1 binds previewId and approvalSubjectDigest."
   privacy: "Names and destinations are disclosed only to an authorized assigned reviewer. Destinations are masked in the default view, exact values require an audited reveal, and no raw destination enters logs, events, analytics or receipt payloads."
   cognitive_and_dark_pattern_rules:
@@ -373,7 +375,7 @@ global_contract:
     - ops.guard_action_proposal_update() for current-version and aggregate-version increments
     - ops.guard_action_proposal_version_update() for preview-once and closed lifecycle transitions
     - ops.validate_action_origin_target_at_commit() DEFERRABLE CONSTRAINT TRIGGER for the closed polymorphic origin and target catalog
-    - ops.validate_action_approval_detail_at_commit() DEFERRABLE CONSTRAINT TRIGGER for exact one-of-seventeen typed child, wrapper bytes and static source bindings
+    - ops.validate_action_approval_detail_at_commit() DEFERRABLE CONSTRAINT TRIGGER for exact one-of-eighteen typed child, wrapper bytes and static source bindings
     - ops.guard_action_assignment_update() for assignment CAS and terminal immutability
     - ops.validate_action_quorum_at_commit() DEFERRABLE CONSTRAINT TRIGGER including sorted-unique roles, change-task IDs and counted decision arrays
     - ops.guard_in_flight_effect_update() for generation, fence, attempt count and terminal immutability
@@ -389,7 +391,7 @@ closed_json_types:
     validator: ops.action_approval_detail_binding_v1_is_valid(jsonb)
     additional_properties: false
     required_keys: [actionDetailKind, actionDetail]
-    action_detail_kinds: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR, COMMERCIAL_CONTROL]
+    action_detail_kinds: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR, COMMERCIAL_CONTROL, PROVIDER_CONTROL]
     canonical_bytes: ops.action_proposal_versions.action_detail_canonical
     generated_digest: ops.action_proposal_versions.action_detail_digest
     invariant: actionDetailKind equals actionDetail.kind and canonical bytes contain exactly the two wrapper keys
@@ -398,7 +400,7 @@ closed_json_types:
     additional_properties: false
     discriminator: actionDetailKind
     required_keys: [schemaVersion, proposalId, proposalVersion, actionKind, originDigest, contentDigest, rationaleDigest, targetType, targetId, targetVersion, targetDigest, objectScopeDigest, operationId, requiredCapability, targetRequestDigest, previewId, approvalSubjectDigest, evidenceSetDigest, contraryEvidenceSetDigest, uncertaintySetDigest, riskAssessmentDigest, policySnapshotDigest, conflictSnapshotDigest, expectedEffectDigest, reversible, quorumPlanDigest, effectIdempotencyKeySha256, notBefore, expiresAt, actionDetailKind, actionDetail, actionDetailDigest]
-    action_detail_kinds: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR, COMMERCIAL_CONTROL]
+    action_detail_kinds: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR, COMMERCIAL_CONTROL, PROVIDER_CONTROL]
     forbidden_keys: [decisionDigest, recordKind, decisionKind, decisionReceiptDigest, actorId, actorAssertionJti, actorActionDigest, assignmentId, assignmentVersion, assignmentGeneration, slotKind, reasonCode, reason, reasonDigest, assurance, stepUpAuthorizationId, conflictDeclarationId, quorumSnapshotDigest, requestId, auditEventId, decidedAt, withdrawnDecisionId]
     canonical_bytes: ops.action_proposal_versions.approval_binding_canonical
     generated_digest: ops.action_proposal_versions.approval_digest
@@ -489,7 +491,7 @@ approval_binding_physical_contract:
     actionDetailDigest: action_proposal_versions.action_detail_digest
   equality_enforcement: ops.validate_action_approval_binding_at_commit()
   typed_detail_equality_enforcement: ops.validate_action_approval_detail_at_commit()
-  typed_detail_rule: exactly one 1:1 typed detail relation matches action_kind, action_detail_kind, canonical detail bytes and every source ID/version/digest; the other sixteen detail relations have zero rows
+  typed_detail_rule: exactly one 1:1 typed detail relation matches action_kind, action_detail_kind, canonical detail bytes and every source ID/version/digest; the other seventeen detail relations have zero rows
   no_applicable_value_rule: inapplicable branch fields are absent; no NULL, empty digest or sentinel value may impersonate another branch
   reviewer_rule: every assignment and decision references the same [proposal_id,version,approval_digest] candidate key; reviewer-specific facts exist only on ops.action_decisions
 
@@ -514,6 +516,7 @@ support_function_catalog:
     - {signature: "ops.action_approval_capability_activation_detail_v1_is_valid(bytea) RETURNS boolean", language: SQL, volatility: IMMUTABLE, parallel: SAFE, leakproof: false, search_path: "pg_catalog,ops", execute_roles: []}
     - {signature: "ops.action_approval_response_policy_calendar_detail_v1_is_valid(bytea) RETURNS boolean", language: SQL, volatility: IMMUTABLE, parallel: SAFE, leakproof: false, search_path: "pg_catalog,ops", execute_roles: []}
     - {signature: "ops.action_approval_commercial_control_detail_v1_is_valid(bytea) RETURNS boolean", language: SQL, volatility: IMMUTABLE, parallel: SAFE, leakproof: false, search_path: "pg_catalog,ops", execute_roles: []}
+    - {signature: "ops.action_approval_provider_control_detail_v1_is_valid(bytea) RETURNS boolean", language: SQL, volatility: IMMUTABLE, parallel: SAFE, leakproof: false, search_path: "pg_catalog,ops", execute_roles: []}
     - {signature: "ops.action_decision_v1_is_valid(jsonb) RETURNS boolean", language: SQL, volatility: IMMUTABLE, parallel: SAFE, leakproof: false, search_path: "pg_catalog,ops", execute_roles: []}
     - {signature: "ops.action_decision_receipt_binding_v1_is_valid(jsonb) RETURNS boolean", language: SQL, volatility: IMMUTABLE, parallel: SAFE, leakproof: false, search_path: "pg_catalog,ops", execute_roles: []}
     - {signature: "ops.safe_retry_proof_v1_is_valid(jsonb) RETURNS boolean", language: SQL, volatility: IMMUTABLE, parallel: SAFE, leakproof: false, search_path: "pg_catalog,ops", execute_roles: []}
@@ -657,7 +660,7 @@ tables:
     uniques:
       - {name: action_proposals_id_current_version_key, columns: [id, current_version]}
     checks:
-      - {name: action_proposals_action_kind_check, expression: "action_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL')"}
+      - {name: action_proposals_action_kind_check, expression: "action_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL','PROVIDER_CONTROL')"}
       - {name: action_proposals_origin_kind_check, expression: "origin_kind IN ('HUMAN','AGENT_PROPOSAL','SYSTEM_EVENT','COMPENSATION')"}
       - {name: action_proposals_compensation_check, expression: "(origin_kind = 'COMPENSATION' AND compensates_execution_id IS NOT NULL AND compensates_execution_state = 'SUCCEEDED' AND compensates_effect_digest ~ '^[0-9a-f]{64}$' AND compensates_execution_receipt_digest ~ '^[0-9a-f]{64}$') OR (origin_kind <> 'COMPENSATION' AND compensates_execution_id IS NULL AND compensates_execution_state IS NULL AND compensates_effect_digest IS NULL AND compensates_execution_receipt_digest IS NULL)"}
       - {name: action_proposals_target_type_check, expression: "target_type IN ('CASE','CLAIM','TASK','LINE_ITEM','COMMUNICATION_INTENT','PUBLICATION','RULE_VERSION','USER','KILL_SWITCH','COMMUNICATION_SUBJECT','ASSET','RECORD_CLASS','FUNDING_DISCLOSURE','CAPABILITY','BUSINESS_CALENDAR')"}
@@ -780,7 +783,7 @@ tables:
       - {name: action_proposal_versions_binding_json_check, expression: "approval_binding IS NULL OR (ops.action_approval_binding_v1_is_valid(approval_binding) AND convert_from(approval_binding_canonical,'UTF8')::jsonb = approval_binding)"}
       - {name: action_proposal_versions_binding_digest_check, expression: "approval_digest IS NULL OR (approval_digest = encode(extensions.digest(approval_binding_canonical,'sha256'),'hex') AND approval_digest ~ '^[0-9a-f]{64}$' AND target_request_digest ~ '^[0-9a-f]{64}$' AND evidence_set_digest ~ '^[0-9a-f]{64}$' AND contrary_evidence_set_digest ~ '^[0-9a-f]{64}$' AND uncertainty_set_digest ~ '^[0-9a-f]{64}$' AND risk_assessment_digest ~ '^[0-9a-f]{64}$' AND policy_snapshot_digest ~ '^[0-9a-f]{64}$' AND conflict_snapshot_digest ~ '^[0-9a-f]{64}$' AND expected_effect_digest ~ '^[0-9a-f]{64}$' AND quorum_plan_digest ~ '^[0-9a-f]{64}$' AND effect_idempotency_key_sha256 ~ '^[0-9a-f]{64}$' AND action_detail_digest = encode(extensions.digest(action_detail_canonical,'sha256'),'hex') AND action_detail_digest ~ '^[0-9a-f]{64}$' AND convert_from(action_detail_canonical,'UTF8')::jsonb = jsonb_build_object('actionDetailKind',action_detail_kind,'actionDetail',action_detail))"}
       - {name: action_proposal_versions_binding_text_check, expression: "approval_binding IS NULL OR (length(btrim(operation_id)) BETWEEN 1 AND 128 AND length(btrim(required_capability)) BETWEEN 1 AND 128)"}
-      - {name: action_proposal_versions_detail_kind_check, expression: "action_detail_kind IS NULL OR action_detail_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL')"}
+      - {name: action_proposal_versions_detail_kind_check, expression: "action_detail_kind IS NULL OR action_detail_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL','PROVIDER_CONTROL')"}
       - {name: action_proposal_versions_review_state_check, expression: "state IN ('DRAFT','WITHDRAWN','SUPERSEDED','EXPIRED') OR approval_binding IS NOT NULL"}
       - {name: action_proposal_versions_pending_check, expression: "state <> 'PENDING_QUORUM' OR (preview_id IS NOT NULL AND approval_binding IS NOT NULL AND not_before <= due_at AND due_at <= expires_at)"}
       - {name: action_proposal_versions_terminal_check, expression: "(state IN ('APPROVED','REJECTED','CHANGES_REQUIRED','WITHDRAWN','EXPIRED','SUPERSEDED')) = (terminal_at IS NOT NULL)"}
@@ -1144,7 +1147,7 @@ tables:
     checks:
       - {name: execution_authorizations_positive_check, expression: "generation > 0 AND cancellation_generation >= 0"}
       - {name: execution_authorizations_kind_check, expression: "authorization_kind IN ('INITIAL_APPROVAL','SAFE_RETRY')"}
-      - {name: execution_authorizations_action_kind_check, expression: "action_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL')"}
+      - {name: execution_authorizations_action_kind_check, expression: "action_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL','PROVIDER_CONTROL')"}
       - {name: execution_authorizations_transport_check, expression: "transport IN ('BASE_APPLICATION_COMMAND','PRIVATE_APPLICATION_COMMAND')"}
       - {name: execution_authorizations_effect_boundary_check, expression: "effect_boundary IN ('DATABASE_ONLY','PROVIDER')"}
       - {name: execution_authorizations_provider_check, expression: "(effect_boundary = 'PROVIDER' AND provider_config_id IS NOT NULL AND provider_config_version > 0 AND provider_configuration_digest <> '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde' AND provider_idempotency_key_sha256 <> '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74') OR (effect_boundary = 'DATABASE_ONLY' AND provider_config_id IS NULL AND provider_config_version IS NULL AND provider_configuration_digest = '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde' AND provider_idempotency_key_sha256 = '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74')"}
@@ -1678,7 +1681,7 @@ tables:
     checks:
       - {name: in_flight_effects_type_check, expression: "effect_type IN ('ACTION_EXECUTION','AGENT_PROVIDER_TURN')"}
       - {name: in_flight_effects_source_check, expression: "(effect_type = 'ACTION_EXECUTION' AND action_kind IS NOT NULL AND action_proposal_id IS NOT NULL AND action_proposal_version IS NOT NULL AND approval_digest IS NOT NULL AND agent_provider_turn_id IS NULL) OR (effect_type = 'AGENT_PROVIDER_TURN' AND action_kind IS NULL AND action_proposal_id IS NULL AND action_proposal_version IS NULL AND approval_digest IS NULL AND agent_provider_turn_id IS NOT NULL)"}
-      - {name: in_flight_effects_action_kind_check, expression: "action_kind IS NULL OR action_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL')"}
+      - {name: in_flight_effects_action_kind_check, expression: "action_kind IS NULL OR action_kind IN ('HYPOTHESIS','CLAIM','TASK','COMPARABLE','COMMUNICATION','PUBLICATION','RETRACTION','RULE_ACTIVATION','ROLE_GRANT','KILL_SWITCH','COMMUNICATION_AUTHORIZATION','ASSET_RIGHTS_DECISION','RETENTION_SCHEDULE','FUNDING_DISCLOSURE','CAPABILITY_ACTIVATION','RESPONSE_POLICY_CALENDAR','COMMERCIAL_CONTROL','PROVIDER_CONTROL')"}
       - {name: in_flight_effects_predecessor_check, expression: "(predecessor_relationship = 'NONE' AND predecessor_effect_id IS NULL) OR (predecessor_relationship IN ('COMPENSATES','SUPERSEDES') AND predecessor_effect_id IS NOT NULL AND predecessor_effect_id <> id)"}
       - {name: in_flight_effects_state_check, expression: "state IN ('POLICY_BLOCKED','QUEUED','RUNNING','RETRYABLE_FAILED','CANCEL_REQUESTED','RECONCILIATION_REQUIRED','SUCCEEDED','PARTIALLY_SUCCEEDED','PERMANENT_FAILED','CANCELLED','EXPIRED')"}
       - {name: in_flight_effects_positive_check, expression: "current_generation > 0 AND state_version > 0 AND cancellation_generation >= 0 AND dispatch_attempt_count BETWEEN 0 AND 3 AND last_receipt_sequence > 0"}

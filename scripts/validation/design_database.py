@@ -21,6 +21,7 @@ from .design_database_support import (
     _rows,
     _validate_sql_expression,
 )
+from .design_support import physical_migration_name
 from .loaders import load_yaml
 from .models import Validation
 
@@ -140,8 +141,9 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
     ]["creation_order"]
     economics_relations = {
         relation
-        for path in PHYSICAL_TABLE_PATHS[-4:]
-        for relation in _rows(documents[path])
+        for document in documents.values()
+        if physical_migration_name(document) == "0029_product_economics.sql"
+        for relation in _rows(document)
     }
     result.require(
         bool(economics_order)

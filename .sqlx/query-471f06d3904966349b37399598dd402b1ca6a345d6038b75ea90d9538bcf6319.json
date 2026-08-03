@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT routing_policy,version FROM ops.provider_configs WHERE id=$1 AND provider_type='relay' FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "routing_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_configs",
+            "name": "routing_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_configs",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "471f06d3904966349b37399598dd402b1ca6a345d6038b75ea90d9538bcf6319"
+}

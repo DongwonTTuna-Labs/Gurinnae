@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_model_upgrade_attempts a SET status='RUNNING',started_at=COALESCE(started_at,clock_timestamp()) FROM ops.provider_configs p,ops.relay_model_catalog m WHERE a.id=$1 AND a.provider_id=p.id AND a.target_model_id=m.model_id AND a.status IN ('QUEUED','RUNNING') AND p.provider_type='relay' AND p.version=a.expected_provider_version AND m.active RETURNING a.provider_id,a.target_model_id,a.attempt_kind,a.owner_user_id, a.expected_provider_version,a.requested_data_policy,a.connection_test_id, p.routing_policy,m.track",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "provider_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "provider_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "target_model_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "target_model_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "attempt_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "attempt_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "owner_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "expected_provider_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "expected_provider_version"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "requested_data_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "requested_data_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "connection_test_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "connection_test_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "routing_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_configs",
+            "name": "routing_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "track",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.relay_model_catalog",
+            "name": "track"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "a184ed9578e96cd3ac907828b1664618ee41332a8561715399953062171742e1"
+}

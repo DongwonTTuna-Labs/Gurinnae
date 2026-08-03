@@ -3,10 +3,10 @@ specification_version: 13.0.0
 status: FINAL
 counts:
   screens: 94
-  operations: 212
-  query_operations: 107
-  command_operations: 105
-  http_write_operations: 102
+  operations: 215
+  query_operations: 108
+  command_operations: 107
+  http_write_operations: 104
   database_tables: 107
   database_migrations: 24
   roles: 15
@@ -15,10 +15,10 @@ counts:
   acceptance_scenarios: 271
   public_operations: 41
   submission_operations: 34
-  control_operations: 131
+  control_operations: 134
   identity_operations: 6
-  commands: 105
-  queries: 107
+  commands: 107
+  queries: 108
 screens:
 - screen_id: PUB-001
   surface: public
@@ -1182,9 +1182,14 @@ screens:
   - listProviders
   - disableProviderRouting
   - testProviderConnection
+  - listRelayModels
+  - upgradeProviderModel
+  - setModelAutoUpgrade
   command_operations:
   - disableProviderRouting
   - testProviderConnection
+  - upgradeProviderModel
+  - setModelAutoUpgrade
   e2e_test: tests/e2e/screens/ops-005.spec.ts
   visual_test: tests/visual/ops-005.spec.ts
 - screen_id: OPS-006
@@ -3552,59 +3557,21 @@ operations:
   kind: COMMAND
   capability: kill_switch.execute
   request_schema: disableProviderRoutingRequest
-  response_schema: disableProviderRoutingReceipt
-  success_status: 200
+  response_schema: AddendumProblemDetailsV1
+  success_status: 409
   consuming_screens:
   - OPS-005
-  handler: services/control-api/src/service/domains/operations.rs
-  application: crates/application/src/commands/disable_provider_routing.rs
-  integration_test: tests/integration/api/control-api/disable_provider_routing.rs
+  handler: services/control-api/src/routes/mod.rs
+  application: services/control-api/src/service/mod.rs
+  integration_test: services/control-api/src/service/mod.rs
   generated_client: packages/api-client-control/src/generated/
-  contract_test: tests/contract/control-api/disable_provider_routing.spec.ts
-  repository_methods:
-  - ProviderRepository::disable_routing
-  statements:
-  - verb: SELECT_FOR_UPDATE
-    relation: ops.provider_configs
-    purpose: lock provider config
-    expected_rows: exactly-one
-    identity_predicate: id = :providerId
-    version_predicate: version = :expectedVersion
-  - verb: UPDATE
-    relation: ops.provider_configs
-    purpose: disable routing and increment version
-    expected_rows: exactly-one
-    version_predicate: version = :expectedVersion
-    identity_predicate: id = :providerId
-    version_mutation: version = version + 1
-  domain_events:
-  - provider.routing_disabled.v1
+  contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
+  repository_methods: []
+  statements: []
+  domain_events: []
   integration_events: []
-  audit_action: command.disableProviderRouting
-  concurrency:
-    mode: OPTIMISTIC
-    version_field: expectedVersion
-    guard_relation: ops.provider_configs
-    guard_identity_predicate: id = :providerId
-    guard_version_predicate: version = :expectedVersion
-    mutation_relation: ops.provider_configs
-    mutation_identity_predicate: id = :providerId
-    success_effect: increment version by exactly one; DELETE commands delete exactly one current version
-    zero_rows_resolution:
-      probe: read identity without version predicate
-      missing_error: RESOURCE_NOT_FOUND
-      existing_error: VERSION_CONFLICT
-    version_mutation: version = version + 1
-    request_placeholders:
-    - expectedVersion
-    - providerId
-    context_placeholders: []
-    guard_columns:
-    - id
-    - version
-    mutation_columns:
-    - id
-    - version
+  audit_action: none
+  concurrency: null
   auth: actor-assertion-and-capability
   assurance_policy:
     mode: STATIC
@@ -3613,6 +3580,10 @@ operations:
     step_up_possible: true
   assurance_level: STEP_UP
   step_up_required: true
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: disableUser
   api: control-api
   method: POST
@@ -6927,6 +6898,52 @@ operations:
     conditions: []
     step_up_possible: false
   assurance_level: NONE
+- operation_id: listRelayModels
+  api: control-api
+  method: GET
+  path: /v1/internal/queries/list-relay-models
+  kind: QUERY
+  capability: cases.read
+  request_schema: listRelayModelsQuery
+  response_schema: RelayModelsPage
+  success_status: 200
+  consuming_screens:
+  - OPS-005
+  handler: services/control-api/src/service/domains/operations.rs
+  application: services/control-api/src/service/domains/operations.rs
+  integration_test: tests/integration/api/control-api/list_relay_models.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: tests/contract/control-api/list_relay_models.spec.ts
+  repository_methods:
+  - ProviderRepository::list_relay_models
+  statements:
+  - verb: SELECT
+    relation: ops.relay_model_catalog
+    purpose: list relay models and adoption state
+    expected_rows: zero-or-more
+  - verb: SELECT
+    relation: ops.provider_configs
+    purpose: read current relay provider model, policy, pricing and version
+    expected_rows: zero-or-more
+  - verb: SELECT
+    relation: ops.provider_model_upgrade_receipts
+    purpose: derive the never-adopted new-model flag from successful immutable receipts
+    expected_rows: zero-or-more
+  - verb: SELECT
+    relation: ops.relay_model_catalog_sync_runs
+    purpose: read latest catalog synchronization status
+    expected_rows: zero-or-one
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: null
+  auth: actor-assertion-and-capability
+  assurance_policy:
+    mode: STATIC
+    default: ACTIVE_SESSION
+    conditions: []
+    step_up_possible: false
+  assurance_level: ACTIVE_SESSION
 - operation_id: listReviewQueue
   api: control-api
   method: GET
@@ -9174,6 +9191,40 @@ operations:
     conditions: []
     step_up_possible: false
   assurance_level: NONE
+- operation_id: setModelAutoUpgrade
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/set-model-auto-upgrade
+  kind: COMMAND
+  capability: kill_switch.execute
+  request_schema: setModelAutoUpgradeRequest
+  response_schema: AddendumProblemDetailsV1
+  success_status: 409
+  consuming_screens:
+  - OPS-005
+  handler: services/control-api/src/routes/mod.rs
+  application: services/control-api/src/service/mod.rs
+  integration_test: services/control-api/src/service/mod.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
+  repository_methods: []
+  statements: []
+  domain_events: []
+  integration_events: []
+  audit_action: none
+  concurrency: null
+  auth: actor-assertion-and-capability
+  assurance_policy:
+    mode: STATIC
+    default: STEP_UP
+    conditions: []
+    step_up_possible: true
+  assurance_level: STEP_UP
+  step_up_required: true
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: startAccessReview
   api: control-api
   method: POST
@@ -9678,29 +9729,20 @@ operations:
   kind: COMMAND
   capability: jobs.operate
   request_schema: testProviderConnectionRequest
-  response_schema: testProviderConnectionReceipt
-  success_status: 202
+  response_schema: AddendumProblemDetailsV1
+  success_status: 409
   consuming_screens:
   - OPS-005
-  handler: services/control-api/src/service/domains/operations.rs
-  application: crates/application/src/commands/test_provider_connection.rs
-  integration_test: tests/integration/api/control-api/test_provider_connection.rs
+  handler: services/control-api/src/routes/mod.rs
+  application: services/control-api/src/service/mod.rs
+  integration_test: services/control-api/src/service/mod.rs
   generated_client: packages/api-client-control/src/generated/
-  contract_test: tests/contract/control-api/test_provider_connection.spec.ts
-  repository_methods:
-  - ProviderRepository::request_test
-  statements:
-  - verb: INSERT
-    relation: ops.provider_connection_tests
-    purpose: create redacted connection test request
-    expected_rows: exactly-one
-  - verb: INSERT
-    relation: ops.jobs
-    purpose: enqueue provider test job
-    expected_rows: exactly-one
+  contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
+  repository_methods: []
+  statements: []
   domain_events: []
   integration_events: []
-  audit_action: provider.connection_test.requested
+  audit_action: none
   concurrency: null
   auth: actor-assertion-and-capability
   assurance_policy:
@@ -9710,6 +9752,10 @@ operations:
     step_up_possible: false
   assurance_level: ACTIVE_SESSION
   step_up_required: false
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: transitionCase
   api: control-api
   method: POST
@@ -10479,6 +10525,40 @@ operations:
     step_up_possible: false
   assurance_level: SCOPED_TOKEN
   step_up_required: false
+- operation_id: upgradeProviderModel
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/upgrade-provider-model
+  kind: COMMAND
+  capability: kill_switch.execute
+  request_schema: upgradeProviderModelRequest
+  response_schema: AddendumProblemDetailsV1
+  success_status: 409
+  consuming_screens:
+  - OPS-005
+  handler: services/control-api/src/routes/mod.rs
+  application: services/control-api/src/service/mod.rs
+  integration_test: services/control-api/src/service/mod.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
+  repository_methods: []
+  statements: []
+  domain_events: []
+  integration_events: []
+  audit_action: none
+  concurrency: null
+  auth: actor-assertion-and-capability
+  assurance_policy:
+    mode: STATIC
+    default: STEP_UP
+    conditions: []
+    step_up_possible: true
+  assurance_level: STEP_UP
+  step_up_required: true
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: validateClaims
   api: control-api
   method: POST
@@ -10843,6 +10923,7 @@ capabilities:
   - listInternalNotifications
   - listMyTasks
   - listProviders
+  - listRelayModels
   - listSavedViews
   - searchInternalRecords
   - updateSavedView
@@ -11153,9 +11234,13 @@ capabilities:
   - disableProviderRouting
   - extendKillSwitch
   - listKillSwitches
+  - setModelAutoUpgrade
+  - upgradeProviderModel
   screen_actions:
   - OPS-001:open-kill
   - OPS-005:disable-routing
+  - OPS-005:upgrade-model
+  - OPS-005:auto-upgrade
   - OPS-006:activate
   - OPS-006:deactivate
   - OPS-006:extend

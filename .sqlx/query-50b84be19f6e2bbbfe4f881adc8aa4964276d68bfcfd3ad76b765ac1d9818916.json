@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.provider_model_upgrade_attempts( id,provider_id,target_model_id,attempt_kind,requested_by,owner_user_id, expected_provider_version,requested_data_policy,catalog_sync_run_id,status,connection_test_id) VALUES($1,$2,$3,'AUTO',NULL,$4,$5,NULL,$6,'QUEUED',$7)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Int8",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "50b84be19f6e2bbbfe4f881adc8aa4964276d68bfcfd3ad76b765ac1d9818916"
+}
