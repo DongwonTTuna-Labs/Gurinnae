@@ -21,8 +21,8 @@ operations_by_id = {row["operation_id"]: row for row in data_contracts["operatio
 manifest_by = {row["id"]: row for row in manifest["screens"]}
 rows = source["screens"]
 rows_by_id = {row["id"]: row for row in rows}
-if len(rows) != 94 or sum(len(row.get("sections", [])) for row in rows) != 497:
-    raise SystemExit("screen catalog must contain exactly 94 screens and 497 sections")
+if len(rows) != 94 or sum(len(row.get("sections", [])) for row in rows) != 492:
+    raise SystemExit("screen catalog must contain exactly 94 screens and 492 sections")
 
 def quote(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)

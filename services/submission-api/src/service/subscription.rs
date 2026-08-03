@@ -275,18 +275,24 @@ fn validate_scope(scope: &Value) -> Result<(), ServiceError> {
     let scope_type = common::string(scope, "scopeType")?;
     if !matches!(
         scope_type,
-        "GLOBAL" | "QUERY" | "CASE" | "AGENCY" | "SUPPLIER" | "CORRECTIONS"
+        "GLOBAL" | "QUERY" | "CASE" | "AGENCY" | "SUPPLIER" | "REGION" | "CORRECTIONS"
     ) {
         return Err(ServiceError::InvalidRequest);
     }
-    let has_ref = scope.get("scopeRef").and_then(Value::as_str).is_some();
+    let reference = scope.get("scopeRef").and_then(Value::as_str);
+    let has_ref = reference.is_some();
     let has_query = scope.get("query").is_some_and(Value::is_object);
     match scope_type {
         "GLOBAL" | "CORRECTIONS" if !has_ref && !has_query => Ok(()),
         "QUERY" if has_query && !has_ref => Ok(()),
         "CASE" | "AGENCY" | "SUPPLIER" if has_ref && !has_query => Ok(()),
+        "REGION" if reference.is_some_and(is_sigungu_code) && !has_query => Ok(()),
         _ => Err(ServiceError::InvalidRequest),
     }
+}
+
+fn is_sigungu_code(value: &str) -> bool {
+    value.len() == 5 && value.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn topic_labels(value: &Value) -> Vec<String> {
@@ -325,4 +331,25 @@ fn text<'a>(value: &'a Value, name: &str) -> Result<&'a str, ServiceError> {
 
 fn uuid(value: &Value, name: &str) -> Result<Uuid, ServiceError> {
     Uuid::parse_str(text(value, name)?).map_err(|_| ServiceError::Persistence)
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::validate_scope;
+
+    #[test]
+    fn region_scope_requires_an_exact_sigungu_code() {
+        assert!(validate_scope(&json!({"scopeType": "REGION", "scopeRef": "11680"})).is_ok());
+        for invalid in [
+            json!({"scopeType": "REGION"}),
+            json!({"scopeType": "REGION", "scopeRef": "11"}),
+            json!({"scopeType": "REGION", "scopeRef": "1168A"}),
+            json!({"scopeType": "REGION", "scopeRef": "116800"}),
+            json!({"scopeType": "REGION", "scopeRef": "11680", "query": {}}),
+        ] {
+            assert!(validate_scope(&invalid).is_err());
+        }
+    }
 }

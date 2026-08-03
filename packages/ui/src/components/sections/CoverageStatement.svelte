@@ -5,8 +5,27 @@ import { stateLabel } from "../../screen-contract";
 import SectionHeading from "./SectionHeading.svelte";
 
 let { section, runtime, screen, projection }: ScreenSectionProps = $props();
+function nonNegativeInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : undefined;
+}
+
 const knownFields = $derived(
   projection?.fields.filter((field) => field.known).length ?? 0,
+);
+const sourceCount = $derived(
+  nonNegativeInteger(
+    projection?.fields.find(
+      (field) => field.name === "totalApproximate" && field.known,
+    )?.value,
+  ),
+);
+const countLabel = $derived(
+  screen.id === "PUB-001" ? "수집 출처" : "확인된 항목",
+);
+const confirmedCount = $derived(
+  screen.id === "PUB-001" ? sourceCount : knownFields,
 );
 const tone = $derived(stateTone(runtime.state));
 </script>
@@ -19,8 +38,8 @@ const tone = $derived(stateTone(runtime.state));
       <dd><strong>{screen.dataOperations.length}</strong><span>개</span></dd>
     </div>
     <div>
-      <dt>확인된 항목</dt>
-      <dd><strong>{knownFields}</strong><span>개</span></dd>
+      <dt>{countLabel}</dt>
+      <dd><strong>{confirmedCount ?? "미확인"}</strong>{#if confirmedCount !== undefined}<span>개</span>{/if}</dd>
     </div>
     <div>
       <dt>현재 상태</dt>
@@ -117,21 +136,6 @@ const tone = $derived(stateTone(runtime.state));
   }
 
   @media (max-width: 620px) {
-    .coverage-stats {
-      grid-template-columns: 1fr;
-    }
-
-    .coverage-stats > div,
-    .coverage-stats > div:first-child {
-      padding: 0.375rem 0.5rem;
-      border-top: 1px solid var(--paper-200);
-      border-inline-start: 0;
-    }
-
-    .coverage-stats > div:first-child {
-      border-top: 0;
-    }
-
     .coverage-note {
       padding-inline: 0.5rem;
     }

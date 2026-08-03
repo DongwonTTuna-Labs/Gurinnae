@@ -122,7 +122,7 @@ def parse_binding_list(raw: str) -> list[dict[str, str]]:
 SCREEN_SECTION_ROLES = parse_rows(
     r"""
 PUB-001|mission|recent|mission|coverage|corrections|search
-PUB-002|query|results|results|coverage|coverage|query
+PUB-002|query|results|results|results|results|query
 PUB-003|scope|results|results|scope|scope|filters
 PUB-004|status|status|known|evidence|unknown|evidence
 PUB-005|revision-banner|revision-banner|snapshot|citation|diff|revision-banner
@@ -230,17 +230,17 @@ ACC-001|identity|security|sessions|security|access-request|sessions
 SCREEN_SEMANTIC_BINDING_ROWS = parse_rows(
     r"""
 PUB-001|listPublicCases.$projection.mission_object->mission_object|listPublicCases.$projection.recent_state->recent_state|listPublicCases.$projection.mission_answer->mission_answer|listPublicCases.$projection.coverage_evidence->coverage_evidence|listPublicCases.$projection.corrections_unknown->corrections_unknown|listPublicCases.$projection.search_next_action->search_next_action
-PUB-002|searchPublicRecords.$projection.query_object->query_object|searchPublicRecords.$projection.results_state->results_state|searchPublicRecords.$projection.results_answer->results_answer|searchPublicRecords.$projection.coverage_evidence->coverage_evidence|searchPublicRecords.$projection.coverage_unknown->coverage_unknown|searchPublicRecords.$projection.query_next_action->query_next_action
+PUB-002|searchPublicRecords.$projection.query_object->query_object,searchPublicRecords.appliedFilters->types_applied_filters|searchPublicRecords.$projection.results_state->results_state|searchPublicRecords.$projection.results_answer->results_answer|searchPublicRecords.$projection.coverage_evidence->coverage_evidence|searchPublicRecords.$projection.coverage_unknown->coverage_unknown|searchPublicRecords.$projection.query_next_action->query_next_action
 PUB-003|listPublicCases.$projection.scope_object->scope_object|listPublicCases.$projection.results_state->results_state|listPublicCases.$projection.results_answer->results_answer|listPublicCases.$projection.scope_evidence->scope_evidence|listPublicCases.$projection.scope_unknown->scope_unknown|listPublicCases.$projection.filters_next_action->filters_next_action
 PUB-004|getPublicCase.slug->case_slug,getPublicCase.title->case_title|getPublicCase.publicState->public_state,getPublicCase.revision->revision,getPublicCase.freshness->freshness|getPublicCase.confirmedFacts->confirmed_facts,getPublicCase.summary->answer_first_summary|getPublicCase.evidence->evidence_items,getPublicCase.timeline->evidence_timeline|getPublicCase.criticalUnknowns->material_unknowns,getPublicCase.counterEvidence->counter_evidence,getPublicCase.limitations->limitations|getCaseReproducibility.caseSlug->reproduction_case_slug,getCaseReproducibility.ruleId->reproduction_rule_id
 PUB-005|getPublicCaseRevision.slug->case_slug,getPublicCaseRevision.revision->revision|getPublicCaseRevision.isLatest->is_latest,getPublicCaseRevision.supersededByRevision->superseded_by_revision|getPublicCaseRevision.content->fixed_content,getPublicCaseRevision.diffFromPrevious->diff_from_previous|getPublicCaseRevision.snapshotHash->snapshot_hash,getPublicCaseRevision.publishedAt->published_at|getPublicCaseRevision.diffFromPrevious->material_changes|listCaseRevisions.items->available_revisions
 PUB-006|getCaseReproducibility.caseSlug->case_slug,getCaseReproducibility.ruleId->rule_id,getCaseReproducibility.ruleVersion->rule_version|getCaseReproducibility.inputDigest->input_digest,getCaseReproducibility.resultDigest->result_digest|getCaseReproducibility.formula->formula,getCaseReproducibility.roundingPolicy->rounding_policy,getCaseReproducibility.result->result|getCaseReproducibility.includedCohort->included_cohort,getCaseReproducibility.excludedCohort->excluded_cohort|getCaseReproducibility.limitations->limitations|getCaseReproducibility.$projection.download_metadata->download_metadata
-PUB-007|listAgencies.$projection.search_object->search_object|listAgencies.$projection.coverage_state->coverage_state|listAgencies.$projection.results_answer->results_answer|listAgencies.$projection.coverage_evidence->coverage_evidence|listAgencies.$projection.coverage_unknown->coverage_unknown|listAgencies.$projection.search_next_action->search_next_action
+PUB-007|listAgencies.$projection.search_object->search_object,listAgencies.appliedFilters->agency_filters|listAgencies.$projection.coverage_state->coverage_state|listAgencies.$projection.results_answer->results_answer|listAgencies.$projection.coverage_evidence->coverage_evidence|listAgencies.$projection.coverage_unknown->coverage_unknown|listAgencies.$projection.search_next_action->search_next_action
 PUB-008|getAgency.id->agency_id,getAgency.name->agency_name|getAgency.freshness->freshness|getAgency.metrics->metrics,getAgency.coverage->coverage|getAgency.identifiers->official_identifiers,getAgency.recentContracts->recent_contracts|getAgency.identityWarnings->identity_warnings|getAgency.recentCases->recent_cases
-PUB-009|listSuppliers.$projection.search_object->search_object|listSuppliers.$projection.identity_note_state->identity_note_state|listSuppliers.$projection.results_answer->results_answer|listSuppliers.$projection.identity_note_evidence->identity_note_evidence|listSuppliers.$projection.identity_note_unknown->identity_note_unknown|listSuppliers.$projection.search_next_action->search_next_action
+PUB-009|listSuppliers.$projection.search_object->search_object,listSuppliers.appliedFilters->supplier_filters|listSuppliers.$projection.identity_note_state->identity_note_state|listSuppliers.$projection.results_answer->results_answer|listSuppliers.$projection.identity_note_evidence->identity_note_evidence|listSuppliers.$projection.identity_note_unknown->identity_note_unknown|listSuppliers.$projection.search_next_action->search_next_action
 PUB-010|getSupplier.id->supplier_id,getSupplier.name->supplier_name|getSupplier.freshness->freshness|getSupplier.metrics->metrics,getSupplier.coverage->coverage|getSupplier.identifiers->official_identifiers,getSupplier.recentContracts->recent_contracts|getSupplier.identityWarnings->identity_warnings|getSupplier.recentCases->recent_cases
 PUB-011|listContracts.$projection.scope_object->scope_object|listContracts.$projection.results_state->results_state|listContracts.$projection.results_answer->results_answer|listContracts.$projection.scope_evidence->scope_evidence|listContracts.$projection.limitations_unknown->limitations_unknown|listContracts.$projection.filters_next_action->filters_next_action
-PUB-012|getContract.id->contract_id,getContract.contractNumber->contract_number|getContract.status->contract_status,getContract.changes->changes|getContract.title->title,getContract.currentAmount->current_amount,getContract.lineItems->line_items|getContract.sourceDocuments->source_documents|getContract.normalizationWarnings->normalization_warnings|getContract.relatedCases->related_cases
+PUB-012|getContract.id->contract_id,getContract.contractNumber->contract_number|getContract.status->contract_status,getContract.changes->changes|getContract.title->title,getContract.currentAmount->current_amount,getContract.lineItems->line_items,getContract.contractMethod->procurement_method|getContract.sourceDocuments->source_documents|getContract.normalizationWarnings->normalization_warnings|getContract.relatedCases->related_cases
 PUB-013|listRules.$projection.overview_object->overview_object|listRules.$projection.changes_state->changes_state|getMethodologyOverview.summary->methodology_summary|getMethodologyOverview.links->methodology_sources|getMethodologyOverview.$projection.ai_limitations->ai_limitations|listRules.$projection.rules_next_action->rules_next_action
 PUB-014|getRule.id->rule_id,getRule.version->rule_version|getRule.status->rule_status,getRule.updatedAt->updated_at|getRule.summary->rule_summary,getRule.data->calculation_contract|getRule.links->evaluation_links|getRule.data->false_positive_and_limitations|listRuleCases.items->related_cases
 PUB-015|getCoverage.asOf->coverage_as_of|getCoverage.dateRange->covered_date_range,getCoverage.methodologyVersion->methodology_version|getCoverage.recordCounts->record_counts,getCoverage.sources->sources|getCoverage.sources->source_evidence|getCoverage.knownGaps->known_gaps|listSourceStatus.items->source_status_actions
@@ -337,7 +337,6 @@ ACC-001|getCurrentAccount.id->account_id,getCurrentAccount.version->account_vers
 SECTION_SUPPLEMENTAL_BINDING_ROWS = parse_rows(
     r"""
 PUB-001.method|listPublicCases.$projection.methodology_projection->methodology_projection
-PUB-002.types|searchPublicRecords.appliedFilters->types_applied_filters
 PUB-003.pagination|listPublicCases.nextCursor->pagination_next_cursor,listPublicCases.totalApproximate->pagination_total_approximate,listPublicCases.asOf->pagination_as_of
 PUB-004.response|getPublicCase.partyResponses->response_party_responses
 PUB-004.comparison|getPublicCase.comparison->comparison_model
@@ -345,11 +344,8 @@ PUB-004.counter|getPublicCase.counterEvidence->counter_evidence
 PUB-004.timeline|getPublicCase.timeline->timeline_items
 PUB-004.revision|getPublicCase.revision->revision_number,getPublicCase.corrections->revision_corrections
 PUB-006.cohort|getCaseReproducibility.includedCohort->included_cohort,getCaseReproducibility.excludedCohort->excluded_cohort
-PUB-007.filters|listAgencies.appliedFilters->agency_filters
 PUB-008.cases|listAgencyCases.items->case_rows,listAgencyCases.nextCursor->case_next_cursor,listAgencyCases.asOf->case_as_of
-PUB-009.filters|listSuppliers.appliedFilters->supplier_filters
 PUB-010.cases|listSupplierCases.items->case_rows,listSupplierCases.nextCursor->case_next_cursor,listSupplierCases.asOf->case_as_of
-PUB-012.procurement|getContract.contractMethod->procurement_method,getContract.sourceDocuments->procurement_sources,getContract.changes->procurement_changes
 PUB-012.related|getContract.relatedCases->related_cases
 PUB-014.inputs|getRule.$projection.required_input_projection->required_input_projection
 PUB-014.blockers|getRule.$projection.blocking_condition_projection->blocking_condition_projection
@@ -441,6 +437,7 @@ ACC-001.notifications|getCurrentAccount.$projection.notification_projection->not
 
 
 PROFILE_STATE_LABELS = {
+    "awaiting-query": "검색어 입력 대기",
     "initial-loading": "처음 불러오는 중",
     "loading": "불러오는 중",
     "refreshing": "새 정보를 확인하는 중",
@@ -481,6 +478,7 @@ PROFILE_STATE_LABELS = {
 
 
 MANIFEST_STATE_SIGNAL_PATHS = {
+    "awaiting-query": "runtimeSignals.queryPresent",
     "loading": "runtimeSignals.blockingPending",
     "success": "runtimeSignals.outcomeState",
     "empty": "runtimeSignals.authorizedRecordCount",
@@ -495,6 +493,15 @@ MANIFEST_STATE_SIGNAL_PATHS = {
 
 MANIFEST_STATE_REFINEMENTS = {
     "public-data": {
+        "loading": ["initial-loading", "refreshing"],
+        "success": ["success"],
+        "empty": ["empty", "filtered-empty"],
+        "partial": ["partial"],
+        "stale": ["stale"],
+        "error": ["error", "offline"],
+    },
+    "public-search": {
+        "awaiting-query": ["awaiting-query"],
         "loading": ["initial-loading", "refreshing"],
         "success": ["success"],
         "empty": ["empty", "filtered-empty"],
@@ -2712,7 +2719,7 @@ def build_effective_contracts(
                 "console",
                 "client log",
             ],
-            "set_equality_scan": "all 94 closed screen schemas + all 497 section leaf/nested/array allowlists + all action and journey browser bindings",
+            "set_equality_scan": "all 94 closed screen schemas + all 492 section leaf/nested/array allowlists + all action and journey browser bindings",
             "runtime_status": "OPEN_IMPLEMENTATION",
         },
         "implementation_requirements": [
@@ -3217,6 +3224,7 @@ def build_action_contracts(
 
 
 PRESERVE_COPY = {
+    "search-input-and-filters": "입력한 검색어와 유효한 필터를 유지한다.",
     "none": "보존할 사용자 입력이 없다.",
     "truthful-saved-state-and-support-reference": "실제 저장 여부와 지원 참조번호를 보존한다.",
     "request-reference-without-object-detail": "보호 대상의 존재는 숨기고 요청 참조만 보존한다.",
@@ -3255,6 +3263,7 @@ PRESERVE_COPY = {
 
 
 ACTION_COPY = {
+    "enter-or-choose-query": "검색어를 입력하거나 예시 검색어·기관 대장을 선택한다.",
     "none": "현재 상태가 끝날 때까지 추가 행동을 하지 않는다.",
     "retry-when-safe": "외부 효과와 중복 여부를 확인한 뒤 안전한 경우에만 다시 시도한다.",
     "request-access-or-safe-return": "권한을 요청하거나 안전한 화면으로 돌아간다.",
@@ -3329,6 +3338,7 @@ PROFILE_PRECEDENCE = {
     "current": 240,
     "healthy": 230,
     "success": 220,
+    "awaiting-query": 200,
 }
 
 
@@ -3375,7 +3385,7 @@ PRIMARY_REFINEMENT_BY_CATEGORY: dict[str, set[str]] = {
     "blocked": {"blocked", "reauth-required", "validation-error", "partial"},
     "conflict": {"conflict", "blocked", "validation-error"},
     "degraded": {"degraded", "offline", "partial", "stale", "error"},
-    "empty": {"empty", "filtered-empty", "not-found"},
+    "empty": {"awaiting-query", "empty", "filtered-empty", "not-found"},
     "failure": {"error", "server-error", "partial-failure", "degraded"},
     "pending": {"loading", "saving", "submitting", "refreshing", "draft"},
     "receipt": {"receipt", "saved", "success"},
@@ -3435,6 +3445,11 @@ def exact_focus(screen_id: str, state: str, focus: str) -> dict[str, Any]:
         return {"behavior": "PRESERVE_ACTIVE_ELEMENT", "target_test_id": None}
     if focus == "main-heading":
         return {"behavior": "MOVE", "target_test_id": f"{prefix}__heading"}
+    if focus == "search-input":
+        return {
+            "behavior": "MOVE",
+            "target_test_id": f"{prefix}__state__{state.replace('-', '_')}__search_input",
+        }
     return {
         "behavior": "MOVE",
         "target_test_id": f"{prefix}__state__{state.replace('-', '_')}__heading",
@@ -4105,7 +4120,7 @@ def build_accessibility_contracts(
                 "history_restore_focus_test_id": f"{snake_screen(screen_id)}__action__{action_id.replace('-', '_')}",
             }
         )
-    if len(screen_rows) != 94 or len(nav_rows) != 102:
+    if len(screen_rows) != 94 or len(nav_rows) != 108:
         raise ValueError("responsive or navigation focus source set changed")
     document = {
         "schema_version": 1,
@@ -4120,7 +4135,7 @@ def build_accessibility_contracts(
         ],
         "set_equality": {
             "screen_contracts": 94,
-            "navigation_focus_contracts": 102,
+            "navigation_focus_contracts": 108,
             "required_viewport_zoom_checks_per_screen": 5,
         },
         "global_rules": [
@@ -4277,10 +4292,19 @@ def render(document: dict[str, Any]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="fail if generated files differ")
+    parser.add_argument(
+        "--target",
+        action="append",
+        choices=sorted(TARGETS),
+        help="generate or check only the named document (repeatable)",
+    )
     args = parser.parse_args()
     documents = build_documents()
     failures: list[str] = []
+    selected = set(args.target or documents)
     for name, document in documents.items():
+        if name not in selected:
+            continue
         path = TARGETS[name]
         output = render(document)
         if args.check:

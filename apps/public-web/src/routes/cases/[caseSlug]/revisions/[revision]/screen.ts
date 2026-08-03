@@ -11,7 +11,7 @@ export const screen = {
       id: "revision-banner",
       title: "개정본 안내",
       component: "StatusAndRevisionHeader",
-      purpose: "과거본 여부와 최신본 링크.",
+      purpose: "지정 개정본의 기준 시점과 최신본 연결.",
       test_id: "pub_005__section__revision-banner",
     },
     {

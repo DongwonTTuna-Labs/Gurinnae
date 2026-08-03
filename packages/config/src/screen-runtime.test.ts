@@ -96,6 +96,51 @@ describe("screen runtime form payloads", () => {
     );
   });
 
+  it("does not invent object or array values for required structured input", () => {
+    const structuredDocument = {
+      paths: {
+        "/structured": {
+          post: {
+            operationId: "submitStructuredInput",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      proof: { type: "object" },
+                      entries: { type: "array", items: { type: "string" } },
+                    },
+                    required: ["proof", "entries"],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    } satisfies OpenApiDocument;
+    const operation = indexOperations([structuredDocument]).get(
+      "submitStructuredInput",
+    );
+    if (!operation) throw new Error("structured operation was not indexed");
+
+    expect(operationFields(operation, {})).toEqual([
+      {
+        name: "proof",
+        label: "proof",
+        type: "json",
+        required: true,
+      },
+      {
+        name: "entries",
+        label: "entries",
+        type: "json",
+        required: true,
+      },
+    ]);
+  });
+
   it("materializes OpenAPI const fields as server-bound readonly values", () => {
     const constDocument = {
       paths: {

@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { expectNativeFormValidity } from "./form-validity";
 import { sha256, state } from "./submission-routing.shared";
 import "./submission-routing-token.helpers";
+import { expectCanonicalSubscriptionExchange } from "./support/submission-token-exchange";
 
 test("failed scoped form actions expose the server error to the user", async ({
   page,
@@ -58,9 +60,20 @@ test("anonymous correction flow creates a scoped draft before save and rotates t
   page,
   request,
 }) => {
-  await page.goto("http://127.0.0.1:29101/correction-request", {
+  await page.goto("http://127.0.0.1:29101/cases/synthetic-record", {
     waitUntil: "networkidle",
   });
+  const correctionAction = page.locator(
+    '[data-action-id="request-correction"]',
+  );
+  await expect(correctionAction).toHaveAttribute(
+    "href",
+    "/correction-request?case=synthetic-record&revision=3",
+  );
+  await correctionAction.click();
+  await page.waitForURL(
+    /\/correction-request\?case=synthetic-record&revision=3/,
+  );
   await expect(page.locator(".error-summary")).toHaveCount(0);
   await expect(page.getByText("제출 세션이 필요합니다.")).toHaveCount(0);
   await expect(page.locator('form[data-action-id="save-draft"]')).toHaveCount(
@@ -71,8 +84,13 @@ test("anonymous correction flow creates a scoped draft before save and rotates t
   ).toHaveCount(0);
 
   const save = page.locator('form[data-action-id="save-draft"]');
-  await save.locator('input[name="caseSlug"]').fill("e2e-case");
-  await save.locator('input[name="publicationRevision"]').fill("3");
+  await expect(save.locator('input[name="caseSlug"]')).toHaveValue(
+    "synthetic-record",
+  );
+  await expect(save.locator('input[name="publicationRevision"]')).toHaveValue(
+    "3",
+  );
+  await expect(save.locator('input[name="expectedVersion"]')).toHaveValue("1");
   await save.locator('input[name="requesterType"]').fill("CITIZEN");
   await save
     .locator('input[name="contactEmail"]')
@@ -81,10 +99,10 @@ test("anonymous correction flow creates a scoped draft before save and rotates t
     .locator('input[name="summary"]')
     .fill("공개 문장의 수치를 바로잡아 주세요.");
   await save
-    .locator('textarea[name="requestedChanges"]')
-    .fill('["계약 금액을 원문과 일치시켜 주세요."]');
+    .locator('textarea[name="requestedChangesInput"]')
+    .fill("계약 금액을 원문과 일치시켜 주세요.");
   await save
-    .locator('input[name="evidenceDescription"]')
+    .locator('textarea[name="evidenceDescription"]')
     .fill("공개 원문 링크를 확인했습니다.");
   await expect(save.locator('button[type="submit"]')).toBeEnabled();
   await save.locator('button[type="submit"]').click();
@@ -324,33 +342,33 @@ test("subscription flow persists the pending session and consumes verification i
   await page.goto("http://127.0.0.1:29101/subscribe", {
     waitUntil: "networkidle",
   });
-  const create = page.locator('form[data-action-id="request-verification"]');
+  const create = page.locator('[data-testid="public-subscription-form"]');
   await create.locator('input[name="email"]').fill("reader@example.test");
   await create.locator('select[name="scopeType"]').selectOption("GLOBAL");
   await create.locator('select[name="frequency"]').selectOption("DAILY");
-  await create.locator('input[name="locale"]').fill("ko-KR");
+  await expect(create.locator('input[name="email"]')).toHaveValue(
+    "reader@example.test",
+  );
+  await expect(create.locator('input[name="locale"]')).toHaveValue("ko-KR");
+  await expect(create.locator('input[name="locale"]')).toHaveAttribute(
+    "type",
+    "hidden",
+  );
   await create.locator('input[name="consent"]').check();
+  await expect(create).toHaveAttribute("method", "POST");
+  await expect(create).toHaveAttribute("action", "?/request-verification");
+  await expectNativeFormValidity(create);
   await expect(create.locator('button[type="submit"]')).toBeEnabled();
+  const actionResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/subscribe?/request-verification"),
+  );
   await create.locator('button[type="submit"]').click();
+  expect((await actionResponse).status()).toBe(303);
   await page.waitForURL(/\/subscribe\?notice=/);
 
-  const pending = (await context.cookies()).find(
-    (cookie) => cookie.name === "gurine_subscription_session",
-  );
-  expect(pending).toMatchObject({
-    httpOnly: true,
-    path: "/subscription",
-    sameSite: "Lax",
-  });
-
-  const verificationToken = `subscription-verify-${randomUUID()}`;
-  await page.goto(
-    `http://127.0.0.1:29101/subscribe?token=${encodeURIComponent(verificationToken)}`,
-    { waitUntil: "networkidle" },
-  );
-  await expect(page).toHaveURL(/\/subscription\/manage\?notice=/);
-  expect(page.url()).not.toContain("token=");
-  await expect(page.locator(".error-summary")).toHaveCount(0);
+  await expectCanonicalSubscriptionExchange(page, context);
 
   const observed = await state(request);
   expect(
@@ -376,39 +394,47 @@ test("scoped subscription presets remain server-bound through browser submission
   const scopes = [
     {
       url: "http://127.0.0.1:29101/cases/integration-case",
+      actionId: "subscribe-case",
       scopeType: "CASE",
       scopeRef: "integration-case",
     },
     {
       url: "http://127.0.0.1:29101/agencies/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      actionId: "subscribe-agency",
       scopeType: "AGENCY",
       scopeRef: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     },
     {
       url: "http://127.0.0.1:29101/suppliers/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      actionId: "subscribe-supplier",
       scopeType: "SUPPLIER",
       scopeRef: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     },
     {
       url: "http://127.0.0.1:29101/corrections",
+      actionId: "subscribe",
       scopeType: "CORRECTIONS",
     },
     {
       url: "http://127.0.0.1:29101/cases?publicationState=PUBLISHED_ANOMALY",
+      actionId: "subscribe-filter",
       scopeType: "QUERY",
     },
   ];
 
   for (const [index, scope] of scopes.entries()) {
     await page.goto(scope.url, { waitUntil: "networkidle" });
-    const form = page.locator('form:has(input[name="scopeType"])').first();
+    const contextLink = page.locator(`[data-action-id="${scope.actionId}"]`);
+    await expect(contextLink).toHaveAttribute("href", /\/subscribe\?scope=/);
+    await contextLink.click();
+    await page.waitForURL(/\/subscribe\?scope=/);
+
+    const form = page.locator('[data-testid="public-subscription-form"]');
     await expect(form.locator('select[name="scopeType"]')).toHaveCount(0);
     await expect(form.locator('input[name="scopeType"]')).toHaveValue(
       scope.scopeType,
     );
-    await expect(form.locator('input[name="scopeType"] + output')).toHaveText(
-      scope.scopeType,
-    );
+    await expect(form.locator('[data-field="scopeType"] strong')).toBeVisible();
     if (scope.scopeRef) {
       await expect(form.locator('input[name="scopeRef"]')).toHaveValue(
         scope.scopeRef,
@@ -418,11 +444,20 @@ test("scoped subscription presets remain server-bound through browser submission
       .locator('input[name="email"]')
       .fill(`scoped-${index}@example.test`);
     await form.locator('select[name="frequency"]').selectOption("DAILY");
-    await form.locator('input[name="locale"]').fill("ko-KR");
+    await expect(form.locator('input[name="locale"]')).toHaveValue("ko-KR");
     await form.locator('input[name="consent"]').check();
     await expect(form.locator('button[type="submit"]')).toBeEnabled();
+    const actionResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().includes("/subscribe?/request-verification"),
+    );
     await form.locator('button[type="submit"]').click();
+    expect((await actionResponse).status()).toBe(303);
     await page.waitForURL(/notice=/);
+    if (scope.scopeType === "CASE") {
+      expect(new URL(page.url()).pathname).toBe("/cases/integration-case");
+    }
 
     const writes = (await state(request)).submissionWrites.filter(
       (write) =>
@@ -443,7 +478,9 @@ test("dataset download requests a real abuse-controlled export job", async ({
     waitUntil: "networkidle",
   });
   const exportForm = page.locator('form[data-action-id="download-dataset"]');
-  await exportForm.locator('input[name="datasetId"]').fill("published-cases");
+  await exportForm
+    .locator('input[name="datasetId"][value="published-cases"]')
+    .check();
   await exportForm.locator('select[name="format"]').selectOption("JSONL");
   await expect(exportForm.locator('button[type="submit"]')).toBeEnabled();
   await exportForm.locator('button[type="submit"]').click();

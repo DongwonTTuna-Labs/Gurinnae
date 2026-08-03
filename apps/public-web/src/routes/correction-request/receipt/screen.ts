@@ -11,7 +11,7 @@ export const screen = {
       id: "receipt",
       title: "접수 결과",
       component: "StatusAndRevisionHeader",
-      purpose: "ID·시각·상태.",
+      purpose: "접수 번호·시각·처리 상태.",
       test_id: "pub_028__section__receipt",
     },
     {

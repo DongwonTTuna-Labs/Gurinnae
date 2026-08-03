@@ -28,9 +28,105 @@ OPENAPI_DOCUMENTS = {
 
 
 # These values exist only in generated test evidence and mock responses. They do
-# not seed a production provider or claim that the unauthenticated relay catalog
-# contains either model.
+# not seed production data or claim that an unauthenticated upstream contains
+# the represented records.
 TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
+    "listPublicDatasets": {
+        "items": [
+            {
+                "id": "published-cases",
+                "title": "공개 사례 기록",
+                "description": "게시된 사례와 개정 이력을 확인하는 구조화 데이터",
+                "format": "JSONL",
+                "coverage": {
+                    "dateRange": {"label": "2025.01–2026.07"},
+                    "sourceIds": ["mock-procurement-source"],
+                    "recordCount": 864,
+                    "knownGaps": [],
+                    "freshness": {
+                        "asOf": "2026-07-12T00:00:00Z",
+                        "status": "CURRENT",
+                    },
+                },
+                "license": "CC-BY-4.0",
+                "updatedAt": "2026-07-12T00:00:00Z",
+                "downloadUrl": None,
+            },
+            {
+                "id": "public-contracts",
+                "title": "계약 대장",
+                "description": "공개 계약의 기관·업체·금액을 정리한 표 형식 데이터",
+                "format": "CSV",
+                "coverage": {
+                    "dateRange": {"label": "2024.01–2026.07"},
+                    "sourceIds": ["mock-procurement-source"],
+                    "recordCount": 2416,
+                    "knownGaps": [],
+                    "freshness": {
+                        "asOf": "2026-07-12T00:00:00Z",
+                        "status": "CURRENT",
+                    },
+                },
+                "license": "CC-BY-4.0",
+                "updatedAt": "2026-07-12T00:00:00Z",
+                "downloadUrl": None,
+            },
+            {
+                "id": "published-corrections",
+                "title": "공개 정정 기록",
+                "description": "공개 내용의 정정 사유와 적용 시점을 보존한 기록",
+                "format": "JSONL",
+                "coverage": {
+                    "dateRange": {"label": "2025.06–2026.07"},
+                    "sourceIds": ["mock-publication-register"],
+                    "recordCount": 37,
+                    "knownGaps": [],
+                    "freshness": {
+                        "asOf": "2026-07-12T00:00:00Z",
+                        "status": "CURRENT",
+                    },
+                },
+                "license": "CC-BY-4.0",
+                "updatedAt": "2026-07-12T00:00:00Z",
+                "downloadUrl": None,
+            },
+        ],
+        "appliedFilters": {"format": []},
+        "asOf": "2026-07-12T00:00:00Z",
+    },
+    "downloadPublicCases": {
+        "id": "public-cases-a95cbf94fea10d08",
+        "status": "READY",
+        "version": 1,
+        "filename": "public-cases.jsonl",
+        "mediaType": "application/x-ndjson; charset=utf-8",
+        "byteLength": 75,
+        "contentSha256": "a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81",
+        "contentBase64": "eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K",
+        "format": "JSONL",
+        "rowCount": 0,
+        "appliedFilters": {"publicationState": [], "sort": "updated_desc"},
+        "generatedAt": "2026-07-12T00:00:00Z",
+    },
+    "downloadPublicSearchRecords": {
+        "id": "public-search-records-a95cbf94fea10d08",
+        "status": "READY",
+        "version": 1,
+        "filename": "public-search-records.jsonl",
+        "mediaType": "application/x-ndjson; charset=utf-8",
+        "byteLength": 75,
+        "contentSha256": "a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81",
+        "contentBase64": "eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K",
+        "format": "JSONL",
+        "rowCount": 0,
+        "appliedFilters": {
+            "q": "계약",
+            "types": [],
+            "publicationState": [],
+            "sort": "relevance",
+        },
+        "generatedAt": "2026-07-12T00:00:00Z",
+    },
     "listRelayModels": {
         "items": [
             {
@@ -78,6 +174,20 @@ TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
     }
 }
 
+TEST_ONLY_OPERATION_RESPONSE_PATCHES: dict[str, dict[str, Any]] = {
+    "getAgency": {
+        "sidoCode": "11",
+        "sigunguCode": "11680",
+        "regionCodeVersion": "행정표준코드-2026.1",
+    },
+    "listPublicCases": {
+        "appliedFilters": {"sidoCode": "11", "sigunguCode": "11680"},
+    },
+    "searchPublicRecords": {
+        "appliedFilters": {"sidoCode": "11", "sigunguCode": "11680"},
+    },
+}
+
 
 GENERATED_PATH_PATTERNS = (
     re.compile(r"^specs/generated/[^/]+\.openapi\.json$"),
@@ -110,6 +220,19 @@ def write(path: str | Path, content: str, *, overwrite: bool | None = None) -> N
     normalized = content.rstrip() + "\n"
     if not target.exists() or target.read_text(encoding="utf-8") != normalized:
         target.write_text(normalized, encoding="utf-8")
+
+
+def biome_format(path: str | Path, content: str) -> str:
+    """Apply the repository formatter to generated JSON/TypeScript deterministically."""
+    completed = subprocess.run(
+        ["bunx", "biome", "format", "--stdin-file-path", str(path)],
+        cwd=ROOT,
+        input=content.rstrip() + "\n",
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return completed.stdout
 
 
 def load_yaml(path: str) -> dict[str, Any]:
@@ -279,7 +402,30 @@ def operation_response_samples() -> dict[str, tuple[int, str, Any]]:
                 f"test-only response sample must target application/json: {operation_id}"
             )
         mapping[operation_id] = (status, media_type, body)
+    for operation_id, patch in TEST_ONLY_OPERATION_RESPONSE_PATCHES.items():
+        generated = mapping.get(operation_id)
+        if generated is None:
+            raise ValueError(f"test-only response patch operation is not cataloged: {operation_id}")
+        status, media_type, body = generated
+        if media_type != "application/json" or not isinstance(body, dict):
+            raise ValueError(
+                f"test-only response patch requires a JSON object: {operation_id}"
+            )
+        merge_sample_patch(body, patch)
     return mapping
+
+
+def merge_sample_patch(target: dict[str, Any], patch: dict[str, Any]) -> None:
+    for key, value in patch.items():
+        if isinstance(value, dict):
+            nested = target.get(key)
+            if not isinstance(nested, dict):
+                raise ValueError(f"test-only response patch target is not an object: {key}")
+            merge_sample_patch(nested, value)
+        else:
+            if key not in target:
+                raise ValueError(f"test-only response patch target is missing: {key}")
+            target[key] = value
 
 
 def operation_sample_evidence(
@@ -511,7 +657,11 @@ pub struct Problem<'a> {
     for module in ("public", "control", "submission", "identity"):
         write(f"{path}/src/{module}/mod.rs", f'pub const SURFACE: &str = "{module}";')
     evidence = operation_sample_evidence(samples)
-    write("verification/generated-operation-samples.json", json.dumps(evidence, ensure_ascii=False, indent=2))
+    sample_path = "verification/generated-operation-samples.json"
+    write(
+        sample_path,
+        biome_format(sample_path, json.dumps(evidence, ensure_ascii=False, indent=2)),
+    )
 
 
 def ordinary_crate(path: str, modules: list[str]) -> None:

@@ -1,25 +1,35 @@
 <script lang="ts">
 import type { ScreenSectionProps } from "../../index";
+import ProjectionValue from "../ProjectionValue.svelte";
 import SectionHeading from "./SectionHeading.svelte";
 
 let { section, runtime, projection }: ScreenSectionProps = $props();
 const showResponse = $derived(/response|party/i.test(section.id));
+const knownFields = $derived(
+  projection?.fields.filter((field) => field.known && field.value !== null) ??
+    [],
+);
+const unknownFields = $derived(
+  projection?.fields.filter((field) => !field.known) ?? [],
+);
 </script>
 
 <SectionHeading {section} kicker="자료 구분" />
 <div class="known-unknown-response">
   <article>
     <h3>확인된 내용</h3>
-    {#if projection}
-      <dl>{#each projection.fields.filter((field) => field.known) as field}<div><dt>{field.label}</dt><dd>{field.value}</dd></div>{/each}</dl>
+    {#if knownFields.length > 0}
+      <dl>{#each knownFields as field}<div><dt>{field.label}</dt><dd><ProjectionValue name={field.name} label={field.label} value={field.value} /></dd></div>{/each}</dl>
+    {:else if !projection}
+      <p>확인된 내용을 불러오는 중입니다.</p>
     {:else}
-      <p>권위 투영값을 불러오는 중입니다.</p>
+      <p>자료 없음</p>
     {/if}
   </article>
   <article>
     <h3>아직 모르는 내용</h3>
-    {#if projection && projection.fields.some((field) => !field.known)}
-      <dl>{#each projection.fields.filter((field) => !field.known) as field}<div><dt>{field.label}</dt><dd>확인 필요</dd></div>{/each}</dl>
+    {#if unknownFields.length > 0}
+      <dl>{#each unknownFields as field}<div><dt>{field.label}</dt><dd>확인 필요</dd></div>{/each}</dl>
     {:else}
       <p>의도와 책임은 자동으로 추정하지 않습니다.</p>
     {/if}

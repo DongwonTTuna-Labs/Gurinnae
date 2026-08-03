@@ -1,6 +1,6 @@
 {
   "specification_version": "13.0.0",
-  "verified_at": "2026-07-29",
+  "verified_at": "2026-07-30",
   "result": "PASS",
   "toolchain": {
     "bun": "1.3.14",
@@ -11,17 +11,17 @@
   "contracts": {
     "public": {
       "generated_files": 16,
-      "generated_bytes": 149067,
-      "tree_sha256": "55a63a91d4fcb62a6f90edb2337735578262fa5e7bc3b383b994465b2d120895",
-      "operations": 41,
-      "generated_sdk_exports": 41,
+      "generated_bytes": 156603,
+      "tree_sha256": "672d10b715523894d7c8aed0fd9de6e71304a3d06473f8d53d514597def8ded5",
+      "operations": 43,
+      "generated_sdk_exports": 43,
       "generation": "PASS",
       "second_generation_diff": "0 bytes"
     },
     "submission": {
       "generated_files": 16,
-      "generated_bytes": 170507,
-      "tree_sha256": "e6573a96cc12e987e76f8476163531d548e5a2a979079b045a04e285b5209702",
+      "generated_bytes": 170529,
+      "tree_sha256": "ddd08402cba20821b8c4b0ab97566e9eab7a6e6be71e350a4ec85d89e22b9b3a",
       "operations": 34,
       "generated_sdk_exports": 42,
       "generation": "PASS",
@@ -29,8 +29,8 @@
     },
     "control": {
       "generated_files": 16,
-      "generated_bytes": 622105,
-      "tree_sha256": "a7b1aa38da3305c6fe4c525e5addba4ff7e4c0e6a6948ad3bfdf24e17f6ceffa",
+      "generated_bytes": 618659,
+      "tree_sha256": "3c4a1f652bd343b6632866633e7633d5c06d48ff6900a1ed7127c5aa84c66c9d",
       "operations": 134,
       "generated_sdk_exports": 170,
       "generated_sdk_export_breakdown": {
@@ -54,7 +54,7 @@
   "generated_exact_optional_property_types": false,
   "first_party_wrappers_exact_optional_property_types": true,
   "deterministic_regeneration": "PASS",
-  "operation_count_scope": "operations records API source-contract counts (the four external APIs total 215; identity-internal is the nine-operation private document); generated_sdk_exports records the checked-in SDK after the additive OpenAPI overlay.",
+  "operation_count_scope": "operations records API source-contract counts (the four external APIs total 217; identity-internal is the nine-operation private document); generated_sdk_exports records the checked-in SDK after the additive OpenAPI overlay.",
   "tree_digest_algorithm": "SHA-256 over sorted relative POSIX paths, each encoded as u32be path length, path bytes, u64be file size, and file bytes.",
   "policy": "Four generated clients are generator-owned, excluded from style rewriting, and compiled in a separate strict TypeScript project with exactOptionalPropertyTypes=false; handwritten first-party wrappers retain exactOptionalPropertyTypes=true."
 }

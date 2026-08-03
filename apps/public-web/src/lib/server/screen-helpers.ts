@@ -7,9 +7,15 @@ import {
 } from "@gurine/config";
 import type {
   AttachmentRemovalItem,
+  PublicLedgerActionId,
+  PublicLedgerCell,
+  PublicLedgerRow,
+  PublicLedgerScreenId,
+  RowSelectionNavigationOptions,
   ScreenField,
   ScreenViewModel,
 } from "@gurine/ui";
+import { publicLedgerCell, publicLedgerStatusTone } from "@gurine/ui";
 import type { RequestEvent } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import {
@@ -143,9 +149,7 @@ export function correctionBootstrapFields(event: RequestEvent): ScreenField[] {
   const indexed = operations.get("createCorrectionRequestDraft");
   if (!indexed)
     throw new Error("createCorrectionRequestDraft contract missing");
-  const locale =
-    event.request.headers.get("accept-language")?.split(",", 1)[0]?.trim() ||
-    "ko-KR";
+  const locale = requestLocale(event.request);
   const caseSlug =
     event.url.searchParams.get("caseSlug") ??
     event.url.searchParams.get("case") ??
@@ -180,6 +184,84 @@ export function mergeFields(
   });
 }
 
+export function publicLedgerRow(
+  screenId: PublicLedgerScreenId,
+  index: number,
+  cells: Pick<PublicLedgerRow, "identifier" | "kind" | "title"> & {
+    summary?: PublicLedgerCell | undefined;
+    status?: PublicLedgerRow["status"] | undefined;
+    metric?: PublicLedgerCell | undefined;
+    href?: string | undefined;
+  },
+): PublicLedgerRow {
+  return {
+    key: `${screenId}:${index}:${cells.identifier.text}`,
+    identifier: cells.identifier,
+    title: cells.title,
+    kind: cells.kind,
+    ...(cells.summary ? { summary: cells.summary } : {}),
+    ...(cells.status ? { status: cells.status } : {}),
+    ...(cells.metric ? { metric: cells.metric } : {}),
+    ...(cells.href ? { href: cells.href } : {}),
+  };
+}
+
+export function optionalLedgerCell(
+  fieldName: string,
+  label: string,
+  value: string | number | null | undefined,
+): PublicLedgerCell | undefined {
+  return value === null || value === undefined
+    ? undefined
+    : publicLedgerCell(fieldName, label, value);
+}
+
+export function ledgerStatus(fieldName: string, label: string, value: string) {
+  return {
+    label,
+    text: publicLedgerCell(fieldName, label, value).text,
+    tone: publicLedgerStatusTone(value),
+  } as const;
+}
+
+export function optionalLedgerStatus(
+  fieldName: string,
+  label: string,
+  value: string | null | undefined,
+) {
+  return value === null || value === undefined
+    ? undefined
+    : ledgerStatus(fieldName, label, value);
+}
+
+export function verifiedLedgerHref(
+  actionId: PublicLedgerActionId,
+  options: RowSelectionNavigationOptions,
+  labels: readonly (string | undefined)[],
+): string | undefined {
+  const expected = new Set(
+    labels.filter((label): label is string => Boolean(label)),
+  );
+  const hrefs = [
+    ...new Set(
+      (options[actionId] ?? [])
+        .filter((option) => expected.has(option.label))
+        .map((option) => option.href),
+    ),
+  ];
+  return hrefs.length === 1 ? hrefs[0] : undefined;
+}
+
+export function compactLedgerLabel(
+  values: readonly (string | null | undefined)[],
+) {
+  const parts = values.flatMap((value) => {
+    const normalized = value?.replaceAll(/\s+/gu, " ").trim();
+    return normalized ? [normalized] : [];
+  });
+  return parts.length > 0 ? parts.join(" · ").slice(0, 120) : undefined;
+}
+
 export function formPreset(
   data: Record<string, unknown>,
   explicit: Record<string, unknown>,
@@ -205,7 +287,25 @@ export function actionPreset(
       ...explicit,
     };
   if (operationId !== "createSubscription") return explicit;
-  return subscriptionPreset(explicit, event.url, event.params);
+  return {
+    ...subscriptionPreset(explicit, event.url, event.params),
+    locale: requestLocale(event.request),
+  };
+}
+
+export function requestLocale(request: Request): string {
+  const ranges = request.headers.get("accept-language")?.split(",") ?? [];
+  for (const range of ranges) {
+    const candidate = range.split(";", 1)[0]?.trim();
+    if (!candidate || candidate === "*") continue;
+    try {
+      const [locale] = Intl.getCanonicalLocales(candidate);
+      if (locale) return locale;
+    } catch {
+      // Ignore invalid language ranges and continue to the next preference.
+    }
+  }
+  return "ko-KR";
 }
 
 export function actionOperationId(

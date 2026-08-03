@@ -11,7 +11,7 @@ export const screen = {
       id: "purpose",
       title: "목적",
       component: "StructuredContentSection",
-      purpose: "찾는 패턴과 비목표.",
+      purpose: "탐지 대상 유형과 비대상 범위.",
       test_id: "pub_014__section__purpose",
     },
     {

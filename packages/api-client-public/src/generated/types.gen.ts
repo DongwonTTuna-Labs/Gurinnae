@@ -62,6 +62,9 @@ export type AgenciesItem = {
     name: string;
     agencyType: string;
     jurisdiction?: string | null;
+    sidoCode: string | null;
+    sigunguCode: string | null;
+    regionCodeVersion: string | null;
     caseCounts: CaseStateCounts;
     coverage: CoverageModel;
     href: string;
@@ -108,6 +111,9 @@ export type AgencyResponse = {
     name: string;
     agencyType: string;
     jurisdiction?: string;
+    sidoCode: string | null;
+    sigunguCode: string | null;
+    regionCodeVersion: string | null;
     identifiers: Array<Identifier>;
     coverage: CoverageModel;
     metrics: Array<MetricWithContext>;
@@ -665,6 +671,10 @@ export type PublicCaseResponse = {
     publishedAt: string;
     updatedAt: string;
     summary: string;
+    agencyName: string | null;
+    contractName: string | null;
+    amount: Money | null;
+    nonConclusion: string;
     confirmedFacts: Array<FactItem>;
     criticalUnknowns: Array<UnknownItem>;
     partyResponses: Array<PartyResponse>;
@@ -693,6 +703,10 @@ export type PublicCaseRevisionResponse = {
 
 export type PublicCaseSnapshot = {
     case: CaseCard;
+    agencyName: string | null;
+    contractName: string | null;
+    amount: Money | null;
+    nonConclusion: string;
     confirmedFacts: Array<FactItem>;
     criticalUnknowns: Array<UnknownItem>;
     partyResponses: Array<PartyResponse>;
@@ -710,12 +724,36 @@ export type PublicCaseSnapshot = {
 export type PublicCasesAppliedFilters = {
     publicationState?: Array<string>;
     agencyId?: string;
+    sidoCode?: string;
+    sigunguCode?: string;
     supplierId?: string;
     ruleId?: string;
     publishedFrom?: string;
     publishedTo?: string;
     hasResponse?: boolean;
     hasCorrection?: boolean;
+    sort?: 'updated_desc' | 'published_desc' | 'title_asc';
+};
+
+/**
+ * 최대 5,000개 사건 레코드의 동기 내려받기 결과. CSV는
+ * `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
+ * 이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
+ * rowCount는 고지 레코드를 제외한다.
+ */
+export type PublicCasesDownload = {
+    id: string;
+    status: 'READY';
+    version: number;
+    filename: string;
+    mediaType: string;
+    byteLength: number;
+    contentSha256: string;
+    contentBase64: string;
+    format: 'CSV' | 'JSONL';
+    rowCount: number;
+    appliedFilters: PublicCasesAppliedFilters;
+    generatedAt: string;
 };
 
 export type PublicCasesItem = CaseCard;
@@ -764,7 +802,11 @@ export type PublicEvidence = {
     id: string;
     title: string;
     evidenceType: string;
-    sourceUrl?: string | null;
+    documentTitle: string | null;
+    publisher: string | null;
+    publishedAt: string | null;
+    sourceUrl: string | null;
+    pageAnchor: string | null;
     sourceLocator: string;
     contentSha256: string;
     publicExcerpt?: string | null;
@@ -775,8 +817,33 @@ export type PublicRecordsSearchResultAppliedFilters = {
     q?: string;
     types?: Array<string>;
     publicationState?: Array<string>;
+    agencyId?: string;
+    sidoCode?: string;
+    sigunguCode?: string;
     dateFrom?: string;
     dateTo?: string;
+    sort?: 'relevance' | 'updated_desc' | 'title_asc';
+};
+
+/**
+ * 최대 5,000개 검색 결과 레코드의 동기 내려받기 결과. CSV는
+ * `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
+ * 이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
+ * rowCount는 고지 레코드를 제외한다.
+ */
+export type PublicSearchDownload = {
+    id: string;
+    status: 'READY';
+    version: number;
+    filename: string;
+    mediaType: string;
+    byteLength: number;
+    contentSha256: string;
+    contentBase64: string;
+    format: 'CSV' | 'JSONL';
+    rowCount: number;
+    appliedFilters: PublicRecordsSearchResultAppliedFilters;
+    generatedAt: string;
 };
 
 export type PublicRecordsSearchResultItem = {
@@ -1326,6 +1393,8 @@ export type ListPublicCasesData = {
         limit?: number;
         publicationState?: Array<string>;
         agencyId?: string;
+        sidoCode?: string;
+        sigunguCode?: string;
         supplierId?: string;
         ruleId?: string;
         publishedFrom?: string;
@@ -1362,6 +1431,59 @@ export type ListPublicCasesResponses = {
 };
 
 export type ListPublicCasesResponse = ListPublicCasesResponses[keyof ListPublicCasesResponses];
+
+export type DownloadPublicCasesData = {
+    body?: never;
+    headers?: {
+        'X-Request-ID'?: string;
+    };
+    path?: never;
+    query: {
+        format: 'CSV' | 'JSONL';
+        publicationState?: Array<string>;
+        agencyId?: string;
+        sidoCode?: string;
+        sigunguCode?: string;
+        supplierId?: string;
+        ruleId?: string;
+        publishedFrom?: string;
+        publishedTo?: string;
+        hasResponse?: boolean;
+        hasCorrection?: boolean;
+        sort?: 'updated_desc' | 'published_desc' | 'title_asc';
+    };
+    url: '/v1/cases/download';
+};
+
+export type DownloadPublicCasesErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: ProblemDetails;
+    /**
+     * Problem response: PRECONDITION_FAILED. 현재 조건의 결과가 5,000건을 초과합니다. 전체 자료는 데이터 내려받기에서 요청하세요.
+     */
+    422: ProblemDetails;
+    /**
+     * Problem response: RATE_LIMITED
+     */
+    429: ProblemDetails;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: ProblemDetails;
+};
+
+export type DownloadPublicCasesError = DownloadPublicCasesErrors[keyof DownloadPublicCasesErrors];
+
+export type DownloadPublicCasesResponses = {
+    /**
+     * Successful response
+     */
+    200: PublicCasesDownload;
+};
+
+export type DownloadPublicCasesResponse = DownloadPublicCasesResponses[keyof DownloadPublicCasesResponses];
 
 export type GetPublicCaseData = {
     body?: never;
@@ -2484,6 +2606,9 @@ export type SearchPublicRecordsData = {
         q: string;
         types?: Array<string>;
         publicationState?: Array<string>;
+        agencyId?: string;
+        sidoCode?: string;
+        sigunguCode?: string;
         dateFrom?: string;
         dateTo?: string;
         cursor?: string;
@@ -2518,6 +2643,57 @@ export type SearchPublicRecordsResponses = {
 };
 
 export type SearchPublicRecordsResponse = SearchPublicRecordsResponses[keyof SearchPublicRecordsResponses];
+
+export type DownloadPublicSearchRecordsData = {
+    body?: never;
+    headers?: {
+        'X-Request-ID'?: string;
+    };
+    path?: never;
+    query: {
+        format: 'CSV' | 'JSONL';
+        q: string;
+        types?: Array<string>;
+        publicationState?: Array<string>;
+        agencyId?: string;
+        sidoCode?: string;
+        sigunguCode?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        sort?: 'relevance' | 'updated_desc' | 'title_asc';
+    };
+    url: '/v1/search/download';
+};
+
+export type DownloadPublicSearchRecordsErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: ProblemDetails;
+    /**
+     * Problem response: PRECONDITION_FAILED. 현재 조건의 결과가 5,000건을 초과합니다. 전체 자료는 데이터 내려받기에서 요청하세요.
+     */
+    422: ProblemDetails;
+    /**
+     * Problem response: RATE_LIMITED
+     */
+    429: ProblemDetails;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: ProblemDetails;
+};
+
+export type DownloadPublicSearchRecordsError = DownloadPublicSearchRecordsErrors[keyof DownloadPublicSearchRecordsErrors];
+
+export type DownloadPublicSearchRecordsResponses = {
+    /**
+     * Successful response
+     */
+    200: PublicSearchDownload;
+};
+
+export type DownloadPublicSearchRecordsResponse = DownloadPublicSearchRecordsResponses[keyof DownloadPublicSearchRecordsResponses];
 
 export type ListSourceStatusData = {
     body?: never;

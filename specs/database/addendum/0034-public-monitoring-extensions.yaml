@@ -1,0 +1,41 @@
+schema_version: 1
+proposal_version: 2026-07-30.0034-public-monitoring-extensions.v1
+status: FINAL
+scope:
+  migration: 0034_public_monitoring_extensions.sql
+  exact_relations: []
+  relation_delta: 0
+
+existing_relation_changes:
+  - relation: core.agencies
+    changes:
+      - nullable sido_code char(2), sigungu_code char(5), and region_code_version text store one Ministry of the Interior and Safety administrative-code assignment per agency
+      - either all three region fields are absent or both digit codes and a nonblank version are present, and the sigungu prefix equals sido_code
+  - relation: public.agencies
+    changes:
+      - the public projection carries the same nullable region-code triple and pair-consistency constraint as core.agencies
+      - public cases inherit their region through the ordering-agency projection rather than a case-region join table
+  - relation: editorial.evidence
+    changes:
+      - nullable document_title, publisher, published_at, and page_anchor extend the approval-time public evidence snapshot; existing source_url remains the source-link field
+  - relation: intake.correction_request_drafts
+    changes:
+      - an optional public case binding is stored only when case_slug and publication_revision are both present and identify one exact public case revision
+      - an absent pair remains valid for a general correction request
+
+owner_routines:
+  intake.create_correction_session:
+    signature: intake.create_correction_session(char(64), text, text, text, integer, timestamptz) RETURNS TABLE(draft_id uuid, session_id uuid, version bigint)
+    security:
+      mode: SECURITY DEFINER
+      owner: gurine_migrator
+      search_path: [pg_catalog, intake, extensions, pg_temp]
+      public_execute: false
+      runtime_execute: [gurine_submission_api]
+      owner_reads: [public.cases, public.case_revisions]
+    binding:
+      absent_pair: both case_slug and publication_revision are null
+      incomplete_pair: SQLSTATE 22023
+      unknown_or_mismatched_pair: SQLSTATE P0002
+      validation_lock: exact public.cases plus public.case_revisions pair is held FOR KEY SHARE through draft creation
+    atomicity: validation, correction draft insert, and submission-session insert execute in the caller migration-function transaction

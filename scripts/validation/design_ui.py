@@ -45,7 +45,7 @@ def validate_ui(
     }
     result.require(
         set(section_surface_overrides["overrides"]) == surface_mismatches
-        and len(surface_mismatches) == 28,
+        and len(surface_mismatches) == 26,
         "section surface override set is not exact",
     )
     navigation_action_keys = {
@@ -56,14 +56,14 @@ def validate_ui(
     }
     navigation_rows = navigation_contracts["navigation_contracts"]
     result.require(
-        len(navigation_action_keys) == len(navigation_rows) == 102
+        len(navigation_action_keys) == len(navigation_rows) == 108
         and set(navigation_rows) == navigation_action_keys
         and not contains_forbidden_marker(navigation_contracts),
         "navigation action contract set is incomplete or unresolved",
     )
     result.require(
         all(row["status"] == "resolved" for row in navigation_rows.values())
-        and len({row["oracle"] for row in navigation_rows.values()}) == 102,
+        and len({row["oracle"] for row in navigation_rows.values()}) == 108,
         "navigation action status or oracle identity is invalid",
     )
     for key, navigation in navigation_rows.items():

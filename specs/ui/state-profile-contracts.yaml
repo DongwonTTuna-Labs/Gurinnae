@@ -2,14 +2,25 @@ schema_version: 1
 specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 counts:
-  profiles: 9
-  unique_state_semantics: 36
-  profile_state_templates: 72
+  profiles: 10
+  unique_state_semantics: 37
+  profile_state_templates: 82
 runtime_signal_contract:
   type: ScreenRuntimeSignalsV1
   additional_properties: false
-  rule: Every signal is bound by a screen contract to an operation result, persisted receipt, trusted session fact, or browser
-    connectivity fact; a renderer cannot invent it.
+  rule: Every signal is bound by a screen contract to an operation result, persisted receipt, trusted session fact, BFF-validated
+    URL query fact, or browser connectivity fact; a renderer cannot invent it.
+  source_provenance:
+    signals.query_present:
+      type: boolean
+      profiles:
+      - public-search
+      source: BFF-normalized URL query parameter q
+      true_when: q contains a non-whitespace value
+      false_when: q is absent or blank
+      forbidden_sources:
+      - renderer inference
+      - unvalidated browser state
 selection_rules:
 - A screen's explicit state_profile is authoritative.
 - Background refresh and orthogonal overlays cannot replace the primary task state without declared precedence.
@@ -195,7 +206,7 @@ templates:
   profile: public-data
   state: offline
   family: connectivity-loss
-  trigger: &id009
+  trigger: &id008
     all:
     - path: signals.connectivity
       op: eq
@@ -217,7 +228,7 @@ templates:
   profile: public-data
   state: success
   family: successful-read-or-submit
-  trigger: &id010
+  trigger: &id009
     all:
     - path: signals.blocking_pending
       op: eq
@@ -231,6 +242,166 @@ templates:
     - path: signals.outcome_state
       op: eq
       value: SUCCESS
+  preserve: current-authoritative-data-or-receipt
+  action_policy: screen-primary
+  focus: main-answer-or-receipt
+  live: polite-once-if-async
+  copy_frame:
+    heading: '{screen_title} — success'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: current-authoritative-data-or-receipt'
+    next_step: '허용 행동 정책: screen-primary'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::awaiting-query
+  profile: public-search
+  state: awaiting-query
+  family: query-entry
+  trigger:
+    all:
+    - path: signals.blocking_pending
+      op: eq
+      value: false
+    - path: signals.blocking_failure
+      op: eq
+      value: false
+    - path: signals.query_present
+      op: eq
+      value: false
+  preserve: search-input-and-filters
+  action_policy: enter-or-choose-query
+  focus: search-input
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — awaiting-query'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: search-input-and-filters'
+    next_step: '허용 행동 정책: enter-or-choose-query'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::initial-loading
+  profile: public-search
+  state: initial-loading
+  family: initial-read
+  trigger: *id001
+  preserve: none
+  action_policy: none
+  focus: main-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — initial-loading'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: none'
+    next_step: '허용 행동 정책: none'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::refreshing
+  profile: public-search
+  state: refreshing
+  family: background-read
+  trigger: *id002
+  preserve: visible-data-and-focus
+  action_policy: keep-safe-actions
+  focus: preserve
+  live: polite-once-after-completion
+  copy_frame:
+    heading: '{screen_title} — refreshing'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-and-focus'
+    next_step: '허용 행동 정책: keep-safe-actions'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::empty
+  profile: public-search
+  state: empty
+  family: confirmed-zero
+  trigger: *id003
+  preserve: scope-and-freshness
+  action_policy: screen-empty-recovery
+  focus: empty-heading
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — empty'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: scope-and-freshness'
+    next_step: '허용 행동 정책: screen-empty-recovery'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::filtered-empty
+  profile: public-search
+  state: filtered-empty
+  family: confirmed-filtered-zero
+  trigger: *id004
+  preserve: query-filters-sort
+  action_policy: clear-or-edit-filter
+  focus: result-summary
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — filtered-empty'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: query-filters-sort'
+    next_step: '허용 행동 정책: clear-or-edit-filter'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::partial
+  profile: public-search
+  state: partial
+  family: partial-data
+  trigger: *id005
+  preserve: available-data-freshness-and-missing-scope
+  action_policy: retry-missing-slice
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — partial'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: available-data-freshness-and-missing-scope'
+    next_step: '허용 행동 정책: retry-missing-slice'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::stale
+  profile: public-search
+  state: stale
+  family: stale-data
+  trigger: *id006
+  preserve: last-verified-data-and-as-of
+  action_policy: refresh-read-only
+  focus: stale-notice
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — stale'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: last-verified-data-and-as-of'
+    next_step: '허용 행동 정책: refresh-read-only'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::error
+  profile: public-search
+  state: error
+  family: blocking-failure
+  trigger: *id007
+  preserve: truthful-saved-state-and-support-reference
+  action_policy: retry-when-safe
+  focus: error-heading
+  live: assertive-once
+  copy_frame:
+    heading: '{screen_title} — error'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: truthful-saved-state-and-support-reference'
+    next_step: '허용 행동 정책: retry-when-safe'
+  retry_safety: NO_BLIND_RETRY
+- profile_state_id: public-search::offline
+  profile: public-search
+  state: offline
+  family: connectivity-loss
+  trigger: *id008
+  preserve: visible-data-local-input-and-last-server-ack
+  action_policy: disable-network-actions-until-online
+  focus: preserve
+  live: polite-once
+  copy_frame:
+    heading: '{screen_title} — offline'
+    summary: '{object_label}의 현재 범위와 영향을 설명한다.'
+    preservation: '보존 범위: visible-data-local-input-and-last-server-ack'
+    next_step: '허용 행동 정책: disable-network-actions-until-online'
+  retry_safety: STATE_SPECIFIC
+- profile_state_id: public-search::success
+  profile: public-search
+  state: success
+  family: successful-read-or-submit
+  trigger: *id009
   preserve: current-authoritative-data-or-receipt
   action_policy: screen-primary
   focus: main-answer-or-receipt
@@ -372,7 +543,7 @@ templates:
   profile: static-content
   state: loading
   family: initial-read
-  trigger: &id008
+  trigger: &id010
     all:
     - path: signals.blocking_pending
       op: eq
@@ -453,7 +624,7 @@ templates:
   profile: guided-submission
   state: loading
   family: initial-read
-  trigger: *id008
+  trigger: *id010
   preserve: none
   action_policy: none
   focus: main-heading
@@ -584,7 +755,7 @@ templates:
   profile: guided-submission
   state: offline
   family: connectivity-loss
-  trigger: *id009
+  trigger: *id008
   preserve: visible-data-local-input-and-last-server-ack
   action_policy: disable-network-actions-until-online
   focus: preserve
@@ -621,7 +792,7 @@ templates:
   profile: guided-submission
   state: success
   family: successful-read-or-submit
-  trigger: *id010
+  trigger: *id009
   preserve: current-authoritative-data-or-receipt
   action_policy: screen-primary
   focus: main-answer-or-receipt
@@ -636,7 +807,7 @@ templates:
   profile: internal-data
   state: loading
   family: initial-read
-  trigger: *id008
+  trigger: *id010
   preserve: none
   action_policy: none
   focus: main-heading
@@ -799,7 +970,7 @@ templates:
   profile: workspace
   state: loading
   family: initial-read
-  trigger: *id008
+  trigger: *id010
   preserve: none
   action_policy: none
   focus: main-heading
@@ -941,7 +1112,7 @@ templates:
   profile: decision
   state: loading
   family: initial-read
-  trigger: *id008
+  trigger: *id010
   preserve: none
   action_policy: none
   focus: main-heading
@@ -1120,7 +1291,7 @@ templates:
   profile: operations
   state: loading
   family: initial-read
-  trigger: *id008
+  trigger: *id010
   preserve: none
   action_policy: none
   focus: main-heading
@@ -1367,7 +1538,7 @@ templates:
   profile: system
   state: offline
   family: connectivity-loss
-  trigger: *id009
+  trigger: *id008
   preserve: visible-data-local-input-and-last-server-ack
   action_policy: disable-network-actions-until-online
   focus: preserve

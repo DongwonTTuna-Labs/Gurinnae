@@ -11,7 +11,7 @@ export const screen = {
       id: "mission",
       title: "운영 목적",
       component: "StructuredContentSection",
-      purpose: "제품 정의.",
+      purpose: "구린네의 운영 목적과 공개 범위.",
       test_id: "pub_022__section__mission",
     },
     {

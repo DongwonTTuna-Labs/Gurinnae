@@ -94,7 +94,7 @@ docker run --rm --network "$network" \
   gurine-sqlx-migrator:13.0.0
 
 # The immutable authority baseline remains 24 migrations, while the runtime
-# image must apply the complete nine-file post-base set as well.  Assert both
+# image must apply the complete ten-file post-base set as well.  Assert both
 # the count and the contiguous version sequence so a missing or out-of-order
 # migration cannot be hidden by a successful SQLx run.
 expected_migration_count="$(

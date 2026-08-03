@@ -11,6 +11,39 @@ type MappingCase = Readonly<{
 
 const cases: readonly MappingCase[] = [
   {
+    screenId: "PUB-001",
+    actionId: "open-case",
+    data: {
+      listPublicCases: {
+        items: [{ title: "최근 공개 사례", href: "/cases/recent-case" }],
+      },
+    },
+    label: "최근 공개 사례",
+    href: "/cases/recent-case",
+  },
+  {
+    screenId: "PUB-002",
+    actionId: "open-result",
+    data: {
+      searchPublicRecords: {
+        items: [{ title: "공개 사례", href: "/cases/public-case" }],
+      },
+    },
+    label: "공개 사례",
+    href: "/cases/public-case",
+  },
+  {
+    screenId: "PUB-003",
+    actionId: "open-case",
+    data: {
+      listPublicCases: {
+        items: [{ title: "공개 사례", href: "/cases/public-case" }],
+      },
+    },
+    label: "공개 사례",
+    href: "/cases/public-case",
+  },
+  {
     screenId: "PUB-007",
     actionId: "open-agency",
     data: {
@@ -218,6 +251,43 @@ describe("row-selection navigation options", () => {
   });
 
   it.each([
+    "/agencies/agency-1",
+    "/cases/case-1",
+    "/contracts/contract-1",
+    "/corrections/correction-1",
+    "/data",
+    "/methodology/rules/rule-1",
+    "/sources/source-1",
+    "/suppliers/supplier-1",
+  ])("allows one of the eight public search detail paths: %s", (href) => {
+    expect(
+      buildRowSelectionNavigationOptions("PUB-002", {
+        searchPublicRecords: { items: [{ title: "검색 결과", href }] },
+      }),
+    ).toEqual({ "open-result": [{ label: "검색 결과", href }] });
+  });
+
+  it("keeps case-list navigation on the case detail allowlist", () => {
+    expect(
+      buildRowSelectionNavigationOptions("PUB-003", {
+        listPublicCases: {
+          items: [{ title: "잘못된 대상", href: "/agencies/agency-1" }],
+        },
+      }),
+    ).toEqual({});
+  });
+
+  it.each([
+    [
+      "PUB-002",
+      {
+        searchPublicRecords: {
+          items: [
+            { title: "쿼리 주입", href: "/cases/case-1?returnTo=/internal" },
+          ],
+        },
+      },
+    ],
     ["PUB-007", { listAgencies: { items: [] } }],
     [
       "PUB-011",

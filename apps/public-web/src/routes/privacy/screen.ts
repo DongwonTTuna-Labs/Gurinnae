@@ -11,7 +11,7 @@ export const screen = {
       id: "controller",
       title: "처리자",
       component: "StructuredContentSection",
-      purpose: "법인·연락처.",
+      purpose: "개인정보 처리 주체와 연락처.",
       test_id: "pub_031__section__controller",
     },
     {

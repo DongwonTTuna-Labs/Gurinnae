@@ -21,6 +21,9 @@
       "id": "00000000-0000-4000-8000-000000000001",
       "name": "",
       "agencyType": "",
+      "sidoCode": "11",
+      "sigunguCode": "11680",
+      "regionCodeVersion": "행정표준코드-2026.1",
       "identifiers": [],
       "coverage": {
         "dateRange": {
@@ -104,14 +107,39 @@
       "appliedFilters": {
         "publicationState": [],
         "agencyId": "00000000-0000-4000-8000-000000000001",
+        "sidoCode": "11",
+        "sigunguCode": "11680",
         "supplierId": "00000000-0000-4000-8000-000000000001",
         "ruleId": "",
         "publishedFrom": "2026-07-12",
         "publishedTo": "2026-07-12",
         "hasResponse": false,
-        "hasCorrection": false
+        "hasCorrection": false,
+        "sort": "updated_desc"
       },
       "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "downloadPublicCases": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "public-cases-a95cbf94fea10d08",
+      "status": "READY",
+      "version": 1,
+      "filename": "public-cases.jsonl",
+      "mediaType": "application/x-ndjson; charset=utf-8",
+      "byteLength": 75,
+      "contentSha256": "a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81",
+      "contentBase64": "eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K",
+      "format": "JSONL",
+      "rowCount": 0,
+      "appliedFilters": {
+        "publicationState": [],
+        "sort": "updated_desc"
+      },
+      "generatedAt": "2026-07-12T00:00:00Z"
     }
   },
   "getPublicCase": {
@@ -126,6 +154,13 @@
       "publishedAt": "2026-07-12T00:00:00Z",
       "updatedAt": "2026-07-12T00:00:00Z",
       "summary": "",
+      "agencyName": "",
+      "contractName": "",
+      "amount": {
+        "amount": "0",
+        "currency": "xxx"
+      },
+      "nonConclusion": "",
       "confirmedFacts": [],
       "criticalUnknowns": [],
       "partyResponses": [],
@@ -233,6 +268,13 @@
           "updatedAt": "2026-07-12T00:00:00Z",
           "href": ""
         },
+        "agencyName": "",
+        "contractName": "",
+        "amount": {
+          "amount": "0",
+          "currency": "xxx"
+        },
+        "nonConclusion": "",
         "confirmedFacts": [],
         "criticalUnknowns": [],
         "partyResponses": [],
@@ -588,7 +630,71 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "items": [],
+      "items": [
+        {
+          "id": "published-cases",
+          "title": "공개 사례 기록",
+          "description": "게시된 사례와 개정 이력을 확인하는 구조화 데이터",
+          "format": "JSONL",
+          "coverage": {
+            "dateRange": {
+              "label": "2025.01–2026.07"
+            },
+            "sourceIds": ["mock-procurement-source"],
+            "recordCount": 864,
+            "knownGaps": [],
+            "freshness": {
+              "asOf": "2026-07-12T00:00:00Z",
+              "status": "CURRENT"
+            }
+          },
+          "license": "CC-BY-4.0",
+          "updatedAt": "2026-07-12T00:00:00Z",
+          "downloadUrl": null
+        },
+        {
+          "id": "public-contracts",
+          "title": "계약 대장",
+          "description": "공개 계약의 기관·업체·금액을 정리한 표 형식 데이터",
+          "format": "CSV",
+          "coverage": {
+            "dateRange": {
+              "label": "2024.01–2026.07"
+            },
+            "sourceIds": ["mock-procurement-source"],
+            "recordCount": 2416,
+            "knownGaps": [],
+            "freshness": {
+              "asOf": "2026-07-12T00:00:00Z",
+              "status": "CURRENT"
+            }
+          },
+          "license": "CC-BY-4.0",
+          "updatedAt": "2026-07-12T00:00:00Z",
+          "downloadUrl": null
+        },
+        {
+          "id": "published-corrections",
+          "title": "공개 정정 기록",
+          "description": "공개 내용의 정정 사유와 적용 시점을 보존한 기록",
+          "format": "JSONL",
+          "coverage": {
+            "dateRange": {
+              "label": "2025.06–2026.07"
+            },
+            "sourceIds": ["mock-publication-register"],
+            "recordCount": 37,
+            "knownGaps": [],
+            "freshness": {
+              "asOf": "2026-07-12T00:00:00Z",
+              "status": "CURRENT"
+            }
+          },
+          "license": "CC-BY-4.0",
+          "updatedAt": "2026-07-12T00:00:00Z",
+          "downloadUrl": null
+        }
+      ],
       "appliedFilters": {
         "format": []
       },
@@ -662,10 +768,38 @@
         "q": "",
         "types": [],
         "publicationState": [],
+        "agencyId": "00000000-0000-4000-8000-000000000001",
+        "sidoCode": "11",
+        "sigunguCode": "11680",
         "dateFrom": "2026-07-12",
-        "dateTo": "2026-07-12"
+        "dateTo": "2026-07-12",
+        "sort": "relevance"
       },
       "asOf": "2026-07-12T00:00:00Z"
+    }
+  },
+  "downloadPublicSearchRecords": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "id": "public-search-records-a95cbf94fea10d08",
+      "status": "READY",
+      "version": 1,
+      "filename": "public-search-records.jsonl",
+      "mediaType": "application/x-ndjson; charset=utf-8",
+      "byteLength": 75,
+      "contentSha256": "a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81",
+      "contentBase64": "eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K",
+      "format": "JSONL",
+      "rowCount": 0,
+      "appliedFilters": {
+        "q": "계약",
+        "types": [],
+        "publicationState": [],
+        "sort": "relevance"
+      },
+      "generatedAt": "2026-07-12T00:00:00Z"
     }
   },
   "listSourceStatus": {

@@ -4,6 +4,7 @@ import type {
   ScreenViewModel,
   TypedScreenViewModel,
 } from "../../index";
+import { responseAccessPrimaryAction } from "../../response-access-action";
 import { isBusyState, responseStepForScreen } from "../../screen-chrome";
 import type { ScreenProjection } from "../../screen-projection";
 import ArchetypeAssembly from "../archetypes/ArchetypeAssembly.svelte";
@@ -11,6 +12,8 @@ import ResponseHeader from "../ResponseHeader.svelte";
 import ScreenHeading from "../screen/ScreenHeading.svelte";
 import StateBadge from "../screen/StateBadge.svelte";
 import StateSummary from "../screen/StateSummary.svelte";
+import UnauthenticatedGuidance from "../screen/UnauthenticatedGuidance.svelte";
+import UnauthenticatedSectionOutline from "../screen/UnauthenticatedSectionOutline.svelte";
 import ResponseProgress from "./ResponseProgress.svelte";
 
 let {
@@ -26,6 +29,14 @@ let {
 } = $props();
 const responseStep = $derived(responseStepForScreen(screen.id));
 const busy = $derived(isBusyState(runtime.state));
+const initialAccessMissing = $derived(
+  screen.id === "RSP-001" &&
+    runtime.state === "unauthenticated" &&
+    runtime.errors.length === 0,
+);
+const initialAccessAction = $derived(
+  responseAccessPrimaryAction(screen, runtime, contract.primaryActionId),
+);
 </script>
 
 <div class="form-shell">
@@ -34,8 +45,18 @@ const busy = $derived(isBusyState(runtime.state));
     <ResponseProgress {responseStep} errorCount={runtime.errors.length} />
     <ScreenHeading variant="response" {screen} {runtime} {contract} {projection} {responseStep} />
     {#if screen.id !== "RSP-008"}<div class="request-summary"><strong>{contract.objectLabel}</strong><span>세션·권한·제출 기한은 제출 단계마다 서버가 다시 확인됩니다.</span></div>{/if}
-    <StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />
-    <div class="form-card"><ArchetypeAssembly variant="form" {screen} {runtime} {contract} {projection} /></div>
+    {#if initialAccessMissing}
+      <UnauthenticatedGuidance
+        {screen}
+        {projection}
+        message={runtime.notice ?? "보안 링크의 발신자를 확인하고 링크와 인증 정보를 공유하지 마세요."}
+        action={initialAccessAction}
+      />
+      <UnauthenticatedSectionOutline {screen} {contract} {projection} />
+    {:else}
+      <StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />
+      <div class="form-card"><ArchetypeAssembly variant="form" {screen} {runtime} {contract} {projection} /></div>
+    {/if}
   </main>
 </div>
 

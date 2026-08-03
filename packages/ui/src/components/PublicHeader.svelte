@@ -179,7 +179,9 @@ $effect(() => {
   text-underline-offset: 3px;
 }
 .icon-button {
+  width: auto;
   min-width: var(--target-min);
+  flex: 0 0 auto;
   padding-inline: 8px;
   min-height: var(--target-min);
   display: inline-flex;
@@ -190,6 +192,7 @@ $effect(() => {
   background: var(--paper-0);
   color: var(--ink-900);
   font: inherit;
+  white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
 }

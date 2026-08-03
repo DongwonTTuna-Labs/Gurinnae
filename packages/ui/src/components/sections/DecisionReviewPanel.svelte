@@ -10,7 +10,7 @@ let { section, screen, runtime, projection }: ScreenSectionProps = $props();
 <div class="decision-gate" role="note">
   <strong>사람의 승인 필요</strong>
   <dl>
-    <div><dt>승인 조건</dt><dd>현재 snapshot · 미해결 blocker 없음 · 독립성 · step-up 상태 모두 충족</dd></div>
+    <div><dt>승인 조건</dt><dd>현재 검토본 · 미해결 차단 사유 없음 · 독립성 · 추가 인증 상태 모두 충족</dd></div>
     <div><dt>결정 기록</dt><dd>승인·변경 요청·반려·회피 중 1개 · 사유</dd></div>
   </dl>
 </div>

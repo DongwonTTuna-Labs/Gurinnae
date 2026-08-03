@@ -100,7 +100,8 @@ async fn create_correction_session(
     let value = common::parse(body)?;
     let locale = common::string(&value, "locale")?;
     let case_slug = common::optional_string(&value, "caseSlug")?;
-    let revision = common::optional_i64(&value, "publicationRevision")?;
+    let revision =
+        checked_publication_revision(common::optional_i64(&value, "publicationRevision")?)?;
     let proof_context = RequestContext {
         operation: "createCorrectionRequestDraft",
         body,
@@ -120,7 +121,7 @@ async fn create_correction_session(
         issuer,
         locale,
         case_slug,
-        revision.map(|value| value as i32),
+        revision,
         expires_at
     )
     .fetch_one(&state.pool)
@@ -138,6 +139,13 @@ async fn create_correction_session(
         "links":[],
         "session":common::descriptor(token,"CORRECTION_DRAFT",draft_id,expires_at,1)?,
     }))
+}
+
+fn checked_publication_revision(revision: Option<i64>) -> Result<Option<i32>, ServiceError> {
+    revision
+        .map(i32::try_from)
+        .transpose()
+        .map_err(|_| ServiceError::InvalidRequest)
 }
 
 async fn exchange(
@@ -273,4 +281,34 @@ async fn resolve_scope(
     .await
     .map_err(common::database_error)?
     .ok_or(ServiceError::Persistence)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ServiceError, checked_publication_revision};
+
+    #[test]
+    fn publication_revision_accepts_postgres_integer_bounds() {
+        assert!(matches!(
+            checked_publication_revision(Some(i64::from(i32::MIN))),
+            Ok(Some(i32::MIN))
+        ));
+        assert!(matches!(
+            checked_publication_revision(Some(i64::from(i32::MAX))),
+            Ok(Some(i32::MAX))
+        ));
+        assert!(matches!(checked_publication_revision(None), Ok(None)));
+    }
+
+    #[test]
+    fn publication_revision_rejects_values_outside_postgres_integer() {
+        assert!(matches!(
+            checked_publication_revision(Some(i64::from(i32::MAX) + 1)),
+            Err(ServiceError::InvalidRequest)
+        ));
+        assert!(matches!(
+            checked_publication_revision(Some(i64::from(i32::MIN) - 1)),
+            Err(ServiceError::InvalidRequest)
+        ));
+    }
 }

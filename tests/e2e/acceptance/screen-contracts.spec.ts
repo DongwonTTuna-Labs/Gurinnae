@@ -280,7 +280,7 @@ async function compactSessionPages(
   await verification.locator('button[type="submit"]').click();
   await responseActive.page.waitForURL(/\/respond\/access\?notice=/);
   await subscription.page.goto(
-    `http://127.0.0.1:29101/subscription/manage?token=${encodeURIComponent(`compact-subscription-${randomUUID()}`)}`,
+    `http://127.0.0.1:29101/subscription/manage/exchange?token=${encodeURIComponent(`compact-subscription-${randomUUID()}`)}`,
     { waitUntil: "networkidle" },
   );
   return {

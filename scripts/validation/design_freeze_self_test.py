@@ -11,6 +11,7 @@ import yaml
 
 from generate_effective_registry import (
     Checks,
+    physical_table_set,
     validate_ai_semantic_payload,
     validate_generator_parity,
 )
@@ -99,6 +100,32 @@ def _count_fixture() -> bool:
     checks = Checks()
     checks.count(77, {str(index) for index in range(80)}, "bad-fixture")
     return any(problem.code == "declared_count" for problem in checks.problems)
+
+
+def _zero_relation_migration_fixture() -> bool:
+    with tempfile.TemporaryDirectory(prefix="gurinnae-zero-relation-") as directory:
+        root = Path(directory)
+        addendum = root / "specs/database/addendum"
+        addendum.mkdir(parents=True)
+        (addendum / "0032-relay-model-catalog.yaml").write_text(
+            "tables:\n"
+            "  - relation: ops.relay_model_catalog\n",
+            encoding="utf-8",
+        )
+        (addendum / "0034-public-monitoring-extensions.yaml").write_text(
+            "scope:\n"
+            "  migration: 0034_public_monitoring_extensions.sql\n"
+            "  exact_relations: []\n",
+            encoding="utf-8",
+        )
+        checks = Checks()
+        relations, by_ordinal = physical_table_set(root, checks)
+        return (
+            not checks.problems
+            and relations == {"ops.relay_model_catalog"}
+            and by_ordinal == {"0032": {"ops.relay_model_catalog"}}
+        )
+
 
 def _status_blocker_fixture() -> bool:
     nested = {
@@ -348,6 +375,7 @@ def self_test() -> tuple[bool, list[dict[str, object]]]:
         ("duplicate-id.yaml", _duplicate_fixture),
         ("set-drift.yaml", _set_fixture),
         ("magic-count.yaml", _count_fixture),
+        ("zero-relation-migration.yaml", _zero_relation_migration_fixture),
         ("open-blocker.yaml", _status_blocker_fixture),
         ("ai-semantic-schema.json", _ai_semantic_fixture),
         ("stale-generator-output.py", _generator_parity_fixture),

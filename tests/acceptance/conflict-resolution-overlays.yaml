@@ -14,8 +14,8 @@ overlays:
     superseded_assertion: 42 public, 125 control and 22 submission operations exist
     effective_oracle:
       base_compatibility:
-        external_http: 212
-        public: 41
+        external_http: 214
+        public: 43
         control: 131
         submission: 34
         browser_identity: 6
@@ -26,14 +26,14 @@ overlays:
         submission: 8
         private_communication: 8
       final_runtime:
-        external_http: 249
-        public: 41
+        external_http: 251
+        public: 43
         control: 160
         submission: 42
         browser_identity: 6
         private_identity: 9
         private_communication: 8
-        complete_http: 266
+        complete_http: 268
       invariants:
         - Every operation ID is globally unique and exposed exactly once in its declared catalog.
         - Base operation IDs and semantics remain present; additive operations do not repurpose them.

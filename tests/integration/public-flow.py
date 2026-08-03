@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+import base64
+import csv
+import hashlib
+import io
 import json
 import os
 import urllib.error
@@ -14,11 +18,23 @@ AGENCY = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 SUPPLIER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 CONTRACT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
 CORRECTION = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+EXPORT_NOTICE = "이상 징후 기록이며 위법·부패의 확정이 아님"
 
 ENDPOINTS = {
     "downloadCaseReproducibility": "/v1/cases/integration-case/reproducibility/download?format=JSON",
     "downloadContracts": "/v1/contracts/download?format=JSONL",
+    "downloadPublicCases": (
+        f"/v1/cases/download?format=JSONL&publicationState=PUBLISHED_ANOMALY&agencyId={AGENCY}"
+        f"&sidoCode=11&sigunguCode=11680&supplierId={SUPPLIER}&ruleId=unit-price-ratio"
+        "&publishedFrom=2026-07-01&publishedTo=2026-07-31&hasResponse=false"
+        "&hasCorrection=true&sort=title_asc"
+    ),
     "downloadPublicOpenApi": "/v1/openapi.json",
+    "downloadPublicSearchRecords": (
+        f"/v1/search/download?format=CSV&q=통합&types=CASE&publicationState=PUBLISHED_ANOMALY"
+        f"&agencyId={AGENCY}&sidoCode=11&sigunguCode=11680&dateFrom=2026-01-01"
+        "&dateTo=2026-12-31&sort=title_asc"
+    ),
     "getAboutContent": "/v1/content/about",
     "getAccessibilityStatement": "/v1/content/accessibility",
     "getAgency": f"/v1/agencies/{AGENCY}",
@@ -69,6 +85,73 @@ def operation_map():
     return result
 
 
+def assert_download_bytes(body):
+    encoded = body["contentBase64"]
+    decoded = base64.b64decode(encoded, validate=True)
+    assert base64.b64encode(decoded).decode("ascii") == encoded
+    assert len(decoded) == body["byteLength"], body
+    assert hashlib.sha256(decoded).hexdigest() == body["contentSha256"], body
+    assert body["rowCount"] <= 5_000, body["rowCount"]
+    return decoded
+
+
+def assert_public_cases_download(body):
+    decoded = assert_download_bytes(body)
+    records = [json.loads(line) for line in decoded.decode("utf-8").splitlines()]
+    assert body["format"] == "JSONL"
+    assert body["filename"] == "public-cases.jsonl"
+    assert body["mediaType"] == "application/x-ndjson; charset=utf-8"
+    assert records[0] == {"notice": EXPORT_NOTICE}
+    assert body["rowCount"] == len(records) - 1 == 1
+    assert records[1]["slug"] == "integration-case"
+    assert body["appliedFilters"] == {
+        "publicationState": ["PUBLISHED_ANOMALY"],
+        "agencyId": AGENCY,
+        "sidoCode": "11",
+        "sigunguCode": "11680",
+        "supplierId": SUPPLIER,
+        "ruleId": "unit-price-ratio",
+        "publishedFrom": "2026-07-01",
+        "publishedTo": "2026-07-31",
+        "hasResponse": False,
+        "hasCorrection": True,
+        "sort": "title_asc",
+    }
+
+
+def assert_public_search_download(body):
+    decoded = assert_download_bytes(body)
+    rows = list(csv.reader(io.StringIO(decoded.decode("utf-8"), newline="")))
+    assert body["format"] == "CSV"
+    assert body["filename"] == "public-search-records.csv"
+    assert body["mediaType"] == "text/csv; charset=utf-8"
+    assert rows[0] == [EXPORT_NOTICE]
+    assert rows[1] == [
+        "resultType",
+        "id",
+        "title",
+        "subtitle",
+        "status",
+        "summary",
+        "updatedAt",
+        "href",
+    ]
+    assert body["rowCount"] == len(rows) - 2 == 1
+    assert rows[2][0] == "CASE"
+    assert rows[2][3] == "integration-case"
+    assert body["appliedFilters"] == {
+        "q": "통합",
+        "types": ["CASE"],
+        "publicationState": ["PUBLISHED_ANOMALY"],
+        "agencyId": AGENCY,
+        "sidoCode": "11",
+        "sigunguCode": "11680",
+        "dateFrom": "2026-01-01",
+        "dateTo": "2026-12-31",
+        "sort": "title_asc",
+    }
+
+
 operations = operation_map()
 assert set(ENDPOINTS) == set(operations), (set(ENDPOINTS) - set(operations), set(operations) - set(ENDPOINTS))
 resolver = RefResolver.from_schema(SPEC)
@@ -85,10 +168,14 @@ for operation_id, path in ENDPOINTS.items():
         raise AssertionError((operation_id, path, error.code, error.read().decode())) from error
     if operation_id == "downloadPublicOpenApi":
         assert body["openapi"] == "3.1.0"
-        assert len(body["paths"]) == 41
+        assert len(body["paths"]) == 43
         continue
     schema = operations[operation_id]["responses"]["200"]["content"]["application/json"]["schema"]
     Draft202012Validator(schema, resolver=resolver).validate(body)
+    if operation_id == "downloadPublicCases":
+        assert_public_cases_download(body)
+    if operation_id == "downloadPublicSearchRecords":
+        assert_public_search_download(body)
     if operation_id.startswith("list") or operation_id == "searchPublicRecords":
         assert body["items"], f"{operation_id} returned an empty fixture-backed projection"
 
@@ -198,4 +285,4 @@ for missing in [
     except urllib.error.HTTPError as error:
         assert error.code == 404, (missing, error.code)
 
-print("public API 41-operation PostgreSQL projection/filter/OpenAPI integration: PASS")
+print("public API 43-operation PostgreSQL projection/filter/OpenAPI integration: PASS")

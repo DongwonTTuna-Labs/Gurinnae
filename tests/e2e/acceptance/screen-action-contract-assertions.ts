@@ -297,7 +297,7 @@ export function assertActionGuards(): void {
   const operations = operationMap(operationContracts());
   const commands = commandSemantics();
   const proposalEntries = proposalEntryOperations();
-  expect(actionEntries, "base screen actions").toHaveLength(252);
+  expect(actionEntries, "base screen actions").toHaveLength(259);
   expect(proposalEntries.size, "explicit provider proposal entries").toBe(4);
   expect(capabilities.length, "non-none capability registry").toBeGreaterThan(
     0,
@@ -328,7 +328,7 @@ export function assertActionGuards(): void {
       action.operationId !== undefined &&
       operations.get(action.operationId)?.mutatesState === true,
   );
-  expect(mutations, "mutating screen actions").toHaveLength(111);
+  expect(mutations, "mutating screen actions").toHaveLength(108);
   const commandMap = new Map(
     commands.map((command) => [command.operationId, command]),
   );

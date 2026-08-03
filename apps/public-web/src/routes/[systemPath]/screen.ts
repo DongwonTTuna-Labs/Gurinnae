@@ -11,7 +11,7 @@ export const screen = {
       id: "message",
       title: "상황",
       component: "StructuredContentSection",
-      purpose: "구체적이되 민감정보 없음.",
+      purpose: "민감정보를 제외한 오류·점검·장애 현황.",
       test_id: "pub_034__section__message",
     },
     {

@@ -23,10 +23,16 @@ import NotificationBanner from "./sections/NotificationBanner.svelte";
 import OmnichannelApprovalPanel from "./sections/OmnichannelApprovalPanel.svelte";
 import OperationsStatusPanel from "./sections/OperationsStatusPanel.svelte";
 import PageHeader from "./sections/PageHeader.svelte";
+import PublicCorrectionRequestForm from "./sections/PublicCorrectionRequestForm.svelte";
+import PublicDatasetExportForm from "./sections/PublicDatasetExportForm.svelte";
+import PublicLedger from "./sections/PublicLedger.svelte";
+import PublicSubscriptionForm from "./sections/PublicSubscriptionForm.svelte";
+import RelatedPublicCases from "./sections/RelatedPublicCases.svelte";
 import ResponseJourneySection from "./sections/ResponseJourneySection.svelte";
 import RevisionAndCorrectionPanel from "./sections/RevisionAndCorrectionPanel.svelte";
 import RevisionTimeline from "./sections/RevisionTimeline.svelte";
 import SaveStatus from "./sections/SaveStatus.svelte";
+import SectionHeading from "./sections/SectionHeading.svelte";
 import SemanticSection from "./sections/SemanticSection.svelte";
 import SensitiveDataNotice from "./sections/SensitiveDataNotice.svelte";
 import SignalTriagePanel from "./sections/SignalTriagePanel.svelte";
@@ -37,10 +43,54 @@ import UnifiedSearch from "./sections/UnifiedSearch.svelte";
 
 let props: ScreenSectionProps = $props();
 const contract = $derived(typedScreenViewModel(props.screen));
+const publicLedgerSections: Readonly<Record<string, string>> = {
+  "PUB-001": "recent",
+  "PUB-002": "results",
+  "PUB-003": "results",
+  "PUB-007": "results",
+  "PUB-009": "results",
+  "PUB-011": "results",
+  "PUB-018": "records",
+};
+const publicLedgerSection = $derived(
+  publicLedgerSections[props.screen.id] === props.section.id,
+);
+const hasValidationError = $derived(
+  ["validation-error", "error", "conflict"].includes(props.runtime.state),
+);
+const actionLabel = (actionId: string, fallback: string) =>
+  props.screen.actions.find((action) => action.id === actionId)?.label ??
+  fallback;
 </script>
 
 {#if (props.screen.id === "CAS-010" || (props.screen.id === "CAS-011" && props.section.id !== "decisions"))}<AgentAnalysisProjection {...props} />
 {:else if contract.journey === "J-03" && (props.screen.id === "RSP-005" || props.screen.id === "RSP-006") }<ResponseJourneySection {...props} />
+{:else if publicLedgerSection}<PublicLedger {...props} />
+{:else if props.screen.id === "PUB-012" && props.section.id === "related"}<RelatedPublicCases {...props} />
+{:else if props.screen.id === "PUB-029" && props.section.id === "email"}<PublicSubscriptionForm {...props} />
+{:else if props.screen.id === "PUB-020" && props.section.id === "datasets"}
+  <SectionHeading section={props.section} kicker="데이터 내려받기" />
+  <PublicDatasetExportForm
+    fields={props.runtime.forms["download-dataset"] ?? []}
+    datasets={props.runtime.publicDatasets ?? []}
+    actionLabel={actionLabel("download-dataset", "데이터 내려받기")}
+    search={props.runtime.search ?? ""}
+    csrfToken={props.runtime.csrfToken}
+    idempotencyKey={props.runtime.idempotencyKeys?.["download-dataset"]}
+    botChallenge={props.runtime.botChallenge}
+    {hasValidationError}
+  />
+{:else if props.screen.id === "PUB-027" && props.section.id === "issue"}
+  <SectionHeading section={props.section} kicker="정정 요청" />
+  <PublicCorrectionRequestForm
+    fields={props.runtime.forms["save-draft"] ?? []}
+    actionLabel={actionLabel("save-draft", "임시 저장")}
+    search={props.runtime.search ?? ""}
+    csrfToken={props.runtime.csrfToken}
+    idempotencyKey={props.runtime.idempotencyKeys?.["save-draft"]}
+    botChallenge={props.runtime.botChallenge}
+    {hasValidationError}
+  />
 {:else if props.section.component === "BusinessHealthPanel"}<BusinessHealthPanel {...props} />
 {:else if props.section.component === "OmnichannelApprovalPanel"}<OmnichannelApprovalPanel {...props} />
 {:else if props.section.component === "CheckAnswers"}<CheckAnswers {...props} />

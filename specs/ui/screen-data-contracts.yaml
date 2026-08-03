@@ -5735,19 +5735,8 @@ operations:
   method: POST
   path: /v1/subscription-session
   purpose:
-  - 필터 기반 구독
-  - 사건 구독
-  - 기관 구독
-  - 업체 구독
-  - 정정 feed 구독
   - 구독 생성
   consumers:
-  - PUB-001
-  - PUB-003
-  - PUB-004
-  - PUB-008
-  - PUB-010
-  - PUB-018
   - PUB-029
   auth: bff-service-assertion
   capability: none
@@ -5802,12 +5791,7 @@ operations:
   - '500'
   blocking_consumers:
   - PUB-029
-  nonblocking_consumers:
-  - PUB-003
-  - PUB-004
-  - PUB-008
-  - PUB-010
-  - PUB-018
+  nonblocking_consumers: []
   response_fields:
   - name: operationId
     type: string
@@ -7280,6 +7264,159 @@ operations:
     step_up_possible: false
   assurance_level: NONE
   step_up_required: false
+- operation_id: downloadPublicCases
+  status: READY
+  api: public-api
+  method: GET
+  path: /v1/cases/download
+  purpose:
+  - 현재 사건 필터 결과를 CSV 또는 JSONL로 내려받기
+  - 최대 5,000행과 재배포 비확정 고지를 함께 제공
+  consumers:
+  - PUB-003
+  auth: anonymous
+  capability: public.read
+  request_fields:
+  - name: format
+    type: enum:CSV,JSONL
+    required: true
+    in: query
+  - name: publicationState
+    type: array:string
+    required: false
+    in: query
+  - name: agencyId
+    type: uuid
+    required: false
+    in: query
+  - name: sidoCode
+    type: string
+    required: false
+    in: query
+  - name: sigunguCode
+    type: string
+    required: false
+    in: query
+  - name: supplierId
+    type: uuid
+    required: false
+    in: query
+  - name: ruleId
+    type: string
+    required: false
+    in: query
+  - name: publishedFrom
+    type: date
+    required: false
+    in: query
+  - name: publishedTo
+    type: date
+    required: false
+    in: query
+  - name: hasResponse
+    type: boolean
+    required: false
+    in: query
+  - name: hasCorrection
+    type: boolean
+    required: false
+    in: query
+  - name: sort
+    type: enum:updated_desc,published_desc,title_asc
+    required: false
+    in: query
+  request_schema: downloadPublicCasesQuery
+  response_schema: PublicCasesDownload
+  idempotency: not-applicable
+  optimistic_concurrency: not-applicable
+  audit: read-access-log
+  rate_limit: public-read
+  errors:
+  - '400'
+  - '422'
+  - '429'
+  - '500'
+  blocking_consumers: []
+  nonblocking_consumers:
+  - PUB-003
+  response_fields:
+  - name: id
+    type: string
+    required: true
+  - name: status
+    type: enum:READY
+    required: true
+  - name: version
+    type: integer
+    required: true
+  - name: filename
+    type: string
+    required: true
+  - name: mediaType
+    type: string
+    required: true
+  - name: byteLength
+    type: integer
+    required: true
+  - name: contentSha256
+    type: sha256
+    required: true
+  - name: contentBase64
+    type: string
+    required: true
+  - name: format
+    type: enum:CSV,JSONL
+    required: true
+  - name: rowCount
+    type: integer(0..5000)
+    required: true
+  - name: appliedFilters
+    type: PublicCasesAppliedFilters
+    required: true
+  - name: generatedAt
+    type: date-time
+    required: true
+  implementation_files:
+    handler: services/public-api/src/routes/mod.rs
+    application: services/public-api/src/service/exports.rs
+    integration_test: tests/integration/public-flow.py
+    generated_client: packages/api-client-public/src/generated/
+    contract_test: services/public-api/src/service/exports.rs
+  specification_version: 13.0.0
+  transport_errors:
+  - INVALID_PARAMETER
+  - RATE_LIMITED
+  authorization_errors: []
+  concurrency_errors: []
+  domain_errors:
+  - PRECONDITION_FAILED
+  provider_errors: []
+  error_codes:
+  - INVALID_PARAMETER
+  - RATE_LIMITED
+  - PRECONDITION_FAILED
+  - INTERNAL_ERROR
+  http_error_mapping:
+    '400':
+    - INVALID_PARAMETER
+    '422':
+    - PRECONDITION_FAILED
+    '429':
+    - RATE_LIMITED
+    '500':
+    - INTERNAL_ERROR
+  internal_errors:
+  - INTERNAL_ERROR
+  operation_kind: QUERY
+  mutates_state: false
+  success_status: 200
+  assurance_policy:
+    mode: STATIC
+    default: NONE
+    conditions: []
+    step_up_possible: false
+  assurance_level: NONE
+  step_up_required: false
 - operation_id: downloadPublicOpenApi
   status: READY
   api: public-api
@@ -7334,6 +7471,151 @@ operations:
     - INTERNAL_ERROR
     '503':
     - STORAGE_FAILURE
+  internal_errors:
+  - INTERNAL_ERROR
+  operation_kind: QUERY
+  mutates_state: false
+  success_status: 200
+  assurance_policy:
+    mode: STATIC
+    default: NONE
+    conditions: []
+    step_up_possible: false
+  assurance_level: NONE
+  step_up_required: false
+- operation_id: downloadPublicSearchRecords
+  status: READY
+  api: public-api
+  method: GET
+  path: /v1/search/download
+  purpose:
+  - 현재 검색 필터 결과를 CSV 또는 JSONL로 내려받기
+  - 최대 5,000행과 재배포 비확정 고지를 함께 제공
+  consumers:
+  - PUB-002
+  auth: anonymous
+  capability: public.read
+  request_fields:
+  - name: format
+    type: enum:CSV,JSONL
+    required: true
+    in: query
+  - name: q
+    type: string
+    required: true
+    in: query
+  - name: types
+    type: array:string
+    required: false
+    in: query
+  - name: publicationState
+    type: array:string
+    required: false
+    in: query
+  - name: agencyId
+    type: uuid
+    required: false
+    in: query
+  - name: sidoCode
+    type: string
+    required: false
+    in: query
+  - name: sigunguCode
+    type: string
+    required: false
+    in: query
+  - name: dateFrom
+    type: date
+    required: false
+    in: query
+  - name: dateTo
+    type: date
+    required: false
+    in: query
+  - name: sort
+    type: enum:relevance,updated_desc,title_asc
+    required: false
+    in: query
+  request_schema: downloadPublicSearchRecordsQuery
+  response_schema: PublicSearchDownload
+  idempotency: not-applicable
+  optimistic_concurrency: not-applicable
+  audit: read-access-log
+  rate_limit: public-read
+  errors:
+  - '400'
+  - '422'
+  - '429'
+  - '500'
+  blocking_consumers: []
+  nonblocking_consumers:
+  - PUB-002
+  response_fields:
+  - name: id
+    type: string
+    required: true
+  - name: status
+    type: enum:READY
+    required: true
+  - name: version
+    type: integer
+    required: true
+  - name: filename
+    type: string
+    required: true
+  - name: mediaType
+    type: string
+    required: true
+  - name: byteLength
+    type: integer
+    required: true
+  - name: contentSha256
+    type: sha256
+    required: true
+  - name: contentBase64
+    type: string
+    required: true
+  - name: format
+    type: enum:CSV,JSONL
+    required: true
+  - name: rowCount
+    type: integer(0..5000)
+    required: true
+  - name: appliedFilters
+    type: PublicRecordsSearchResultAppliedFilters
+    required: true
+  - name: generatedAt
+    type: date-time
+    required: true
+  implementation_files:
+    handler: services/public-api/src/routes/mod.rs
+    application: services/public-api/src/service/exports.rs
+    integration_test: tests/integration/public-flow.py
+    generated_client: packages/api-client-public/src/generated/
+    contract_test: services/public-api/src/service/exports.rs
+  specification_version: 13.0.0
+  transport_errors:
+  - INVALID_PARAMETER
+  - RATE_LIMITED
+  authorization_errors: []
+  concurrency_errors: []
+  domain_errors:
+  - PRECONDITION_FAILED
+  provider_errors: []
+  error_codes:
+  - INVALID_PARAMETER
+  - RATE_LIMITED
+  - PRECONDITION_FAILED
+  - INTERNAL_ERROR
+  http_error_mapping:
+    '400':
+    - INVALID_PARAMETER
+    '422':
+    - PRECONDITION_FAILED
+    '429':
+    - RATE_LIMITED
+    '500':
+    - INTERNAL_ERROR
   internal_errors:
   - INTERNAL_ERROR
   operation_kind: QUERY
@@ -26696,7 +26978,6 @@ operations:
   - 통합 검색 autocomplete
   - 통합 검색 결과
   consumers:
-  - PUB-001
   - PUB-002
   auth: anonymous
   capability: public.read
@@ -26744,7 +27025,6 @@ operations:
   - '429'
   - '500'
   blocking_consumers:
-  - PUB-001
   - PUB-002
   nonblocking_consumers: []
   response_fields:
@@ -31654,18 +31934,18 @@ operations:
     step_up_possible: false
   assurance_level: SCOPED_TOKEN
   step_up_required: false
-operation_count: 215
-http_operation_count: 215
+operation_count: 217
+http_operation_count: 217
 identity_operation_count: 6
-api_operation_count: 215
+api_operation_count: 217
 command_operation_count: 107
-query_operation_count: 108
+query_operation_count: 110
 counts:
-  total: 215
-  query: 108
+  total: 217
+  query: 110
   command: 107
   httpNonGet: 104
-  public: 41
+  public: 43
   submission: 34
   control: 134
   identity: 6

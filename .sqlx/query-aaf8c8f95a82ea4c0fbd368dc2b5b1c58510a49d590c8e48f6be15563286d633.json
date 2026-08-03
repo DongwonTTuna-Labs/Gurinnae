@@ -1,0 +1,108 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.latest_revision,c.public_state,r.revision,r.state::text \"state!\",r.payload,r.payload_sha256,r.published_at,r.supersedes_revision FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id WHERE c.slug=$1 AND r.revision=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latest_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "latest_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "public_state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "public_state"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "state!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "payload"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "payload_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "payload_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "supersedes_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "supersedes_revision"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "aaf8c8f95a82ea4c0fbd368dc2b5b1c58510a49d590c8e48f6be15563286d633"
+}

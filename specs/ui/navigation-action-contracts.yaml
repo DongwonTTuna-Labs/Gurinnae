@@ -1,6 +1,6 @@
 schema_version: 1
 status: REVIEW_REQUIRED
-scope: all 102 authority navigation actions with owner-resolved destinations
+scope: all 108 authority navigation actions with owner-resolved destinations
 sources:
 - specs/ui/screen-catalog.yaml
 - specs/product/owner-addendum-2026-07-14.yaml#route_contract
@@ -91,6 +91,41 @@ navigation_contracts:
       disabled: any required binding is absent, invalid, stale or outside the route allowlist
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-PUB-001-SUBSCRIBE
+  PUB-002.open-result:
+    status: resolved
+    target:
+      kind: DISCRIMINATED_PUBLIC_SEARCH_HREF
+      source: selected_result.href
+      schema: PublicRecordsSearchResultItem.href
+      allowed_types:
+      - CASE
+      - AGENCY
+      - SUPPLIER
+      - CONTRACT
+      - RULE
+      - CORRECTION
+      - DATASET
+      - SOURCE
+    bindings:
+      result_target:
+        source: selected_result.href
+        type: catalog-public-uri-reference
+    preserved_query_keys:
+    - q
+    - types
+    - publicationState
+    - dateFrom
+    - dateTo
+    - limit
+    - sort
+    safe_return: source_screen
+    invalid_behavior: row_target_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-002-OPEN-RESULT
   PUB-003.open-case:
     status: resolved
     target:
@@ -119,6 +154,30 @@ navigation_contracts:
       disabled: any required binding is absent, invalid, stale or outside the route allowlist
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-PUB-003-OPEN-CASE
+  PUB-003.subscribe-filter:
+    status: resolved
+    target:
+      screen_id: PUB-029
+      route: /subscribe
+    bindings: {}
+    required_context:
+      scope_type:
+        value: QUERY
+        transport: query:scope
+        type: QUERY
+      query_snapshot:
+        source: current_route.subscription_query
+        transport: query:query
+        type: canonical-public-case-filter-snapshot
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: the canonical cursor-free query snapshot is present and valid
+      disabled: the filter snapshot is absent, invalid or contains transport-only query keys
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-003-SUBSCRIBE-FILTER
   PUB-004.request-correction:
     status: resolved
     target:
@@ -139,6 +198,32 @@ navigation_contracts:
       disabled: any required binding is absent, invalid, stale or outside the route allowlist
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-PUB-004-REQUEST-CORRECTION
+  PUB-004.subscribe-case:
+    status: resolved
+    target:
+      screen_id: PUB-029
+      route: /subscribe
+    bindings: {}
+    required_context:
+      scope_type:
+        value: CASE
+        transport: query:scope
+        type: CASE
+      scope_ref:
+        source: current_route.caseSlug
+        transport: query:ref
+        type: public-slug
+    preserved_query_keys: []
+    safe_return:
+      screen_id: PUB-004
+      route: /cases/{caseSlug}
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: the current validated case slug is present
+      disabled: the current case slug is absent or invalid
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-004-SUBSCRIBE-CASE
   PUB-005.view-latest:
     status: resolved
     target:
@@ -267,6 +352,30 @@ navigation_contracts:
       disabled: any required binding is absent, invalid, stale or outside the route allowlist
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-PUB-008-VIEW-CASE
+  PUB-008.subscribe-agency:
+    status: resolved
+    target:
+      screen_id: PUB-029
+      route: /subscribe
+    bindings: {}
+    required_context:
+      scope_type:
+        value: AGENCY
+        transport: query:scope
+        type: AGENCY
+      scope_ref:
+        source: current_route.agencySlug
+        transport: query:ref
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: the current validated agency slug is present
+      disabled: the current agency slug is absent or invalid
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-008-SUBSCRIBE-AGENCY
   PUB-009.open-supplier:
     status: resolved
     target:
@@ -327,6 +436,30 @@ navigation_contracts:
       disabled: any required binding is absent, invalid, stale or outside the route allowlist
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-PUB-010-VIEW-CASE
+  PUB-010.subscribe-supplier:
+    status: resolved
+    target:
+      screen_id: PUB-029
+      route: /subscribe
+    bindings: {}
+    required_context:
+      scope_type:
+        value: SUPPLIER
+        transport: query:scope
+        type: SUPPLIER
+      scope_ref:
+        source: current_route.supplierSlug
+        transport: query:ref
+        type: public-slug
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: current_context_fail_closed
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: the current validated supplier slug is present
+      disabled: the current supplier slug is absent or invalid
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-010-SUBSCRIBE-SUPPLIER
   PUB-011.open-contract:
     status: resolved
     target:
@@ -513,6 +646,26 @@ navigation_contracts:
       disabled: any required binding is absent, invalid, stale or outside the route allowlist
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-PUB-018-OPEN-CORRECTION
+  PUB-018.subscribe:
+    status: resolved
+    target:
+      screen_id: PUB-029
+      route: /subscribe
+    bindings: {}
+    required_context:
+      scope_type:
+        value: CORRECTIONS
+        transport: query:scope
+        type: CORRECTIONS
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: the fixed corrections subscription preset is valid
+      disabled: the fixed preset cannot be represented by the destination allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-018-SUBSCRIBE
   PUB-019.open-case:
     status: resolved
     target:
@@ -2095,3 +2248,4 @@ owner_decisions:
 - Response help and link-reissue paths use the public contact form without carrying response object identity in the URL.
 - Additional-material navigation on RSP-006 opens guidance only; it does not invent a supplemental-submission API.
 - Query preservation excludes cursor, token, proof and secret fields and uses only the exact per-screen allowlists in this file.
+- PUB-004.subscribe-case preserves the validated caseSlug as a concrete `/cases/{caseSlug}` return. Only a successful createSubscription receipt may consume that return; failure remains on PUB-029.

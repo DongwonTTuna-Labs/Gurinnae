@@ -1,6 +1,7 @@
 <script lang="ts">
 import { tick } from "svelte";
 import { decisionCode, isAllowedDecisionAction } from "../decision-contract";
+import { presentEnumValue } from "../enum-presentation";
 import type { ScreenRuntime, ScreenViewModel } from "../index";
 import { humanFieldLabel } from "../screen-contract";
 
@@ -256,7 +257,7 @@ function trapFocus(event: KeyboardEvent) {
       {#each (commandActionId ? fieldsFor(commandActionId) : []) as field (field.name)}
         {#if field.name !== "reason" && field.name !== "decision" && field.name !== "schemaVersion" && field.name !== "handoffId" && field.name !== "expectedHandoffVersion" && field.name !== "expectedBindingDigest" && field.name !== "reasonCode" && !field.readonly}
           <label for={fieldId(field.name)}><span>{humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span>
-            {#if field.options}<select id={fieldId(field.name)} name={field.name} required={field.required} aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId}>{#each field.options as option}<option value={option}>{option}</option>{/each}</select>
+            {#if field.options}<select id={fieldId(field.name)} name={field.name} required={field.required} aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId}>{#each field.options as option}<option value={option}>{presentEnumValue(option)}</option>{/each}</select>
             {:else if field.type === "json"}<textarea id={fieldId(field.name)} name={field.name} rows="4" required={field.required} aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId}></textarea>
             {:else if field.type === "boolean"}<input id={fieldId(field.name)} type="checkbox" name={field.name} value="true" aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId} />
             {:else}<input id={fieldId(field.name)} type={field.type} name={field.name} required={field.required} value={field.value ?? ""} aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId} />{/if}
@@ -266,7 +267,7 @@ function trapFocus(event: KeyboardEvent) {
         {/if}
       {/each}
       {#if journeyDecision && selected !== "approve" && selected !== "accept-suggestion"}
-        <label for={fieldId("reasonCode")}><span>인계 거절 사유 코드 (필수)</span><select id={fieldId("reasonCode")} name="reasonCode" required aria-describedby={fieldHelpId}><option value={reasonCode}>{reasonCode}</option></select></label>
+        <label for={fieldId("reasonCode")}><span>인계 거절 사유 코드 (필수)</span><select id={fieldId("reasonCode")} name="reasonCode" required aria-describedby={fieldHelpId}><option value={reasonCode}>{presentEnumValue(reasonCode)}</option></select></label>
       {/if}
       {#if !journeyDecision}
         <label class="reason-field" for={fieldId("reason")}><span>결정 이유 (필수)</span><textarea id={fieldId("reason")} name="reason" rows="5" bind:value={reason} required aria-invalid={fieldInvalid("reason") ? "true" : undefined} aria-describedby={fieldHelpId} placeholder="근거 버전, 확인한 사실, 다음 담당자가 알아야 할 이유를 적습니다."></textarea></label>

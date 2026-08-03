@@ -7,6 +7,9 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::config::Config;
+use agency_projection::{agency_id_from_payload, upsert_public_agency};
+
+mod agency_projection;
 
 #[derive(Debug, Error)]
 pub enum WorkerError {
@@ -310,34 +313,43 @@ async fn load_revision(
             format!("case={case_id} snapshot={snapshot_id}"),
         )
     })?;
-    let payload = row.public_payload;
     let digest = row.public_payload_sha256.trim().to_owned();
-    let canonical = serde_json::to_vec(&payload)
-        .map_err(|error| Failure::Terminal("PUBLIC_PAYLOAD_INVALID", error.to_string()))?;
     let id = row.id;
-    if sha256(&canonical) != digest {
-        return Err(Failure::Terminal(
-            "PUBLIC_PAYLOAD_DIGEST_MISMATCH",
-            id.to_string(),
-        ));
-    }
+    let payload = verified_revision_payload(row.public_payload, &digest, id)?;
+    let source_freshness = payload
+        .get("sourceFreshness")
+        .or_else(|| payload.get("source_freshness"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
     Ok(RevisionProjection {
         id,
         revision: row.revision,
         state: row.state,
-        payload: payload.clone(),
+        payload,
         digest,
         slug: row.public_slug,
         title: row.title,
         summary: row.summary,
         published_at: row.published_at,
         supersedes: row.supersedes_revision,
-        source_freshness: payload
-            .get("sourceFreshness")
-            .or_else(|| payload.get("source_freshness"))
-            .cloned()
-            .unwrap_or_else(|| json!({})),
+        source_freshness,
     })
+}
+
+fn verified_revision_payload(
+    payload: Value,
+    expected_digest: &str,
+    revision_id: Uuid,
+) -> Result<Value, Failure> {
+    let canonical = serde_json::to_vec(&payload)
+        .map_err(|error| Failure::Terminal("PUBLIC_PAYLOAD_INVALID", error.to_string()))?;
+    if sha256(&canonical) != expected_digest {
+        return Err(Failure::Terminal(
+            "PUBLIC_PAYLOAD_DIGEST_MISMATCH",
+            revision_id.to_string(),
+        ));
+    }
+    Ok(payload)
 }
 
 async fn persist_revision(
@@ -387,6 +399,9 @@ async fn persist_revision(
     .execute(&mut *tx)
     .await
     .map_err(database)?;
+    if let Some(agency_id) = agency_id_from_payload(&revision.payload) {
+        upsert_public_agency(&mut tx, agency_id).await?;
+    }
     sqlx::query!(
         "SELECT ops.enqueue_outbox('publication_revision',$1,$2,          'projection.publication_applied.v1',$3,clock_timestamp())",
         revision.id.to_string(),
@@ -566,18 +581,4 @@ fn database(error: sqlx::Error) -> Failure {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::addendum_event_is_accepted;
-
-    #[test]
-    fn action_execution_authorization_is_accepted_by_audit_indexer() {
-        assert!(addendum_event_is_accepted(
-            "audit-indexer",
-            "action.execution_authorized.v1"
-        ));
-        assert!(!addendum_event_is_accepted(
-            "cost-projector",
-            "action.execution_authorized.v1"
-        ));
-    }
-}
+mod tests;

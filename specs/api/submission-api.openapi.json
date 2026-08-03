@@ -8217,6 +8217,7 @@
               "CASE",
               "AGENCY",
               "SUPPLIER",
+              "REGION",
               "CORRECTIONS"
             ]
           },
@@ -8738,6 +8739,7 @@
               "CASE",
               "AGENCY",
               "SUPPLIER",
+              "REGION",
               "CORRECTIONS"
             ]
           },

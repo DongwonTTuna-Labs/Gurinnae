@@ -11,7 +11,7 @@ export const screen = {
       id: "identity",
       title: "구독 확인",
       component: "KnownUnknownResponse",
-      purpose: "마스킹 이메일.",
+      purpose: "가림 처리된 이메일과 구독 대상 확인.",
       test_id: "pub_030__section__identity",
     },
     {

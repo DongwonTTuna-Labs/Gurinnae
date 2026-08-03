@@ -11,7 +11,7 @@ export const screen = {
       id: "principles",
       title: "독립성 원칙",
       component: "StructuredContentSection",
-      purpose: "돈과 편집의 방화벽.",
+      purpose: "후원·수익과 편집 독립성의 분리 원칙.",
       test_id: "pub_023__section__principles",
     },
     {

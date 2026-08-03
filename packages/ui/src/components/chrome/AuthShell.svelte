@@ -11,6 +11,7 @@ import ResponseHeader from "../ResponseHeader.svelte";
 import ScreenHeading from "../screen/ScreenHeading.svelte";
 import StateBadge from "../screen/StateBadge.svelte";
 import StateSummary from "../screen/StateSummary.svelte";
+import UnauthenticatedGuidance from "../screen/UnauthenticatedGuidance.svelte";
 
 let {
   screen,
@@ -24,13 +25,27 @@ let {
   projection: ScreenProjection;
 } = $props();
 const busy = $derived(isBusyState(runtime.state));
+const initialUnauthenticated = $derived(
+  screen.id === "AUTH-001" &&
+    runtime.state === "unauthenticated" &&
+    runtime.errors.length === 0,
+);
 </script>
 
 <div class="form-shell auth-shell">
   <ResponseHeader requestLabel="내부 인증" />
   <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="form-main auth-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
     <ScreenHeading variant="auth" {screen} {runtime} {contract} {projection} />
-    <StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} /><div class="form-card"><ArchetypeAssembly variant="form" {screen} {runtime} {contract} {projection} /></div>
+    {#if initialUnauthenticated}
+      <UnauthenticatedGuidance
+        {screen}
+        {projection}
+        message={runtime.notice ?? "내부 화면을 사용하려면 로그인해야 합니다."}
+      />
+    {:else}
+      <StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />
+    {/if}
+    <div class="form-card"><ArchetypeAssembly variant="form" {screen} {runtime} {contract} {projection} /></div>
   </main>
 </div>
 

@@ -70,15 +70,15 @@ def validate(root: Path, result: Validation) -> None:
 
     result.require(contract['status'] == 'FINAL', 'operation contract must be FINAL')
     result.require(contract['specification_version'] == '13.0.0', 'operation contract version mismatch')
-    result.require(len(operations) == 215, f'expected 215 operations, found {len(operations)}')
+    result.require(len(operations) == 217, f'expected 217 operations, found {len(operations)}')
     result.require(len(by_id) == len(operations), 'operation IDs are not globally unique')
     counts = collections.Counter(op['api'] for op in operations)
     result.require(
-        counts == {'public-api': 41, 'submission-api': 34, 'control-api': 134, 'identity-provider': 6},
+        counts == {'public-api': 43, 'submission-api': 34, 'control-api': 134, 'identity-provider': 6},
         f'wrong API counts: {dict(counts)}',
     )
     kinds = collections.Counter(op['operation_kind'] for op in operations)
-    result.require(kinds == {'QUERY': 108, 'COMMAND': 107}, f'wrong operation kinds: {dict(kinds)}')
+    result.require(kinds == {'QUERY': 110, 'COMMAND': 107}, f'wrong operation kinds: {dict(kinds)}')
     result.require(sum(op['method'] != 'GET' for op in operations) == 104, 'expected 104 non-GET HTTP commands')
     result.require(
         PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS <= set(by_id),
@@ -316,11 +316,11 @@ def validate(root: Path, result: Validation) -> None:
                 result.require(counts_schema == {'$ref': '#/components/schemas/CaseStateCounts'}, f'{api}:{name}: caseCounts must use CaseStateCounts')
 
     result.stats.update({
-        'operations': 215,
-        'query_operations': 108,
+        'operations': 217,
+        'query_operations': 110,
         'command_operations': 107,
         'http_write_operations': 104,
-        'public_operations': 41,
+        'public_operations': 43,
         'submission_operations': 34,
         'control_operations': 134,
         'identity_operations': 6,

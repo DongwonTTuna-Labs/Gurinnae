@@ -11,7 +11,7 @@ export const screen = {
       id: "scope",
       title: "계약 관측 범위",
       component: "CoverageStatement",
-      purpose: "사건 여부와 무관한 관측 범위.",
+      purpose: "사건 공개 여부와 무관한 계약 관측 범위.",
       test_id: "pub_011__section__scope",
     },
     {
@@ -27,7 +27,7 @@ export const screen = {
       id: "results",
       title: "계약 결과",
       component: "DataCollection",
-      purpose: "금액·기간·source·related case.",
+      purpose: "계약번호·제목·상태·금액·기관·업체를 포함한 계약 대장.",
       test_id: "pub_011__section__results",
     },
     {

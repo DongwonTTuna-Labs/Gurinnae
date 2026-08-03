@@ -421,7 +421,7 @@ def physical_table_set(root: Path, checks: Checks) -> tuple[set[str], dict[str, 
             checks.require(False, "invalid_table_registry", relative, "mapping or list", type(raw).__name__)
         relations.extend(current)
         match = re.match(r"^(\d{4})", path.name)
-        if match:
+        if match and current:
             by_ordinal.setdefault(match.group(1), set()).update(current)
     result = checks.unique(relations, "specs/database/addendum/*#tables")
     return result, by_ordinal

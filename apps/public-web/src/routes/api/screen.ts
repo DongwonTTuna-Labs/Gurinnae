@@ -11,7 +11,7 @@ export const screen = {
       id: "getting-started",
       title: "시작",
       component: "StructuredContentSection",
-      purpose: "base URL·auth/rate.",
+      purpose: "공개 자료 조회 주소·접근 조건·호출 한도.",
       test_id: "pub_021__section__getting-started",
     },
     {

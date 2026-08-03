@@ -352,11 +352,32 @@ export async function runResponseFlow(): Promise<void> {
     },
     { expected: 201 },
   );
-  uuidField(subscriptionCreated.body, "aggregateId");
+  const subscriptionId = uuidField(subscriptionCreated.body, "aggregateId");
+  equal(
+    subscriptionCreated.body.verificationDispatched,
+    true,
+    "persisted subscription verification dispatch receipt",
+  );
+  equal(
+    admin(
+      `SELECT count(*) FROM intake.subscriptions WHERE id='${subscriptionId}' AND status='PENDING'`,
+    ),
+    "1",
+    "persisted pending subscription",
+  );
+  equal(
+    admin(
+      `SELECT count(*) FROM ops.outbox WHERE aggregate_type='subscription' AND aggregate_id='${subscriptionId}' AND event_type='notification.subscription_verification_requested.v1'`,
+    ),
+    "1",
+    "persisted subscription verification outbox receipt",
+  );
   await clearCapturedMessages();
   deliverNotifications();
   const verificationToken = await capturedToken("/subscribe?token");
-  const managementToken = await capturedToken("/subscription/manage?token");
+  const managementToken = await capturedToken(
+    "/subscription/manage/exchange?token",
+  );
   const subscriptionVerified = await invoke(
     "POST",
     "/v1/submission-session/subscription:verify",

@@ -40,6 +40,7 @@ import {
   readSubmissionSession,
   rotateSubmissionCsrf,
 } from "./submission-cookie";
+import { route__j01__return_after_subscription_v1 } from "./subscription-preset";
 
 export function screenActions(screen: ScreenViewModel): Actions {
   const actions: Actions = Object.fromEntries(
@@ -255,11 +256,18 @@ async function runAction(
     const destination =
       operationId === "createCorrectionRequest"
         ? "/correction-request/receipt"
-        : renderRoute(screen.route, event.params);
-    throw redirect(
-      303,
-      `${destination}?notice=${encodeURIComponent(`${action.label} 완료`)}`,
-    );
+        : operationId === "createSubscription"
+          ? (route__j01__return_after_subscription_v1(
+              event.url,
+              payload,
+              value,
+            ) ?? renderRoute(screen.route, event.params))
+          : renderRoute(screen.route, event.params);
+    const notice =
+      operationId === "createSubscription"
+        ? "구독 확인 이메일을 보냈습니다."
+        : `${action.label} 완료`;
+    throw redirect(303, `${destination}?notice=${encodeURIComponent(notice)}`);
   } catch (error) {
     if (isRedirect(error)) throw error;
     return fail(400, {

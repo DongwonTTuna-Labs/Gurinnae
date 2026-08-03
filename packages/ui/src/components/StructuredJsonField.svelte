@@ -1,5 +1,10 @@
 <script lang="ts">
 import { untrack } from "svelte";
+import {
+  type AttachmentOption,
+  attachmentOptionLabel,
+} from "../attachment-option";
+import ProjectionValue from "./ProjectionValue.svelte";
 
 type AnswerRow = {
   questionId: string;
@@ -34,7 +39,7 @@ let {
   value?: unknown;
   required?: boolean;
   invalid?: boolean;
-  attachmentOptions?: readonly { id: string; filename?: string }[];
+  attachmentOptions?: readonly AttachmentOption[];
   idPrefix?: string;
 } = $props();
 const isConsent = $derived(name.toLowerCase().includes("consent"));
@@ -196,7 +201,7 @@ function toConsent(input: unknown): Consent {
       {#if attachmentOptions.length > 0}
         <fieldset class="attachment-consent-options">
           <legend>첨부 공개 범위</legend>
-          {#each attachmentOptions as attachment}
+          {#each attachmentOptions as attachment, attachmentIndex}
             {@const existing = consent.attachmentConsents.find((item) => item.attachmentId === attachment.id)}
             <div class="attachment-consent-option">
               <input id={attachmentId(attachment.id)} type="checkbox" checked={existing?.mayPublish === true} onchange={(event) => {
@@ -204,7 +209,8 @@ function toConsent(input: unknown): Consent {
                 const rest = consent.attachmentConsents.filter((item) => item.attachmentId !== attachment.id);
                 consent = { ...consent, attachmentConsents: [...rest, { attachmentId: attachment.id, mayPublish: checked, redactionAllowed: existing?.redactionAllowed === true }] };
               }} aria-describedby={describedBy} />
-              <label for={attachmentId(attachment.id)}>{attachment.filename ?? attachment.id} 공개에 동의합니다.</label>
+              {#if !attachment.filename}<ProjectionValue name="attachmentId" label="첨부 파일 식별자" value={attachment.id} />{/if}
+              <label for={attachmentId(attachment.id)}>{attachmentOptionLabel(attachment, attachmentIndex)} 공개에 동의합니다.</label>
             </div>
           {/each}
         </fieldset>
@@ -243,11 +249,11 @@ function toConsent(input: unknown): Consent {
           <label for={controlId(`answer-${index + 1}`)}><span>답변</span><textarea id={controlId(`answer-${index + 1}`)} rows="4" aria-label={`${row.questionLabel || `질문 ${index + 1}`} 답변`} value={row.text} aria-required={required} aria-describedby={describedBy} oninput={(event) => { const text = event.currentTarget.value; rows = rows.map((current, currentIndex) => currentIndex === index ? { ...current, text, updatedAt: now() } : current); }}></textarea></label>
           <fieldset class="attachment-picker"><legend>첨부 공개 범위 (선택)</legend>
             {#if attachmentOptions.length > 0}
-              {#each attachmentOptions as attachment}
+              {#each attachmentOptions as attachment, attachmentIndex}
                 <label for={controlId(`answer-${index + 1}-attachment-${attachment.id.replace(/[^a-zA-Z0-9_-]+/gu, "-")}`)}><input id={controlId(`answer-${index + 1}-attachment-${attachment.id.replace(/[^a-zA-Z0-9_-]+/gu, "-")}`)} type="checkbox" checked={row.attachmentIds.includes(attachment.id)} onchange={(event) => {
                   const checked = event.currentTarget.checked;
                   rows = rows.map((current, currentIndex) => currentIndex === index ? { ...current, attachmentIds: checked ? [...current.attachmentIds, attachment.id] : current.attachmentIds.filter((id) => id !== attachment.id) } : current);
-                }} aria-describedby={describedBy} /><span>{attachment.filename ?? "첨부 파일"} 연결</span></label>
+                }} aria-describedby={describedBy} /><span>{attachmentOptionLabel(attachment, attachmentIndex)} 연결</span></label>
               {/each}
             {:else}<p class="field-help">연결할 첨부가 없습니다.</p>{/if}
           </fieldset>

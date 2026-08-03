@@ -11,7 +11,7 @@ export const screen = {
       id: "status",
       title: "출처 상태 요약",
       component: "StatusAndRevisionHeader",
-      purpose: "healthy/stale/incident.",
+      purpose: "공식 데이터 출처별 정상·지연·장애 상태.",
       test_id: "pub_016__section__status",
     },
     {

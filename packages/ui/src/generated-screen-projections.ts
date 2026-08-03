@@ -43,29 +43,17 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "recent",
       fieldName: "status",
     },
-    "corrections.corrections": {
-      operationId: "listPublicCases",
-      path: "$.corrections",
+    "corrections.items": {
+      operationId: "listCorrections",
+      path: "$.items",
       sectionId: "corrections",
-      fieldName: "corrections",
+      fieldName: "items",
     },
-    "corrections.status": {
-      operationId: "listPublicCases",
-      path: "$.status",
-      sectionId: "corrections",
-      fieldName: "status",
-    },
-    "coverage.coverage": {
-      operationId: "listPublicCases",
-      path: "$.coverage",
+    "coverage.totalApproximate": {
+      operationId: "listSourceStatus",
+      path: "$.totalApproximate",
       sectionId: "coverage",
-      fieldName: "coverage",
-    },
-    "coverage.status": {
-      operationId: "listPublicCases",
-      path: "$.status",
-      sectionId: "coverage",
-      fieldName: "status",
+      fieldName: "totalApproximate",
     },
     "method.method": {
       operationId: "listPublicCases",
@@ -81,79 +69,49 @@ export const SCREEN_PROJECTION_BINDINGS = {
     },
   },
   "PUB-002": {
-    "query.query": {
+    "query.appliedFilters": {
       operationId: "searchPublicRecords",
-      path: "$.query",
+      path: "$.appliedFilters",
       sectionId: "query",
-      fieldName: "query",
+      fieldName: "appliedFilters",
     },
-    "query.status": {
+    "results.items": {
       operationId: "searchPublicRecords",
-      path: "$.status",
-      sectionId: "query",
-      fieldName: "status",
-    },
-    "types.types": {
-      operationId: "searchPublicRecords",
-      path: "$.types",
-      sectionId: "types",
-      fieldName: "types",
-    },
-    "types.status": {
-      operationId: "searchPublicRecords",
-      path: "$.status",
-      sectionId: "types",
-      fieldName: "status",
-    },
-    "results.results": {
-      operationId: "searchPublicRecords",
-      path: "$.results",
+      path: "$.items",
       sectionId: "results",
-      fieldName: "results",
+      fieldName: "items",
     },
-    "results.status": {
+    "results.nextCursor": {
       operationId: "searchPublicRecords",
-      path: "$.status",
+      path: "$.nextCursor",
       sectionId: "results",
-      fieldName: "status",
+      fieldName: "nextCursor",
     },
-    "coverage.coverage": {
+    "results.totalApproximate": {
       operationId: "searchPublicRecords",
-      path: "$.coverage",
-      sectionId: "coverage",
-      fieldName: "coverage",
+      path: "$.totalApproximate",
+      sectionId: "results",
+      fieldName: "totalApproximate",
     },
-    "coverage.status": {
+    "results.asOf": {
       operationId: "searchPublicRecords",
-      path: "$.status",
-      sectionId: "coverage",
-      fieldName: "status",
+      path: "$.asOf",
+      sectionId: "results",
+      fieldName: "asOf",
     },
   },
   "PUB-003": {
-    "scope.scope": {
+    "scope.totalApproximate": {
       operationId: "listPublicCases",
-      path: "$.scope",
+      path: "$.totalApproximate",
       sectionId: "scope",
-      fieldName: "scope",
+      fieldName: "totalApproximate",
     },
-    "scope.status": {
+    "scope.asOf": {
       operationId: "listPublicCases",
-      path: "$.status",
+      path: "$.asOf",
       sectionId: "scope",
-      fieldName: "status",
-    },
-    "filters.filters": {
-      operationId: "listPublicCases",
-      path: "$.filters",
-      sectionId: "filters",
-      fieldName: "filters",
-    },
-    "filters.status": {
-      operationId: "listPublicCases",
-      path: "$.status",
-      sectionId: "filters",
-      fieldName: "status",
+      fieldName: "asOf",
     },
     "filters.appliedFilters": {
       operationId: "listPublicCases",
@@ -161,29 +119,29 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "filters",
       fieldName: "appliedFilters",
     },
-    "results.results": {
+    "results.items": {
       operationId: "listPublicCases",
-      path: "$.results",
+      path: "$.items",
       sectionId: "results",
-      fieldName: "results",
+      fieldName: "items",
     },
-    "results.status": {
+    "results.totalApproximate": {
       operationId: "listPublicCases",
-      path: "$.status",
+      path: "$.totalApproximate",
       sectionId: "results",
-      fieldName: "status",
+      fieldName: "totalApproximate",
     },
-    "pagination.pagination": {
+    "results.asOf": {
       operationId: "listPublicCases",
-      path: "$.pagination",
-      sectionId: "pagination",
-      fieldName: "pagination",
+      path: "$.asOf",
+      sectionId: "results",
+      fieldName: "asOf",
     },
-    "pagination.status": {
+    "pagination.nextCursor": {
       operationId: "listPublicCases",
-      path: "$.status",
+      path: "$.nextCursor",
       sectionId: "pagination",
-      fieldName: "status",
+      fieldName: "nextCursor",
     },
   },
   "PUB-004": {
@@ -469,59 +427,29 @@ export const SCREEN_PROJECTION_BINDINGS = {
     },
   },
   "PUB-007": {
-    "search.search": {
-      operationId: "listAgencies",
-      path: "$.search",
-      sectionId: "search",
-      fieldName: "search",
-    },
-    "search.status": {
-      operationId: "listAgencies",
-      path: "$.status",
-      sectionId: "search",
-      fieldName: "status",
-    },
-    "filters.filters": {
-      operationId: "listAgencies",
-      path: "$.filters",
-      sectionId: "filters",
-      fieldName: "filters",
-    },
-    "filters.status": {
-      operationId: "listAgencies",
-      path: "$.status",
-      sectionId: "filters",
-      fieldName: "status",
-    },
-    "filters.appliedFilters": {
+    "search.appliedFilters": {
       operationId: "listAgencies",
       path: "$.appliedFilters",
-      sectionId: "filters",
+      sectionId: "search",
       fieldName: "appliedFilters",
     },
-    "results.results": {
+    "results.items": {
       operationId: "listAgencies",
-      path: "$.results",
+      path: "$.items",
       sectionId: "results",
-      fieldName: "results",
+      fieldName: "items",
     },
-    "results.status": {
+    "results.totalApproximate": {
       operationId: "listAgencies",
-      path: "$.status",
+      path: "$.totalApproximate",
       sectionId: "results",
-      fieldName: "status",
+      fieldName: "totalApproximate",
     },
-    "coverage.coverage": {
+    "coverage.asOf": {
       operationId: "listAgencies",
-      path: "$.coverage",
+      path: "$.asOf",
       sectionId: "coverage",
-      fieldName: "coverage",
-    },
-    "coverage.status": {
-      operationId: "listAgencies",
-      path: "$.status",
-      sectionId: "coverage",
-      fieldName: "status",
+      fieldName: "asOf",
     },
   },
   "PUB-008": {
@@ -629,59 +557,29 @@ export const SCREEN_PROJECTION_BINDINGS = {
     },
   },
   "PUB-009": {
-    "search.search": {
-      operationId: "listSuppliers",
-      path: "$.search",
-      sectionId: "search",
-      fieldName: "search",
-    },
-    "search.status": {
-      operationId: "listSuppliers",
-      path: "$.status",
-      sectionId: "search",
-      fieldName: "status",
-    },
-    "filters.filters": {
-      operationId: "listSuppliers",
-      path: "$.filters",
-      sectionId: "filters",
-      fieldName: "filters",
-    },
-    "filters.status": {
-      operationId: "listSuppliers",
-      path: "$.status",
-      sectionId: "filters",
-      fieldName: "status",
-    },
-    "filters.appliedFilters": {
+    "search.appliedFilters": {
       operationId: "listSuppliers",
       path: "$.appliedFilters",
-      sectionId: "filters",
+      sectionId: "search",
       fieldName: "appliedFilters",
     },
-    "results.results": {
+    "results.items": {
       operationId: "listSuppliers",
-      path: "$.results",
+      path: "$.items",
       sectionId: "results",
-      fieldName: "results",
+      fieldName: "items",
     },
-    "results.status": {
+    "results.totalApproximate": {
       operationId: "listSuppliers",
-      path: "$.status",
+      path: "$.totalApproximate",
       sectionId: "results",
-      fieldName: "status",
+      fieldName: "totalApproximate",
     },
-    "identity-note.identity-note": {
+    "identity-note.asOf": {
       operationId: "listSuppliers",
-      path: "$.identity-note",
+      path: "$.asOf",
       sectionId: "identity-note",
-      fieldName: "identity-note",
-    },
-    "identity-note.status": {
-      operationId: "listSuppliers",
-      path: "$.status",
-      sectionId: "identity-note",
-      fieldName: "status",
+      fieldName: "asOf",
     },
   },
   "PUB-010": {
@@ -789,29 +687,17 @@ export const SCREEN_PROJECTION_BINDINGS = {
     },
   },
   "PUB-011": {
-    "scope.scope": {
+    "scope.totalApproximate": {
       operationId: "listContracts",
-      path: "$.scope",
+      path: "$.totalApproximate",
       sectionId: "scope",
-      fieldName: "scope",
+      fieldName: "totalApproximate",
     },
-    "scope.status": {
+    "scope.asOf": {
       operationId: "listContracts",
-      path: "$.status",
+      path: "$.asOf",
       sectionId: "scope",
-      fieldName: "status",
-    },
-    "filters.filters": {
-      operationId: "listContracts",
-      path: "$.filters",
-      sectionId: "filters",
-      fieldName: "filters",
-    },
-    "filters.status": {
-      operationId: "listContracts",
-      path: "$.status",
-      sectionId: "filters",
-      fieldName: "status",
+      fieldName: "asOf",
     },
     "filters.appliedFilters": {
       operationId: "listContracts",
@@ -819,37 +705,55 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "filters",
       fieldName: "appliedFilters",
     },
-    "results.results": {
+    "results.items": {
       operationId: "listContracts",
-      path: "$.results",
+      path: "$.items",
       sectionId: "results",
-      fieldName: "results",
+      fieldName: "items",
     },
-    "results.status": {
+    "results.totalApproximate": {
       operationId: "listContracts",
-      path: "$.status",
+      path: "$.totalApproximate",
       sectionId: "results",
-      fieldName: "status",
+      fieldName: "totalApproximate",
     },
-    "limitations.limitations": {
+    "limitations.asOf": {
       operationId: "listContracts",
-      path: "$.limitations",
+      path: "$.asOf",
       sectionId: "limitations",
-      fieldName: "limitations",
-    },
-    "limitations.status": {
-      operationId: "listContracts",
-      path: "$.status",
-      sectionId: "limitations",
-      fieldName: "status",
+      fieldName: "asOf",
     },
   },
   "PUB-012": {
-    "identity.identity": {
+    "identity.id": {
       operationId: "getContract",
-      path: "$.identity",
+      path: "$.id",
       sectionId: "identity",
-      fieldName: "identity",
+      fieldName: "id",
+    },
+    "identity.contractNumber": {
+      operationId: "getContract",
+      path: "$.contractNumber",
+      sectionId: "identity",
+      fieldName: "contractNumber",
+    },
+    "identity.title": {
+      operationId: "getContract",
+      path: "$.title",
+      sectionId: "identity",
+      fieldName: "title",
+    },
+    "identity.agency": {
+      operationId: "getContract",
+      path: "$.agency",
+      sectionId: "identity",
+      fieldName: "agency",
+    },
+    "identity.supplier": {
+      operationId: "getContract",
+      path: "$.supplier",
+      sectionId: "identity",
+      fieldName: "supplier",
     },
     "identity.status": {
       operationId: "getContract",
@@ -857,17 +761,53 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "identity",
       fieldName: "status",
     },
-    "terms.terms": {
+    "terms.contractMethod": {
       operationId: "getContract",
-      path: "$.terms",
+      path: "$.contractMethod",
       sectionId: "terms",
-      fieldName: "terms",
+      fieldName: "contractMethod",
     },
-    "terms.status": {
+    "terms.signedAt": {
       operationId: "getContract",
-      path: "$.status",
+      path: "$.signedAt",
       sectionId: "terms",
-      fieldName: "status",
+      fieldName: "signedAt",
+    },
+    "terms.startAt": {
+      operationId: "getContract",
+      path: "$.startAt",
+      sectionId: "terms",
+      fieldName: "startAt",
+    },
+    "terms.endAt": {
+      operationId: "getContract",
+      path: "$.endAt",
+      sectionId: "terms",
+      fieldName: "endAt",
+    },
+    "terms.currency": {
+      operationId: "getContract",
+      path: "$.currency",
+      sectionId: "terms",
+      fieldName: "currency",
+    },
+    "terms.originalAmount": {
+      operationId: "getContract",
+      path: "$.originalAmount",
+      sectionId: "terms",
+      fieldName: "originalAmount",
+    },
+    "terms.currentAmount": {
+      operationId: "getContract",
+      path: "$.currentAmount",
+      sectionId: "terms",
+      fieldName: "currentAmount",
+    },
+    "terms.lineItems": {
+      operationId: "getContract",
+      path: "$.lineItems",
+      sectionId: "terms",
+      fieldName: "lineItems",
     },
     "changes.changes": {
       operationId: "getContract",
@@ -875,47 +815,11 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "changes",
       fieldName: "changes",
     },
-    "changes.status": {
+    "provenance.sourceDocuments": {
       operationId: "getContract",
-      path: "$.status",
-      sectionId: "changes",
-      fieldName: "status",
-    },
-    "procurement.procurement": {
-      operationId: "getContract",
-      path: "$.procurement",
-      sectionId: "procurement",
-      fieldName: "procurement",
-    },
-    "procurement.status": {
-      operationId: "getContract",
-      path: "$.status",
-      sectionId: "procurement",
-      fieldName: "status",
-    },
-    "provenance.provenance": {
-      operationId: "getContract",
-      path: "$.provenance",
+      path: "$.sourceDocuments",
       sectionId: "provenance",
-      fieldName: "provenance",
-    },
-    "provenance.status": {
-      operationId: "getContract",
-      path: "$.status",
-      sectionId: "provenance",
-      fieldName: "status",
-    },
-    "related.related": {
-      operationId: "getContract",
-      path: "$.related",
-      sectionId: "related",
-      fieldName: "related",
-    },
-    "related.status": {
-      operationId: "getContract",
-      path: "$.status",
-      sectionId: "related",
-      fieldName: "status",
+      fieldName: "sourceDocuments",
     },
     "related.relatedCases": {
       operationId: "getContract",
@@ -923,17 +827,11 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "related",
       fieldName: "relatedCases",
     },
-    "limitations.limitations": {
+    "limitations.normalizationWarnings": {
       operationId: "getContract",
-      path: "$.limitations",
+      path: "$.normalizationWarnings",
       sectionId: "limitations",
-      fieldName: "limitations",
-    },
-    "limitations.status": {
-      operationId: "getContract",
-      path: "$.status",
-      sectionId: "limitations",
-      fieldName: "status",
+      fieldName: "normalizationWarnings",
     },
   },
   "PUB-013": {
@@ -1295,29 +1193,11 @@ export const SCREEN_PROJECTION_BINDINGS = {
     },
   },
   "PUB-018": {
-    "principle.principle": {
+    "principle.asOf": {
       operationId: "listCorrections",
-      path: "$.principle",
+      path: "$.asOf",
       sectionId: "principle",
-      fieldName: "principle",
-    },
-    "principle.status": {
-      operationId: "listCorrections",
-      path: "$.status",
-      sectionId: "principle",
-      fieldName: "status",
-    },
-    "filters.filters": {
-      operationId: "listCorrections",
-      path: "$.filters",
-      sectionId: "filters",
-      fieldName: "filters",
-    },
-    "filters.status": {
-      operationId: "listCorrections",
-      path: "$.status",
-      sectionId: "filters",
-      fieldName: "status",
+      fieldName: "asOf",
     },
     "filters.appliedFilters": {
       operationId: "listCorrections",
@@ -1325,29 +1205,23 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "filters",
       fieldName: "appliedFilters",
     },
-    "records.records": {
+    "records.items": {
       operationId: "listCorrections",
-      path: "$.records",
+      path: "$.items",
       sectionId: "records",
-      fieldName: "records",
+      fieldName: "items",
     },
-    "records.status": {
+    "records.totalApproximate": {
       operationId: "listCorrections",
-      path: "$.status",
+      path: "$.totalApproximate",
       sectionId: "records",
-      fieldName: "status",
+      fieldName: "totalApproximate",
     },
-    "feed.feed": {
+    "feed.nextCursor": {
       operationId: "listCorrections",
-      path: "$.feed",
+      path: "$.nextCursor",
       sectionId: "feed",
-      fieldName: "feed",
-    },
-    "feed.status": {
-      operationId: "listCorrections",
-      path: "$.status",
-      sectionId: "feed",
-      fieldName: "status",
+      fieldName: "nextCursor",
     },
   },
   "PUB-019": {
@@ -1419,77 +1293,17 @@ export const SCREEN_PROJECTION_BINDINGS = {
     },
   },
   "PUB-020": {
-    "datasets.datasets": {
+    "datasets.items": {
       operationId: "listPublicDatasets",
-      path: "$.datasets",
+      path: "$.items",
       sectionId: "datasets",
-      fieldName: "datasets",
+      fieldName: "items",
     },
-    "datasets.status": {
+    "snapshots.asOf": {
       operationId: "listPublicDatasets",
-      path: "$.status",
-      sectionId: "datasets",
-      fieldName: "status",
-    },
-    "snapshots.snapshots": {
-      operationId: "listPublicDatasets",
-      path: "$.snapshots",
+      path: "$.asOf",
       sectionId: "snapshots",
-      fieldName: "snapshots",
-    },
-    "snapshots.status": {
-      operationId: "listPublicDatasets",
-      path: "$.status",
-      sectionId: "snapshots",
-      fieldName: "status",
-    },
-    "schemas.schemas": {
-      operationId: "listPublicDatasets",
-      path: "$.schemas",
-      sectionId: "schemas",
-      fieldName: "schemas",
-    },
-    "schemas.status": {
-      operationId: "listPublicDatasets",
-      path: "$.status",
-      sectionId: "schemas",
-      fieldName: "status",
-    },
-    "license.license": {
-      operationId: "listPublicDatasets",
-      path: "$.license",
-      sectionId: "license",
-      fieldName: "license",
-    },
-    "license.status": {
-      operationId: "listPublicDatasets",
-      path: "$.status",
-      sectionId: "license",
-      fieldName: "status",
-    },
-    "corrections.corrections": {
-      operationId: "listPublicDatasets",
-      path: "$.corrections",
-      sectionId: "corrections",
-      fieldName: "corrections",
-    },
-    "corrections.status": {
-      operationId: "listPublicDatasets",
-      path: "$.status",
-      sectionId: "corrections",
-      fieldName: "status",
-    },
-    "limits.limits": {
-      operationId: "listPublicDatasets",
-      path: "$.limits",
-      sectionId: "limits",
-      fieldName: "limits",
-    },
-    "limits.status": {
-      operationId: "listPublicDatasets",
-      path: "$.status",
-      sectionId: "limits",
-      fieldName: "status",
+      fieldName: "asOf",
     },
   },
   "PUB-021": {

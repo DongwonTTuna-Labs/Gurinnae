@@ -27,7 +27,7 @@ EDGE_FIELDS = [
 ]
 JOURNEY_IDS = [f"J-{ordinal:02d}" for ordinal in range(1, 13)]
 EDGE_COUNTS = {
-    "J-01": 4,
+    "J-01": 7,
     "J-02": 5,
     "J-03": 7,
     "J-04": 5,
@@ -40,6 +40,7 @@ EDGE_COUNTS = {
     "J-11": 29,
     "J-12": 36,
 }
+EDGE_TOTAL = sum(EDGE_COUNTS.values())
 ROUTE_PARAMETER_TYPES = {
     "agencySlug": "public-slug",
     "caseId": "uuid",
@@ -128,12 +129,18 @@ def _validate_identity(
     journeys = authority.get("journey_contracts")
     _require(isinstance(journeys, dict) and list(journeys) == JOURNEY_IDS, "journey contract set drifted")
     counts = authority.get("counts", {})
-    _require(counts.get("journeys") == 12 and counts.get("edges") == 129, "journey declared counts drifted")
+    _require(
+        counts.get("journeys") == 12 and counts.get("edges") == EDGE_TOTAL,
+        "journey declared counts drifted",
+    )
     _require({key: len(value) for key, value in edges_by_journey.items()} == EDGE_COUNTS, "journey edge counts drifted")
     rows = [row for values in edges_by_journey.values() for row in values]
     edge_ids = [str(row.get("edge_id")) for row in rows]
     handlers = [str(row.get("handler_id")) for row in rows]
-    _require(len(rows) == len(set(edge_ids)) == 129, "journey edge IDs are not unique")
+    _require(
+        len(rows) == len(set(edge_ids)) == EDGE_TOTAL,
+        "journey edge IDs are not unique",
+    )
     observed_reuse = {
         handler: sorted(row["edge_id"] for row in rows if row["handler_id"] == handler)
         for handler, count in Counter(handlers).items()
@@ -431,7 +438,7 @@ def build_journey_contracts(
         )
     return {
         "schema_version": 2,
-        "specification_version": "13.0.0+owner-ui-journeys.3",
+        "specification_version": "13.0.0+owner-ui-journeys.4",
         "status": "OPEN_IMPLEMENTATION",
         "authority_mode": "DERIVED_FROM_EXPLICIT_PRODUCT_REGISTRY",
         "sources": [

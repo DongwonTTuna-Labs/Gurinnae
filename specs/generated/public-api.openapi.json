@@ -555,6 +555,24 @@
             }
           },
           {
+            "name": "sidoCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{2}$"
+            }
+          },
+          {
+            "name": "sigunguCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$"
+            }
+          },
+          {
             "name": "supplierId",
             "in": "query",
             "required": false,
@@ -675,6 +693,199 @@
           "INVALID_PARAMETER",
           "INVALID_CURSOR",
           "RATE_LIMITED",
+          "INTERNAL_ERROR"
+        ],
+        "security": [],
+        "x-assurance-level": "NONE",
+        "x-step-up-required": false
+      }
+    },
+    "/v1/cases/download": {
+      "get": {
+        "operationId": "downloadPublicCases",
+        "tags": ["operations"],
+        "summary": "현재 사건 필터 결과 내려받기",
+        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.\n최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고\n다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는\n{\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"}이고 이후 레코드가 데이터다.\nrowCount는 고지 레코드를 제외한다.",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["CSV", "JSONL"]
+            }
+          },
+          {
+            "name": "publicationState",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "agencyId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sidoCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{2}$"
+            }
+          },
+          {
+            "name": "sigunguCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$"
+            }
+          },
+          {
+            "name": "supplierId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "ruleId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "publishedFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "publishedTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasResponse",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "hasCorrection",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["updated_desc", "published_desc", "title_asc"]
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCasesDownload"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["INVALID_PARAMETER"]
+          },
+          "422": {
+            "description": "Problem response: PRECONDITION_FAILED. 현재 조건의 결과가 5,000건을 초과합니다. 전체 자료는 데이터 내려받기에서 요청하세요.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["PRECONDITION_FAILED"]
+          },
+          "429": {
+            "description": "Problem response: RATE_LIMITED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["RATE_LIMITED"]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["INTERNAL_ERROR"]
+          }
+        },
+        "x-operation-kind": "QUERY",
+        "x-capability": "public.read",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "RATE_LIMITED",
+          "PRECONDITION_FAILED",
           "INTERNAL_ERROR"
         ],
         "security": [],
@@ -3385,6 +3596,33 @@
             }
           },
           {
+            "name": "agencyId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sidoCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{2}$"
+            }
+          },
+          {
+            "name": "sigunguCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$"
+            }
+          },
+          {
             "name": "dateFrom",
             "in": "query",
             "required": false,
@@ -3489,6 +3727,185 @@
           "INVALID_PARAMETER",
           "INVALID_CURSOR",
           "RATE_LIMITED",
+          "INTERNAL_ERROR"
+        ],
+        "security": [],
+        "x-assurance-level": "NONE",
+        "x-step-up-required": false
+      }
+    },
+    "/v1/search/download": {
+      "get": {
+        "operationId": "downloadPublicSearchRecords",
+        "tags": ["operations"],
+        "summary": "현재 검색 필터 결과 내려받기",
+        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.\n최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고\n다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는\n{\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"}이고 이후 레코드가 데이터다.\nrowCount는 고지 레코드를 제외한다.",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["CSV", "JSONL"]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "publicationState",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "agencyId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sidoCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{2}$"
+            }
+          },
+          {
+            "name": "sigunguCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{5}$"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["relevance", "updated_desc", "title_asc"]
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSearchDownload"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["INVALID_PARAMETER"]
+          },
+          "422": {
+            "description": "Problem response: PRECONDITION_FAILED. 현재 조건의 결과가 5,000건을 초과합니다. 전체 자료는 데이터 내려받기에서 요청하세요.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["PRECONDITION_FAILED"]
+          },
+          "429": {
+            "description": "Problem response: RATE_LIMITED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["RATE_LIMITED"]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["INTERNAL_ERROR"]
+          }
+        },
+        "x-operation-kind": "QUERY",
+        "x-capability": "public.read",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "RATE_LIMITED",
+          "PRECONDITION_FAILED",
           "INTERNAL_ERROR"
         ],
         "security": [],
@@ -4622,6 +5039,38 @@
               }
             ]
           },
+          "sidoCode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sigunguCode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{5}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "regionCodeVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "caseCounts": {
             "$ref": "#/components/schemas/CaseStateCounts"
           },
@@ -4637,6 +5086,9 @@
           "id",
           "name",
           "agencyType",
+          "sidoCode",
+          "sigunguCode",
+          "regionCodeVersion",
           "caseCounts",
           "coverage",
           "href"
@@ -4756,6 +5208,38 @@
           "jurisdiction": {
             "type": "string"
           },
+          "sidoCode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sigunguCode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{5}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "regionCodeVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "identifiers": {
             "type": "array",
             "items": {
@@ -4800,6 +5284,9 @@
           "id",
           "name",
           "agencyType",
+          "sidoCode",
+          "sigunguCode",
+          "regionCodeVersion",
           "identifiers",
           "coverage",
           "metrics",
@@ -7031,6 +7518,39 @@
           "summary": {
             "type": "string"
           },
+          "agencyName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contractName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nonConclusion": {
+            "type": "string"
+          },
           "confirmedFacts": {
             "type": "array",
             "items": {
@@ -7109,6 +7629,10 @@
           "publishedAt",
           "updatedAt",
           "summary",
+          "agencyName",
+          "contractName",
+          "amount",
+          "nonConclusion",
           "confirmedFacts",
           "criticalUnknowns",
           "partyResponses",
@@ -7175,6 +7699,39 @@
         "properties": {
           "case": {
             "$ref": "#/components/schemas/CaseCard"
+          },
+          "agencyName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contractName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nonConclusion": {
+            "type": "string"
           },
           "confirmedFacts": {
             "type": "array",
@@ -7252,6 +7809,10 @@
         },
         "required": [
           "case",
+          "agencyName",
+          "contractName",
+          "amount",
+          "nonConclusion",
           "confirmedFacts",
           "criticalUnknowns",
           "partyResponses",
@@ -7279,6 +7840,14 @@
             "type": "string",
             "format": "uuid"
           },
+          "sidoCode": {
+            "type": "string",
+            "pattern": "^[0-9]{2}$"
+          },
+          "sigunguCode": {
+            "type": "string",
+            "pattern": "^[0-9]{5}$"
+          },
           "supplierId": {
             "type": "string",
             "format": "uuid"
@@ -7299,8 +7868,81 @@
           },
           "hasCorrection": {
             "type": "boolean"
+          },
+          "sort": {
+            "type": "string",
+            "enum": ["updated_desc", "published_desc", "title_asc"]
           }
         }
+      },
+      "PublicCasesDownload": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "최대 5,000개 사건 레코드의 동기 내려받기 결과. CSV는\n`이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가\n이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.\nrowCount는 고지 레코드를 제외한다.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["READY"]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "byteLength": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "contentSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "contentBase64": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["CSV", "JSONL"]
+          },
+          "rowCount": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000
+          },
+          "appliedFilters": {
+            "$ref": "#/components/schemas/PublicCasesAppliedFilters"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "version",
+          "filename",
+          "mediaType",
+          "byteLength",
+          "contentSha256",
+          "contentBase64",
+          "format",
+          "rowCount",
+          "appliedFilters",
+          "generatedAt"
+        ]
       },
       "PublicCasesItem": {
         "$ref": "#/components/schemas/CaseCard"
@@ -7477,11 +8119,52 @@
           "evidenceType": {
             "type": "string"
           },
+          "documentTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sourceUrl": {
             "anyOf": [
               {
                 "type": "string",
                 "format": "uri-reference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pageAnchor": {
+            "anyOf": [
+              {
+                "type": "string"
               },
               {
                 "type": "null"
@@ -7520,6 +8203,11 @@
           "id",
           "title",
           "evidenceType",
+          "documentTitle",
+          "publisher",
+          "publishedAt",
+          "sourceUrl",
+          "pageAnchor",
           "sourceLocator",
           "contentSha256"
         ]
@@ -7543,6 +8231,18 @@
               "type": "string"
             }
           },
+          "agencyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sidoCode": {
+            "type": "string",
+            "pattern": "^[0-9]{2}$"
+          },
+          "sigunguCode": {
+            "type": "string",
+            "pattern": "^[0-9]{5}$"
+          },
           "dateFrom": {
             "type": "string",
             "format": "date"
@@ -7550,8 +8250,81 @@
           "dateTo": {
             "type": "string",
             "format": "date"
+          },
+          "sort": {
+            "type": "string",
+            "enum": ["relevance", "updated_desc", "title_asc"]
           }
         }
+      },
+      "PublicSearchDownload": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "최대 5,000개 검색 결과 레코드의 동기 내려받기 결과. CSV는\n`이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가\n이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.\nrowCount는 고지 레코드를 제외한다.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["READY"]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "byteLength": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "contentSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "contentBase64": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["CSV", "JSONL"]
+          },
+          "rowCount": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000
+          },
+          "appliedFilters": {
+            "$ref": "#/components/schemas/PublicRecordsSearchResultAppliedFilters"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "version",
+          "filename",
+          "mediaType",
+          "byteLength",
+          "contentSha256",
+          "contentBase64",
+          "format",
+          "rowCount",
+          "appliedFilters",
+          "generatedAt"
+        ]
       },
       "PublicRecordsSearchResultItem": {
         "type": "object",

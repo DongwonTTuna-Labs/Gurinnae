@@ -141,6 +141,7 @@ const stateProfile = (screen: ScreenViewModel): ScreenRuntime["state"][] => {
     : [];
   const allowed = new Set<ScreenRuntime["state"]>([
     "loading",
+    "awaiting-query",
     "initial-loading",
     "success",
     "empty",
@@ -328,6 +329,7 @@ export function canonicalizeScreenViewModel(
 export const stateLabel = (state: ScreenRuntime["state"]): string =>
   ({
     loading: "불러오는 중",
+    "awaiting-query": "검색어 입력 대기",
     "initial-loading": "처음 불러오는 중",
     success: "최신 상태",
     empty: "자료 없음",

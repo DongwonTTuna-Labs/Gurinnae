@@ -5,6 +5,10 @@ import type {
   TypedScreenViewModel,
 } from "../../index";
 import {
+  publicActionPlacement,
+  sectionActionIds,
+} from "../../public-action-placement";
+import {
   sourceSectionForId,
   statusSectionIdForScreen,
 } from "../../screen-chrome";
@@ -28,19 +32,25 @@ let {
   variant?: "standard" | "workspace" | "form";
 } = $props();
 const statusSectionId = $derived(statusSectionIdForScreen(screen.sections));
+const actionPlacement = $derived(publicActionPlacement(screen));
 </script>
 
 <div class="section-grid" class:form-grid={variant === "form" || screen.archetype === "GUIDED_FORM"} class:workspace-grid={variant === "workspace"}>
   {#each contract.sections as typedSection, index (typedSection.id)}
     {@const section = sourceSectionForId(screen, typedSection.id)}
+    {@const inlineActionIds = sectionActionIds(actionPlacement, typedSection.id)}
+    {@const ownsAttachments = actionPlacement?.attachmentSectionId === typedSection.id}
     {#if !(skipStatus && typedSection.id === statusSectionId)}
       <section id={typedSection.id} tabindex="-1" aria-labelledby={`section-${typedSection.id}-heading`} data-testid={typedSection.testId} data-focus-target={projection.sections[typedSection.id]?.focusTarget} data-component={typedSection.component} data-projection-state={projection.sections[typedSection.id]?.state} class="section" class:form-section={variant === "form"} class:primary={typedSection.region === "priority"} class:workspace-section={variant === "workspace"}>
-        <div class="section-content"><ScreenSection {section} {screen} {runtime} {index} projection={projection.sections[typedSection.id]} /></div>
+        <div class="section-content">
+          <ScreenSection {section} {screen} {runtime} {index} projection={projection.sections[typedSection.id]} />
+          {#if actionPlacement}<ScreenActions {screen} {runtime} actionIds={inlineActionIds} attachments={ownsAttachments} context="section" />{/if}
+        </div>
       </section>
     {/if}
   {/each}
 </div>
-<ScreenActions {screen} {runtime} />
+{#if !actionPlacement}<ScreenActions {screen} {runtime} />{/if}
 
 <style>
   .section-grid {

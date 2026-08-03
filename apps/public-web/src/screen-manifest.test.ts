@@ -5,6 +5,13 @@ const screens = Object.values(
   import.meta.glob("./routes/**/screen.ts", { eager: true, import: "screen" }),
 );
 
+const EXPLICITLY_EMPTY_PROJECTION_SECTIONS = new Set([
+  "PUB-020.schemas",
+  "PUB-020.license",
+  "PUB-020.corrections",
+  "PUB-020.limits",
+]);
+
 describe("public screen manifest", () => {
   it("materializes all 34 unique public screens", () => {
     assertScreens(screens, 34);
@@ -13,6 +20,7 @@ describe("public screen manifest", () => {
 });
 
 function assertTypedContracts(values: unknown[]): void {
+  const emptyProjectionSections = new Set<string>();
   for (const value of values) {
     const screen = value as ScreenViewModel;
     const typed = typedScreenViewModel(screen);
@@ -20,10 +28,13 @@ function assertTypedContracts(values: unknown[]): void {
     expect(typed.sections.map((section) => section.id)).toEqual(
       screen.sections.map((section) => section.id),
     );
-    expect(typed.sections.every((section) => section.fields.length > 0)).toBe(
-      true,
-    );
+    for (const section of typed.sections) {
+      if (section.fields.length === 0) {
+        emptyProjectionSections.add(`${screen.id}.${section.id}`);
+      }
+    }
   }
+  expect(emptyProjectionSections).toEqual(EXPLICITLY_EMPTY_PROJECTION_SECTIONS);
 }
 
 function assertScreens(values: unknown[], expected: number): void {

@@ -146,8 +146,8 @@ function autocompleteFor(name: string): AutoCompleteToken {
   {#if showGuide}<p>필수 입력과 검토 후 제출하며, 세션·권한은 단계마다 서버가 확인합니다.</p>{/if}
   {#if screen.id === "RSP-005" && (section.id === "consent" || section.id === "authority" || section.id === "consequence")}
     {#if section.id === "consent"}<p>본문 공개: {previewConsent?.bodyConsent === true ? "동의" : "미동의"}</p><p>민감정보 가림 확인: {previewConsent?.redactionAcknowledged === true ? "확인" : "미확인"} · 첨부 공개 {Array.isArray(previewConsent?.attachmentConsents) ? previewConsent.attachmentConsents.filter((item) => record(item)?.mayPublish === true).length : 0}개</p>
-    {:else if section.id === "authority"}<p>제출 권한과 세션 범위는 서버가 preview 시점에 확인합니다. 권한이 확인되지 않으면 제출 버튼을 사용할 수 없습니다.</p>
-    {:else}<p>제출 후에는 immutable receipt와 submission digest가 발급되며, 수정은 보충자료 경로에서 새 영수증으로 남습니다.</p>{/if}
+    {:else if section.id === "authority"}<p>제출 권한과 세션 범위는 서버가 미리보기 시점에 확인합니다. 권한이 확인되지 않으면 제출 버튼을 사용할 수 없습니다.</p>
+    {:else}<p>제출 후에는 변경할 수 없는 영수증과 제출 무결성 지문이 발급되며, 수정은 보충자료 경로에서 새 영수증으로 남습니다.</p>{/if}
   {:else if isAnswerScreen && saveAction}
     <form id={`action-${saveAction.id}`} method="POST" action={formAction(saveAction.id)} class="guided-response-form answer-consent-form" data-action-id={saveAction.id}>
       {#if runtime.idempotencyKeys?.[saveAction.id]}<input type="hidden" name="idempotencyKey" value={runtime.idempotencyKeys[saveAction.id]} />{/if}
@@ -172,7 +172,7 @@ function autocompleteFor(name: string): AutoCompleteToken {
         {:else if field.readonly}<input type="hidden" name={field.name} value={field.value ?? ""} />
         {:else}<input type="hidden" name={field.name} value={field.value ?? ""} />{/if}
       {/each}
-      <p class="field-help">제출하면 서버가 첨부 상태·version·권한을 다시 확인하고 immutable receipt를 발급합니다.</p>
+      <p class="field-help">제출하면 서버가 첨부 상태·버전·권한을 다시 확인하고 변경할 수 없는 영수증을 발급합니다.</p>
       <button class="primary-button" type="submit" disabled={reviewVm?.consequence.blocked === true} aria-disabled={reviewVm?.consequence.blocked === true}>
         {reviewVm?.consequence.blocked ? "차단 사유를 해결한 뒤 제출" : submitAction.label}
       </button>

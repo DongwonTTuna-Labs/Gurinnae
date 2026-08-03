@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -31,7 +32,7 @@ SOURCE_PINS = {
     "additive_command_semantics_sha256": "specs/product/addendum-command-semantics.yaml",
     "approval_policy_sha256": "specs/product/addendum-approval-policy.yaml",
 }
-EDGE_COUNTS = {
+SOURCE_EDGE_COUNTS = {
     "J-01": 4,
     "J-02": 5,
     "J-03": 7,
@@ -45,6 +46,65 @@ EDGE_COUNTS = {
     "J-11": 29,
     "J-12": 36,
 }
+EDGE_COUNTS = {**SOURCE_EDGE_COUNTS, "J-01": 7}
+SOURCE_EDGE_TOTAL = sum(SOURCE_EDGE_COUNTS.values())
+EDGE_TOTAL = sum(EDGE_COUNTS.values())
+R6A_J01_SUBSCRIPTION_EDGES = [
+    [
+        "J-01-E05",
+        "OPEN_CASE_SUBSCRIPTION",
+        "PUB-004",
+        "SCREEN",
+        "PUB-029",
+        "SCREEN",
+        "NAVIGATION",
+        "VISIBLE_ACTION",
+        "PUB-004.subscribe-case",
+        "ui__pub_004__subscribe_case",
+        "PUB-004",
+        "PUB-029",
+        "preserve the exact case slug as safe return context; this optional branch does not replace the J-01 durable outcome",
+        "NONTERMINAL",
+        "EXISTING",
+        "DECLARED_RUNTIME_OPEN",
+    ],
+    [
+        "J-01-E06",
+        "REQUEST_CASE_SUBSCRIPTION_VERIFICATION",
+        "PUB-029",
+        "SCREEN",
+        "PUB-029::subscription-verification-requested",
+        "MILESTONE",
+        "APPLICATION_COMMAND",
+        "OPERATION_RESULT",
+        "createSubscription#verificationDispatched=true",
+        "handle__j01__create_subscription_verification_receipt_v1",
+        "PUB-029",
+        "PUB-029",
+        "only a persisted verification-dispatched receipt continues; rejection or failure remains on PUB-029",
+        "NONTERMINAL",
+        "EXISTING",
+        "DECLARED_RUNTIME_OPEN",
+    ],
+    [
+        "J-01-E07",
+        "RETURN_TO_CASE_AFTER_SUBSCRIPTION",
+        "PUB-029::subscription-verification-requested",
+        "MILESTONE",
+        "PUB-004",
+        "SCREEN",
+        "RECEIPT_NAVIGATION",
+        "RECEIPT_ROUTER",
+        "createSubscription#verificationDispatched=true+safeReturn",
+        "route__j01__return_after_subscription_v1",
+        "PUB-029",
+        "PUB-004",
+        "resume J-01 at PUB-004 with the same case slug; J-01-E02 through E04 retain the existing durable outcome",
+        "NONTERMINAL",
+        "EXISTING",
+        "DECLARED_RUNTIME_OPEN",
+    ],
+]
 
 
 class UniqueLoader(yaml.SafeLoader):
@@ -104,9 +164,13 @@ def validate_edges(decision: dict[str, Any]) -> tuple[list[str], dict[str, list[
     fields = decision.get("edge_tuple_fields")
     registry = decision.get("edge_registry")
     require(isinstance(fields, list) and len(fields) == 16, "edge tuple field contract drifted")
-    require(isinstance(registry, dict) and list(registry) == list(EDGE_COUNTS), "journey registry order drifted")
+    require(
+        isinstance(registry, dict)
+        and list(registry) == list(SOURCE_EDGE_COUNTS),
+        "journey registry order drifted",
+    )
     identifiers: list[str] = []
-    for journey_id, expected in EDGE_COUNTS.items():
+    for journey_id, expected in SOURCE_EDGE_COUNTS.items():
         rows = registry.get(journey_id)
         require(isinstance(rows, list) and len(rows) == expected, f"{journey_id} edge count drifted")
         for row in rows:
@@ -114,7 +178,10 @@ def validate_edges(decision: dict[str, Any]) -> tuple[list[str], dict[str, list[
             edge_id = row[0]
             require(isinstance(edge_id, str) and edge_id.startswith(f"{journey_id}-E"), f"{journey_id} edge ID drifted")
             identifiers.append(edge_id)
-    require(len(identifiers) == len(set(identifiers)) == 129, "edge ID set is not exactly 129 unique rows")
+    require(
+        len(identifiers) == len(set(identifiers)) == SOURCE_EDGE_TOTAL,
+        f"edge ID set is not exactly {SOURCE_EDGE_TOTAL} unique rows",
+    )
     return fields, registry
 
 
@@ -123,7 +190,11 @@ def validate_decision(decision: dict[str, Any]) -> tuple[list[str], dict[str, li
     require(decision.get("open_decisions") == [], "owner decision still has open decisions")
     require("OPEN_DECISION" not in str(decision), "owner decision contains an open-decision marker")
     contracts = decision.get("journey_contracts")
-    require(isinstance(contracts, dict) and list(contracts) == list(EDGE_COUNTS), "journey contract set drifted")
+    require(
+        isinstance(contracts, dict)
+        and list(contracts) == list(SOURCE_EDGE_COUNTS),
+        "journey contract set drifted",
+    )
     fields, registry = validate_edges(decision)
     branches = decision.get("branch_contracts")
     branch_edges = {
@@ -140,15 +211,90 @@ def validate_decision(decision: dict[str, Any]) -> tuple[list[str], dict[str, li
     return fields, registry
 
 
+def canonical_edge_registry(
+    registry: dict[str, list[list[Any]]],
+) -> dict[str, list[list[Any]]]:
+    canonical = {
+        journey_id: [list(row) for row in registry[journey_id]]
+        for journey_id in SOURCE_EDGE_COUNTS
+    }
+    canonical["J-01"].extend([list(row) for row in R6A_J01_SUBSCRIPTION_EDGES])
+    require(
+        {journey_id: len(rows) for journey_id, rows in canonical.items()}
+        == EDGE_COUNTS,
+        "R6a J-01 subscription edge count drifted",
+    )
+    identifiers = [row[0] for rows in canonical.values() for row in rows]
+    require(
+        len(identifiers) == len(set(identifiers)) == EDGE_TOTAL,
+        f"canonical edge ID set is not exactly {EDGE_TOTAL} unique rows",
+    )
+    return canonical
+
+
+def canonical_rules(decision: dict[str, Any]) -> list[str]:
+    old_route_rule = (
+        "The 94 route set is byte-for-byte unchanged. New work is a section/action/view-model "
+        "refinement on an existing route."
+    )
+    new_route_rule = (
+        "The 94-screen route set remains closed. PUB-028 and PUB-030 use token-free canonical "
+        "browser routes; one-time tokens are exchange-request inputs only."
+    )
+    return [
+        new_route_rule if rule == old_route_rule else str(rule)
+        for rule in decision["owner_decision"]["invariants"]
+    ]
+
+
+def canonical_edge_count_contract(decision: dict[str, Any]) -> dict[str, Any]:
+    source = decision["owner_decision"]["edge_count_decision"]
+    return {
+        "fixed_equation": "50 + 17 + 29 + 36 = 132",
+        "j01_equation": "E01..E07=7; E05 navigation + E06 persisted subscription receipt + E07 same-case return add three explicit edges",
+        "j01_optional_subscription_rule": "E05..E07 are an optional nonterminal branch from PUB-004. Success returns to PUB-004 and the unchanged PUB-006::locator-understood durable terminal; failure remains on PUB-029.",
+        **{
+            key: (
+                str(value).replace("fixed 129-edge registry", "fixed 132-edge registry")
+                if key == "rejected_suffix_edge"
+                else value
+            )
+            for key, value in source.items()
+            if key != "fixed_equation"
+        },
+    }
+
+
+def canonical_compiled_registry(decision: dict[str, Any]) -> dict[str, Any]:
+    compiled = deepcopy(decision["compiled_registry_decisions"])
+    compiled["resolver_registry"]["row_count"] = EDGE_TOTAL
+    return compiled
+
+
+def canonical_acceptance_contract(decision: dict[str, Any]) -> dict[str, Any]:
+    contract = deepcopy(decision["acceptance_to_add_or_retain_exactly"])
+    graph_static = contract["graph_static"]
+    contract["graph_static"] = [
+        (
+            "UX-JOURNEY-GRAPH-12X132-SET-EQUALITY"
+            if oracle == "UX-JOURNEY-GRAPH-12X129-SET-EQUALITY"
+            else oracle
+        )
+        for oracle in graph_static
+    ]
+    return contract
+
+
 def canonical_document(
     decision: dict[str, Any],
     pins: list[dict[str, str]],
     fields: list[str],
     registry: dict[str, list[list[Any]]],
 ) -> dict[str, Any]:
+    canonical_registry = canonical_edge_registry(registry)
     return {
         "schema_version": 1,
-        "specification_version": "13.0.0+owner-journey-authority.1",
+        "specification_version": "13.0.0+owner-journey-authority.2",
         "status": "REVIEW_REQUIRED",
         "authority_mode": "ADDITIVE_OWNER_DECISION",
         "authority_zip_sha256": AUTHORITY_ZIP_SHA256,
@@ -161,31 +307,31 @@ def canonical_document(
         },
         "source_pins_role": "ADOPTION_INPUT_SNAPSHOT_BEFORE_CANONICAL_INTEGRATION",
         "source_pins": pins,
-        "rules": decision["owner_decision"]["invariants"],
+        "rules": canonical_rules(decision),
         "counts": {
             "journeys": 12,
-            "edges": 129,
+            "edges": EDGE_TOTAL,
             "branches": 17,
             "handoff_kinds": 20,
             "cross_journey_arcs": 12,
             "routes": 94,
         },
-        "edge_count_contract": decision["owner_decision"]["edge_count_decision"],
+        "edge_count_contract": canonical_edge_count_contract(decision),
         "closed_enums": decision["closed_enums"],
         "journey_contracts": decision["journey_contracts"],
         "edge_failure_contract": decision["edge_failure_contract"],
         "edge_tuple_fields": fields,
-        "edge_registry": registry,
+        "edge_registry": canonical_registry,
         "node_group_registry": decision["node_group_registry"],
         "branch_contracts": decision["branch_contracts"],
         "handoff_kind_registry": decision["handoff_kind_registry"],
         "cross_journey_arc_contracts": decision["cross_journey_arc_contracts"],
         "route_lock": decision["route_lock_for_new_journeys"],
-        "compiled_registry_decisions": decision["compiled_registry_decisions"],
+        "compiled_registry_decisions": canonical_compiled_registry(decision),
         "required_functions": decision["new_or_missing_functions"],
         "event_and_consumer_decisions": decision["event_and_consumer_decisions"],
         "terminal_registry": decision["terminal_registry"],
-        "acceptance_contract": decision["acceptance_to_add_or_retain_exactly"],
+        "acceptance_contract": canonical_acceptance_contract(decision),
         "negative_canaries": decision["negative_canaries"],
         "rejected_alternatives": decision["rejected_alternatives"],
         "implementation_gate": {

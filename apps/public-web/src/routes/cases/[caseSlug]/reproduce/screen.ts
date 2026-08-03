@@ -11,7 +11,7 @@ export const screen = {
       id: "summary",
       title: "재현 요약",
       component: "StructuredContentSection",
-      purpose: "rule/version/result.",
+      purpose: "적용 규칙·개정본·계산 결과 요약.",
       test_id: "pub_006__section__summary",
     },
     {

@@ -53,8 +53,24 @@ def validate(root:Path,result:Validation)->None:
     result.require(action.get('local_only') is True,f"{screen['id']}:{action['id']}: local/navigation action lacks local_only")
     result.require(action.get('assurance_level')=='NONE' and action.get('step_up_required') is False,f"{screen['id']}:{action['id']}: local action has security assurance")
     continue
-   result.require(oid in op_by,f"{screen['id']}:{action['id']}: unknown operation {oid}")
-   if oid not in op_by: continue
+   result.require(oid in op_by or oid in additive_by,f"{screen['id']}:{action['id']}: unknown operation {oid}")
+   if oid not in op_by:
+    additive=additive_by.get(oid)
+    result.require(additive is not None,f"{screen['id']}:{action['id']}: unknown additive operation {oid}")
+    if additive is None: continue
+    result.require(additive.get('kind')=='COMMAND',f"{screen['id']}:{action['id']}: additive screen action is not a command")
+    resolved=additive.get('assurance')
+    if isinstance(resolved,str) and resolved.startswith('conditional-'):
+     # Persisted/decision-dependent assurance cannot be selected from the
+     # static screen catalog. The visible action advertises the conservative
+     # upper bound while the command still reauthorizes its exact branch.
+     resolved='STEP_UP'
+    result.require(resolved in LEVELS,f"{screen['id']}:{action['id']}: invalid additive assurance")
+    if resolved not in LEVELS: continue
+    result.require(action.get('assurance_level')==resolved,f"{screen['id']}:{action['id']}: action assurance {action.get('assurance_level')} != {resolved}")
+    result.require(action.get('step_up_required')==(resolved=='STEP_UP'),f"{screen['id']}:{action['id']}: step-up flag differs from resolved assurance")
+    if screen['surface'] in {'public','response'}: result.require(resolved!='STEP_UP',f"{screen['id']}:{action['id']}: public/response surface cannot use internal OIDC step-up")
+    continue
    op=op_by[oid]
    if op['operation_kind']!='COMMAND':
     result.require(action.get('step_up_required') is False,f"{screen['id']}:{action['id']}: query/navigation cannot require step-up")

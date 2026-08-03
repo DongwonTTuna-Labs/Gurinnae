@@ -9,7 +9,7 @@ rules:
 - Each product oracle binds to exactly one independently named executable scenario.
 - Scenario identity is stable and an implementation receipt cannot satisfy a different oracle.
 bindings:
-- oracle_id: UX-JOURNEY-GRAPH-12X129-SET-EQUALITY
+- oracle_id: UX-JOURNEY-GRAPH-12X132-SET-EQUALITY
   scenario_id: AC-JOURNEY_GRAPH-001
   implementation_test_id: ac_journey_graph_001
 - oracle_id: UX-JOURNEY-GRAPH-ALL-NODES-REACH-TERMINAL

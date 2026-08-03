@@ -149,10 +149,11 @@ flows:
   - save/upload/finalize/preview under scoped session
   - createCorrectionRequest(expectedVersion) atomically finalizes draft, moves clean attachments, revokes draft session and issues
     CORRECTION_RECEIPT
+  - receipt email link uses /correction-request/receipt/exchange?token=<one-time>, then 303 /correction-request/receipt
   subscription:
   - createSubscription(abuseProof) -> PENDING + verification email
   - verifySubscription(verificationToken) -> consume token and issue SUBSCRIPTION_MANAGEMENT
-  - management link uses exchangeSubscriptionManagementToken then token-free /subscription/manage
+  - management link uses /subscription/manage/exchange?token=<one-time>, exchangeSubscriptionManagementToken, then 303 /subscription/manage
   receipts:
   - email receipt links use one-time BFF exchange operations
   - receipt sessions are read-only and expire after 30 minutes

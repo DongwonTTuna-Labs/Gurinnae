@@ -1,5 +1,6 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 import {
   decisionCode,
   isAllowedDecisionAction,
@@ -59,14 +60,15 @@ describe("typed screen contract", () => {
     );
     expect(ids).toHaveLength(94);
     expect(new Set(ids).size).toBe(94);
-    expect(sections).toBe(497);
-    expect(
-      ids.every((id) =>
-        ROUTE_SCREEN_CONTRACTS[
-          id as keyof typeof ROUTE_SCREEN_CONTRACTS
-        ].sections.every((section) => section.fields.length > 0),
-      ),
-    ).toBe(true);
+    expect(sections).toBe(492);
+    const emptyGeneratedSections = ids.flatMap((id) =>
+      ROUTE_SCREEN_CONTRACTS[id as keyof typeof ROUTE_SCREEN_CONTRACTS].sections
+        .filter((section) => section.fields.length === 0)
+        .map((section) => `${id}.${section.id}`),
+    );
+    expect(new Set(emptyGeneratedSections)).toEqual(
+      explicitlyEmptyProjectionSections(),
+    );
   });
   it("has an explicit implementation for every authority component", () => {
     const components = new Set(
@@ -146,6 +148,7 @@ describe("typed screen contract", () => {
   it("uses human state labels and never exposes operation ids as section titles", () => {
     const vm = typedScreenViewModel(screen("OPS-004"));
     expect(stateLabel("forbidden")).toBe("권한 없음");
+    expect(stateLabel("awaiting-query")).toBe("검색어 입력 대기");
     expect(
       vm.sections.every((section) => !section.title.includes("internalQuery")),
     ).toBe(true);
@@ -204,3 +207,36 @@ describe("typed screen contract", () => {
     expect(blocked.projectionState).toBe("BLOCKED");
   });
 });
+
+function explicitlyEmptyProjectionSections(): Set<string> {
+  const document: unknown = parse(
+    readFileSync(
+      new URL(
+        "../../../specs/ui/screen-projection-overrides.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  if (!isRecord(document))
+    throw new Error("화면 projection override 형식 오류");
+  const overrides = document.screen_section_field_overrides;
+  if (!isRecord(overrides))
+    throw new Error("화면 projection override registry 누락");
+
+  const result = new Set<string>();
+  for (const [screenId, rawSections] of Object.entries(overrides)) {
+    if (!isRecord(rawSections))
+      throw new Error(`${screenId} projection override 형식 오류`);
+    for (const [sectionId, fields] of Object.entries(rawSections)) {
+      if (!Array.isArray(fields))
+        throw new Error(`${screenId}.${sectionId} projection field 형식 오류`);
+      if (fields.length === 0) result.add(`${screenId}.${sectionId}`);
+    }
+  }
+  return result;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

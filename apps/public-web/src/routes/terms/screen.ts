@@ -11,7 +11,7 @@ export const screen = {
       id: "service",
       title: "서비스 조건",
       component: "AgentSuggestionPanel",
-      purpose: "availability.",
+      purpose: "서비스 제공 범위와 이용 조건.",
       test_id: "pub_032__section__service",
     },
     {

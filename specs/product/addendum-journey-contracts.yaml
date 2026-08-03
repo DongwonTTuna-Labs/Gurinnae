@@ -1,5 +1,5 @@
 schema_version: 1
-specification_version: 13.0.0+owner-journey-authority.1
+specification_version: 13.0.0+owner-journey-authority.2
 status: REVIEW_REQUIRED
 authority_mode: ADDITIVE_OWNER_DECISION
 authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
@@ -59,23 +59,25 @@ rules:
 - J-12 stages other than QUALIFIED are read projections. No commercial stage row or stage event is created.
 - J-11 communication edges E19 through E23 remain five separate physical milestones: intent, delivery claim, provider observation,
     reconciliation, and origin receipt return.
-- The 94 route set is byte-for-byte unchanged. New work is a section/action/view-model refinement on an existing route.
+- The 94-screen route set remains closed. PUB-028 and PUB-030 use token-free canonical browser routes; one-time tokens are exchange-request inputs only.
 counts:
   journeys: 12
-  edges: 129
+  edges: 132
   branches: 17
   handoff_kinds: 20
   cross_journey_arcs: 12
   routes: 94
 edge_count_contract:
-  fixed_equation: 47 + 17 + 29 + 36 = 129
+  fixed_equation: 50 + 17 + 29 + 36 = 132
+  j01_equation: E01..E07=7; E05 navigation + E06 persisted subscription receipt + E07 same-case return add three explicit edges
+  j01_optional_subscription_rule: E05..E07 are an optional nonterminal branch from PUB-004. Success returns to PUB-004 and the unchanged PUB-006::locator-understood durable terminal; failure remains on PUB-029.
   j12_equation: E01..E08=8 + E09A..E09B=2 + E10..E17=8 + E18A..E18D=4 + E19A..E19C=3 + E20=1 + E21..E30=10 = 36
   e20_rule: J-12-E20 remains one authored edge and one resolver-registry row. Its closed branch contract owns the typed ACTION_RETRY_AUTHORIZED
     and DELIVERY_RETRY_AUTHORIZED selectors. cross_journey_arc_contracts has two selector-specialization rows only so each
     selector binds a different callee entry and handoff kind; those rows are return-binding metadata and are not additional
     edge IDs.
   rejected_suffix_edge: J-12-E20A or J-12-E20B is forbidden because it would create a thirty-seventh J-12 edge, violate DESIGN.md
-    E20 identity, and change the fixed 129-edge registry without adding a distinct user or domain transition.
+    E20 identity, and change the fixed 132-edge registry without adding a distinct user or domain transition.
 closed_enums:
   node_kind:
   - SCREEN
@@ -201,7 +203,7 @@ edge_failure_contract:
       terminal_class: RECOVERY_TERMINAL
       applies_to: every J-10 edge with an unavailable required provider tool parser projection or persistence dependency
   rule: These are typed edge exits, not additional happy-path edge IDs. They are included in terminal reachability but never
-    counted in the fixed 129-edge registry.
+    counted in the fixed 132-edge registry.
 edge_tuple_fields:
 - edge_id
 - edge_name
@@ -285,6 +287,54 @@ edge_registry:
     - SUCCESS_TERMINAL
     - NEW_COMPILED_REGISTRY_REQUIRED
     - NEW_REQUIRED
+  - - J-01-E05
+    - OPEN_CASE_SUBSCRIPTION
+    - PUB-004
+    - SCREEN
+    - PUB-029
+    - SCREEN
+    - NAVIGATION
+    - VISIBLE_ACTION
+    - PUB-004.subscribe-case
+    - ui__pub_004__subscribe_case
+    - PUB-004
+    - PUB-029
+    - preserve the exact case slug as safe return context; this optional branch does not replace the J-01 durable outcome
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-01-E06
+    - REQUEST_CASE_SUBSCRIPTION_VERIFICATION
+    - PUB-029
+    - SCREEN
+    - PUB-029::subscription-verification-requested
+    - MILESTONE
+    - APPLICATION_COMMAND
+    - OPERATION_RESULT
+    - createSubscription#verificationDispatched=true
+    - handle__j01__create_subscription_verification_receipt_v1
+    - PUB-029
+    - PUB-029
+    - only a persisted verification-dispatched receipt continues; rejection or failure remains on PUB-029
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
+  - - J-01-E07
+    - RETURN_TO_CASE_AFTER_SUBSCRIPTION
+    - PUB-029::subscription-verification-requested
+    - MILESTONE
+    - PUB-004
+    - SCREEN
+    - RECEIPT_NAVIGATION
+    - RECEIPT_ROUTER
+    - createSubscription#verificationDispatched=true+safeReturn
+    - route__j01__return_after_subscription_v1
+    - PUB-029
+    - PUB-004
+    - resume J-01 at PUB-004 with the same case slug; J-01-E02 through E04 retain the existing durable outcome
+    - NONTERMINAL
+    - EXISTING
+    - DECLARED_RUNTIME_OPEN
   J-02:
   - - J-02-E01
     - OPEN_FIXED_REVISION
@@ -3178,7 +3228,7 @@ compiled_registry_decisions:
   resolver_registry:
     name: journey_edge_resolver_registry_v1
     key: edge_id
-    row_count: 129
+    row_count: 132
     required_fields:
     - edge_id
     - resolver_kind
@@ -3349,7 +3399,7 @@ terminal_registry:
     - J-12::RECONCILIATION_REQUIRED
 acceptance_contract:
   graph_static:
-  - UX-JOURNEY-GRAPH-12X129-SET-EQUALITY
+  - UX-JOURNEY-GRAPH-12X132-SET-EQUALITY
   - UX-JOURNEY-GRAPH-ALL-NODES-REACH-TERMINAL
   - UX-JOURNEY-GRAPH-EVERY-NONTERMINAL-HAS-OUTGOING
   - UX-JOURNEY-GRAPH-RESOLVER-SET-EQUALITY

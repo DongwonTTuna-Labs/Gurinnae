@@ -13,14 +13,14 @@ const budget = $derived(screen.id === "OPS-004");
   {#if budget}
   <div class="business-health" data-testid="ops-004-agent-suggestion" data-state={projection?.state ?? "UNKNOWN"} aria-busy={runtime.state === "loading"}>
     <p class="business-health-lead">예산 판단은 모델·OCR·저장·전송 비용과 업무 가치 근거가 모두 있을 때만 확정합니다.</p>
-    {#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="예산 근거를 확인할 수 없습니다." />{:else}<p role="status">예산 투영값을 불러오는 중입니다.</p>{/if}
+    {#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="예산 근거를 확인할 수 없습니다." />{:else}<p role="status">예산 정보를 불러오는 중입니다.</p>{/if}
   </div>
 {:else}
   <p class="agent-warning">AI 결과는 자동으로 근거가 되지 않습니다. 실행이 종료되고 출처·정확한 위치·권리·중단 사유가 검증된 뒤 사람이 선택한 자료만 근거로 승격합니다.</p>
   <ol class="analysis-stages" aria-label="조사 결과 처리 단계">
     {#each stages as stage, index}<li class:active={runtime.state === "success" ? index <= 3 : index === 0}><span>{index + 1}</span><strong>{stage}</strong></li>{/each}
   </ol>
-  <div class="analysis-guard" role="note"><strong>승격 전 확인</strong><ul><li>원본 revision·locator 고정</li><li>원문 재추출·인용 일치</li><li>권리·개인정보·불확실성 표시</li></ul></div>
+  <div class="analysis-guard" role="note"><strong>승격 전 확인</strong><ul><li>원본 개정본·위치 정보 고정</li><li>원문 재추출·인용 일치</li><li>권리·개인정보·불확실성 표시</li></ul></div>
   <ApprovalDecisionDialog {screen} {runtime} dialogId={`suggestion-dialog-${screen.id.toLowerCase()}-${section.id.toLowerCase()}`} />
   {#if runtime.state === "receipt"}<p class="inline-state" role="status">근거 승격 영수증이 저장되었습니다. 동일한 근거 버전이 사건 근거 표와 공개 미리보기에 연결됩니다.</p>{/if}
   {#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="대기 중인 조사 결과가 없습니다." />{/if}

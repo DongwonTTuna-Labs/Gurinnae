@@ -11,7 +11,7 @@ export const screen = {
       id: "commitment",
       title: "접근성 약속",
       component: "StructuredContentSection",
-      purpose: "WCAG/KWCAG.",
+      purpose: "적용 접근성 기준과 지원 약속.",
       test_id: "pub_033__section__commitment",
     },
     {

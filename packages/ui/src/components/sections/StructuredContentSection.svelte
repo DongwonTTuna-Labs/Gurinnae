@@ -27,20 +27,29 @@ const loading = $derived(
     runtime.state === "initial-loading" ||
     projection?.state === "LOADING",
 );
+const initialAuth = $derived(
+  screen.id === "AUTH-001" &&
+    runtime.state === "unauthenticated" &&
+    runtime.errors.length === 0,
+);
+const copyOnly = $derived(screen.id === "PUB-001" && section.id === "mission");
 </script>
 
-<SectionHeading {section} kicker={typedSection?.region === "next-action" ? "다음 단계" : "확인할 내용"} />
-<div class="structured-content" data-region={projection?.region ?? typedSection?.region ?? "state"} data-projection-state={projection?.state ?? "UNKNOWN"} aria-busy={runtime.state === "loading"}>
-  {#if sectionCopy !== section.purpose}<p class="section-summary">{sectionCopy}</p>{/if}
-  <p class="structured-state"><span class="state-dot" aria-hidden="true"></span><span>현재 상태</span><strong>{stateLabel(runtime.state)}</strong></p>
-  {#if loading}
+	<SectionHeading {section} kicker={typedSection?.region === "next-action" ? "다음 단계" : "확인할 내용"} />
+	<div class="structured-content" data-region={projection?.region ?? typedSection?.region ?? "state"} data-projection-state={projection?.state ?? "UNKNOWN"} aria-busy={runtime.state === "loading"}>
+	  {#if copyOnly || sectionCopy !== section.purpose}<p class="section-summary">{sectionCopy}</p>{/if}
+	  {#if !initialAuth}<p class="structured-state"><span class="state-dot" aria-hidden="true"></span><span>현재 상태</span><strong>{stateLabel(runtime.state)}</strong></p>{/if}
+	  {#if copyOnly}
+	    <!-- PUB-001 mission is complete in its contracted copy; it has no data DTO. -->
+	  {:else if initialAuth}
+    <!-- The screen-level live guidance owns this expected pre-auth state. -->
+  {:else if loading}
     <div class="skeleton-record" aria-label={`${section.title} 불러오는 중`} aria-hidden="true"><span></span><span></span><span></span></div>
     <p role="status">{section.title}의 확인된 값을 불러오는 중입니다.</p>
   {:else if projection}
     <OperationData {runtime} {projection} mode="cards" emptyLabel="현재 계약에서 확인 가능한 항목이 없습니다." />
-    <p class="projection-provenance"><strong>근거</strong><span>화면별 허용 목록 투영값 · 서버 관리 출처 지문</span></p>
   {:else}
-    <p class="inline-state conflict" role="status">{section.title}의 권위 투영값을 확인할 수 없습니다. 지원 담당자에게 화면 식별자와 기준 시각을 전달하세요.</p>
+    <p class="inline-state conflict" role="status">{section.title} 정보를 표시할 수 없습니다. 잠시 후 다시 시도하세요.</p>
   {/if}
 </div>
 {#if screen.id === "INT-002" && section.id === "handoff"}
@@ -66,8 +75,7 @@ const loading = $derived(
     color: var(--ink-700);
   }
 
-  .structured-state,
-  .projection-provenance {
+  .structured-state {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -77,14 +85,12 @@ const loading = $derived(
     color: var(--ink-500);
   }
 
-  .structured-state span,
-  .projection-provenance strong {
+  .structured-state span {
     font-size: 0.75rem;
     font-weight: 650;
   }
 
-  .structured-state strong,
-  .projection-provenance span {
+  .structured-state strong {
     color: var(--ink-900);
     font-size: 0.8125rem;
   }

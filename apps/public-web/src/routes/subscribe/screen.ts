@@ -11,7 +11,7 @@ export const screen = {
       id: "topic",
       title: "구독 대상",
       component: "RevisionAndCorrectionPanel",
-      purpose: "case/agency/supplier/corrections.",
+      purpose: "사건·기관·업체·정정별 구독 범위.",
       test_id: "pub_029__section__topic",
     },
     {
@@ -34,8 +34,8 @@ export const screen = {
       order: 4,
       id: "email",
       title: "이메일",
-      component: "AgentSuggestionPanel",
-      purpose: "verification.",
+      component: "CheckAnswers",
+      purpose: "이메일 확인과 구독 신청.",
       test_id: "pub_029__section__email",
     },
     {

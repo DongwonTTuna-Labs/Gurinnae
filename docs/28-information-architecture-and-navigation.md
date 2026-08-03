@@ -39,7 +39,7 @@
 ├── data
 ├── api
 ├── subscribe
-├── subscription/manage/{token}
+├── subscription/manage
 ├── correction-request
 ├── about
 ├── about/funding

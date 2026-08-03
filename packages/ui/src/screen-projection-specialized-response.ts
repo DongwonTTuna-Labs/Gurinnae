@@ -322,7 +322,7 @@ export function responseSpecializedFields(
         return [
           {
             name: "authority_status",
-            label: "권위 확인 상태",
+            label: "제출 권한 확인 상태",
             value: vm.authority.status,
             known: true,
             source: "getResponseSubmissionPreview.authority",
