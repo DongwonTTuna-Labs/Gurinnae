@@ -1717,7 +1717,6 @@ dependencies = [
 name = "gurine-application"
 version = "0.1.0"
 dependencies = [
- "gurine-api-contracts",
  "gurine-auth",
  "gurine-domain",
  "serde",

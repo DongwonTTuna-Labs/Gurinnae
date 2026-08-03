@@ -17,12 +17,53 @@ struct CommunicationAction {
     citations: Value,
 }
 
+#[derive(Debug)]
+struct ApprovedAction {
+    proposal_id: Uuid,
+    proposal_version: i64,
+    payload: Value,
+    action: CommunicationAction,
+}
+
+#[derive(Debug)]
+struct EncryptedRendering {
+    id: Uuid,
+    bytes: Vec<u8>,
+    sha256: String,
+    ciphertext: Vec<u8>,
+}
+
 async fn execute_approved_action(
     pool: &PgPool,
     field_keys: &EnvelopeKeyRing,
     aggregate_id: Uuid,
     payload: &serde_json::Map<String, Value>,
 ) -> Result<Value, Failure> {
+    let (execution_id, generation, event_payload) = approved_execution(payload, aggregate_id)?;
+    let approved =
+        load_approved_action(pool, field_keys, execution_id, generation, event_payload).await?;
+    let endpoint =
+        load_communication_endpoint(pool, execution_id, generation, &approved.action).await?;
+    let destination = communication_destination(field_keys, &approved.action, &endpoint)?;
+    let rendering = encrypted_rendering(field_keys, execution_id, destination, &approved.action)?;
+    let endpoint_snapshot_digest: String = endpoint
+        .try_get("endpoint_snapshot_digest")
+        .map_err(database)?;
+    dispatch_communication(
+        pool,
+        execution_id,
+        generation,
+        approved,
+        endpoint_snapshot_digest,
+        rendering,
+    )
+    .await
+}
+
+fn approved_execution(
+    payload: &serde_json::Map<String, Value>,
+    aggregate_id: Uuid,
+) -> Result<(Uuid, i64, Value), Failure> {
     let execution_id = object_uuid(payload, "executionId")?;
     if execution_id != aggregate_id {
         return Err(Failure::Terminal(
@@ -48,16 +89,23 @@ async fn execute_approved_action(
                 .to_owned(),
         ));
     }
-    let event_payload = Value::Object(payload.clone());
-    let row = sqlx::query(
-        "SELECT * FROM ops.load_action_execution_v1($1,$2,$3)",
-    )
-    .bind(execution_id)
-    .bind(generation)
-    .bind(&event_payload)
-    .fetch_one(pool)
-    .await
-    .map_err(database)?;
+    Ok((execution_id, generation, Value::Object(payload.clone())))
+}
+
+async fn load_approved_action(
+    pool: &PgPool,
+    field_keys: &EnvelopeKeyRing,
+    execution_id: Uuid,
+    generation: i64,
+    event_payload: Value,
+) -> Result<ApprovedAction, Failure> {
+    let row = sqlx::query("SELECT * FROM ops.load_action_execution_v1($1,$2,$3)")
+        .bind(execution_id)
+        .bind(generation)
+        .bind(&event_payload)
+        .fetch_one(pool)
+        .await
+        .map_err(database)?;
     let proposal_id: Uuid = row.try_get("proposal_id").map_err(database)?;
     let proposal_version: i64 = row.try_get("proposal_version").map_err(database)?;
     let encrypted: Vec<u8> = row.try_get("target_request_encrypted").map_err(database)?;
@@ -81,7 +129,21 @@ async fn execute_approved_action(
     let action_payload: Value = serde_json::from_slice(&plaintext)
         .map_err(|_| Failure::Terminal("ACTION_PAYLOAD_INVALID", execution_id.to_string()))?;
     let action = communication_action(&action_payload)?;
-    let endpoint = sqlx::query(
+    Ok(ApprovedAction {
+        proposal_id,
+        proposal_version,
+        payload: action_payload,
+        action,
+    })
+}
+
+async fn load_communication_endpoint(
+    pool: &PgPool,
+    execution_id: Uuid,
+    generation: i64,
+    action: &CommunicationAction,
+) -> Result<sqlx::postgres::PgRow, Failure> {
+    sqlx::query(
         "SELECT * FROM ops.load_action_communication_endpoint_v1($1,$2,$3,$4,$5,$6::char(64),$7)",
     )
     .bind(execution_id)
@@ -93,10 +155,20 @@ async fn execute_approved_action(
     .bind(&action.channel)
     .fetch_one(pool)
     .await
-    .map_err(database)?;
+    .map_err(database)
+}
+
+fn communication_destination(
+    field_keys: &EnvelopeKeyRing,
+    action: &CommunicationAction,
+    endpoint: &sqlx::postgres::PgRow,
+) -> Result<String, Failure> {
     let endpoint_ciphertext: Vec<u8> = endpoint.try_get("endpoint_ciphertext").map_err(database)?;
     let endpoint_token = std::str::from_utf8(&endpoint_ciphertext).map_err(|_| {
-        Failure::Terminal("COMMUNICATION_ENDPOINT_DECRYPTION_FAILED", action.endpoint_id.to_string())
+        Failure::Terminal(
+            "COMMUNICATION_ENDPOINT_DECRYPTION_FAILED",
+            action.endpoint_id.to_string(),
+        )
     })?;
     let endpoint_id_text = action.endpoint_id.to_string();
     let endpoint_plaintext = decrypt(
@@ -112,10 +184,16 @@ async fn execute_approved_action(
         endpoint_token,
     )
     .map_err(|_| {
-        Failure::Terminal("COMMUNICATION_ENDPOINT_DECRYPTION_FAILED", action.endpoint_id.to_string())
+        Failure::Terminal(
+            "COMMUNICATION_ENDPOINT_DECRYPTION_FAILED",
+            action.endpoint_id.to_string(),
+        )
     })?;
     let destination = String::from_utf8(endpoint_plaintext).map_err(|_| {
-        Failure::Terminal("COMMUNICATION_ENDPOINT_INVALID", action.endpoint_id.to_string())
+        Failure::Terminal(
+            "COMMUNICATION_ENDPOINT_INVALID",
+            action.endpoint_id.to_string(),
+        )
     })?;
     if destination.trim().is_empty() || destination.len() > 16_384 {
         return Err(Failure::Terminal(
@@ -123,6 +201,15 @@ async fn execute_approved_action(
             action.endpoint_id.to_string(),
         ));
     }
+    Ok(destination)
+}
+
+fn encrypted_rendering(
+    field_keys: &EnvelopeKeyRing,
+    execution_id: Uuid,
+    destination: String,
+    action: &CommunicationAction,
+) -> Result<EncryptedRendering, Failure> {
     let rendering_id = Uuid::new_v4();
     let rendered = json!({
         "to": destination,
@@ -131,8 +218,9 @@ async fn execute_approved_action(
         "htmlBody": "",
         "citations": action.citations,
     });
-    let rendered_bytes = serde_json::to_vec(&rendered)
-        .map_err(|_| Failure::Terminal("COMMUNICATION_RENDERING_INVALID", execution_id.to_string()))?;
+    let rendered_bytes = serde_json::to_vec(&rendered).map_err(|_| {
+        Failure::Terminal("COMMUNICATION_RENDERING_INVALID", execution_id.to_string())
+    })?;
     let rendered_sha256 = sha256(&rendered_bytes);
     let rendering_id_text = rendering_id.to_string();
     let rendered_ciphertext = encrypt(
@@ -148,13 +236,42 @@ async fn execute_approved_action(
         &rendered_bytes,
     )
     .map(String::into_bytes)
-    .map_err(|_| Failure::Terminal("COMMUNICATION_RENDERING_ENCRYPTION_FAILED", execution_id.to_string()))?;
-    let endpoint_snapshot_digest: String = endpoint
-        .try_get("endpoint_snapshot_digest")
-        .map_err(database)?;
-    let request_digest = sha256(
-        format!("{execution_id}:{generation}:{rendering_id}:{rendered_sha256}").as_bytes(),
-    );
+    .map_err(|_| {
+        Failure::Terminal(
+            "COMMUNICATION_RENDERING_ENCRYPTION_FAILED",
+            execution_id.to_string(),
+        )
+    })?;
+    Ok(EncryptedRendering {
+        id: rendering_id,
+        bytes: rendered_bytes,
+        sha256: rendered_sha256,
+        ciphertext: rendered_ciphertext,
+    })
+}
+
+async fn dispatch_communication(
+    pool: &PgPool,
+    execution_id: Uuid,
+    generation: i64,
+    approved: ApprovedAction,
+    endpoint_snapshot_digest: String,
+    rendering: EncryptedRendering,
+) -> Result<Value, Failure> {
+    let ApprovedAction {
+        proposal_id,
+        proposal_version,
+        payload: action_payload,
+        action,
+    } = approved;
+    let EncryptedRendering {
+        id: rendering_id,
+        bytes: rendered_bytes,
+        sha256: rendered_sha256,
+        ciphertext: rendered_ciphertext,
+    } = rendering;
+    let request_digest =
+        sha256(format!("{execution_id}:{generation}:{rendering_id}:{rendered_sha256}").as_bytes());
     let receipt: Value = sqlx::query_scalar(
         "SELECT ops.dispatch_approved_communication_intent_v1($1,$2)",
     )

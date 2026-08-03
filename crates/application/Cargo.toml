@@ -4,7 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-gurine-api-contracts = { path = "../api-contracts" }
 gurine-auth = { path = "../auth" }
 gurine-domain = { path = "../domain" }
 sha2.workspace = true
