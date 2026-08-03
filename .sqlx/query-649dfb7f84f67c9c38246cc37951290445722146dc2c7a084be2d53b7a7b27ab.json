@@ -1,0 +1,96 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT case_id,agent_type,objective,evidence_scope_ids,input_snapshot_hash,max_cost,version,run_contract_version,dataset_snapshot_id,claim_receipt_id,claim_receipt_sha256 FROM ops.claim_agent_run_worker_v2($1,$2,$3,$4)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "agent_type",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "objective",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "evidence_scope_ids",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "input_snapshot_hash",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "max_cost",
+        "type_info": "Numeric",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "run_contract_version",
+        "type_info": "Int2",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "dataset_snapshot_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "claim_receipt_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "claim_receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "649dfb7f84f67c9c38246cc37951290445722146dc2c7a084be2d53b7a7b27ab"
+}

@@ -42,17 +42,18 @@
       "items": { "type": "string", "format": "uuid" }
     },
     "languagePolicyVersion": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 64
+      "const": "ko-public-claims-v1"
     },
-    "languagePolicySha256": { "$ref": "#/$defs/sha256" },
+    "languagePolicySha256": {
+      "const": "6766a275b7d9a3ef0157bbd42d57245f8309f3ec15f2ee6cd515d6397ee4bc4e"
+    },
     "maxFindings": { "type": "integer", "minimum": 1, "maximum": 50 }
   },
   "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
   "x-gurinnae-invariants": [
     "draftTextSha256 is SHA-256 over the exact UTF-8 bytes of draftText after no implicit normalization.",
     "Every response finding citationId is a member of allowedCitationIds; an empty allowedCitationIds array permits no cited finding.",
-    "UTF-16 offsets are measured in code units over this exact draftText and never Unicode scalar-value, grapheme, or UTF-8 byte offsets."
+    "UTF-16 offsets are measured in code units over this exact draftText and never Unicode scalar-value, grapheme, or UTF-8 byte offsets.",
+    "The policy version and digest are the exact immutable ko-public-claims-v1 ruleset advertised to the provider; a caller cannot select another policy."
   ]
 }

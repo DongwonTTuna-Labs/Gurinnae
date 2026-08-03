@@ -22,6 +22,8 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0032_relay_model_catalog.sql",
     "0033_provider_control_execution.sql",
     "0034_public_monitoring_extensions.sql",
+    "0035_r6b_agent_runtime_activation.sql",
+    "0036_r6b_pipeline_activation.sql",
 )
 EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
     EXPECTED_ADDITIVE_MIGRATIONS

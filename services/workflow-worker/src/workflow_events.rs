@@ -36,6 +36,7 @@ async fn handle_event(
         store,
         scanner,
         field_keys,
+        job.id,
         event_type,
         consumer_id,
         aggregate_id,
@@ -72,6 +73,7 @@ async fn reconcile_event(
     store: &Store,
     scanner: &ClamAvScanner,
     field_keys: &EnvelopeKeyRing,
+    producer_job_id: Uuid,
     event_type: &str,
     consumer_id: &str,
     aggregate_id: Uuid,
@@ -102,7 +104,9 @@ async fn reconcile_event(
                 scan_attachment(pool, store, scanner, "RESPONSE", aggregate_id).await?
             }
             "audit.export_requested.v1" => export_audit(pool, store, aggregate_id).await?,
-            "detection.signal_created.v1" => create_signal_task(pool, payload).await?,
+            "detection.signal_created.v1" => {
+                reconcile_signal_created(pool, payload, producer_job_id).await?
+            }
             "export.dataset_requested.v1" => export_dataset(pool, store, aggregate_id).await?,
             "source.schema_drift_detected.v1" => reconcile_schema_drift(pool, payload).await?,
             "workflow.response_submitted.v1" => reconcile_response(pool, aggregate_id).await?,

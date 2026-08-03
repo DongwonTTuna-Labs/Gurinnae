@@ -22,8 +22,9 @@ mod source;
 mod turn;
 
 pub use adapters::{
-    ComparableRecord, EntityRecord, EvidenceRecord, ResponseRecord, RuleRecord,
-    SourceArtifactRecord, ToolSnapshot,
+    AgencyProfileRecord, ComparableRecord, ContractCorpusRecord, EntityRecord, EvidenceRecord,
+    RelationshipNeighborRecord, ResponseRecord, RuleRecord, SourceArtifactRecord,
+    SupplierProfileRecord, ToolSnapshot,
 };
 pub use control::{
     CancelReason, ControlReceipt, ControlState, ProofKind, ReconciliationProof, RunControl,
@@ -44,15 +45,19 @@ pub use turn::{
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolId {
+    AgencyProfile,
     ClaimLanguageCheck,
+    ContractSearch,
     ContractFindComparables,
     EntityLookup,
     EvidenceRead,
     EvidenceSearch,
+    RelationshipNeighbors,
     ResponseRead,
     RuleReproduce,
     SourceFetch,
     SourceLocatorVerify,
+    SupplierProfile,
 }
 
 pub(super) fn digest_without_digest<T: Serialize>(value: &T) -> Result<String, RuntimeError> {
@@ -104,29 +109,37 @@ pub const SOURCE_FETCH_MEDIA_TYPES: &[&str] = &[
 mod tests;
 
 impl ToolId {
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 13] = [
+        Self::AgencyProfile,
         Self::ClaimLanguageCheck,
+        Self::ContractSearch,
         Self::ContractFindComparables,
         Self::EntityLookup,
         Self::EvidenceRead,
         Self::EvidenceSearch,
+        Self::RelationshipNeighbors,
         Self::ResponseRead,
         Self::RuleReproduce,
         Self::SourceFetch,
         Self::SourceLocatorVerify,
+        Self::SupplierProfile,
     ];
 
     pub const fn wire_name(self) -> &'static str {
         match self {
+            Self::AgencyProfile => "agency.profile",
             Self::ClaimLanguageCheck => "claim.language_check",
+            Self::ContractSearch => "contract.search",
             Self::ContractFindComparables => "contract.find_comparables",
             Self::EntityLookup => "entity.lookup",
             Self::EvidenceRead => "evidence.read",
             Self::EvidenceSearch => "evidence.search",
+            Self::RelationshipNeighbors => "relationship.neighbors",
             Self::ResponseRead => "response.read",
             Self::RuleReproduce => "rule.reproduce",
             Self::SourceFetch => "source.fetch",
             Self::SourceLocatorVerify => "source.locator_verify",
+            Self::SupplierProfile => "supplier.profile",
         }
     }
 }
@@ -142,6 +155,82 @@ pub struct SnapshotBinding {
 pub struct ClaimLanguageCheckRequest {
     pub binding: SnapshotBinding,
     pub draft_text: String,
+    pub draft_text_sha256: String,
+    pub claim_type: ClaimType,
+    pub locale: ClaimLocale,
+    pub allowed_citation_ids: Vec<Uuid>,
+    pub language_policy_version: String,
+    pub language_policy_sha256: String,
+    pub max_findings: u8,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ClaimType {
+    Fact,
+    Calculation,
+    Inference,
+    Limitation,
+    OfficialOutcome,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum ClaimLocale {
+    #[serde(rename = "ko-KR")]
+    KoKr,
+    #[serde(rename = "en-US")]
+    EnUs,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ContractSearchRequest {
+    pub binding: SnapshotBinding,
+    pub entity_kind: ContractEntityKind,
+    pub entity_id: Option<Uuid>,
+    pub from_date: Option<String>,
+    pub to_date: Option<String>,
+    pub procurement_methods: Vec<String>,
+    pub limit: u8,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ContractEntityKind {
+    Any,
+    Agency,
+    Supplier,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SupplierProfileRequest {
+    pub binding: SnapshotBinding,
+    pub supplier_id: Uuid,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AgencyProfileRequest {
+    pub binding: SnapshotBinding,
+    pub agency_id: Uuid,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RelationshipNeighborsRequest {
+    pub binding: SnapshotBinding,
+    pub supplier_id: Uuid,
+    pub relationship_kinds: Vec<RelationshipKind>,
+    pub as_of: Option<String>,
+    pub limit: u8,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RelationshipKind {
+    Ownership,
+    BeneficialOwnership,
+    Control,
+    ManagementRole,
+    LegalRepresentative,
+    ContractualRelationship,
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractFindComparablesRequest {
@@ -417,9 +506,12 @@ impl SourceFetchRequest {
 #[path = "runtime_legacy.rs"]
 mod legacy;
 pub use legacy::{
-    Comparable, ComparablesResponse, EntityIdentifier, EntityIdentifierKind, EntityKind,
+    AgencyProfile, AgencyProfileResponse, Comparable, ComparablesResponse, ContractSearchHit,
+    ContractSearchResponse, EntityIdentifier, EntityIdentifierKind, EntityKind,
     EntityLookupResponse, EntityMatch, EvidenceHit, EvidenceReadResponse, EvidenceSearchResponse,
-    EvidenceValue, Finding, LanguageCheckResponse, ReproductionValue, ResponseReadResponse,
-    ResponseValue, RuleReproduceResponse, SourceArtifact, SourceFetchResponse,
-    SourceLocatorVerifyRequest, SourceRequestKind, ToolRequest, ToolResponse,
+    EvidenceValue, Finding, LanguageCheckResponse, LanguageDecision, LanguageFindingCode,
+    LanguageFindingSeverity, RelationshipNeighbor, RelationshipNeighborsResponse,
+    ReproductionValue, ResponseReadResponse, ResponseValue, RuleReproduceResponse, SourceArtifact,
+    SourceFetchResponse, SourceLocatorVerifyRequest, SourceRequestKind, SupplierIdentityStatus,
+    SupplierProfile, SupplierProfileResponse, ToolRequest, ToolResponse,
 };

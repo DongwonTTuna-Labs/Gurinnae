@@ -1,6 +1,8 @@
 mod analysis_source_fetch;
+mod analysis_tool_dispatch;
 mod analysis_tool_persistence;
-use analysis_source_fetch::{dispatch_source_fetch, persist_research_fetch, PendingSourceFetch};
+use analysis_source_fetch::{PendingSourceFetch, persist_research_fetch};
+use analysis_tool_dispatch::{DispatchedTool, execute_tool, tool_result_and_transcript};
 
 /// The HTTP gateway is the transport boundary. The bridge decodes the
 /// provider envelope into the closed Rust runtime types and executes internal
@@ -63,12 +65,9 @@ async fn validate_typed_provider_output(
         gurine_agent_orchestration::runtime::RunOutcome::Succeeded { .. }
         | gurine_agent_orchestration::runtime::RunOutcome::Abstained { .. } => Ok(()),
         gurine_agent_orchestration::runtime::RunOutcome::BudgetBlocked { .. }
-        | gurine_agent_orchestration::runtime::RunOutcome::ReconciliationRequired { .. } => {
-            Err(Failure::Retryable(
-                "AGENT_RUNTIME_NOT_TERMINAL",
-                turn.turn_id.to_string(),
-            ))
-        }
+        | gurine_agent_orchestration::runtime::RunOutcome::ReconciliationRequired { .. } => Err(
+            Failure::Retryable("AGENT_RUNTIME_NOT_TERMINAL", turn.turn_id.to_string()),
+        ),
     }
 }
 fn runtime_bounds(output_schema_id: &str) -> (u16, u16) {
@@ -128,13 +127,20 @@ fn typed_citations(
                         .and_then(|sha| evidence.iter().find(|row| row.source_use_sha256 == sha))
                         .map(|row| row.source_use_id)
                 })
-                .ok_or_else(|| Failure::Terminal("AGENT_RUNTIME_INVALID", "citation sourceUseSha256".into()))?;
+                .ok_or_else(|| {
+                    Failure::Terminal("AGENT_RUNTIME_INVALID", "citation sourceUseSha256".into())
+                })?;
             let selected_content_sha256 = item
                 .get("selected_content_sha256")
                 .or_else(|| item.get("selectedContentSha256"))
                 .and_then(Value::as_str)
                 .filter(|value| is_sha256_text(value))
-                .ok_or_else(|| Failure::Terminal("AGENT_RUNTIME_INVALID", "citation selectedContentSha256".into()))?
+                .ok_or_else(|| {
+                    Failure::Terminal(
+                        "AGENT_RUNTIME_INVALID",
+                        "citation selectedContentSha256".into(),
+                    )
+                })?
                 .to_owned();
             Ok(gurine_agent_orchestration::runtime::Citation {
                 source_use_id,
@@ -200,7 +206,10 @@ async fn parse_tool_call(
         .and_then(Value::as_str)
         && expected != request_sha256
     {
-        return Err(Failure::Terminal("PROVIDER_TOOL_CALL_INVALID", "requestSha256".into()));
+        return Err(Failure::Terminal(
+            "PROVIDER_TOOL_CALL_INVALID",
+            "requestSha256".into(),
+        ));
     }
     Ok(gurine_agent_orchestration::runtime::ToolCall {
         call_id: stable_uuid(call_id.as_bytes()),
@@ -229,59 +238,13 @@ async fn dispatch_tool_call(
     // therefore leaves a CLAIMED lease that reconciliation can settle instead
     // of an untracked external side effect.
     let tool_call_id = claim_tool_call(state, turn, agent_type, &call).await?;
-    let (response_json, pending_source_fetch) = if let gurine_agent_orchestration::runtime::ToolRequest::SourceFetch(request) = &call.request {
-        let (response, pending) = dispatch_source_fetch(state, turn, &call, request).await?;
-        let typed: gurine_agent_orchestration::runtime::SourceFetchResponseV2 =
-            serde_json::from_value(response.clone())
-                .map_err(|error| Failure::Terminal("SOURCE_FETCH_RESPONSE_INVALID", error.to_string()))?;
-        let expected_kind = match request.request_kind {
-            gurine_agent_orchestration::runtime::SourceRequestKind::SearchPublicWeb => "SEARCH_PUBLIC_WEB",
-            gurine_agent_orchestration::runtime::SourceRequestKind::FetchUrl => "FETCH_URL",
-        };
-        if typed.schema_version != "source.fetch.response.v2"
-            || typed.request_kind != expected_kind
-            || typed.gateway_decision.decision != "ALLOW"
-            || typed.gateway_decision.policy_version != "source-policy-v2"
-            || !is_sha256_text(&typed.fetch_receipt_sha256)
-            || !is_sha256_text(&typed.gateway_decision.policy_sha256)
-            || !is_sha256_text(&typed.gateway_decision.decision_sha256)
-            || typed.artifacts.iter().any(|artifact| {
-                !is_sha256_text(&artifact.content_sha256)
-                    || !is_sha256_text(&artifact.artifact_sha256)
-                    || !is_sha256_text(&artifact.response_headers_sha256)
-                    || !is_sha256_text(&artifact.content_safety_receipt_sha256)
-                    || !is_sha256_text(&artifact.source_use_sha256)
-                    || artifact.content_media_type.contains(';')
-            })
-        {
-            return Err(Failure::Terminal("SOURCE_FETCH_RESPONSE_INVALID", "binding".into()));
-        }
-        (response, pending)
-    } else {
-        let response = dispatcher
-            .dispatch(agent_type, &call.request)
-            .map_err(|error| Failure::Terminal("AGENT_TOOL_DENIED", error.to_string()))?;
-        (serde_json::to_value(&response)
-            .map_err(|error| Failure::Terminal("AGENT_TOOL_RESULT_INVALID", error.to_string()))?, None)
-    };
-    let result_sha256 = sha256(
-        &serde_json::to_vec(&response_json)
-            .map_err(|error| Failure::Terminal("AGENT_TOOL_RESULT_INVALID", error.to_string()))?,
-    );
-    let transcript = json!({
-        "priorTranscriptSha256": turn.prior_transcript_sha256,
-        "providerTurnId": turn.turn_id,
-        "callId": call.call_id,
-        "requestSha256": call.request_sha256,
-        "resultSha256": result_sha256,
-        "providerReceiptSha256": sha256(&canonical_bytes(receipt)?),
-    });
-    let transcript_sha256 = sha256(&canonical_bytes(&transcript)?);
-    let result = json!({
-        "callId": call.call_id,
-        "response": response_json,
-        "responseSha256": result_sha256,
-    });
+    let DispatchedTool {
+        response_json,
+        pending_source_fetch,
+        corpus_parent_source_use_ids,
+    } = execute_tool(state, turn, agent_type, &call, &dispatcher).await?;
+    let (result, transcript_sha256) =
+        tool_result_and_transcript(turn, &call, response_json, receipt)?;
     analysis_tool_persistence::persist_tool_call(
         state,
         turn,
@@ -292,6 +255,7 @@ async fn dispatch_tool_call(
         &transcript_sha256,
         receipt_id,
         pending_source_fetch.as_ref(),
+        corpus_parent_source_use_ids.as_deref(),
     )
     .await?;
     Ok((result, transcript_sha256))
@@ -315,22 +279,36 @@ async fn claim_tool_call(
     let request_canonical = canonical_bytes(&request)?;
     let request_sha256 = sha256(&request_canonical);
     let tool_id = call.request.tool_id().wire_name();
-    let (request_schema_sha256, response_schema_sha256) = tool_schema_hashes(tool_id);
+    let (request_schema_sha256, response_schema_sha256) =
+        analysis_tool_catalog::tool_schema_hashes(tool_id)
+            .ok_or_else(|| Failure::Terminal("AGENT_REGISTRY_DRIFT", tool_id.to_owned()))?;
     let call_text = call.call_id.to_string();
     let tool_call_id = Uuid::new_v4();
     let rights_decision_sha256 = if tool_id == "source.fetch" {
-        let request_kind = request.get("requestKind").and_then(Value::as_str)
+        let request_kind = request
+            .get("requestKind")
+            .and_then(Value::as_str)
             .unwrap_or("FETCH_URL");
-        let source_id = if request_kind == "SEARCH_PUBLIC_WEB" { "brave-search-web-v1" } else { "public-research" };
+        let source_id = if request_kind == "SEARCH_PUBLIC_WEB" {
+            "brave-search-web-v1"
+        } else {
+            "public-research"
+        };
         let rights: Option<Value> = sqlx::query_scalar!(
             "SELECT ops.assert_research_fetch_rights_v1($1,$2)",
             source_id,
             request_kind,
         )
-            .fetch_one(&state.pool)
-            .await
-            .map_err(database)?;
-        rights.and_then(|value| value.get("decisionSha256").and_then(Value::as_str).map(str::to_owned))
+        .fetch_one(&state.pool)
+        .await
+        .map_err(database)?;
+        rights
+            .and_then(|value| {
+                value
+                    .get("decisionSha256")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            })
             .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_UNAVAILABLE", source_id.to_owned()))?
     } else {
         sha256(format!("rights-snapshot:{tool_id}:{request_sha256}").as_bytes())
@@ -396,12 +374,14 @@ async fn insert_tool_result_source_uses(
     tool_id: &str,
     result_sha256: &str,
     provider_receipt_id: Option<Uuid>,
+    corpus_parent_source_use_ids: Option<&[Uuid]>,
 ) -> Result<(), Failure> {
     sqlx::query(
         r#"
         WITH parents AS (
           SELECT * FROM ops.agent_source_uses
            WHERE agent_run_id=$1 AND use_kind='TOOL_QUERY'
+             AND ($7::uuid[] IS NULL OR source_use_id=ANY($7))
         ), identities AS (
           SELECT p.*, gen_random_uuid() AS new_source_use_id, clock_timestamp() AS new_occurred_at
             FROM parents p
@@ -462,30 +442,40 @@ async fn insert_tool_result_source_uses(
     .bind(tool_id)
     .bind(result_sha256)
     .bind(provider_receipt_id)
+    .bind(corpus_parent_source_use_ids.map(<[Uuid]>::to_vec))
     .execute(&mut *executor)
     .await
     .map_err(database)?;
     Ok(())
 }
 
-fn tool_schema_hashes(tool_id: &str) -> (&'static str, &'static str) {
-    match tool_id {
-        "claim.language_check" => ("0eff4fa492ebc9664f49ecf871880c7f776050c36e9d4ddac1a3d4482600e615", "ac77f413e976813197b57db66a5737178c87f51ba7d67b19bc31aa80b7c0dbf6"),
-        "contract.find_comparables" => ("84fc62d88f8c6d61717fcf7e025cc4e7b4825703cb147d207ba6a92d8875a5c0", "15f512d7b8d1ddb98c09e04ece72c0907e29c21a38501bb539d86e43881e64fe"),
-        "entity.lookup" => ("19133149878dbbf54ef7865f1822c77ea2c31aac8bcfcc377ad4869e18bb713d", "0dc88f3b5cac41877326f3f6cbf5a86a8859e4124bdc387adc7816c3444256a1"),
-        "evidence.read" => ("71ba7e5b3d0867e7ac36354f82d42cf8533c1ed93b49426f248cc9147a6b8bde", "ec19aa983c3c786da78f4e2bc41e6398c6af24ae8d3506ee4cf0848a4a0fa4e0"),
-        "evidence.search" => ("d92f236d62ab15ddb3ba12af5f63079e2293057d7d5d21f5d43280306ca54c42", "cc44ee052c404fae5fd5945e483d60966e76b1f44c1ebfea576b19444bc651ca"),
-        "response.read" => ("87e0332aed2c7de8f604db95a629159856426e3f8e4f2649194c5148716d74ee", "f751a34a8f78407894ff96605241928d3fecee2f7ff9b48ba130ecb48701855f"),
-        "rule.reproduce" => ("ba0e45b6c03dad44a99299fc5a06058e740500dabe60f6af13cc77ebc5fd4147", "8104f45d77b0d576e986844e09b34370c642042ebe8d7c8a8dc3d68fbf9b21ff"),
-        "source.fetch" => ("8a6083ee948e416f71d7ee7e34ddb6ca41e84a8e3a2d1be53c4900605dc80c67", "42e59f2ddbe8bf2c58e61451cd698e388463f42bcdc13394bb6bf5140ca5912e"),
-        _ => ("3470624bf89ed5d2116d7ef365b4dd017e822736f5b8d71189c7312653a5512f", "d8ddd0649eb49c0f0d8bc9490fb48134cb383cfa671d53d6ad710be39bd998ad"),
+async fn resolve_snapshot_id(state: &State, turn: &ProviderTurnIdentity) -> Result<Uuid, Failure> {
+    if let Some(snapshot_id) = turn.dataset_snapshot_id {
+        return sqlx::query_scalar!(
+            "SELECT ds.id FROM ops.agent_runs r
+              JOIN core.dataset_snapshots ds
+                ON ds.id=r.dataset_snapshot_id
+               AND ds.snapshot_sha256=r.input_snapshot_hash
+             WHERE r.id=$1 AND r.run_contract_version=2
+               AND ds.id=$2 AND ds.snapshot_sha256=CAST($3 AS char(64))
+               AND ds.snapshot_kind='AGENT_CASE' AND ds.state='READY'",
+            turn.run_id,
+            snapshot_id,
+            &turn.input_snapshot_sha256,
+        )
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(database)?
+        .ok_or_else(|| {
+            Failure::Terminal(
+                "AGENT_EVIDENCE_SCOPE_INVALID",
+                "v2 snapshot identity".to_owned(),
+            )
+        });
     }
-}
-
-async fn resolve_snapshot_id(
-    state: &State,
-    turn: &ProviderTurnIdentity,
-) -> Result<Uuid, Failure> {
+    // Legacy v1 runs predate the physical dataset_snapshot_id binding. Keep
+    // their digest lookup for compatibility; every new automatic run is v2
+    // and must take the exact branch above.
     sqlx::query_scalar!(
         "SELECT id FROM core.dataset_snapshots
           WHERE snapshot_sha256=CAST($1 AS char(64)) AND snapshot_kind='AGENT_CASE' AND state='READY'
@@ -516,8 +506,8 @@ fn stable_uuid(seed: &[u8]) -> Uuid {
 
 impl ProviderAdapter for ExternalFinalProvider {
     fn complete(&self, request: &ProviderRequest) -> Result<ProviderReply, ProviderRuntimeError> {
-        let request_sha256 = provider_request_sha256(request)
-            .map_err(|_| ProviderRuntimeError::InvalidReceipt)?;
+        let request_sha256 =
+            provider_request_sha256(request).map_err(|_| ProviderRuntimeError::InvalidReceipt)?;
         let mut receipt = ProviderReceipt {
             idempotency_key: request.idempotency_key.clone(),
             request_sha256,
@@ -525,8 +515,8 @@ impl ProviderAdapter for ExternalFinalProvider {
             cost_micros_krw: self.cost_micros,
             receipt_sha256: String::new(),
         };
-        receipt.receipt_sha256 = provider_receipt_sha256(&receipt)
-            .map_err(|_| ProviderRuntimeError::InvalidReceipt)?;
+        receipt.receipt_sha256 =
+            provider_receipt_sha256(&receipt).map_err(|_| ProviderRuntimeError::InvalidReceipt)?;
         Ok(ProviderReply {
             envelope: ProviderEnvelope::FinalOutput(self.output.clone()),
             receipt,

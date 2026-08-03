@@ -79,15 +79,23 @@ impl Default for TypedDispatcher {
 
 pub(super) fn allowed_tools(agent: &str) -> Option<&'static [ToolId]> {
     const MARKET: &[ToolId] = &[
+        ToolId::AgencyProfile,
+        ToolId::ContractSearch,
         ToolId::EvidenceSearch,
+        ToolId::RelationshipNeighbors,
         ToolId::SourceFetch,
+        ToolId::SupplierProfile,
         ToolId::ContractFindComparables,
     ];
     const INVESTIGATOR: &[ToolId] = &[
+        ToolId::AgencyProfile,
+        ToolId::ContractSearch,
         ToolId::EvidenceSearch,
         ToolId::EvidenceRead,
         ToolId::ContractFindComparables,
         ToolId::EntityLookup,
+        ToolId::RelationshipNeighbors,
+        ToolId::SupplierProfile,
     ];
     const SKEPTIC: &[ToolId] = &[
         ToolId::EvidenceSearch,

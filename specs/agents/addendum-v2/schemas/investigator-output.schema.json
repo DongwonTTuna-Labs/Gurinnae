@@ -222,10 +222,14 @@
       "properties": {
         "toolId": {
           "enum": [
+            "agency.profile",
+            "contract.search",
             "evidence.search",
             "evidence.read",
             "contract.find_comparables",
-            "entity.lookup"
+            "entity.lookup",
+            "relationship.neighbors",
+            "supplier.profile"
           ]
         },
         "objective": {

@@ -15,8 +15,12 @@ agents:
   display_name: 시장가격 조사 보조
   purpose: 공개 시장가격과 다른 공공계약 비교 후보를 찾되 동일성·비리·범죄를 단정하지 않는다.
   tools:
+  - agency.profile
+  - contract.search
   - evidence.search
+  - relationship.neighbors
   - source.fetch
+  - supplier.profile
   - contract.find_comparables
   output_schema: MarketResearchOutput
   max_iterations: 12
@@ -25,10 +29,14 @@ agents:
   display_name: 사건 조사 보조
   purpose: 고정된 근거 snapshot 안에서 가설·반대가설·중요한 미확인·다음 조사 행동을 구조화한다.
   tools:
+  - agency.profile
+  - contract.search
   - evidence.search
   - evidence.read
   - contract.find_comparables
   - entity.lookup
+  - relationship.neighbors
+  - supplier.profile
   output_schema: InvestigatorOutput
   max_iterations: 16
   max_cost_krw: 5000

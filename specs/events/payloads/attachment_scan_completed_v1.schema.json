@@ -3,10 +3,14 @@
   "$id": "https://gurine.invalid/events/attachment.scan_completed.v1.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["attachment_id", "scan_status", "sha256"],
+  "required": ["attachment_id", "attachment_kind", "scan_status", "sha256"],
   "properties": {
     "attachment_id": {
       "type": "string"
+    },
+    "attachment_kind": {
+      "type": "string",
+      "enum": ["CORRECTION", "RESPONSE"]
     },
     "scan_status": {
       "type": "string"

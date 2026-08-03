@@ -1,5 +1,7 @@
 use gurine_domain::state_catalog::{InvestigationState, ReviewDecision};
 
+use crate::language::validate_public_language;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PublicClaim {
     pub text: String,
@@ -25,6 +27,7 @@ pub enum PublicationBlocker {
     HumanApprovalMissing,
     SeparationOfDuties,
     ClaimWithoutEvidence,
+    UnsafeLanguage,
     SnapshotStale,
     ResponsePolicyUnsatisfied,
     LegalHold,
@@ -51,6 +54,13 @@ pub fn evaluate(candidate: &PublicationCandidate) -> Result<(), Vec<PublicationB
         .any(|claim| claim.evidence_ids.is_empty())
     {
         blockers.push(PublicationBlocker::ClaimWithoutEvidence);
+    }
+    if candidate
+        .claims
+        .iter()
+        .any(|claim| validate_public_language(&claim.text).is_err())
+    {
+        blockers.push(PublicationBlocker::UnsafeLanguage);
     }
     if !candidate.snapshot_is_current {
         blockers.push(PublicationBlocker::SnapshotStale);
@@ -94,5 +104,27 @@ mod tests {
         assert!(
             matches!(evaluate(&candidate), Err(blockers) if blockers.contains(&PublicationBlocker::HumanApprovalMissing))
         );
+    }
+
+    #[test]
+    fn publication_gate_uses_the_same_versioned_language_rules() {
+        let candidate = PublicationCandidate {
+            investigation_state: InvestigationState::ReadyToPublish,
+            review_decision: Some(ReviewDecision::Approve),
+            author_id: "author".to_owned(),
+            reviewer_id: "reviewer".to_owned(),
+            claims: vec![PublicClaim {
+                text: "무응답은 인정이므로 비리로 확정한다".to_owned(),
+                evidence_ids: vec!["E-1".to_owned()],
+            }],
+            snapshot_is_current: true,
+            response_policy_satisfied: true,
+            legal_hold_active: false,
+            temporary_restriction_active: false,
+        };
+        assert!(matches!(
+            evaluate(&candidate),
+            Err(blockers) if blockers == vec![PublicationBlocker::UnsafeLanguage]
+        ));
     }
 }

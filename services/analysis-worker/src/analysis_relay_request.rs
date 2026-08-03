@@ -24,7 +24,9 @@ pub(super) fn relay_chat_request(
     let selected_refs = wire
         .get("selectedContentRefs")
         .and_then(Value::as_array)
-        .ok_or_else(|| Failure::Terminal("PROVIDER_REQUEST_INVALID", "selectedContentRefs".into()))?;
+        .ok_or_else(|| {
+            Failure::Terminal("PROVIDER_REQUEST_INVALID", "selectedContentRefs".into())
+        })?;
     let user = json!({
         "bindings": {
             "agentRunId": run_id,
@@ -74,9 +76,7 @@ fn pinned_prompt_bytes(agent_type: &str) -> Option<&'static str> {
         "market-researcher" => Some(include_str!(
             "../../../specs/agents/market-researcher/prompt.md"
         )),
-        "investigator" => Some(include_str!(
-            "../../../specs/agents/investigator/prompt.md"
-        )),
+        "investigator" => Some(include_str!("../../../specs/agents/investigator/prompt.md")),
         "skeptic" => Some(include_str!("../../../specs/agents/skeptic/prompt.md")),
         "claim-drafter" => Some(include_str!(
             "../../../specs/agents/claim-drafter/prompt.md"
@@ -111,15 +111,23 @@ fn relay_tools(agent_type: &str) -> Result<Vec<Value>, Failure> {
 pub(super) fn relay_allowed_tool_ids(agent_type: &str) -> &'static [&'static str] {
     match agent_type {
         "market-researcher" => &[
+            "agency.profile",
+            "contract.search",
             "evidence.search",
+            "relationship.neighbors",
             "source.fetch",
+            "supplier.profile",
             "contract.find_comparables",
         ],
         "investigator" => &[
+            "agency.profile",
+            "contract.search",
             "evidence.search",
             "evidence.read",
             "contract.find_comparables",
             "entity.lookup",
+            "relationship.neighbors",
+            "supplier.profile",
         ],
         "skeptic" => &["evidence.search", "evidence.read", "rule.reproduce"],
         "claim-drafter" => &["evidence.read", "response.read", "claim.language_check"],
@@ -140,7 +148,23 @@ pub(super) fn relay_tool_id(name: &str) -> Option<&'static str> {
 }
 
 fn relay_tool_schema(tool_id: &str) -> Option<Value> {
-    relay_tool_row(tool_id).and_then(|row| serde_json::from_str(row.2).ok())
+    let mut schema =
+        relay_tool_row(tool_id).and_then(|row| serde_json::from_str::<Value>(row.2).ok())?;
+    if tool_id == "claim.language_check" {
+        use gurine_publication_policy::language::{
+            LANGUAGE_POLICY_VERSION, language_policy_sha256,
+        };
+        let properties = schema.get_mut("properties")?.as_object_mut()?;
+        properties.insert(
+            "languagePolicyVersion".to_owned(),
+            json!({"const": LANGUAGE_POLICY_VERSION}),
+        );
+        properties.insert(
+            "languagePolicySha256".to_owned(),
+            json!({"const": language_policy_sha256()}),
+        );
+    }
+    Some(schema)
 }
 
 fn relay_tool_row(tool_id: &str) -> Option<&'static (&'static str, &'static str, &'static str)> {
@@ -148,15 +172,81 @@ fn relay_tool_row(tool_id: &str) -> Option<&'static (&'static str, &'static str,
 }
 
 const RELAY_TOOL_ROWS: &[(&str, &str, &str)] = &[
-    ("claim.language_check", "claim__dot__language_check", include_str!("../../../specs/agents/addendum-v2/tools/claim-language-check.request.schema.json")),
-    ("contract.find_comparables", "contract__dot__find_comparables", include_str!("../../../specs/agents/addendum-v2/tools/contract-find-comparables.request.schema.json")),
-    ("entity.lookup", "entity__dot__lookup", include_str!("../../../specs/agents/addendum-v2/tools/entity-lookup.request.schema.json")),
-    ("evidence.read", "evidence__dot__read", include_str!("../../../specs/agents/addendum-v2/tools/evidence-read.request.schema.json")),
-    ("evidence.search", "evidence__dot__search", include_str!("../../../specs/agents/addendum-v2/tools/evidence-search.request.schema.json")),
-    ("response.read", "response__dot__read", include_str!("../../../specs/agents/addendum-v2/tools/response-read.request.schema.json")),
-    ("rule.reproduce", "rule__dot__reproduce", include_str!("../../../specs/agents/addendum-v2/tools/rule-reproduce.request.schema.json")),
-    ("source.fetch", "source__dot__fetch", include_str!("../../../specs/agents/addendum-v2/tools/source-fetch.request.schema.json")),
-    ("source.locator_verify", "source__dot__locator_verify", include_str!("../../../specs/agents/addendum-v2/tools/source-locator-verify.request.schema.json")),
+    (
+        "agency.profile",
+        "agency__dot__profile",
+        include_str!("../../../specs/agents/addendum-v2/tools/agency-profile.request.schema.json"),
+    ),
+    (
+        "claim.language_check",
+        "claim__dot__language_check",
+        include_str!(
+            "../../../specs/agents/addendum-v2/tools/claim-language-check.request.schema.json"
+        ),
+    ),
+    (
+        "contract.search",
+        "contract__dot__search",
+        include_str!("../../../specs/agents/addendum-v2/tools/contract-search.request.schema.json"),
+    ),
+    (
+        "contract.find_comparables",
+        "contract__dot__find_comparables",
+        include_str!(
+            "../../../specs/agents/addendum-v2/tools/contract-find-comparables.request.schema.json"
+        ),
+    ),
+    (
+        "entity.lookup",
+        "entity__dot__lookup",
+        include_str!("../../../specs/agents/addendum-v2/tools/entity-lookup.request.schema.json"),
+    ),
+    (
+        "evidence.read",
+        "evidence__dot__read",
+        include_str!("../../../specs/agents/addendum-v2/tools/evidence-read.request.schema.json"),
+    ),
+    (
+        "evidence.search",
+        "evidence__dot__search",
+        include_str!("../../../specs/agents/addendum-v2/tools/evidence-search.request.schema.json"),
+    ),
+    (
+        "relationship.neighbors",
+        "relationship__dot__neighbors",
+        include_str!(
+            "../../../specs/agents/addendum-v2/tools/relationship-neighbors.request.schema.json"
+        ),
+    ),
+    (
+        "response.read",
+        "response__dot__read",
+        include_str!("../../../specs/agents/addendum-v2/tools/response-read.request.schema.json"),
+    ),
+    (
+        "rule.reproduce",
+        "rule__dot__reproduce",
+        include_str!("../../../specs/agents/addendum-v2/tools/rule-reproduce.request.schema.json"),
+    ),
+    (
+        "source.fetch",
+        "source__dot__fetch",
+        include_str!("../../../specs/agents/addendum-v2/tools/source-fetch.request.schema.json"),
+    ),
+    (
+        "source.locator_verify",
+        "source__dot__locator_verify",
+        include_str!(
+            "../../../specs/agents/addendum-v2/tools/source-locator-verify.request.schema.json"
+        ),
+    ),
+    (
+        "supplier.profile",
+        "supplier__dot__profile",
+        include_str!(
+            "../../../specs/agents/addendum-v2/tools/supplier-profile.request.schema.json"
+        ),
+    ),
 ];
 
 #[cfg(test)]
@@ -170,6 +260,22 @@ mod tests {
             assert_eq!(relay_tool_name(row.0), Some(row.1));
         }
         assert_eq!(relay_tool_id("unknown__dot__tool"), None);
+    }
+
+    #[test]
+    fn claim_language_tool_exposes_the_exact_active_policy() {
+        use gurine_publication_policy::language::{
+            LANGUAGE_POLICY_VERSION, language_policy_sha256,
+        };
+        let schema = relay_tool_schema("claim.language_check").expect("claim schema");
+        assert_eq!(
+            schema["properties"]["languagePolicyVersion"]["const"],
+            LANGUAGE_POLICY_VERSION
+        );
+        assert_eq!(
+            schema["properties"]["languagePolicySha256"]["const"],
+            language_policy_sha256()
+        );
     }
 
     #[test]
@@ -203,6 +309,7 @@ mod tests {
             run_id: Uuid::from_u128(3),
             idempotency_hash: sha256(b"idempotency"),
             request_redacted: json!({}),
+            dataset_snapshot_id: Some(Uuid::from_u128(2)),
             input_snapshot_sha256: sha256(b"snapshot"),
             prior_transcript_sha256: sha256(b"transcript"),
             provider_config_id: Uuid::from_u128(4),

@@ -72,15 +72,19 @@
     },
     "toolId": {
       "enum": [
+        "agency.profile",
         "claim.language_check",
         "contract.find_comparables",
+        "contract.search",
         "entity.lookup",
         "evidence.read",
         "evidence.search",
+        "relationship.neighbors",
         "response.read",
         "rule.reproduce",
         "source.fetch",
-        "source.locator_verify"
+        "source.locator_verify",
+        "supplier.profile"
       ]
     },
     "toolCatalogVersion": {
@@ -113,10 +117,16 @@
     "request": {
       "oneOf": [
         {
+          "$ref": "../tools/agency-profile.request.schema.json"
+        },
+        {
           "$ref": "../tools/claim-language-check.request.schema.json"
         },
         {
           "$ref": "../tools/contract-find-comparables.request.schema.json"
+        },
+        {
+          "$ref": "../tools/contract-search.request.schema.json"
         },
         {
           "$ref": "../tools/entity-lookup.request.schema.json"
@@ -126,6 +136,9 @@
         },
         {
           "$ref": "../tools/evidence-search.request.schema.json"
+        },
+        {
+          "$ref": "../tools/relationship-neighbors.request.schema.json"
         },
         {
           "$ref": "../tools/response-read.request.schema.json"
@@ -138,6 +151,9 @@
         },
         {
           "$ref": "../tools/source-locator-verify.request.schema.json"
+        },
+        {
+          "$ref": "../tools/supplier-profile.request.schema.json"
         }
       ]
     },
@@ -199,10 +215,16 @@
           "type": "null"
         },
         {
+          "$ref": "../tools/agency-profile.response.schema.json"
+        },
+        {
           "$ref": "../tools/claim-language-check.response.schema.json"
         },
         {
           "$ref": "../tools/contract-find-comparables.response.schema.json"
+        },
+        {
+          "$ref": "../tools/contract-search.response.schema.json"
         },
         {
           "$ref": "../tools/entity-lookup.response.schema.json"
@@ -212,6 +234,9 @@
         },
         {
           "$ref": "../tools/evidence-search.response.schema.json"
+        },
+        {
+          "$ref": "../tools/relationship-neighbors.response.schema.json"
         },
         {
           "$ref": "../tools/response-read.response.schema.json"
@@ -224,6 +249,9 @@
         },
         {
           "$ref": "../tools/source-locator-verify.response.schema.json"
+        },
+        {
+          "$ref": "../tools/supplier-profile.response.schema.json"
         }
       ]
     },
@@ -431,6 +459,32 @@
       "if": {
         "properties": {
           "toolId": {
+            "const": "agency.profile"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/agency-profile.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/agency-profile.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
             "const": "claim.language_check"
           }
         }
@@ -473,6 +527,32 @@
               },
               {
                 "$ref": "../tools/contract-find-comparables.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "contract.search"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/contract-search.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/contract-search.response.schema.json"
               }
             ]
           }
@@ -551,6 +631,32 @@
               },
               {
                 "$ref": "../tools/evidence-search.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "toolId": {
+            "const": "relationship.neighbors"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/relationship-neighbors.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/relationship-neighbors.response.schema.json"
               }
             ]
           }
@@ -663,6 +769,32 @@
     },
     {
       "if": {
+        "properties": {
+          "toolId": {
+            "const": "supplier.profile"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "$ref": "../tools/supplier-profile.request.schema.json"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "../tools/supplier-profile.response.schema.json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
         "properties": { "status": { "const": "DENIED" } },
         "required": ["status"]
       },
@@ -700,6 +832,6 @@
     "The toolId selects exactly one request/response schema pair and the persisted requestSchemaSha256/responseSchemaSha256 equal that pair's canonical bytes.",
     "(agentRunId,callId) is idempotent; claimGeneration and leaseTokenSha256 fence one executor, and an expired lease never proves the external outcome.",
     "Every sourceUseBinding belongs to this tool call/run/snapshot, is sorted unique, and is atomically committed with result, response validation, transcript, cost, and terminal receipt.",
-    "source.fetch alone uses the egress adapter and mandatory budget reservation; the eight internal tools are read-only snapshot-scoped PostgreSQL adapters."
+    "source.fetch alone uses the egress adapter and mandatory budget reservation; the twelve internal tools are read-only snapshot-scoped PostgreSQL adapters."
   ]
 }

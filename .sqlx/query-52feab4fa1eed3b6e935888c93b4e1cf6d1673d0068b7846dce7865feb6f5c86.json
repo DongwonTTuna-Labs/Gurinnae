@@ -1,0 +1,84 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT m.object_type,m.object_id,m.canonical_payload,m.id AS snapshot_member_id,\n                btrim(m.member_digest::text) AS snapshot_member_digest,\n                su.source_use_id AS \"source_use_id?: Uuid\"\n           FROM core.dataset_snapshot_members m\n           LEFT JOIN LATERAL (\n             SELECT s.source_use_id FROM ops.agent_source_uses s\n              WHERE s.agent_run_id=$2 AND s.use_kind='TOOL_QUERY'\n                AND s.source_kind='DATASET_MEMBER'\n                AND s.dataset_snapshot_id=m.dataset_snapshot_id\n                AND s.snapshot_member_id=m.id\n                AND s.snapshot_member_digest=m.member_digest\n              ORDER BY s.source_use_id LIMIT 1\n           ) su ON true\n          WHERE m.dataset_snapshot_id=$1\n            AND m.object_type IN ('CONTRACT','SUPPLIER','AGENCY')\n          ORDER BY m.member_ordinal,m.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "object_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "canonical_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "canonical_payload"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "snapshot_member_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "snapshot_member_digest",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "source_use_id?: Uuid",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "source_use_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      false
+    ]
+  },
+  "hash": "52feab4fa1eed3b6e935888c93b4e1cf6d1673d0068b7846dce7865feb6f5c86"
+}

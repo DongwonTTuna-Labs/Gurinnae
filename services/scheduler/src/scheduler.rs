@@ -50,65 +50,125 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
     .map_err(|_| SchedulerError::Initialization)?;
     tracing::info!(instance_id=%config.instance_id,"scheduler ready");
     loop {
-        let recovered = recover_expired(&pool, 100).await.map_err(|error| {
-            tracing::error!(stage="recover_expired", error=%error, "scheduler stage failed");
-            SchedulerError::Database(job_sqlx(error))
-        })?;
-        let scheduled = schedule_source_runs(&pool, config.batch_size).await.map_err(|error| {
-            tracing::error!(stage="schedule_source_runs", error=%error, "scheduler stage failed");
-            error
-        })?;
-        let polls = schedule_delivery_poll_requests(&pool, config.batch_size).await.map_err(|error| {
-            tracing::error!(stage="schedule_delivery_poll_requests", error=%error, "scheduler stage failed");
-            error
-        })?;
-        let catalog_syncs = schedule_relay_model_catalog_sync(&pool).await.map_err(|error| {
-            tracing::error!(stage="schedule_relay_model_catalog_sync", error=%error, "scheduler stage failed");
-            error
-        })?;
-        let expired: Option<Uuid> = sqlx::query_scalar!(
-            "SELECT ops.enqueue_outbox('internal.publication_access_expiry',$1,0, \
-             'internal.expire_due_publication_access.v1',$2,clock_timestamp())",
-            config.batch_size.to_string(),
-            json!({"limit":config.batch_size}),
-        )
-        .fetch_one(&pool)
-        .await
-        .map_err(|error| {
-            tracing::error!(stage="publication_access_expiry", error=%error, "scheduler stage failed");
-            SchedulerError::Database(error)
-        })?;
-        let dispatched = dispatch_batch(&pool, config.batch_size).await?;
-        let consumed = consume_scheduler_job(&pool, &event_worker).await?;
+        let activity = run_cycle(&pool, &event_worker, &config).await?;
         if config.once {
-            if scheduled == 0
-                && polls == 0
-                && catalog_syncs == 0
-                && expired.is_none()
-                && dispatched == 0
-                && !consumed
-                && recovered == 0
-            {
+            if activity.is_idle() {
                 return Ok(());
             }
-        } else if scheduled == 0
-            && polls == 0
-            && catalog_syncs == 0
-            && expired.is_none()
-            && dispatched == 0
-            && !consumed
-            && recovered == 0
-        {
-            tokio::select! {
-                () = tokio::time::sleep(config.poll_interval) => {},
-                signal = tokio::signal::ctrl_c() => {
-                    signal.map_err(|_| SchedulerError::Initialization)?;
-                    tracing::info!("scheduler shutdown requested");
-                    return Ok(());
-                }
-            }
+        } else if activity.is_idle() && wait_for_work(config.poll_interval).await? {
+            return Ok(());
         }
     }
+}
+
+struct CycleActivity {
+    recovered: u64,
+    source_runs: u64,
+    delivery_polls: u64,
+    snapshot_builds: u64,
+    catalog_syncs: u64,
+    publication_expiry: Option<Uuid>,
+    dispatched: u64,
+    consumed: bool,
+}
+
+impl CycleActivity {
+    fn is_idle(&self) -> bool {
+        self.recovered == 0
+            && self.source_runs == 0
+            && self.delivery_polls == 0
+            && self.snapshot_builds == 0
+            && self.catalog_syncs == 0
+            && self.publication_expiry.is_none()
+            && self.dispatched == 0
+            && !self.consumed
+    }
+}
+
+async fn run_cycle(
+    pool: &PgPool,
+    event_worker: &Worker,
+    config: &Config,
+) -> Result<CycleActivity, SchedulerError> {
+    let recovered = recover_expired(pool, 100).await.map_err(|error| {
+        tracing::error!(stage="recover_expired", error=%error, "scheduler stage failed");
+        SchedulerError::Database(job_sqlx(error))
+    })?;
+    let source_runs = schedule_source_runs(pool, config.batch_size)
+        .await
+        .map_err(|error| log_stage_error("schedule_source_runs", error))?;
+    let delivery_polls = schedule_delivery_poll_requests(pool, config.batch_size)
+        .await
+        .map_err(|error| log_stage_error("schedule_delivery_poll_requests", error))?;
+    let snapshot_builds = schedule_detection_snapshot_builds(pool, config.batch_size)
+        .await
+        .map_err(|error| log_stage_error("schedule_detection_snapshot_builds", error))?;
+    let catalog_syncs = schedule_relay_model_catalog_sync(pool)
+        .await
+        .map_err(|error| log_stage_error("schedule_relay_model_catalog_sync", error))?;
+    let publication_expiry = enqueue_publication_access_expiry(pool, config.batch_size).await?;
+    Ok(CycleActivity {
+        recovered,
+        source_runs,
+        delivery_polls,
+        snapshot_builds,
+        catalog_syncs,
+        publication_expiry,
+        dispatched: dispatch_batch(pool, config.batch_size).await?,
+        consumed: consume_scheduler_job(pool, event_worker).await?,
+    })
+}
+
+fn log_stage_error(stage: &'static str, error: SchedulerError) -> SchedulerError {
+    tracing::error!(stage, error=%error, "scheduler stage failed");
+    error
+}
+
+async fn enqueue_publication_access_expiry(
+    pool: &PgPool,
+    batch_size: i64,
+) -> Result<Option<Uuid>, SchedulerError> {
+    sqlx::query_scalar!(
+        "SELECT ops.enqueue_outbox('internal.publication_access_expiry',$1,0, \
+         'internal.expire_due_publication_access.v1',$2,clock_timestamp())",
+        batch_size.to_string(),
+        json!({"limit":batch_size}),
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|error| {
+        tracing::error!(stage="publication_access_expiry", error=%error, "scheduler stage failed");
+        SchedulerError::Database(error)
+    })
+}
+
+async fn wait_for_work(poll_interval: std::time::Duration) -> Result<bool, SchedulerError> {
+    tokio::select! {
+        () = tokio::time::sleep(poll_interval) => Ok(false),
+        signal = tokio::signal::ctrl_c() => {
+            signal.map_err(|_| SchedulerError::Initialization)?;
+            tracing::info!("scheduler shutdown requested");
+            Ok(true)
+        }
+    }
+}
+
+/// Ask the database owner routine to create only due, digest-bound detection
+/// snapshot jobs. The routine owns deduplication and sees the same authority
+/// tables as the later snapshot producer; the scheduler never invents a
+/// cohort or a rule configuration.
+pub async fn schedule_detection_snapshot_builds(
+    pool: &PgPool,
+    limit: i64,
+) -> Result<u64, SchedulerError> {
+    let count = sqlx::query_scalar!(
+        r#"SELECT ops.enqueue_due_detection_snapshot_builds_v1($1) AS "count!""#,
+        limit,
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(SchedulerError::Database)?;
+    u64::try_from(count).map_err(|_| SchedulerError::Initialization)
 }
 
 async fn consume_scheduler_job(pool: &PgPool, worker: &Worker) -> Result<bool, SchedulerError> {

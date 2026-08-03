@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/relationship-neighbors-request.json",
+  "title": "RelationshipNeighborsRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputSnapshotId",
+    "inputSnapshotSha256",
+    "supplierId",
+    "relationshipKinds",
+    "asOf",
+    "limit"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "relationship.neighbors.request.v2" },
+    "runId": { "type": "string", "format": "uuid" },
+    "inputSnapshotId": { "type": "string", "format": "uuid" },
+    "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "supplierId": { "type": "string", "format": "uuid" },
+    "relationshipKinds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 6,
+      "items": {
+        "enum": [
+          "OWNERSHIP",
+          "BENEFICIAL_OWNERSHIP",
+          "CONTROL",
+          "MANAGEMENT_ROLE",
+          "LEGAL_REPRESENTATIVE",
+          "CONTRACTUAL_RELATIONSHIP"
+        ]
+      }
+    },
+    "asOf": {
+      "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+    },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 50 }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-invariants": [
+    "Both endpoint suppliers must be members of the exact READY input snapshot.",
+    "Only independently VERIFIED assertions with publicUseStatus APPROVED are returned.",
+    "Natural-person, family, sensitive, and scored relationship data is forbidden."
+  ]
+}

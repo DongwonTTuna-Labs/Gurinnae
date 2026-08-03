@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT snapshot_kind,producer_component,producer_digest,producer_generation,state, selection_spec,source_watermark_sha256,member_count,snapshot_sha256, terminal_receipt_sha256 FROM core.dataset_snapshots WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "snapshot_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "snapshot_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "producer_component",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "producer_component"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "producer_digest",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "producer_digest"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "producer_generation",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "producer_generation"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "selection_spec",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "selection_spec"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "source_watermark_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "source_watermark_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "member_count",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "member_count"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "snapshot_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "snapshot_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "terminal_receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "terminal_receipt_sha256"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "759c5dbec0acce6a67920defed98f7d02cc7a93f54f764cd623d7f60849991b9"
+}

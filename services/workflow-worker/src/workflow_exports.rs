@@ -301,36 +301,6 @@ fn dataset_parquet(dataset_id: &str, dataset: &Value, filters: &Value) -> Result
         .map_err(|error| Failure::Terminal("DATASET_SERIALIZE", error.to_string()))
 }
 
-async fn create_signal_task(
-    pool: &PgPool,
-    payload: &serde_json::Map<String, Value>,
-) -> Result<Value, Failure> {
-    let signal = object_uuid(payload, "signal_id")?;
-    let exists = sqlx::query_scalar!(
-        "SELECT EXISTS(SELECT 1 FROM core.anomaly_signals WHERE id=$1)",
-        signal,
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(database)?;
-    let exists = required(exists).map_err(database)?;
-    if !exists {
-        return Err(Failure::Terminal("SIGNAL_NOT_FOUND", signal.to_string()));
-    }
-    sqlx::query!(
-        "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority) \
-         SELECT 'SIGNAL_TRIAGE','SIGNAL',$1,'Triage detected signal','OPEN', \
-           CASE severity WHEN 'CRITICAL' THEN 'URGENT' WHEN 'HIGH' THEN 'HIGH' ELSE 'NORMAL' END \
-         FROM core.anomaly_signals WHERE id=$1 AND NOT EXISTS( \
-           SELECT 1 FROM ops.tasks WHERE task_type='SIGNAL_TRIAGE' AND object_id=$1 AND status<>'DONE')",
-        signal,
-    )
-    .execute(pool)
-    .await
-    .map_err(database)?;
-    Ok(json!({"signalId":signal,"taskCreated":true}))
-}
-
 async fn reconcile_schema_drift(
     pool: &PgPool,
     payload: &serde_json::Map<String, Value>,

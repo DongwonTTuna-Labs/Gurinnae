@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT candidate_id,merge_decision_id,disposition,recorded FROM core.record_supplier_identity_candidate_v1($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "candidate_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "merge_decision_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "disposition",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "recorded",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "bbe606d13e9c88346da49a2e352771be11716728cd85829354c7ddf47ce2a0ae"
+}

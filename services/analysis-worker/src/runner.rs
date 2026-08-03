@@ -24,10 +24,20 @@ use uuid::Uuid;
 
 use crate::config::Config;
 
+#[path = "analysis_detection_snapshot_build.rs"]
+mod analysis_detection_snapshot_build;
+#[path = "analysis_detection_sweep.rs"]
+mod analysis_detection_sweep;
 #[path = "analysis_relay_upgrade_receipt.rs"]
 mod analysis_relay_upgrade_receipt;
+#[path = "analysis_rule_evaluation_v2.rs"]
+mod analysis_rule_evaluation_v2;
+#[path = "analysis_rule_materializer.rs"]
+mod analysis_rule_materializer;
 #[path = "analysis_runtime_snapshot.rs"]
 mod analysis_runtime_snapshot;
+#[path = "analysis_tool_catalog.rs"]
+mod analysis_tool_catalog;
 
 use analysis_relay_upgrade_receipt::{
     RelayUpgradeAttemptKind, RelayUpgradeReceipt, RelayUpgradeReceiptInput,
@@ -127,24 +137,63 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
             .await
             .map_err(WorkerError::Job)?,
         Err(Failure::Terminal(code, detail)) => {
-            tracing::error!(job_type=%job.job_type, code, detail=%detail, "analysis job terminal failure");
-            reconcile_terminal_failure(&state.pool, &job, code)
-                .await
-                .map_err(WorkerError::Job)?;
+            let v2_handled = if job.job_type == "AGENT_RUN" {
+                handle_agent_run_v2_failure(&state.pool, &job, code, &detail, false)
+                    .await
+                    .map_err(WorkerError::Job)?
+            } else {
+                false
+            };
+            let detail_sha256 = sha256(detail.as_bytes());
+            tracing::error!(
+                job_type=%job.job_type,
+                code,
+                detail_sha256,
+                detail_redacted=true,
+                "analysis job terminal failure"
+            );
+            if !v2_handled {
+                reconcile_terminal_failure(&state.pool, &job, code)
+                    .await
+                    .map_err(WorkerError::Job)?;
+            }
+            let durable_detail = durable_failure_detail(&detail_sha256);
             state
                 .worker
-                .fail(&state.pool, &job, code, &detail, false, json!({}))
+                .fail(&state.pool, &job, code, &durable_detail, false, json!({}))
                 .await
                 .map_err(WorkerError::Job)?;
         }
         Err(Failure::Retryable(code, detail)) => {
-            tracing::warn!(job_type=%job.job_type, code, detail=%detail, "analysis job retryable failure");
+            let v2_handled = if job.job_type == "AGENT_RUN" {
+                handle_agent_run_v2_failure(&state.pool, &job, code, &detail, true)
+                    .await
+                    .map_err(WorkerError::Job)?
+            } else {
+                false
+            };
+            let detail_sha256 = sha256(detail.as_bytes());
+            tracing::warn!(
+                job_type=%job.job_type,
+                code,
+                detail_sha256,
+                detail_redacted=true,
+                "analysis job retryable failure"
+            );
+            let durable_detail = durable_failure_detail(&detail_sha256);
             let retrying = state
                 .worker
-                .fail(&state.pool, &job, code, &detail, true, json!({}))
+                .fail(
+                    &state.pool,
+                    &job,
+                    code,
+                    &durable_detail,
+                    !v2_handled,
+                    json!({}),
+                )
                 .await
                 .map_err(WorkerError::Job)?;
-            if !retrying {
+            if !retrying && !v2_handled {
                 reconcile_terminal_failure(&state.pool, &job, code)
                     .await
                     .map_err(WorkerError::Job)?;
@@ -152,6 +201,24 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
         }
     }
     Ok(true)
+}
+
+fn durable_failure_detail(detail_sha256: &str) -> String {
+    format!("redacted:sha256={detail_sha256}")
+}
+
+#[cfg(test)]
+mod runner_failure_redaction_tests {
+    use super::durable_failure_detail;
+
+    #[test]
+    fn failure_detail_is_never_persisted_verbatim() {
+        let secret = "provider transport included sensitive response bytes";
+        let digest = "a".repeat(64);
+        let durable = durable_failure_detail(&digest);
+        assert_eq!(durable, format!("redacted:sha256={digest}"));
+        assert!(!durable.contains(secret));
+    }
 }
 
 #[rustfmt::skip]
@@ -302,6 +369,10 @@ async fn reconcile_agent_run(
 async fn handle(state: &State, job: &ClaimedJob) -> Result<Value, Failure> {
     match job.job_type.as_str() {
         "EVENT_DELIVERY" => analysis_event(state, job).await,
+        "DETECTION_SNAPSHOT_BUILD" => {
+            analysis_detection_snapshot_build::build_detection_dataset_snapshot(&state.pool, job)
+                .await
+        }
         "RULE_EVALUATION" => rule_evaluation(&state.pool, job).await,
         "AGENT_RUN" => agent_run(state, job).await,
         "PROVIDER_CONNECTION_TEST" => provider_connection_test(state, job).await,
@@ -317,6 +388,7 @@ async fn handle(state: &State, job: &ClaimedJob) -> Result<Value, Failure> {
 include!("analysis_jobs.rs");
 include!("analysis_job_persistence.rs");
 include!("analysis_context.rs");
+include!("analysis_agent_v2_transition.rs");
 include!("analysis_source_use_roots.rs");
 include!("analysis_provider_connection.rs");
 include!("analysis_provider_rights.rs");

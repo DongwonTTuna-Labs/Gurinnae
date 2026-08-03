@@ -8191,6 +8191,40 @@ events:
     - {consumer: analysis-worker, physical_service: analysis-worker, module: analysis, handler: handle_research_artifact_promoted_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating projection notification job or external effect, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
     - {consumer: review-console-projector, physical_service: projection-worker, module: review_console, handler: handle_research_artifact_promoted_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating projection notification job or external effect, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
     - {consumer: audit-indexer, physical_service: projection-worker, module: audit_index, handler: handle_research_artifact_promoted_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating projection notification job or external effect, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+  normalization.run_completed.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: ingest-worker
+    producer_operations: []
+    producer_routines: [core.complete_normalization_run]
+    aggregate: NormalizationRun
+    classification: INTERNAL
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [normalizationRunId, state, aggregateVersion, outputObjectType, outputObjectId, outputObjectVersion, outputPayloadSha256, fieldProvenanceCount, fieldProvenanceSetSha256, errorCode, errorSha256, terminalReceiptSha256, auditEventId, occurredAt]
+      properties:
+        normalizationRunId: {type: string, format: uuid}
+        state: {type: string, enum: [SUCCEEDED, FAILED]}
+        aggregateVersion: {type: integer, minimum: 2}
+        outputObjectType: {type: [string, 'null']}
+        outputObjectId: {type: [string, 'null'], format: uuid}
+        outputObjectVersion: {type: [integer, 'null'], minimum: 1}
+        outputPayloadSha256: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+        fieldProvenanceCount: {type: integer, minimum: 0}
+        fieldProvenanceSetSha256: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+        errorCode: {type: [string, 'null'], pattern: '^[A-Z][A-Z0-9_]{0,127}$'}
+        errorSha256: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+        terminalReceiptSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+        auditEventId: {type: string, format: uuid}
+        occurredAt: {type: string, format: date-time}
+    payload_required: [normalizationRunId, state, aggregateVersion, outputObjectType, outputObjectId, outputObjectVersion, outputPayloadSha256, fieldProvenanceCount, fieldProvenanceSetSha256, errorCode, errorSha256, terminalReceiptSha256, auditEventId, occurredAt]
+    redaction: {allowlist: payload_schema.properties only, forbidden: [secret, token, credential, raw input payload, raw output payload, source content, field provenance values, error message, error detail, stack trace, identity proof, cookie], reference_rule: only typed terminal state and error code, bounded count and version facts, identifiers and digests leave the normalization owner boundary}
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: one terminal completion applies at the exact run version and gaps park for reconciliation, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: return the stored terminal run audit and outbox identity with zero repeated state or external effect, changed_event_identity: same event_id with changed canonical envelope digest is EVENT_REPLAY_CONFLICT and incident evidence}
+    consumers: []
+    consumer_bindings: []
   agent.run_control_changed.v2:
     category: DOMAIN
     schema_version: 2
@@ -8218,13 +8252,31 @@ events:
         proofSha256: {$ref: '#/$defs/sha256'}
         budgetDisposition: {type: string, enum: [NONE, RESERVED, SETTLED, RELEASED, RECONCILIATION_REQUIRED]}
         budgetResolutionSetSha256: {$ref: '#/$defs/sha256'}
+        actorType: {type: string, enum: [SERVICE]}
         actorKind: {type: string, enum: [CONTROL_API, ANALYSIS_WORKER, RECONCILIATION_WORKER, SCHEDULER]}
-        actorId: {type: [string, 'null'], format: uuid}
+        actorId:
+          oneOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+          - {const: analysis-worker}
         reasonCode: {type: string, enum: [RUN_STARTED, TURN_ADVANCED, FINAL_OUTPUT_VALIDATED, DEFINITIVE_FAILURE, BUDGET_DENIED, POLICY_DENIED, PRE_DISPATCH_CANCELLED, CANCEL_REQUESTED, OUTCOME_AMBIGUOUS, SAFE_RETRY_AUTHORIZED, RECONCILED_SUCCEEDED, RECONCILED_FAILED, RECONCILED_CANCELLED, NO_STATE_CHANGE]}
         reasonSha256: {$ref: '#/$defs/sha256'}
         occurredAt: {$ref: '#/$defs/datetime'}
         receiptSha256: {$ref: '#/$defs/sha256'}
+      oneOf:
+      - properties:
+          actorType: {const: LEGACY_ACTOR_TYPE_MUST_BE_ABSENT}
+          actorId:
+            oneOf:
+            - {type: string, format: uuid}
+            - {type: 'null'}
+      - required: [actorType, actorKind, actorId]
+        properties:
+          actorType: {const: SERVICE}
+          actorKind: {const: ANALYSIS_WORKER}
+          actorId: {const: analysis-worker}
     payload_required: [runId, aggregateVersion, priorStatus, priorControlState, nextStatus, nextControlState, affectedProviderTurnId, affectedToolCallId, reconciliationEvidenceId, reconciliationEvidenceSha256, proofKind, proofSha256, budgetDisposition, budgetResolutionSetSha256, actorKind, actorId, reasonCode, reasonSha256, occurredAt, receiptSha256]
+    payload_optional: [actorType]
     redaction: {allowlist: payload_schema.properties only, forbidden: [secret, token, credential, signature bytes, raw request/response body, raw provider proof, raw tool result, reason text, message body, identity proof, cookie, provider-native account or recipient ID], reference_rule: authenticated proof and reasons remain in immutable owner rows and only typed identities and digests leave the boundary}
     ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: exact prior receipt chain and legal status/control edge are monotonic; a gap parks for reconciliation and never overwrites the run head, tie_breaker: [occurred_at, event_id]}
     replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: return stored result with zero repeated run projection operation alert or audit effect, changed_event_identity: same event_id with changed canonical envelope digest is EVENT_REPLAY_CONFLICT and incident evidence}
@@ -8607,7 +8659,7 @@ journey_event_runtime_contract:
 set_equality_assertions:
 - set(events) == set(owner-addendum.event_delta.event_types)
 - len(events) == event_count after evaluating the source-derived count expression; numeric event inventory literals are forbidden
-- every payload_schema is type object, additionalProperties false, required equals payload_required and properties keys equal required
+- every payload_schema is type object and additionalProperties false; required equals payload_required and properties keys equal the disjoint union of payload_required plus payload_optional where omitted payload_optional means an empty list
 - eventId is envelope-only and is forbidden from every event payload; the six journey events share exactly journey-projector, operations-projector and audit-indexer consumers
 - every producer and consumer is present in logical_component_bindings
 - every consumer binding names physical service, module, handler, inbox key, replay, failure and ordering behavior

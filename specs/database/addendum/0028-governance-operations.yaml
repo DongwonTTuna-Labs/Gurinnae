@@ -2895,6 +2895,8 @@ cross_migration_0025_retention_hold_bridge:
     raw.asset_rights_decisions: ASSET_RIGHTS_DECISION_AUDIT
     ops.agent_reconciliation_evidence: AGENT_RECONCILIATION_EVIDENCE
     ops.agent_run_control_receipts: AGENT_RUN_CONTROL_RECEIPT
+    ops.signal_investigation_policies: AGENT_RUNTIME_POLICY
+    ops.signal_investigation_initiation_receipts: AGENT_RUNTIME_INITIATION_RECEIPT
     ops.agent_source_uses: AGENT_SOURCE_USE
     raw.research_artifact_promotions: RESEARCH_ARTIFACT_PROMOTION
     public.search_documents: PUBLIC_SEARCH_PROJECTION
@@ -2918,6 +2920,13 @@ cross_migration_0025_retention_hold_bridge:
     core.procurement_query_snapshot_members: PROCUREMENT_QUERY_SNAPSHOT
     editorial.response_request_claim_scopes: RESPONSE_REQUEST_SCOPE_HISTORY
     editorial.response_request_evidence_scopes: RESPONSE_REQUEST_SCOPE_HISTORY
+  operational_audit_schedule_semantics:
+    reference_record_class: AGENT_RUN_CONTROL_RECEIPT
+    covered_relations: [ops.signal_investigation_policies, ops.signal_investigation_initiation_receipts]
+    schedule_rule: each relation retains its distinct record class and exact current nonexpired schedule binding while following the same finite operational-audit retention semantics as AGENT_RUN_CONTROL_RECEIPT; PRESERVE_PUBLIC_REVISION and custom PRESERVE terminal tokens are forbidden
+    linkability:
+      ops.signal_investigation_policies: no direct natural-person identifier is stored; created_by is a linkable internal user reference, so each row is operational-audit evidence
+      ops.signal_investigation_initiation_receipts: no direct natural-person identifier is emitted in the canonical receipt payload; signal, case, and target graph references remain potentially linkable, so each row is operational-audit evidence
   alter_each_relation:
     columns:
       retention_record_class: text NOT NULL

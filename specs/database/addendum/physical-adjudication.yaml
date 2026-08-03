@@ -19,6 +19,31 @@ global_decisions:
     authority_spec_rule: specs/database/migrations/0001..0024 remain byte-identical to the pinned authority archive.
     runtime_rule: db/migrations/0001..0024 are the same byte-identical authority inputs; a separately pinned runtime derivation is forbidden.
     correction_rule: Existing implementation deltas formerly mixed into 0009, 0013, and 0024 are relocated in original ordinal order to reviewed migration 0030. Every later correction uses post-base migrations, preflight, and rollback proof.
+  signal_investigation_runtime_activation:
+    migration: 0035_r6b_agent_runtime_activation.sql
+    physical_contract: specs/database/addendum/0035-r6b-agent-runtime-activation.yaml
+    exact_new_relations:
+      - ops.signal_investigation_policies
+      - ops.signal_investigation_initiation_receipts
+    restored_existing_relations:
+      - core.parser_versions
+      - raw.source_documents
+      - core.parser_runs
+      - raw.parsed_records
+      - core.field_provenance
+      - core.normalization_runs
+      - core.dataset_snapshots
+      - core.dataset_snapshot_member_sources
+      - core.rule_runs
+      - core.rule_evaluations
+      - ops.agent_runs
+      - editorial.case_signals
+      - core.supplier_identifiers
+      - ops.source_checkpoints
+      - ops.event_types
+    recovery_rule: Restore only the already-declared v2 parser, normalization, snapshot, agent-run, and proven-identifier physical seams; legacy rows remain nullable bridges and no missing proof is synthesized.
+    initiation_rule: The fixed owner boundary records exactly one immutable disposition per signal. STARTED atomically binds the exact policy revision, case, READY AGENT_CASE snapshot, queued AgentRunV2, job, service audit, and receipt; every fail-closed no-op stores zero effect identities and reserves zero budget.
+    authority_limit: Automatic initiation never accepts a suggestion, merges identity, changes a publication state, or publishes a claim. Those human authorization boundaries remain unchanged.
   execution_identity:
     aggregate: ops.in_flight_effects
     immutable_authorization: ops.execution_authorizations
@@ -356,6 +381,27 @@ candidate_adjudications:
     migration: 0029_product_economics.sql
     canonical_identity: [packet_id, packet_version, member_ordinal]
     digest_rule: Ten ordered typed member keys belong to subject version 1, reproduce member_set_digest and packet_subject_digest, and bind exactly one terminal valuable outcome through the version-2 lifecycle.
+
+r6b_runtime_candidate_adjudications:
+  historical_scope_counts_unchanged: true
+  count: 2
+  count_rule: These post-adjudication runtime-activation relations are supplemental to the frozen 32 candidate_adjudications above and are not included in scope.dispositions or current_source_truth historical counts.
+  candidates:
+    - candidate: ops.signal_investigation_policies
+      disposition: NEW
+      migration: 0035_r6b_agent_runtime_activation.sql
+      canonical_identity: [policy_id]
+      revision_key: [policy_id, version]
+      stable_version_key: [policy_key, version]
+      digest: policy_digest
+      rule: Append-only and intentionally unseeded. A disabled sparse revision is fail-closed; an enabled revision must bind the complete severity, dedupe, daily and case limits, budget, kill switch, investigator prompt/schema/provider policy, iteration, deadline, and human creator tuple.
+    - candidate: ops.signal_investigation_initiation_receipts
+      disposition: NEW
+      migration: 0035_r6b_agent_runtime_activation.sql
+      canonical_identity: [receipt_id]
+      idempotency_key: [signal_id]
+      digest: receipt_digest
+      rule: Exactly one immutable outcome exists per signal. STARTED carries all four effect identities and the exact policy revision; every non-STARTED disposition carries none and reserves zero. Canonical bytes, JSON payload, digest, service actor, and audit identity remain inseparable.
 
 protocol_receipt_maps:
   count: 4

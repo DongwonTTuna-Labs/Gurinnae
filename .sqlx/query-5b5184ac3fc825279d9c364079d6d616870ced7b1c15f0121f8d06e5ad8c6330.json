@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(\n                  source_use.evidence_segment_id,\n                  source_use.research_artifact_id,\n                  legacy_evidence.id\n                ) AS id,\n                source_use.source_use_id,\n                btrim(source_use.source_use_sha256::text) AS source_use_sha,\n                btrim(source_use.selected_content_sha256::text) AS selected_sha,\n                COALESCE(source_use.locator_value,legacy_evidence.source_locator) AS locator\n           FROM ops.agent_source_uses source_use\n           LEFT JOIN core.dataset_snapshot_members member\n             ON member.id=source_use.snapshot_member_id\n            AND member.dataset_snapshot_id=source_use.dataset_snapshot_id\n            AND member.member_digest=source_use.snapshot_member_digest\n           LEFT JOIN core.dataset_snapshot_member_sources member_source\n             ON member_source.id=source_use.snapshot_member_source_id\n            AND member_source.dataset_snapshot_id=member.dataset_snapshot_id\n            AND member_source.snapshot_member_id=member.id\n            AND member_source.snapshot_member_digest=member.member_digest\n           LEFT JOIN editorial.evidence legacy_evidence\n             ON NOT $3\n            AND source_use.source_kind='DATASET_MEMBER'\n            AND legacy_evidence.source_document_id=source_use.source_document_id\n            AND legacy_evidence.verification_status='VERIFIED'\n          WHERE source_use.agent_run_id=$1\n            AND source_use.use_kind IN ('TOOL_QUERY','TOOL_RESULT','MODEL_INPUT')\n            AND source_use.selected_content_sha256 IS NOT NULL\n            AND source_use.locator_value IS NOT NULL\n            AND (\n              source_use.source_kind='RESEARCH_ARTIFACT'\n              OR (source_use.source_kind='EVIDENCE_SEGMENT'\n                  AND source_use.evidence_segment_id IS NOT NULL\n                  AND (NOT $3 OR (\n                    source_use.dataset_snapshot_id=$2\n                    AND member.object_type='EVIDENCE_SEGMENT'\n                    AND member.evidence_segment_id=source_use.evidence_segment_id\n                    AND member.object_id=source_use.evidence_segment_id\n                    AND member.object_version=source_use.object_version\n                    AND member.object_content_sha256=source_use.object_content_sha256\n                    AND member_source.source_kind='SOURCE_DOCUMENT'\n                    AND member_source.evidence_segment_id=source_use.evidence_segment_id\n                    AND member_source.source_digest=source_use.snapshot_member_source_digest\n                  )))\n              OR (NOT $3 AND source_use.source_kind='DATASET_MEMBER'\n                  AND legacy_evidence.id IS NOT NULL)\n            )\n          ORDER BY 1,2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "source_use_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "source_use_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "source_use_sha",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "selected_sha",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "locator",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "5b5184ac3fc825279d9c364079d6d616870ced7b1c15f0121f8d06e5ad8c6330"
+}

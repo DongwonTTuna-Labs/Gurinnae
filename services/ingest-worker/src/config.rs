@@ -1,13 +1,15 @@
 use std::{env, path::PathBuf, time::Duration};
 
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use thiserror::Error;
 use url::Url;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Config {
     pub database_url: String,
     pub object_store: ObjectStoreConfig,
     pub source_egress_url: Option<Url>,
+    pub supplier_identifier_hmac_key: Vec<u8>,
     pub worker_id: String,
     pub poll_interval: Duration,
     pub lease: Duration,
@@ -69,12 +71,21 @@ impl Config {
             database_url: required("INGEST_DATABASE_URL")?,
             object_store,
             source_egress_url,
+            supplier_identifier_hmac_key: decode_key(&required("SUPPLIER_IDENTIFIER_HMAC_KEY")?)?,
             worker_id,
             poll_interval: Duration::from_millis(poll_millis),
             lease: Duration::from_secs(lease_seconds),
             once: env::var("INGEST_ONCE").as_deref() == Ok("true"),
         })
     }
+}
+
+fn decode_key(value: &str) -> Result<Vec<u8>, ConfigError> {
+    let bytes = STANDARD.decode(value).map_err(|_| ConfigError::Invalid)?;
+    if bytes.len() < 32 {
+        return Err(ConfigError::Invalid);
+    }
+    Ok(bytes)
 }
 
 fn required(name: &'static str) -> Result<String, ConfigError> {
@@ -89,4 +100,22 @@ fn number(name: &'static str, default: u64) -> Result<u64, ConfigError> {
         .ok()
         .map_or(Ok(default), |value| value.parse())
         .map_err(|_| ConfigError::Invalid)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ConfigError, decode_key};
+
+    #[test]
+    fn supplier_identifier_key_requires_standard_base64_and_32_bytes() {
+        assert!(
+            decode_key("MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=")
+                .is_ok_and(|key| key.len() == 32)
+        );
+        assert!(matches!(
+            decode_key("not-base64"),
+            Err(ConfigError::Invalid)
+        ));
+        assert!(matches!(decode_key("c2hvcnQ="), Err(ConfigError::Invalid)));
+    }
 }

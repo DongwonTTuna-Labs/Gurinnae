@@ -17,7 +17,10 @@ use uuid::Uuid;
 
 use crate::config::{Config, ObjectStoreConfig};
 
+mod connector_parser;
 mod source_fetch_persistence;
+mod structured_records;
+mod supplier_identity;
 
 use source_fetch_persistence::persist_source_fetch;
 
@@ -67,6 +70,7 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
             &store,
             &source_client,
             config.source_egress_url.as_ref(),
+            &config.supplier_identifier_hmac_key,
             &worker,
         )
         .await?;
@@ -108,12 +112,22 @@ async fn process_one(
     store: &Store,
     source_client: &Client,
     source_egress_url: Option<&Url>,
+    supplier_identifier_hmac_key: &[u8],
     worker: &Worker,
 ) -> Result<bool, WorkerError> {
     let Some(job) = worker.claim(pool).await.map_err(WorkerError::Job)? else {
         return Ok(false);
     };
-    match process_claimed(pool, store, source_client, source_egress_url, &job).await {
+    match process_claimed(
+        pool,
+        store,
+        source_client,
+        source_egress_url,
+        supplier_identifier_hmac_key,
+        &job,
+    )
+    .await
+    {
         Ok(metrics) => worker
             .complete(pool, &job, metrics)
             .await

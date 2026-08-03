@@ -19,8 +19,8 @@ def validate(root: Path, result: Validation) -> None:
         f"expected 5 agents, found {len(catalog['agents'])}",
     )
     result.require(
-        len(tools["tools"]) == 9,
-        f"expected 9 tools, found {len(tools['tools'])}",
+        len(tools["tools"]) == 13,
+        f"expected 13 tools, found {len(tools['tools'])}",
     )
     cases = manifest["cases"]
     result.require(len(cases) == 50, f"expected 50 agent cases, found {len(cases)}")
@@ -109,7 +109,7 @@ def validate(root: Path, result: Validation) -> None:
     result.stats.update(
         {
             "agents": 5,
-            "agent_tools": 9,
+            "agent_tools": 13,
             "agent_eval_cases": 50,
             "agent_reference": "PASS" if reference.returncode == 0 else "FAIL",
             "agent_v2_schemas": addendum_payload.get("schemas", 0),

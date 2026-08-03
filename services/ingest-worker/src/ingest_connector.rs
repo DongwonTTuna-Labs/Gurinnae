@@ -202,9 +202,9 @@ async fn mark_source_terminal(
             "UPDATE ops.source_registry SET enabled=false WHERE source_id=$1",
             source_id,
         )
-            .execute(&mut *tx)
-            .await
-            .map_err(database)?;
+        .execute(&mut *tx)
+        .await
+        .map_err(database)?;
     }
     tx.commit().await.map_err(database)?;
     Ok(())
@@ -218,75 +218,15 @@ async fn put_object(store: &Store, key: &str, bytes: Vec<u8>, digest: &str) -> R
     result.map(|_| ()).map_err(object_store)
 }
 
-async fn persist_structured_json(
-    tx: &mut Transaction<'_, Postgres>,
-    source_id: &str,
-    operation: &ConnectorOperation,
-    document_id: Uuid,
-    bytes: &[u8],
-) -> Result<(), Failure> {
-    let value: Value = serde_json::from_slice(bytes)
-        .map_err(|error| Failure::Terminal("SOURCE_PAYLOAD_MALFORMED", error.to_string()))?;
-    let records = structured_records(source_id, operation, &value);
-    for (index, record) in records.iter().enumerate() {
-        let record_bytes = serde_json::to_vec(record)
-            .map_err(|error| Failure::Terminal("SOURCE_PAYLOAD_MALFORMED", error.to_string()))?;
-        sqlx::query!(
-            "INSERT INTO raw.parsed_records(source_document_id,record_type,record_index,parser_version,payload,payload_sha256) \
-             VALUES($1,$2,$3,'connector-structured-json-v1',$4,$5) \
-             ON CONFLICT(source_document_id,record_type,record_index,parser_version) DO NOTHING",
-            document_id,
-            operation.kind.to_ascii_uppercase(),
-            i32::try_from(index).map_err(|_| {
-                Failure::Terminal("SOURCE_RECORD_LIMIT", operation.id.to_owned())
-            })?,
-            record,
-            sha256(&record_bytes),
-        )
-        .execute(&mut **tx)
-        .await
-        .map_err(database)?;
-        if source_id == "koneps-contracts" {
-            normalize_koneps_contract(tx, source_id, operation, document_id, index, record).await?;
-        } else if source_id == "open-dart" {
-            normalize_dart_supplier(tx, document_id, record).await?;
-        }
-    }
-    sqlx::query!(
-        "SELECT raw.mark_connector_source_document_parsed($1,$2,$3,$4,$5)",
-        document_id,
-        "connector-structured-json",
-        "connector-structured-json-v1",
-        "v1",
-        json!({"structuredRecordCount":records.len(),"connectorOperationId":operation.id}),
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(database)?;
-    Ok(())
-}
+include!("ingest_structured_persistence.rs");
 
-fn structured_records(
-    source_id: &str,
-    operation: &ConnectorOperation,
-    value: &Value,
-) -> Vec<Value> {
-    let candidate = if source_id.starts_with("koneps-") {
-        value
-            .pointer("/response/body/items/item")
-            .or_else(|| value.pointer("/response/body/items"))
-    } else if source_id == "open-dart" {
-        value.get("list").or(Some(value))
-    } else if operation.kind == "manifest" {
-        value.get("documents")
-    } else {
-        value.get("records").or(Some(value))
-    };
-    match candidate {
-        Some(Value::Array(values)) => values.clone(),
-        Some(Value::Object(values)) if !values.is_empty() => vec![Value::Object(values.clone())],
-        _ => Vec::new(),
-    }
+struct KonepsContractFields<'a> {
+    external_id: &'a str,
+    title: &'a str,
+    agency_name: &'a str,
+    agency_identifier: Option<&'a str>,
+    amount: Option<String>,
+    signed_at: Option<String>,
 }
 
 async fn normalize_koneps_contract(
@@ -294,73 +234,138 @@ async fn normalize_koneps_contract(
     source_id: &str,
     operation: &ConnectorOperation,
     document_id: Uuid,
-    index: usize,
+    parsed_record_id: Uuid,
+    record_index: i32,
+    record_locator: &str,
     record: &Value,
+    supplier_identifier_hmac_key: &[u8],
 ) -> Result<(), Failure> {
-    let Some(external_id) = first_text(record, &["untyCntrctNo", "cntrctNo"]) else {
-        return data_quality_incident(
+    let fields = match koneps_contract_fields(record) {
+        Ok(fields) => fields,
+        Err(code) => {
+            return data_quality_incident(tx, source_id, document_id, operation.id, code).await;
+        }
+    };
+    let agency_id = resolve_agency(
+        tx,
+        fields.agency_name,
+        fields.agency_identifier,
+        document_id,
+    )
+    .await?;
+    observe_koneps_supplier(
+        tx,
+        document_id,
+        parsed_record_id,
+        record_index,
+        record,
+        supplier_identifier_hmac_key,
+    )
+    .await?;
+    let contract_id = upsert_koneps_contract(
+        tx,
+        source_id,
+        document_id,
+        record_locator,
+        agency_id,
+        &fields,
+    )
+    .await?;
+    persist_koneps_title_provenance(tx, document_id, record_locator, contract_id, fields.title)
+        .await
+}
+
+fn koneps_contract_fields(record: &Value) -> Result<KonepsContractFields<'_>, &'static str> {
+    let external_id =
+        first_text(record, &["untyCntrctNo", "cntrctNo"]).ok_or("CONTRACT_ID_MISSING")?;
+    let title = first_text(record, &["cntrctNm"]).ok_or("CONTRACT_TITLE_MISSING")?;
+    let agency_name =
+        first_text(record, &["cntrctInsttNm", "dminsttNm"]).ok_or("AGENCY_NAME_MISSING")?;
+    Ok(KonepsContractFields {
+        external_id,
+        title,
+        agency_name,
+        agency_identifier: first_text(record, &["cntrctInsttCd", "dminsttCd"]),
+        amount: first_text_or_number(record, &["thtmCntrctAmt", "totCntrctAmt", "cntrctAmt"]),
+        signed_at: first_text(record, &["cntrctCnclsDate", "cntrctDt"]).and_then(normalize_date),
+    })
+}
+
+async fn observe_koneps_supplier(
+    tx: &mut Transaction<'_, Postgres>,
+    document_id: Uuid,
+    parsed_record_id: Uuid,
+    record_index: i32,
+    record: &Value,
+    supplier_identifier_hmac_key: &[u8],
+) -> Result<(), Failure> {
+    let supplier_name = first_text_entry(record, &["corpNm", "cntrctCorpNm"]);
+    let supplier_identifier = first_text_entry(record, &["bizno", "corpBizno"]);
+    if let Some((_, name)) = supplier_name {
+        let identifier = supplier_identifier.map(|(_, raw_value)| {
+            supplier_identity::IncomingSupplierIdentifier {
+                scheme: gurine_identity_resolution::supplier::StrongIdentifierScheme::KoreanBusinessNumber,
+                raw_value,
+            }
+        });
+        supplier_identity::resolve_supplier(
             tx,
-            source_id,
-            document_id,
-            operation.id,
-            "CONTRACT_ID_MISSING",
+            supplier_identifier_hmac_key,
+            supplier_identity::IncomingSupplier {
+                name,
+                identifier,
+                source_document_id: document_id,
+                parsed_record_id,
+                record_index,
+            },
         )
-        .await;
-    };
-    let Some(title) = first_text(record, &["cntrctNm"]) else {
-        return data_quality_incident(
-            tx,
-            source_id,
-            document_id,
-            operation.id,
-            "CONTRACT_TITLE_MISSING",
-        )
-        .await;
-    };
-    let Some(agency_name) = first_text(record, &["cntrctInsttNm", "dminsttNm"]) else {
-        return data_quality_incident(
-            tx,
-            source_id,
-            document_id,
-            operation.id,
-            "AGENCY_NAME_MISSING",
-        )
-        .await;
-    };
-    let agency_identifier = first_text(record, &["cntrctInsttCd", "dminsttCd"]);
-    let agency_id = resolve_agency(tx, agency_name, agency_identifier, document_id).await?;
-    let supplier_name = first_text(record, &["corpNm", "cntrctCorpNm"]);
-    let supplier_identifier = first_text(record, &["bizno", "corpBizno"]);
-    let supplier_id = match supplier_name {
-        Some(name) => Some(resolve_supplier(tx, name, supplier_identifier, document_id).await?),
-        None => None,
-    };
-    let amount = first_text_or_number(record, &["thtmCntrctAmt", "totCntrctAmt", "cntrctAmt"]);
-    let signed_at = first_text(record, &["cntrctCnclsDate", "cntrctDt"]).and_then(normalize_date);
-    let contract_id: Uuid = sqlx::query_scalar!(
+        .await?;
+    }
+    Ok(())
+}
+
+async fn upsert_koneps_contract(
+    tx: &mut Transaction<'_, Postgres>,
+    source_id: &str,
+    document_id: Uuid,
+    record_locator: &str,
+    agency_id: Uuid,
+    fields: &KonepsContractFields<'_>,
+) -> Result<Uuid, Failure> {
+    let supplier_id: Option<Uuid> = None;
+    sqlx::query_scalar!(
         "INSERT INTO core.contracts(source_id,external_contract_id,contract_number,title,agency_id, \
            supplier_id,status,signed_at,original_amount,current_amount,normalization_version, \
            source_document_id,source_record_locator) \
          VALUES($1,$2,$2,$3,$4,$5,'ACTIVE',$6::date,NULLIF($7,'')::numeric,NULLIF($7,'')::numeric, \
            'connector-v1',$8,$9) \
          ON CONFLICT(source_id,external_contract_id) DO UPDATE SET title=EXCLUDED.title, \
-           agency_id=EXCLUDED.agency_id,supplier_id=EXCLUDED.supplier_id,signed_at=EXCLUDED.signed_at, \
+           agency_id=EXCLUDED.agency_id,signed_at=EXCLUDED.signed_at, \
            current_amount=EXCLUDED.current_amount,source_document_id=EXCLUDED.source_document_id, \
            source_record_locator=EXCLUDED.source_record_locator,version=core.contracts.version+1 \
          RETURNING id",
         source_id,
-        external_id,
-        title,
+        fields.external_id,
+        fields.title,
         agency_id,
         supplier_id,
-        signed_at.as_deref() as _,
-        amount.as_deref().unwrap_or(""),
+        fields.signed_at.as_deref() as _,
+        fields.amount.as_deref().unwrap_or(""),
         document_id,
-        format!("json-pointer:/response/body/items/item/{index}"),
+        format!("json-pointer:{record_locator}"),
     )
     .fetch_one(&mut **tx)
     .await
-    .map_err(database)?;
+    .map_err(database)
+}
+
+async fn persist_koneps_title_provenance(
+    tx: &mut Transaction<'_, Postgres>,
+    document_id: Uuid,
+    record_locator: &str,
+    contract_id: Uuid,
+    title: &str,
+) -> Result<(), Failure> {
     sqlx::query!(
         "INSERT INTO core.field_provenance(entity_type,entity_id,field_path,source_document_id, \
            source_locator,raw_value,normalized_value,transformation,parser_version,normalization_version) \
@@ -368,7 +373,7 @@ async fn normalize_koneps_contract(
            'connector-structured-json-v1','connector-v1') ON CONFLICT DO NOTHING",
         contract_id,
         document_id,
-        format!("json-pointer:/response/body/items/item/{index}/cntrctNm"),
+        format!("json-pointer:{record_locator}/cntrctNm"),
         json!(title),
         json!(title),
     )
@@ -381,15 +386,33 @@ async fn normalize_koneps_contract(
 async fn normalize_dart_supplier(
     tx: &mut Transaction<'_, Postgres>,
     document_id: Uuid,
+    parsed_record_id: Uuid,
+    record_index: i32,
     record: &Value,
+    supplier_identifier_hmac_key: &[u8],
 ) -> Result<(), Failure> {
-    let Some(corp_code) = first_text(record, &["corp_code"]) else {
+    let Some((_, corp_code)) = first_text_entry(record, &["corp_code"]) else {
         return Ok(());
     };
-    let Some(name) = first_text(record, &["corp_name"]) else {
+    let Some((_, name)) = first_text_entry(record, &["corp_name"]) else {
         return Ok(());
     };
-    let _ = resolve_supplier(tx, name, Some(corp_code), document_id).await?;
+    let _ = supplier_identity::resolve_supplier(
+        tx,
+        supplier_identifier_hmac_key,
+        supplier_identity::IncomingSupplier {
+            name,
+            identifier: Some(supplier_identity::IncomingSupplierIdentifier {
+                scheme:
+                    gurine_identity_resolution::supplier::StrongIdentifierScheme::OpenDartCorpCode,
+                raw_value: corp_code,
+            }),
+            source_document_id: document_id,
+            parsed_record_id,
+            record_index,
+        },
+    )
+    .await?;
     Ok(())
 }
 
@@ -445,68 +468,12 @@ async fn resolve_agency(
     Ok(id)
 }
 
-async fn resolve_supplier(
-    tx: &mut Transaction<'_, Postgres>,
-    name: &str,
-    identifier: Option<&str>,
-    document_id: Uuid,
-) -> Result<Uuid, Failure> {
-    let identifier_hash = identifier.map(|value| sha256(value.as_bytes()));
-    if let Some(hash) = &identifier_hash
-        && let Some(id) = sqlx::query_scalar!(
-            "SELECT supplier_id FROM core.supplier_identifiers WHERE scheme IN ('BUSINESS_NUMBER','DART_CORP_CODE') AND value_hash=$1",
-            hash,
-        )
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(database)?
-    {
-        return Ok(id);
-    }
-    if let Some(id) = sqlx::query_scalar!(
-        "SELECT id FROM core.suppliers WHERE canonical_name=$1 ORDER BY created_at LIMIT 1",
-        name,
-    )
-    .fetch_optional(&mut **tx)
-    .await
-    .map_err(database)?
-    {
-        return Ok(id);
-    }
-    let id = Uuid::new_v4();
-    sqlx::query!(
-        "INSERT INTO core.suppliers(id,canonical_name,identity_confidence,identity_status) \
-         VALUES($1,$2,0.9,'VERIFIED')",
-        id,
-        name,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(database)?;
-    if let (Some(identifier), Some(hash)) = (identifier, identifier_hash) {
-        let scheme = if identifier.len() == 8 {
-            "DART_CORP_CODE"
-        } else {
-            "BUSINESS_NUMBER"
-        };
-        let display = if identifier.len() > 4 {
-            format!("***{}", &identifier[identifier.len() - 4..])
-        } else {
-            "***".to_owned()
-        };
-        sqlx::query!(
-            "INSERT INTO core.supplier_identifiers(supplier_id,scheme,value_hash,display_value, \
-               source_document_id,verification_status) VALUES($1,$2,$3,$4,$5,'VERIFIED') \
-             ON CONFLICT DO NOTHING",
-            id,
-            scheme,
-            hash,
-            display,
-            document_id,
-        )
-        .execute(&mut **tx)
-        .await
-        .map_err(database)?;
-    }
-    Ok(id)
+fn first_text_entry<'a, 'b>(value: &'a Value, keys: &'b [&'b str]) -> Option<(&'b str, &'a str)> {
+    keys.iter().find_map(|key| {
+        value
+            .get(*key)
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(|value| (*key, value))
+    })
 }

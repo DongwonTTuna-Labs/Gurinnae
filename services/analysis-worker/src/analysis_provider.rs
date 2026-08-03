@@ -57,7 +57,7 @@ async fn production_provider(
             continue;
         };
         let routing_version = row.version;
-        let Some((output, actual_cost)) = request_provider(
+        let request = ProviderRequestContext {
             state,
             gateway,
             run_id,
@@ -67,17 +67,16 @@ async fn production_provider(
             objective,
             evidence,
             maximum_cost_krw,
-            &semantic_request_sha256,
-            &provider,
+            semantic_request_sha256: &semantic_request_sha256,
+            provider: &provider,
             provider_config_id,
             target,
-            &model,
+            model: &model,
             routing_version,
             input_snapshot_sha256,
-            &routing,
-        )
-        .await?
-        else {
+            routing_policy: &routing,
+        };
+        let Some((output, actual_cost)) = request_provider(&request).await? else {
             continue;
         };
         return Ok((provider, model, output, actual_cost, true));
@@ -99,79 +98,71 @@ fn provider_gateway(state: &State, run_id: Uuid) -> Result<&reqwest::Url, Failur
         .ok_or_else(|| Failure::Terminal("AI_EGRESS_MISSING", run_id.to_string()))
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "provider dispatch binds the full canonical routing and budget context"
-)]
-async fn request_provider(
-    state: &State,
-    gateway: &reqwest::Url,
+struct ProviderRequestContext<'a> {
+    state: &'a State,
+    gateway: &'a reqwest::Url,
     run_id: Uuid,
     job_id: Uuid,
     case_id: Uuid,
-    agent_type: &str,
-    objective: &str,
-    evidence: &Value,
+    agent_type: &'a str,
+    objective: &'a str,
+    evidence: &'a Value,
     maximum_cost_krw: i64,
-    semantic_request_sha256: &str,
-    provider: &str,
+    semantic_request_sha256: &'a str,
+    provider: &'a str,
     provider_config_id: Uuid,
-    target: &str,
-    model: &str,
+    target: &'a str,
+    model: &'a str,
     routing_version: i64,
-    input_snapshot_sha256: &str,
-    routing_policy: &Value,
+    input_snapshot_sha256: &'a str,
+    routing_policy: &'a Value,
+}
+
+async fn request_provider(
+    context: &ProviderRequestContext<'_>,
 ) -> Result<Option<(Value, i64)>, Failure> {
-    let pricing = LocalPricing::from_routing_policy(routing_policy)?;
-    let relay_data_policy = if provider == RELAY_PROVIDER {
-        Some(RelayDataPolicy::from_routing_policy(routing_policy)?)
+    let pricing = LocalPricing::from_routing_policy(context.routing_policy)?;
+    let relay_data_policy = if context.provider == RELAY_PROVIDER {
+        Some(RelayDataPolicy::from_routing_policy(
+            context.routing_policy,
+        )?)
     } else {
         None
     };
     let mut prior_transcript_sha256 = sha256(b"{\"calls\":[]}");
     let mut prior_tool_result: Option<Value> = None;
     let mut total_cost = 0_i64;
-    let max_provider_turns = agent_max_provider_turns(agent_type);
+    let max_provider_turns = agent_max_provider_turns(context.agent_type);
     for turn_sequence in 1..=max_provider_turns {
         let turn = insert_provider_turn(
-            state,
-            run_id,
-            job_id,
-            case_id,
-            agent_type,
-            objective,
-            evidence,
-            provider,
-            provider_config_id,
-            model,
-            routing_version,
-            input_snapshot_sha256,
-            maximum_cost_krw.saturating_sub(total_cost),
-            semantic_request_sha256,
-            &state.config.environment,
+            context.state,
+            context.run_id,
+            context.job_id,
+            context.case_id,
+            context.agent_type,
+            context.objective,
+            context.evidence,
+            context.provider,
+            context.provider_config_id,
+            context.model,
+            context.routing_version,
+            context.input_snapshot_sha256,
+            context.maximum_cost_krw.saturating_sub(total_cost),
+            context.semantic_request_sha256,
+            &context.state.config.environment,
             turn_sequence,
             &prior_transcript_sha256,
             prior_tool_result.as_ref(),
         )
         .await?;
-        let response = send_provider_request(
-            state, gateway, &turn, evidence, run_id, provider_config_id, provider,
-            model, target, agent_type, objective, prior_tool_result.as_ref(), semantic_request_sha256,
-        ).await?;
+        let response = send_provider_request(context, &turn, prior_tool_result.as_ref()).await?;
         let (output, cost, next_transcript, tool_result) = finalize_provider_response(
-            state,
+            context,
             response,
             &turn,
-            run_id,
-            provider_config_id,
-            provider,
-            model,
-            semantic_request_sha256,
-            maximum_cost_krw.saturating_sub(total_cost),
+            context.maximum_cost_krw.saturating_sub(total_cost),
             &pricing,
             relay_data_policy.as_ref(),
-            evidence,
-            agent_type,
         )
         .await?;
         total_cost = total_cost.saturating_add(cost);
@@ -184,7 +175,7 @@ async fn request_provider(
         prior_tool_result = tool_result;
     }
     Ok(Some((
-        blocked_output_for(agent_type, "ABSTAINED", "ITERATION_LIMIT_REACHED"),
+        blocked_output_for(context.agent_type, "ABSTAINED", "ITERATION_LIMIT_REACHED"),
         total_cost,
     )))
 }
@@ -199,85 +190,112 @@ fn agent_max_provider_turns(agent_type: &str) -> i32 {
     }
 }
 
-#[expect(clippy::too_many_arguments, reason = "provider egress binds the immutable turn headers")]
-async fn send_provider_request(
-    state: &State,
-    gateway: &reqwest::Url,
+struct PreparedProviderRequest {
+    body: Value,
+    request_sha256: String,
+    input_snapshot_id: Uuid,
+}
+
+async fn prepare_provider_request(
+    context: &ProviderRequestContext<'_>,
     turn: &ProviderTurnIdentity,
-    evidence: &Value,
-    run_id: Uuid,
-    provider_config_id: Uuid,
-    provider: &str,
-    model: &str,
-    target: &str,
-    agent_type: &str,
-    objective: &str,
     prior_tool_result: Option<&Value>,
-    semantic_request_sha256: &str,
-) -> Result<ProviderDispatchResponse, Failure> {
+) -> Result<PreparedProviderRequest, Failure> {
     // `insert_provider_turn` already persisted and hashed the exact semantic
-    // request, including the selected authorized bytes.  Sending that value
+    // request, including the selected authorized bytes. Sending that value
     // verbatim preserves the request_sha256/wire equality contract.
-    let mut wire_request = provider_wire_request(
+    let mut body = provider_wire_request(
         &turn.request_redacted,
-        evidence,
-        state.object_store.as_ref(),
-        &state.pool,
-        objective,
+        context.evidence,
+        context.state.object_store.as_ref(),
+        &context.state.pool,
+        context.objective,
         prior_tool_result,
     )
     .await?;
-    // Dispatch-only turn metadata is kept outside the persisted closed
-    // requestRedacted object.  It lets an approved provider distinguish the
-    // tool turn from the final turn without changing the semantic request
-    // schema or storing transient tool results in the durable turn row.
-    if let Some(object) = wire_request.as_object_mut() {
+    // Dispatch-only metadata distinguishes tool turns without changing the
+    // persisted semantic request or storing transient tool results there.
+    if let Some(object) = body.as_object_mut() {
         object.insert("turnSequence".to_owned(), json!(turn.turn_sequence));
         object.insert(
             "priorTranscriptSha256".to_owned(),
             json!(turn.prior_transcript_sha256),
         );
     }
-    // Tool V2 requests must carry the exact immutable snapshot binding.  The
-    // provider receives the UUID alongside the already persisted hash so it
-    // can emit a closed request without guessing database state.
-    let input_snapshot_id = resolve_snapshot_id_for_dispatch(state, turn).await?;
-    let (wire_request, request_sha256) = if provider == RELAY_PROVIDER {
-        validate_relay_target(target, RELAY_CHAT_PATH)?;
+    // The provider receives the immutable snapshot UUID with its stored hash.
+    let input_snapshot_id = resolve_snapshot_id_for_dispatch(context.state, turn).await?;
+    let (body, request_sha256) = if context.provider == RELAY_PROVIDER {
+        validate_relay_target(context.target, RELAY_CHAT_PATH)?;
         let request = relay_chat_request(
-            agent_type,
-            model,
-            &wire_request,
+            context.agent_type,
+            context.model,
+            &body,
             turn,
             input_snapshot_id,
-            run_id,
-            provider_config_id,
-            semantic_request_sha256,
+            context.run_id,
+            context.provider_config_id,
+            context.semantic_request_sha256,
         )?;
         (request.body, request.request_sha256)
     } else {
-        (wire_request, turn.request_sha256.clone())
+        (body, turn.request_sha256.clone())
     };
-    let response = state.client.post(gateway.clone())
+    Ok(PreparedProviderRequest {
+        body,
+        request_sha256,
+        input_snapshot_id,
+    })
+}
+
+async fn send_provider_request(
+    context: &ProviderRequestContext<'_>,
+    turn: &ProviderTurnIdentity,
+    prior_tool_result: Option<&Value>,
+) -> Result<ProviderDispatchResponse, Failure> {
+    let request = prepare_provider_request(context, turn, prior_tool_result).await?;
+    let response = context
+        .state
+        .client
+        .post(context.gateway.clone())
         .header("x-gurine-egress-caller", "analysis-worker")
-        .header("x-gurine-ai-provider", provider)
-        .header("x-gurine-egress-target", target)
-        .header("x-gurine-ai-agent-run-id", run_id.to_string())
-        .header("x-gurine-ai-input-snapshot-id", input_snapshot_id.to_string())
-        .header("x-gurine-ai-input-snapshot-sha256", turn.input_snapshot_sha256.as_str())
+        .header("x-gurine-ai-provider", context.provider)
+        .header("x-gurine-egress-target", context.target)
+        .header("x-gurine-ai-agent-run-id", context.run_id.to_string())
+        .header(
+            "x-gurine-ai-input-snapshot-id",
+            request.input_snapshot_id.to_string(),
+        )
+        .header(
+            "x-gurine-ai-input-snapshot-sha256",
+            turn.input_snapshot_sha256.as_str(),
+        )
         .header("x-gurine-ai-provider-turn-id", turn.turn_id.to_string())
-        .header("x-gurine-ai-agent-type", agent_type)
-        .header("x-gurine-ai-provider-config-id", provider_config_id.to_string())
-        .header("x-gurine-ai-model-id", model)
-        .header("x-gurine-ai-model-configuration-sha256", sha256(model.as_bytes()))
-        .header("x-gurine-ai-idempotency-key-sha256", turn.idempotency_hash.as_str())
-        .header("x-gurine-source-fetch-request-sha256", request_sha256.as_str())
+        .header("x-gurine-ai-agent-type", context.agent_type)
+        .header(
+            "x-gurine-ai-provider-config-id",
+            context.provider_config_id.to_string(),
+        )
+        .header("x-gurine-ai-model-id", context.model)
+        .header(
+            "x-gurine-ai-model-configuration-sha256",
+            sha256(context.model.as_bytes()),
+        )
+        .header(
+            "x-gurine-ai-idempotency-key-sha256",
+            turn.idempotency_hash.as_str(),
+        )
+        .header(
+            "x-gurine-source-fetch-request-sha256",
+            request.request_sha256.as_str(),
+        )
         .header("x-gurine-idempotency-key", turn.idempotency_hash.as_str())
-        .json(&wire_request).send().await;
+        .json(&request.body)
+        .send()
+        .await;
     match response {
         Ok(response) => Ok(ProviderDispatchResponse {
             response,
-            request_sha256,
+            request_sha256: request.request_sha256,
         }),
         Err(error) => {
             let detail = error.to_string();
@@ -286,94 +304,128 @@ async fn send_provider_request(
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "response validation binds receipt, budget, and request digests"
-)]
 async fn finalize_provider_response(
-    state: &State,
+    request: &ProviderRequestContext<'_>,
     response: ProviderDispatchResponse,
     turn: &ProviderTurnIdentity,
-    run_id: Uuid,
-    provider_config_id: Uuid,
-    provider: &str,
-    model: &str,
-    semantic_request_sha256: &str,
     maximum_cost_krw: i64,
     pricing: &LocalPricing,
     relay_data_policy: Option<&RelayDataPolicy>,
-    evidence: &Value,
-    agent_type: &str,
 ) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
     let context = ProviderResponseContext {
-        state,
+        state: request.state,
         turn,
-        run_id,
-        provider_config_id,
-        provider,
-        model,
-        semantic_request_sha256,
+        run_id: request.run_id,
+        provider_config_id: request.provider_config_id,
+        provider: request.provider,
+        model: request.model,
+        semantic_request_sha256: request.semantic_request_sha256,
     };
     let body = provider_response_body(
         &context,
         response,
         relay_data_policy,
         pricing,
-        evidence,
+        request.evidence,
         maximum_cost_krw,
-        agent_type,
+        request.agent_type,
     )
     .await?;
-    let Some(receipt) = body.get("providerReceipt").or_else(|| body.get("receipt")).cloned() else {
-        let provider_code = body
-            .get("code")
-            .and_then(Value::as_str)
-            .unwrap_or("UNKNOWN_PROVIDER_ERROR");
-        return context
-            .unresolved_shape(
-                "provider receipt missing",
-                format!("{}:{}", turn.turn_id, provider_code),
-            )
-            .await;
-    };
-    let receipt_id = bound_receipt_id(&context, &receipt).await?;
-    let outcome = receipt.get("outcome").and_then(Value::as_str).unwrap_or("");
-    if !matches!(outcome, "ACCEPTED_FINAL" | "ACCEPTED_TOOL_CALL") {
-        let code = match provider_failure_code(outcome) {
-            Ok(code) => code,
-            Err(_) => {
-                return context.unresolved_shape("provider outcome unrecognized", turn.turn_id.to_string()).await;
-            }
-        };
-        complete_provider_turn_failure(state, turn, &receipt, receipt_id, code).await?;
-        return if code == "PROVIDER_OUTCOME_UNKNOWN" {
-            context.unresolved_shape(code, turn.turn_id.to_string()).await
-        } else {
-            Err(Failure::Terminal(code, turn.turn_id.to_string()))
-        };
-    }
+    let (receipt, receipt_id, accepted_tool_call) =
+        accepted_provider_receipt(&context, &body).await?;
     let output = body.get("output").cloned().unwrap_or_else(|| body.clone());
-    let actual_cost = match receipt_cost_krw(&receipt, pricing) {
-        Ok(cost) => cost,
-        Err(_) => {
-            return context.unresolved_shape("provider pricing invalid", turn.turn_id.to_string()).await;
-        }
-    };
-    if actual_cost < 0 || actual_cost > maximum_cost_krw {
-        return context.unresolved_shape("provider cost exceeds budget", provider.to_owned()).await;
-    }
-    if outcome == "ACCEPTED_TOOL_CALL" {
-        return persist_tool_turn(state, turn, agent_type, &body, evidence, &receipt, receipt_id, actual_cost).await;
+    let actual_cost = bounded_provider_cost(&context, &receipt, pricing, maximum_cost_krw).await?;
+    if accepted_tool_call {
+        return persist_tool_turn(
+            request.state,
+            turn,
+            request.agent_type,
+            &body,
+            request.evidence,
+            &receipt,
+            receipt_id,
+            actual_cost,
+        )
+        .await;
     }
     persist_validated_output(
         &context,
-        agent_type,
+        request.agent_type,
         &output,
         &receipt,
         receipt_id,
         actual_cost,
     )
     .await
+}
+
+async fn accepted_provider_receipt(
+    context: &ProviderResponseContext<'_>,
+    body: &Value,
+) -> Result<(Value, Uuid, bool), Failure> {
+    let Some(receipt) = body
+        .get("providerReceipt")
+        .or_else(|| body.get("receipt"))
+        .cloned()
+    else {
+        let provider_code = body
+            .get("code")
+            .and_then(Value::as_str)
+            .unwrap_or("UNKNOWN_PROVIDER_ERROR");
+        return context
+            .reject_unresolved(
+                "provider receipt missing",
+                format!("{}:{}", context.turn.turn_id, provider_code),
+            )
+            .await;
+    };
+    let receipt_id = bound_receipt_id(context, &receipt).await?;
+    let outcome = receipt.get("outcome").and_then(Value::as_str).unwrap_or("");
+    let accepted_tool_call = outcome == "ACCEPTED_TOOL_CALL";
+    if outcome == "ACCEPTED_FINAL" || accepted_tool_call {
+        return Ok((receipt, receipt_id, accepted_tool_call));
+    }
+    let code = match provider_failure_code(outcome) {
+        Ok(code) => code,
+        Err(_) => {
+            return context
+                .reject_unresolved(
+                    "provider outcome unrecognized",
+                    context.turn.turn_id.to_string(),
+                )
+                .await;
+        }
+    };
+    complete_provider_turn_failure(context.state, context.turn, &receipt, receipt_id, code).await?;
+    if code == "PROVIDER_OUTCOME_UNKNOWN" {
+        context
+            .reject_unresolved(code, context.turn.turn_id.to_string())
+            .await
+    } else {
+        Err(Failure::Terminal(code, context.turn.turn_id.to_string()))
+    }
+}
+
+async fn bounded_provider_cost(
+    context: &ProviderResponseContext<'_>,
+    receipt: &Value,
+    pricing: &LocalPricing,
+    maximum_cost_krw: i64,
+) -> Result<i64, Failure> {
+    let actual_cost = match receipt_cost_krw(receipt, pricing) {
+        Ok(cost) => cost,
+        Err(_) => {
+            return context
+                .reject_unresolved("provider pricing invalid", context.turn.turn_id.to_string())
+                .await;
+        }
+    };
+    if actual_cost < 0 || actual_cost > maximum_cost_krw {
+        return context
+            .reject_unresolved("provider cost exceeds budget", context.provider.to_owned())
+            .await;
+    }
+    Ok(actual_cost)
 }
 
 async fn persist_validated_output(
@@ -395,9 +447,18 @@ async fn persist_validated_output(
         .await?;
         let mut failure_receipt = receipt.clone();
         if let Some(object) = failure_receipt.as_object_mut() {
-            object.insert("outcome".to_owned(), Value::String("DEFINITIVE_REJECTED".to_owned()));
-            object.insert("proofKind".to_owned(), Value::String("VALIDATED_OUTPUT_REJECTION".to_owned()));
-            object.insert("proofSha256".to_owned(), Value::String(sha256(b"OUTPUT_SCHEMA_INVALID")));
+            object.insert(
+                "outcome".to_owned(),
+                Value::String("DEFINITIVE_REJECTED".to_owned()),
+            );
+            object.insert(
+                "proofKind".to_owned(),
+                Value::String("VALIDATED_OUTPUT_REJECTION".to_owned()),
+            );
+            object.insert(
+                "proofSha256".to_owned(),
+                Value::String(sha256(b"OUTPUT_SCHEMA_INVALID")),
+            );
             object.remove("receiptSha256");
         }
         let failure_receipt_sha = sha256(&canonical_bytes(&failure_receipt)?);
@@ -427,7 +488,10 @@ async fn persist_validated_output(
     Ok((Some(output.clone()), actual_cost, None, None))
 }
 
-#[expect(clippy::too_many_arguments, reason = "provider tool turn binds receipt, snapshot, and immutable tool transcript")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "provider tool turn binds receipt, snapshot, and immutable tool transcript"
+)]
 async fn persist_tool_turn(
     state: &State,
     turn: &ProviderTurnIdentity,
@@ -439,15 +503,8 @@ async fn persist_tool_turn(
     actual_cost: i64,
 ) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
     let call = parse_tool_call(state, body, turn, evidence).await?;
-    let (tool_result, transcript_sha256) = dispatch_tool_call(
-        state,
-        turn,
-        agent_type,
-        call.clone(),
-        receipt,
-        receipt_id,
-    )
-    .await?;
+    let (tool_result, transcript_sha256) =
+        dispatch_tool_call(state, turn, agent_type, call.clone(), receipt, receipt_id).await?;
     complete_provider_turn_tool_call(
         state,
         turn,
@@ -459,7 +516,12 @@ async fn persist_tool_turn(
         actual_cost,
     )
     .await?;
-    Ok((None, actual_cost, Some(transcript_sha256), Some(tool_result)))
+    Ok((
+        None,
+        actual_cost,
+        Some(transcript_sha256),
+        Some(tool_result),
+    ))
 }
 
 async fn bound_receipt_id(
@@ -477,10 +539,14 @@ async fn bound_receipt_id(
         &context.turn.idempotency_hash,
     ) {
         Ok(id) => Ok(id),
-        Err(_) => context
-            .unresolved_binding("provider receipt binding invalid", context.turn.turn_id.to_string())
-            .await
-            .map(|_| Uuid::nil()),
+        Err(_) => {
+            context
+                .reject_unresolved(
+                    "provider receipt binding invalid",
+                    context.turn.turn_id.to_string(),
+                )
+                .await
+        }
     }
 }
 
@@ -501,23 +567,14 @@ impl ProviderResponseContext<'_> {
         detail: impl Into<String>,
     ) -> Result<T, Failure> {
         let detail_text = detail.into();
-        tracing::warn!(provider_turn_id=%self.turn.turn_id, reason, detail=%detail_text, "provider response rejected");
+        let detail_sha256 = sha256(detail_text.as_bytes());
+        tracing::warn!(
+            provider_turn_id=%self.turn.turn_id,
+            reason,
+            detail_sha256,
+            detail_redacted=true,
+            "provider response rejected"
+        );
         Err(unresolved_provider_outcome(detail_text))
-    }
-
-    async fn unresolved_shape(
-        &self,
-        reason: &str,
-        detail: impl Into<String>,
-    ) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
-        self.reject_unresolved(reason, detail).await
-    }
-
-    async fn unresolved_binding(
-        &self,
-        reason: &str,
-        detail: impl Into<String>,
-    ) -> Result<Option<(Value, i64)>, Failure> {
-        self.reject_unresolved(reason, detail).await
     }
 }

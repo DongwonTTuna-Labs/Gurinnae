@@ -36,6 +36,11 @@ view_model_schemas:
   - {type: ProvenanceGraphV2, path: schemas/provenance-graph.schema.json, screens: [CAS-011]}
 
 tool_schemas:
+  - id: agency.profile
+    request: tools/agency-profile.request.schema.json
+    response: tools/agency-profile.response.schema.json
+    unique_request_field: agencyId
+    unique_response_field: profile
   - id: claim.language_check
     request: tools/claim-language-check.request.schema.json
     response: tools/claim-language-check.response.schema.json
@@ -46,6 +51,11 @@ tool_schemas:
     response: tools/contract-find-comparables.response.schema.json
     unique_request_field: subjectContractId
     unique_response_field: comparables
+  - id: contract.search
+    request: tools/contract-search.request.schema.json
+    response: tools/contract-search.response.schema.json
+    unique_request_field: procurementMethods
+    unique_response_field: contracts
   - id: entity.lookup
     request: tools/entity-lookup.request.schema.json
     response: tools/entity-lookup.response.schema.json
@@ -61,6 +71,11 @@ tool_schemas:
     response: tools/evidence-search.response.schema.json
     unique_request_field: query
     unique_response_field: hits
+  - id: relationship.neighbors
+    request: tools/relationship-neighbors.request.schema.json
+    response: tools/relationship-neighbors.response.schema.json
+    unique_request_field: relationshipKinds
+    unique_response_field: neighbors
   - id: response.read
     request: tools/response-read.request.schema.json
     response: tools/response-read.response.schema.json
@@ -81,6 +96,11 @@ tool_schemas:
     response: tools/source-locator-verify.response.schema.json
     unique_request_field: expectedSelectedContentSha256
     unique_response_field: verification
+  - id: supplier.profile
+    request: tools/supplier-profile.request.schema.json
+    response: tools/supplier-profile.response.schema.json
+    unique_request_field: supplierId
+    unique_response_field: profile
 
 schema_rules:
   - Every listed JSON document uses JSON Schema draft 2020-12, has a stable $id, and closes every object with additionalProperties false.

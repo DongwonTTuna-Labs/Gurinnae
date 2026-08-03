@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/agency-profile-request.json",
+  "title": "AgencyProfileRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputSnapshotId",
+    "inputSnapshotSha256",
+    "agencyId"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "agency.profile.request.v2" },
+    "runId": { "type": "string", "format": "uuid" },
+    "inputSnapshotId": { "type": "string", "format": "uuid" },
+    "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "agencyId": { "type": "string", "format": "uuid" }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-invariants": [
+    "The agency must be a member of the exact READY input snapshot."
+  ]
+}

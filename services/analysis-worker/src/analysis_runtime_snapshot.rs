@@ -7,6 +7,13 @@ use gurine_agent_orchestration::runtime::{
 use gurine_object_store::gateway::GatewayObjectStore;
 use sqlx::{Postgres, Transaction};
 
+#[path = "analysis_corpus_snapshot.rs"]
+mod corpus;
+#[path = "analysis_runtime_snapshot_binding.rs"]
+mod snapshot_binding;
+
+use snapshot_binding::RuntimeSnapshotContract;
+
 pub(super) async fn load_tool_snapshot(
     state: &State,
     turn: &ProviderTurnIdentity,
@@ -17,35 +24,28 @@ pub(super) async fn load_tool_snapshot(
         .execute(&mut *transaction)
         .await
         .map_err(database)?;
-    let snapshot_bound: bool = sqlx::query_scalar!(
-        "SELECT EXISTS(SELECT 1 FROM core.dataset_snapshots ds
-            WHERE ds.id=$1 AND ds.snapshot_sha256=CAST($2 AS char(64)) AND ds.state='READY')
-         AND NOT EXISTS(SELECT 1 FROM ops.agent_source_uses su
-            WHERE su.agent_run_id=$3 AND su.dataset_snapshot_id IS NOT NULL
-              AND su.dataset_snapshot_id<>$1)",
-        binding.input_snapshot_id,
-        &binding.input_snapshot_sha256,
-        turn.run_id,
-    )
-    .fetch_one(&mut *transaction)
-    .await
-    .map_err(database)?
-    .ok_or_else(|| {
-        database(sqlx::Error::Decode(Box::new(
-            sqlx::error::UnexpectedNullError,
-        )))
-    })?;
-    if !snapshot_bound {
-        return Err(Failure::Terminal(
-            "AGENT_EVIDENCE_SCOPE_INVALID",
-            "input snapshot binding".to_owned(),
-        ));
-    }
-    let evidence = evidence_records(&mut transaction, turn).await?;
-    let responses = load_responses(&mut transaction, turn).await?;
-    let comparables = load_comparables(&mut transaction, turn).await?;
-    let entities = load_entities(&mut transaction, turn).await?;
-    let rules = load_rules(&mut transaction, turn).await?;
+    let contract = snapshot_binding::validate(&mut transaction, turn, &binding).await?;
+    let evidence =
+        evidence_records(&mut transaction, turn, contract, binding.input_snapshot_id).await?;
+    let responses =
+        load_responses(&mut transaction, turn, contract, binding.input_snapshot_id).await?;
+    let comparables =
+        load_comparables(&mut transaction, turn, contract, binding.input_snapshot_id).await?;
+    let entities =
+        load_entities(&mut transaction, turn, contract, binding.input_snapshot_id).await?;
+    let rules = load_rules(&mut transaction, turn, contract).await?;
+    let (contracts, supplier_profiles, agency_profiles, relationships) =
+        if contract == RuntimeSnapshotContract::V2 {
+            let snapshot = corpus::load(&mut transaction, turn, binding.input_snapshot_id).await?;
+            (
+                snapshot.contracts,
+                snapshot.supplier_profiles,
+                snapshot.agency_profiles,
+                snapshot.relationships,
+            )
+        } else {
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
+        };
     let source_artifacts =
         load_source_artifacts(&mut transaction, turn, state.object_store.as_ref()).await?;
     transaction.commit().await.map_err(database)?;
@@ -56,6 +56,10 @@ pub(super) async fn load_tool_snapshot(
         comparables,
         entities,
         rules,
+        contracts,
+        supplier_profiles,
+        agency_profiles,
+        relationships,
         source_artifacts,
     })
 }
@@ -63,14 +67,35 @@ pub(super) async fn load_tool_snapshot(
 async fn load_responses(
     executor: &mut Transaction<'_, Postgres>,
     turn: &ProviderTurnIdentity,
+    contract: RuntimeSnapshotContract,
+    dataset_snapshot_id: uuid::Uuid,
 ) -> Result<Vec<ResponseRecord>, Failure> {
+    let require_v2_binding = contract == RuntimeSnapshotContract::V2;
     sqlx::query!(
-        "SELECT DISTINCT response_id,response_content_sha256
-           FROM ops.agent_source_uses
-          WHERE agent_run_id=$1 AND response_id IS NOT NULL
-            AND response_content_sha256 IS NOT NULL
-          ORDER BY response_id",
+        "SELECT DISTINCT source_use.response_id,source_use.response_content_sha256
+           FROM ops.agent_source_uses source_use
+           LEFT JOIN core.dataset_snapshot_members member
+             ON member.id=source_use.snapshot_member_id AND member.dataset_snapshot_id=source_use.dataset_snapshot_id
+            AND member.member_digest=source_use.snapshot_member_digest
+           LEFT JOIN core.dataset_snapshot_member_sources member_source
+             ON member_source.id=source_use.snapshot_member_source_id AND member_source.dataset_snapshot_id=member.dataset_snapshot_id
+            AND member_source.snapshot_member_id=member.id
+            AND member_source.snapshot_member_digest=member.member_digest
+          WHERE source_use.agent_run_id=$1
+            AND source_use.response_id IS NOT NULL AND source_use.response_content_sha256 IS NOT NULL
+            AND (NOT $3 OR (
+              source_use.dataset_snapshot_id=$2 AND source_use.source_kind='RESPONSE_SNAPSHOT'
+              AND member.object_type='RESPONSE' AND member.response_id=source_use.response_id
+              AND member.object_version=source_use.response_version
+              AND member.object_content_sha256=source_use.response_content_sha256
+              AND member_source.source_kind='RESPONSE' AND member_source.response_id=source_use.response_id
+              AND member_source.response_version=source_use.response_version
+              AND member_source.response_content_sha256=source_use.response_content_sha256
+            ))
+          ORDER BY source_use.response_id",
         turn.run_id,
+        dataset_snapshot_id,
+        require_v2_binding,
     )
     .fetch_all(&mut **executor)
     .await
@@ -88,14 +113,33 @@ async fn load_responses(
 async fn load_comparables(
     executor: &mut Transaction<'_, Postgres>,
     turn: &ProviderTurnIdentity,
+    contract: RuntimeSnapshotContract,
+    dataset_snapshot_id: uuid::Uuid,
 ) -> Result<Vec<ComparableRecord>, Failure> {
+    let require_v2_binding = contract == RuntimeSnapshotContract::V2;
     sqlx::query!(
-        "SELECT DISTINCT object_id,source_use_id
-           FROM ops.agent_source_uses
-          WHERE agent_run_id=$1 AND object_type='CONTRACT'
-            AND object_id IS NOT NULL
-          ORDER BY object_id,source_use_id",
+        "SELECT DISTINCT source_use.object_id,source_use.source_use_id
+           FROM ops.agent_source_uses source_use
+           LEFT JOIN core.dataset_snapshot_members member
+             ON member.id=source_use.snapshot_member_id AND member.dataset_snapshot_id=source_use.dataset_snapshot_id
+            AND member.member_digest=source_use.snapshot_member_digest
+           LEFT JOIN core.dataset_snapshot_member_sources member_source
+             ON member_source.id=source_use.snapshot_member_source_id AND member_source.dataset_snapshot_id=member.dataset_snapshot_id
+            AND member_source.snapshot_member_id=member.id
+            AND member_source.snapshot_member_digest=member.member_digest
+          WHERE source_use.agent_run_id=$1 AND source_use.object_type='CONTRACT'
+            AND source_use.object_id IS NOT NULL
+            AND (NOT $3 OR (
+              source_use.dataset_snapshot_id=$2 AND source_use.source_kind='DATASET_MEMBER'
+              AND member.object_type='CONTRACT' AND member.object_id=source_use.object_id
+              AND member.object_version=source_use.object_version
+              AND member.object_content_sha256=source_use.object_content_sha256
+              AND member_source.source_digest=source_use.snapshot_member_source_digest
+            ))
+          ORDER BY source_use.object_id,source_use.source_use_id",
         turn.run_id,
+        dataset_snapshot_id,
+        require_v2_binding,
     )
     .fetch_all(&mut **executor)
     .await
@@ -111,6 +155,20 @@ async fn load_comparables(
 }
 
 async fn load_entities(
+    executor: &mut Transaction<'_, Postgres>,
+    turn: &ProviderTurnIdentity,
+    contract: RuntimeSnapshotContract,
+    dataset_snapshot_id: uuid::Uuid,
+) -> Result<Vec<EntityRecord>, Failure> {
+    match contract {
+        RuntimeSnapshotContract::V1 => load_legacy_entities(executor, turn).await,
+        RuntimeSnapshotContract::V2 => {
+            load_v2_snapshot_entities(executor, turn, dataset_snapshot_id).await
+        }
+    }
+}
+
+async fn load_legacy_entities(
     executor: &mut Transaction<'_, Postgres>,
     turn: &ProviderTurnIdentity,
 ) -> Result<Vec<EntityRecord>, Failure> {
@@ -169,10 +227,99 @@ async fn load_entities(
     Ok(entities.into_values().collect())
 }
 
+async fn load_v2_snapshot_entities(
+    executor: &mut Transaction<'_, Postgres>,
+    turn: &ProviderTurnIdentity,
+    dataset_snapshot_id: uuid::Uuid,
+) -> Result<Vec<EntityRecord>, Failure> {
+    sqlx::query!(
+        "SELECT member.object_type,member.object_id,member.canonical_payload
+           FROM core.dataset_snapshot_members member
+          WHERE member.dataset_snapshot_id=$1
+            AND member.object_type IN ('AGENCY','SUPPLIER')
+            AND EXISTS(
+              SELECT 1 FROM ops.agent_source_uses source_use
+               WHERE source_use.agent_run_id=$2
+                 AND source_use.use_kind='TOOL_QUERY'
+                 AND source_use.source_kind='DATASET_MEMBER'
+                 AND source_use.dataset_snapshot_id=member.dataset_snapshot_id
+                 AND source_use.snapshot_member_id=member.id
+                 AND source_use.snapshot_member_digest=member.member_digest
+                 AND source_use.object_type=member.object_type
+                 AND source_use.object_id=member.object_id
+                 AND source_use.object_version=member.object_version
+                 AND source_use.object_content_sha256=member.object_content_sha256
+            )
+          ORDER BY member.member_ordinal,member.id",
+        dataset_snapshot_id,
+        turn.run_id,
+    )
+    .fetch_all(&mut **executor)
+    .await
+    .map_err(database)?
+    .into_iter()
+    .map(|row| snapshot_entity(row.object_id, &row.canonical_payload))
+    .collect()
+}
+
+fn snapshot_entity(
+    entity_id: uuid::Uuid,
+    canonical_payload: &serde_json::Value,
+) -> Result<EntityRecord, Failure> {
+    let canonical_name = canonical_payload
+        .get("canonicalName")
+        .and_then(serde_json::Value::as_str)
+        .filter(|name| !name.trim().is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            Failure::Terminal("AGENT_CORPUS_SNAPSHOT_INVALID", "canonicalName".to_owned())
+        })?;
+    let mut identifiers = vec![EntityIdentifier {
+        kind: EntityIdentifierKind::CanonicalName,
+        value: canonical_name.clone(),
+    }];
+    if let Some(aliases) = canonical_payload.get("verifiedAliases") {
+        let aliases = aliases.as_array().ok_or_else(|| {
+            Failure::Terminal(
+                "AGENT_CORPUS_SNAPSHOT_INVALID",
+                "verifiedAliases".to_owned(),
+            )
+        })?;
+        for alias in aliases {
+            let alias = alias
+                .as_str()
+                .filter(|value| !value.trim().is_empty())
+                .ok_or_else(|| {
+                    Failure::Terminal(
+                        "AGENT_CORPUS_SNAPSHOT_INVALID",
+                        "verifiedAliases".to_owned(),
+                    )
+                })?;
+            identifiers.push(EntityIdentifier {
+                kind: EntityIdentifierKind::VerifiedAlias,
+                value: alias.to_owned(),
+            });
+        }
+    }
+    Ok(EntityRecord {
+        entity_id,
+        canonical_name,
+        identifiers,
+    })
+}
+
 async fn load_rules(
     executor: &mut Transaction<'_, Postgres>,
     turn: &ProviderTurnIdentity,
+    contract: RuntimeSnapshotContract,
 ) -> Result<Vec<RuleRecord>, Failure> {
+    if contract == RuntimeSnapshotContract::V2 {
+        // RULE_RUN is not an AGENT_CASE DatasetSnapshot member kind. A v2
+        // runtime may expose one only after a typed, source-use-bound tool
+        // response is implemented; querying the live rule table here would
+        // create a second scope authority.
+        return Ok(Vec::new());
+    }
     sqlx::query!(
         "SELECT rr.id AS rule_run_id,rr.rule_version_id,
                 COALESCE(rr.input_digest::text,
@@ -274,30 +421,61 @@ async fn load_source_artifacts(
 async fn evidence_records(
     executor: &mut Transaction<'_, Postgres>,
     turn: &ProviderTurnIdentity,
+    contract: RuntimeSnapshotContract,
+    dataset_snapshot_id: uuid::Uuid,
 ) -> Result<Vec<EvidenceRecord>, Failure> {
+    let require_v2_binding = contract == RuntimeSnapshotContract::V2;
     sqlx::query!(
-        "SELECT e.id,su.source_use_id,btrim(su.source_use_sha256::text) AS source_use_sha,
-                btrim(su.selected_content_sha256::text) AS selected_sha,
-                COALESCE(su.locator_value,e.source_locator) AS locator
-           FROM editorial.evidence e
-           JOIN ops.agent_source_uses su ON su.agent_run_id=$1
-             AND su.use_kind='TOOL_QUERY' AND su.source_kind='DATASET_MEMBER'
-             AND EXISTS (SELECT 1 FROM core.dataset_snapshots ds
-                           WHERE ds.id=su.dataset_snapshot_id
-                             AND ds.snapshot_sha256=CAST($2 AS char(64)) AND ds.state='READY')
-          WHERE e.verification_status='VERIFIED' AND su.selected_content_sha256 IS NOT NULL
-         UNION ALL
-         SELECT su.research_artifact_id AS id,su.source_use_id,btrim(su.source_use_sha256::text),
-                btrim(su.selected_content_sha256::text),su.locator_value
-           FROM ops.agent_source_uses su
-          WHERE su.agent_run_id=$1
-            AND su.use_kind IN ('TOOL_QUERY','TOOL_RESULT','MODEL_INPUT')
-            AND su.source_kind='RESEARCH_ARTIFACT'
-            AND su.research_artifact_id IS NOT NULL
-            AND su.selected_content_sha256 IS NOT NULL
+        "SELECT COALESCE(
+                  source_use.evidence_segment_id,
+                  source_use.research_artifact_id,
+                  legacy_evidence.id
+                ) AS id,
+                source_use.source_use_id,
+                btrim(source_use.source_use_sha256::text) AS source_use_sha,
+                btrim(source_use.selected_content_sha256::text) AS selected_sha,
+                COALESCE(source_use.locator_value,legacy_evidence.source_locator) AS locator
+           FROM ops.agent_source_uses source_use
+           LEFT JOIN core.dataset_snapshot_members member
+             ON member.id=source_use.snapshot_member_id
+            AND member.dataset_snapshot_id=source_use.dataset_snapshot_id
+            AND member.member_digest=source_use.snapshot_member_digest
+           LEFT JOIN core.dataset_snapshot_member_sources member_source
+             ON member_source.id=source_use.snapshot_member_source_id
+            AND member_source.dataset_snapshot_id=member.dataset_snapshot_id
+            AND member_source.snapshot_member_id=member.id
+            AND member_source.snapshot_member_digest=member.member_digest
+           LEFT JOIN editorial.evidence legacy_evidence
+             ON NOT $3
+            AND source_use.source_kind='DATASET_MEMBER'
+            AND legacy_evidence.source_document_id=source_use.source_document_id
+            AND legacy_evidence.verification_status='VERIFIED'
+          WHERE source_use.agent_run_id=$1
+            AND source_use.use_kind IN ('TOOL_QUERY','TOOL_RESULT','MODEL_INPUT')
+            AND source_use.selected_content_sha256 IS NOT NULL
+            AND source_use.locator_value IS NOT NULL
+            AND (
+              source_use.source_kind='RESEARCH_ARTIFACT'
+              OR (source_use.source_kind='EVIDENCE_SEGMENT'
+                  AND source_use.evidence_segment_id IS NOT NULL
+                  AND (NOT $3 OR (
+                    source_use.dataset_snapshot_id=$2
+                    AND member.object_type='EVIDENCE_SEGMENT'
+                    AND member.evidence_segment_id=source_use.evidence_segment_id
+                    AND member.object_id=source_use.evidence_segment_id
+                    AND member.object_version=source_use.object_version
+                    AND member.object_content_sha256=source_use.object_content_sha256
+                    AND member_source.source_kind='SOURCE_DOCUMENT'
+                    AND member_source.evidence_segment_id=source_use.evidence_segment_id
+                    AND member_source.source_digest=source_use.snapshot_member_source_digest
+                  )))
+              OR (NOT $3 AND source_use.source_kind='DATASET_MEMBER'
+                  AND legacy_evidence.id IS NOT NULL)
+            )
           ORDER BY 1,2",
         turn.run_id,
-        &turn.input_snapshot_sha256,
+        dataset_snapshot_id,
+        require_v2_binding,
     )
     .fetch_all(&mut **executor)
     .await
@@ -306,7 +484,7 @@ async fn evidence_records(
     .map(|row| {
         Ok(EvidenceRecord {
             evidence_id: required(row.id).map_err(database)?,
-            source_use_id: required(row.source_use_id).map_err(database)?,
+            source_use_id: row.source_use_id,
             source_use_sha256: required(row.source_use_sha).map_err(database)?,
             selected_content_sha256: required(row.selected_sha).map_err(database)?,
             locator: required(row.locator).map_err(database)?,

@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT member_ordinal,member_digest,object_type,object_id,object_version, canonical_payload FROM core.dataset_snapshot_members WHERE dataset_snapshot_id=$1 ORDER BY member_ordinal,member_digest",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "member_ordinal",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "member_ordinal"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "member_digest",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "member_digest"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "object_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "object_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "object_version"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "canonical_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "canonical_payload"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e8c610c5f31740e737aa664432d51954003d5b6e79b97408f6020b6b00efab19"
+}

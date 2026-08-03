@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT run.version,receipt.receipt_id,receipt.receipt_sha256 FROM ops.agent_runs AS run JOIN LATERAL (SELECT receipt_id,receipt_sha256 FROM ops.agent_run_control_receipts WHERE agent_run_id=run.id ORDER BY aggregate_version DESC LIMIT 1) AS receipt ON true WHERE run.id=$1 AND run.run_contract_version=2 AND run.status='RUNNING'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_runs",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "receipt_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_run_control_receipts",
+            "name": "receipt_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_run_control_receipts",
+            "name": "receipt_sha256"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "739004b1d9467b3de9eccc50ec658a8deba721e95579429e0e9bc9760f4158e4"
+}

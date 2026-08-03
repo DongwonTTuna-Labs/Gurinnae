@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT version,terminal_receipt_id,terminal_receipt_sha256,replayed FROM ops.complete_agent_run_worker_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "terminal_receipt_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "terminal_receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "replayed",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Uuid",
+        "Bpchar",
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Bpchar",
+        "Text",
+        "Jsonb",
+        "Bpchar",
+        "Numeric"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "51fef5d2725d141281e8ed3ab4a07b45001760d2fa7714a1fa2e2ddf0357e04e"
+}

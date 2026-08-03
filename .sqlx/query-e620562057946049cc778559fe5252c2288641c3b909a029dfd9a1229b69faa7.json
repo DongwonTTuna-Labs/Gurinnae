@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) SELECT 'RULE_EVALUATION','analysis-worker',$2,$3,8 FROM core.rule_evaluations WHERE id=$1 AND status IN ('QUEUED','RUNNING') ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e620562057946049cc778559fe5252c2288641c3b909a029dfd9a1229b69faa7"
+}

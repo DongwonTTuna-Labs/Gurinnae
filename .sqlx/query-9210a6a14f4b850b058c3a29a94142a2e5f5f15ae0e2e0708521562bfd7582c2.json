@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT member.object_type,member.object_id,member.canonical_payload\n           FROM core.dataset_snapshot_members member\n          WHERE member.dataset_snapshot_id=$1\n            AND member.object_type IN ('AGENCY','SUPPLIER')\n            AND EXISTS(\n              SELECT 1 FROM ops.agent_source_uses source_use\n               WHERE source_use.agent_run_id=$2\n                 AND source_use.use_kind='TOOL_QUERY'\n                 AND source_use.source_kind='DATASET_MEMBER'\n                 AND source_use.dataset_snapshot_id=member.dataset_snapshot_id\n                 AND source_use.snapshot_member_id=member.id\n                 AND source_use.snapshot_member_digest=member.member_digest\n                 AND source_use.object_type=member.object_type\n                 AND source_use.object_id=member.object_id\n                 AND source_use.object_version=member.object_version\n                 AND source_use.object_content_sha256=member.object_content_sha256\n            )\n          ORDER BY member.member_ordinal,member.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "object_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "canonical_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshot_members",
+            "name": "canonical_payload"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9210a6a14f4b850b058c3a29a94142a2e5f5f15ae0e2e0708521562bfd7582c2"
+}

@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT source_use.response_id,source_use.response_content_sha256\n           FROM ops.agent_source_uses source_use\n           LEFT JOIN core.dataset_snapshot_members member\n             ON member.id=source_use.snapshot_member_id AND member.dataset_snapshot_id=source_use.dataset_snapshot_id\n            AND member.member_digest=source_use.snapshot_member_digest\n           LEFT JOIN core.dataset_snapshot_member_sources member_source\n             ON member_source.id=source_use.snapshot_member_source_id AND member_source.dataset_snapshot_id=member.dataset_snapshot_id\n            AND member_source.snapshot_member_id=member.id\n            AND member_source.snapshot_member_digest=member.member_digest\n          WHERE source_use.agent_run_id=$1\n            AND source_use.response_id IS NOT NULL AND source_use.response_content_sha256 IS NOT NULL\n            AND (NOT $3 OR (\n              source_use.dataset_snapshot_id=$2 AND source_use.source_kind='RESPONSE_SNAPSHOT'\n              AND member.object_type='RESPONSE' AND member.response_id=source_use.response_id\n              AND member.object_version=source_use.response_version\n              AND member.object_content_sha256=source_use.response_content_sha256\n              AND member_source.source_kind='RESPONSE' AND member_source.response_id=source_use.response_id\n              AND member_source.response_version=source_use.response_version\n              AND member_source.response_content_sha256=source_use.response_content_sha256\n            ))\n          ORDER BY source_use.response_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "response_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "response_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "response_content_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "response_content_sha256"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "980fd75052044d5f8255996dbf2936456fbdb9cf8e1d00af71e2b5222d00a755"
+}

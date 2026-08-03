@@ -10,6 +10,10 @@ struct LocalPricing {
     output_micros_per_unit: i64,
 }
 
+struct ProviderRequestData {
+    request: Value,
+}
+
 impl LocalPricing {
     fn from_routing_policy(policy: &Value) -> Result<Self, Failure> {
         let value = policy
@@ -102,6 +106,7 @@ struct ProviderTurnIdentity {
     run_id: Uuid,
     idempotency_hash: String,
     request_redacted: Value,
+    dataset_snapshot_id: Option<Uuid>,
     input_snapshot_sha256: String,
     prior_transcript_sha256: String,
     provider_config_id: Uuid,
@@ -156,7 +161,11 @@ fn receipt_cost_krw(receipt: &Value, pricing: &LocalPricing) -> Result<i64, Fail
             "final outcome required".into(),
         ));
     }
-    if receipt.pointer("/pricing/costState").and_then(Value::as_str) != Some("SETTLED") {
+    if receipt
+        .pointer("/pricing/costState")
+        .and_then(Value::as_str)
+        != Some("SETTLED")
+    {
         return Err(Failure::Terminal(
             "PROVIDER_COST_INVALID",
             "settled pricing required".into(),
@@ -166,10 +175,15 @@ fn receipt_cost_krw(receipt: &Value, pricing: &LocalPricing) -> Result<i64, Fail
         .get("pricing")
         .and_then(Value::as_object)
         .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "pricing".into()))?;
-    if pricing_object.get("pricingVersion").and_then(Value::as_str) != Some(pricing.version.as_str())
-        || pricing_object.get("pricingSha256").and_then(Value::as_str) != Some(pricing.digest.as_str())
+    if pricing_object.get("pricingVersion").and_then(Value::as_str)
+        != Some(pricing.version.as_str())
+        || pricing_object.get("pricingSha256").and_then(Value::as_str)
+            != Some(pricing.digest.as_str())
     {
-        return Err(Failure::Terminal("PROVIDER_COST_INVALID", "local pricing binding".into()));
+        return Err(Failure::Terminal(
+            "PROVIDER_COST_INVALID",
+            "local pricing binding".into(),
+        ));
     }
     let usage = receipt
         .get("usage")
@@ -184,7 +198,10 @@ fn receipt_cost_krw(receipt: &Value, pricing: &LocalPricing) -> Result<i64, Fail
         .and_then(Value::as_i64)
         .ok_or_else(|| Failure::Terminal("PROVIDER_COST_INVALID", "outputUnits".into()))?;
     if input_units < 0 || output_units < 0 {
-        return Err(Failure::Terminal("PROVIDER_COST_INVALID", "negative usage".into()));
+        return Err(Failure::Terminal(
+            "PROVIDER_COST_INVALID",
+            "negative usage".into(),
+        ));
     }
     let calculated_micros = input_units
         .checked_mul(pricing.input_micros_per_unit)

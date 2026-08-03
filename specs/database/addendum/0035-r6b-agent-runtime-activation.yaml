@@ -1,0 +1,345 @@
+schema_version: 1
+proposal_version: 2026-07-31.0035-r6b-agent-runtime-activation.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0035_r6b_agent_runtime_activation.sql
+  exact_relations:
+    - ops.signal_investigation_policies
+    - ops.signal_investigation_initiation_receipts
+  relation_delta: 2
+  purpose: restore the already-declared 0025 parser, normalization, dataset-snapshot, AgentRunV2, and supplier-identity physical seams, then add a fail-closed signal-investigation initiation boundary
+
+declared_recovery:
+  source_contract: specs/database/addendum/0025-evidence-snapshots-search.yaml
+  compatibility_rule: legacy rows keep nullable v1 bridge fields; the migration does not synthesize parser, normalization, snapshot, agent-run, or identity proof
+  exact_new_write_rule: only rows satisfying the complete v2 shapes and native composite lineage keys are eligible for new parser, normalization, snapshot, agent-run, or proven supplier-identifier writes
+  supplier_candidate_writer_rule: record_supplier_identity_candidate_v1 is a deny-only interface returning MAPPING_ACTIVATION_MISSING and recorded=false with null identities and zero DML until the missing mapping-activation authority is decision-complete
+  relation_count_rule: the ALTERs, parser seed, indexes, triggers, grants, and owner routines add no relkind-r relation beyond scope.exact_relations
+
+repaired_runtime_acl:
+  function: ops.is_lower_sha256(text)
+  runtime_execute: [gurine_analysis_worker, gurine_scheduler]
+  public_execute: false
+  derivation: migration 0032 gives these roles direct DML on relay_model_catalog_sync_runs and provider_model_upgrade_attempts whose digest CHECK constraints call this function; PostgreSQL validates function EXECUTE under the DML caller, so the table grants are unusable without this exact helper privilege
+  closure: no other runtime role receives EXECUTE and no relation privilege is broadened
+
+measured_runtime_pins:
+  connector_ingest_bundle:
+    canonical_manifest_members: 17
+    sha256: addf2fb260bf760b6cdd86fa1daaf129e4d7ac4f232e77400f8413cd90b45ad2
+    rule: connector-structured-json-v1 is ACTIVE only under this measured whole-ingest-worker canonical manifest digest; partial source lists and guessed digests are invalid
+  agent_runtime_schemas:
+    ProviderTurnV2: 2b68c8f597ac3e8abe385b2f69ed82d42758c41e4c21e3dd6d0602a50316526e
+    ToolCallV2: 36028052d9d0ef9df99a5894e7b741632f909a2047cb4c4876f62e6add5ab212
+    InvestigatorOutputV2: 3eeb282779310e3b4dce0f4d613050736596d62a2a3f986fdbe882b7121796a6
+    MarketResearchOutputV2: 737431cfb03f7dc3b7fa59d3561d7c3c56049375b42899725f493b794cdd323b
+  tool_contract:
+    exact_count: 13
+    exact_ids: [agency.profile, claim.language_check, contract.find_comparables, contract.search, entity.lookup, evidence.read, evidence.search, relationship.neighbors, response.read, rule.reproduce, source.fetch, source.locator_verify, supplier.profile]
+    claim_language_check_request_sha256: 5f997b0ad29c80151e0ddd649f6763f14451b41dd8e653ffbf43eccf2ec0112e
+    language_policy: {version: ko-public-claims-v1, sha256: 6766a275b7d9a3ef0157bbd42d57245f8309f3ec15f2ee6cd515d6397ee4bc4e}
+    authority: specs/database/addendum/0025-evidence-snapshots-search.yaml#closed_type_contracts.normative_json_schema_registry
+
+existing_relation_changes:
+  - relation: core.parser_versions
+    changes:
+      - seed connector-structured-json-v1 as the structured JSON parser identity used by connector ingestion
+      - bind implementation_digest to the measured 17-member whole-ingest-worker canonical manifest SHA-256 in measured_runtime_pins.connector_ingest_bundle
+  - relation: raw.source_documents
+    changes:
+      - add the id plus content_sha256 candidate key required by parser-run input-byte binding
+  - relation: core.parser_runs
+    changes:
+      - add nullable legacy-bridge input-content, extraction-schema, implementation, and extraction-receipt digests
+      - add source, segment, and full extraction candidate keys plus the native source-document content foreign key
+      - grant ingest-worker the declared SELECT and INSERT path for parser-run persistence
+  - relation: raw.parsed_records
+    changes:
+      - add nullable parser_run_id and the normalization, parser, provenance, and source-run candidate keys
+      - bind parser_run_id plus source_document_id to the exact parser run
+  - relation: core.field_provenance
+    changes:
+      - add nullable normalization_run_id, parser_run_id, parsed_record_id, and entity_version as a legacy bridge
+      - require the complete four-field v2 shape and native normalization, parser, parsed-record, and member-binding keys
+  - relation: core.normalization_runs
+    changes:
+      - install the declared source-document, parser-run, parsed-record, producer-job, and terminal-audit foreign keys
+      - add one active RUNNING generation fence per parsed record, normalization ID, and normalization version
+  - relation: core.dataset_snapshots
+    changes:
+      - install producer-job, build-start-audit, and terminal-audit foreign keys
+      - add one BUILDING snapshot fence per snapshot kind and producer digest
+  - relation: core.dataset_snapshot_member_sources
+    changes:
+      - install native source-document, parser-run, parsed-record, and field-provenance lineage foreign keys
+  - relation: core.rule_runs
+    changes:
+      - add an all-or-none dataset snapshot identity/digest and rule configuration/code digest binding
+  - relation: core.rule_evaluations
+    changes:
+      - retain human requested_by authority while allowing only snapshot-producer as the closed service requester
+  - relation: ops.agent_runs
+    changes:
+      - add the nullable AgentRunV2 snapshot, transcript, prompt, schema, provider, budget, iteration, deadline, output-validation, failure, terminal-receipt, and service-actor bridge
+      - require all v2 authority fields, an exact READY snapshot binding, evidence_scope_ids equal to the canonical empty array, closed lifecycle/budget/provider candidates, and either a human creator or workflow-worker service creator
+      - preserve claim_agent_run_worker_v1 and transition_agent_run_worker_v1 for v1 only; both reject a v2 row with SQLSTATE 55000 before any status, version, output, or control mutation
+      - grant gurine_migrator only the INSERT path required for process_signal_investigation_v1 to create one fenced v2 run; runtime roles retain no direct table DML
+  - relation: ops.jobs
+    changes:
+      - grant gurine_migrator the INSERT and UPDATE path required for process_signal_investigation_v1 to enqueue its matching analysis job inside the owner transaction; runtime roles retain no expanded direct DML
+  - relation: ops.agent_tool_calls
+    changes:
+      - expand the closed tool ID and schema tuple set from nine to exactly thirteen with agency.profile, contract.search, relationship.neighbors, and supplier.profile
+      - bind every request and optional result to the exact tool-specific schemaVersion and require each corpus tool request to carry the claimed v2 run's exact READY AGENT_CASE snapshot identity and digest
+  - relation: editorial.case_signals
+    changes:
+      - retain human linked_by authority while allowing only workflow-worker as the closed service linker
+  - relation: core.supplier_identifiers
+    changes:
+      - add candidate identity, source locator, verification evidence, immutable fact digest, and proof_state
+      - preserve existing rows as LEGACY_UNPROVEN; only verified strong identifiers with a complete candidate/proof tuple can be PROVEN_V1
+  - relation: ops.source_checkpoints
+    changes:
+      - grant analysis-worker the read path needed to materialize source-bounded dataset snapshots
+  - relation: ops.event_types
+    changes:
+      - replace dataset.snapshot_created.v1 payload_schema with the closed READY or FAILED terminal snapshot envelope emitted by finalize_dataset_snapshot
+
+tables:
+  ops.signal_investigation_policies:
+    owner_role: gurine_migrator
+    owning_component: workflow-worker
+    domain: SignalInvestigationPolicy
+    repository: services/workflow-worker::workflow_signal
+    mutation_class: APPEND_ONLY
+    columns:
+      policy_id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      policy_key: {type: text, nullable: false, default: AUTO_SIGNAL_INVESTIGATION}
+      version: {type: bigint, nullable: false}
+      enabled: {type: boolean, nullable: false, default: false}
+      minimum_severity: {type: text, nullable: true}
+      dedupe_window: {type: interval, nullable: true}
+      daily_run_limit: {type: integer, nullable: true}
+      case_daily_run_limit: {type: integer, nullable: true}
+      daily_budget_micros_krw: {type: bigint, nullable: true}
+      max_run_micros_krw: {type: bigint, nullable: true}
+      kill_switch_code: {type: text, nullable: true}
+      agent_type: {type: text, nullable: true}
+      prompt_id: {type: text, nullable: true}
+      prompt_version: {type: text, nullable: true}
+      prompt_sha256: {type: 'char(64)', nullable: true}
+      output_schema_id: {type: text, nullable: true}
+      output_schema_version: {type: text, nullable: true}
+      output_schema_sha256: {type: 'char(64)', nullable: true}
+      provider_policy_version: {type: text, nullable: true}
+      provider_policy_sha256: {type: 'char(64)', nullable: true}
+      provider_classification: {type: text, nullable: true}
+      provider_candidate_ids: {type: 'text[]', nullable: true}
+      budget_policy_version: {type: text, nullable: true}
+      budget_policy_sha256: {type: 'char(64)', nullable: true}
+      max_provider_turns: {type: integer, nullable: true}
+      max_tool_calls: {type: integer, nullable: true}
+      deadline_interval: {type: interval, nullable: true}
+      created_by: {type: uuid, nullable: true}
+      policy_digest: {type: 'char(64)', nullable: false}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: signal_investigation_policies_pk, columns: [policy_id]}
+    uniques:
+      - {name: signal_investigation_policies_version_uq, columns: [policy_key, version]}
+      - {name: signal_investigation_policies_id_version_uq, columns: [policy_id, version]}
+    foreign_keys:
+      - {name: signal_investigation_policies_creator_fk, columns: [created_by], references: 'ops.users(id)', on_delete: RESTRICT}
+    checks:
+      - {name: signal_investigation_policies_key_ck, rule: policy_key is exactly AUTO_SIGNAL_INVESTIGATION}
+      - {name: signal_investigation_policies_scalar_ck, rule: version is positive, policy_digest is lowercase SHA-256, and severity is closed when present}
+      - {name: signal_investigation_policies_enabled_ck, rule: an enabled row has the complete positive limits, nonnegative bounded budgets, kill switch, investigator prompt/schema/provider/budget digests, valid provider candidates, bounded iteration limits, positive deadline, and human creator}
+    triggers:
+      - {name: signal_investigation_policies_immutable_guard, timing: BEFORE, events: [UPDATE, DELETE], function: ops.reject_signal_investigation_mutation()}
+    grants:
+      gurine_workflow_worker: [SELECT]
+      write_rule: owner routine only; runtime roles have no direct INSERT, UPDATE, or DELETE
+    rls: {enabled: false, forced: false, reason: internal append-only configuration read only by the fixed workflow initiation boundary}
+    retention:
+      record_class: AGENT_RUNTIME_POLICY
+      trigger: later of policy supersession, every referencing initiation receipt, and governing audit or legal-hold closure
+      schedule_binding: 0036_r6b_pipeline_activation.sql binds the exact current nonexpired schedule; the distinct class follows AGENT_RUN_CONTROL_RECEIPT operational-audit schedule semantics
+      data_classification: no direct natural-person identifier is stored; created_by is a linkable internal user reference and the row is operational-audit evidence
+      legal_hold_key: policy_id
+      backup_behavior: restore before initiation receipts
+      terminal_action_rule: selected by the approved finite operational-audit schedule; PRESERVE_PUBLIC_REVISION and custom PRESERVE terminal tokens are forbidden
+    repository_roundtrip:
+      write: append a new policy_key version through the owner boundary
+      read: select the latest version deterministically by version and policy_id
+      assertions: [disabled sparse row is valid, enabled incomplete row is rejected, update and delete are rejected, direct runtime mutation is denied]
+
+  ops.signal_investigation_initiation_receipts:
+    owner_role: gurine_migrator
+    owning_component: workflow-worker
+    domain: SignalInvestigationInitiationReceipt
+    repository: services/workflow-worker::workflow_signal
+    mutation_class: IMMUTABLE
+    columns:
+      receipt_id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      signal_id: {type: uuid, nullable: false}
+      rule_version_id: {type: uuid, nullable: false}
+      target_type: {type: text, nullable: false}
+      target_id: {type: uuid, nullable: false}
+      producer_job_id: {type: uuid, nullable: false}
+      policy_id: {type: uuid, nullable: true}
+      policy_version: {type: bigint, nullable: true}
+      disposition: {type: text, nullable: false}
+      case_id: {type: uuid, nullable: true}
+      dataset_snapshot_id: {type: uuid, nullable: true}
+      agent_run_id: {type: uuid, nullable: true}
+      job_id: {type: uuid, nullable: true}
+      reserved_micros_krw: {type: bigint, nullable: false, default: 0}
+      actor_type: {type: text, nullable: false, default: SERVICE}
+      actor_id: {type: text, nullable: false, default: workflow-worker}
+      audit_event_id: {type: uuid, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: 'char(64)', nullable: false}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: signal_investigation_receipts_pk, columns: [receipt_id]}
+    uniques:
+      - {name: signal_investigation_receipts_signal_uq, columns: [signal_id]}
+      - {name: signal_investigation_receipts_digest_uq, columns: [receipt_digest]}
+    foreign_keys:
+      - {name: signal_investigation_receipts_signal_fk, columns: [signal_id], references: 'core.anomaly_signals(id)', on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_rule_fk, columns: [rule_version_id], references: 'core.rule_versions(id)', on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_producer_job_fk, columns: [producer_job_id], references: 'ops.jobs(id)', on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_policy_fk, columns: [policy_id, policy_version], references: 'ops.signal_investigation_policies(policy_id,version)', match: FULL, on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_case_fk, columns: [case_id], references: 'editorial.cases(id)', on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_snapshot_fk, columns: [dataset_snapshot_id], references: 'core.dataset_snapshots(id)', on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_agent_run_fk, columns: [agent_run_id], references: 'ops.agent_runs(id)', on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_job_fk, columns: [job_id], references: 'ops.jobs(id)', on_delete: RESTRICT}
+      - {name: signal_investigation_receipts_audit_fk, columns: [audit_event_id], references: 'ops.audit_events(id)', on_delete: RESTRICT}
+    checks:
+      - {name: signal_investigation_receipts_policy_shape_ck, rule: policy identity and version are both present or both absent}
+      - {name: signal_investigation_receipts_actor_ck, rule: actor is exactly SERVICE workflow-worker}
+      - {name: signal_investigation_receipts_disposition_ck, values: [STARTED, POLICY_ABSENT, POLICY_DISABLED, KILL_SWITCH_ACTIVE, BELOW_MIN_SEVERITY, DUPLICATE_SUPPRESSED, DAILY_LIMIT_REACHED, CASE_DAILY_LIMIT_REACHED, BUDGET_BLOCKED, EVIDENCE_SCOPE_DENIED, PROVIDER_UNAVAILABLE]}
+      - {name: signal_investigation_receipts_started_shape_ck, rule: STARTED has policy, case, dataset snapshot, agent run and job; every no-op has none of those effects and reserves zero}
+      - {name: signal_investigation_receipts_canonical_ck, rule: canonical UTF-8 JSON equals receipt_payload and receipt_digest is its SHA-256}
+    indexes:
+      - {name: signal_investigation_receipts_target_time_idx, columns: [rule_version_id, target_type, target_id, 'created_at DESC']}
+      - {name: signal_investigation_receipts_case_time_idx, columns: [case_id, 'created_at DESC'], predicate: "disposition = 'STARTED'"}
+    triggers:
+      - {name: signal_investigation_receipts_immutable_guard, timing: BEFORE, events: [UPDATE, DELETE], function: ops.reject_signal_investigation_mutation()}
+    grants:
+      gurine_workflow_worker: [SELECT]
+      gurine_control_api: [SELECT]
+      gurine_auditor: [SELECT]
+      write_rule: process_signal_investigation_v1 owner routine only; runtime roles have no direct INSERT, UPDATE, or DELETE
+    rls: {enabled: false, forced: false, reason: immutable internal service receipt with no direct external or tenant access}
+    retention:
+      record_class: AGENT_RUNTIME_INITIATION_RECEIPT
+      trigger: linked signal, case, run, job, audit, and policy retention closure
+      schedule_binding: 0036_r6b_pipeline_activation.sql binds the exact current nonexpired schedule; the distinct class follows AGENT_RUN_CONTROL_RECEIPT operational-audit schedule semantics
+      data_classification: no direct natural-person identifier is emitted in the canonical receipt payload; signal, case, and target graph references remain potentially linkable and the row is operational-audit evidence
+      legal_hold_key: signal_id
+      backup_behavior: restore with the full referenced initiation graph
+      terminal_action_rule: selected by the approved finite operational-audit schedule; PRESERVE_PUBLIC_REVISION and custom PRESERVE terminal tokens are forbidden
+    repository_roundtrip:
+      write: process one signal exactly once through the owner routine
+      read: resolve the immutable outcome by signal_id or receipt_digest
+      assertions: [one receipt per signal, exact policy revision binding, STARTED all-or-none effects, no-op zero effects, canonical digest equality, immutable mutation denial, direct runtime write denial]
+
+owner_routines:
+  ops.reject_signal_investigation_mutation:
+    signature: ops.reject_signal_investigation_mutation() RETURNS trigger
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, pg_temp], public_execute: false, runtime_execute: []}
+    effect: reject every UPDATE or DELETE of a signal-investigation policy or initiation receipt with SQLSTATE 55000; it never returns a row and cannot silently permit DELETE
+  core.assert_v2_rule_run_snapshot:
+    signature: core.assert_v2_rule_run_snapshot() RETURNS trigger
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, pg_temp], public_execute: false, runtime_execute: []}
+    effect: a nonnull v2 rule-run snapshot must resolve to the exact READY DETECTION_DATASET identity and digest
+  ops.assert_v2_agent_run_snapshot:
+    signature: ops.assert_v2_agent_run_snapshot() RETURNS trigger
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, pg_temp], public_execute: false, runtime_execute: []}
+    effect: every AgentRunV2 row must resolve to the exact READY AGENT_CASE snapshot identity and digest
+  ops.agent_tool_schema_contract_is_valid:
+    signature: ops.agent_tool_schema_contract_is_valid(text,char(64),char(64)) RETURNS boolean
+    security: {mode: INVOKER IMMUTABLE PARALLEL SAFE, owner: gurine_migrator, search_path: [pg_catalog, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: return true only for one of the thirteen exact tool ID, request-schema digest, and response-schema digest tuples pinned by the active registry; every missing, additional, changed, or cross-tool tuple returns false
+  ops.agent_tool_payload_is_valid:
+    signature: ops.agent_tool_payload_is_valid(text,jsonb,jsonb) RETURNS boolean
+    security: {mode: INVOKER IMMUTABLE PARALLEL SAFE, owner: gurine_migrator, search_path: [pg_catalog, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: require an object request under one of the thirteen closed tool IDs and its exact tool-specific request schemaVersion where declared; an optional result must be an object with the matching tool-specific response schemaVersion
+  ops.assert_v2_corpus_tool_snapshot:
+    signature: ops.assert_v2_corpus_tool_snapshot() RETURNS trigger
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, pg_temp], public_execute: false, runtime_execute: []}
+    effect: agency.profile, contract.search, relationship.neighbors, and supplier.profile calls must belong to an AgentRunV2 bound to one exact READY AGENT_CASE snapshot and must repeat that run ID, snapshot ID, and snapshot digest exactly in the stored request
+  core.guard_proven_supplier_identifier:
+    signature: core.guard_proven_supplier_identifier() RETURNS trigger
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, pg_temp], public_execute: false, runtime_execute: []}
+    effect: a PROVEN_V1 supplier identifier cannot be updated or deleted, and no update may convert a legacy row into proof outside the owner insertion boundary
+  core.begin_dataset_snapshot:
+    signature: core.begin_dataset_snapshot(text,uuid,text,char(64),text,jsonb,bytea,jsonb,bytea,jsonb,bytea,char(64),uuid) RETURNS TABLE(snapshot_id uuid,producer_generation bigint,state text,snapshot_sha256 char(64),reused boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: canonicalize one AGENT_CASE or DETECTION_DATASET build request, serialize generation allocation, replay only the latest matching BUILDING or READY snapshot, or allocate a new generation and insert one BUILDING snapshot
+    replay_contract:
+      key: [snapshot_kind, producer_key, build_request_sha256]
+      replayable_states: [BUILDING, READY]
+      exact_fence: the supplied build_started_audit_event_id must equal the stored audit identity or replay fails closed
+      failed_generation: FAILED is never replayable; a retry requires a newly planned audit identity and allocates the next producer_generation
+    allocation_contract:
+      domains: [snapshot_kind plus producer_key, snapshot_kind plus producer_digest]
+      lock_order: take both distinct advisory transaction lock keys in ascending numeric order before replay lookup or generation allocation so shared keys and shared digests cannot race or deadlock
+      generation: one plus the maximum producer_generation among rows of the same snapshot kind whose producer_key or producer_digest matches the requested build
+    new_build_audit_binding: the referenced audit must plan the inserted snapshot_id and exactly bind SERVICE/analysis-worker, DATASET_SNAPSHOT_BUILD_STARTED, DatasetSnapshot, jobs.operate, SUCCESS, request_id=producer_job_id, details.producerJobId, details.snapshotKind, and details.buildRequestSha256
+  core.finalize_dataset_snapshot:
+    signature: core.finalize_dataset_snapshot(uuid,bigint,text,bigint,char(64),jsonb,bytea,char(64),uuid,text,char(64)) RETURNS TABLE(snapshot_id uuid,state text,version bigint,snapshot_sha256 char(64),member_count bigint)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: lock one BUILDING version, prove the exact terminal audit plus contiguous members and sources with canonical digests, terminalize to READY or the zero-member FAILED shape, and enqueue the closed dataset.snapshot_created.v1 event
+    terminal_audit_binding:
+      exact_fields: [terminal_audit_event_id, snapshot_id, state, terminal_receipt_sha256, action, outcome, object_type, capability]
+      default_actor: {actor_type: SERVICE, actor_id: analysis-worker}
+      automatic_signal_exception: {snapshot_kind: AGENT_CASE, actor_type: SERVICE, actor_id: workflow-worker, sole_origin: ops.process_signal_investigation_v1}
+      state_mapping: {READY: {action: DATASET_SNAPSHOT_READY, outcome: SUCCESS}, FAILED: {action: DATASET_SNAPSHOT_FAILED, outcome: FAILED}}
+    ready_manifest_binding:
+      exact_field_count: 10
+      exact_fields: [schemaVersion, snapshotId, snapshotKind, producerDigest, producerGeneration, selectionSha256, sourceWatermarkSha256, normalizationSetSha256, memberCount, memberSetSha256]
+      header_binding: schemaVersion is dataset-snapshot-manifest.v1; snapshotId and both member arguments equal the call; snapshotKind, producer digest and generation, selection digest, source-watermark digest, and normalization-set digest equal the locked snapshot header
+      closure: missing, additional, stale, or caller-substituted manifest fields fail before digesting or terminalizing the snapshot
+    replay_contract: an already READY or FAILED row returns only when expected_version plus one, state, member count, terminal receipt, terminal audit, and the complete READY manifest or FAILED error shape are byte-for-byte equal; every mismatch fails with SQLSTATE 40001 and no write or duplicate event
+  core.record_supplier_identity_candidate_v1:
+    signature: core.record_supplier_identity_candidate_v1(jsonb) RETURNS TABLE(candidate_id uuid,merge_decision_id uuid,disposition text,recorded boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, pg_temp], public_execute: false, runtime_execute: [gurine_ingest_worker]}
+    effect: deny-only boundary returning (NULL,NULL,MAPPING_ACTIVATION_MISSING,false) with zero DML until an authoritative mapping-activation contract exists; it never verifies an identifier, creates a merge decision, or silently records a candidate
+  ops.process_signal_investigation_v1:
+    signature: ops.process_signal_investigation_v1(uuid,uuid) RETURNS TABLE(disposition text,case_id uuid,dataset_snapshot_id uuid,agent_run_id uuid,job_id uuid,receipt_id uuid,actor_type text,actor_id text,replayed boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, editorial, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_workflow_worker]}
+    dispositions_in_contract_order: [STARTED, POLICY_ABSENT, POLICY_DISABLED, KILL_SWITCH_ACTIVE, BELOW_MIN_SEVERITY, DUPLICATE_SUPPRESSED, DAILY_LIMIT_REACHED, CASE_DAILY_LIMIT_REACHED, BUDGET_BLOCKED, EVIDENCE_SCOPE_DENIED, PROVIDER_UNAVAILABLE]
+    effect: require the workflow-worker session, lock one signal, return its immutable receipt on exact replay, evaluate the latest append-only policy through the closed no-op dispositions, or atomically create and link the case, copy only signal-included members and complete lineage from the exact READY DETECTION_DATASET into a READY AGENT_CASE snapshot, enqueue one queued AgentRunV2 job, append audits, reserve the bounded run budget, and persist the canonical STARTED receipt
+    replay_and_no_op: an existing signal receipt returns the same nine result fields with replayed=true and zero writes; every policy denial appends one service audit plus canonical receipt with null case, snapshot, run, and job identities and reserved_micros_krw=0; a missing or non-array explanation.includedIds is EVIDENCE_SCOPE_DENIED before any STARTED graph is written
+    forbidden_effects: [signal publication-state mutation, case publication-state mutation, suggestion acceptance, supplier verification, identity merge, public claim publication]
+  ops.claim_agent_run_worker_v1:
+    signature: ops.claim_agent_run_worker_v1(uuid) RETURNS TABLE(case_id uuid,agent_type text,objective text,evidence_scope_ids jsonb,input_snapshot_hash char(64),max_cost numeric,version bigint,run_contract_version smallint,dataset_snapshot_id uuid)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: inspect the requested run before mutation and raise SQLSTATE 55000 for run_contract_version=2; only a v1 QUEUED or RUNNING row can retain the legacy claim or replay behavior, with the two additive return columns acting solely as a nullable compatibility bridge
+  ops.transition_agent_run_worker_v1:
+    signature: ops.transition_agent_run_worker_v1(uuid,bigint,text,text,text,jsonb,text,numeric,boolean) RETURNS boolean
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: inspect the requested run before mutation and raise SQLSTATE 55000 for run_contract_version=2; preserve the existing nine-argument v1 transition body for a RUNNING v1 row without inventing any v2 control, proof, service-actor, or receipt authority
+  ops.enqueue_due_detection_snapshot_builds_v1:
+    signature: ops.enqueue_due_detection_snapshot_builds_v1(bigint) RETURNS bigint
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, pg_temp], public_execute: false, runtime_execute: [gurine_scheduler]}
+    effect: reject a null or out-of-range limit outside 1 through 1000 with SQLSTATE 22023; for a valid limit return zero with no DML until the immutable DETECTION_DATASET source-digest preimage and runnable-build authority are decision-complete
+
+OPEN_RISKS:
+  - id: R6B-0035-NORMALIZATION-COMPLETION-CONTRACT
+    risk: The 0025 addendum requires core.complete_normalization_run, but its terminal receipt schema, event type, correlation input, and exact return contract are not decision-complete in the active specifications.
+    fail_closed_disposition: Migration 0035 restores the declared normalization foreign keys and one-active-generation fence but does not invent the ambiguous completion routine. Normalization completion remains unavailable until the missing contract is resolved and reviewed.
+  - id: R6B-0035-DETECTION-SNAPSHOT-SCHEDULER-AUTHORITY
+    risk: The active specifications do not define the immutable source-digest preimage and runnable-build contract needed for a scheduler to create a DETECTION_DATASET job.
+    fail_closed_disposition: ops.enqueue_due_detection_snapshot_builds_v1 validates a bounded 1 through 1000 limit and then returns zero with no DML; the scheduler cannot invent a build until that authority is decision-complete and reviewed.
+  - id: R6B-0035-AGENT-RUN-V2-TRANSITION-AUTHORITY
+    risk: claim_agent_run_worker_v1 does not create the required RUN_STARTED receipt chain, the existing v1 transition routine cannot complete the v2 status, control-state, and terminal-receipt shape, and the active specifications do not decide transition_agent_run_v2's exact signature, proof and receipt contract, or the ANALYSIS_WORKER service actor UUID.
+    fail_closed_disposition: Migration 0035 does not invent a v2 transition authority. The intentionally unseeded policy and the POLICY_ABSENT or POLICY_DISABLED dispositions prevent STARTED by default; if an independently authorized enabled policy initiates a v2 run, it remains QUEUED because both legacy claim and transition routines raise SQLSTATE 55000 before mutation, so no analysis dispatch or terminalization occurs until the missing authority is decision-complete and reviewed.
+  - id: R6B-0035-RETENTION-SCHEDULES
+    status: RESOLVED_BY_0036
+    risk: Migration 0035 originally left AGENT_RUNTIME_POLICY and AGENT_RUNTIME_INITIATION_RECEIPT outside the source-derived record-class schedule registry.
+    resolved_by:
+      migration: db/migrations/0036_r6b_pipeline_activation.sql
+      addendum: specs/database/addendum/0036-r6b-pipeline-activation.yaml
+    closure: Migration 0036 registers both exact relation-class mappings and requires every immutable row to bind retention_schedule_id, retention_record_class, and retention_schedule_digest to an approved current nonexpired operational-audit schedule before a runtime writer may create it; both classes follow AGENT_RUN_CONTROL_RECEIPT schedule semantics and never use PRESERVE_PUBLIC_REVISION.

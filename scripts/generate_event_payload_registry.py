@@ -1,46 +1,96 @@
 #!/usr/bin/env python3
-"""Generate the migration-embedded closed event payload registry.
+"""Generate reviewed forward overrides for closed event payload schemas.
 
-The runtime registry is derived from the hash-pinned base event catalog and
-the repository's reviewed owner-addendum event contracts.  Keeping generation
-mechanical prevents a producer fix from silently weakening a payload schema.
+Migration 0030 is historical authority and must remain byte-stable.  When an
+event producer/consumer contract is corrected later, this generator embeds the
+reviewed source schema in the current additive migration instead of rewriting
+that historical registry.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
-from typing import Any
+import sys
+from typing import Any, Sequence
 
 import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT / "db/migrations/0030_v13_submission_session_hardening.sql"
+TARGET_MIGRATION = ROOT / "db/migrations/0036_r6b_pipeline_activation.sql"
 BASE_CATALOG = ROOT / "specs/events/event-catalog.yaml"
 ADDENDUM_CATALOG = ROOT / "specs/product/addendum-event-contracts.yaml"
-START = "-- BEGIN GENERATED EVENT PAYLOAD REGISTRY\n"
-END = "-- END GENERATED EVENT PAYLOAD REGISTRY\n"
-LEGACY_COMMERCIAL_QUALIFICATION_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": [
-        "deploymentId",
-        "organizationId",
-        "qualificationEpisodeId",
-        "receiptId",
-        "receiptDigest",
-        "sku",
-    ],
-    "properties": {
-        "deploymentId": {"type": "string", "format": "uuid"},
-        "organizationId": {"type": "string", "format": "uuid"},
-        "qualificationEpisodeId": {"type": "string", "format": "uuid"},
-        "receiptId": {"type": "string", "format": "uuid"},
-        "receiptDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "sku": {"type": "string", "const": "EVIDENCE_WORKSPACE_ORGANIZATION_V1"},
-    },
+START = "-- BEGIN GENERATED EVENT PAYLOAD FORWARD OVERRIDES\n"
+END = "-- END GENERATED EVENT PAYLOAD FORWARD OVERRIDES\n"
+
+# Every entry is a separately reviewed forward schema correction.  Keeping this
+# list closed prevents an unrelated catalog edit from silently changing a
+# runtime admission contract in migration 0036.
+ATTACHMENT_SCAN_EVENT_TYPE = "attachment.scan_completed.v1"
+AGENT_RUN_CONTROL_EVENT_TYPE = "agent.run_control_changed.v2"
+FORWARD_OVERRIDE_EVENT_TYPES = (
+    ATTACHMENT_SCAN_EVENT_TYPE,
+    AGENT_RUN_CONTROL_EVENT_TYPE,
+)
+
+AGENT_RUN_CONTROL_REQUIRED_FIELDS = [
+    "runId",
+    "aggregateVersion",
+    "priorStatus",
+    "priorControlState",
+    "nextStatus",
+    "nextControlState",
+    "affectedProviderTurnId",
+    "affectedToolCallId",
+    "reconciliationEvidenceId",
+    "reconciliationEvidenceSha256",
+    "proofKind",
+    "proofSha256",
+    "budgetDisposition",
+    "budgetResolutionSetSha256",
+    "actorKind",
+    "actorId",
+    "reasonCode",
+    "reasonSha256",
+    "occurredAt",
+    "receiptSha256",
+]
+UUID_OR_NULL_SCHEMA = {
+    "oneOf": [
+        {"type": "string", "format": "uuid"},
+        {"type": "null"},
+    ]
 }
+TYPED_ACTOR_ID_SCHEMA = {
+    "oneOf": [
+        {"type": "string", "format": "uuid"},
+        {"type": "null"},
+        {"const": "analysis-worker"},
+    ]
+}
+ACTOR_VARIANT_SCHEMA = [
+    {
+        "properties": {
+            "actorType": {"const": "LEGACY_ACTOR_TYPE_MUST_BE_ABSENT"},
+            "actorId": UUID_OR_NULL_SCHEMA,
+        }
+    },
+    {
+        "required": ["actorType", "actorKind", "actorId"],
+        "properties": {
+            "actorType": {"const": "SERVICE"},
+            "actorKind": {"const": "ANALYSIS_WORKER"},
+            "actorId": {"const": "analysis-worker"},
+        },
+    },
+]
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise ValueError(message)
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -65,8 +115,7 @@ def resolve_refs(value: Any, definitions: dict[str, Any]) -> Any:
         if not isinstance(target, dict):
             raise ValueError(f"missing payload schema definition: {name}")
         siblings = {key: item for key, item in value.items() if key != "$ref"}
-        merged = {**target, **siblings}
-        return resolve_refs(merged, definitions)
+        return resolve_refs({**target, **siblings}, definitions)
     return {
         key: resolve_refs(item, definitions)
         for key, item in value.items()
@@ -78,7 +127,8 @@ def schema_uri(event_type: str) -> str:
     return f"payloads/{event_type.replace('.', '_')}.schema.json"
 
 
-def rows() -> list[tuple[str, str, int, str, dict[str, Any]]]:
+def registry_rows() -> list[tuple[str, str, int, str, dict[str, Any]]]:
+    """Return the effective source registry while preserving closure checks."""
     base = load_yaml(BASE_CATALOG)
     addendum = load_yaml(ADDENDUM_CATALOG)
     result: list[tuple[str, str, int, str, dict[str, Any]]] = []
@@ -129,28 +179,117 @@ def rows() -> list[tuple[str, str, int, str, dict[str, Any]]]:
         seen.add(event_type)
 
     expected = len(base_events) + len(addendum_events)
-    if len(result) != expected or len(seen) != expected:
-        raise ValueError("effective event registry cardinality mismatch")
+    require(
+        len(result) == expected and len(seen) == expected,
+        "effective event registry cardinality mismatch",
+    )
     return sorted(result)
+
+
+def validate_attachment_scan_schema(schema: dict[str, Any]) -> None:
+    expected_required = ["attachment_id", "attachment_kind", "scan_status", "sha256"]
+    require(schema.get("type") == "object", "attachment scan payload must be an object")
+    require(
+        schema.get("additionalProperties") is False,
+        "attachment scan payload must remain closed",
+    )
+    require(
+        schema.get("required") == expected_required,
+        "attachment scan payload required fields drifted",
+    )
+    properties = schema.get("properties")
+    require(isinstance(properties, dict), "attachment scan payload properties missing")
+    require(
+        list(properties) == expected_required,
+        "attachment scan payload property set or order drifted",
+    )
+    require(
+        properties.get("attachment_kind")
+        == {"type": "string", "enum": ["CORRECTION", "RESPONSE"]},
+        "attachment_kind must be the closed CORRECTION/RESPONSE discriminator",
+    )
+
+
+def schema_contains_keyword(value: Any, keyword: str) -> bool:
+    if isinstance(value, list):
+        return any(schema_contains_keyword(item, keyword) for item in value)
+    if not isinstance(value, dict):
+        return False
+    return keyword in value or any(
+        schema_contains_keyword(item, keyword) for item in value.values()
+    )
+
+
+def validate_agent_run_control_schema(schema: dict[str, Any]) -> None:
+    require(schema.get("type") == "object", "agent run control payload must be an object")
+    require(
+        schema.get("additionalProperties") is False,
+        "agent run control payload must remain closed",
+    )
+    require(
+        schema.get("required") == AGENT_RUN_CONTROL_REQUIRED_FIELDS,
+        "agent run control legacy required fields drifted",
+    )
+    properties = schema.get("properties")
+    require(isinstance(properties, dict), "agent run control payload properties missing")
+    expected_properties = AGENT_RUN_CONTROL_REQUIRED_FIELDS.copy()
+    expected_properties.insert(expected_properties.index("actorKind"), "actorType")
+    require(
+        list(properties) == expected_properties,
+        "agent run control payload property set or order drifted",
+    )
+    require(
+        properties.get("actorType") == {"type": "string", "enum": ["SERVICE"]},
+        "actorType must be the optional SERVICE discriminator",
+    )
+    require(
+        properties.get("actorId") == TYPED_ACTOR_ID_SCHEMA,
+        "actorId must admit only legacy UUID/null or analysis-worker",
+    )
+    require(
+        schema.get("oneOf") == ACTOR_VARIANT_SCHEMA,
+        "agent actor legacy/service variant closure drifted",
+    )
+    for unsupported in ("not", "if", "then", "else", "allOf"):
+        require(
+            not schema_contains_keyword(schema, unsupported),
+            f"agent actor schema uses unsupported keyword: {unsupported}",
+        )
+
+
+def forward_override_rows() -> list[tuple[str, str, dict[str, Any]]]:
+    by_event_type = {row[0]: row for row in registry_rows()}
+    result: list[tuple[str, str, dict[str, Any]]] = []
+    for event_type in FORWARD_OVERRIDE_EVENT_TYPES:
+        row = by_event_type.get(event_type)
+        require(row is not None, f"forward override event missing: {event_type}")
+        _, _, _, uri, schema = row
+        if event_type == ATTACHMENT_SCAN_EVENT_TYPE:
+            validate_attachment_scan_schema(schema)
+        elif event_type == AGENT_RUN_CONTROL_EVENT_TYPE:
+            validate_agent_run_control_schema(schema)
+        result.append((event_type, uri, schema))
+    require(
+        len(result) == len(set(FORWARD_OVERRIDE_EVENT_TYPES)),
+        "forward override event types must be unique",
+    )
+    return result
 
 
 def sql_literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def render_registry() -> str:
-    registry_rows = rows()
+def render_forward_overrides() -> str:
+    override_rows = forward_override_rows()
     rendered_rows: list[str] = []
-    for event_type, category, version, uri, schema in registry_rows:
+    for event_type, uri, schema in override_rows:
         payload = json.dumps(schema, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         rendered_rows.append(
-            "    ("
+            "      ("
             + ",".join(
                 [
                     sql_literal(event_type),
-                    sql_literal(category),
-                    str(version),
-                    "true",
                     sql_literal(uri),
                     f"$event_schema${payload}$event_schema$::jsonb",
                 ]
@@ -158,74 +297,83 @@ def render_registry() -> str:
             + ")"
         )
     values = ",\n".join(rendered_rows)
-    effective_types = ",\n    ".join(sql_literal(row[0]) for row in registry_rows)
-    legacy_product_schema = json.dumps(
-        LEGACY_COMMERCIAL_QUALIFICATION_SCHEMA,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    )
+    expected_count = len(override_rows)
     return (
         START
-        + "-- Generated by scripts/generate_event_payload_registry.py.\n"
-        + "ALTER TABLE ops.event_types ADD COLUMN IF NOT EXISTS payload_schema jsonb;\n\n"
-        + "WITH effective_event_types(\n"
-        + "  event_type,category,schema_version,active,payload_schema_uri,payload_schema\n"
-        + ") AS (\n  VALUES\n"
-        + values
-        + "\n)\n"
-        + "INSERT INTO ops.event_types(\n"
-        + "  event_type,category,schema_version,active,payload_schema_uri,payload_schema\n"
-        + ")\n"
-        + "SELECT event_type,category,schema_version,active,payload_schema_uri,payload_schema\n"
-        + "FROM effective_event_types\n"
-        + "ON CONFLICT (event_type) DO UPDATE SET\n"
-        + "  category=EXCLUDED.category,\n"
-        + "  schema_version=EXCLUDED.schema_version,\n"
-        + "  active=EXCLUDED.active,\n"
-        + "  payload_schema_uri=EXCLUDED.payload_schema_uri,\n"
-        + "  payload_schema=EXCLUDED.payload_schema;\n\n"
-        + "UPDATE ops.event_types\n"
-        + "SET active=false\n"
-        + "WHERE event_type NOT IN (\n    "
-        + effective_types
-        + "\n);\n\n"
-        + "UPDATE ops.event_types\n"
-        + "SET payload_schema=$event_schema$"
-        + legacy_product_schema
-        + "$event_schema$::jsonb,\n"
-        + "    payload_schema_uri='legacy/product_commercial_qualification_recorded_v1.compat.schema.json'\n"
-        + "WHERE event_type='product.commercial_qualification_recorded.v1'\n"
-        + "  AND active=false;\n\n"
-        + "DO $$\n"
-        + "DECLARE v_missing text;\n"
+        + "-- Generated by scripts/generate_event_payload_registry.py; do not edit.\n"
+        + "DO $event_payload_override$\n"
+        + "DECLARE\n"
+        + "  v_updated integer;\n"
         + "BEGIN\n"
-        + "  SELECT string_agg(event_type,',' ORDER BY event_type) INTO v_missing\n"
-        + "  FROM ops.event_types WHERE active AND payload_schema IS NULL;\n"
-        + "  IF v_missing IS NOT NULL THEN\n"
-        + "    RAISE EXCEPTION 'active event payload schema missing: %',v_missing;\n"
+        + "  WITH schema_overrides(event_type,payload_schema_uri,payload_schema) AS (\n"
+        + "    VALUES\n"
+        + values
+        + "\n  ), updated AS (\n"
+        + "    UPDATE ops.event_types AS registered\n"
+        + "    SET payload_schema_uri=override.payload_schema_uri,\n"
+        + "        payload_schema=override.payload_schema\n"
+        + "    FROM schema_overrides AS override\n"
+        + "    WHERE registered.event_type=override.event_type\n"
+        + "      AND registered.active\n"
+        + "    RETURNING registered.event_type\n"
+        + "  )\n"
+        + "  SELECT count(*)::integer INTO v_updated FROM updated;\n"
+        + f"  IF v_updated <> {expected_count} THEN\n"
+        + "    RAISE EXCEPTION\n"
+        + "      'event payload forward override cardinality mismatch: expected %, updated %',\n"
+        + f"      {expected_count},v_updated USING ERRCODE='55000';\n"
         + "  END IF;\n"
-        + "END $$;\n"
+        + "END\n"
+        + "$event_payload_override$;\n"
         + END
     )
 
 
-def main() -> None:
-    current = MIGRATION.read_text(encoding="utf-8")
-    generated = render_registry()
-    if START in current:
-        before, rest = current.split(START, 1)
-        _, after = rest.split(END, 1)
-        updated = before + generated + after
-    else:
-        legacy_start = current.index("-- Every outbox writer, including owner routines")
-        legacy_end = current.index(
-            "CREATE OR REPLACE FUNCTION ops.json_schema_value_valid_v1", legacy_start
+def replace_generated_region(current: str, generated: str) -> str:
+    require(current.count(START) == 1, "0036 forward override start marker missing or duplicated")
+    require(current.count(END) == 1, "0036 forward override end marker missing or duplicated")
+    before, rest = current.split(START, 1)
+    _, after = rest.split(END, 1)
+    return before + generated + after
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true")
+    modes.add_argument("--stdout", action="store_true")
+    args = parser.parse_args(argv)
+
+    try:
+        generated = render_forward_overrides()
+        if args.stdout:
+            print(generated, end="")
+            return 0
+        current = TARGET_MIGRATION.read_text(encoding="utf-8")
+        updated = replace_generated_region(current, generated)
+        if args.check:
+            if current != updated:
+                print(
+                    f"event payload forward overrides differ: {TARGET_MIGRATION.relative_to(ROOT)}",
+                    file=sys.stderr,
+                )
+                return 1
+            print(
+                "EVENT_PAYLOAD_FORWARD_OVERRIDES: PASS "
+                f"events={len(FORWARD_OVERRIDE_EVENT_TYPES)}"
+            )
+            return 0
+        TARGET_MIGRATION.write_text(updated, encoding="utf-8")
+        print(
+            "EVENT_PAYLOAD_FORWARD_OVERRIDES: GENERATED "
+            f"events={len(FORWARD_OVERRIDE_EVENT_TYPES)} "
+            f"target={TARGET_MIGRATION.relative_to(ROOT)}"
         )
-        updated = current[:legacy_start] + generated + "\n" + current[legacy_end:]
-    MIGRATION.write_text(updated, encoding="utf-8")
-    print(f"generated {len(rows())} event payload registry rows")
+        return 0
+    except (OSError, ValueError) as error:
+        print(f"EVENT_PAYLOAD_FORWARD_OVERRIDES: FAIL {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

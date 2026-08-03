@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT run_contract_version FROM ops.agent_runs WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "run_contract_version",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_runs",
+            "name": "run_contract_version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9c68e72798a297ca1b47fd7acc704f5cc376a7061072d6267f6cd387cf0f6211"
+}

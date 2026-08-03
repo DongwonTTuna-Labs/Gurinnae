@@ -2,6 +2,14 @@ schema_version: 1
 specification_version: 13.0.0
 status: FINAL
 tools:
+- id: agency.profile
+  mode: READ_ONLY
+  request_schema: addendum-v2/tools/agency-profile.request.schema.json
+  response_schema: addendum-v2/tools/agency-profile.response.schema.json
+  timeout_ms: 8000
+  max_results: 50
+  network: internal-only
+  audit: agent-tool-call-redacted
 - id: claim.language_check
   mode: READ_ONLY
   request_schema: tools/claim-language_check.request.schema.json
@@ -14,6 +22,14 @@ tools:
   mode: READ_ONLY
   request_schema: tools/contract-find_comparables.request.schema.json
   response_schema: tools/contract-find_comparables.response.schema.json
+  timeout_ms: 8000
+  max_results: 50
+  network: internal-only
+  audit: agent-tool-call-redacted
+- id: contract.search
+  mode: READ_ONLY
+  request_schema: addendum-v2/tools/contract-search.request.schema.json
+  response_schema: addendum-v2/tools/contract-search.response.schema.json
   timeout_ms: 8000
   max_results: 50
   network: internal-only
@@ -38,6 +54,14 @@ tools:
   mode: READ_ONLY
   request_schema: tools/evidence-search.request.schema.json
   response_schema: tools/evidence-search.response.schema.json
+  timeout_ms: 8000
+  max_results: 50
+  network: internal-only
+  audit: agent-tool-call-redacted
+- id: relationship.neighbors
+  mode: READ_ONLY
+  request_schema: addendum-v2/tools/relationship-neighbors.request.schema.json
+  response_schema: addendum-v2/tools/relationship-neighbors.response.schema.json
   timeout_ms: 8000
   max_results: 50
   network: internal-only
@@ -70,6 +94,14 @@ tools:
   mode: READ_ONLY
   request_schema: tools/source-locator_verify.request.schema.json
   response_schema: tools/source-locator_verify.response.schema.json
+  timeout_ms: 8000
+  max_results: 50
+  network: internal-only
+  audit: agent-tool-call-redacted
+- id: supplier.profile
+  mode: READ_ONLY
+  request_schema: addendum-v2/tools/supplier-profile.request.schema.json
+  response_schema: addendum-v2/tools/supplier-profile.response.schema.json
   timeout_ms: 8000
   max_results: 50
   network: internal-only

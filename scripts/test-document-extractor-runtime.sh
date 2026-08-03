@@ -5,6 +5,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 container="gurine-document-runtime-$BASHPID"
 database="gurine_document_runtime"
 work="$(mktemp -d -t gurine-document-runtime-XXXXXX)"
+supplier_identifier_hmac_key="ZGV2ZWxvcG1lbnQtb25seS1zdXBwbGllci1pZC1rZXk="
 
 cleanup() {
   status=$?
@@ -174,6 +175,7 @@ SCHEDULER_INSTANCE_ID="runtime-test" SCHEDULER_ONCE=true \
 GURINE_ENV=test OBJECT_STORE_ADAPTER=filesystem \
 OBJECT_STORE_FILESYSTEM_ROOT="$work/objects" \
 INGEST_DATABASE_URL="postgresql://gurine_ingest_worker:ingest_test@127.0.0.1:${postgres_port}/${database}" \
+SUPPLIER_IDENTIFIER_HMAC_KEY="$supplier_identifier_hmac_key" \
 INGEST_ONCE=true HOSTNAME="ingest-runtime-test" \
   target/debug/gurine-ingest-worker
 

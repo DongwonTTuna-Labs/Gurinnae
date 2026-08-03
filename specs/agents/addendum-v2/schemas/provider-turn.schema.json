@@ -246,15 +246,19 @@
             },
             "toolId": {
               "enum": [
+                "agency.profile",
                 "claim.language_check",
                 "contract.find_comparables",
+                "contract.search",
                 "entity.lookup",
                 "evidence.read",
                 "evidence.search",
+                "relationship.neighbors",
                 "response.read",
                 "rule.reproduce",
                 "source.fetch",
-                "source.locator_verify"
+                "source.locator_verify",
+                "supplier.profile"
               ]
             },
             "argumentsSha256": {
