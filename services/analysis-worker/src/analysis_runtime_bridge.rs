@@ -286,6 +286,10 @@ async fn insert_tool_result_source_uses(
     provider_receipt_id: Option<Uuid>,
     corpus_parent_source_use_ids: Option<&[Uuid]>,
 ) -> Result<(), Failure> {
+    // PostgreSQL cannot describe `$2` because it is first consumed by
+    // polymorphic `jsonb_build_object`; SQLx 0.9 therefore reports an unknown
+    // parameter type. Convert this after an approved SQL change adds an exact
+    // cast, or when SQLx/PostgreSQL can infer the existing statement unchanged.
     sqlx::query(
         r#"
         WITH parents AS (

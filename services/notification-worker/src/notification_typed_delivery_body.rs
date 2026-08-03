@@ -16,6 +16,7 @@
         .get("leaseSeconds")
         .and_then(serde_json::Value::as_i64)
         .unwrap_or(60);
+    let lease_seconds = i32::try_from(lease_seconds).map_err(|_| WorkerError::Database)?;
     let transport_policy_version = event
         .payload
         .get("transportPolicyVersion")
@@ -34,25 +35,23 @@
     .await
     .map_err(|_| WorkerError::Database)?;
     let expected_generation = snapshot.generation;
-    let attempt = sqlx::query(
+    let attempt = sqlx::query!(
         "SELECT (ops.claim_outbound_delivery_attempt(ROW($1::uuid,$2::text,$3::char(64),$4::bigint,$5::bigint,$6::integer,$7::text)::ops.outbound_delivery_claim_v1)).*",
+        delivery_id,
+        &worker_id,
+        &lease_token_hash,
+        expected_version,
+        expected_generation,
+        lease_seconds,
+        &transport_policy_version,
     )
-    .bind(delivery_id)
-    .bind(&worker_id)
-    .bind(&lease_token_hash)
-    .bind(expected_version)
-    .bind(expected_generation)
-    .bind(lease_seconds)
-    .bind(&transport_policy_version)
     .fetch_one(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?;
-    let attempt_id: Uuid = attempt
-        .try_get("attempt_id")
-        .map_err(|_| WorkerError::Database)?;
-    let provider_idempotency_key: String = attempt
-        .try_get("provider_idempotency_key_sha256")
-        .map_err(|_| WorkerError::Database)?;
+    let attempt_id = attempt.attempt_id.ok_or(WorkerError::Database)?;
+    let provider_idempotency_key = attempt
+        .provider_idempotency_key_sha256
+        .ok_or(WorkerError::Database)?;
     let rendering_id = snapshot.rendering_id.ok_or(WorkerError::Database)?;
     let rendering_digest = snapshot.rendering_digest.ok_or(WorkerError::Database)?;
     let rendered_sha256 = snapshot.rendered_sha256.ok_or(WorkerError::Database)?;

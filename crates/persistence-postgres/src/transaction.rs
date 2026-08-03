@@ -7,22 +7,26 @@ pub enum IsolationLevel {
     Serializable,
 }
 
-impl IsolationLevel {
-    const fn statement(self) -> &'static str {
-        match self {
-            Self::ReadCommitted => "SET TRANSACTION ISOLATION LEVEL READ COMMITTED",
-            Self::RepeatableRead => "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
-            Self::Serializable => "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE",
-        }
-    }
-}
-
 pub async fn set_isolation(
     transaction: &mut Transaction<'_, Postgres>,
     level: IsolationLevel,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query(level.statement())
-        .execute(&mut **transaction)
-        .await?;
+    match level {
+        IsolationLevel::ReadCommitted => {
+            sqlx::query!("SET TRANSACTION ISOLATION LEVEL READ COMMITTED")
+                .execute(&mut **transaction)
+                .await?;
+        }
+        IsolationLevel::RepeatableRead => {
+            sqlx::query!("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+                .execute(&mut **transaction)
+                .await?;
+        }
+        IsolationLevel::Serializable => {
+            sqlx::query!("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+                .execute(&mut **transaction)
+                .await?;
+        }
+    }
     Ok(())
 }

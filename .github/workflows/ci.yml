@@ -20,6 +20,9 @@ jobs:
             --output type=cacheonly \
             --file infra/docker/rust-service/Dockerfile \
             .
+      - name: Verify SQLx offline cache matches live schema
+        run: make test-sqlx-prepare
+
       - name: Verify Bun workspaces
         run: |
           docker run --rm --user "$(id -u):$(id -g)" \

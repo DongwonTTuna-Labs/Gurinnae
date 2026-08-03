@@ -228,6 +228,10 @@ async fn insert_model_output_derivation_source_uses(
     let bound_receipt_id = required(receipt.provider_receipt_id).map_err(database)?;
     let bound_receipt_sha256 = required(receipt.btrim).map_err(database)?;
     let output_sha256 = sha256(&canonical_bytes(output)?);
+    // PostgreSQL cannot describe `$3` because it is first consumed by
+    // polymorphic `jsonb_build_object`; SQLx 0.9 therefore reports an unknown
+    // parameter type. Convert this after an approved SQL change adds an exact
+    // cast, or when SQLx/PostgreSQL can infer the existing statement unchanged.
     sqlx::query(
         r#"
         WITH parents AS (

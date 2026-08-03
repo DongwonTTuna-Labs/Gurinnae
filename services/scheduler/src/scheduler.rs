@@ -5,7 +5,7 @@ use croner::Cron;
 use gurine_jobs::postgres::{ClaimedJob, Worker, recover_expired};
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
 use serde_json::{Value, json};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use thiserror::Error;
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -386,7 +386,7 @@ pub async fn schedule_delivery_poll_requests(
     pool: &PgPool,
     limit: i64,
 ) -> Result<u64, SchedulerError> {
-    let rows = sqlx::query(
+    let rows = sqlx::query!(
         r#"SELECT id,version,channel,provider_message_id,provider_config_id,
                 provider_config_version,provider_configuration_digest,
                 provider_preflight_receipt_id,provider_preflight_receipt_digest
@@ -396,34 +396,22 @@ pub async fn schedule_delivery_poll_requests(
             AND provider_message_id IS NOT NULL AND dispatch_eligible
             AND next_attempt_at<=clock_timestamp()
           ORDER BY next_attempt_at,id LIMIT $1"#,
+        limit,
     )
-    .bind(limit)
     .fetch_all(pool)
     .await
     .map_err(SchedulerError::Database)?;
     let mut emitted = 0_u64;
     for row in rows {
-        let id: Uuid = row.try_get("id").map_err(SchedulerError::Database)?;
-        let version: i64 = row.try_get("version").map_err(SchedulerError::Database)?;
-        let channel: String = row.try_get("channel").map_err(SchedulerError::Database)?;
-        let provider_message_id: String = row
-            .try_get("provider_message_id")
-            .map_err(SchedulerError::Database)?;
-        let config_id: Uuid = row
-            .try_get("provider_config_id")
-            .map_err(SchedulerError::Database)?;
-        let config_version: i64 = row
-            .try_get("provider_config_version")
-            .map_err(SchedulerError::Database)?;
-        let configuration_digest: String = row
-            .try_get("provider_configuration_digest")
-            .map_err(SchedulerError::Database)?;
-        let preflight_id: Uuid = row
-            .try_get("provider_preflight_receipt_id")
-            .map_err(SchedulerError::Database)?;
-        let preflight_digest: String = row
-            .try_get("provider_preflight_receipt_digest")
-            .map_err(SchedulerError::Database)?;
+        let id = row.id;
+        let version = row.version;
+        let channel = row.channel;
+        let provider_message_id = required_poll_column(row.provider_message_id)?;
+        let config_id = required_poll_column(row.provider_config_id)?;
+        let config_version = required_poll_column(row.provider_config_version)?;
+        let configuration_digest = required_poll_column(row.provider_configuration_digest)?;
+        let preflight_id = required_poll_column(row.provider_preflight_receipt_id)?;
+        let preflight_digest = required_poll_column(row.provider_preflight_receipt_digest)?;
         let poll_key = format!("communication-provider-poll:{id}:{version}:{provider_message_id}");
         let inserted = sqlx::query!(
             "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) \
@@ -449,6 +437,14 @@ pub async fn schedule_delivery_poll_requests(
         emitted += inserted;
     }
     Ok(emitted)
+}
+
+fn required_poll_column<T>(value: Option<T>) -> Result<T, SchedulerError> {
+    value.ok_or_else(|| {
+        SchedulerError::Database(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })
 }
 
 fn to_chrono(value: OffsetDateTime) -> Result<DateTime<Utc>, SchedulerError> {

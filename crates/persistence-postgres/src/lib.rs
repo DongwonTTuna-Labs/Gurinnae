@@ -6,7 +6,6 @@ pub mod economics;
 pub mod hypothesis_recursion;
 pub mod idempotency;
 pub mod identity;
-pub mod jobs;
 pub mod journey_registry;
 pub mod mappers;
 pub mod outbox;

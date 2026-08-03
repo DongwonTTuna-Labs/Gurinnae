@@ -524,6 +524,10 @@ async fn finish_source_run(
     .execute(&mut *tx)
     .await
     .map_err(database)?;
+    // PostgreSQL cannot describe `$2` inside polymorphic
+    // `jsonb_build_object`; SQLx 0.9 therefore reports an unknown parameter
+    // type. Convert this after an approved SQL change adds an exact cast, or
+    // when SQLx/PostgreSQL can infer the existing statement unchanged.
     sqlx::query(
         "UPDATE ops.source_registry SET configuration=configuration || jsonb_build_object( \
            'activationReceipt',jsonb_build_object('passedAt',clock_timestamp(), \

@@ -158,6 +158,10 @@ async fn load_approved_action(
     generation: i64,
     event_payload: Value,
 ) -> Result<ApprovedAction, Failure> {
+    // The current migration tree, including migration 0030, does not define
+    // `ops.load_action_execution_v1`, so SQLx cannot describe this call.
+    // Convert it after the authority schema adds the declared procedure and
+    // the offline metadata is regenerated.
     let row = sqlx::query("SELECT * FROM ops.load_action_execution_v1($1,$2,$3)")
         .bind(execution_id)
         .bind(generation)
@@ -202,6 +206,10 @@ async fn load_communication_endpoint(
     generation: i64,
     action: &CommunicationAction,
 ) -> Result<sqlx::postgres::PgRow, Failure> {
+    // The current migration tree, including migration 0030, does not define
+    // `ops.load_action_communication_endpoint_v1`, so SQLx cannot describe
+    // this call. Convert it after the authority schema adds the declared
+    // procedure and the offline metadata is regenerated.
     sqlx::query(
         "SELECT * FROM ops.load_action_communication_endpoint_v1($1,$2,$3,$4,$5,$6::char(64),$7)",
     )
@@ -331,6 +339,10 @@ async fn dispatch_communication(
     } = rendering;
     let request_digest =
         sha256(format!("{execution_id}:{generation}:{rendering_id}:{rendered_sha256}").as_bytes());
+    // The current migration tree, including migration 0030, does not define
+    // `ops.dispatch_approved_communication_intent_v1`, so SQLx cannot describe
+    // this call. Convert it after the authority schema adds the declared
+    // procedure and the offline metadata is regenerated.
     let receipt: Value = sqlx::query_scalar(
         "SELECT ops.dispatch_approved_communication_intent_v1($1,$2)",
     )

@@ -64,44 +64,44 @@ async fn insert_provider_turn(
     let (output_schema_id, output_schema_version, output_schema_sha256) =
         output_schema_contract(agent_type);
     let rights_sha256 = model_use_rights_decision_set_sha256(evidence)?;
-    sqlx::query_scalar::<_, Uuid>(
+    sqlx::query_scalar!(
         "SELECT ops.start_agent_provider_turn(
            $1,$2,CAST($3 AS char(64)),CAST($28 AS integer),CAST($28 AS integer),CAST($4 AS char(64)),
            $5,$6,$7,CAST($8 AS char(64)),$9,CAST($10 AS char(64)),
            $11,$12,CAST($13 AS char(64)),$14,$15,CAST($16 AS char(64)),
            $17,CAST($18 AS char(64)),CAST($19 AS char(64)),CAST($20 AS char(64)),
            CAST($21 AS char(64)),$22,$23,$24,$25,$26,$27)",
-    )
-    .bind(turn_id)
-    .bind(run_id)
-    .bind(input_snapshot_sha256)
-    .bind(prior_transcript_sha256)
-    .bind(provider_config_id)
-    .bind(provider)
-    .bind(model)
-    .bind(model_configuration_sha256)
-    .bind(routing_version.to_string())
-    .bind(routing_decision_sha256)
-    .bind(prompt_id)
-    .bind(prompt_version)
-    .bind(prompt_sha256)
-    .bind(output_schema_id)
-    .bind(output_schema_version)
-    .bind(output_schema_sha256)
-    .bind(classification)
-    .bind(rights_sha256)
-    .bind(sha256(
+        turn_id,
+        run_id,
+        input_snapshot_sha256,
+        prior_transcript_sha256,
+        provider_config_id,
+        provider,
+        model,
+        model_configuration_sha256,
+        routing_version.to_string(),
+        routing_decision_sha256,
+        prompt_id,
+        prompt_version,
+        prompt_sha256,
+        output_schema_id,
+        output_schema_version,
+        output_schema_sha256,
+        classification,
+        rights_sha256,
+        sha256(
         format!("budget\0{run_id}\0{maximum_cost_krw}").as_bytes(),
-    ))
-    .bind(idempotency_hash.clone())
-    .bind(request_sha256)
-    .bind(&request_data.request)
-    .bind(request_canonical)
-    .bind(job_id)
-    .bind(case_id)
-    .bind(maximum_cost_krw)
-    .bind(environment.to_ascii_uppercase())
-    .bind(turn_sequence)
+        ),
+        idempotency_hash.clone(),
+        request_sha256,
+        &request_data.request,
+        request_canonical,
+        job_id,
+        case_id,
+        rust_decimal::Decimal::from(maximum_cost_krw),
+        environment.to_ascii_uppercase(),
+        turn_sequence,
+    )
     .fetch_one(&state.pool)
     .await
     .map_err(database)?;
