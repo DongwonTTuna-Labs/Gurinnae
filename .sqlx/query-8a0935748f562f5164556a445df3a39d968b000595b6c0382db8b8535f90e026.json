@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT surface FROM ops.saved_views WHERE id=$1 AND user_id=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "surface",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.saved_views",
+            "name": "surface"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8a0935748f562f5164556a445df3a39d968b000595b6c0382db8b8535f90e026"
+}

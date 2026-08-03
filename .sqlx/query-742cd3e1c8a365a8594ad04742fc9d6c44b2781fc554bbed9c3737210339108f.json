@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM editorial.case_signals WHERE case_id=$1 AND signal_id=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "742cd3e1c8a365a8594ad04742fc9d6c44b2781fc554bbed9c3737210339108f"
+}

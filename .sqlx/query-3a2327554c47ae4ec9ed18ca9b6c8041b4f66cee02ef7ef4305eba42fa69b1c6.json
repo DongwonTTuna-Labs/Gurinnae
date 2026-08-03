@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.user_roles(user_id,role_id,granted_by,reason,expires_at) VALUES($1,$2,$3,'initial invitation grant',$4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3a2327554c47ae4ec9ed18ca9b6c8041b4f66cee02ef7ef4305eba42fa69b1c6"
+}

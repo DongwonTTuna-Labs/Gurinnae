@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT CASE WHEN c.publication_state='NEVER_PUBLISHED' AND c.resolution_code='EXPLAINED' THEN 'PUBLISHED_EXPLAINED' WHEN c.publication_state='NEVER_PUBLISHED' THEN 'PUBLISHED_ANOMALY' ELSE c.publication_state::text END publication_state, GREATEST(COALESCE(c.current_publication_revision,0), COALESCE((SELECT max(r.revision) FROM editorial.publication_revisions r WHERE r.case_id=c.id),0))+1 revision, NULLIF(GREATEST(COALESCE(c.current_publication_revision,0), COALESCE((SELECT max(r.revision) FROM editorial.publication_revisions r WHERE r.case_id=c.id),0)),0) current_publication_revision FROM editorial.cases c WHERE c.id=$1 FOR UPDATE OF c",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "publication_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "revision",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "current_publication_revision",
+        "type_info": "Int4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e8e2e9aa98d49dc8a935a4357910faf0d9a5fff5772882eea76494f03e0555d2"
+}

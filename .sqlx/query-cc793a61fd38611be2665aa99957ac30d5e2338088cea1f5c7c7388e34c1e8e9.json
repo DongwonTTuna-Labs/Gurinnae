@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT communication_provider_config_id FROM ops.communication_provider_bindings WHERE generic_provider_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "communication_provider_config_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_bindings",
+            "name": "communication_provider_config_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cc793a61fd38611be2665aa99957ac30d5e2338088cea1f5c7c7388e34c1e8e9"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.claims SET text=COALESCE($2,text),limitations=COALESCE($3,limitations) WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "574e767ea544d7bcc87ebf8520b6060a2df6ad337c9171ef7f643fe9af9aeea3"
+}

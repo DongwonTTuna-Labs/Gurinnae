@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.agent_suggestions SET status='REJECTED',decision_reason=$2,decided_by=$3,decided_at=clock_timestamp(),version=version+1,decision_kind='REJECT',decision_sha256=CAST($4 AS char(64)),decision_audit_event_id=$5 WHERE id=$1 AND version=$6",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Bpchar",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d878a0a476bd7504cfe04ab61ed7ac71c1ebb006de7bda66ca3502074b69bd0"
+}

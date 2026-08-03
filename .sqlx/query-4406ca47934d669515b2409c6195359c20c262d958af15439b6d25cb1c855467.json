@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.claims(id,case_id,claim_type,text,limitations, validation_status,created_by) VALUES($1,$2,$3::editorial.claim_type,$4,$5,'DRAFT',$6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "editorial.claim_type",
+            "kind": {
+              "Enum": [
+                "FACT",
+                "CALCULATION",
+                "INFERENCE",
+                "LIMITATION",
+                "OFFICIAL_OUTCOME"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4406ca47934d669515b2409c6195359c20c262d958af15439b6d25cb1c855467"
+}

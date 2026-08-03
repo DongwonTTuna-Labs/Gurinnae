@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object( 'incidents',(SELECT count(*) FROM ops.source_incidents WHERE status='OPEN'), 'myTasks',(SELECT count(*) FROM ops.tasks WHERE assignee_user_id=$1 AND status<>'DONE'), 'overdueTasks',(SELECT count(*) FROM ops.tasks WHERE due_at<clock_timestamp() AND status<>'DONE'), 'reviewQueue',(SELECT count(*) FROM editorial.review_assignments WHERE status IN ('ASSIGNED','IN_PROGRESS')), 'failedJobs',(SELECT count(*) FROM ops.jobs WHERE status IN ('FAILED','DEAD_LETTER')), 'unreadNotifications',(SELECT count(*) FROM ops.notifications WHERE user_id=$1 AND read_at IS NULL))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8f3ec1af704bfbce92b6e5cf6b0d391867643b1c65670969ab7ef273b4b8fd41"
+}

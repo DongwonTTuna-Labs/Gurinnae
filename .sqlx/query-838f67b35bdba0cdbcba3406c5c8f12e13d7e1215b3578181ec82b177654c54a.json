@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.case_signals(case_id,signal_id,link_reason,linked_by) VALUES($1,$2,$3,$4) ON CONFLICT(case_id,signal_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "838f67b35bdba0cdbcba3406c5c8f12e13d7e1215b3578181ec82b177654c54a"
+}

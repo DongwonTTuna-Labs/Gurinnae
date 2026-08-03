@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.kill_switches SET scope=$2,state='ACTIVE',reason=$3,activated_by=$4,activated_at=clock_timestamp(),expires_at=$5,deactivated_by=NULL,deactivated_at=NULL,updated_at=clock_timestamp() WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Text",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "335ba6b1c9efdd1708984a1526bc70bdc24acb78ee0ac0175bdb423b31d28a94"
+}

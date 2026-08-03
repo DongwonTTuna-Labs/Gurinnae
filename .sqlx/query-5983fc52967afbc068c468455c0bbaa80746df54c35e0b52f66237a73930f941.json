@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',id,'sourceId',source_id,'mode',mode,'status',status, 'checkpointBefore',checkpoint_before,'checkpointAfter',checkpoint_after,'recordsSeen',records_seen, 'recordsChanged',records_changed,'startedAt',started_at,'completedAt',completed_at, 'reportAvailable',report_object_key IS NOT NULL,'errorDetail',error_detail,'version',version, 'retryOfSourceRunId',retry_of_source_run_id,'requestedFrom',requested_from, 'requestedTo',requested_to,'requestReason',request_reason) FROM ops.source_runs WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5983fc52967afbc068c468455c0bbaa80746df54c35e0b52f66237a73930f941"
+}

@@ -19,13 +19,16 @@ pub async fn consume(
         Uuid::parse_str(assertion.jti).map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
     let expires_at = OffsetDateTime::from_unix_timestamp(assertion.expires_at_unix)
         .map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
-    sqlx::query_scalar("SELECT ops.consume_assertion_jti($1, $2, $3, $4, $5, $6)")
-        .bind(assertion.assertion_type)
-        .bind(jti)
-        .bind(assertion.issuer)
-        .bind(assertion.audience)
-        .bind(expires_at)
-        .bind(assertion.request_digest)
-        .fetch_one(pool)
-        .await
+    sqlx::query_scalar!(
+        "SELECT ops.consume_assertion_jti($1, $2, $3, $4, $5, $6)",
+        assertion.assertion_type,
+        jti,
+        assertion.issuer,
+        assertion.audience,
+        expires_at,
+        assertion.request_digest,
+    )
+    .fetch_one(pool)
+    .await?
+    .ok_or_else(|| sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError)))
 }

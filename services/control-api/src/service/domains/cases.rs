@@ -88,12 +88,14 @@ async fn assign_case(
 ) -> Result<(), ServiceError> {
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
     let assignee = uuid_value(payload, &["assigneeUserId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query("UPDATE editorial.cases SET lead_investigator_id=$2 WHERE id=$1")
-        .bind(case_id)
-        .bind(assignee)
-        .execute(&mut **tx)
-        .await
-        .map_err(db)?;
+    sqlx::query!(
+        "UPDATE editorial.cases SET lead_investigator_id=$2 WHERE id=$1",
+        case_id,
+        assignee,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?;
     upsert_task(
         tx,
         "CASE",
@@ -116,21 +118,27 @@ async fn transition_case(
 ) -> Result<(), ServiceError> {
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
     let target = string_value(payload, "targetState").ok_or(ServiceError::InvalidRequest)?;
-    let current: String =
-        sqlx::query_scalar("SELECT investigation_state::text FROM editorial.cases WHERE id=$1")
-            .bind(case_id)
-            .fetch_one(&mut **tx)
-            .await
-            .map_err(db)?;
+    let current: String = sqlx::query_scalar!(
+        "SELECT investigation_state::text FROM editorial.cases WHERE id=$1",
+        case_id,
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(db)?
+    .ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })?;
     if !valid_case_transition(&current, target) {
         return Err(ServiceError::InvalidStateTransition);
     }
-    sqlx::query(
+    sqlx::query!(
         "UPDATE editorial.cases SET investigation_state=$2::editorial.investigation_state \
          WHERE id=$1",
+        case_id,
+        target as _,
     )
-    .bind(case_id)
-    .bind(target)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -143,7 +151,7 @@ async fn list_case_timeline(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let case_id = query_uuid(parameters, "caseId")?;
-    let items = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'occurredAt',occurred_at,'action',action,'actorId',actor_id,'outcome',outcome::text,'reason',reason,'details',details) ORDER BY occurred_at DESC),'[]'::jsonb) FROM ops.audit_events WHERE object_id=$1::text").bind(case_id.to_string()).fetch_one(pool).await.map_err(db)?;
+    let items = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'occurredAt',occurred_at,'action',action,'actorId',actor_id,'outcome',outcome::text,'reason',reason,'details',details) ORDER BY occurred_at DESC),'[]'::jsonb) FROM ops.audit_events WHERE object_id=$1::text", case_id.to_string()).fetch_one(pool).await.map_err(db)?.ok_or_else(|| db(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     list_response(items, parameters)
 }
 
@@ -151,7 +159,7 @@ async fn list_internal_cases(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'slug',public_slug,'title',title,'investigationState',investigation_state::text,'publicationState',publication_state::text,'priority',priority,'leadInvestigatorId',lead_investigator_id,'version',version,'updatedAt',updated_at) ORDER BY updated_at DESC),'[]'::jsonb) FROM editorial.cases").fetch_one(pool).await.map_err(db)?;
+    let items = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'slug',public_slug,'title',title,'investigationState',investigation_state::text,'publicationState',publication_state::text,'priority',priority,'leadInvestigatorId',lead_investigator_id,'version',version,'updatedAt',updated_at) ORDER BY updated_at DESC),'[]'::jsonb) FROM editorial.cases").fetch_one(pool).await.map_err(db)?.ok_or_else(|| db(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     list_response(items, parameters)
 }
 
@@ -164,7 +172,7 @@ async fn search_internal_records(
         .filter(|value| !value.trim().is_empty())
         .ok_or(ServiceError::InvalidRequest)?;
     let pattern = format!("%{}%", query.replace('%', "\\%").replace('_', "\\_"));
-    let items = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(item),'[]'::jsonb) FROM (SELECT jsonb_build_object('resultType','CASE','id',id,'title',title,'summary',summary) item,updated_at sort_at FROM editorial.cases WHERE title ILIKE $1 ESCAPE '\\' OR summary ILIKE $1 ESCAPE '\\' UNION ALL SELECT jsonb_build_object('resultType','EVIDENCE','id',id,'title',title,'summary',description),updated_at FROM editorial.evidence WHERE title ILIKE $1 ESCAPE '\\' OR description ILIKE $1 ESCAPE '\\' ORDER BY sort_at DESC LIMIT 100) results").bind(pattern).fetch_one(pool).await.map_err(db)?;
+    let items = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(item),'[]'::jsonb) FROM (SELECT jsonb_build_object('resultType','CASE','id',id,'title',title,'summary',summary) item,updated_at sort_at FROM editorial.cases WHERE title ILIKE $1 ESCAPE '\\' OR summary ILIKE $1 ESCAPE '\\' UNION ALL SELECT jsonb_build_object('resultType','EVIDENCE','id',id,'title',title,'summary',description),updated_at FROM editorial.evidence WHERE title ILIKE $1 ESCAPE '\\' OR description ILIKE $1 ESCAPE '\\' ORDER BY sort_at DESC LIMIT 100) results", pattern).fetch_one(pool).await.map_err(db)?.ok_or_else(|| db(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     list_response(items, parameters)
 }
 

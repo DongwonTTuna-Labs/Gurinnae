@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',id,'jobType',job_type,'queue',queue,'status',status::text, 'priority',priority,'payload',payload,'runAfter',run_after,'leaseOwner',lease_owner, 'leaseExpiresAt',lease_expires_at,'fencingToken',fencing_token,'attemptCount',attempt_count, 'maxAttempts',max_attempts,'lastErrorCode',last_error_code,'lastErrorDetail',last_error_detail, 'version',version,'createdAt',created_at,'updatedAt',updated_at,'completedAt',completed_at) FROM ops.jobs WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "758e40b91d76458020574a8f69217016a46caef828339d0c61a4920fb4d659e0"
+}

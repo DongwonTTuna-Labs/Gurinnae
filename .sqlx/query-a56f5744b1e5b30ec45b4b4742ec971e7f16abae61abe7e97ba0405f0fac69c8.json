@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT case_id FROM editorial.publication_revisions WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "case_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a56f5744b1e5b30ec45b4b4742ec971e7f16abae61abe7e97ba0405f0fac69c8"
+}

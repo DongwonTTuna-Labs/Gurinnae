@@ -178,11 +178,11 @@ async fn begin_idempotency<'a>(
     // owner routines require this before their first statement; applying it
     // here also prevents a caller from accidentally running a mixed-strength
     // transaction through the generic dispatcher.
-    sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+    sqlx::query!("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
         .execute(&mut *transaction)
         .await
         .map_err(db)?;
-    let claimed = sqlx::query(
+    let claimed = sqlx::query!(
         "INSERT INTO ops.idempotency_keys(scope,key_hash,request_hash,expires_at) \
          VALUES($1,$2,$3,clock_timestamp()+interval '24 hours') \
          ON CONFLICT(scope,key_hash) DO UPDATE SET \
@@ -190,51 +190,44 @@ async fn begin_idempotency<'a>(
          resource_type=NULL,resource_id=NULL,created_at=clock_timestamp(), \
          expires_at=EXCLUDED.expires_at \
          WHERE ops.idempotency_keys.expires_at<=clock_timestamp()",
+        &key.scope,
+        &key.key_hash,
+        &key.request_hash,
     )
-    .bind(&key.scope)
-    .bind(&key.key_hash)
-    .bind(&key.request_hash)
     .execute(&mut *transaction)
     .await
     .map_err(db)?
     .rows_affected();
-    let receipt = sqlx::query(
+    let receipt = sqlx::query!(
         "SELECT request_hash,response_status,response_body FROM ops.idempotency_keys \
          WHERE scope=$1 AND key_hash=$2 AND expires_at>clock_timestamp() FOR UPDATE",
+        &key.scope,
+        &key.key_hash,
     )
-    .bind(&key.scope)
-    .bind(&key.key_hash)
     .fetch_optional(&mut *transaction)
     .await
     .map_err(db)?
     .ok_or(ServiceError::IdempotencyConflict)?;
-    if receipt
-        .try_get::<String, _>("request_hash")
-        .map_err(db)?
-        .trim()
-        != key.request_hash
-    {
+    if receipt.request_hash.trim() != key.request_hash {
         return Err(ServiceError::IdempotencyConflict);
     }
     let replay = if claimed == 0 {
-        replay_output(&receipt)?.ok_or(ServiceError::IdempotencyConflict)?
+        replay_output(receipt.response_status, receipt.response_body)?
+            .ok_or(ServiceError::IdempotencyConflict)?
     } else {
         return Ok((transaction, key, None));
     };
     Ok((transaction, key, Some(replay)))
 }
 
-fn replay_output(row: &sqlx::postgres::PgRow) -> Result<Option<Output>, ServiceError> {
-    let Some(status) = row
-        .try_get::<Option<i32>, _>("response_status")
-        .map_err(db)?
-    else {
+fn replay_output(
+    status: Option<i32>,
+    response: Option<Value>,
+) -> Result<Option<Output>, ServiceError> {
+    let Some(status) = status else {
         return Ok(None);
     };
-    let Some(response) = row
-        .try_get::<Option<Value>, _>("response_body")
-        .map_err(db)?
-    else {
+    let Some(response) = response else {
         return Ok(None);
     };
     Ok(Some(Output {
@@ -258,15 +251,15 @@ async fn previous_case_state(
         return Ok(None);
     }
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query_scalar::<_, String>(
+    let state = sqlx::query_scalar!(
         "SELECT investigation_state::text FROM editorial.cases WHERE id=$1 FOR UPDATE",
+        case_id,
     )
-    .bind(case_id)
     .fetch_optional(&mut **transaction)
     .await
     .map_err(db)?
-    .map(Some)
-    .ok_or(ServiceError::NotFound)
+    .ok_or(ServiceError::NotFound)?;
+    required_sqlx_value(state).map(Some)
 }
 
 struct PreparedCommand {
@@ -301,17 +294,18 @@ async fn prepare_command(
             uuid_value(payload_object, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
         let snapshot_id = uuid_value(payload_object, &["reviewSnapshotId"])
             .ok_or(ServiceError::InvalidRequest)?;
-        let valid = sqlx::query_scalar::<_, bool>(
+        let valid = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM editorial.review_snapshots s \
              JOIN editorial.cases c ON c.id=s.case_id \
              WHERE s.id=$1 AND s.case_id=$2 AND c.current_review_snapshot_id=$1 \
                AND s.unresolved_blockers='[]'::jsonb)",
+            snapshot_id,
+            case_id,
         )
-        .bind(snapshot_id)
-        .bind(case_id)
         .fetch_one(&mut **transaction)
         .await
         .map_err(db)?;
+        let valid = required_sqlx_value(valid)?;
         if !valid {
             return Err(ServiceError::InvalidRequest);
         }
@@ -386,11 +380,11 @@ async fn schedule_rule_activation(
         dedupe.clone(),
     )
     .await?;
-    sqlx::query(
+    sqlx::query!(
         "UPDATE ops.jobs SET run_after=$2 WHERE job_type='RULE_ACTIVATION' AND dedupe_key=$1",
+        dedupe,
+        effective_at,
     )
-    .bind(dedupe)
-    .bind(effective_at)
     .execute(&mut **transaction)
     .await
     .map_err(db)?;
@@ -454,18 +448,18 @@ async fn finalize_command(
     )?;
     let pending_domain_events =
         enqueue_command_events(operation, &candidates, prepared, transaction).await?;
-    let completed = sqlx::query(
+    let completed = sqlx::query!(
         "UPDATE ops.idempotency_keys SET response_status=$4,response_body=$5,resource_type=$6,resource_id=$7 \
          WHERE scope=$1 AND key_hash=$2 AND request_hash=$3 \
          AND response_status IS NULL AND expires_at>clock_timestamp()",
+        &key.scope,
+        &key.key_hash,
+        &key.request_hash,
+        i32::from(prepared.status_code),
+        &response,
+        prepared.resource_type,
+        prepared.persisted_id.to_string(),
     )
-    .bind(&key.scope)
-    .bind(&key.key_hash)
-    .bind(&key.request_hash)
-    .bind(i32::from(prepared.status_code))
-    .bind(&response)
-    .bind(prepared.resource_type)
-    .bind(prepared.persisted_id.to_string())
     .execute(&mut **transaction)
     .await
     .map_err(db)?

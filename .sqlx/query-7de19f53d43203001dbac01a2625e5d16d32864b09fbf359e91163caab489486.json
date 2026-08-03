@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'taskType',task_type,'objectType',object_type,'objectId',object_id,'title',title,'status',status,'priority',priority,'dueAt',due_at,'blockerCode',blocker_code,'version',version) ORDER BY due_at NULLS LAST,created_at),'[]'::jsonb) FROM ops.tasks WHERE assignee_user_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7de19f53d43203001dbac01a2625e5d16d32864b09fbf359e91163caab489486"
+}

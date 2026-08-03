@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object( 'id',e.id,'contentSha256',btrim(e.content_sha256::text), 'locator',e.source_locator,'updatedAt',e.updated_at, 'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb) ) ORDER BY e.id),'[]'::jsonb) FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.case_id=$1 AND e.id=ANY($2::uuid[]) AND e.verification_status='VERIFIED'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a9b59b4ee264fc5c5bcf7efe509540e0c323105515ff0ceee91e4987be650dba"
+}

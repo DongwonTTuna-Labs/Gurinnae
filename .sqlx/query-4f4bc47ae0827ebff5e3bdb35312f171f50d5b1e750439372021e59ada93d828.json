@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',r.id,'caseId',r.case_id,'revision',r.revision, 'state',r.state::text,'reviewSnapshotId',r.review_snapshot_id, 'publicPayloadSha256',r.public_payload_sha256,'previewSha256',r.preview_sha256, 'publishedBy',r.published_by,'publishedAt',r.published_at, 'supersedesRevision',r.supersedes_revision,'reason',r.reason) FROM editorial.publication_revisions r WHERE r.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4f4bc47ae0827ebff5e3bdb35312f171f50d5b1e750439372021e59ada93d828"
+}

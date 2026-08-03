@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.review_assignments(id,case_id,review_snapshot_id,reviewer_id, status,assigned_by,assigned_at,due_at) VALUES($1,$2,$3,$4,'ASSIGNED',$5,clock_timestamp(),$6) ON CONFLICT(case_id,review_snapshot_id,reviewer_id) DO UPDATE SET status='ASSIGNED',assigned_by=EXCLUDED.assigned_by,assigned_at=clock_timestamp(), due_at=EXCLUDED.due_at,completed_at=NULL,version=editorial.review_assignments.version+1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e2a3ce3392e74dcc8849e5cb99cefec431782600032e50a001d7e186ea71e0c3"
+}

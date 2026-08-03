@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.retraction_drafts(id,publication_revision_id,scope, affected_claim_ids,reason,status,created_by) VALUES($1,$2,$3,$4,$5,'DRAFT',$6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1ce42f7af2f7acef50bcea59742890c840963aefb59182ac240f80770020182b"
+}

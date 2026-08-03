@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.claim_evidence(claim_id,evidence_id,citation_label, citation_order,supports) VALUES($1,$2,$3,$4,'FACT')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "50b4114bef203c4e9feaaf67c4781b667bb04d1f36ba936d95af3b125bf0f83c"
+}

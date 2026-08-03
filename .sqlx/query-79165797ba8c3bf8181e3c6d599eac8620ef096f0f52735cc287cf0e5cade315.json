@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',id,'slug',public_slug,'title',title, 'investigationState',investigation_state::text,'publicationState',publication_state::text, 'resolutionCode',resolution_code::text,'summary',summary,'priority',priority, 'leadInvestigatorId',lead_investigator_id,'editorId',editor_id, 'legalReviewRequired',legal_review_required,'currentReviewSnapshotId',current_review_snapshot_id, 'currentPublicationRevision',current_publication_revision,'version',version, 'createdAt',created_at,'updatedAt',updated_at) FROM editorial.cases WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "79165797ba8c3bf8181e3c6d599eac8620ef096f0f52735cc287cf0e5cade315"
+}

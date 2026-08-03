@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.sessions SET step_up_at=$2 WHERE id=$1 AND revoked_at IS NULL AND expires_at>$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "106705d13d30d7dee26fa6558a474264075800fa20e8ce45c9852a36bcd8f184"
+}

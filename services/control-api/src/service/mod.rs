@@ -18,7 +18,7 @@ use gurine_domain::{case::CASE_TRANSITIONS, state_catalog::InvestigationState};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{AssertSqlSafe, PgPool, Postgres, Row, Transaction};
+use sqlx::{AssertSqlSafe, PgPool, Postgres, Transaction};
 use thiserror::Error;
 use time::{Date, OffsetDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;

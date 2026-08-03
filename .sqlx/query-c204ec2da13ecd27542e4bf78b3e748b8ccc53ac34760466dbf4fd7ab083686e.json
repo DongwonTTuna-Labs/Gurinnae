@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.source_runs SET status='PAUSED',request_reason=$2 WHERE id=$1 AND mode IN ('BACKFILL','DRY_RUN') AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c204ec2da13ecd27542e4bf78b3e748b8ccc53ac34760466dbf4fd7ab083686e"
+}

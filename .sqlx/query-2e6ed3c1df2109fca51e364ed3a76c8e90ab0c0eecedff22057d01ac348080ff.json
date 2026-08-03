@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',u.id,'email',u.email,'displayName',u.display_name, 'status',u.status,'rolesVersion',COALESCE((SELECT max(urv.version) FROM ops.user_roles urv WHERE urv.user_id=u.id AND urv.revoked_at IS NULL),0),'version',u.version, 'roles',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',r.id,'code',r.code, 'name',r.name,'riskLevel',r.risk_level,'expiresAt',ur.expires_at) ORDER BY r.code) FROM ops.user_roles ur JOIN ops.roles r ON r.id=ur.role_id WHERE ur.user_id=u.id AND ur.revoked_at IS NULL),'[]'::jsonb), 'activeSessions',(SELECT count(*) FROM ops.sessions s WHERE s.user_id=u.id AND s.revoked_at IS NULL)) FROM ops.users u WHERE u.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "2e6ed3c1df2109fca51e364ed3a76c8e90ab0c0eecedff22057d01ac348080ff"
+}

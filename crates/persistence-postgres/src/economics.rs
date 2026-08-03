@@ -1,6 +1,6 @@
 use gurine_domain::economics::{MetricStatus, MetricValue};
 use rust_decimal::Decimal;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -37,34 +37,34 @@ pub async fn read_invoice_memberships(
     period_end: time::Date,
     billing_cutoff_at: time::OffsetDateTime,
 ) -> Result<Vec<InvoiceMembershipRow>, sqlx::Error> {
-    sqlx::query(
+    sqlx::query!(
         "SELECT usage_root_fact_id, usage_fact_id, usage_fact_digest, meter_kind::text,
                 period_start, period_end, measurement_state::text,
                 membership_kind::text, current_invoice_id, current_membership_digest,
                 blocker_code
            FROM ops.read_invoice_membership_v1($1,$2,$3,$4,$5)",
+        contract_period_id,
+        contract_digest,
+        period_start,
+        period_end,
+        billing_cutoff_at,
     )
-    .bind(contract_period_id)
-    .bind(contract_digest)
-    .bind(period_start)
-    .bind(period_end)
-    .bind(billing_cutoff_at)
     .fetch_all(pool)
     .await?
     .into_iter()
     .map(|row| {
         Ok(InvoiceMembershipRow {
-            usage_root_fact_id: row.try_get("usage_root_fact_id")?,
-            usage_fact_id: row.try_get("usage_fact_id")?,
-            usage_fact_digest: row.try_get("usage_fact_digest")?,
-            meter_kind: row.try_get("meter_kind")?,
-            period_start: row.try_get("period_start")?,
-            period_end: row.try_get("period_end")?,
-            measurement_state: row.try_get("measurement_state")?,
-            membership_kind: row.try_get("membership_kind")?,
-            current_invoice_id: row.try_get("current_invoice_id")?,
-            current_membership_digest: row.try_get("current_membership_digest")?,
-            blocker_code: row.try_get("blocker_code")?,
+            usage_root_fact_id: required(row.usage_root_fact_id)?,
+            usage_fact_id: required(row.usage_fact_id)?,
+            usage_fact_digest: required(row.usage_fact_digest)?,
+            meter_kind: required(row.meter_kind)?,
+            period_start: required(row.period_start)?,
+            period_end: required(row.period_end)?,
+            measurement_state: required(row.measurement_state)?,
+            membership_kind: row.membership_kind,
+            current_invoice_id: row.current_invoice_id,
+            current_membership_digest: row.current_membership_digest,
+            blocker_code: row.blocker_code,
         })
     })
     .collect()
@@ -77,36 +77,40 @@ pub async fn read_cac_metric_inputs(
     reporting_currency: &str,
     accounting_policy_digest: &str,
 ) -> Result<Vec<CacMetricInputRow>, sqlx::Error> {
-    sqlx::query(
+    sqlx::query!(
         "SELECT organization_id, acquisition_amount, attribution_state,
                 acquisition_source_receipt_digest, input_set_digest,
-                metric_status, reason_code
+                metric_status AS \"metric_status?: String\", reason_code
            FROM ops.read_cac_metric_inputs_v1($1,$2,$3,$4)",
+        period_start,
+        period_end,
+        reporting_currency,
+        accounting_policy_digest,
     )
-    .bind(period_start)
-    .bind(period_end)
-    .bind(reporting_currency)
-    .bind(accounting_policy_digest)
     .fetch_all(pool)
     .await?
     .into_iter()
     .map(|row| {
-        let status = match row.try_get::<String, _>("metric_status")?.as_str() {
+        let status = match required(row.metric_status)?.as_str() {
             "KNOWN" => MetricStatus::Known,
             "NOT_APPLICABLE" => MetricStatus::NotApplicable,
             _ => MetricStatus::Unknown,
         };
         Ok(CacMetricInputRow {
-            organization_id: row.try_get("organization_id")?,
-            acquisition_amount: row.try_get("acquisition_amount")?,
-            attribution_state: row.try_get("attribution_state")?,
-            acquisition_source_receipt_digest: row.try_get("acquisition_source_receipt_digest")?,
-            input_set_digest: row.try_get("input_set_digest")?,
+            organization_id: row.organization_id,
+            acquisition_amount: required(row.acquisition_amount)?,
+            attribution_state: required(row.attribution_state)?,
+            acquisition_source_receipt_digest: row.acquisition_source_receipt_digest,
+            input_set_digest: required(row.input_set_digest)?,
             metric_status: status,
-            reason_code: row.try_get("reason_code")?,
+            reason_code: required(row.reason_code)?,
         })
     })
     .collect()
+}
+
+fn required<T>(value: Option<T>) -> Result<T, sqlx::Error> {
+    value.ok_or_else(|| sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError)))
 }
 
 pub fn metric_value<T>(

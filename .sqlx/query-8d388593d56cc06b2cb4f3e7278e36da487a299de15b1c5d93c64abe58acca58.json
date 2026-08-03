@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.source_runs(id,source_id,mode,status,request_reason,requested_by) VALUES($1,$2,$3,'QUEUED',$4,$5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8d388593d56cc06b2cb4f3e7278e36da487a299de15b1c5d93c64abe58acca58"
+}

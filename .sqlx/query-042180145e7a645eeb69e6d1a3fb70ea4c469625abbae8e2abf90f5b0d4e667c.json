@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'notificationType',notification_type,'title',title,'body',body,'readAt',read_at,'version',version,'createdAt',created_at) ORDER BY created_at DESC),'[]'::jsonb) FROM ops.notifications WHERE user_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "042180145e7a645eeb69e6d1a3fb70ea4c469625abbae8e2abf90f5b0d4e667c"
+}

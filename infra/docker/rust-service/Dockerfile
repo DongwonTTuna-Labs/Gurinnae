@@ -1,12 +1,15 @@
 # syntax=docker/dockerfile:1.12
 FROM rust:1.97.0-bookworm@sha256:7d0723df719e7f213b69dc7c8c595985c3f4b060cfbee4f7bc0e347a86fe3b6a AS build
 WORKDIR /workspace
+ENV SQLX_OFFLINE=true
 COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY .sqlx .sqlx
 COPY crates crates
 COPY services services
 COPY xtask xtask
 COPY db db
 COPY specs specs
+COPY verification verification
 COPY vendor vendor
 COPY tests tests
 RUN --mount=type=cache,id=gurine-cargo-registry,target=/usr/local/cargo/registry \
@@ -174,7 +177,9 @@ ENTRYPOINT ["/app/gurine-document-extractor"]
 
 FROM rust:1.97.0-bookworm@sha256:7d0723df719e7f213b69dc7c8c595985c3f4b060cfbee4f7bc0e347a86fe3b6a AS document-extractor-test
 WORKDIR /workspace
+ENV SQLX_OFFLINE=true
 COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY .sqlx .sqlx
 COPY crates crates
 COPY services services
 COPY xtask xtask
@@ -220,12 +225,12 @@ RUN cargo test --locked --workspace --all-targets --no-run
 # fail-closed probe into a false build failure; the runtime gate remains
 # mandatory in Makefile:test-rust-workspace and verify-prearchive.
 
-FROM rust-workspace-test AS sqlx-prepare-test
+FROM build AS sqlx-prepare-test
 RUN cargo install sqlx-cli --version 0.9.0 --locked --no-default-features --features rustls,postgres
 ARG SQLX_PREPARE_NONCE
 RUN --mount=type=secret,id=database_url,required=true \
     test -n "$SQLX_PREPARE_NONCE" \
-    && DATABASE_URL="$(cat /run/secrets/database_url)" cargo sqlx prepare --workspace --check
+    && SQLX_OFFLINE=false DATABASE_URL="$(cat /run/secrets/database_url)" cargo sqlx prepare --workspace --check -- --all-targets
 
 FROM python:3.13.5-slim-bookworm@sha256:4c2cf9917bd1cbacc5e9b07320025bdb7cdf2df7b0ceaccb55e9dd7e30987419 AS authority-validator
 RUN apt-get update \

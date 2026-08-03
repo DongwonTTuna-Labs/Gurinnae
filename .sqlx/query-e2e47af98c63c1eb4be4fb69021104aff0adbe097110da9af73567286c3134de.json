@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT core.record_supplier_relationship_assertion_v1($1::jsonb)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "record_supplier_relationship_assertion_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e2e47af98c63c1eb4be4fb69021104aff0adbe097110da9af73567286c3134de"
+}

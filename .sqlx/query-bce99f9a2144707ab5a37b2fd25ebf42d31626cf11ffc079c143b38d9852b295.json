@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.rule_versions(id,rule_id,version,name,description,configuration, code_digest,status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,'DRAFT',$8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Bpchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bce99f9a2144707ab5a37b2fd25ebf42d31626cf11ffc079c143b38d9852b295"
+}

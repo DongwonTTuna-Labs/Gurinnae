@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.source_incidents SET status='ACKNOWLEDGED',acknowledged_by=$2, acknowledged_at=clock_timestamp() WHERE source_id=$1 AND status='OPEN'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cd9b53c30e9a81574dea7aa95ec46510366e95446721bc0e343944fdb6c5886e"
+}

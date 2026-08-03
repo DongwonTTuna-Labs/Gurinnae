@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.investigation_state::text current_state,c.publication_state::text publication_state, c.resolution_code::text resolution_code,c.lead_investigator_id IS NOT NULL assigned_investigator, EXISTS(SELECT 1 FROM editorial.case_signals cs WHERE cs.case_id=c.id) at_least_one_signal, EXISTS(SELECT 1 FROM editorial.case_signals cs JOIN ops.signal_triages st ON st.signal_id=cs.signal_id WHERE cs.case_id=c.id AND st.result IN ('PROMOTE_TO_CASE','LINK_TO_CASE')) triage_decision_investigate, EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id AND r.status IN ('SENT','VIEWED') AND r.due_at>clock_timestamp()) validated_response_request, EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id AND r.status IN ('SENT','VIEWED') AND r.due_at>clock_timestamp()) due_at_in_future, EXISTS(SELECT 1 FROM editorial.responses r WHERE r.case_id=c.id AND r.verified_at IS NOT NULL) OR EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id AND (r.status IN ('SUBMITTED','CLOSED','EXPIRED') OR r.due_at<=clock_timestamp())) response_received_or_deadline_handled, EXISTS(SELECT 1 FROM editorial.claims cl WHERE cl.case_id=c.id) AND NOT EXISTS(SELECT 1 FROM editorial.claims cl WHERE cl.case_id=c.id AND cl.validation_status<>'VALID') claims_valid, EXISTS(SELECT 1 FROM editorial.evidence e WHERE e.case_id=c.id) AND NOT EXISTS(SELECT 1 FROM editorial.evidence e WHERE e.case_id=c.id AND e.verification_status<>'VERIFIED') evidence_verified, NOT EXISTS(SELECT 1 FROM editorial.response_requests r WHERE r.case_id=c.id AND r.status IN ('DRAFT','SENT','VIEWED')) response_policy_satisfied, c.legal_review_required legal_review_required, EXISTS(SELECT 1 FROM editorial.review_snapshots s WHERE s.id=c.current_review_snapshot_id AND s.case_id=c.id AND s.case_version=c.version AND s.unresolved_blockers='[]'::jsonb) snapshot_current, EXISTS(SELECT 1 FROM editorial.review_decisions d JOIN ops.user_roles ur ON ur.user_id=d.reviewer_id AND ur.revoked_at IS NULL AND (ur.expires_at IS NULL OR ur.expires_at>clock_timestamp()) JOIN ops.roles role ON role.id=ur.role_id AND role.code='EDITOR' WHERE d.review_snapshot_id=c.current_review_snapshot_id AND d.decision='APPROVE') editorial_approved, EXISTS(SELECT 1 FROM editorial.review_decisions d JOIN ops.user_roles ur ON ur.user_id=d.reviewer_id AND ur.revoked_at IS NULL AND (ur.expires_at IS NULL OR ur.expires_at>clock_timestamp()) JOIN ops.roles role ON role.id=ur.role_id AND role.code='LEGAL_REVIEWER' WHERE d.review_snapshot_id=c.current_review_snapshot_id AND d.decision='APPROVE') legal_approved, EXISTS(SELECT 1 FROM editorial.evidence e WHERE e.case_id=c.id AND e.created_at>c.updated_at) new_material_evidence, c.publication_state='NEVER_PUBLISHED' OR COALESCE(to_timestamp($2),'-infinity'::timestamptz) > COALESCE((SELECT max(p.published_at) FROM editorial.publication_revisions p WHERE p.case_id=c.id),'-infinity'::timestamptz) reauth_if_previously_published FROM editorial.cases c WHERE c.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "current_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "publication_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "resolution_code",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "assigned_investigator",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "at_least_one_signal",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "triage_decision_investigate",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "validated_response_request",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "due_at_in_future",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "response_received_or_deadline_handled",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "claims_valid",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "evidence_verified",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "response_policy_satisfied",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "legal_review_required",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "legal_review_required"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "snapshot_current",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "editorial_approved",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "legal_approved",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "new_material_evidence",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "reauth_if_previously_published",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "b7ac86e8cec49c43cb764377117c3ff18b75934687e05a41e11097e30844cca9"
+}

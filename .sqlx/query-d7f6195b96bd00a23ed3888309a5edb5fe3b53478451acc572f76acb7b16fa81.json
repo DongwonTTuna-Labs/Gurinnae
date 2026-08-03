@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.anomaly_signals SET assigned_user_id=$2,status='ASSIGNED' WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d7f6195b96bd00a23ed3888309a5edb5fe3b53478451acc572f76acb7b16fa81"
+}

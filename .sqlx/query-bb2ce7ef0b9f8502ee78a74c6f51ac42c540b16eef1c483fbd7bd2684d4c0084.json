@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_versions SET status='SHADOW',activation_reason=$2 WHERE id=$1 AND status='DRAFT'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bb2ce7ef0b9f8502ee78a74c6f51ac42c540b16eef1c483fbd7bd2684d4c0084"
+}

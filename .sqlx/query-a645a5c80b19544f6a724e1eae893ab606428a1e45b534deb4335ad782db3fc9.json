@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.anomaly_signals\n            SET status='DUPLICATE'::core.signal_status,\n                duplicate_signal_id=$2, duplicate_relationship=$3,\n                duplicate_reason_digest=$4, duplicate_marked_by=$5,\n                duplicate_marked_at=clock_timestamp(), version=version+1\n          WHERE id=$1 AND version=$6 AND status <> 'DUPLICATE'::core.signal_status",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Bpchar",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a645a5c80b19544f6a724e1eae893ab606428a1e45b534deb4335ad782db3fc9"
+}

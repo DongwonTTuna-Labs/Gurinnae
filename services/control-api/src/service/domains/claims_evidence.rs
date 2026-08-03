@@ -130,21 +130,19 @@ async fn add_claim(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.claims(id,case_id,claim_type,text,limitations, \
          validation_status,created_by) VALUES($1,$2,$3::editorial.claim_type,$4,$5,'DRAFT',$6)",
-    )
-    .bind(id)
-    .bind(case_id)
-    .bind(string_value(payload, "claimType").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "text").ok_or(ServiceError::InvalidRequest)?)
-    .bind(
+        id,
+        case_id,
+        string_value(payload, "claimType").ok_or(ServiceError::InvalidRequest)? as _,
+        string_value(payload, "text").ok_or(ServiceError::InvalidRequest)?,
         payload
             .get("limitations")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -160,23 +158,23 @@ async fn add_evidence(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.evidence(id,case_id,evidence_type,title,source_document_id, \
          source_url,source_locator,content_sha256,classification,verification_status, \
          description,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8, \
          $9::editorial.evidence_classification,'PENDING',$10,$11)",
+        id,
+        case_id,
+        string_value(payload, "evidenceType").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "title").ok_or(ServiceError::InvalidRequest)?,
+        uuid_value(payload, &["sourceDocumentId"]),
+        payload.get("sourceUrl").and_then(Value::as_str),
+        string_value(payload, "locator").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "contentHash").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "classification").ok_or(ServiceError::InvalidRequest)? as _,
+        payload.get("notes").and_then(Value::as_str),
+        actor,
     )
-    .bind(id)
-    .bind(case_id)
-    .bind(string_value(payload, "evidenceType").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "title").ok_or(ServiceError::InvalidRequest)?)
-    .bind(uuid_value(payload, &["sourceDocumentId"]))
-    .bind(payload.get("sourceUrl").and_then(Value::as_str))
-    .bind(string_value(payload, "locator").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "contentHash").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "classification").ok_or(ServiceError::InvalidRequest)?)
-    .bind(payload.get("notes").and_then(Value::as_str))
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -191,22 +189,20 @@ async fn create_evidence_redaction(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let evidence = uuid_value(payload, &["evidenceId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.evidence_redactions(id,evidence_id,ranges,redaction_type, \
          reason,replacement_text,status,created_by) VALUES($1,$2,$3,$4,$5,$6,'DRAFT',$7)",
-    )
-    .bind(id)
-    .bind(evidence)
-    .bind(
+        id,
+        evidence,
         payload
             .get("ranges")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "redactionType").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        payload.get("replacementText").and_then(Value::as_str),
+        actor,
     )
-    .bind(string_value(payload, "redactionType").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(payload.get("replacementText").and_then(Value::as_str))
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -221,20 +217,18 @@ async fn create_hypothesis(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.hypotheses(id,case_id,statement,status,unknowns,created_by) \
          VALUES($1,$2,$3,'OPEN',$4,$5)",
-    )
-    .bind(id)
-    .bind(case_id)
-    .bind(string_value(payload, "statement").ok_or(ServiceError::InvalidRequest)?)
-    .bind(
+        id,
+        case_id,
+        string_value(payload, "statement").ok_or(ServiceError::InvalidRequest)?,
         payload
             .get("unknowns")
             .cloned()
             .unwrap_or_else(|| json!([])),
+        actor,
     )
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -250,16 +244,16 @@ async fn link_evidence(
 ) -> Result<(), ServiceError> {
     let evidence = uuid_value(payload, &["evidenceId"]).ok_or(ServiceError::InvalidRequest)?;
     let target = uuid_value(payload, &["targetId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.evidence_links(evidence_id,target_type,target_id,relation, \
          reason,created_by) VALUES($1,$2,$3,$4,$5,$6)",
+        evidence,
+        string_value(payload, "targetType").ok_or(ServiceError::InvalidRequest)?,
+        target,
+        string_value(payload, "relation").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(evidence)
-    .bind(string_value(payload, "targetType").ok_or(ServiceError::InvalidRequest)?)
-    .bind(target)
-    .bind(string_value(payload, "relation").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -272,13 +266,13 @@ async fn update_claim(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let claim = uuid_value(payload, &["claimId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE editorial.claims SET text=COALESCE($2,text),limitations=COALESCE($3,limitations) \
          WHERE id=$1",
+        claim,
+        payload.get("text").and_then(Value::as_str),
+        payload.get("limitations").cloned(),
     )
-    .bind(claim)
-    .bind(payload.get("text").and_then(Value::as_str))
-    .bind(payload.get("limitations").cloned())
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -298,17 +292,17 @@ async fn update_evidence(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let evidence = uuid_value(payload, &["evidenceId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE editorial.evidence SET title=COALESCE($2,title), \
          source_locator=COALESCE($3,source_locator), \
          classification=COALESCE($4::editorial.evidence_classification,classification), \
          description=COALESCE($5,description) WHERE id=$1",
+        evidence,
+        payload.get("title").and_then(Value::as_str),
+        payload.get("locator").and_then(Value::as_str),
+        payload.get("classification").and_then(Value::as_str) as _,
+        payload.get("notes").and_then(Value::as_str),
     )
-    .bind(evidence)
-    .bind(payload.get("title").and_then(Value::as_str))
-    .bind(payload.get("locator").and_then(Value::as_str))
-    .bind(payload.get("classification").and_then(Value::as_str))
-    .bind(payload.get("notes").and_then(Value::as_str))
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -326,14 +320,14 @@ async fn update_hypothesis(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let hypothesis = uuid_value(payload, &["hypothesisId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE editorial.hypotheses SET statement=COALESCE($2,statement), \
          status=COALESCE($3,status),unknowns=COALESCE($4,unknowns) WHERE id=$1",
+        hypothesis,
+        payload.get("statement").and_then(Value::as_str),
+        payload.get("status").and_then(Value::as_str),
+        payload.get("unknowns").cloned(),
     )
-    .bind(hypothesis)
-    .bind(payload.get("statement").and_then(Value::as_str))
-    .bind(payload.get("status").and_then(Value::as_str))
-    .bind(payload.get("unknowns").cloned())
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -355,18 +349,30 @@ async fn validate_claims(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let claim = uuid_value(payload, &["claimId"]).ok_or(ServiceError::InvalidRequest)?;
-    let blockers: i64 = sqlx::query_scalar(
+    let blockers: i64 = sqlx::query_scalar!(
         "SELECT count(*) FROM editorial.claim_evidence ce \
          JOIN editorial.evidence e ON e.id=ce.evidence_id \
          WHERE ce.claim_id=$1 AND e.verification_status<>'VERIFIED'",
+        claim,
     )
-    .bind(claim)
     .fetch_one(&mut **tx)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })?;
     let status = if blockers == 0 { "VALID" } else { "BLOCKED" };
-    let changed = sqlx::query("UPDATE editorial.claims SET validation_status=$2::core.claim_validation_status WHERE id=$1")
-        .bind(claim).bind(status).execute(&mut **tx).await.map_err(db)?.rows_affected();
+    let changed = sqlx::query!(
+        "UPDATE editorial.claims SET validation_status=$2::core.claim_validation_status WHERE id=$1",
+        claim,
+        status as _,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
     if changed != 1 {
         return Err(ServiceError::NotFound);
     }
@@ -388,13 +394,13 @@ async fn verify_evidence(
         "needs_work" | "NEEDS_WORK" => "NEEDS_WORK",
         _ => return Err(ServiceError::InvalidRequest),
     };
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE editorial.evidence SET verification_status=$2,verified_by=$3, \
          verified_at=CASE WHEN $2='VERIFIED' THEN clock_timestamp() ELSE NULL END WHERE id=$1",
+        evidence,
+        status,
+        actor,
     )
-    .bind(evidence)
-    .bind(status)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -426,37 +432,52 @@ async fn get_evidence_workspace(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "evidenceId")?;
-    let evidence: Value = sqlx::query_scalar(
+    let evidence: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object('id',id,'caseId',case_id,'evidenceType',evidence_type, \
          'title',title,'description',description,'sourceDocumentId',source_document_id, \
          'sourceUrl',source_url,'sourceLocator',source_locator,'contentSha256',content_sha256, \
          'classification',classification::text,'verificationStatus',verification_status, \
          'verifiedBy',verified_by,'verifiedAt',verified_at,'publicExcerpt',redacted_public_excerpt, \
          'version',version) FROM editorial.evidence WHERE id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
-    let claims: Value = sqlx::query_scalar(
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })?;
+    let claims: Value = sqlx::query_scalar!(
         "SELECT COALESCE(jsonb_agg(jsonb_build_object('claimId',claim_id,'citationLabel', \
          citation_label,'citationOrder',citation_order,'supports',supports) ORDER BY citation_order), \
          '[]'::jsonb) FROM editorial.claim_evidence WHERE evidence_id=$1",
+        id,
     )
-    .bind(id)
     .fetch_one(pool)
     .await
-    .map_err(db)?;
-    let redactions: Value = sqlx::query_scalar(
+    .map_err(db)?
+    .ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })?;
+    let redactions: Value = sqlx::query_scalar!(
         "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'ranges',ranges,'redactionType', \
          redaction_type,'reason',reason,'replacementText',replacement_text,'status',status) \
          ORDER BY created_at),'[]'::jsonb) FROM editorial.evidence_redactions WHERE evidence_id=$1",
+        id,
     )
-    .bind(id)
     .fetch_one(pool)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })?;
     Ok(
         json!({"evidence":evidence,"sourceContext":{},"linkedClaims":claims,
         "verification":{},"redactions":redactions,"provenance":{},"blockers":[]}),
@@ -471,15 +492,15 @@ async fn case_list_query(
     let items: Value = match query {
         Query::ListCaseClaims => {
             let case_id = query_uuid(parameters, "caseId")?;
-            sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'caseId',case_id,'claimType',claim_type::text,'text',text,'limitations',limitations,'validationStatus',validation_status,'version',version) ORDER BY created_at),'[]'::jsonb) FROM editorial.claims WHERE case_id=$1").bind(case_id).fetch_one(pool).await.map_err(db)?
+            sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'caseId',case_id,'claimType',claim_type::text,'text',text,'limitations',limitations,'validationStatus',validation_status,'version',version) ORDER BY created_at),'[]'::jsonb) FROM editorial.claims WHERE case_id=$1", case_id).fetch_one(pool).await.map_err(db)?.ok_or_else(|| db(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?
         }
         Query::ListCaseEvidence => {
             let case_id = query_uuid(parameters, "caseId")?;
-            sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'caseId',case_id,'evidenceType',evidence_type,'title',title,'classification',classification::text,'verificationStatus',verification_status,'contentSha256',content_sha256,'version',version) ORDER BY created_at),'[]'::jsonb) FROM editorial.evidence WHERE case_id=$1").bind(case_id).fetch_one(pool).await.map_err(db)?
+            sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'caseId',case_id,'evidenceType',evidence_type,'title',title,'classification',classification::text,'verificationStatus',verification_status,'contentSha256',content_sha256,'version',version) ORDER BY created_at),'[]'::jsonb) FROM editorial.evidence WHERE case_id=$1", case_id).fetch_one(pool).await.map_err(db)?.ok_or_else(|| db(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?
         }
         Query::ListCaseHypotheses => {
             let case_id = query_uuid(parameters, "caseId")?;
-            sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'caseId',case_id,'statement',statement,'status',status,'unknowns',unknowns,'version',version) ORDER BY created_at),'[]'::jsonb) FROM editorial.hypotheses WHERE case_id=$1").bind(case_id).fetch_one(pool).await.map_err(db)?
+            sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'caseId',case_id,'statement',statement,'status',status,'unknowns',unknowns,'version',version) ORDER BY created_at),'[]'::jsonb) FROM editorial.hypotheses WHERE case_id=$1", case_id).fetch_one(pool).await.map_err(db)?.ok_or_else(|| db(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?
         }
         Query::GetEvidenceWorkspace => return Err(ServiceError::InvalidRequest),
     };

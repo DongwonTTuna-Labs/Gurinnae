@@ -2,6 +2,12 @@ use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
+fn unexpected_null() -> ServiceError {
+    db(sqlx::Error::Decode(Box::new(
+        sqlx::error::UnexpectedNullError,
+    )))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
     ActivateKillSwitch,
@@ -144,15 +150,15 @@ async fn update_budget_limit(
     if daily < rust_decimal::Decimal::ZERO || monthly < daily {
         return Err(ServiceError::InvalidRequest);
     }
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.budget_limits SET daily_limit=$2,monthly_limit=$3,currency=$4, \
          updated_by=$5,updated_at=clock_timestamp() WHERE scope=$1",
+        scope,
+        daily,
+        monthly,
+        string_value(payload, "currency").ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(scope)
-    .bind(daily)
-    .bind(monthly)
-    .bind(string_value(payload, "currency").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -170,11 +176,18 @@ async fn activate_kill_switch(
     actor: Uuid,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
-    let changed = sqlx::query("UPDATE ops.kill_switches SET scope=$2,state='ACTIVE',reason=$3,activated_by=$4,activated_at=clock_timestamp(),expires_at=$5,deactivated_by=NULL,deactivated_at=NULL,updated_at=clock_timestamp() WHERE id=$1")
-        .bind(id).bind(payload.get("scope").cloned().ok_or(ServiceError::InvalidRequest)?)
-        .bind(string_value(payload,"reason").ok_or(ServiceError::InvalidRequest)?)
-        .bind(actor).bind(timestamp_value(payload,"expiresAt")?)
-        .execute(&mut **tx).await.map_err(db)?.rows_affected();
+    let changed = sqlx::query!(
+        "UPDATE ops.kill_switches SET scope=$2,state='ACTIVE',reason=$3,activated_by=$4,activated_at=clock_timestamp(),expires_at=$5,deactivated_by=NULL,deactivated_at=NULL,updated_at=clock_timestamp() WHERE id=$1",
+        id,
+        payload.get("scope").cloned().ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload,"reason").ok_or(ServiceError::InvalidRequest)?,
+        actor,
+        timestamp_value(payload,"expiresAt")?,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
     if changed != 1 {
         return Err(ServiceError::NotFound);
     }
@@ -188,7 +201,7 @@ async fn deactivate_kill_switch(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     if let Some(target) = uuid_value(payload, &["killSwitchId", "id"]) {
-        let changed=sqlx::query("UPDATE ops.kill_switches SET state='INACTIVE',deactivated_by=$2,deactivated_at=clock_timestamp(),updated_at=clock_timestamp() WHERE id=$1 AND state='ACTIVE'").bind(target).bind(actor).execute(&mut **tx).await.map_err(db)?.rows_affected();
+        let changed = sqlx::query!("UPDATE ops.kill_switches SET state='INACTIVE',deactivated_by=$2,deactivated_at=clock_timestamp(),updated_at=clock_timestamp() WHERE id=$1 AND state='ACTIVE'", target, actor).execute(&mut **tx).await.map_err(db)?.rows_affected();
         if changed == 0 {
             return Err(ServiceError::NotFound);
         }
@@ -203,12 +216,12 @@ async fn extend_kill_switch(
 ) -> Result<(), ServiceError> {
     let target =
         uuid_value(payload, &["killSwitchId", "id"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.kill_switches SET expires_at= \
          GREATEST(COALESCE(expires_at,clock_timestamp()),clock_timestamp())+interval '1 hour', \
          updated_at=clock_timestamp() WHERE id=$1 AND state='ACTIVE'",
+        target,
     )
-    .bind(target)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -226,10 +239,11 @@ async fn business_health_query(
     _parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let data: Value = sqlx::query_scalar("SELECT ops.read_business_health_projection_v1()")
+    let data: Value = sqlx::query_scalar!("SELECT ops.read_business_health_projection_v1()")
         .fetch_one(pool)
         .await
-        .map_err(db)?;
+        .map_err(db)?
+        .ok_or_else(unexpected_null)?;
     let status = data
         .get("summary")
         .and_then(|summary| summary.get("status"))
@@ -252,18 +266,19 @@ async fn cost_export_query(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let params = parse_cost_export_parameters(parameters)?;
-    let rows: Value = sqlx::query_scalar(
+    let rows: Value = sqlx::query_scalar!(
         // The contract is an explicit half-open window [from,to).  Do not
         // widen a caller's upper bound by converting it to a date and adding
         // a day; that silently exports rows outside the requested snapshot.
         "SELECT ops.read_cost_export_projection_v1($1::timestamptz, $2::timestamptz, $3)",
+        &params.from as _,
+        &params.to as _,
+        &params.group_by,
     )
-    .bind(&params.from)
-    .bind(&params.to)
-    .bind(&params.group_by)
     .fetch_one(pool)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
     let digest_input = serde_json::json!({
         "from": params.from, "to": params.to, "groupBy": params.group_by,
         "format": params.format, "rows": rows
@@ -382,7 +397,7 @@ async fn list_kill_switches(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items: Value = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'code',code,'scope',scope,'state',state::text,'reason',reason,'activatedAt',activated_at,'expiresAt',expires_at,'version',version) ORDER BY updated_at DESC),'[]'::jsonb) FROM ops.kill_switches").fetch_one(pool).await.map_err(db)?;
+    let items: Value = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'code',code,'scope',scope,'state',state::text,'reason',reason,'activatedAt',activated_at,'expiresAt',expires_at,'version',version) ORDER BY updated_at DESC),'[]'::jsonb) FROM ops.kill_switches").fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     Ok(
         json!({"items":items,"appliedFilters":parameters,"asOf":format_time(OffsetDateTime::now_utc())?}),
     )
@@ -397,11 +412,12 @@ async fn get_incident(
         .or_else(|| parameters.get("id"))
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or(ServiceError::InvalidRequest)?;
-    let value: Option<Value> = sqlx::query_scalar("SELECT ops.read_incident_v1($1)")
-        .bind(id)
+    let value: Option<Value> = sqlx::query_scalar!("SELECT ops.read_incident_v1($1)", id)
         .fetch_optional(pool)
         .await
-        .map_err(db)?;
+        .map_err(db)?
+        .map(|value| value.ok_or_else(unexpected_null))
+        .transpose()?;
     let Some(value) = value else {
         return Err(ServiceError::NotFound);
     };

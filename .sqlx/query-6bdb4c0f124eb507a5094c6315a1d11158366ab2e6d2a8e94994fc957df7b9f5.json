@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_configs SET enabled=false,last_connection_test_status='DISABLED' WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6bdb4c0f124eb507a5094c6315a1d11158366ab2e6d2a8e94994fc957df7b9f5"
+}

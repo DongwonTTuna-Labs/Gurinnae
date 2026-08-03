@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.anomaly_signals SET status= CASE WHEN assigned_user_id IS NULL THEN 'NEW'::core.signal_status ELSE 'ASSIGNED'::core.signal_status END WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c0e473dc09bb423b2d2b9434fc9e78a528f1f0399e9c3485b5b21831cea46c97"
+}

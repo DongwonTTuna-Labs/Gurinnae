@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.hypotheses SET statement=COALESCE($2,statement), status=COALESCE($3,status),unknowns=COALESCE($4,unknowns) WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "866d1754c6f25ef820e315dcc7f134612312747efa0ed80e1aea63052bc87eec"
+}

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_record_class_schedule_queue_v1()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_record_class_schedule_queue_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "806e7e0eb15fdc1dd8f89edcf7b31a6cc06fc7a0ef22ccc278c5add84fbd8d7e"
+}

@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id,c.claim_type::text claim_type,c.text,c.limitations, COALESCE((SELECT jsonb_agg(ce.evidence_id ORDER BY ce.citation_order) FROM editorial.claim_evidence ce WHERE ce.claim_id=c.id),'[]'::jsonb) evidence_ids, COALESCE((SELECT jsonb_agg(cr.response_id ORDER BY cr.response_id) FROM editorial.claim_responses cr WHERE cr.claim_id=c.id),'[]'::jsonb) response_ids FROM editorial.claims c WHERE c.case_id=$1 AND c.id=ANY($2::uuid[]) ORDER BY array_position($2::uuid[],c.id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.claims",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "claim_type",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "text",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.claims",
+            "name": "text"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "limitations",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.claims",
+            "name": "limitations"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "evidence_ids",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "response_ids",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "b57745e034d304e689cf47e9c1cb39ade1c12d636e5770895173632a57997230"
+}

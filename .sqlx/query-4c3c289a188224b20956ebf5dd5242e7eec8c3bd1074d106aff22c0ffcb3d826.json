@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.anomaly_signals SET status='LINKED' WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4c3c289a188224b20956ebf5dd5242e7eec8c3bd1074d106aff22c0ffcb3d826"
+}

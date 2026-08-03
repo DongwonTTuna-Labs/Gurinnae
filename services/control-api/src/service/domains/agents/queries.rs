@@ -5,7 +5,7 @@ pub(super) async fn query_agent_run(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "agentRunId")?;
-    let mut row: Value = sqlx::query_scalar(
+    let mut row: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object('id',r.id,'caseId',r.case_id,'agentType',r.agent_type, \
          'objective',r.objective,'evidenceScopeIds',r.evidence_scope_ids,'providerPolicy',r.provider_policy, \
          'provider',r.provider,'model',r.model,'status',r.status,'inputSnapshotHash',r.input_snapshot_hash, \
@@ -25,12 +25,17 @@ pub(super) async fn query_agent_run(
          'maxCost',r.max_cost::text,'actualCost',r.actual_cost::text, \
          'startedAt',r.started_at,'completedAt',r.completed_at,'createdAt',r.created_at,'updatedAt',r.updated_at,'version',r.version) \
          FROM ops.agent_runs r WHERE r.id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })?;
     attach_cas011(&mut row)?;
     Ok(envelope(id, value_status(&row), row))
 }
@@ -40,7 +45,7 @@ pub(super) async fn list_case_agent_runs(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let case_id = query_uuid(parameters, "caseId")?;
-    let items: Value = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',r.id,'agentType',r.agent_type,'objective',r.objective,'status',r.status,'maxCost',r.max_cost::text,'actualCost',r.actual_cost::text,'version',r.version,'createdAt',r.created_at,'inputSnapshotHash',r.input_snapshot_hash,'validation',COALESCE((SELECT jsonb_agg(jsonb_build_object('status',v.validation_status,'schemaStatus',v.schema_status,'citationStatus',v.citation_status,'policyStatus',v.policy_status,'failureCode',v.failure_code,'validatedAt',v.validated_at) ORDER BY v.validated_at DESC) FROM ops.agent_output_validations v WHERE v.agent_run_id=r.id),'[]'::jsonb),'suggestionCounts',jsonb_build_object('pending',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='PENDING'),0),'accepted',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='ACCEPTED'),0),'rejected',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='REJECTED'),0)),'sourceUseCount',COALESCE((SELECT count(*) FROM ops.agent_source_uses u WHERE u.agent_run_id=r.id),0),'budgetLedger',COALESCE(ops.read_agent_run_budget_projection_v1(r.id),'{}'::jsonb)) ORDER BY r.created_at DESC),'[]'::jsonb) FROM ops.agent_runs r WHERE r.case_id=$1").bind(case_id).fetch_one(pool).await.map_err(db)?;
+    let items: Value = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',r.id,'agentType',r.agent_type,'objective',r.objective,'status',r.status,'maxCost',r.max_cost::text,'actualCost',r.actual_cost::text,'version',r.version,'createdAt',r.created_at,'inputSnapshotHash',r.input_snapshot_hash,'validation',COALESCE((SELECT jsonb_agg(jsonb_build_object('status',v.validation_status,'schemaStatus',v.schema_status,'citationStatus',v.citation_status,'policyStatus',v.policy_status,'failureCode',v.failure_code,'validatedAt',v.validated_at) ORDER BY v.validated_at DESC) FROM ops.agent_output_validations v WHERE v.agent_run_id=r.id),'[]'::jsonb),'suggestionCounts',jsonb_build_object('pending',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='PENDING'),0),'accepted',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='ACCEPTED'),0),'rejected',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='REJECTED'),0)),'sourceUseCount',COALESCE((SELECT count(*) FROM ops.agent_source_uses u WHERE u.agent_run_id=r.id),0),'budgetLedger',COALESCE(ops.read_agent_run_budget_projection_v1(r.id),'{}'::jsonb)) ORDER BY r.created_at DESC),'[]'::jsonb) FROM ops.agent_runs r WHERE r.case_id=$1", case_id).fetch_one(pool).await.map_err(db)?.ok_or_else(|| db(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     let mut response = json!({"items":items,"appliedFilters":parameters,
         "asOf":format_time(OffsetDateTime::now_utc())?});
     response["analysisVm"] = cas010_projection(case_id, &items)?;
@@ -51,10 +56,15 @@ pub(super) async fn list_action_approval_queue(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items: Value = sqlx::query_scalar("SELECT ops.read_action_queue_v1()")
+    let items: Value = sqlx::query_scalar!("SELECT ops.read_action_queue_v1()")
         .fetch_one(pool)
         .await
-        .map_err(db)?;
+        .map_err(db)?
+        .ok_or_else(|| {
+            db(sqlx::Error::Decode(Box::new(
+                sqlx::error::UnexpectedNullError,
+            )))
+        })?;
     let items = normalize_action_queue_items(items);
     let (items, next_cursor) = filter_action_queue_items(items, parameters)?;
     action_queue_page(items, next_cursor, parameters)
@@ -69,8 +79,7 @@ pub(super) async fn get_action_proposal(
         .or_else(|| parameters.get("id"))
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or(ServiceError::InvalidRequest)?;
-    let value = sqlx::query_scalar::<_, Option<Value>>("SELECT ops.read_action_proposal_v1($1)")
-        .bind(id)
+    let value = sqlx::query_scalar!("SELECT ops.read_action_proposal_v1($1)", id)
         .fetch_one(pool)
         .await
         .map_err(db)?;
@@ -89,8 +98,7 @@ pub(super) async fn get_action_execution_receipt(
         .or_else(|| parameters.get("id"))
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or(ServiceError::InvalidRequest)?;
-    let value = sqlx::query_scalar::<_, Option<Value>>("SELECT ops.read_execution_receipt_v1($1)")
-        .bind(id)
+    let value = sqlx::query_scalar!("SELECT ops.read_execution_receipt_v1($1)", id)
         .fetch_optional(pool)
         .await
         .map_err(db)?

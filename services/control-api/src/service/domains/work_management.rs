@@ -1,6 +1,12 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+fn unexpected_null() -> ServiceError {
+    db(sqlx::Error::Decode(Box::new(
+        sqlx::error::UnexpectedNullError,
+    )))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
     CreateSavedView,
@@ -120,28 +126,26 @@ async fn create_saved_view(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     if payload.get("isDefault").and_then(Value::as_bool) == Some(true) {
-        sqlx::query("UPDATE ops.saved_views SET is_default=false WHERE user_id=$1 AND surface=$2")
-            .bind(actor)
-            .bind(string_value(payload, "surface").ok_or(ServiceError::InvalidRequest)?)
-            .execute(&mut **tx)
-            .await
-            .map_err(db)?;
+        sqlx::query!(
+            "UPDATE ops.saved_views SET is_default=false WHERE user_id=$1 AND surface=$2",
+            actor,
+            string_value(payload, "surface").ok_or(ServiceError::InvalidRequest)?,
+        )
+        .execute(&mut **tx)
+        .await
+        .map_err(db)?;
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.saved_views(id,user_id,name,surface,query,is_default) \
          VALUES($1,$2,$3,$4,$5,$6)",
-    )
-    .bind(id)
-    .bind(actor)
-    .bind(string_value(payload, "name").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "surface").ok_or(ServiceError::InvalidRequest)?)
-    .bind(
+        id,
+        actor,
+        string_value(payload, "name").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "surface").ok_or(ServiceError::InvalidRequest)?,
         payload
             .get("query")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
-    )
-    .bind(
         payload
             .get("isDefault")
             .and_then(Value::as_bool)
@@ -162,26 +166,26 @@ async fn update_saved_view(
 ) -> Result<(), ServiceError> {
     let target = uuid_value(payload, &["savedViewId", "id"]).unwrap_or(id);
     if payload.get("isDefault").and_then(Value::as_bool) == Some(true) {
-        let surface: String =
-            sqlx::query_scalar("SELECT surface FROM ops.saved_views WHERE id=$1 AND user_id=$2")
-                .bind(target)
-                .bind(actor)
-                .fetch_optional(&mut **tx)
-                .await
-                .map_err(db)?
-                .ok_or(ServiceError::NotFound)?;
-        sqlx::query("UPDATE ops.saved_views SET is_default=false WHERE user_id=$1 AND surface=$2 AND id<>$3")
-            .bind(actor).bind(surface).bind(target).execute(&mut **tx).await.map_err(db)?;
+        let surface: String = sqlx::query_scalar!(
+            "SELECT surface FROM ops.saved_views WHERE id=$1 AND user_id=$2",
+            target,
+            actor,
+        )
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(db)?
+        .ok_or(ServiceError::NotFound)?;
+        sqlx::query!("UPDATE ops.saved_views SET is_default=false WHERE user_id=$1 AND surface=$2 AND id<>$3", actor, surface, target).execute(&mut **tx).await.map_err(db)?;
     }
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.saved_views SET name=COALESCE($3,name),query=COALESCE($4,query), \
          is_default=COALESCE($5,is_default) WHERE id=$1 AND user_id=$2",
+        target,
+        actor,
+        payload.get("name").and_then(Value::as_str),
+        payload.get("query").cloned(),
+        payload.get("isDefault").and_then(Value::as_bool),
     )
-    .bind(target)
-    .bind(actor)
-    .bind(payload.get("name").and_then(Value::as_str))
-    .bind(payload.get("query").cloned())
-    .bind(payload.get("isDefault").and_then(Value::as_bool))
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -198,13 +202,15 @@ async fn delete_saved_view(
     actor: Uuid,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
-    let changed = sqlx::query("DELETE FROM ops.saved_views WHERE id=$1 AND user_id=$2")
-        .bind(id)
-        .bind(actor)
-        .execute(&mut **tx)
-        .await
-        .map_err(db)?
-        .rows_affected();
+    let changed = sqlx::query!(
+        "DELETE FROM ops.saved_views WHERE id=$1 AND user_id=$2",
+        id,
+        actor,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
     if changed != 1 {
         return Err(ServiceError::NotFound);
     }
@@ -219,13 +225,13 @@ async fn reassign_task(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let assignee = uuid_value(payload, &["assigneeUserId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.tasks SET assignee_user_id=$2,assigned_by=$3, \
          assignment_reason='reassigned by control command' WHERE id=$1",
+        id,
+        assignee,
+        actor,
     )
-    .bind(id)
-    .bind(assignee)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -242,10 +248,10 @@ async fn mark_notification_read(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     if let Some(target) = uuid_value(payload, &["notificationId", "id"]) {
-        sqlx::query(
+        sqlx::query!(
             "UPDATE ops.notifications SET read_at=COALESCE(read_at,clock_timestamp()) WHERE id=$1",
+            target,
         )
-        .bind(target)
         .execute(&mut **tx)
         .await
         .map_err(db)?;
@@ -259,7 +265,7 @@ async fn get_internal_dashboard(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let actor = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
-    let counts: Value = sqlx::query_scalar(
+    let counts: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object( \
          'incidents',(SELECT count(*) FROM ops.source_incidents WHERE status='OPEN'), \
          'myTasks',(SELECT count(*) FROM ops.tasks WHERE assignee_user_id=$1 AND status<>'DONE'), \
@@ -267,11 +273,12 @@ async fn get_internal_dashboard(
          'reviewQueue',(SELECT count(*) FROM editorial.review_assignments WHERE status IN ('ASSIGNED','IN_PROGRESS')), \
          'failedJobs',(SELECT count(*) FROM ops.jobs WHERE status IN ('FAILED','DEAD_LETTER')), \
          'unreadNotifications',(SELECT count(*) FROM ops.notifications WHERE user_id=$1 AND read_at IS NULL))",
+        actor,
     )
-    .bind(actor)
     .fetch_one(pool)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
     Ok(json!({
         "incidents":counts.get("incidents").cloned().unwrap_or(json!(0)),
         "myTasks":counts.get("myTasks").cloned().unwrap_or(json!(0)),
@@ -290,7 +297,7 @@ async fn list_internal_notifications(
 ) -> Result<Value, ServiceError> {
     let items: Value = {
         let actor = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
-        sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'notificationType',notification_type,'title',title,'body',body,'readAt',read_at,'version',version,'createdAt',created_at) ORDER BY created_at DESC),'[]'::jsonb) FROM ops.notifications WHERE user_id=$1").bind(actor).fetch_one(pool).await.map_err(db)?
+        sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'notificationType',notification_type,'title',title,'body',body,'readAt',read_at,'version',version,'createdAt',created_at) ORDER BY created_at DESC),'[]'::jsonb) FROM ops.notifications WHERE user_id=$1", actor).fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?
     };
     Ok(items)
 }
@@ -298,7 +305,7 @@ async fn list_internal_notifications(
 async fn list_my_tasks(claims: &ActorClaims, pool: &PgPool) -> Result<Value, ServiceError> {
     let items: Value = {
         let actor = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
-        sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'taskType',task_type,'objectType',object_type,'objectId',object_id,'title',title,'status',status,'priority',priority,'dueAt',due_at,'blockerCode',blocker_code,'version',version) ORDER BY due_at NULLS LAST,created_at),'[]'::jsonb) FROM ops.tasks WHERE assignee_user_id=$1").bind(actor).fetch_one(pool).await.map_err(db)?
+        sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'taskType',task_type,'objectType',object_type,'objectId',object_id,'title',title,'status',status,'priority',priority,'dueAt',due_at,'blockerCode',blocker_code,'version',version) ORDER BY due_at NULLS LAST,created_at),'[]'::jsonb) FROM ops.tasks WHERE assignee_user_id=$1", actor).fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?
     };
     Ok(items)
 }
@@ -306,7 +313,7 @@ async fn list_my_tasks(claims: &ActorClaims, pool: &PgPool) -> Result<Value, Ser
 async fn list_saved_views(claims: &ActorClaims, pool: &PgPool) -> Result<Value, ServiceError> {
     let items: Value = {
         let actor = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
-        sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'name',name,'surface',surface,'query',query,'isDefault',is_default,'version',version,'createdAt',created_at,'updatedAt',updated_at) ORDER BY updated_at DESC),'[]'::jsonb) FROM ops.saved_views WHERE user_id=$1").bind(actor).fetch_one(pool).await.map_err(db)?
+        sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'name',name,'surface',surface,'query',query,'isDefault',is_default,'version',version,'createdAt',created_at,'updatedAt',updated_at) ORDER BY updated_at DESC),'[]'::jsonb) FROM ops.saved_views WHERE user_id=$1", actor).fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?
     };
     Ok(items)
 }

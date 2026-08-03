@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',id,'ruleVersionId',rule_version_id, 'datasetSnapshotId',dataset_snapshot_id,'evaluationProfile',evaluation_profile, 'status',status,'result',result_payload,'resultDigest',result_digest, 'reason',reason,'startedAt',started_at,'completedAt',completed_at) FROM core.rule_evaluations WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4b9f09d1222b23e3fc2de087e451b50a7f98b5f348ade527f1312503223a0692"
+}

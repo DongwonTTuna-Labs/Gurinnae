@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.evidence(id,case_id,evidence_type,title,source_document_id, source_url,source_locator,content_sha256,classification,verification_status, description,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8, $9::editorial.evidence_classification,'PENDING',$10,$11)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Bpchar",
+        {
+          "Custom": {
+            "name": "editorial.evidence_classification",
+            "kind": {
+              "Enum": [
+                "PUBLIC",
+                "RESTRICTED",
+                "PERSONAL_DATA",
+                "LEGAL_HOLD"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1dc7012a0a70edf166639b99a44b9ff03ac85c61584080a99d7cfcdebcd1940f"
+}

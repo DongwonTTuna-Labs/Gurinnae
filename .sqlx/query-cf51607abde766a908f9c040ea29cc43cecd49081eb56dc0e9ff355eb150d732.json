@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('sourceId',source_id,'enabled',enabled, 'legalStatus',legal_status) ORDER BY source_id),'[]'::jsonb) FROM ops.source_registry",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cf51607abde766a908f9c040ea29cc43cecd49081eb56dc0e9ff355eb150d732"
+}

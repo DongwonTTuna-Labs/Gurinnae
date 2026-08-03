@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.saved_views SET is_default=false WHERE user_id=$1 AND surface=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6bba819eb5d4dd26ad1d401b6e9930f677ffe54aa1c12c00de4f9b6f8c54c14d"
+}

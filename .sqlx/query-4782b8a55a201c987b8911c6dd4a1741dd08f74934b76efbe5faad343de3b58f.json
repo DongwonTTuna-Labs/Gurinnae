@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT core.decide_supplier_relationship_assertion_v1($1, $2::jsonb)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "decide_supplier_relationship_assertion_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4782b8a55a201c987b8911c6dd4a1741dd08f74934b76efbe5faad343de3b58f"
+}

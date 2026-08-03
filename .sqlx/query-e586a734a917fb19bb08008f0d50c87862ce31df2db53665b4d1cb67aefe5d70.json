@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',id,'caseId',case_id,'evidenceType',evidence_type, 'title',title,'description',description,'sourceDocumentId',source_document_id, 'sourceUrl',source_url,'sourceLocator',source_locator,'contentSha256',content_sha256, 'classification',classification::text,'verificationStatus',verification_status, 'verifiedBy',verified_by,'verifiedAt',verified_at,'publicExcerpt',redacted_public_excerpt, 'version',version) FROM editorial.evidence WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e586a734a917fb19bb08008f0d50c87862ce31df2db53665b4d1cb67aefe5d70"
+}

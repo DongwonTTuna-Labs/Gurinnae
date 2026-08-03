@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',s.id,'ruleRunId',s.rule_run_id, 'ruleVersionId',s.rule_version_id,'signalType',s.signal_type,'targetType',s.target_type, 'targetId',s.target_id,'score',s.score,'severity',s.severity,'status',s.status::text, 'explanation',s.explanation,'calculation',s.calculation,'blockers',s.blockers, 'comparisonDigest',s.comparison_digest,'assignedUserId',s.assigned_user_id,'version',s.version, 'duplicateSignalId',s.duplicate_signal_id,'duplicateRelationship',s.duplicate_relationship, 'duplicateReasonDigest',s.duplicate_reason_digest,'duplicateMarkedBy',s.duplicate_marked_by, 'duplicateMarkedAt',s.duplicate_marked_at) FROM core.anomaly_signals s WHERE s.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3628c9c176233ce5da5e8b7cf065112c5fe479fb04a41f3e901b0ce1b4835d67"
+}

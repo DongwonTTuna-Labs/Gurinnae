@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('sourceId',source_id,'displayName',display_name, 'connectorType',connector_type,'ownerTeam',owner_team,'enabled',enabled, 'scheduleCron',schedule_cron,'baseUrl',base_url,'legalStatus',legal_status, 'configuration',configuration,'version',version,'updatedAt',updated_at) FROM ops.source_registry WHERE source_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4211ea8b71ec9e3109d4f005e5008c572da3574167671ce62c3f48003c0bed7a"
+}

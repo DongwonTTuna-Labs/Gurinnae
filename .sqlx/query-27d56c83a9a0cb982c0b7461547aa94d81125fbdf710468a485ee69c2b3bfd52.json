@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.jobs SET status=$2::ops.job_status,lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,run_after=CASE WHEN $2='QUEUED' THEN clock_timestamp() ELSE run_after END WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "ops.job_status",
+            "kind": {
+              "Enum": [
+                "QUEUED",
+                "LEASED",
+                "RUNNING",
+                "SUCCEEDED",
+                "FAILED",
+                "DEAD_LETTER",
+                "CANCELLED",
+                "QUARANTINED"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "27d56c83a9a0cb982c0b7461547aa94d81125fbdf710468a485ee69c2b3bfd52"
+}

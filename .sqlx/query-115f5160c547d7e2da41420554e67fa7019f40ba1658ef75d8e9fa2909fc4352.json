@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.responses SET public_excerpt_sha256=$2,excerpt_approved_by=$3, excerpt_approved_at=clock_timestamp(),editorial_status= CASE WHEN editorial_status='PENDING' THEN 'ACCEPTED' ELSE editorial_status END WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "115f5160c547d7e2da41420554e67fa7019f40ba1658ef75d8e9fa2909fc4352"
+}

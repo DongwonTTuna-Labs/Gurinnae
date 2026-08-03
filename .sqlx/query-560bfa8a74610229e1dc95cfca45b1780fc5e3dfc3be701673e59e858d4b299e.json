@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.evidence_links(evidence_id,target_type,target_id,relation, reason,created_by) VALUES($1,$2,$3,$4,$5,$6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "560bfa8a74610229e1dc95cfca45b1780fc5e3dfc3be701673e59e858d4b299e"
+}

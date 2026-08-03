@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.user_roles SET revoked_at=clock_timestamp(),revoked_by=$3,version=version+1 WHERE user_id=$1 AND role_id=$2 AND revoked_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6a7db1e16aa31021f7a3928dda7b50bb603412bdf3fa4a7a03033139e588961b"
+}

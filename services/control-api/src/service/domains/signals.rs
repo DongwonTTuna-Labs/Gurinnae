@@ -1,6 +1,12 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+fn unexpected_null() -> ServiceError {
+    db(sqlx::Error::Decode(Box::new(
+        sqlx::error::UnexpectedNullError,
+    )))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
     AssignSignal,
@@ -87,11 +93,11 @@ async fn assign_signal(
 ) -> Result<(), ServiceError> {
     let signal = uuid_value(payload, &["signalId"]).ok_or(ServiceError::InvalidRequest)?;
     let assignee = uuid_value(payload, &["assigneeUserId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "UPDATE core.anomaly_signals SET assigned_user_id=$2,status='ASSIGNED' WHERE id=$1",
+        signal,
+        assignee,
     )
-    .bind(signal)
-    .bind(assignee)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -118,22 +124,24 @@ async fn link_signal_to_case(
 ) -> Result<(), ServiceError> {
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
     let signal = uuid_value(payload, &["signalId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.case_signals(case_id,signal_id,link_reason,linked_by) \
          VALUES($1,$2,$3,$4) ON CONFLICT(case_id,signal_id) DO NOTHING",
+        case_id,
+        signal,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(case_id)
-    .bind(signal)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
-    sqlx::query("UPDATE core.anomaly_signals SET status='LINKED' WHERE id=$1")
-        .bind(signal)
-        .execute(&mut **tx)
-        .await
-        .map_err(db)?;
+    sqlx::query!(
+        "UPDATE core.anomaly_signals SET status='LINKED' WHERE id=$1",
+        signal,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?;
 
     Ok(())
 }
@@ -215,11 +223,11 @@ async fn mark_duplicate_signal(
     if target == signal {
         return Err(ServiceError::InvalidRequest);
     }
-    let pair = sqlx::query(
+    let pair = sqlx::query!(
         "SELECT id, version FROM core.anomaly_signals \
          WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
+        &[signal, target],
     )
-    .bind(vec![signal, target])
     .fetch_all(&mut **tx)
     .await
     .map_err(db)?;
@@ -242,8 +250,8 @@ async fn mark_duplicate_signal(
         .ok_or(ServiceError::InvalidRequest)?;
     let target_version = pair
         .iter()
-        .find(|row| row.try_get::<Uuid, _>("id").ok() == Some(target))
-        .and_then(|row| row.try_get::<i64, _>("version").ok())
+        .find(|row| row.id == target)
+        .map(|row| row.version)
         .ok_or(ServiceError::NotFound)?;
     if target_expected != target_version {
         return Err(ServiceError::VersionConflict);
@@ -272,20 +280,20 @@ async fn mark_duplicate_signal(
     });
     let rationale_digest =
         sha256(&serde_json::to_vec(&rationale_binding).map_err(|_| ServiceError::InvalidRequest)?);
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE core.anomaly_signals
             SET status='DUPLICATE'::core.signal_status,
                 duplicate_signal_id=$2, duplicate_relationship=$3,
                 duplicate_reason_digest=$4, duplicate_marked_by=$5,
                 duplicate_marked_at=clock_timestamp(), version=version+1
           WHERE id=$1 AND version=$6 AND status <> 'DUPLICATE'::core.signal_status",
+        signal,
+        target,
+        relationship,
+        rationale_digest,
+        actor,
+        expected_version,
     )
-    .bind(signal)
-    .bind(target)
-    .bind(relationship)
-    .bind(rationale_digest)
-    .bind(actor)
-    .bind(expected_version)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -305,17 +313,17 @@ async fn mark_signal_status(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let _reason = signal_reason(payload, detail)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE core.anomaly_signals
             SET status=$2::core.signal_status,
                 duplicate_signal_id=NULL, duplicate_relationship=NULL,
                 duplicate_reason_digest=NULL, duplicate_marked_by=NULL,
                 duplicate_marked_at=NULL, version=version+1
           WHERE id=$1 AND version=$3 AND status <> 'DUPLICATE'::core.signal_status",
+        signal,
+        status as _,
+        expected_version,
     )
-    .bind(signal)
-    .bind(status)
-    .bind(expected_version)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -341,23 +349,24 @@ async fn unlink_signal_from_case(
 ) -> Result<(), ServiceError> {
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
     let signal = uuid_value(payload, &["signalId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed =
-        sqlx::query("DELETE FROM editorial.case_signals WHERE case_id=$1 AND signal_id=$2")
-            .bind(case_id)
-            .bind(signal)
-            .execute(&mut **tx)
-            .await
-            .map_err(db)?
-            .rows_affected();
+    let changed = sqlx::query!(
+        "DELETE FROM editorial.case_signals WHERE case_id=$1 AND signal_id=$2",
+        case_id,
+        signal,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
     if changed != 1 {
         return Err(ServiceError::NotFound);
     }
-    sqlx::query(
+    sqlx::query!(
         "UPDATE core.anomaly_signals SET status= \
          CASE WHEN assigned_user_id IS NULL THEN 'NEW'::core.signal_status \
               ELSE 'ASSIGNED'::core.signal_status END WHERE id=$1",
+        signal,
     )
-    .bind(signal)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -370,7 +379,7 @@ async fn signal_query(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "signalId")?;
-    let signal: Value = sqlx::query_scalar(
+    let signal: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object('id',s.id,'ruleRunId',s.rule_run_id, \
          'ruleVersionId',s.rule_version_id,'signalType',s.signal_type,'targetType',s.target_type, \
          'targetId',s.target_id,'score',s.score,'severity',s.severity,'status',s.status::text, \
@@ -380,13 +389,14 @@ async fn signal_query(
          'duplicateReasonDigest',s.duplicate_reason_digest,'duplicateMarkedBy',s.duplicate_marked_by, \
          'duplicateMarkedAt',s.duplicate_marked_at) \
          FROM core.anomaly_signals s WHERE s.id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
-    let duplicates: Value = sqlx::query_scalar(
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(unexpected_null)?;
+    let duplicates: Value = sqlx::query_scalar!(
         "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',d.id,'signalType',d.signal_type,
           'severity',d.severity,'status',d.status::text,'targetType',d.target_type,
           'targetId',d.target_id,'explanation',d.explanation,'createdAt',d.created_at,
@@ -395,11 +405,12 @@ async fn signal_query(
            FROM core.anomaly_signals d
           WHERE d.id=(SELECT duplicate_signal_id FROM core.anomaly_signals WHERE id=$1)
              OR d.duplicate_signal_id=$1",
+        id,
     )
-    .bind(id)
     .fetch_one(pool)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
     Ok(
         json!({"signal":signal,"triggerExplanation":signal.get("explanation").cloned().unwrap_or(json!({})),
         "dataQuality":{},"targetRecord":{},"duplicates":duplicates,
@@ -413,7 +424,7 @@ async fn list_case_signals(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let case_id = query_uuid(parameters, "caseId")?;
-    let items = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',s.id,'signalType',s.signal_type,'severity',s.severity,'status',s.status::text,'score',s.score,'version',s.version,'linkedAt',cs.linked_at) ORDER BY cs.linked_at DESC),'[]'::jsonb) FROM editorial.case_signals cs JOIN core.anomaly_signals s ON s.id=cs.signal_id WHERE cs.case_id=$1").bind(case_id).fetch_one(pool).await.map_err(db)?;
+    let items = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',s.id,'signalType',s.signal_type,'severity',s.severity,'status',s.status::text,'score',s.score,'version',s.version,'linkedAt',cs.linked_at) ORDER BY cs.linked_at DESC),'[]'::jsonb) FROM editorial.case_signals cs JOIN core.anomaly_signals s ON s.id=cs.signal_id WHERE cs.case_id=$1", case_id).fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     list_response(items, parameters)
 }
 
@@ -421,7 +432,7 @@ async fn list_signals(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'signalType',signal_type,'targetType',target_type,'targetId',target_id,'score',score,'severity',severity,'status',status::text,'assignedUserId',assigned_user_id,'version',version,'createdAt',created_at,'duplicateSignalId',duplicate_signal_id,'duplicateRelationship',duplicate_relationship) ORDER BY created_at DESC),'[]'::jsonb) FROM core.anomaly_signals").fetch_one(pool).await.map_err(db)?;
+    let items = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'signalType',signal_type,'targetType',target_type,'targetId',target_id,'score',score,'severity',severity,'status',status::text,'assignedUserId',assigned_user_id,'version',version,'createdAt',created_at,'duplicateSignalId',duplicate_signal_id,'duplicateRelationship',duplicate_relationship) ORDER BY created_at DESC),'[]'::jsonb) FROM core.anomaly_signals").fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     list_response(items, parameters)
 }
 

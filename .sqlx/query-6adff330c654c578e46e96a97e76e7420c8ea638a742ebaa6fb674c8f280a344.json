@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_versions SET status='RETIRED',retired_at=clock_timestamp() WHERE rule_id=(SELECT rule_id FROM core.rule_versions WHERE id=$1) AND status='ACTIVE' AND id<>$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6adff330c654c578e46e96a97e76e7420c8ea638a742ebaa6fb674c8f280a344"
+}

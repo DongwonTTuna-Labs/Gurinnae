@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',r.id,'code',r.code,'name',r.name,'description',r.description,'riskLevel',r.risk_level,'version',r.version,'capabilities',COALESCE((SELECT jsonb_agg(rc.capability_code ORDER BY rc.capability_code) FROM ops.role_capabilities rc WHERE rc.role_id=r.id),'[]'::jsonb)) ORDER BY r.code),'[]'::jsonb) FROM ops.roles r",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cd3fd5320745849209160d9ef729e417489326255cac0a95fbcbebfa352111c9"
+}

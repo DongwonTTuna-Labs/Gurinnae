@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.tasks SET status='DONE',completed_at=clock_timestamp() WHERE object_type='CORRECTION' AND object_id=$1 AND status<>'DONE'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "30cd09c28b810f18cf69e45f3cc922ec6608c660f3cee89c0f4afe2abfb23454"
+}

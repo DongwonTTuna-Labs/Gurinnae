@@ -1,6 +1,12 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+fn unexpected_null() -> ServiceError {
+    db(sqlx::Error::Decode(Box::new(
+        sqlx::error::UnexpectedNullError,
+    )))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
     ActivateRuleVersion,
@@ -110,15 +116,16 @@ async fn activate_or_schedule_rule_version(
     let digest = string_value(payload, "evaluationDigest")
         .filter(|value| is_sha256(value))
         .ok_or(ServiceError::InvalidRequest)?;
-    let evaluated: bool = sqlx::query_scalar(
+    let evaluated: bool = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM core.rule_evaluations WHERE rule_version_id=$1 \
          AND status='SUCCEEDED' AND result_digest=$2)",
+        version,
+        digest,
     )
-    .bind(version)
-    .bind(digest)
     .fetch_one(&mut **tx)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
     if !evaluated {
         return Err(ServiceError::InvalidRequest);
     }
@@ -133,12 +140,12 @@ async fn activate_or_schedule_rule_version(
         return Err(ServiceError::InvalidRequest);
     }
     if operation == "activateRuleVersion" {
-        sqlx::query(
+        sqlx::query!(
             "UPDATE core.rule_versions SET status='RETIRED',retired_at=clock_timestamp() \
              WHERE rule_id=(SELECT rule_id FROM core.rule_versions WHERE id=$1) \
                AND status='ACTIVE' AND id<>$1",
+            version,
         )
-        .bind(version)
         .execute(&mut **tx)
         .await
         .map_err(db)?;
@@ -148,17 +155,17 @@ async fn activate_or_schedule_rule_version(
     } else {
         "SCHEDULED"
     };
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE core.rule_versions SET status=$2,effective_at=$3, \
          activation_evaluation_digest=$4,activation_rollout=$5,activation_reason=$6 \
          WHERE id=$1 AND status IN ('DRAFT','SHADOW','SCHEDULED')",
+        version,
+        status,
+        effective_at,
+        digest,
+        rollout,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
     )
-    .bind(version)
-    .bind(status)
-    .bind(effective_at)
-    .bind(digest)
-    .bind(rollout)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -184,27 +191,23 @@ async fn create_rule_version_draft(
             || format!("draft-{}", id.simple()),
             |base| format!("{base}-draft-{}", id.simple()),
         );
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.rule_versions(id,rule_id,version,name,description,configuration, \
          code_digest,status,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,'DRAFT',$8)",
-    )
-    .bind(id)
-    .bind(rule_id)
-    .bind(version)
-    .bind(string_value(payload, "name").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "description").ok_or(ServiceError::InvalidRequest)?)
-    .bind(
+        id,
+        rule_id,
+        version,
+        string_value(payload, "name").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "description").ok_or(ServiceError::InvalidRequest)?,
         payload
             .get("configuration")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
-    )
-    .bind(
         string_value(payload, "implementationDigest")
             .filter(|value| is_sha256(value))
             .ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -218,34 +221,35 @@ async fn rollback_rule_version(
 ) -> Result<(), ServiceError> {
     let current = uuid_value(payload, &["ruleVersionId"]).ok_or(ServiceError::InvalidRequest)?;
     let target = uuid_value(payload, &["targetVersionId"]).ok_or(ServiceError::InvalidRequest)?;
-    let same_rule: bool = sqlx::query_scalar(
+    let same_rule: bool = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM core.rule_versions target \
          JOIN core.rule_versions current ON current.id=$1 \
          WHERE target.id=$2 AND target.rule_id=current.rule_id \
            AND target.status IN ('RETIRED','ROLLED_BACK','ACTIVE'))",
+        current,
+        target,
     )
-    .bind(current)
-    .bind(target)
     .fetch_one(&mut **tx)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
     if !same_rule {
         return Err(ServiceError::InvalidRequest);
     }
-    sqlx::query(
+    sqlx::query!(
         "UPDATE core.rule_versions SET status='ROLLED_BACK',retired_at=clock_timestamp(), \
          activation_reason=$2 WHERE id=$1",
+        current,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
     )
-    .bind(current)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
-    sqlx::query(
+    sqlx::query!(
         "UPDATE core.rule_versions SET status='ACTIVE',effective_at=clock_timestamp(), \
          retired_at=NULL WHERE id=$1",
+        target,
     )
-    .bind(target)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -262,17 +266,17 @@ async fn run_rule_evaluation(
     let rule = uuid_value(payload, &["ruleVersionId"]).ok_or(ServiceError::InvalidRequest)?;
     let dataset =
         uuid_value(payload, &["datasetSnapshotId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.rule_evaluations(id,rule_version_id,dataset_snapshot_id, \
          evaluation_profile,status,requested_by,reason) \
          VALUES($1,$2,$3,$4,'QUEUED',$5,$6)",
+        id,
+        rule,
+        dataset,
+        string_value(payload, "evaluationProfile").ok_or(ServiceError::InvalidRequest)?,
+        actor,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
     )
-    .bind(id)
-    .bind(rule)
-    .bind(dataset)
-    .bind(string_value(payload, "evaluationProfile").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -296,12 +300,12 @@ async fn start_rule_shadow(
     let rule = uuid_value(payload, &["ruleVersionId"]).ok_or(ServiceError::InvalidRequest)?;
     let dataset =
         uuid_value(payload, &["datasetSnapshotId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE core.rule_versions SET status='SHADOW',activation_reason=$2 \
          WHERE id=$1 AND status='DRAFT'",
+        rule,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
     )
-    .bind(rule)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -310,16 +314,16 @@ async fn start_rule_shadow(
         return Err(ServiceError::VersionConflict);
     }
     let evaluation_id = Uuid::new_v4();
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.rule_evaluations(id,rule_version_id,dataset_snapshot_id, \
          evaluation_profile,status,requested_by,reason) \
          VALUES($1,$2,$3,'SHADOW','QUEUED',$4,$5)",
+        evaluation_id,
+        rule,
+        dataset,
+        actor,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
     )
-    .bind(evaluation_id)
-    .bind(rule)
-    .bind(dataset)
-    .bind(actor)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -340,18 +344,19 @@ async fn query_rule_version(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "ruleVersionId")?;
-    let row: Value = sqlx::query_scalar(
+    let row: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object('id',id,'ruleId',rule_id,'versionName',version,'name',name, \
          'description',description,'configuration',configuration,'implementationDigest',code_digest, \
          'status',status,'effectiveAt',effective_at,'retiredAt',retired_at,'rowVersion',row_version, \
          'evaluationDigest',activation_evaluation_digest,'rollout',activation_rollout, \
          'activationReason',activation_reason) FROM core.rule_versions WHERE id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(unexpected_null)?;
     Ok(envelope(id, value_status(&row), row))
 }
 
@@ -360,18 +365,19 @@ async fn query_rule_evaluation(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "evaluationRunId")?;
-    let row: Value = sqlx::query_scalar(
+    let row: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object('id',id,'ruleVersionId',rule_version_id, \
          'datasetSnapshotId',dataset_snapshot_id,'evaluationProfile',evaluation_profile, \
          'status',status,'result',result_payload,'resultDigest',result_digest, \
          'reason',reason,'startedAt',started_at,'completedAt',completed_at) \
          FROM core.rule_evaluations WHERE id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(unexpected_null)?;
     Ok(envelope(id, value_status(&row), row))
 }
 
@@ -379,7 +385,7 @@ async fn list_internal_rules(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items: Value = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'ruleId',rule_id,'versionName',version,'name',name,'status',status,'effectiveAt',effective_at,'rowVersion',row_version) ORDER BY rule_id,created_at DESC),'[]'::jsonb) FROM core.rule_versions").fetch_one(pool).await.map_err(db)?;
+    let items: Value = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'ruleId',rule_id,'versionName',version,'name',name,'status',status,'effectiveAt',effective_at,'rowVersion',row_version) ORDER BY rule_id,created_at DESC),'[]'::jsonb) FROM core.rule_versions").fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     let response = json!({"items":items,"appliedFilters":parameters,
         "asOf":format_time(OffsetDateTime::now_utc())?});
     Ok(response)

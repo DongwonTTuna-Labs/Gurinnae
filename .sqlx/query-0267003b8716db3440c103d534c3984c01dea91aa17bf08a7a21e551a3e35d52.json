@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.oidc_transactions SET consumed_at=clock_timestamp() WHERE id=$1 AND consumed_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0267003b8716db3440c103d534c3984c01dea91aa17bf08a7a21e551a3e35d52"
+}

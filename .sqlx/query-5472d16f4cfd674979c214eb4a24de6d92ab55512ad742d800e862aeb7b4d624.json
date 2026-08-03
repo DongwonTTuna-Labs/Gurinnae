@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.budget_limits SET daily_limit=$2,monthly_limit=$3,currency=$4, updated_by=$5,updated_at=clock_timestamp() WHERE scope=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Numeric",
+        "Numeric",
+        "Bpchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5472d16f4cfd674979c214eb4a24de6d92ab55512ad742d800e862aeb7b4d624"
+}

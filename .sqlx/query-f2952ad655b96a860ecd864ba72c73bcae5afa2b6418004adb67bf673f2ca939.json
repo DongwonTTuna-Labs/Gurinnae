@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT csrf_token_hash FROM ops.sessions WHERE session_token_hash=$1 AND revoked_at IS NULL AND expires_at>clock_timestamp() FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "csrf_token_hash",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.sessions",
+            "name": "csrf_token_hash"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f2952ad655b96a860ecd864ba72c73bcae5afa2b6418004adb67bf673f2ca939"
+}

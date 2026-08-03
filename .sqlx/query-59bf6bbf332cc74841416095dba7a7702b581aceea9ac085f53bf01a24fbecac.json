@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'sourceId',source_id, 'severity',severity::text,'type',incident_type,'summary',summary,'status',status) ORDER BY created_at DESC),'[]'::jsonb) FROM ops.source_incidents WHERE status<>'RESOLVED'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "59bf6bbf332cc74841416095dba7a7702b581aceea9ac085f53bf01a24fbecac"
+}

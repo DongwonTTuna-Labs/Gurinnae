@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.tasks SET assignee_user_id=$2,assigned_by=$3, assignment_reason='reassigned by control command' WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2148ceba69b19e9e855e0425862c843b962a4348cd636e94ea2c874226033777"
+}

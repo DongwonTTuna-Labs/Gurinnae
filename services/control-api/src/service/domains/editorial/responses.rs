@@ -21,32 +21,28 @@ pub(super) async fn arm_createresponserequest(
         "email-address",
         email.as_bytes(),
     )?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.response_requests(id,case_id,party_type,party_name, \
          recipient_email_hash,recipient_email_encrypted,questions, \
          requested_publication_scope,due_at,status,created_by) \
          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'DRAFT',$10)",
-    )
-    .bind(id)
-    .bind(case_id)
-    .bind(string_value(payload, "partyType").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "partyName").ok_or(ServiceError::InvalidRequest)?)
-    .bind(sha256(email.as_bytes()))
-    .bind(encrypted)
-    .bind(
+        id,
+        case_id,
+        string_value(payload, "partyType").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "partyName").ok_or(ServiceError::InvalidRequest)?,
+        sha256(email.as_bytes()),
+        encrypted,
         payload
             .get("questions")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
-    )
-    .bind(
         payload
             .get("requestedPublicationScope")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
+        timestamp_value(payload, "dueAt")?.ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(timestamp_value(payload, "dueAt")?.ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -82,19 +78,19 @@ pub(super) async fn arm_saveresponserequestdraft(
         } else {
             (None, None)
         };
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE editorial.response_requests SET recipient_email_hash=COALESCE($2,recipient_email_hash), \
          recipient_email_encrypted=COALESCE($3,recipient_email_encrypted), \
          questions=COALESCE($4,questions),due_at=COALESCE($5,due_at), \
          requested_publication_scope=COALESCE($6,requested_publication_scope) \
          WHERE id=$1 AND status='DRAFT'",
+        request,
+        email_hash,
+        encrypted,
+        payload.get("questions").cloned(),
+        timestamp_value(payload, "dueAt")?,
+        payload.get("requestedPublicationScope").cloned(),
     )
-    .bind(request)
-    .bind(email_hash)
-    .bind(encrypted)
-    .bind(payload.get("questions").cloned())
-    .bind(timestamp_value(payload, "dueAt")?)
-    .bind(payload.get("requestedPublicationScope").cloned())
     .execute(&mut **tx)
     .await
     .map_err(db)?

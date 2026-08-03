@@ -1,6 +1,12 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+fn unexpected_null() -> ServiceError {
+    db(sqlx::Error::Decode(Box::new(
+        sqlx::error::UnexpectedNullError,
+    )))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
     CreateAccessRequest,
@@ -159,20 +165,18 @@ async fn create_access_request(
     actor: Uuid,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.access_requests(id,requester_user_id,requested_role_codes,reason, \
          requested_until,status) VALUES($1,$2,$3,$4,$5,'PENDING')",
-    )
-    .bind(id)
-    .bind(actor)
-    .bind(
+        id,
+        actor,
         payload
             .get("requestedRoleCodes")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        timestamp_value(payload, "requestedUntil")?,
     )
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(timestamp_value(payload, "requestedUntil")?)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -181,8 +185,7 @@ async fn create_access_request(
 }
 
 async fn disable_user(id: Uuid, tx: &mut Transaction<'_, Postgres>) -> Result<(), ServiceError> {
-    let changed = sqlx::query("UPDATE ops.users SET status='DISABLED' WHERE id=$1")
-        .bind(id)
+    let changed = sqlx::query!("UPDATE ops.users SET status='DISABLED' WHERE id=$1", id)
         .execute(&mut **tx)
         .await
         .map_err(db)?
@@ -190,11 +193,11 @@ async fn disable_user(id: Uuid, tx: &mut Transaction<'_, Postgres>) -> Result<()
     if changed != 1 {
         return Err(ServiceError::NotFound);
     }
-    sqlx::query(
+    sqlx::query!(
         "UPDATE ops.sessions SET revoked_at=COALESCE(revoked_at,clock_timestamp()) \
          WHERE user_id=$1 AND revoked_at IS NULL",
+        id,
     )
-    .bind(id)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -210,23 +213,23 @@ async fn grant_role(
     let user = uuid_value(payload, &["userId"]).ok_or(ServiceError::InvalidRequest)?;
     let role = uuid_value(payload, &["roleId"]).ok_or(ServiceError::InvalidRequest)?;
     let role_exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ops.roles WHERE id=$1)")
-            .bind(role)
+        sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM ops.roles WHERE id=$1)", role)
             .fetch_one(&mut **tx)
             .await
-            .map_err(db)?;
+            .map_err(db)?
+            .ok_or_else(unexpected_null)?;
     if !role_exists {
         return Err(ServiceError::NotFound);
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.user_roles(user_id,role_id,granted_by,reason,expires_at) \
          VALUES($1,$2,$3,$4,$5)",
+        user,
+        role,
+        actor,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        timestamp_value(payload, "expiresAt")?,
     )
-    .bind(user)
-    .bind(role)
-    .bind(actor)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(timestamp_value(payload, "expiresAt")?)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -243,34 +246,35 @@ async fn invite_user(
     let email = string_value(payload, "email").ok_or(ServiceError::InvalidRequest)?;
     let display = string_value(payload, "displayName").ok_or(ServiceError::InvalidRequest)?;
     let oidc_subject = format!("invited:{}", sha256(email.to_ascii_lowercase().as_bytes()));
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.users(id,oidc_subject,email,display_name,status) \
          VALUES($1,$2,$3,$4,'INVITED')",
+        id,
+        oidc_subject,
+        email as _,
+        display,
     )
-    .bind(id)
-    .bind(oidc_subject)
-    .bind(email)
-    .bind(display)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
     for role in uuid_array(payload, "roleIds")? {
-        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ops.roles WHERE id=$1)")
-            .bind(role)
-            .fetch_one(&mut **tx)
-            .await
-            .map_err(db)?;
+        let exists: bool =
+            sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM ops.roles WHERE id=$1)", role)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(db)?
+                .ok_or_else(unexpected_null)?;
         if !exists {
             return Err(ServiceError::NotFound);
         }
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO ops.user_roles(user_id,role_id,granted_by,reason,expires_at) \
              VALUES($1,$2,$3,'initial invitation grant',$4)",
+            id,
+            role,
+            actor,
+            timestamp_value(payload, "expiresAt")?,
         )
-        .bind(id)
-        .bind(role)
-        .bind(actor)
-        .bind(timestamp_value(payload, "expiresAt")?)
         .execute(&mut **tx)
         .await
         .map_err(db)?;
@@ -291,23 +295,21 @@ async fn place_temporary_restriction(
     if expires <= OffsetDateTime::now_utc() {
         return Err(ServiceError::InvalidRequest);
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.publication_access_decisions(id,publication_revision_id, \
          scope,affected_ids,state,reason,expires_at,placed_by) \
          VALUES($1,$2,$3,$4,'ACTIVE',$5,$6,$7)",
-    )
-    .bind(id)
-    .bind(publication)
-    .bind(string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?)
-    .bind(
+        id,
+        publication,
+        string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?,
         payload
             .get("affectedIds")
             .cloned()
             .unwrap_or_else(|| json!([])),
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        expires,
+        actor,
     )
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(expires)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -322,27 +324,23 @@ async fn propose_role_definition_change(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let role = uuid_value(payload, &["roleId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.role_change_proposals(id,role_id,add_capabilities, \
          remove_capabilities,reason,status,proposed_by) \
          VALUES($1,$2,$3,$4,$5,'REVIEW',$6)",
-    )
-    .bind(id)
-    .bind(role)
-    .bind(
+        id,
+        role,
         payload
             .get("addCapabilities")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
-    )
-    .bind(
         payload
             .get("removeCapabilities")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -355,12 +353,12 @@ async fn revoke_own_session(
     session_id: Uuid,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.sessions SET revoked_at=clock_timestamp() \
          WHERE id=$1 AND user_id=$2 AND revoked_at IS NULL",
+        session_id,
+        actor,
     )
-    .bind(session_id)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -379,13 +377,13 @@ async fn revoke_role(
 ) -> Result<(), ServiceError> {
     let user = uuid_value(payload, &["userId"]).ok_or(ServiceError::InvalidRequest)?;
     let role = uuid_value(payload, &["roleId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.user_roles SET revoked_at=clock_timestamp(),revoked_by=$3,version=version+1 \
          WHERE user_id=$1 AND role_id=$2 AND revoked_at IS NULL",
+        user,
+        role,
+        actor,
     )
-    .bind(user)
-    .bind(role)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -402,7 +400,7 @@ async fn revoke_user_sessions(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     if let Some(user) = uuid_value(payload, &["userId"]) {
-        sqlx::query("UPDATE ops.sessions SET revoked_at=COALESCE(revoked_at,clock_timestamp()) WHERE user_id=$1 AND revoked_at IS NULL").bind(user).execute(&mut **tx).await.map_err(db)?;
+        sqlx::query!("UPDATE ops.sessions SET revoked_at=COALESCE(revoked_at,clock_timestamp()) WHERE user_id=$1 AND revoked_at IS NULL", user).execute(&mut **tx).await.map_err(db)?;
     }
 
     Ok(())
@@ -420,36 +418,34 @@ async fn start_access_review(
     }
     let scope = string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?;
     let scope_id = uuid_value(payload, &["scopeId"]);
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.access_reviews(id,scope,scope_id,reviewer_user_ids,due_at,reason, \
          status,created_by) VALUES($1,$2,$3,$4,$5,$6,'OPEN',$7)",
-    )
-    .bind(id)
-    .bind(scope)
-    .bind(scope_id)
-    .bind(
+        id,
+        scope,
+        scope_id,
         payload
             .get("reviewerUserIds")
             .cloned()
             .ok_or(ServiceError::InvalidRequest)?,
+        timestamp_value(payload, "dueAt")?.ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(timestamp_value(payload, "dueAt")?.ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
     for reviewer in reviewers {
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority, \
              assignee_user_id,due_at,assigned_by,assignment_reason) \
              VALUES('ACCESS_REVIEW','ACCESS_REVIEW',$1,'Access review','OPEN','HIGH',$2,$3,$4,$5)",
+            id,
+            reviewer,
+            timestamp_value(payload, "dueAt")?,
+            actor,
+            string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
         )
-        .bind(id)
-        .bind(reviewer)
-        .bind(timestamp_value(payload, "dueAt")?)
-        .bind(actor)
-        .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
         .execute(&mut **tx)
         .await
         .map_err(db)?;
@@ -460,18 +456,19 @@ async fn start_access_review(
 
 async fn current_account(claims: &ActorClaims, pool: &PgPool) -> Result<Value, ServiceError> {
     let user = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
-    let data: Value = sqlx::query_scalar(
+    let data: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object('userId',u.id,'email',u.email,'displayName',u.display_name, \
          'status',u.status,'rolesVersion',$3::bigint,'sessionId',$2::text) \
          FROM ops.users u WHERE u.id=$1",
+        user,
+        &claims.sid,
+        claims.roles_version,
     )
-    .bind(user)
-    .bind(&claims.sid)
-    .bind(claims.roles_version)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(unexpected_null)?;
     Ok(envelope(user, "ACTIVE", data))
 }
 
@@ -480,7 +477,7 @@ async fn user_access_detail(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "userId")?;
-    let row: Value = sqlx::query_scalar(
+    let row: Value = sqlx::query_scalar!(
         "SELECT jsonb_build_object('id',u.id,'email',u.email,'displayName',u.display_name, \
          'status',u.status,'rolesVersion',COALESCE((SELECT max(urv.version) FROM ops.user_roles urv \
            WHERE urv.user_id=u.id AND urv.revoked_at IS NULL),0),'version',u.version, \
@@ -490,12 +487,13 @@ async fn user_access_detail(
            WHERE ur.user_id=u.id AND ur.revoked_at IS NULL),'[]'::jsonb), \
          'activeSessions',(SELECT count(*) FROM ops.sessions s WHERE s.user_id=u.id AND s.revoked_at IS NULL)) \
          FROM ops.users u WHERE u.id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(unexpected_null)?;
     Ok(envelope(id, value_status(&row), row))
 }
 
@@ -503,7 +501,7 @@ async fn list_role_definitions(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',r.id,'code',r.code,'name',r.name,'description',r.description,'riskLevel',r.risk_level,'version',r.version,'capabilities',COALESCE((SELECT jsonb_agg(rc.capability_code ORDER BY rc.capability_code) FROM ops.role_capabilities rc WHERE rc.role_id=r.id),'[]'::jsonb)) ORDER BY r.code),'[]'::jsonb) FROM ops.roles r").fetch_one(pool).await.map_err(db)?;
+    let items = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',r.id,'code',r.code,'name',r.name,'description',r.description,'riskLevel',r.risk_level,'version',r.version,'capabilities',COALESCE((SELECT jsonb_agg(rc.capability_code ORDER BY rc.capability_code) FROM ops.role_capabilities rc WHERE rc.role_id=r.id),'[]'::jsonb)) ORDER BY r.code),'[]'::jsonb) FROM ops.roles r").fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     list_response(items, parameters)
 }
 
@@ -511,7 +509,7 @@ async fn list_users(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',u.id,'email',u.email,'displayName',u.display_name,'status',u.status,'rolesVersion',COALESCE((SELECT max(ur.version) FROM ops.user_roles ur WHERE ur.user_id=u.id AND ur.revoked_at IS NULL),0),'version',u.version,'lastLoginAt',u.last_login_at) ORDER BY u.display_name),'[]'::jsonb) FROM ops.users u").fetch_one(pool).await.map_err(db)?;
+    let items = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',u.id,'email',u.email,'displayName',u.display_name,'status',u.status,'rolesVersion',COALESCE((SELECT max(ur.version) FROM ops.user_roles ur WHERE ur.user_id=u.id AND ur.revoked_at IS NULL),0),'version',u.version,'lastLoginAt',u.last_login_at) ORDER BY u.display_name),'[]'::jsonb) FROM ops.users u").fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     list_response(items, parameters)
 }
 
