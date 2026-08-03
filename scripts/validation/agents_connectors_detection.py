@@ -21,8 +21,8 @@ def validate(root: Path, result: Validation) -> None:
             result.require(keyword in prompt, f"agent {agent['id']}: prompt missing policy keyword {keyword}")
         evals = load_yaml(directory / 'evals.yaml')['cases']
         result.require(len(evals) == 10, f"agent {agent['id']}: insufficient eval cases")
-    result.require(len(connectors['connectors']) == 6, f'expected 6 connectors, found {len(connectors["connectors"])}')
-    result.require(connectors['total_operations'] == 44, f'expected 44 connector operations, found {connectors["total_operations"]}')
+    result.require(len(connectors['connectors']) == 8, f'expected 8 connectors, found {len(connectors["connectors"])}')
+    result.require(connectors['total_operations'] == 56, f'expected 56 connector operations, found {connectors["total_operations"]}')
     for connector in connectors['connectors']:
         directory = root / connector['directory']
         for name in ['connector.yaml', 'operations.yaml', 'field-mapping.yaml', 'error-policy.yaml']:
@@ -31,7 +31,7 @@ def validate(root: Path, result: Validation) -> None:
             fixture = load_json(directory / 'fixtures' / f'{kind}.json')
             expected_origin='synthetic-structural-not-live-evidence' if connector['source_kind'] in {'OFFICIAL_REST_API','OFFICIAL_REST_AND_ZIP_XML_API'} else 'synthetic-manifest-contract-not-live-evidence'
             result.require(fixture['fixture_origin'] == expected_origin, f"connector {connector['id']}: fixture origin mislabeled")
-    result.require(len(detection['rules']) == 10, f'expected 10 detection rules, found {len(detection["rules"])}')
+    result.require(len(detection['rules']) == 15, f'expected 15 detection rules, found {len(detection["rules"])}')
     case_count = 0
     for rule in detection['rules']:
         path = root / 'specs/detection/evals' / f"{rule['id'].lower()}.jsonl"
@@ -39,5 +39,5 @@ def validate(root: Path, result: Validation) -> None:
         kinds = {kind: sum(1 for case in cases if case['kind'] == kind) for kind in ['positive', 'false_positive', 'missing_data']}
         result.require(kinds == {'positive': 10, 'false_positive': 15, 'missing_data': 5}, f"rule {rule['id']}: wrong eval distribution {kinds}")
         case_count += len(cases)
-    result.require(case_count == 300, f'expected 300 rule evaluation cases, found {case_count}')
+    result.require(case_count == 450, f'expected 450 rule evaluation cases, found {case_count}')
     result.stats.update({'agents': len(agents['agents']), 'agent_tools': len(tools['tools']), 'connectors': len(connectors['connectors']), 'connector_operations': connectors['total_operations'], 'detection_rules': len(detection['rules']), 'rule_evaluation_cases': case_count})

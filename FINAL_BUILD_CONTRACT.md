@@ -21,8 +21,8 @@ v13 원본과 base provenance를 검증하는 기준이며 현재 `specs/`를 �
 - Persistence mapping 217, optimistic-concurrency contract 66
 - PostgreSQL **24 migration, 107 active table, 72 active first-party function**, service/privilege role 13
 - Agent 5, read-only tool 9, deterministic evaluation 50
-- Connector 6, upstream operation 44
-- Detection rule 10, concrete oracle evaluation 300
+- Connector 8, upstream operation 56
+- Detection rule 15, concrete oracle evaluation 450
 - Cargo member 32, Bun workspace 9, Compose service 20
 - Acceptance feature 35, scenario 271
 

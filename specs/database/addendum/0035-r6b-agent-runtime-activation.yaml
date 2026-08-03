@@ -31,7 +31,7 @@ measured_runtime_pins:
   agent_runtime_schemas:
     ProviderTurnV2: 2b68c8f597ac3e8abe385b2f69ed82d42758c41e4c21e3dd6d0602a50316526e
     ToolCallV2: 36028052d9d0ef9df99a5894e7b741632f909a2047cb4c4876f62e6add5ab212
-    InvestigatorOutputV2: 3eeb282779310e3b4dce0f4d613050736596d62a2a3f986fdbe882b7121796a6
+    InvestigatorOutputV2: c9f4536c3d8f6ae58a66cc830fb1a71745fad01e370c69ef799511a21bc4f1f0
     MarketResearchOutputV2: 737431cfb03f7dc3b7fa59d3561d7c3c56049375b42899725f493b794cdd323b
   tool_contract:
     exact_count: 13

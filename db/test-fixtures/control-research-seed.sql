@@ -154,6 +154,34 @@ VALUES(
   'a9bdbc4c-076b-5d00-93da-c8074941d1c0',1)
 ON CONFLICT DO NOTHING;
 
+-- Promotion must not trust parser labels copied onto an EvidenceSegment.  The
+-- test-only parser is an actual active registry row and the terminal run pins
+-- the exact implementation digest and input bytes used by the segment below.
+INSERT INTO core.parser_versions(
+  parser_name,version,supported_media_types,implementation_digest,
+  sandbox_profile,status)
+VALUES(
+  'control-fixture-parser','v1','["text/plain"]'::jsonb,
+  encode(extensions.digest(convert_to('control-fixture-parser-implementation-v1','UTF8'),'sha256'),'hex'),
+  'test-fixture-only-no-network-v1','ACTIVE')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO core.parser_runs(
+  id,source_document_id,parser_name,parser_version,status,output_record_count,
+  output_digest,error_code,started_at,completed_at,input_content_sha256,
+  extraction_schema_version,implementation_sha256,extraction_receipt_sha256)
+VALUES(
+  '8f32c1d9-746c-5f89-b575-c688e14b410d',
+  '0ab0b0bc-40db-562a-af3b-cf21cf7a8215','control-fixture-parser','v1',
+  'SUCCEEDED',1,
+  encode(extensions.digest(convert_to('control-fixture-parser-output-v1','UTF8'),'sha256'),'hex'),
+  NULL,'2026-01-02T22:02:56Z','2026-01-02T22:02:56Z',
+  '4951601014f8f3dfce1477715f11e812d5c8a29f00bd88803405fd32d4af07c6',
+  'control-research-segment.v1',
+  encode(extensions.digest(convert_to('control-fixture-parser-implementation-v1','UTF8'),'sha256'),'hex'),
+  encode(extensions.digest(convert_to('control-fixture-parser-extraction-v1','UTF8'),'sha256'),'hex'))
+ON CONFLICT DO NOTHING;
+
 INSERT INTO raw.evidence_segments(
   id,source_document_id,source_asset_id,source_asset_revision,source_content_sha256,
   parser_run_id,parser_name,parser_version,segment_ordinal,locator_kind,locator_value,
@@ -203,27 +231,6 @@ VALUES(
   'promote-source-fetch','source.fetch',1,'2026-01-02T22:02:56Z','2026-01-02T22:02:57Z')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO ops.agent_tool_calls(
-  tool_call_id,agent_run_id,provider_turn_id,call_id,input_snapshot_sha256,prior_transcript_sha256,
-  tool_id,tool_catalog_version,tool_catalog_sha256,request_schema_id,request_schema_version,
-  request_schema_sha256,response_schema_id,response_schema_version,response_schema_sha256,
-  timeout_ms,max_results,request_sha256,request_redacted,request_canonical,allowlist_decision_sha256,
-  scope_decision_sha256,rights_decision_sha256,classification,status,result_kind,result_sha256,
-  result_redacted,result_canonical,response_validation_sha256,result_transcript_sha256,source_use_count,
-  source_use_set_sha256,latency_ms,terminal_at,claim_generation,lease_token_sha256,lease_expires_at,version,started_at)
-VALUES(
-  '043eb9f6-e47e-56de-a587-82969b7bc1b6','8eee21b7-75c0-53c9-b079-d897a2c3c711',
-  'df45a69f-7ddb-5d39-b135-cc6eeacddd96','promote-source-fetch',repeat('9',64),repeat('0',64),
-  'source.fetch','control-tools-v1',repeat('1',64),'source-fetch.request','v2',
-  '8a6083ee948e416f71d7ee7e34ddb6ca41e84a8e3a2d1be53c4900605dc80c67',
-  'source-fetch.response','v2','42e59f2ddbe8bf2c58e61451cd698e388463f42bcdc13394bb6bf5140ca5912e',
-  1000,1,'44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a','{}',ops.canonical_jsonb_v1('{}'::jsonb),
-  repeat('2',64),repeat('3',64),repeat('4',64),'PUBLIC','SUCCEEDED','TOOL_RESULT',
-  '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a','{}',ops.canonical_jsonb_v1('{}'::jsonb),
-  repeat('5',64),repeat('6',64),0,'4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',1,
-  '2026-01-02T22:02:57Z',1,repeat('7',64),'2026-01-02T23:02:57Z',1,'2026-01-02T22:02:56Z')
-ON CONFLICT DO NOTHING;
-
 DO $$
 DECLARE
   v_content bytea := convert_to('gurinnae control promotion fixture' || chr(10), 'UTF8');
@@ -235,11 +242,16 @@ DECLARE
   v_tool_id uuid := '043eb9f6-e47e-56de-a587-82969b7bc1b6';
   v_run_id uuid := '8eee21b7-75c0-53c9-b079-d897a2c3c711';
   v_source_use_id uuid := 'e3b5ed44-ec8b-5fb3-ad5c-924ca07afa9d';
+  -- The compatibility run predates the physical V2 snapshot FK.  This stable
+  -- wire identity binds the V2 request to its retained input digest without
+  -- rewriting the V1 run as a snapshot-authoritative run.
+  v_input_snapshot_id uuid := '88c24d96-dcc6-5a62-bd26-61e5749d9bf6';
   v_rights_id uuid := v_asset_id;
   v_locator text := 'https://example.test/gurinnae/control-promotion-fixture';
   v_locator_sha char(64) := encode(extensions.digest(convert_to(v_locator,'UTF8'),'sha256'),'hex');
-  v_policy text := 'research-policy-v1';
+  v_policy text := 'source-policy-v2';
   v_policy_sha char(64) := encode(extensions.digest(convert_to(v_policy,'UTF8'),'sha256'),'hex');
+  v_gateway_decision_sha char(64) := encode(extensions.digest(convert_to('control-source-fetch-allow','UTF8'),'sha256'),'hex');
   v_rights_sha char(64);
   v_receipt char(64) := encode(extensions.digest(convert_to('content-safety-v2:'||v_content_sha||':CLEAN','UTF8'),'sha256'),'hex');
   v_artifact_canonical bytea;
@@ -247,6 +259,12 @@ DECLARE
   v_asset_rights_canonical bytea;
   v_source_use_canonical bytea;
   v_source_use_sha char(64);
+  v_request jsonb;
+  v_request_canonical bytea;
+  v_request_sha char(64);
+  v_result jsonb;
+  v_result_canonical bytea;
+  v_result_sha char(64);
   v_snapshot jsonb;
   v_capability_id uuid;
   v_capability_version bigint;
@@ -257,6 +275,23 @@ DECLARE
   v_expires_at timestamptz;
   v_dimensions jsonb;
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+      FROM core.parser_runs run
+      JOIN core.parser_versions parser
+        ON parser.parser_name=run.parser_name
+       AND parser.version=run.parser_version
+       AND parser.status='ACTIVE'
+       AND parser.implementation_digest=run.implementation_sha256
+     WHERE run.id='8f32c1d9-746c-5f89-b575-c688e14b410d'
+       AND run.source_document_id='0ab0b0bc-40db-562a-af3b-cf21cf7a8215'
+       AND run.status='SUCCEEDED'
+       AND run.input_content_sha256=v_content_sha
+       AND run.output_digest IS NOT NULL
+       AND run.extraction_receipt_sha256 IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'control research parser binding mismatch';
+  END IF;
   v_snapshot := ops.research_rights_snapshot_v1('control-fixture-source',clock_timestamp());
   IF v_snapshot IS NULL THEN RAISE EXCEPTION 'control research rights snapshot missing'; END IF;
   v_capability_id := (v_snapshot->'primaryDecision'->>'decisionId')::uuid;
@@ -299,10 +334,9 @@ BEGIN
     'useKind','TOOL_QUERY','sourceKind','RESEARCH_ARTIFACT',
     'sourceIdentity',jsonb_build_object('kind','RESEARCH_ARTIFACT','researchArtifactId',v_artifact_id,'assetId',v_asset_id,'assetRevision',1,'artifactSha256',v_artifact_sha,'contentSha256',v_content_sha,'sourceFetchId',v_fetch_id),
     'locator',jsonb_build_object('kind','HTML_CSS_SELECTOR','value',v_locator,'locatorSha256',v_locator_sha),
-    'selectedContentSha256',v_content_sha,'classification','PUBLIC',
-    'rightsDecision',jsonb_build_object('decisionId',v_rights_id,'capabilityDecisionId',v_capability_id,
+    'selectedContentSha256',v_content_sha,'classification','RESTRICTED',
+    'rightsDecision',jsonb_build_object('decisionId',v_rights_id,
       'decisionVersion',1,'decisionSha256',v_rights_sha,'effectiveAt',v_effective_at,'expiresAt',v_expires_at,
-      'capabilityDecisionSetSha256',v_capability_set_sha,
       'accessRight',v_dimensions->>'accessRight','privateStorageRight',v_dimensions->>'privateStorageRight',
       'modelEgressRight',v_dimensions->>'modelEgressRight','modelUseRight',v_dimensions->>'modelUseRight',
       'derivativeCreationRight',v_dimensions->>'derivativeCreationRight','excerptRight',v_dimensions->>'excerptRight',
@@ -310,18 +344,122 @@ BEGIN
       'publicDisplayRight',v_dimensions->>'publicDisplayRight'),
     'providerReceiptId',NULL,'occurredAt',v_effective_at));
   v_source_use_sha := encode(extensions.digest(v_source_use_canonical,'sha256'),'hex');
+  v_request := jsonb_build_object(
+    'schemaVersion','source.fetch.request.v2','runId',v_run_id,
+    'inputSnapshotId',v_input_snapshot_id,'inputSnapshotSha256',repeat('9',64),
+    'requestKind','FETCH_URL','url',v_locator,
+    'expectedMediaTypes',jsonb_build_array('text/plain'),
+    'sourcePolicyVersion',v_policy,'sourcePolicySha256',v_policy_sha,
+    'rightsPurpose','FACT_CHECK','maxBytes',26214400,'allowRedirects',false);
+  v_request_canonical := ops.canonical_jsonb_v1(v_request);
+  v_request_sha := encode(extensions.digest(v_request_canonical,'sha256'),'hex');
+  v_result := jsonb_build_object(
+    'schemaVersion','source.fetch.response.v2','requestKind','FETCH_URL',
+    'gatewayDecision',jsonb_build_object(
+      'policyVersion',v_policy,'policySha256',v_policy_sha,'decision','ALLOW',
+      'decisionCode','EGRESS_FETCHED','decisionSha256',v_gateway_decision_sha),
+    'discoveryReceipt',NULL,'searchResults','[]'::jsonb,
+    'artifacts',jsonb_build_array(jsonb_build_object(
+      'researchArtifactId',v_artifact_id,'assetId',v_asset_id,'assetRevision',1,
+      'sourceFetchId',v_fetch_id,'artifactOrdinal',0,'fetchOutcome','STORED',
+      'sourceAuthority','control-fixture-source','finalOrigin',v_locator,
+      'retrievedAt','2026-01-02T22:02:56Z','httpStatus',200,
+      'contentMediaType','text/plain','contentSizeBytes',octet_length(v_content),
+      'contentSha256',v_content_sha,'artifactSha256',v_artifact_sha,
+      'responseHeadersSha256',encode(extensions.digest(ops.canonical_jsonb_v1('[]'::jsonb),'sha256'),'hex'),
+      'safeHeaders','[]'::jsonb,'redirects','[]'::jsonb,
+      'contentSafetyState','CLEAN','contentSafetyReceiptSha256',v_receipt,
+      'researchOnly',true,'reviewTier','OFFICIAL_UNREVIEWED',
+      'sourceUseId',v_source_use_id,'sourceUseSha256',v_source_use_sha)),
+    'truncated',false,'fetchReceiptSha256',v_receipt);
+  v_result_canonical := ops.canonical_jsonb_v1(v_result);
+  v_result_sha := encode(extensions.digest(v_result_canonical,'sha256'),'hex');
+
+  INSERT INTO ops.agent_tool_calls(
+    tool_call_id,agent_run_id,provider_turn_id,call_id,input_snapshot_sha256,prior_transcript_sha256,
+    tool_id,tool_catalog_version,tool_catalog_sha256,request_schema_id,request_schema_version,
+    request_schema_sha256,response_schema_id,response_schema_version,response_schema_sha256,
+    timeout_ms,max_results,request_sha256,request_redacted,request_canonical,allowlist_decision_sha256,
+    scope_decision_sha256,rights_decision_sha256,classification,status,result_kind,result_sha256,
+    result_redacted,result_canonical,response_validation_sha256,result_transcript_sha256,source_use_count,
+    source_use_set_sha256,latency_ms,terminal_at,claim_generation,lease_token_sha256,lease_expires_at,version,started_at)
+  VALUES(
+    v_tool_id,v_run_id,v_turn_id,'promote-source-fetch',repeat('9',64),repeat('0',64),
+    'source.fetch','13.0.0+agent-multimodal.1',
+    -- SHA-256 of the exact current 13-tool authority catalog bytes.
+    'e2c740a886f8cbab7756eac4325088723cde9ec9a83b6b560bbfc9faa16990ed',
+    'source.fetch.request.v2','2',
+    'e197b3f470dcd2180ad6127c1615684507c10c86cb26c9ee57967f73bff9e57c',
+    'source.fetch.response.v2','2','c1097a7785d2680e2b27d99133c0f9f37c26f67172cccbc94d9acb9aab7905c6',
+    1000,1,v_request_sha,v_request,v_request_canonical,
+    encode(extensions.digest(convert_to('allowlist:CONTROL_FIXTURE','UTF8'),'sha256'),'hex'),
+    encode(extensions.digest(convert_to('snapshot-scope','UTF8'),'sha256'),'hex'),
+    v_capability_sha,'INTERNAL','SUCCEEDED','TOOL_RESULT',v_result_sha,
+    v_result,v_result_canonical,encode(extensions.digest(convert_to('response-valid','UTF8'),'sha256'),'hex'),
+    encode(extensions.digest(convert_to('control-source-fetch-transcript','UTF8'),'sha256'),'hex'),
+    0,'4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',1,
+    '2026-01-02T22:02:57Z',1,
+    encode(extensions.digest(convert_to('promote-source-fetch','UTF8'),'sha256'),'hex'),
+    '2026-01-02T23:02:57Z',1,'2026-01-02T22:02:56Z')
+  ON CONFLICT DO NOTHING;
+
   PERFORM ops.record_research_fetch_v1(
     p_agent_run_id => v_run_id, p_provider_turn_id => v_turn_id, p_tool_call_id => v_tool_id,
     p_call_id => 'promote-source-fetch', p_input_snapshot_sha256 => repeat('9',64),
     p_request_kind => 'FETCH_URL', p_source_id => 'control-fixture-source',
     p_external_locator => v_locator, p_source_url_redacted => v_locator,
     p_final_url_redacted => v_locator, p_http_status => 200, p_content_media_type => 'text/plain',
-    p_request_sha256 => '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a',
+    p_request_sha256 => v_request_sha,
     p_content => v_content, p_object_key => 'research/control-promotion-fixture.txt',
-    p_policy_version => v_policy, p_result_sha256 => '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a',
+    p_policy_version => v_policy, p_result_sha256 => v_result_sha,
     p_fetch_id => v_fetch_id, p_asset_id => v_asset_id, p_artifact_id => v_artifact_id,
     p_source_use_id => v_source_use_id, p_source_use_sha256 => v_source_use_sha,
     p_receipt_digest => v_receipt, p_safe_headers => '[]'::jsonb, p_redirect_chain => '[]'::jsonb);
+  IF NOT EXISTS (
+    SELECT 1 FROM raw.research_artifacts artifact
+     WHERE artifact.id=v_artifact_id
+       AND artifact.request_kind='FETCH_URL'
+       AND artifact.classification='RESTRICTED'
+       AND artifact.artifact_sha256=v_artifact_sha
+  ) THEN
+    RAISE EXCEPTION 'control research artifact classification mismatch';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM raw.asset_rights_decisions decision
+     WHERE decision.id=v_rights_id
+       AND decision.decision_sha256=v_rights_sha
+       AND decision.approval_sha256=v_capability_set_sha
+       AND decision.execution_sha256=v_execution_set_sha
+  ) THEN
+    RAISE EXCEPTION 'control research asset rights digest mismatch';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM ops.agent_source_uses source_use
+     WHERE source_use.source_use_id=v_source_use_id
+       AND source_use.classification='RESTRICTED'
+       AND source_use.source_use_sha256=v_source_use_sha
+       AND (
+         SELECT count(*) FROM jsonb_object_keys(
+           convert_from(source_use.source_use_canonical,'UTF8')::jsonb
+             ->'rightsDecision'
+         )
+       )=14
+       AND NOT ((
+         convert_from(source_use.source_use_canonical,'UTF8')::jsonb
+           ->'rightsDecision'
+       ) ?| ARRAY['capabilityDecisionId','capabilityDecisionSetSha256'])
+  ) THEN
+    RAISE EXCEPTION 'control research source-use preimage mismatch';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM raw.research_artifact_review_tiers tier
+     WHERE tier.research_artifact_id=v_artifact_id
+       AND tier.revision=1
+       AND tier.review_tier='OFFICIAL_UNREVIEWED'
+       AND tier.reviewed_classification='RESTRICTED'
+  ) THEN
+    RAISE EXCEPTION 'control research initial review tier mismatch';
+  END IF;
 END $$;
 
 COMMIT;

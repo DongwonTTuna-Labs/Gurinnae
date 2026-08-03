@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.agent_suggestions(\n           agent_run_id,case_id,suggestion_type,payload,evidence_ids,citation_checks,status,\n           proposal_contract_version,target_schema_version,payload_sha256,payload_canonical,\n           input_snapshot_sha256,citation_validation_id,expires_at)\n         SELECT $1,(SELECT case_id FROM ops.agent_runs WHERE id=$1),$2,$3,'[]'::jsonb,'[]'::jsonb,'PENDING',2,$4,CAST($5 AS char(64)),$6,\n                $7,$8,clock_timestamp()+interval '7 days'\n         WHERE NOT EXISTS (SELECT 1 FROM ops.agent_suggestions WHERE agent_run_id=$1 AND citation_validation_id=$8 AND payload_sha256=CAST($5 AS char(64)))\n         RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Bpchar",
+        "Bytea",
+        "Bpchar",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "36650dec5073a84debc287c2be803b07181366eea9336756a64944e128ebffe9"
+}

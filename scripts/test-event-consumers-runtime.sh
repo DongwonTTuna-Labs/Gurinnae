@@ -3597,12 +3597,18 @@ docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
   -v response_size="$response_size" -v correction_size="$correction_size" <<'SQL' >/dev/null
 INSERT INTO ops.users(id,oidc_subject,email,display_name,status) VALUES
  ('31000000-0000-4000-8000-000000000001','event-publisher','publisher@example.test','Event Publisher','ACTIVE'),
- ('31000000-0000-4000-8000-000000000002','event-reviewer','reviewer@example.test','Event Reviewer','ACTIVE'),
+ ('31000000-0000-4000-8000-000000000002','event-reviewer','event-reviewer@example.test','Event Reviewer','ACTIVE'),
  ('31000000-0000-4000-8000-000000000003','event-invitee','invitee@example.test','Event Invitee','INVITED');
 INSERT INTO editorial.cases(id,public_slug,title,investigation_state,publication_state,summary,version)
 VALUES('31000000-0000-4000-8000-000000000004','event-case','Event consumer case','READY_TO_PUBLISH','PUBLISHED_ANOMALY','Event consumer integration',1);
 INSERT INTO editorial.review_snapshots(id,case_id,case_version,snapshot_sha256,snapshot_payload,automated_gate_results,created_by)
-VALUES('31000000-0000-4000-8000-000000000005','31000000-0000-4000-8000-000000000004',1,repeat('1',64),'{}','{}','31000000-0000-4000-8000-000000000001');
+VALUES(
+  '31000000-0000-4000-8000-000000000005',
+  '31000000-0000-4000-8000-000000000004',1,
+  encode(extensions.digest(
+    convert_to('event-consumer-review-snapshot','UTF8'),'sha256'
+  ),'hex'),'{}','{}','31000000-0000-4000-8000-000000000001'
+);
 UPDATE editorial.cases SET current_review_snapshot_id='31000000-0000-4000-8000-000000000005'
  WHERE id='31000000-0000-4000-8000-000000000004';
 INSERT INTO editorial.review_decisions(review_snapshot_id,reviewer_id,decision,reason,criteria,reviewer_independence,reauth_context_hash)
@@ -5872,10 +5878,11 @@ BEGIN
 END $$;
 SQL
 
-# D1 sensitivity proof runs last.  Altering only the declared contract-row
-# identity basis must produce a different canonical digest and exactly one new
-# deduped build job.  The new job remains QUEUED and is intentionally not sent
-# to analysis, preserving all earlier snapshot/run cardinality assertions.
+# D1 sensitivity proof is defined here but invoked after the R6c rule jobs.
+# Altering only the declared contract-row identity basis must produce a
+# different canonical digest and exactly one new deduped build job.  Invoking
+# it last keeps that job QUEUED and intentionally out of analysis-worker.
+r6b2_d1_sensitivity_proof() {
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <<'SQL' >/dev/null
 CREATE TEMP TABLE r6b_d1_identity_change(
   before_digest text NOT NULL,
@@ -5943,5 +5950,528 @@ BEGIN
   END IF;
 END $$;
 SQL
+}
 
-echo "workflow/notification runtime and R6b2 snapshot-sweep-signal-investigation-v2 receipt chain: PASS"
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 \
+  -U postgres -d "$database" \
+  < db/test-fixtures/r6c-typed-graph-runtime.sql
+
+r6c_recursion_phase() {
+  local phase="$1"
+  shift
+  docker exec -i "$container" psql -v ON_ERROR_STOP=1 \
+    -U postgres -d "$database" -v "r6c_recursion_phase=$phase" "$@" \
+    < db/test-fixtures/r6c-hypothesis-recursion-runtime.sql >/dev/null
+}
+
+r6c_hypothesis_proposal_id() {
+  case "$1" in
+    approve_absent) echo "31610000-0000-4000-8000-000000000001" ;;
+    approve_disabled) echo "31610000-0000-4000-8000-000000000002" ;;
+    approve_case_budget) echo "31610000-0000-4000-8000-000000000003" ;;
+    approve_max_depth) echo "31610000-0000-4000-8000-000000000004" ;;
+    approve_happy) echo "31610000-0000-4000-8000-000000000005" ;;
+    approve_stale_case) echo "31610000-0000-4000-8000-000000000006" ;;
+    *)
+      echo "unknown R6c approval phase: $1" >&2
+      return 1
+      ;;
+  esac
+}
+
+r6c_approve_hypothesis() {
+  local phase="$1"
+  local suggestion_id
+  local proposal_id
+  case "$phase" in
+    approve_absent)
+      suggestion_id="31600000-0000-4000-8000-000000000030"
+      ;;
+    approve_disabled)
+      suggestion_id="31600000-0000-4000-8000-000000000040"
+      ;;
+    approve_case_budget)
+      suggestion_id="31600000-0000-4000-8000-000000000050"
+      ;;
+    approve_max_depth)
+      suggestion_id="31600000-0000-4000-8000-000000000060"
+      ;;
+    approve_happy)
+      suggestion_id="31600000-0000-4000-8000-000000000070"
+      ;;
+    approve_stale_case)
+      suggestion_id="31600000-0000-4000-8000-000000000080"
+      ;;
+    *)
+      echo "unknown R6c approval phase: $phase" >&2
+      return 1
+      ;;
+  esac
+  proposal_id="$(r6c_hypothesis_proposal_id "$phase")"
+
+  local reason="TEST_FIXTURE_ONLY ${phase} acceptance"
+  local draft
+  draft="$(
+    docker exec "$container" psql -At -v ON_ERROR_STOP=1 \
+      -U postgres -d "$database" -c "
+        SELECT jsonb_build_object(
+          'kind','HYPOTHESIS',
+          'target',jsonb_build_object(
+            'type','CASE','id',current_case.id,
+            'version',current_case.version,
+            'digest',btrim(suggestion.input_snapshot_sha256)
+          ),
+          'objectScopeDigest',encode(extensions.digest(
+            convert_to(current_case.id::text,'UTF8'),'sha256'
+          ),'hex'),
+          'contentDigest',btrim(suggestion.payload_sha256),
+          'proposal',suggestion.payload
+        )::text
+        FROM ops.agent_suggestions AS suggestion
+        JOIN editorial.cases AS current_case
+          ON current_case.id=suggestion.case_id
+        WHERE suggestion.id='${suggestion_id}'::uuid
+          AND suggestion.status='PENDING'
+          AND suggestion.version=1"
+  )"
+  if [[ -z "$draft" ]]; then
+    echo "R6c approval draft authority missing: $phase" >&2
+    return 1
+  fi
+
+  local rationale_json
+  local payload_encrypted
+  local rationale_encrypted
+  local payload_encrypted_base64
+  local rationale_encrypted_base64
+  rationale_json="$(jq -cn --arg reason "$reason" '$reason')"
+  payload_encrypted="$(
+    encrypt ops.action_proposal_versions payload_encrypted \
+      "$proposal_id" json "$draft"
+  )"
+  rationale_encrypted="$(
+    encrypt ops.action_proposal_versions rationale_encrypted \
+      "$proposal_id" json "$rationale_json"
+  )"
+  payload_encrypted_base64="$(printf '%s' "$payload_encrypted" | base64 -w0)"
+  rationale_encrypted_base64="$(printf '%s' "$rationale_encrypted" | base64 -w0)"
+  r6c_recursion_phase "$phase" \
+    -v "r6c_payload_encrypted_base64=$payload_encrypted_base64" \
+    -v "r6c_rationale_encrypted_base64=$rationale_encrypted_base64"
+}
+
+r6c_recursion_receipt_exists() {
+  local proposal_id="$1"
+  docker exec "$container" psql -At -v ON_ERROR_STOP=1 \
+    -U postgres -d "$database" -c "
+      SELECT CASE WHEN EXISTS (
+        SELECT 1
+        FROM ops.execution_authorizations AS execution_authorization
+        JOIN ops.hypothesis_recursion_receipts AS receipt
+          ON receipt.trigger_kind='ACTION_EXECUTION'
+         AND receipt.trigger_id=execution_authorization.execution_id
+         AND receipt.trigger_generation=execution_authorization.generation
+        WHERE execution_authorization.proposal_id='${proposal_id}'::uuid
+          AND execution_authorization.proposal_version=1
+          AND execution_authorization.generation=1
+      ) THEN 1 ELSE 0 END"
+}
+
+r6c_recursion_drain_diagnostics() {
+  local proposal_id="$1"
+  docker exec "$container" psql -v ON_ERROR_STOP=1 \
+    -U postgres -d "$database" -c "
+      SELECT execution_authorization.proposal_id,
+             execution_authorization.execution_id,
+             execution_authorization.generation,
+             effect.state AS effect_state,
+             effect.current_generation,
+             receipt.disposition AS recursion_disposition
+      FROM ops.execution_authorizations AS execution_authorization
+      LEFT JOIN ops.in_flight_effects AS effect
+        ON effect.id=execution_authorization.execution_id
+      LEFT JOIN ops.hypothesis_recursion_receipts AS receipt
+        ON receipt.trigger_kind='ACTION_EXECUTION'
+       AND receipt.trigger_id=execution_authorization.execution_id
+       AND receipt.trigger_generation=execution_authorization.generation
+      WHERE execution_authorization.proposal_id='${proposal_id}'::uuid;
+      SELECT job.id,job.priority,job.created_at,job.status,
+             job.payload->>'eventType' AS event_type,
+             job.payload->>'aggregateId' AS aggregate_id,
+             job.attempt_count,job.last_error_code,job.last_error_detail,
+             attempt.outcome AS attempt_outcome,
+             attempt.error_code AS attempt_error_code,
+             attempt.error_detail AS attempt_error_detail
+      FROM ops.jobs AS job
+      LEFT JOIN ops.job_attempts AS attempt
+        ON attempt.job_id=job.id
+       AND attempt.attempt=job.attempt_count
+      WHERE job.queue='workflow-worker'
+        AND job.status<>'SUCCEEDED'
+      ORDER BY job.priority,job.created_at,job.id;" >&2
+}
+
+r6c_drain_hypothesis_root() {
+  local approval_phase="$1"
+  local proposal_id
+  local queue_state
+  local queued
+  local target_position
+  local max_attempts
+  local attempt
+  proposal_id="$(r6c_hypothesis_proposal_id "$approval_phase")"
+
+  # One scheduler pass dispatches every currently undispatched event.  Earlier
+  # agent completion events legitimately precede the new authorization in the
+  # workflow queue, so a fixed number of WORKFLOW_ONCE calls is not a valid
+  # completion oracle.  Measure that closed queue and drain only until the
+  # exact authorization's immutable recursion receipt exists.
+  run_r6b2_scheduler
+  queue_state="$(
+    docker exec "$container" psql -At -F '|' -v ON_ERROR_STOP=1 \
+      -U postgres -d "$database" -c "
+        WITH target AS (
+          SELECT execution_id
+          FROM ops.execution_authorizations
+          WHERE proposal_id='${proposal_id}'::uuid
+            AND proposal_version=1
+            AND generation=1
+        ), ordered AS (
+          SELECT job.payload,
+                 row_number() OVER (
+                   ORDER BY job.priority,job.created_at,job.id
+                 ) AS position
+          FROM ops.jobs AS job
+          WHERE job.queue='workflow-worker'
+            AND job.status='QUEUED'
+            AND job.run_after<=clock_timestamp()
+        )
+        SELECT count(*),coalesce(min(ordered.position) FILTER (
+          WHERE ordered.payload->>'eventType'='action.execution_authorized.v1'
+            AND ordered.payload->>'aggregateId'=(
+              SELECT target.execution_id::text FROM target
+            )
+        ),0)
+        FROM ordered"
+  )"
+  IFS='|' read -r queued target_position <<<"$queue_state"
+  if [[ "$target_position" -eq 0 ]]; then
+    echo "R6c authorization delivery missing: phase=$approval_phase queued=$queued" >&2
+    r6c_recursion_drain_diagnostics "$proposal_id"
+    return 1
+  fi
+  echo "R6c recursion queue: phase=$approval_phase queued=$queued target_position=$target_position"
+
+  # The measured queue includes the authorization delivery.  Its executor can
+  # add one completion delivery; three extra iterations cover scheduler
+  # dispatch and the exact receipt check without an unbounded poll or sleep.
+  max_attempts=$((queued + 3))
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if [[ "$(r6c_recursion_receipt_exists "$proposal_id")" == "1" ]]; then
+      return 0
+    fi
+    run_r6b2_workflow
+    run_r6b2_scheduler
+  done
+
+  if [[ "$(r6c_recursion_receipt_exists "$proposal_id")" == "1" ]]; then
+    return 0
+  fi
+  echo "R6c recursion receipt not produced within measured bound: phase=$approval_phase attempts=$max_attempts" >&2
+  r6c_recursion_drain_diagnostics "$proposal_id"
+  return 1
+}
+
+r6c_run_approved_hypothesis_to_root() {
+  local approval_phase="$1"
+  local verify_phase="$2"
+
+  r6c_approve_hypothesis "$approval_phase"
+  r6c_drain_hypothesis_root "$approval_phase"
+  r6c_recursion_phase "$verify_phase"
+}
+
+r6c_complete_stage_and_reconcile() {
+  local completion_phase="$1"
+  local verify_phase="$2"
+
+  r6c_recursion_phase "$completion_phase"
+  run_r6b2_scheduler
+  run_r6b2_workflow
+  r6c_recursion_phase "$verify_phase"
+}
+
+r6c_recursion_phase setup
+
+r6c_run_approved_hypothesis_to_root approve_absent verify_absent
+
+r6c_recursion_phase policy_disabled
+r6c_run_approved_hypothesis_to_root approve_disabled verify_disabled
+
+r6c_recursion_phase policy_case_budget
+r6c_run_approved_hypothesis_to_root \
+  approve_case_budget verify_case_budget
+
+r6c_recursion_phase policy_max_depth
+r6c_run_approved_hypothesis_to_root \
+  approve_max_depth verify_max_depth_root
+r6c_complete_stage_and_reconcile \
+  complete_market_max_depth verify_max_depth
+
+r6c_recursion_phase policy_happy
+r6c_run_approved_hypothesis_to_root approve_happy verify_happy_root
+
+# Requeue the original workflow EVENT_DELIVERY job with the same producer job
+# identity and reset only its inbox processing marker.  This is a real exact
+# redelivery, not a second synthetic event or a duplicate plan seed.
+r6c_recursion_phase prepare_exact_redelivery
+run_r6b2_workflow
+r6c_recursion_phase verify_exact_redelivery
+
+r6c_recursion_phase complete_market_happy
+run_r6b2_scheduler
+run_r6b2_workflow
+r6c_complete_stage_and_reconcile \
+  complete_skeptic_happy verify_happy
+r6c_approve_hypothesis approve_stale_case
+r6c_recursion_phase verify_stale_case_version
+r6c_recursion_phase final_verify
+
+# R6c test-only rule oracle transport.  Each positive input comes verbatim
+# from the independently pinned JSONL oracle.  The paired production-shaped
+# input changes only the source-availability bit that keeps the rule inactive
+# until its declared connector authority exists.  These DRAFT versions are
+# confined to the disposable database; there is no migration or operational
+# activation seed.
+r6c_enqueue_rule_case() {
+  local case_ordinal="$1"
+  local rule_id="$2"
+  local case_kind="$3"
+  local input_json="$4"
+  local expected_json="$5"
+  local rule_version_id="31400000-0000-4000-8000-0000000001${case_ordinal}"
+  local evaluation_id="31400000-0000-4000-8000-0000000002${case_ordinal}"
+  local dataset_snapshot_id="31400000-0000-4000-8000-0000000003${case_ordinal}"
+  local job_id="31400000-0000-4000-8000-0000000004${case_ordinal}"
+  local input_sha256
+  local result_preimage
+  local result_preimage_sha256
+  local result_digest
+
+  input_sha256="$(printf '%s' "$input_json" | sha256sum | cut -d' ' -f1)"
+  result_preimage="$(jq -cS 'del(.result_hash)' <<<"$expected_json")"
+  result_preimage_sha256="$(
+    printf '%s' "$result_preimage" | sha256sum | cut -d' ' -f1
+  )"
+  result_digest="$(printf '%s' "$expected_json" | sha256sum | cut -d' ' -f1)"
+  if [[ "$(jq -r '.input_hash' <<<"$expected_json")" != "$input_sha256" ]] \
+    || [[ "$(jq -r '.result_hash' <<<"$expected_json")" != "$result_preimage_sha256" ]]; then
+    echo "R6c rule oracle canonical digest mismatch: $rule_id/$case_kind" >&2
+    return 1
+  fi
+
+  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
+    -d "$database" -v rule_version_id="$rule_version_id" \
+    -v evaluation_id="$evaluation_id" \
+    -v dataset_snapshot_id="$dataset_snapshot_id" -v job_id="$job_id" \
+    -v rule_id="$rule_id" -v case_kind="$case_kind" \
+    -v input_json="$input_json" -v expected_json="$expected_json" \
+    -v result_digest="$result_digest" <<'SQL' >/dev/null
+INSERT INTO core.rule_versions(
+  id,rule_id,version,name,description,configuration,code_digest,status,
+  created_by
+) VALUES (
+  :'rule_version_id',:'rule_id','r6c-runtime-' || :'case_kind',
+  'R6c runtime ' || :'rule_id' || ' ' || :'case_kind',
+  'TEST_FIXTURE_ONLY: no operational activation seed',
+  jsonb_build_object(
+    'evaluationInput',:'input_json'::jsonb,
+    'runtimeExpected',:'expected_json'::jsonb,
+    'runtimeResultDigest',:'result_digest',
+    'fixtureAuthority','TEST_FIXTURE_ONLY','severity','HIGH'
+  ),repeat('c',64),'DRAFT','31000000-0000-4000-8000-000000000001'
+);
+INSERT INTO core.rule_evaluations(
+  id,rule_version_id,dataset_snapshot_id,evaluation_profile,status,
+  requested_by,reason,requester_type,requester_service
+) VALUES (
+  :'evaluation_id',:'rule_version_id',:'dataset_snapshot_id','REGRESSION',
+  'QUEUED','31000000-0000-4000-8000-000000000001',
+  'TEST_FIXTURE_ONLY R6c ' || :'case_kind','USER',NULL
+);
+INSERT INTO ops.jobs(
+  id,job_type,queue,status,priority,payload,dedupe_key,max_attempts
+) VALUES (
+  :'job_id','RULE_EVALUATION','analysis-worker','QUEUED',1,
+  jsonb_build_object('evaluationId',:'evaluation_id'),
+  'r6c-rule-runtime:' || :'evaluation_id',1
+);
+SQL
+}
+
+r6c_blocked_result() {
+  local input_json="$1"
+  local blocker="$2"
+  local input_sha256
+  local result_without_digest
+  local result_sha256
+  input_sha256="$(printf '%s' "$input_json" | sha256sum | cut -d' ' -f1)"
+  result_without_digest="$(
+    jq -cnS --arg blocker "$blocker" --arg input_sha256 "$input_sha256" \
+      '{blockers:[$blocker],excluded_ids:[],included_ids:[],input_hash:$input_sha256,metrics:{},outcome:"BLOCKED"}'
+  )"
+  result_sha256="$(
+    printf '%s' "$result_without_digest" | sha256sum | cut -d' ' -f1
+  )"
+  jq -cS --arg result_sha256 "$result_sha256" \
+    '. + {result_hash:$result_sha256}' <<<"$result_without_digest"
+}
+
+r6c_rule_case_ordinal=01
+for r6c_rule_id in \
+  OFFICER_OVERLAP_AWARD OWNERSHIP_LINKED_COMPETITORS BID_ROTATION \
+  REVOLVING_DOOR_CONTRACT SANCTIONED_SUCCESSOR; do
+  r6c_rule_slug="$(tr '[:upper:]' '[:lower:]' <<<"$r6c_rule_id")"
+  r6c_oracle_file="specs/detection/evals/${r6c_rule_slug}.jsonl"
+  r6c_positive="$(jq -sc 'map(select(.kind=="positive"))[0]' "$r6c_oracle_file")"
+  r6c_positive_input="$(jq -cS '.input' <<<"$r6c_positive")"
+  r6c_positive_expected="$(jq -cS '.expected' <<<"$r6c_positive")"
+  r6c_enqueue_rule_case \
+    "$r6c_rule_case_ordinal" "$r6c_rule_id" positive \
+    "$r6c_positive_input" "$r6c_positive_expected"
+  r6c_rule_case_ordinal="$(printf '%02d' "$((10#$r6c_rule_case_ordinal + 1))")"
+
+  case "$r6c_rule_id" in
+    OFFICER_OVERLAP_AWARD)
+      r6c_blocker='SOURCE_COVERAGE_INCOMPLETE'
+      r6c_blocked_input="$(
+        jq -cS '.input.source_coverage.dart_officer_assignments_complete=false | .input' \
+          <<<"$r6c_positive"
+      )"
+      ;;
+    OWNERSHIP_LINKED_COMPETITORS)
+      r6c_blocker='STRUCTURED_BIDDER_SOURCE_UNAVAILABLE'
+      r6c_blocked_input="$(
+        jq -cS '.input.procurement.structured_participant_source.status="UNAVAILABLE" | .input' \
+          <<<"$r6c_positive"
+      )"
+      ;;
+    BID_ROTATION)
+      r6c_blocker='STRUCTURED_PARTICIPANT_SOURCE_UNAVAILABLE'
+      r6c_blocked_input="$(
+        jq -cS '.input.participant_source.status="UNAVAILABLE" | .input' \
+          <<<"$r6c_positive"
+      )"
+      ;;
+    REVOLVING_DOOR_CONTRACT)
+      r6c_blocker='OFFICIAL_REEMPLOYMENT_SOURCE_UNAVAILABLE'
+      r6c_blocked_input="$(
+        jq -cS '.input.source_coverage.official_reemployment_source_available=false | .input' \
+          <<<"$r6c_positive"
+      )"
+      ;;
+    SANCTIONED_SUCCESSOR)
+      r6c_blocker='SANCTION_SOURCE_NOT_READY'
+      r6c_blocked_input="$(
+        jq -cS '.input.sanction_source_status="DISABLED" | .input' \
+          <<<"$r6c_positive"
+      )"
+      ;;
+  esac
+  r6c_blocked_expected="$(
+    r6c_blocked_result "$r6c_blocked_input" "$r6c_blocker"
+  )"
+  r6c_enqueue_rule_case \
+    "$r6c_rule_case_ordinal" "$r6c_rule_id" production-blocked \
+    "$r6c_blocked_input" "$r6c_blocked_expected"
+  r6c_rule_case_ordinal="$(printf '%02d' "$((10#$r6c_rule_case_ordinal + 1))")"
+done
+
+# ANALYSIS_ONCE drains the currently runnable queue.  The D1 sensitivity job is
+# deliberately created only after this loop, so this invocation has exactly
+# the ten priority-1 R6c oracle jobs available to claim.
+for _ in $(seq 1 12); do
+  r6c_rule_jobs_remaining="$(
+    docker exec "$container" psql -At -v ON_ERROR_STOP=1 -U postgres \
+      -d "$database" -c \
+      "SELECT count(*) FROM ops.jobs WHERE dedupe_key LIKE 'r6c-rule-runtime:%' AND status IN ('QUEUED','LEASED','RUNNING')"
+  )"
+  [[ "$r6c_rule_jobs_remaining" == 0 ]] && break
+  run_r6b2_analysis
+done
+if [[ "$r6c_rule_jobs_remaining" != 0 ]]; then
+  echo "R6c rule runtime jobs did not drain: $r6c_rule_jobs_remaining" >&2
+  exit 1
+fi
+
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
+  -d "$database" <<'SQL' >/dev/null
+DO $$
+DECLARE
+  v_evaluation_count bigint;
+BEGIN
+  SELECT count(*) INTO v_evaluation_count
+  FROM core.rule_evaluations AS evaluation
+  JOIN core.rule_versions AS rule ON rule.id=evaluation.rule_version_id
+  JOIN ops.jobs AS job
+    ON job.payload->>'evaluationId'=evaluation.id::text
+   AND job.dedupe_key='r6c-rule-runtime:' || evaluation.id::text
+  JOIN ops.job_attempts AS attempt ON attempt.job_id=job.id
+  JOIN core.rule_runs AS run
+    ON run.run_key='evaluation:' || evaluation.id::text
+  WHERE rule.description='TEST_FIXTURE_ONLY: no operational activation seed'
+    AND rule.status='DRAFT'
+    AND rule.configuration->>'fixtureAuthority'='TEST_FIXTURE_ONLY'
+    AND evaluation.status='SUCCEEDED'
+    AND evaluation.result_payload=rule.configuration->'runtimeExpected'
+    AND btrim(evaluation.result_digest::text)
+      =rule.configuration->>'runtimeResultDigest'
+    AND btrim(run.input_digest::text)
+      =rule.configuration#>>'{runtimeExpected,input_hash}'
+    AND run.status='SUCCEEDED' AND run.record_count=1
+    AND job.status='SUCCEEDED' AND job.last_error_code IS NULL
+    AND attempt.outcome='SUCCEEDED'
+    AND attempt.metrics->>'resultDigest'
+      =rule.configuration->>'runtimeResultDigest';
+  IF v_evaluation_count <> 10
+     OR (SELECT count(*) FROM core.rule_evaluations AS evaluation
+         JOIN core.rule_versions AS rule ON rule.id=evaluation.rule_version_id
+         WHERE rule.description='TEST_FIXTURE_ONLY: no operational activation seed') <> 10
+     OR (SELECT count(*) FROM core.rule_evaluations AS evaluation
+         JOIN core.rule_versions AS rule ON rule.id=evaluation.rule_version_id
+         WHERE rule.description='TEST_FIXTURE_ONLY: no operational activation seed'
+           AND evaluation.result_payload->>'outcome'='SIGNAL') <> 5
+     OR (SELECT count(*) FROM core.rule_evaluations AS evaluation
+         JOIN core.rule_versions AS rule ON rule.id=evaluation.rule_version_id
+         WHERE rule.description='TEST_FIXTURE_ONLY: no operational activation seed'
+           AND evaluation.result_payload->>'outcome'='BLOCKED') <> 5
+     OR EXISTS (
+       SELECT 1 FROM core.rule_versions AS rule
+       WHERE rule.description='TEST_FIXTURE_ONLY: no operational activation seed'
+         AND rule.status='ACTIVE'
+     ) THEN
+    RAISE EXCEPTION
+      'R6c rule runtime oracle/blocked proof invalid: valid %',
+      v_evaluation_count;
+  END IF;
+END $$;
+SQL
+
+r6b2_d1_sensitivity_proof
+
+# The source.fetch review-tier proof depends on the canonical Control runtime
+# and research fixtures.  Load those only after every broad queue/drain count
+# above has completed: these seeds intentionally add durable control rows, but
+# this disposable database is removed on exit and the R6c proof itself rolls
+# its promotion transaction back.
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
+  -d "$database" < db/test-fixtures/reference-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
+  -d "$database" < db/test-fixtures/control-runtime-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
+  -d "$database" < db/test-fixtures/control-research-seed.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
+  -d "$database" < db/test-fixtures/r6c-source-fetch-tier-runtime.sql \
+  >/dev/null
+
+echo "workflow/notification runtime, R6b2 pipeline, R6c typed graph v3, hypothesis recursion, source.fetch review tier, and rule oracle/blocked paths: PASS"

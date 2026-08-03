@@ -1,0 +1,378 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,asset_id,asset_revision,source_fetch_id,agent_run_id,\n                      provider_turn_id,tool_call_id,call_id,artifact_ordinal,\n                      input_snapshot_sha256,request_kind,request_sha256,result_sha256,\n                      fetch_outcome,source_url_redacted,final_url_redacted,source_authority,\n                      retrieved_at,http_status,content_media_type,content_size_bytes,\n                      content_sha256,response_headers_sha256,artifact_sha256,object_key_hash,\n                      safe_headers::text AS \"safe_headers_json!\",\n                      redirect_chain::text AS \"redirect_chain_json!\",classification,\n                      content_safety_state,content_safety_receipt_sha256,created_at\n                 FROM raw.research_artifacts WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "asset_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "asset_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "asset_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "asset_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "source_fetch_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "source_fetch_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "agent_run_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "agent_run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "provider_turn_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "provider_turn_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "tool_call_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "tool_call_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "call_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "call_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "artifact_ordinal",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "artifact_ordinal"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "input_snapshot_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "input_snapshot_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "request_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "request_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "request_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "request_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "result_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "result_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "fetch_outcome",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "fetch_outcome"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "source_url_redacted",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "source_url_redacted"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "final_url_redacted",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "final_url_redacted"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "source_authority",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "source_authority"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "retrieved_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "retrieved_at"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "http_status",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "http_status"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "content_media_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "content_media_type"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "content_size_bytes",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "content_size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "content_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "content_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "response_headers_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "response_headers_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "artifact_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "artifact_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "object_key_hash",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "object_key_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "safe_headers_json!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 26,
+        "name": "redirect_chain_json!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 27,
+        "name": "classification",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "classification"
+          }
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "content_safety_state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "content_safety_state"
+          }
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "content_safety_receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "content_safety_receipt_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "07e2a3a404c38192811b7c5b6dc41d78d095f9a26c98fb2e43c7cddac9d5391c"
+}

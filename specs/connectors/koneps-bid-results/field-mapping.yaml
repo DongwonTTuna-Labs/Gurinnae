@@ -1,0 +1,72 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+connector_id: koneps-bid-results
+mapping_mode: closed-metadata-allowlist-validated-by-preflight
+opening_metadata:
+  operation_scope:
+  - opening-goods-search
+  - opening-construction-search
+  - opening-service-search
+  - opening-foreign-search
+  required:
+  - {canonical: notice.number, path: bidNtceNo}
+  - {canonical: notice.order, path: bidNtceOrd}
+  optional:
+  - {canonical: notice.classification, path: bidClsfcNo}
+  - {canonical: notice.rebid_number, path: rbidNo}
+  - {canonical: notice.title, path: bidNtceNm}
+  - {canonical: opening.opened_at, path: opengDt}
+  - {canonical: opening.participant_count, path: prtcptCnum}
+  - {canonical: agency.identifier, paths: [ntceInsttCd, dminsttCd]}
+  - {canonical: agency.name, paths: [ntceInsttNm, dminsttNm]}
+  - {canonical: opening.progress, path: progrsDivCdNm}
+  - {canonical: source.input_at, path: inptDt}
+  raw_evidence_only: [opengRsltNtcCntnts]
+  opaque_never_parse: [opengCorpInfo]
+  output_rows: opening metadata only
+award_metadata:
+  operation_scope:
+  - award-goods-search
+  - award-construction-search
+  - award-service-search
+  - award-foreign-search
+  required:
+  - {canonical: notice.number, path: bidNtceNo}
+  - {canonical: notice.order, path: bidNtceOrd}
+  optional:
+  - {canonical: notice.classification, path: bidClsfcNo}
+  - {canonical: notice.rebid_number, path: rbidNo}
+  - {canonical: notice.title, path: bidNtceNm}
+  - {canonical: award.participant_count, path: prtcptCnum}
+  - {canonical: award.winner_name, path: bidwinnrNm}
+  - canonical: award.winner_business_number_digest
+    path: bidwinnrBizno
+    transform: HMAC-SHA256 with configured supplier identifier key
+  - {canonical: award.amount, path: sucsfbidAmt}
+  - {canonical: award.rate, path: sucsfbidRate}
+  - {canonical: award.opened_at, path: rlOpengDt}
+  - {canonical: award.finalized_on, path: fnlSucsfDate}
+  - {canonical: source.registered_at, path: rgstDt}
+  - {canonical: agency.identifier, path: dminsttCd}
+  - {canonical: agency.name, path: dminsttNm}
+  - {canonical: linked_agency.name, path: linkInsttNm}
+  forbidden_normalized_fields:
+  - fnlSucsfCorpOfcl
+  - bidwinnrCeoNm
+  - bidwinnrAdrs
+  - bidwinnrTelNo
+  output_rows: award metadata only; no BID_PARTICIPATION row
+unknown_field_policy: preserve only in immutable raw source bytes and field provenance
+missing_required_policy: quarantine record and open data-quality incident
+participant_coverage:
+  state: BLOCKED
+  blocker: KONEPS_STRUCTURED_BIDDER_PARTICIPATION_UNAVAILABLE
+  unlock_condition: official structured bidder records with exact identity, bid amount, status, withdrawal and rank semantics
+persistence_boundary:
+  immutable_raw_and_parsed_records: required
+  closed_typed_validation: required
+  canonical_projection_state: BLOCKED
+  canonical_domain_output_rows: 0
+  blocker: KONEPS_MAPPING_ACTIVATION_RECEIPT_MISSING
+  authority: specs/connectors/addendum-koneps-mapping.yaml#mapping_version
+  unlock_condition: approved exact mapping contract digest and schema-mapping activation receipt bound to credentialed preflight fingerprints

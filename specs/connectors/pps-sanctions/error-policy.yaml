@@ -1,0 +1,15 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+connector_id: pps-sanctions
+activation:
+  rights_unconfirmed: remain disabled; emit zero normalized rows
+  schema_fingerprint_missing: remain disabled; emit zero normalized rows
+transport:
+  quota_or_429: bounded retry respecting Retry-After
+  auth_or_permission: remain disabled and open source incident
+  transient_5xx: bounded retry then incident
+  malformed_manifest: retain raw bytes, quarantine and open schema-drift incident
+  checksum_mismatch: reject document and open integrity incident
+normalization:
+  unapproved_csv_revision: quarantine; no SANCTION output
+  unknown_column: retain in raw artifact only; no automatic mapping expansion

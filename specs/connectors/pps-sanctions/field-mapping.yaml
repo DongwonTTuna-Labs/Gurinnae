@@ -1,0 +1,58 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+connector_id: pps-sanctions
+manifest_mapping:
+  required_fields:
+  - external_id
+  - title
+  - url
+  - published_at
+  - content_type
+  - revision
+  - sha256
+  allowed_content_types:
+  - text/csv
+  - application/csv
+  official_url_only: true
+csv_mapping:
+  state: BLOCKED
+  output_rows: 0
+  blocker: PPS_SANCTIONS_REUSE_RIGHTS_UNCONFIRMED
+  reason: the official file is identified, but reuse wording and access restrictions require a recorded rights decision and the CSV columns are not pinned
+  provenance:
+    dataset: https://www.data.go.kr/data/15137996/fileData.do
+    official_report: https://data.g2b.go.kr/link/AISC001_01/?reptNm=UI-ADOAAA-017R
+    official_report_id: UI-ADOAAA-017R
+    conflict: data.go marks unrestricted reuse while the report states supply is limited to credit agencies
+  officially_documented_columns:
+  - 계약법구분
+  - 기관
+  - 법인등록번호
+  - 사업자등록번호
+  - 소관구분
+  - 시행규칙76조별표2
+  - 시행규칙76조별표2명
+  - 업체
+  - 제재근거법률
+  - 제재기간월수
+  - 제재기간일수
+  - 제재시작일자
+  - 제재입력일시
+  - 제재종료일자
+  - 조달업무영역
+  - 조문명
+  - 조항호
+  - 처분상태
+  documented_columns_are_not_activation: the retrieved file header and encoding still require an exact recorded fingerprint
+  unlock_requirements:
+  - recorded reuse-rights approval bound to the exact official asset revision
+  - exact CSV header and encoding fingerprint
+  - approved supplier identifier hashing and sanction effective-period mapping
+  - structural fixture regenerated from the approved closed field set
+  forbidden_before_unlock:
+  - guessing CSV headers
+  - supplier matching by name alone
+  - emitting SANCTION edges or rule inputs
+  - copying natural-person names or contact fields into normalized output
+unknown_field_policy: retain only in immutable raw official artifact after the existing rights gate succeeds
+missing_required_policy: reject manifest or quarantine document and open incident

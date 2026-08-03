@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT EXISTS (\n          SELECT 1\n            FROM jsonb_array_elements($3::jsonb) AS requested(value)\n           WHERE NOT EXISTS (\n             SELECT 1\n               FROM ops.agent_source_uses model_input\n              WHERE model_input.agent_run_id=$1\n                AND (\n                  (model_input.provider_turn_id=$2\n                   AND model_input.use_kind='MODEL_INPUT'\n                   AND model_input.source_kind='EVIDENCE_SEGMENT')\n                  OR (model_input.use_kind='TOOL_QUERY'\n                      AND model_input.source_kind='RESEARCH_ARTIFACT'\n                      AND model_input.provider_turn_id=$2\n                      AND model_input.classification='RESTRICTED'\n                      AND EXISTS (\n                        SELECT 1 FROM ops.agent_tool_calls tool\n                         WHERE tool.agent_run_id=model_input.agent_run_id\n                           AND tool.tool_call_id=model_input.tool_call_id\n                           AND tool.tool_id='source.fetch'\n                           AND tool.status='SUCCEEDED'\n                           AND tool.result_transcript_sha256=CAST($4 AS char(64))\n                      )\n                      AND EXISTS (\n                        SELECT 1 FROM raw.research_artifact_review_tiers tier\n                         WHERE tier.research_artifact_id=model_input.research_artifact_id\n                           AND tier.research_asset_id=model_input.research_asset_id\n                           AND tier.research_asset_revision=model_input.research_asset_revision\n                           AND tier.research_artifact_sha256=model_input.research_artifact_sha256\n                           AND tier.research_content_sha256=model_input.research_content_sha256\n                           AND tier.review_tier='OFFICIAL_UNREVIEWED'\n                           AND tier.reviewed_classification='RESTRICTED'\n                           AND tier.revision=(\n                             SELECT max(latest.revision)\n                               FROM raw.research_artifact_review_tiers latest\n                              WHERE latest.research_artifact_id=model_input.research_artifact_id\n                           )\n                      ))\n                )\n                AND (\n                  model_input.source_use_sha256=CAST(requested.value->>'sourceUseSha256' AS char(64))\n                  OR model_input.parent_source_use_sha256=CAST(requested.value->>'sourceUseSha256' AS char(64))\n                )\n                AND model_input.locator_value=requested.value->'locator'->>'value'\n                AND model_input.selected_content_sha256=CAST(requested.value->>'selectedContentSha256' AS char(64))\n           )\n        )\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ac8314e3a4e9f006b235ea6f22cc48e698e6ed13571d1afec5c1a69d2e7cf220"
+}

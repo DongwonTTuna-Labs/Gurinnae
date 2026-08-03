@@ -66,4 +66,27 @@ mod tests {
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].locator, "/response/body/items/item/0");
     }
+
+    #[test]
+    fn bid_result_metadata_uses_the_same_closed_data_go_kr_item_locator() {
+        let operation = operations()
+            .find(|operation| operation.id == "opening-goods-search")
+            .expect("connector catalog must contain KONEPS opening metadata");
+        let value = json!({"response":{"body":{"items":{"item":[{"bidNtceNo":"SYN-1","opengCorpInfo":"opaque"}]}}}});
+        let records = extract("koneps-bid-results", operation, &value);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].locator, "/response/body/items/item/0");
+        assert_eq!(records[0].value["opengCorpInfo"], "opaque");
+    }
+
+    #[test]
+    fn dart_person_context_keeps_the_exact_disclosure_list_locator() {
+        let operation = operations()
+            .find(|operation| operation.id == "dart-executive-status")
+            .expect("connector catalog must contain OpenDART executive status");
+        let value = json!({"status":"000","list":[{"nm":"가상 임원"}]});
+        let records = extract("open-dart", operation, &value);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].locator, "/list/0");
+    }
 }

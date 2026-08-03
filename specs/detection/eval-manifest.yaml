@@ -1,6 +1,6 @@
 schema_version: 1
 specification_version: 13.0.0
-total_cases: 300
+total_cases: 450
 files:
 - rule_id: PRICE_OUTLIER
   file: specs/detection/evals/price_outlier.jsonl
@@ -42,3 +42,23 @@ files:
   file: specs/detection/evals/restrictive_specification.jsonl
   case_count: 30
   sha256: 5b2b56056458a49349c7d2ccae4e469659c7971dcfd3acbd29ed8450d9302378
+- rule_id: OFFICER_OVERLAP_AWARD
+  file: specs/detection/evals/officer_overlap_award.jsonl
+  case_count: 30
+  sha256: 87060563ffd338f599e81a6b11e18be6639f0340f05d1432603617608a1321a7
+- rule_id: OWNERSHIP_LINKED_COMPETITORS
+  file: specs/detection/evals/ownership_linked_competitors.jsonl
+  case_count: 30
+  sha256: ee7d4f859d015d827a49d46a76c71ecd2f79a174af4e475dcaea3a41331a3ea5
+- rule_id: BID_ROTATION
+  file: specs/detection/evals/bid_rotation.jsonl
+  case_count: 30
+  sha256: f6112dc41db6ba71e471b5343d894c8e02cf621b676b2f14bee1257414aacbf2
+- rule_id: REVOLVING_DOOR_CONTRACT
+  file: specs/detection/evals/revolving_door_contract.jsonl
+  case_count: 30
+  sha256: c93fdbb79b87416891c704d18f9caeafc50aed5d17278089977a87ff2ebf9cd8
+- rule_id: SANCTIONED_SUCCESSOR
+  file: specs/detection/evals/sanctioned_successor.jsonl
+  case_count: 30
+  sha256: 5006e060bd8b99ad67959c49333b4dfdb0da30b92a934404e6f1c42c76db5f87

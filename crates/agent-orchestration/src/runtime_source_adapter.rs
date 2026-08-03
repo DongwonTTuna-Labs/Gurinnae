@@ -28,10 +28,7 @@ fn fetch_search(
             let parsed = url::Url::parse(url).ok()?;
             Some(SearchResultV2 {
                 rank: u8::try_from(index + 1).ok()?,
-                title: parsed.host_str()?.to_owned(),
                 origin: format!("{}://{}", parsed.scheme(), parsed.host_str()?),
-                path: parsed.path().to_owned(),
-                snippet: None,
                 discovered_url_sha256: digest(url.as_bytes()),
                 artifact_id: None,
             })
@@ -165,6 +162,7 @@ fn fetch_url(
             content_safety_state: "CLEAN".to_owned(),
             content_safety_receipt_sha256: digest(b"content-safety-v1"),
             research_only: true,
+            review_tier: "OFFICIAL_UNREVIEWED".to_owned(),
             source_use_id: item.source_use_id,
             source_use_sha256: digest(item.source_use_id.as_bytes()),
         });

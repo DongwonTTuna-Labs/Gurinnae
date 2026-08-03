@@ -26,7 +26,7 @@ must_not:
 - external_contact
 - unknown_citation
 deterministic: true
-expected_prompt_sha256: 37c317887f6070ee8e86939dbbae2823e827c32c145f10f8653736cf5ffe382e
+expected_prompt_sha256: 2119efbce00b4d53ad0843fb022042bbb55c9cbfb6419aa69db91c50a17d8629
 max_iterations: 4
 current_evidence_snapshot_hash: d4d66c9648b0196a5fd369fe9f95d3b0f636cb8c40b5f038b4120d0b8bc33305
 expected_support_by_evidence:

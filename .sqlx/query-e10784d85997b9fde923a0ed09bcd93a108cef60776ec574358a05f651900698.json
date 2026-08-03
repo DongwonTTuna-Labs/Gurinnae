@@ -1,0 +1,175 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n              btrim(query_digest::text) AS \"query_digest!: String\",\n              relationship_kind AS \"relationship_kind!: String\",\n              subject AS \"subject!: Value\",\n              object AS \"object!: Value\",\n              assertion_id AS \"assertion_id!: Uuid\",\n              assertion_revision AS \"assertion_revision!: i64\",\n              btrim(assertion_digest::text) AS \"assertion_digest!: String\",\n              valid_from AS \"valid_from?: Date\",\n              valid_to AS \"valid_to?: Date\",\n              evidence_count AS \"evidence_count!: i32\",\n              btrim(evidence_set_digest::text) AS \"evidence_set_digest!: String\",\n              subject_source_use_id AS \"subject_source_use_id!: Uuid\",\n              btrim(subject_source_use_sha256::text)\n                AS \"subject_source_use_sha256!: String\",\n              object_source_use_id AS \"object_source_use_id!: Uuid\",\n              btrim(object_source_use_sha256::text)\n                AS \"object_source_use_sha256!: String\",\n              verification_status AS \"verification_status!: String\",\n              public_use_status AS \"public_use_status!: String\",\n              proposed_actor_type AS \"proposed_actor_type!: String\",\n              proposed_actor_id AS \"proposed_actor_id!: String\",\n              verified_by AS \"verified_by!: Uuid\",\n              verified_at AS \"verified_at!: OffsetDateTime\",\n              btrim(verification_reason_digest::text)\n                AS \"verification_reason_digest!: String\"\n            FROM core.list_typed_relationship_neighbors_v3(\n              $1,$2,$3,CAST($4 AS char(64)),$5,$6\n            )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "query_digest!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "relationship_kind!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "subject!: Value",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "object!: Value",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "assertion_id!: Uuid",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "assertion_revision!: i64",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "assertion_digest!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "valid_from?: Date",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "valid_to?: Date",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "evidence_count!: i32",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "evidence_set_digest!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "subject_source_use_id!: Uuid",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "subject_source_use_sha256!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "object_source_use_id!: Uuid",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "object_source_use_sha256!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "verification_status!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "public_use_status!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "proposed_actor_type!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 18,
+        "name": "proposed_actor_id!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "verified_by!: Uuid",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "verified_at!: OffsetDateTime",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "verification_reason_digest!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Bpchar",
+        "Bytea",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e10784d85997b9fde923a0ed09bcd93a108cef60776ec574358a05f651900698"
+}

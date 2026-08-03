@@ -1,24 +1,35 @@
 use super::{Failure, ProviderTurnIdentity, database, required};
 use gurine_agent_orchestration::runtime::{
     AgencyProfileRecord, ContractCorpusRecord, RelationshipKind, RelationshipNeighborRecord,
-    SupplierIdentityStatus, SupplierProfileRecord,
+    RelationshipNeighborRecordV3, SupplierIdentityStatus, SupplierProfileRecord,
 };
 use serde_json::Value;
 use sqlx::{Postgres, Transaction};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
+#[path = "analysis_typed_relationship_snapshot.rs"]
+mod typed_relationship;
+
 pub(super) struct CorpusSnapshot {
     pub contracts: Vec<ContractCorpusRecord>,
     pub supplier_profiles: Vec<SupplierProfileRecord>,
     pub agency_profiles: Vec<AgencyProfileRecord>,
     pub relationships: Vec<RelationshipNeighborRecord>,
+    pub typed_relationships: Vec<RelationshipNeighborRecordV3>,
+}
+
+pub(super) struct TypedRelationshipRequest {
+    pub canonical: Vec<u8>,
+    pub limit: i64,
+    pub snapshot_generation: i64,
 }
 
 pub(super) async fn load(
     executor: &mut Transaction<'_, Postgres>,
     turn: &ProviderTurnIdentity,
     dataset_snapshot_id: Uuid,
+    typed_relationship_request: Option<TypedRelationshipRequest>,
 ) -> Result<CorpusSnapshot, Failure> {
     let rows = sqlx::query!(
         "SELECT m.object_type,m.object_id,m.canonical_payload,m.id AS snapshot_member_id,
@@ -81,11 +92,18 @@ pub(super) async fn load(
     }
     apply_contract_counts(&contracts, &mut suppliers, &mut agencies)?;
     let relationships = load_relationships(executor, turn, dataset_snapshot_id).await?;
+    let typed_relationships = match typed_relationship_request {
+        Some(request) => {
+            typed_relationship::load(executor, turn, dataset_snapshot_id, request).await?
+        }
+        None => Vec::new(),
+    };
     Ok(CorpusSnapshot {
         contracts,
         supplier_profiles: suppliers,
         agency_profiles: agencies,
         relationships,
+        typed_relationships,
     })
 }
 

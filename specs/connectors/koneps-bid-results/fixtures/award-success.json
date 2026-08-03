@@ -1,0 +1,40 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-bid-results",
+  "operation_id": "award-goods-search",
+  "kind": "success",
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 1,
+      "items": {
+        "item": [
+          {
+            "bidNtceNo": "R6C-SYN-001",
+            "bidNtceOrd": "00",
+            "bidClsfcNo": "00",
+            "rbidNo": "000",
+            "bidNtceNm": "가상 공공데이터 분석 용역",
+            "prtcptCnum": "3",
+            "bidwinnrNm": "가상 투명기술 주식회사",
+            "bidwinnrBizno": "0000000000",
+            "sucsfbidAmt": "125000000",
+            "sucsfbidRate": "87.745",
+            "rlOpengDt": "202607311000",
+            "fnlSucsfDate": "20260731",
+            "rgstDt": "202607311100",
+            "dminsttCd": "SYN-AGENCY-01",
+            "dminsttNm": "가상 투명행정원",
+            "linkInsttNm": "가상 조달지원원",
+            "fnlSucsfCorpOfcl": "정규화 금지 담당자",
+            "bidwinnrCeoNm": "정규화 금지 대표자",
+            "bidwinnrAdrs": "정규화 금지 주소",
+            "bidwinnrTelNo": "정규화 금지 전화번호"
+          }
+        ]
+      }
+    }
+  }
+}

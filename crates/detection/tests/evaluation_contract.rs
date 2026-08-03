@@ -3,6 +3,10 @@ use serde_json::Value;
 
 const EVALUATIONS: &[(&str, &str)] = &[
     (
+        "bid_rotation",
+        include_str!("../../../specs/detection/evals/bid_rotation.jsonl"),
+    ),
+    (
         "contract_amendment_escalation",
         include_str!("../../../specs/detection/evals/contract_amendment_escalation.jsonl"),
     ),
@@ -19,6 +23,14 @@ const EVALUATIONS: &[(&str, &str)] = &[
         include_str!("../../../specs/detection/evals/new_supplier_dependence.jsonl"),
     ),
     (
+        "officer_overlap_award",
+        include_str!("../../../specs/detection/evals/officer_overlap_award.jsonl"),
+    ),
+    (
+        "ownership_linked_competitors",
+        include_str!("../../../specs/detection/evals/ownership_linked_competitors.jsonl"),
+    ),
+    (
         "price_outlier",
         include_str!("../../../specs/detection/evals/price_outlier.jsonl"),
     ),
@@ -29,6 +41,14 @@ const EVALUATIONS: &[(&str, &str)] = &[
     (
         "restrictive_specification",
         include_str!("../../../specs/detection/evals/restrictive_specification.jsonl"),
+    ),
+    (
+        "revolving_door_contract",
+        include_str!("../../../specs/detection/evals/revolving_door_contract.jsonl"),
+    ),
+    (
+        "sanctioned_successor",
+        include_str!("../../../specs/detection/evals/sanctioned_successor.jsonl"),
     ),
     (
         "shared_supplier_identity",
@@ -45,7 +65,7 @@ const EVALUATIONS: &[(&str, &str)] = &[
 ];
 
 #[test]
-fn all_three_hundred_oracle_cases_match() -> Result<(), Box<dyn std::error::Error>> {
+fn all_four_hundred_fifty_oracle_cases_match() -> Result<(), Box<dyn std::error::Error>> {
     let mut total = 0;
     for (file, contents) in EVALUATIONS {
         for (line_index, line) in contents.lines().enumerate() {
@@ -64,6 +84,6 @@ fn all_three_hundred_oracle_cases_match() -> Result<(), Box<dyn std::error::Erro
             total += 1;
         }
     }
-    assert_eq!(total, 300);
+    assert_eq!(total, 450);
     Ok(())
 }

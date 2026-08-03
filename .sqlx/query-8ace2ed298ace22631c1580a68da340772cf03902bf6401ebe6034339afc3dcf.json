@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT validation_id FROM ops.agent_output_validations\n           WHERE agent_run_id=$1 AND provider_turn_id=$2\n             AND input_snapshot_sha256=CAST($3 AS char(64))\n             AND provider_output_sha256=CAST($4 AS char(64))\n             AND validator_version='agent-output-validator-v2'\n             AND validator_sha256=CAST($14 AS char(64))\n             AND output_schema_id=$5 AND output_schema_version=$6\n             AND output_schema_sha256=CAST($7 AS char(64))\n             AND validation_policy_version='agent-output-policy-v2'\n             AND validation_policy_sha256=CAST($15 AS char(64))\n             AND validation_status='VALID' AND schema_status='PASS'\n             AND citation_status='PASS' AND policy_status='PASS'\n             AND run_terminal_status='SUCCEEDED' AND output_status=$8\n             AND failure_code IS NULL AND failure_details_redacted='{}'::jsonb\n             AND validated_outcome=$16\n             AND validated_outcome_sha256=CAST($4 AS char(64))\n             AND citation_count=$9 AND proposal_count=$10\n             AND citation_set_sha256=CAST($11 AS char(64))\n             AND proposal_set_sha256=CAST($12 AS char(64))\n             AND validation_sha256=CAST($13 AS char(64))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "validation_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_output_validations",
+            "name": "validation_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Text",
+        "Bpchar",
+        "Text",
+        "Int4",
+        "Int4",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8ace2ed298ace22631c1580a68da340772cf03902bf6401ebe6034339afc3dcf"
+}

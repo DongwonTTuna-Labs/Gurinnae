@@ -52,8 +52,11 @@ research_artifact:
   schema: schemas/research-artifact.schema.json
   status: ResearchArtifact is immutable untrusted research input, never Evidence.
   allowed_fetch_outcomes: [STORED, RENDER_REQUIRED, QUARANTINED]
-  use_before_promotion: [private review, candidate comparison, source discovery, further bounded internal analysis when rights permit]
-  prohibited_before_promotion: [claim support, publication, public excerpt, external message rationale, authoritative fact insertion]
+  review_tier_contract: artifact-review-tier.yaml
+  initial_state: {reviewTier: OFFICIAL_UNREVIEWED, reviewedClassification: RESTRICTED}
+  use_before_promotion: [private review, candidate comparison, source discovery, internal hypothesis metadata reference by immutable digest]
+  prohibited_before_promotion: [MODEL_INPUT, claim support, publication, public excerpt, external message rationale, authoritative fact insertion]
+  provider_boundary: Raw ResearchArtifact content is never MODEL_INPUT. After human promotion, only the resulting Evidence revision with an explicit PUBLIC or INTERNAL reviewed classification may enter the existing provider eligibility gate.
 
 human_promotion:
   operation_id: promoteResearchArtifactToEvidence
@@ -76,6 +79,7 @@ human_promotion:
     - The exact latest effective asset-rights GRANT permits access, private storage, derivative creation, and excerpt. Public classification also requires redistribution, commercial use, and public display ALLOW.
     - Selected locators are sorted, non-overlapping where positional, within the asset, and re-extract to the submitted selectedContentSha256 values.
     - The reviewer sees source authority, final URL, retrieval time, media type, safety, rights dimensions, selected content, limitations, and consequences before submit.
+    - The latest artifact review tier is OFFICIAL_UNREVIEWED and the command supplies an explicit reviewed classification; PUBLIC is never inferred or defaulted.
   transaction:
     isolation: SERIALIZABLE
     lock_order:
@@ -102,6 +106,9 @@ human_promotion:
     kind: HUMAN_EVIDENCE_PROMOTION_COMMAND
     rule: This command is an evidence-curation decision under cases.evidence.manage, not approval of an external ActionProposal and not consent to communicate. If a promoted Evidence revision later supports an external action, that separate proposal starts a fresh approval cycle under specs/product/addendum-approval-policy.yaml and the omnichannel consent/delivery contract.
     forbidden_inference: A promotion receipt never sets ApprovalBindingV1, communication authorization, provider selection, send state, delivery state, publication approval, or public visibility.
+  citation_boundary:
+    internal_hypothesis: The unreviewed artifact may contribute metadata and immutable digests only.
+    claim_or_communication: Requires the HUMAN_PROMOTED review-tier receipt and the resulting promoted-Evidence citation graph; official-source status alone is insufficient.
 
 view_models:
   analysis: schemas/analysis-vm.schema.json

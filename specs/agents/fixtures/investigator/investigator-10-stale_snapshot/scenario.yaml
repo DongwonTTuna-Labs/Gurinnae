@@ -33,6 +33,6 @@ provider_attempts:
   status: OK
   cost_krw: 50
 current_evidence_snapshot_hash: '0000000000000000000000000000000000000000000000000000000000000000'
-expected_prompt_sha256: 332fa05b173398038ae9b1d812917c1b2da3dee57cc374eebf491e8aef0d956c
+expected_prompt_sha256: 9ea7c6d15b7398e99568bc5a8d66a7583893ae83b9e5baf46a1438b6678e6d5e
 expected_support_by_evidence:
   00000000-0000-0000-0000-0000000003e9: 대상 계약의 표시 단가

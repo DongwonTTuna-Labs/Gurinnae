@@ -234,10 +234,10 @@ class EventPayloadForwardOverrideTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "start marker"):
             generator.replace_generated_region("BEGIN;\nCOMMIT;\n", "generated")
 
-    def test_generator_never_targets_historical_migration(self) -> None:
+    def test_generator_targets_current_additive_migration(self) -> None:
         self.assertEqual(
             generator.TARGET_MIGRATION.name,
-            "0036_r6b_pipeline_activation.sql",
+            "0037_r6c_conflict_investigation.sql",
         )
         source = Path(generator.__file__).read_text(encoding="utf-8")
         self.assertNotIn('db/migrations/0030_', source)

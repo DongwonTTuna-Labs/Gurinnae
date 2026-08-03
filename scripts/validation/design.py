@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .design_domain import validate_domain
+from .design_database_self_test import self_test_database_candidate_key_merges
 from .design_journey_self_test import self_test_journey_validators
 from .design_lifecycle import validate_lifecycle
 from .design_journey_graph import validate_journey_graph
@@ -37,3 +38,4 @@ def validate(root: Path, result: Validation) -> None:
         ui,
     )
     self_test_journey_validators(documents)
+    self_test_database_candidate_key_merges(documents)

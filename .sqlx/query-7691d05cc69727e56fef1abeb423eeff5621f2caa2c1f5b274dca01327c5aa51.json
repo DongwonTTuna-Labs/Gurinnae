@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT snapshot_id AS \"snapshot_id!\", btrim(snapshot_sha256::text) AS \"snapshot_sha256!: String\", member_count AS \"member_count!\", conflict_input_count AS \"conflict_input_count!\", btrim(conflict_input_set_sha256::text) AS \"conflict_input_set_sha256!: String\", replayed AS \"replayed!\" FROM core.build_conflict_detection_dataset_snapshot_v2($1,$2,$3)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "snapshot_id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "snapshot_sha256!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "member_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "conflict_input_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "conflict_input_set_sha256!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "replayed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "7691d05cc69727e56fef1abeb423eeff5621f2caa2c1f5b274dca01327c5aa51"
+}

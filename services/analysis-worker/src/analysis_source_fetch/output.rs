@@ -15,10 +15,11 @@ struct BraveWeb {
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BraveResult {
-    title: String,
+    #[serde(rename = "title")]
+    _title: String,
     url: String,
-    #[serde(default)]
-    description: Option<String>,
+    #[serde(rename = "description", default)]
+    _description: Option<String>,
     #[serde(rename = "age", default)]
     _age: Option<String>,
 }
@@ -118,16 +119,32 @@ fn apply_search_output(
 
 fn search_results(items: &[BraveResult], limit: usize) -> Result<Vec<Value>, Failure> {
     let mut seen_urls = std::collections::BTreeSet::new();
-    items.iter().take(limit).enumerate().map(|(index, item)| {
-        let parsed = reqwest::Url::parse(&item.url).map_err(|_| provider_error("invalid_url", index))?;
-        if parsed.scheme() != "https" { return Err(provider_error("non_https_url", index)); }
-        if !seen_urls.insert(parsed.to_string()) { return Err(provider_error("duplicate_url", index)); }
-        let host = parsed.host_str().ok_or_else(|| provider_error("missing_host", index))?;
-        let title = if item.title.trim().is_empty() { host } else { item.title.as_str() };
-        let snippet = item.description.as_deref().map(|value| value.chars().take(1000).collect::<String>());
-        Ok(json!({"rank":index+1,"title":title,"origin":format!("{}://{}",parsed.scheme(),host),
-            "path":parsed.path(),"snippet":snippet,"discoveredUrlSha256":sha256(item.url.as_bytes()),"artifactId":null}))
-    }).collect()
+    items
+        .iter()
+        .take(limit)
+        .enumerate()
+        .map(|(index, item)| {
+            let parsed =
+                reqwest::Url::parse(&item.url).map_err(|_| provider_error("invalid_url", index))?;
+            if parsed.scheme() != "https" {
+                return Err(provider_error("non_https_url", index));
+            }
+            if !seen_urls.insert(parsed.to_string()) {
+                return Err(provider_error("duplicate_url", index));
+            }
+            let host = parsed
+                .host_str()
+                .ok_or_else(|| provider_error("missing_host", index))?;
+            // Search-provider title and snippet bytes have no authoritative
+            // non-person classification.  Return only locator metadata; the
+            // fetched content remains unavailable to the relay until a human
+            // promotion records an explicit eligible classification.
+            Ok(
+                json!({"rank":index+1,"origin":format!("{}://{}",parsed.scheme(),host),
+            "discoveredUrlSha256":sha256(item.url.as_bytes()),"artifactId":null}),
+            )
+        })
+        .collect()
 }
 
 fn provider_error(kind: &str, index: usize) -> Failure {
@@ -194,7 +211,85 @@ fn artifact_wire(
     wire["safeHeaders"] = safe_headers.clone();
     wire["redirects"] = redirects.clone();
     wire["researchOnly"] = json!(true);
+    wire["reviewTier"] = json!(INITIAL_RESEARCH_REVIEW_TIER);
     wire["sourceUseId"] = json!(pending.source_use_id);
     wire["sourceUseSha256"] = json!(pending.source_use_sha256);
     Ok(wire)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_result_wire_drops_unclassified_provider_content() {
+        let person_bytes = "홍길동 전 대표의 개인 정보";
+        let results = search_results(
+            &[BraveResult {
+                _title: person_bytes.to_owned(),
+                url: "https://official.example/notices/42".to_owned(),
+                _description: Some(person_bytes.to_owned()),
+                _age: None,
+            }],
+            1,
+        )
+        .expect("metadata-only result");
+
+        assert_eq!(results[0]["origin"], "https://official.example");
+        assert!(results[0].get("title").is_none());
+        assert!(results[0].get("snippet").is_none());
+        assert!(results[0].get("path").is_none());
+        assert!(
+            !serde_json::to_string(&results)
+                .expect("search result json")
+                .contains(person_bytes)
+        );
+    }
+
+    #[test]
+    fn artifact_wire_declares_the_unreviewed_tier_without_content_bytes() {
+        let pending = PendingSourceFetch {
+            request_kind: "FETCH_URL",
+            source_id: "public-research",
+            external_locator: "https://official.example/notices/42".to_owned(),
+            source_url_redacted: Some("https://official.example/notices/42".to_owned()),
+            final_url_redacted: Some("https://official.example/notices/42".to_owned()),
+            http_status: 200,
+            content_media_type: Some("text/plain".to_owned()),
+            request_sha256: "1".repeat(64),
+            content: b"person bytes must stay in object storage".to_vec(),
+            object_key: "research/run/turn/content".to_owned(),
+            policy_version: "source-policy-v2",
+            fetch_id: Uuid::from_u128(1),
+            asset_id: Uuid::from_u128(2),
+            artifact_id: Uuid::from_u128(3),
+            source_use_id: Uuid::from_u128(4),
+            source_use_sha256: "2".repeat(64),
+            safe_headers: json!([]),
+            redirects: json!([]),
+            content_safety_receipt_sha256: "3".repeat(64),
+        };
+        let wire = artifact_wire(
+            pending.artifact_id,
+            pending.asset_id,
+            pending.fetch_id,
+            pending.source_id,
+            &pending.external_locator,
+            200,
+            &pending,
+            &pending.content,
+            sha256(&pending.content),
+            &pending.safe_headers,
+            &pending.redirects,
+            "2026-08-01T00:00:00.000000Z",
+            pending.content_safety_receipt_sha256.clone(),
+        )
+        .expect("artifact metadata");
+
+        assert_eq!(wire["reviewTier"], INITIAL_RESEARCH_REVIEW_TIER);
+        let encoded = serde_json::to_string(&wire).expect("artifact wire json");
+        assert!(!encoded.contains("person bytes must stay in object storage"));
+        assert!(wire.get("content").is_none());
+        assert!(wire.get("selectedContentBytesBase64").is_none());
+    }
 }

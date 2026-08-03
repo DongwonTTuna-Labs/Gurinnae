@@ -13,12 +13,15 @@ use super::*;
 mod corpus_adapter;
 #[path = "runtime_language_adapter.rs"]
 mod language_adapter;
+#[path = "runtime_relationship_adapter.rs"]
+mod relationship_adapter;
 #[path = "runtime_source_adapter.rs"]
 mod source_adapter;
 
 pub use corpus_adapter::{
     AgencyProfileRecord, ContractCorpusRecord, RelationshipNeighborRecord, SupplierProfileRecord,
 };
+pub use relationship_adapter::{RelationshipEndpointRecordV3, RelationshipNeighborRecordV3};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EvidenceRecord {
@@ -88,6 +91,10 @@ pub struct ToolSnapshot {
     pub supplier_profiles: Vec<SupplierProfileRecord>,
     pub agency_profiles: Vec<AgencyProfileRecord>,
     pub relationships: Vec<RelationshipNeighborRecord>,
+    pub typed_relationships: Vec<RelationshipNeighborRecordV3>,
+    /// Exact canonical provider request digest validated by the typed graph
+    /// database reader. It is present only for relationship.neighbors V3.
+    pub typed_relationship_query_digest: Option<String>,
     pub source_artifacts: Vec<SourceArtifactRecord>,
 }
 
@@ -130,6 +137,9 @@ impl ToolAdapter for SnapshotAdapter {
             ToolRequest::EvidenceSearch(value) => self.search_evidence(value),
             ToolRequest::RelationshipNeighbors(value) => {
                 corpus_adapter::relationship_neighbors(self, value)
+            }
+            ToolRequest::RelationshipNeighborsV3(value) => {
+                relationship_adapter::relationship_neighbors_v3(self, value)
             }
             ToolRequest::ResponseRead(value) => self.read_response(value),
             ToolRequest::RuleReproduce(value) => self.reproduce_rule(value),
@@ -327,6 +337,8 @@ mod tests {
                 supplier_profiles: Vec::new(),
                 agency_profiles: Vec::new(),
                 relationships: Vec::new(),
+                typed_relationships: Vec::new(),
+                typed_relationship_query_digest: None,
                 source_artifacts: vec![artifact(b"actual source bytes")],
             },
         }

@@ -8,6 +8,12 @@ const ACTION_EXECUTION_CONSUMERS: &[(&str, &str)] = &[
     ("action-execution-worker", "workflow-worker"),
     ("audit-indexer", "projection-worker"),
 ];
+const ACTION_EXECUTION_COMPLETED_CONSUMERS: &[(&str, &str)] = &[
+    ("notification-worker", "notification-worker"),
+    ("product-fact-projector", "projection-worker"),
+    ("audit-indexer", "projection-worker"),
+    ("workflow-worker", "workflow-worker"),
+];
 const ANALYSIS_WORKER_CONSUMERS: &[(&str, &str)] = &[("analysis-worker", "analysis-worker")];
 
 fn dataset_snapshot_consumers(
@@ -49,6 +55,7 @@ pub(crate) fn consumers_for(
         | "projection.publication_revision_created.v1" => {
             &[("projection-worker", "projection-worker")]
         }
+        "action.execution_completed.v1" => ACTION_EXECUTION_COMPLETED_CONSUMERS,
         "agent.run_completed.v1"
         | "attachment.correction_scan_requested.v1"
         | "attachment.response_scan_requested.v1"
@@ -176,6 +183,22 @@ mod tests {
         assert_eq!(
             consumers_for("case.assigned.v1", &empty_payload),
             Ok(&[][..])
+        );
+    }
+
+    #[test]
+    fn action_execution_completion_preserves_existing_consumers_and_adds_workflow_worker() {
+        assert_eq!(
+            consumers_for("action.execution_completed.v1", &serde_json::json!({})),
+            Ok(ACTION_EXECUTION_COMPLETED_CONSUMERS)
+        );
+    }
+
+    #[test]
+    fn agent_run_completion_still_routes_only_to_workflow_worker() {
+        assert_eq!(
+            consumers_for("agent.run_completed.v1", &serde_json::json!({})),
+            Ok(&[("workflow-worker", "workflow-worker")][..])
         );
     }
 

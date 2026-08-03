@@ -31,7 +31,7 @@ struct ToolInspection {
 
 pub fn evaluate(context: EvaluationContext<'_>) -> Result<Value, PolicyError> {
     let allowed_tools = allowed_tools(context.agent_id).ok_or(PolicyError::UnknownAgent)?;
-    let inspection = inspect_tools(context.transcript, allowed_tools)?;
+    let inspection = inspect_tools(context.agent_id, context.transcript, allowed_tools)?;
     if inspection.denied {
         return Ok(blocked("POLICY_BLOCKED", "TOOL_NOT_ALLOWED"));
     }
@@ -100,6 +100,7 @@ pub fn evaluate(context: EvaluationContext<'_>) -> Result<Value, PolicyError> {
 }
 
 fn inspect_tools(
+    agent_id: &str,
     transcript: &Value,
     allowed_tools: &[&str],
 ) -> Result<ToolInspection, PolicyError> {
@@ -114,6 +115,13 @@ fn inspect_tools(
         let mode = call["mode"].as_str().ok_or(PolicyError::InvalidInput)?;
         cost += call["cost_krw"].as_i64().unwrap_or_default();
         if !allowed_tools.contains(&tool) || mode != "READ_ONLY" {
+            denied = true;
+            continue;
+        }
+        if agent_id == "investigator"
+            && tool == "source.fetch"
+            && call.pointer("/request/requestKind").and_then(Value::as_str) != Some("FETCH_URL")
+        {
             denied = true;
             continue;
         }
@@ -195,11 +203,48 @@ fn allowed_tools(agent_id: &str) -> Option<&'static [&'static str]> {
             "contract.find_comparables",
             "entity.lookup",
             "relationship.neighbors",
+            "source.fetch",
             "supplier.profile",
         ]),
         "skeptic" => Some(&["evidence.search", "evidence.read", "rule.reproduce"]),
         "claim-drafter" => Some(&["evidence.read", "response.read", "claim.language_check"]),
         "citation-verifier" => Some(&["evidence.read", "source.locator_verify"]),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::inspect_tools;
+    use serde_json::json;
+
+    fn transcript(request_kind: &str) -> serde_json::Value {
+        json!({
+            "calls":[{
+                "tool_id":"source.fetch",
+                "mode":"READ_ONLY",
+                "cost_krw":0,
+                "request":{"requestKind":request_kind},
+                "response":{"results":[]}
+            }]
+        })
+    }
+
+    #[test]
+    fn investigator_transcript_rejects_search_and_accepts_fetch_url() {
+        let tools = ["source.fetch"];
+        let search = inspect_tools("investigator", &transcript("SEARCH_PUBLIC_WEB"), &tools)
+            .expect("closed transcript");
+        assert!(search.denied);
+        let fetch = inspect_tools("investigator", &transcript("FETCH_URL"), &tools)
+            .expect("closed transcript");
+        assert!(!fetch.denied);
+        let market = inspect_tools(
+            "market-researcher",
+            &transcript("SEARCH_PUBLIC_WEB"),
+            &tools,
+        )
+        .expect("closed transcript");
+        assert!(!market.denied);
     }
 }

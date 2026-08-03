@@ -29,6 +29,11 @@ pub fn evaluate(rule_id: &str, input: &Value) -> Result<Value, EvaluationError> 
         "NEW_SUPPLIER_DEPENDENCE" => rules::new_supplier_dependence::evaluate(input),
         "SHARED_SUPPLIER_IDENTITY" => rules::shared_supplier_identity::evaluate(input),
         "RESTRICTIVE_SPECIFICATION" => rules::restrictive_specification::evaluate(input),
+        "OFFICER_OVERLAP_AWARD" => rules::officer_overlap_award::evaluate(input),
+        "OWNERSHIP_LINKED_COMPETITORS" => rules::ownership_linked_competitors::evaluate(input),
+        "BID_ROTATION" => rules::bid_rotation::evaluate(input),
+        "REVOLVING_DOOR_CONTRACT" => rules::revolving_door_contract::evaluate(input),
+        "SANCTIONED_SUCCESSOR" => rules::sanctioned_successor::evaluate(input),
         _ => Err(EvaluationError::UnknownRule),
     }
 }

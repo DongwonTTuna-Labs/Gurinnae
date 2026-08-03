@@ -1,0 +1,12 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-bid-results",
+  "operation_id": "opening-goods-search",
+  "kind": "quota",
+  "response": {
+    "header": {
+      "resultCode": "22",
+      "resultMsg": "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR."
+    }
+  }
+}

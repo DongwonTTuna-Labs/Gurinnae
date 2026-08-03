@@ -1,0 +1,38 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+id: pps-sanctions
+display_name: 조달청 부정당업자 제재 공식 CSV
+status: FINAL
+activation_state: DISABLED
+runtime_default_enabled: false
+source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+official_references:
+- https://www.data.go.kr/data/15137996/fileData.do
+- https://data.g2b.go.kr/link/AISC001_01/?reptNm=UI-ADOAAA-017R
+official_report_id: UI-ADOAAA-017R
+manifest_url_env: PPS_SANCTIONS_OFFICIAL_MANIFEST_URL
+credential_env: null
+formats:
+- json-manifest
+- csv
+network: egress-gateway-only
+schedule: ops.source_registry
+activation:
+  requires_configured_manifest_or_fixed_link: true
+  requires_https_and_host_allowlist: true
+  requires_manifest_schema_validation: true
+  requires_recorded_response_fingerprint: true
+  requires_terms_review: true
+  requires_reuse_rights_approval: true
+  requires_exact_csv_schema_fingerprint: true
+  failure_mode: connector remains DISABLED
+operations:
+- pps-sanctions-manifest
+- pps-sanctions-csv
+activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+operator_responsibility: resolve official CSV reuse rights, provide signed official manifest and approve the exact CSV mapping fingerprint
+blocker:
+  code: PPS_SANCTIONS_REUSE_RIGHTS_UNCONFIRMED
+  evidence: data.go marks unrestricted reuse while the official report states supply is limited to credit agencies
+  effect: fetch activation and normalized SANCTION rows remain disabled
+  unlock_condition: recorded reuse-rights approval plus exact CSV schema fingerprint and credentialed preflight receipt

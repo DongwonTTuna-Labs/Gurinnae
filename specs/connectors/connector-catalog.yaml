@@ -20,6 +20,15 @@ connectors:
   activation: credential/config + live preflight; synthetic fixtures are not live evidence
   activation_mode: KEY_ONLY_REST
   operator_responsibility: provide credential/config and pass live preflight
+- id: koneps-bid-results
+  directory: specs/connectors/koneps-bid-results
+  source_kind: OFFICIAL_REST_API
+  operation_count: 8
+  official_references:
+  - https://www.data.go.kr/data/15129397/openapi.do
+  activation: credential/config + live preflight; synthetic fixtures are not live evidence
+  activation_mode: KEY_ONLY_REST
+  operator_responsibility: provide credential/config and pass live preflight
 - id: local-finance
   directory: specs/connectors/local-finance
   source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
@@ -42,12 +51,25 @@ connectors:
 - id: open-dart
   directory: specs/connectors/open-dart
   source_kind: OFFICIAL_REST_AND_ZIP_XML_API
-  operation_count: 4
+  operation_count: 6
   official_references:
   - https://opendart.fss.or.kr/guide/main.do
   activation: credential/config + live preflight; synthetic fixtures are not live evidence
   activation_mode: KEY_ONLY_REST
   operator_responsibility: provide credential/config and pass live preflight
+- id: pps-sanctions
+  directory: specs/connectors/pps-sanctions
+  source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+  operation_count: 2
+  official_references:
+  - https://www.data.go.kr/data/15137996/fileData.do
+  - https://data.g2b.go.kr/link/AISC001_01/?reptNm=UI-ADOAAA-017R
+  activation: disabled; official CSV reuse rights and exact schema fingerprint require recorded approval before activation
+  activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+  operator_responsibility: resolve official CSV reuse rights, provide signed official manifest and pass live preflight
+  runtime_default_enabled: false
+  legal_blocker: PPS_SANCTIONS_REUSE_RIGHTS_UNCONFIRMED
+  official_report_id: UI-ADOAAA-017R
 - id: audit-results
   directory: specs/connectors/audit-results
   source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
@@ -57,7 +79,7 @@ connectors:
   activation: credential/config + live preflight; synthetic fixtures are not live evidence
   activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
   operator_responsibility: provide official manifest URL and maintain signed manifest entries
-total_operations: 44
+total_operations: 56
 activation_rule: Every connector ships an exact parser contract and structural fixtures. Production activation additionally writes a credentialed
   preflight receipt and live response fingerprint; failure disables only that connector.
 activation_modes:

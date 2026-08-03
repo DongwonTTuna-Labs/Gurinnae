@@ -185,9 +185,11 @@ members:
   - lib.rs
   - data_go_kr.rs
   - koneps.rs
+  - koneps_bid_results.rs
   - local_finance.rs
   - alio.rs
   - open_dart.rs
+  - pps_sanctions.rs
   - audit_results.rs
   forbidden_dependencies_or_patterns: []
 - path: crates/test-support

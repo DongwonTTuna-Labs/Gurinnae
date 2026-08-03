@@ -1,5 +1,3 @@
-use sqlx::Row;
-
 async fn load_agent_context(state: &State, job: &ClaimedJob) -> Result<AgentContext, Failure> {
     let claim = claim_agent_run(state, job).await?;
     validate_claimed_snapshot(&state.pool, &claim).await?;
@@ -52,6 +50,19 @@ struct ClaimedAgentRun {
     transition: AgentRunTransition,
 }
 
+#[derive(Debug)]
+struct V1ClaimedAgentRunRow {
+    case_id: Uuid,
+    agent_type: String,
+    objective: String,
+    evidence_scope_ids: Value,
+    input_snapshot_hash: String,
+    max_cost: Decimal,
+    version: i64,
+    run_contract_version: i16,
+    dataset_snapshot_id: Option<Uuid>,
+}
+
 async fn claim_agent_run(state: &State, job: &ClaimedJob) -> Result<ClaimedAgentRun, Failure> {
     let run_id = payload_uuid(&job.payload, "agentRunId")?;
     match agent_run_contract_route(&state.pool, run_id).await? {
@@ -61,28 +72,27 @@ async fn claim_agent_run(state: &State, job: &ClaimedJob) -> Result<ClaimedAgent
 }
 
 async fn claim_agent_run_v1(state: &State, run_id: Uuid) -> Result<ClaimedAgentRun, Failure> {
-    let row = sqlx::query("SELECT * FROM ops.claim_agent_run_worker_v1($1)")
-        .bind(run_id)
-        .fetch_optional(&state.pool)
-        .await
-        .map_err(database)?
-        .ok_or_else(|| Failure::Terminal("AGENT_RUN_NOT_QUEUED", run_id.to_string()))?;
-    let case_id = row.try_get("case_id").map_err(database)?;
-    let agent_type = row.try_get("agent_type").map_err(database)?;
-    let objective = row.try_get("objective").map_err(database)?;
-    let evidence_ids = json_uuids(row.try_get("evidence_scope_ids").map_err(database)?)?;
-    let expected_snapshot = row
-        .try_get::<String, _>("input_snapshot_hash")
-        .map_err(database)?
-        .trim()
-        .to_owned();
-    let maximum_cost: Decimal = row.try_get("max_cost").map_err(database)?;
-    let run_version = row.try_get("version").map_err(database)?;
-    let run_contract_version = row.try_get("run_contract_version").map_err(database)?;
-    let dataset_snapshot_id = row.try_get("dataset_snapshot_id").map_err(database)?;
+    let row = sqlx::query_as!(
+        V1ClaimedAgentRunRow,
+        r#"SELECT
+             case_id AS "case_id!", agent_type AS "agent_type!", objective AS "objective!",
+             evidence_scope_ids AS "evidence_scope_ids!",
+             input_snapshot_hash AS "input_snapshot_hash!", max_cost AS "max_cost!",
+             version AS "version!", run_contract_version AS "run_contract_version!",
+             dataset_snapshot_id
+           FROM ops.claim_agent_run_worker_v1($1)"#,
+        run_id,
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(database)?
+    .ok_or_else(|| Failure::Terminal("AGENT_RUN_NOT_QUEUED", run_id.to_string()))?;
+    let evidence_ids = json_uuids(row.evidence_scope_ids)?;
+    let expected_snapshot = row.input_snapshot_hash.trim().to_owned();
+    let maximum_cost = row.max_cost;
     let snapshot_contract = claimed_snapshot_contract(
-        run_contract_version,
-        dataset_snapshot_id,
+        row.run_contract_version,
+        row.dataset_snapshot_id,
         &evidence_ids,
         &expected_snapshot,
     )?;
@@ -93,10 +103,10 @@ async fn claim_agent_run_v1(state: &State, run_id: Uuid) -> Result<ClaimedAgentR
         .map_err(|_| Failure::Terminal("AGENT_BUDGET_INVALID", run_id.to_string()))?;
     Ok(ClaimedAgentRun {
         run_id,
-        run_version,
-        case_id,
-        agent_type,
-        objective,
+        run_version: row.version,
+        case_id: row.case_id,
+        agent_type: row.agent_type,
+        objective: row.objective,
         evidence_ids,
         expected_snapshot,
         maximum_cost_krw,

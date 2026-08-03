@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT suggestion.payload,\n                  suggestion.payload_sha256::text AS \"payload_sha256?\",\n                  suggestion.payload_canonical AS \"payload_canonical?\",\n                  COALESCE(array_agg(citation.citation_id ORDER BY citation.citation_ordinal)\n                    FILTER (WHERE citation.citation_id IS NOT NULL),ARRAY[]::uuid[])\n                    AS \"citation_ids!: Vec<Uuid>\",\n                  COALESCE(array_agg(citation.citation_ordinal ORDER BY citation.citation_ordinal)\n                    FILTER (WHERE citation.citation_id IS NOT NULL),ARRAY[]::integer[])\n                    AS \"citation_ordinals!: Vec<i32>\",\n                  COALESCE(array_agg(btrim(citation.source_use_sha256)::text ORDER BY citation.citation_ordinal)\n                    FILTER (WHERE citation.citation_id IS NOT NULL),ARRAY[]::text[])\n                    AS \"source_use_sha256s!: Vec<String>\"\n             FROM ops.agent_suggestions suggestion\n             LEFT JOIN ops.agent_proposal_citations citation\n               ON citation.proposal_id=suggestion.id\n              AND citation.agent_run_id=suggestion.agent_run_id\n              AND citation.validation_id=suggestion.citation_validation_id\n            WHERE suggestion.agent_run_id=$1\n              AND suggestion.citation_validation_id=$2\n              AND suggestion.suggestion_type='HYPOTHESIS'\n              AND suggestion.proposal_contract_version=2\n              AND suggestion.input_snapshot_sha256=CAST($3 AS char(64))\n            GROUP BY suggestion.id,suggestion.payload,suggestion.payload_sha256,\n                     suggestion.payload_canonical",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "payload"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "payload_sha256?",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "payload_canonical?",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "payload_canonical"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "citation_ids!: Vec<Uuid>",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "citation_ordinals!: Vec<i32>",
+        "type_info": "Int4Array",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "source_use_sha256s!: Vec<String>",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "a0b2552a9a90c2140c12876fa1542d82be44aae8cc63ace45e855247db1d881f"
+}

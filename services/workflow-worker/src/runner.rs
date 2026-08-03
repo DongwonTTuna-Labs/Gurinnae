@@ -134,6 +134,8 @@ async fn process_event_one(
 
 include!("workflow_events.rs");
 include!("workflow_action_execution.rs");
+include!("workflow_hypothesis_execution.rs");
 include!("workflow_exports.rs");
 include!("workflow_signal.rs");
+include!("workflow_hypothesis_recursion.rs");
 include!("workflow_pending.rs");

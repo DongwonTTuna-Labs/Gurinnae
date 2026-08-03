@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(\n          SELECT 1 FROM ops.agent_proposal_citations citation\n           WHERE citation.proposal_id=$1 AND citation.validation_id=$2\n             AND citation.citation_ordinal=$3\n             AND citation.input_snapshot_sha256=CAST($4 AS char(64))\n             AND citation.proposal_payload_sha256=CAST($5 AS char(64))\n             AND citation.supports_redacted=$6\n             AND citation.agent_run_id=$7\n             AND citation.provider_turn_id=$10\n             AND ($9::uuid IS NULL OR citation.citation_id=$9)\n             AND EXISTS (\n               SELECT 1 FROM ops.agent_source_uses source_use\n                WHERE source_use.agent_run_id=citation.agent_run_id\n                  AND source_use.source_use_id=citation.source_use_id\n                  AND source_use.source_use_sha256=citation.source_use_sha256\n                  AND source_use.provider_turn_id=$10\n                  AND source_use.use_kind='CITATION'\n                  AND source_use.parent_source_use_sha256=CAST($8 AS char(64))\n             )\n        ) AS \"exists!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Uuid",
+        "Bpchar",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "955d37632f4be8a68f8c1acc451e55071cb671a29a6a3b44f3d4f6b5898d6304"
+}

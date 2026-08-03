@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                (SELECT count(*) FROM ops.agent_source_uses\n                  WHERE agent_run_id=$1 AND provider_turn_id=$2 AND use_kind='CITATION') AS \"source_uses!\",\n                (SELECT count(*) FROM ops.agent_output_validations\n                  WHERE agent_run_id=$1 AND provider_turn_id=$2) AS \"validations!\",\n                (SELECT count(*) FROM ops.agent_suggestions\n                  WHERE agent_run_id=$1 AND citation_validation_id IN (\n                    SELECT validation_id FROM ops.agent_output_validations\n                     WHERE agent_run_id=$1 AND provider_turn_id=$2)) AS \"suggestions!\",\n                (SELECT count(*) FROM ops.agent_proposal_citations\n                  WHERE agent_run_id=$1 AND provider_turn_id=$2) AS \"citations!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source_uses!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "validations!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "suggestions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "citations!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "1beaf6c3cd8c3ba8b7ca985d26cde3f3501a1804809b9f7d2d2fed4daa123028"
+}

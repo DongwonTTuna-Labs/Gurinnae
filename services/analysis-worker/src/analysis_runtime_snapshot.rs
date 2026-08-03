@@ -1,10 +1,14 @@
-use super::{Failure, ProviderTurnIdentity, State, database, required};
+use super::{Failure, ProviderTurnIdentity, State, canonical_bytes, database, required, sha256};
+use gurine_agent_orchestration::research::{
+    ResearchRequestKind as StoredResearchRequestKind, Sha256Digest,
+};
 use gurine_agent_orchestration::runtime::{
     ComparableRecord, EntityIdentifier, EntityIdentifierKind, EntityRecord, EvidenceRecord,
-    ResponseRecord, RuleRecord, SnapshotBinding, SourceArtifactRecord, SourceRequestKind,
-    ToolSnapshot,
+    ResponseRecord, RuleRecord, SnapshotBinding, SourceArtifactRecord, SourceRequestKind, ToolCall,
+    ToolRequest, ToolSnapshot,
 };
 use gurine_object_store::gateway::GatewayObjectStore;
+use gurine_persistence_postgres::research_artifacts::ResearchArtifactRepository;
 use sqlx::{Postgres, Transaction};
 
 #[path = "analysis_corpus_snapshot.rs"]
@@ -18,13 +22,15 @@ pub(super) async fn load_tool_snapshot(
     state: &State,
     turn: &ProviderTurnIdentity,
     binding: SnapshotBinding,
+    tool_call: Option<&ToolCall>,
 ) -> Result<ToolSnapshot, Failure> {
     let mut transaction = state.pool.begin().await.map_err(database)?;
     sqlx::query!("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         .execute(&mut *transaction)
         .await
         .map_err(database)?;
-    let contract = snapshot_binding::validate(&mut transaction, turn, &binding).await?;
+    let validated = snapshot_binding::validate(&mut transaction, turn, &binding).await?;
+    let contract = validated.contract;
     let evidence =
         evidence_records(&mut transaction, turn, contract, binding.input_snapshot_id).await?;
     let responses =
@@ -34,17 +40,42 @@ pub(super) async fn load_tool_snapshot(
     let entities =
         load_entities(&mut transaction, turn, contract, binding.input_snapshot_id).await?;
     let rules = load_rules(&mut transaction, turn, contract).await?;
-    let (contracts, supplier_profiles, agency_profiles, relationships) =
+    let mut typed_relationship_query_digest = None;
+    let (contracts, supplier_profiles, agency_profiles, relationships, typed_relationships) =
         if contract == RuntimeSnapshotContract::V2 {
-            let snapshot = corpus::load(&mut transaction, turn, binding.input_snapshot_id).await?;
+            let typed_relationship_request = match tool_call {
+                Some(
+                    call @ ToolCall {
+                        request: ToolRequest::RelationshipNeighborsV3(request),
+                        ..
+                    },
+                ) => {
+                    let canonical = canonical_bytes(&call.request_wire)?;
+                    typed_relationship_query_digest = Some(sha256(&canonical));
+                    Some(corpus::TypedRelationshipRequest {
+                        canonical,
+                        limit: i64::from(request.limit),
+                        snapshot_generation: validated.producer_generation,
+                    })
+                }
+                _ => None,
+            };
+            let snapshot = corpus::load(
+                &mut transaction,
+                turn,
+                binding.input_snapshot_id,
+                typed_relationship_request,
+            )
+            .await?;
             (
                 snapshot.contracts,
                 snapshot.supplier_profiles,
                 snapshot.agency_profiles,
                 snapshot.relationships,
+                snapshot.typed_relationships,
             )
         } else {
-            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new())
         };
     let source_artifacts =
         load_source_artifacts(&mut transaction, turn, state.object_store.as_ref()).await?;
@@ -60,6 +91,8 @@ pub(super) async fn load_tool_snapshot(
         supplier_profiles,
         agency_profiles,
         relationships,
+        typed_relationships,
+        typed_relationship_query_digest,
         source_artifacts,
     })
 }
@@ -351,38 +384,22 @@ async fn load_source_artifacts(
     turn: &ProviderTurnIdentity,
     object_store: Option<&GatewayObjectStore>,
 ) -> Result<Vec<SourceArtifactRecord>, Failure> {
-    let rows = sqlx::query!(
-        "SELECT r.id AS research_artifact_id,
-                su.source_use_id,r.content_sha256,r.artifact_sha256,r.content_media_type,
-                r.request_kind,r.source_url_redacted,r.final_url_redacted,r.object_key
-           FROM raw.research_artifacts r
-           JOIN LATERAL (
-             SELECT source_use_id FROM ops.agent_source_uses
-              WHERE agent_run_id=r.agent_run_id AND research_artifact_id=r.id
-                AND use_kind='TOOL_RESULT'
-              ORDER BY source_use_id LIMIT 1
-           ) su ON true
-          WHERE r.agent_run_id=$1 AND r.input_snapshot_sha256=CAST($2 AS char(64)) AND r.fetch_outcome='STORED'
-          ORDER BY r.id",
-        turn.run_id,
-        &turn.input_snapshot_sha256,
-    )
-    .fetch_all(&mut **executor)
-    .await
-    .map_err(database)?;
+    let snapshot_sha256 = Sha256Digest::parse(&turn.input_snapshot_sha256).map_err(|_| {
+        Failure::Terminal(
+            "SOURCE_ARTIFACT_INVALID",
+            "input_snapshot_sha256".to_owned(),
+        )
+    })?;
+    let rows = ResearchArtifactRepository::new()
+        .list_runtime_capsules(&mut **executor, turn.run_id, &snapshot_sha256)
+        .await?;
     let mut artifacts = Vec::with_capacity(rows.len());
     for row in rows {
-        let content_sha256 = row.content_sha256;
+        let content_sha256 = row.content_sha256.as_str().to_owned();
         let object_key = row.object_key;
-        let request_kind = match row.request_kind.as_str() {
-            "SEARCH_PUBLIC_WEB" => SourceRequestKind::SearchPublicWeb,
-            "FETCH_URL" => SourceRequestKind::FetchUrl,
-            _ => {
-                return Err(Failure::Terminal(
-                    "SOURCE_ARTIFACT_INVALID",
-                    "request_kind".to_owned(),
-                ));
-            }
+        let request_kind = match row.request_kind {
+            StoredResearchRequestKind::SearchPublicWeb => SourceRequestKind::SearchPublicWeb,
+            StoredResearchRequestKind::FetchUrl => SourceRequestKind::FetchUrl,
         };
         // Search results are discovery-only in the closed tool response and
         // must not cause an object-store read.  FETCH_URL is the only branch
@@ -407,7 +424,7 @@ async fn load_source_artifacts(
             research_artifact_id: row.research_artifact_id,
             source_use_id: row.source_use_id,
             content_sha256,
-            fetch_receipt_sha256: row.artifact_sha256,
+            fetch_receipt_sha256: row.artifact_sha256.as_str().to_owned(),
             content_media_type: row.content_media_type,
             request_kind,
             source_url: row.source_url_redacted,

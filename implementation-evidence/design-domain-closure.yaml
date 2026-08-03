@@ -45,10 +45,10 @@ bindings:
     rust_type: gurine_agent_orchestration::research::ResearchArtifact
     owner: crates/agent-orchestration
     application: services/analysis-worker::research
-    repository: crates/persistence-postgres::research_artifacts
-    relations: [raw.research_artifacts]
-    identity: research_artifact_id
-    concurrency: immutable-content-digest
+    repository: crates/persistence-postgres::research_artifacts::ResearchArtifactRepository
+    relations: [raw.research_artifacts, raw.research_artifact_review_tiers]
+    identity: research_artifact_id+artifact_sha256+review-tier-revision+review-receipt-sha256
+    concurrency: immutable-content-digest+append-only-review-tier-predecessor-receipt
     operations: []
     events: [agent.tool_call_completed.v1]
     errors: [RESEARCH_FETCH_BLOCKED, RESEARCH_RENDER_REQUIRED, RESEARCH_ARTIFACT_STALE]
@@ -78,13 +78,51 @@ bindings:
     rust_type: gurine_detection::snapshot::DatasetSnapshot
     owner: crates/detection
     application: crates/application::detection
-    repository: crates/persistence-postgres::dataset_snapshots
-    relations: [core.dataset_snapshots, core.dataset_snapshot_members, core.dataset_snapshot_member_sources, core.dataset_snapshot_strong_identifier_facts]
+    repository: crates/persistence-postgres::dataset_snapshots::PostgresDatasetSnapshotRepository
+    relations:
+      - core.dataset_snapshots
+      - core.dataset_snapshot_members
+      - core.dataset_snapshot_member_sources
+      - core.dataset_snapshot_strong_identifier_facts
+      - core.dataset_snapshot_relationship_assertions_v2
+      - core.dataset_snapshot_conflict_inputs_v2
     identity: dataset_snapshot_id+snapshot_sha256
-    concurrency: immutable-repeatable-read-snapshot
+    concurrency: immutable-repeatable-read-snapshot+frozen-relationship-and-conflict-input-set-digests
     operations: [startAgentRun, runRuleEvaluation, startRuleShadow]
     events: [dataset.snapshot_created.v1]
     errors: [DATASET_SNAPSHOT_NOT_READY, DATASET_SNAPSHOT_STALE, DATASET_MEMBER_DIGEST_MISMATCH]
+  - noun: RelationshipGraphAssertionV2
+    rust_type: gurine_domain::relationship_graph::RelationshipGraphAssertionV2
+    owner: crates/domain
+    application: services/ingest-worker::ingest_structured_persistence + services/analysis-worker::analysis_typed_relationship_snapshot
+    repository: crates/persistence-postgres::relationship_graph::RelationshipGraphRepository
+    relations:
+      - core.relationship_graph_endpoints_v2
+      - core.relationship_graph_assertions_v2
+      - core.relationship_graph_assertion_evidence_v2
+      - core.relationship_graph_verification_decisions_v2
+    identity: assertion-id+assertion-revision+assertion-digest+subject-and-object-endpoint-digests
+    concurrency: immutable-endpoints+append-only-assertion-revision+independent-human-decision+snapshot-scoped-approved-read
+    operations: []
+    events: []
+    errors: [TYPED_RELATIONSHIP_ENDPOINT_CONTRACT_MISMATCH, INVALID_PARAMETER, INTERNAL_ERROR]
+  - noun: HypothesisRecursion
+    rust_type: gurine_domain::hypothesis_recursion::HypothesisRecursion
+    owner: crates/domain
+    application: services/workflow-worker::workflow_hypothesis_recursion
+    repository: crates/persistence-postgres::hypothesis_recursion::HypothesisRecursionRepository
+    relations:
+      - ops.hypothesis_recursion_policies
+      - ops.hypothesis_recursion_plans
+      - ops.hypothesis_recursion_nodes
+      - ops.hypothesis_recursion_transitions
+      - ops.hypothesis_recursion_receipts
+      - ops.hypothesis_recursion_budget_ledger
+    identity: trigger-kind+trigger-id+trigger-generation+receipt-sha256
+    concurrency: producer-job-lease-and-fence+immutable-trigger-replay+gapless-transition-and-budget-chains
+    operations: []
+    events: []
+    errors: [HYPOTHESIS_RECURSION_PRODUCER_FENCE_INVALID, HYPOTHESIS_RECURSION_OWNER_CONTRACT_INVALID]
   - noun: NormalizationRun
     rust_type: gurine_ingestion::normalization::NormalizationRun
     owner: crates/ingestion

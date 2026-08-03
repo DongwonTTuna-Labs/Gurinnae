@@ -36,6 +36,7 @@ agents:
   - contract.find_comparables
   - entity.lookup
   - relationship.neighbors
+  - source.fetch
   - supplier.profile
   output_schema: InvestigatorOutput
   max_iterations: 16

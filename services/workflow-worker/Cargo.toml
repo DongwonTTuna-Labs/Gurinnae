@@ -9,6 +9,7 @@ arrow-schema.workspace = true
 bytes.workspace = true
 base64.workspace = true
 gurine-auth = { path = "../../crates/auth" }
+gurine-domain = { path = "../../crates/domain" }
 gurine-jobs = { path = "../../crates/jobs" }
 gurine-object-store = { path = "../../crates/object-store" }
 gurine-persistence-postgres = { path = "../../crates/persistence-postgres" }

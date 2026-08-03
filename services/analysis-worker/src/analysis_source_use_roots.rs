@@ -270,7 +270,8 @@ macro_rules! query_v2_source_use_set_state {
                  AND member.snapshot_contract_version=snapshot.contract_version
                  AND member.object_type IN (
                    'AGENCY','SUPPLIER','CONTRACT','CONTRACT_LINE_ITEM',
-                   'CONTRACT_CHANGE','PRICE_OBSERVATION'
+                   'CONTRACT_CHANGE','PRICE_OBSERVATION',
+                   'TYPED_RELATIONSHIP_ASSERTION'
                  )
                 JOIN core.dataset_snapshot_member_sources source
                   ON source.dataset_snapshot_id=member.dataset_snapshot_id

@@ -97,7 +97,12 @@ async fn insert_source_document_revision(
         Option::<&str>::None,
         json!([]),
         Option::<&str>::None,
-        json!({"connectorOperationId":context.operation.id,"sourceRunId":context.run_id}),
+        json!({
+            "connectorOperationId":context.operation.id,
+            "sourceRunId":context.run_id,
+            "manifestDeclaredSha256":context.target.sha256,
+            "manifestDeclaredContentType":context.target.content_type,
+        }),
     )
     .fetch_one(&mut **tx)
     .await

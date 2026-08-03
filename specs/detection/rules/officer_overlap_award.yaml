@@ -1,0 +1,120 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: OFFICER_OVERLAP_AWARD
+name: 동일 임원 수주 업체 중첩
+version: 1.0.0
+required:
+- policy.minimum_distinct_suppliers
+- source_coverage.dart_officer_assignments_complete
+- source_coverage.award_records_complete
+- source_coverage.relationship_periods_complete
+- source_coverage.relationships_verified
+- source_coverage.public_use_approved
+- source_coverage.independent_human_verification_complete
+- awards
+- officer_assignments
+thresholds:
+  minimum_distinct_suppliers:
+    required_input_path: policy.minimum_distinct_suppliers
+    allowed_minimum: 2
+    default: forbidden
+formula: exact person identifier digest holds an officer role at award time for the policy-required number of distinct suppliers awarded by the same agency
+identity_contract:
+  matching_key: person_identifier_digest
+  digest_format: sha256-lower-hex
+  display_name_used: false
+  same_name_match_forbidden: true
+  natural_person_score_forbidden: true
+validity_contract:
+  source_coverage:
+    dart_officer_assignments_complete: required_true
+    award_records_complete: required_true
+    relationship_periods_complete: required_true
+  graph_snapshot:
+    relationships_verified: required_true
+    public_use_approved: required_true
+    independent_human_verification_complete: required_true
+  interval: closed [valid_from, valid_to]
+  award_date_field: awarded_on
+  incomplete_coverage_outcome: BLOCKED
+materializer_input:
+  awards:
+    connector_id: koneps-bid-results
+    data_product: award_metadata
+    snapshot_bound: true
+    required_fields:
+    - id
+    - agency_id
+    - supplier_id
+    - awarded_on
+  officer_assignments:
+    connector_id: open-dart
+    operation_id: dart-executive-status
+    snapshot_bound: true
+    relationship_kind: MANAGEMENT_ROLE
+    endpoint_kinds:
+    - PERSON
+    - SUPPLIER
+    supplier_endpoint_authority:
+      source: owner-controlled human-resolved supplier read model
+      current_state: UNAVAILABLE
+      required_for_activation: true
+      required_tuple:
+      - entity_id
+      - entity_revision
+      - entity_digest
+      caller_supplied_tuple: forbidden
+    required_status:
+      validity_coverage_status: COMPLETE
+      verification_status: VERIFIED
+      public_use_status: APPROVED
+      independent_human_verification: true
+    person_identifier: exact lowercase sha256 digest only
+    person_fields_allowed:
+    - person_identifier_digest
+    - contextual_role
+    - source_locator
+    person_fields_forbidden:
+    - resident_registration_number
+    - address
+    - birth_date
+    - family_relation
+    - natural_person_score
+blockers:
+- REQUIRED_FIELD_MISSING
+- INVALID_POLICY_THRESHOLD
+- SOURCE_COVERAGE_INCOMPLETE
+- RELATIONSHIP_GRAPH_NOT_APPROVED
+- INSUFFICIENT_CONTEXT
+- PERSON_IDENTITY_DIGEST_INVALID
+- DATE_INVALID
+- VALIDITY_INTERVAL_INVALID
+- DUPLICATE_RECORD_ID
+metamorphic:
+- award and assignment order does not change result
+- exact digest equality is required; identical display names never match
+- an award outside the closed employment interval never contributes
+- incomplete source or relationship validity coverage always blocks instead of producing a signal or no-signal
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+activation:
+  policy_required: true
+  default_policy: forbidden
+  production_seed: forbidden
+  current_operating_status: BLOCKED
+  current_blocker: OPEN_DART_MANAGEMENT_ROLE_SUPPLIER_AUTHORITY_UNAVAILABLE
+  unlock_conditions:
+  - an owner-controlled typed read model returns the human-resolved SUPPLIER entity id, revision and digest
+  - the MANAGEMENT_ROLE proposal writer verifies that tuple and its complete evidence in the same transaction
+  operating_status_after_unlock_and_all_coverage_gates_pass: ACTIVATABLE
+  otherwise: BLOCKED
+  oracle_tests_remain_required_while_blocked: true
+implementation: crates/detection/src/rules/officer_overlap_award.rs
+reference_evaluator: specs/detection/reference_evaluator.py

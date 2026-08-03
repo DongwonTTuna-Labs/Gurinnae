@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.agent_proposal_citations(\n          citation_id,proposal_id,agent_run_id,provider_turn_id,validation_id,dataset_snapshot_id,snapshot_member_id,snapshot_member_digest,\n          citation_ordinal,input_snapshot_sha256,proposal_payload_sha256,source_kind,source_use_id,source_use_sha256,\n          evidence_segment_id,research_artifact_id,source_id,locator_kind,locator_value,locator_digest,content_sha256,supports_redacted,supports_sha256,citation_digest)\n         SELECT COALESCE($12::uuid,gen_random_uuid()),$1::uuid,s.agent_run_id,s.provider_turn_id,$2::uuid,COALESCE(s.dataset_snapshot_id,$13::uuid),s.snapshot_member_id,s.snapshot_member_digest,$3::int4,\n                $4,CAST($5 AS char(64)),CASE WHEN s.source_kind='RESEARCH_ARTIFACT' THEN 'RUN_TOOL_ARTIFACT' ELSE s.source_kind END,\n                s.source_use_id,s.source_use_sha256,s.evidence_segment_id,s.research_artifact_id,\n                COALESCE(s.source_document_id,s.research_artifact_id),s.locator_kind,s.locator_value,\n                s.locator_sha256,s.selected_content_sha256,$6,encode(extensions.digest(convert_to($6,'UTF8'),'sha256'),'hex'),\n                encode(extensions.digest(convert_to(($1::uuid)::text||':'||($3::int4)::text||':'||s.source_use_sha256,'UTF8'),'sha256'),'hex')\n           FROM ops.agent_source_uses s WHERE s.agent_run_id=$7 AND s.use_kind='CITATION'\n            AND s.parent_source_use_sha256=CAST($8 AS char(64))\n            AND s.locator_kind IS NOT NULL AND s.locator_value IS NOT NULL AND s.locator_sha256 IS NOT NULL\n            AND s.selected_content_sha256 IS NOT NULL\n            AND EXISTS (SELECT 1 FROM ops.agent_suggestions proposal\n                         WHERE proposal.id=$1::uuid AND proposal.agent_run_id=$7::uuid\n                           AND proposal.suggestion_type=$9)\n            AND ((s.source_kind='EVIDENCE_SEGMENT' AND (\n                   s.classification='PUBLIC'\n                   OR ($10 AND s.classification='INTERNAL')\n                 )) OR ($11 AND EXISTS (\n              SELECT 1 FROM raw.research_artifacts artifact\n              JOIN LATERAL (\n                SELECT tier.review_tier,tier.reviewed_classification\n                  FROM raw.research_artifact_review_tiers tier\n                 WHERE tier.research_artifact_id=artifact.id\n                   AND tier.research_asset_id=artifact.asset_id\n                   AND tier.research_asset_revision=artifact.asset_revision\n                   AND tier.research_artifact_sha256=artifact.artifact_sha256\n                   AND tier.research_content_sha256=artifact.content_sha256\n                 ORDER BY tier.revision DESC LIMIT 1\n              ) latest ON true\n               WHERE artifact.id=s.research_artifact_id\n                 AND artifact.agent_run_id=s.agent_run_id\n                 AND artifact.asset_id=s.research_asset_id\n                 AND artifact.asset_revision=s.research_asset_revision\n                 AND artifact.artifact_sha256=s.research_artifact_sha256\n                 AND artifact.content_sha256=s.research_content_sha256\n                 AND artifact.source_fetch_id=s.research_source_fetch_id\n                 AND latest.review_tier='OFFICIAL_UNREVIEWED'\n                 AND latest.reviewed_classification='RESTRICTED'\n            ))) LIMIT 1\n         ON CONFLICT (proposal_id,citation_ordinal) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Uuid",
+        "Bpchar",
+        "Text",
+        "Bool",
+        "Bool",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "df4794acb4be5bd68ea30a181f16a1027968d5673a830ff0d6cd86dea073ff9b"
+}

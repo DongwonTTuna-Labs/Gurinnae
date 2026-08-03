@@ -37,6 +37,8 @@ async fn handle_event(
         scanner,
         field_keys,
         job.id,
+        job.fence.lease_token,
+        job.fence.fencing_token,
         event_type,
         consumer_id,
         aggregate_id,
@@ -74,6 +76,8 @@ async fn reconcile_event(
     scanner: &ClamAvScanner,
     field_keys: &EnvelopeKeyRing,
     producer_job_id: Uuid,
+    producer_job_lease_token: Uuid,
+    producer_job_fencing_token: i64,
     event_type: &str,
     consumer_id: &str,
     aggregate_id: Uuid,
@@ -86,8 +90,20 @@ async fn reconcile_event(
                 format!("{consumer_id}:{event_type}"),
             ));
         }
-        execute_approved_action(pool, field_keys, aggregate_id, payload).await?
-    } else if matches!(consumer_id, "response-request-materializer" | "response-clock-worker") {
+        execute_approved_action(
+            pool,
+            field_keys,
+            producer_job_id,
+            producer_job_lease_token,
+            producer_job_fencing_token,
+            aggregate_id,
+            payload,
+        )
+        .await?
+    } else if matches!(
+        consumer_id,
+        "response-request-materializer" | "response-clock-worker"
+    ) {
         reconcile_communication_delivery_receipt(pool, consumer_id, payload).await?
     } else if consumer_id != "workflow-worker" {
         return Err(Failure::Terminal(
@@ -96,7 +112,33 @@ async fn reconcile_event(
         ));
     } else {
         match event_type {
-            "agent.run_completed.v1" => reconcile_agent_run(pool, payload).await?,
+            "action.execution_completed.v1" => {
+                reconcile_hypothesis_execution_completed(
+                    pool,
+                    payload,
+                    producer_job_id,
+                    producer_job_lease_token,
+                    producer_job_fencing_token,
+                )
+                .await?
+            }
+            "agent.run_completed.v1" => {
+                let agent_run = reconcile_agent_run(pool, payload).await?;
+                match agent_run.contract_version {
+                    AgentRunContractVersion::V1 => agent_run.metrics,
+                    AgentRunContractVersion::V2 => {
+                        let recursion = reconcile_hypothesis_recursion_stage_completed(
+                            pool,
+                            payload,
+                            producer_job_id,
+                            producer_job_lease_token,
+                            producer_job_fencing_token,
+                        )
+                        .await?;
+                        json!({"agentRun":agent_run.metrics,"hypothesisRecursion":recursion})
+                    }
+                }
+            }
             "attachment.correction_scan_requested.v1" => {
                 scan_attachment(pool, store, scanner, "CORRECTION", aggregate_id).await?
             }
@@ -279,10 +321,93 @@ async fn scan_attachment(
     Ok(json!({"attachmentId":id,"attachmentKind":kind,"scanStatus":status,"eventId":event_id}))
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AgentRunContractVersion {
+    V1,
+    V2,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AgentRunReconciliationPath {
+    LegacySucceeded,
+    V2Succeeded,
+    V2Terminal,
+}
+
+fn agent_run_reconciliation_path(
+    contract_version: AgentRunContractVersion,
+    persisted_status: &str,
+    event_status: Option<&str>,
+) -> Result<AgentRunReconciliationPath, Failure> {
+    match contract_version {
+        AgentRunContractVersion::V1 if persisted_status == "SUCCEEDED" => {
+            Ok(AgentRunReconciliationPath::LegacySucceeded)
+        }
+        AgentRunContractVersion::V1 => Err(Failure::Terminal(
+            "AGENT_RUN_NOT_SUCCEEDED",
+            persisted_status.to_owned(),
+        )),
+        AgentRunContractVersion::V2 => {
+            let event_status = event_status
+                .ok_or_else(|| Failure::Terminal("INVALID_AGENT_EVENT", "status".to_owned()))?;
+            if event_status != persisted_status {
+                return Err(Failure::Terminal(
+                    "AGENT_RUN_STATUS_MISMATCH",
+                    format!("{event_status}:{persisted_status}"),
+                ));
+            }
+            if persisted_status == "SUCCEEDED" {
+                Ok(AgentRunReconciliationPath::V2Succeeded)
+            } else {
+                Ok(AgentRunReconciliationPath::V2Terminal)
+            }
+        }
+    }
+}
+
+fn agent_run_metrics(
+    path: AgentRunReconciliationPath,
+    run_id: Uuid,
+    status: &str,
+    suggestions: i64,
+) -> Value {
+    match path {
+        AgentRunReconciliationPath::LegacySucceeded => {
+            json!({"agentRunId":run_id,"suggestions":suggestions})
+        }
+        AgentRunReconciliationPath::V2Succeeded => {
+            json!({"agentRunId":run_id,"status":status,"suggestions":suggestions})
+        }
+        AgentRunReconciliationPath::V2Terminal => {
+            json!({"agentRunId":run_id,"status":status,"suggestions":0})
+        }
+    }
+}
+
+impl TryFrom<i16> for AgentRunContractVersion {
+    type Error = Failure;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Self::V1),
+            2 => Ok(Self::V2),
+            _ => Err(Failure::Terminal(
+                "AGENT_RUN_CONTRACT_VERSION_INVALID",
+                value.to_string(),
+            )),
+        }
+    }
+}
+
+struct ReconciledAgentRun {
+    contract_version: AgentRunContractVersion,
+    metrics: Value,
+}
+
 async fn reconcile_agent_run(
     pool: &PgPool,
     payload: &serde_json::Map<String, Value>,
-) -> Result<Value, Failure> {
+) -> Result<ReconciledAgentRun, Failure> {
     let run_id = object_uuid(payload, "agent_run_id")?;
     let case_id = object_uuid(payload, "case_id")?;
     let expected = payload
@@ -290,8 +415,10 @@ async fn reconcile_agent_run(
         .and_then(Value::as_str)
         .filter(|value| is_sha256(value))
         .ok_or_else(|| Failure::Terminal("INVALID_AGENT_EVENT", "output digest".to_owned()))?;
+    let event_status = payload.get("status").and_then(Value::as_str);
     let row = sqlx::query!(
-        "SELECT status,output_payload FROM ops.agent_runs WHERE id=$1 AND case_id=$2",
+        "SELECT status,output_payload,run_contract_version AS \"run_contract_version!\" \
+         FROM ops.agent_runs WHERE id=$1 AND case_id=$2",
         run_id,
         case_id,
     )
@@ -299,10 +426,15 @@ async fn reconcile_agent_run(
     .await
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("AGENT_RUN_NOT_FOUND", run_id.to_string()))?;
+    let contract_version = AgentRunContractVersion::try_from(row.run_contract_version)?;
     let status = row.status;
     let output = row.output_payload;
-    if status != "SUCCEEDED" {
-        return Err(Failure::Terminal("AGENT_RUN_NOT_SUCCEEDED", status));
+    let path = agent_run_reconciliation_path(contract_version, &status, event_status)?;
+    if path == AgentRunReconciliationPath::V2Terminal {
+        return Ok(ReconciledAgentRun {
+            contract_version,
+            metrics: agent_run_metrics(path, run_id, &status, 0),
+        });
     }
     let output = output.ok_or_else(|| {
         Failure::Terminal("AGENT_OUTPUT_MISSING", "output payload is null".to_owned())
@@ -336,5 +468,68 @@ async fn reconcile_agent_run(
         .await
         .map_err(database)?;
     }
-    Ok(json!({"agentRunId":run_id,"suggestions":suggestions}))
+    Ok(ReconciledAgentRun {
+        contract_version,
+        metrics: agent_run_metrics(path, run_id, &status, suggestions),
+    })
+}
+
+#[cfg(test)]
+mod agent_run_contract_version_tests {
+    use super::{
+        AgentRunContractVersion, AgentRunReconciliationPath, Failure, agent_run_metrics,
+        agent_run_reconciliation_path,
+    };
+    use uuid::Uuid;
+
+    #[test]
+    fn only_v2_requires_the_recursion_owner() {
+        assert!(matches!(
+            AgentRunContractVersion::try_from(1),
+            Ok(AgentRunContractVersion::V1)
+        ));
+        assert!(matches!(
+            AgentRunContractVersion::try_from(2),
+            Ok(AgentRunContractVersion::V2)
+        ));
+        for invalid in [0, 3] {
+            let error = AgentRunContractVersion::try_from(invalid)
+                .expect_err("unknown agent-run contract version must fail closed");
+            assert!(matches!(error, Failure::Terminal(_, _)));
+        }
+    }
+
+    #[test]
+    fn v1_preserves_legacy_non_success_and_metrics_contract() {
+        for status in ["FAILED", "CANCELLED", "BUDGET_BLOCKED"] {
+            let error = agent_run_reconciliation_path(AgentRunContractVersion::V1, status, None)
+                .expect_err("legacy non-success must remain terminal");
+            assert!(matches!(
+                error,
+                Failure::Terminal("AGENT_RUN_NOT_SUCCEEDED", _)
+            ));
+        }
+        let path =
+            agent_run_reconciliation_path(AgentRunContractVersion::V1, "SUCCEEDED", Some("FAILED"))
+                .expect("legacy code did not trust the event status field");
+        let metrics = agent_run_metrics(path, Uuid::from_u128(1), "SUCCEEDED", 2);
+        assert_eq!(metrics.as_object().map(|object| object.len()), Some(2));
+        assert!(metrics.get("status").is_none());
+    }
+
+    #[test]
+    fn v2_requires_exact_event_status_and_forwards_terminal_states() {
+        assert!(
+            agent_run_reconciliation_path(AgentRunContractVersion::V2, "SUCCEEDED", None).is_err()
+        );
+        assert!(
+            agent_run_reconciliation_path(AgentRunContractVersion::V2, "SUCCEEDED", Some("FAILED"))
+                .is_err()
+        );
+        assert_eq!(
+            agent_run_reconciliation_path(AgentRunContractVersion::V2, "FAILED", Some("FAILED"))
+                .expect("v2 terminal owner path"),
+            AgentRunReconciliationPath::V2Terminal
+        );
+    }
 }

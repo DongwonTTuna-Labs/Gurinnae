@@ -27,7 +27,8 @@
           "url",
           "published_at",
           "content_type",
-          "revision"
+          "revision",
+          "sha256"
         ],
         "properties": {
           "external_id": {

@@ -1,0 +1,12 @@
+{
+  "fixture_origin": "synthetic-manifest-contract-not-live-evidence",
+  "connector_id": "pps-sanctions",
+  "kind": "empty",
+  "manifest": {
+    "manifest_version": "1",
+    "publisher": "가상 조달 제재자료 운영자",
+    "generated_at": "2026-08-01T00:00:00Z",
+    "documents": []
+  },
+  "normalization": { "state": "BLOCKED", "output_rows": 0 }
+}

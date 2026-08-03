@@ -1,10 +1,15 @@
+pub mod bid_rotation;
 pub mod contract_amendment_escalation;
 pub mod contract_splitting_pattern;
 pub mod low_bid_competition;
 pub mod new_supplier_dependence;
+pub mod officer_overlap_award;
+pub mod ownership_linked_competitors;
 pub mod price_outlier;
 pub mod repeated_single_source;
 pub mod restrictive_specification;
+pub mod revolving_door_contract;
+pub mod sanctioned_successor;
 pub mod shared_supplier_identity;
 pub mod supplier_concentration;
 pub mod year_end_spending_spike;

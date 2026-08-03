@@ -92,9 +92,54 @@ rules:
   eval_file: specs/detection/evals/restrictive_specification.jsonl
   reference_evaluator: specs/detection/reference_evaluator.py
   publication_claim_allowed: false
+- id: OFFICER_OVERLAP_AWARD
+  name: 동일 임원 수주 업체 중첩
+  version: 1.0.0
+  implementation: crates/detection/src/rules/officer_overlap_award.rs
+  contract: specs/detection/rules/officer_overlap_award.yaml
+  oracle: specs/detection/oracles/officer_overlap_award.md
+  eval_file: specs/detection/evals/officer_overlap_award.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: OWNERSHIP_LINKED_COMPETITORS
+  name: 소유·지배 관계 경쟁 입찰자
+  version: 1.0.0
+  implementation: crates/detection/src/rules/ownership_linked_competitors.rs
+  contract: specs/detection/rules/ownership_linked_competitors.yaml
+  oracle: specs/detection/oracles/ownership_linked_competitors.md
+  eval_file: specs/detection/evals/ownership_linked_competitors.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: BID_ROTATION
+  name: 낙찰자 순환
+  version: 1.0.0
+  implementation: crates/detection/src/rules/bid_rotation.rs
+  contract: specs/detection/rules/bid_rotation.yaml
+  oracle: specs/detection/oracles/bid_rotation.md
+  eval_file: specs/detection/evals/bid_rotation.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: REVOLVING_DOOR_CONTRACT
+  name: 퇴직 공직자 원소속 기관 계약
+  version: 1.0.0
+  implementation: crates/detection/src/rules/revolving_door_contract.rs
+  contract: specs/detection/rules/revolving_door_contract.yaml
+  oracle: specs/detection/oracles/revolving_door_contract.md
+  eval_file: specs/detection/evals/revolving_door_contract.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
+- id: SANCTIONED_SUCCESSOR
+  name: 제재 업체 후속 신생 업체 수주
+  version: 1.0.0
+  implementation: crates/detection/src/rules/sanctioned_successor.rs
+  contract: specs/detection/rules/sanctioned_successor.yaml
+  oracle: specs/detection/oracles/sanctioned_successor.md
+  eval_file: specs/detection/evals/sanctioned_successor.jsonl
+  reference_evaluator: specs/detection/reference_evaluator.py
+  publication_claim_allowed: false
 evaluation:
   cases_per_rule: 30
-  total_cases: 300
+  total_cases: 450
   concrete_inputs: true
   seed_only_inputs_forbidden: true
   reference_evaluator: specs/detection/reference_evaluator.py

@@ -24,5 +24,7 @@ operations:
 - dart-company
 - dart-disclosures
 - dart-financial-statements
+- dart-executive-status
+- dart-major-shareholder-status
 activation_mode: KEY_ONLY_REST
 operator_responsibility: provide credential/config and pass live preflight

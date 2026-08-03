@@ -1,0 +1,23 @@
+{
+  "fixture_origin": "synthetic-manifest-contract-not-live-evidence",
+  "connector_id": "pps-sanctions",
+  "kind": "delete",
+  "manifest": {
+    "manifest_version": "1",
+    "publisher": "가상 조달 제재자료 운영자",
+    "generated_at": "2026-08-03T00:00:00Z",
+    "documents": [
+      {
+        "external_id": "pps-sanctions-SYN-001",
+        "title": "구조 합성 항목",
+        "url": "https://example.invalid/pps-sanctions/sanctions-v2.csv",
+        "published_at": "2026-08-02T00:00:00Z",
+        "content_type": "text/csv",
+        "revision": "synthetic-2",
+        "sha256": "cda29559c44e98e0c89721deb40d4f813acc44136fc09a42bad296764550cc0b",
+        "deleted": true
+      }
+    ]
+  },
+  "normalization": { "state": "BLOCKED", "output_rows": 0 }
+}

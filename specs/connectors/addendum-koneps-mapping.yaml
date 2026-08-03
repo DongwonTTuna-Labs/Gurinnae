@@ -25,6 +25,13 @@ authority:
     The URLs identify the already-declared upstream contracts. This addendum does
     not authorize scraping, a seventh connector, a new credential, or an
     undeclared remote operation.
+  r6c_extension:
+    connector: specs/connectors/koneps-bid-results/connector.yaml
+    operations: specs/connectors/koneps-bid-results/operations.yaml
+    field_mapping: specs/connectors/koneps-bid-results/field-mapping.yaml
+    authority: explicit R6c connector expansion decision
+    scope: opening and award metadata only
+    bidder_participation_effect: none; opengCorpInfo remains opaque and no BID_PARTICIPATION rows are emitted
 
 mapping_version:
   id: koneps-procurement-revision-v1

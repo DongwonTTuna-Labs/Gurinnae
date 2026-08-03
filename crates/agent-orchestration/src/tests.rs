@@ -313,6 +313,10 @@ impl ProviderAdapter for ToolThenFinalProvider {
                     binding: self.binding.clone(),
                     evidence_id: self.evidence_id,
                 }),
+                request_wire: serde_json::json!({
+                    "schemaVersion": "evidence.read.request.v2",
+                    "evidenceId": self.evidence_id,
+                }),
                 request_sha256: "c".repeat(64),
             })
         } else {
@@ -391,6 +395,8 @@ fn bounded_runtime_passes_typed_tool_result_to_follow_up_turn() {
             supplier_profiles: Vec::new(),
             agency_profiles: Vec::new(),
             relationships: Vec::new(),
+            typed_relationships: Vec::new(),
+            typed_relationship_query_digest: None,
             source_artifacts: Vec::new(),
         }),
     };
@@ -454,6 +460,8 @@ fn snapshot_dispatcher_registers_all_thirteen_typed_adapters() {
         supplier_profiles: Vec::new(),
         agency_profiles: Vec::new(),
         relationships: Vec::new(),
+        typed_relationships: Vec::new(),
+        typed_relationship_query_digest: None,
         source_artifacts: Vec::new(),
     });
     let request = ToolRequest::EvidenceRead(EvidenceReadRequest {
@@ -475,5 +483,66 @@ fn snapshot_dispatcher_registers_all_thirteen_typed_adapters() {
     assert_eq!(
         dispatcher.dispatch("investigator", &denied),
         Err(DispatchError::RequestInvalid)
+    );
+}
+
+#[test]
+fn investigator_source_fetch_is_fetch_url_only() {
+    let binding = binding();
+    let dispatcher = TypedDispatcher::from_snapshot(ToolSnapshot {
+        binding: binding.clone(),
+        evidence: Vec::new(),
+        responses: Vec::new(),
+        comparables: Vec::new(),
+        entities: Vec::new(),
+        rules: Vec::new(),
+        contracts: Vec::new(),
+        supplier_profiles: Vec::new(),
+        agency_profiles: Vec::new(),
+        relationships: Vec::new(),
+        typed_relationships: Vec::new(),
+        typed_relationship_query_digest: None,
+        source_artifacts: Vec::new(),
+    });
+    let search_request = ToolRequest::SourceFetch(SourceFetchRequest {
+        binding: binding.clone(),
+        request_kind: SourceRequestKind::SearchPublicWeb,
+        query: Some("공식 공개 출처".to_owned()),
+        locale: Some("ko-KR".to_owned()),
+        country: Some("KR".to_owned()),
+        recency_days: Some(30),
+        result_limit: Some(5),
+        canonical_url: None,
+    });
+    assert!(matches!(
+        dispatcher.dispatch("market-researcher", &search_request),
+        Ok(ToolResponse::SourceFetch(_))
+    ));
+    for agent in [
+        "investigator",
+        "skeptic",
+        "claim-drafter",
+        "citation-verifier",
+    ] {
+        assert_eq!(
+            dispatcher.dispatch(agent, &search_request),
+            Err(DispatchError::ToolDenied),
+            "{agent}"
+        );
+    }
+    let fetch_request = ToolRequest::SourceFetch(SourceFetchRequest {
+        binding,
+        request_kind: SourceRequestKind::FetchUrl,
+        query: None,
+        locale: None,
+        country: None,
+        recency_days: None,
+        result_limit: None,
+        canonical_url: Some("https://official.example/notices/42".to_owned()),
+    });
+    assert_eq!(
+        dispatcher.dispatch("investigator", &fetch_request),
+        Err(DispatchError::RequestInvalid),
+        "FETCH_URL passes the agent policy and reaches the empty snapshot adapter"
     );
 }

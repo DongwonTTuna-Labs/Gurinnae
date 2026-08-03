@@ -4,8 +4,10 @@ pub mod alio;
 pub mod audit_results;
 pub mod data_go_kr;
 pub mod koneps;
+pub mod koneps_bid_results;
 pub mod local_finance;
 pub mod open_dart;
+pub mod pps_sanctions;
 pub mod request;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -22,7 +24,9 @@ pub fn operations() -> impl Iterator<Item = &'static ConnectorOperation> {
     alio::OPERATIONS
         .iter()
         .chain(audit_results::OPERATIONS)
+        .chain(koneps_bid_results::OPERATIONS)
         .chain(koneps::OPERATIONS)
         .chain(local_finance::OPERATIONS)
         .chain(open_dart::OPERATIONS)
+        .chain(pps_sanctions::OPERATIONS)
 }

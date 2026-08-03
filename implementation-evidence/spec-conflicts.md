@@ -282,3 +282,62 @@ Exact tuple resolution:
   application); defer prev/next, compare shelf, global freshness slot and ledger naming
   to a contract-amendment round. No invented data, fail-closed preserved.
 - Status: OPEN_IMPLEMENTATION (follow-up: contract amendment round).
+
+## SPEC-CONFLICT-014 — Source connector activation receipt has no bootstrap owner
+
+- Binding statement: `specs/config/source-connectors.yaml` requires a credentialed
+  or official-link preflight receipt and recorded response fingerprint before a
+  connector is activated. PPS sanctions additionally requires reuse-rights
+  approval and an exact CSV schema fingerprint.
+- Current physical path: `services/control-api/src/service/domains/sources.rs`
+  admits `runSource`/`retrySourceRun` from `ops.source_registry.enabled` plus
+  `legal_status='APPROVED'`; `services/ingest-worker/src/ingest_jobs.rs` claims the
+  run using the same registry state plus the closed environment allowlist. The
+  only writer for `configuration.activationReceipt` is `finish_source_run`, after
+  an ordinary source run has already fetched and completed successfully. There is
+  no connector-preflight operation, immutable receipt relation, owner routine, or
+  approved receipt input that can exist before that first run.
+- Preserved resolution for R6c: keep every new connector disabled by default,
+  retain the independent environment and registry gates, and keep PPS sanctions
+  production activation explicitly blocked. Do not require the post-run receipt
+  in the worker claim yet, because that would make the first legitimate preflight
+  permanently unreachable.
+- Rejected alternatives: manufacture a static receipt, reinterpret an ordinary
+  data run as preflight, reuse the unrelated communication-provider receipt
+  schema, or let a mutable JSON field alone attest rights and credential checks.
+- Unlock condition: authority must define a connector-specific preflight
+  operation, immutable receipt schema and owner writer, the exact credential /
+  rights / quota / response-fingerprint proof fields, expiry/revocation rules,
+  and the atomic transition that enables `ops.source_registry`. Control enqueue
+  and worker claim can then require that exact current receipt.
+- Status: `OPEN_AUTHORITY_DECISION`.
+
+## SPEC-CONFLICT-015 — Connector base-URL environment and registry authority diverge
+
+- Binding/configuration statement: `specs/config/secret-and-key-catalog.yaml`,
+  `specs/deployment/service-config-map.yaml`, `compose.yaml`, and
+  `infra/scripts/production-preflight.sh` declare and validate
+  `KONEPS_CONTRACT_API_BASE_URL`, `KONEPS_NOTICE_API_BASE_URL`,
+  `KONEPS_BID_RESULTS_API_BASE_URL`, and `OPEN_DART_API_BASE_URL` on the egress
+  gateway when the corresponding connector is enabled.
+- Current physical path: the egress gateway consumes none of those four values;
+  it owns only exact host bindings and credential injection. The ingest worker
+  builds targets exclusively from `ops.source_registry.base_url` returned by
+  `process_source_run`. No migration, startup owner, or Control operation
+  atomically reconciles the environment values into that registry row. Therefore
+  a production preflight can accept an environment URL while the runtime registry
+  remains absent, stale, or path-divergent and later fails closed with
+  `SOURCE_BASE_URL_MISSING`/a different target.
+- Preserved resolution for R6c: retain `ops.source_registry.base_url` as the
+  current runtime authority and the gateway's exact host allowlist; do not add an
+  undocumented mutable startup writer or let the worker silently prefer an
+  environment value.
+- Rejected alternatives: environment-over-registry fallback, gateway path
+  rewriting, treating preflight presence as registry equality, or seeding a
+  production-enabled connector without activation evidence.
+- Unlock condition: authority must choose one source of truth. Either define an
+  owner-controlled, digest-bound, atomic environment-to-registry reconciliation
+  and equality preflight, or remove the dead base-URL environment contract and
+  make the versioned registry configuration plus activation receipt the sole
+  deployment input.
+- Status: `OPEN_AUTHORITY_DECISION`.

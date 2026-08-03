@@ -1,0 +1,55 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+connector_id: pps-sanctions
+authority:
+  dataset: https://www.data.go.kr/data/15137996/fileData.do
+  report: https://data.g2b.go.kr/link/AISC001_01/?reptNm=UI-ADOAAA-017R
+  report_id: UI-ADOAAA-017R
+operations:
+- id: pps-sanctions-manifest
+  kind: manifest
+  method: GET
+  url_env: PPS_SANCTIONS_OFFICIAL_MANIFEST_URL
+  request_parameters: []
+  pagination:
+    strategy: manifest-documents-array
+  remote_identity:
+    strategy: manifest-field
+    primary_fields: [external_id]
+  remote_revision:
+    strategy: manifest-field
+    fields: [revision, sha256]
+  response_contract: ../official-manifest.schema.json
+  checkpoint:
+    strategy: manifest-generated-at-and-sha256
+    partition: pps-sanctions-manifest
+  deletion_semantics: manifest deleted=true or two-pass reconciliation after activation
+  retry: &retry
+    quota_or_429: honor Retry-After; otherwise bounded exponential backoff with jitter
+    transient_5xx: bounded exponential backoff then source incident
+    auth_or_permission: keep connector disabled and open incident
+    malformed_payload: store raw bytes, quarantine record, open schema-drift incident
+- id: pps-sanctions-csv
+  kind: document
+  method: GET
+  url_source: manifest.documents[].url
+  request_parameters: []
+  pagination:
+    strategy: manifest-order
+  remote_identity:
+    strategy: manifest-field
+    primary_fields: [external_id]
+  remote_revision:
+    strategy: manifest-field-or-content-hash
+    fields: [revision, sha256]
+  response_contract: raw CSV bytes matching manifest content_type and sha256
+  checkpoint:
+    strategy: manifest-entry-index-and-content-hash
+    partition: pps-sanctions-csv
+  deletion_semantics: manifest deleted=true after activation; absence alone requires two successful reconciliations
+  normalization:
+    state: BLOCKED
+    output_rows: 0
+    blocker: PPS_SANCTIONS_REUSE_RIGHTS_UNCONFIRMED
+    unlock_condition: recorded reuse-rights approval and exact CSV schema mapping fingerprint
+  retry: *retry

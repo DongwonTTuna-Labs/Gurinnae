@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 base64.workspace = true
+gurine-domain = { path = "../../crates/domain" }
 gurine-identity-resolution = { path = "../../crates/identity-resolution" }
 gurine-jobs = { path = "../../crates/jobs" }
 gurine-object-store = { path = "../../crates/object-store" }

@@ -1,0 +1,14 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+connector_id: koneps-bid-results
+transport:
+  '00': success
+  quota_or_429: bounded retry respecting Retry-After
+  auth_or_permission: disable connector and open incident
+  transient_5xx: bounded retry then incident
+  malformed_payload: retain raw bytes, quarantine and open schema-drift incident
+normalization:
+  missing_notice_identity: quarantine record
+  invalid_numeric_metadata: retain raw field and mark coverage partial
+  opengCorpInfo_present: retain raw bytes only; never split or infer participant rows
+  forbidden_person_or_contact_field: drop from normalized output; retain only in immutable raw bytes

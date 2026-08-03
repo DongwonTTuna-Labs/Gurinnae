@@ -45,17 +45,37 @@ INSERT INTO ops.source_registry(source_id,display_name,connector_type,owner_team
   'https://apis.data.go.kr/1230000/ao/CntrctInfoService/','APPROVED','{}'),
  ('koneps-notices','KONEPS Notices','OFFICIAL_REST','DATA',true,'0 * * * *',
   'https://apis.data.go.kr/1230000/ad/BidPublicInfoService/','APPROVED','{}'),
+ ('koneps-bid-results','KONEPS Bid Results','OFFICIAL_REST','DATA',true,'0 * * * *',
+  'https://fixture.invalid/koneps-bid-results/','APPROVED','{"fixtureOnly":true}'),
  ('open-dart','Open DART','OFFICIAL_REST','DATA',true,'0 * * * *',
-  'https://opendart.fss.or.kr/api/','APPROVED','{}'),
+  'https://opendart.fss.or.kr/api/','APPROVED',
+  '{
+    "parameters": {
+      "dart-company": {"corp_code":"00990001"},
+      "dart-financial-statements": {
+        "corp_code":"00990001","bsns_year":"2026","reprt_code":"11011","fs_div":"CFS"
+      },
+      "dart-executive-status": {
+        "corp_code":"00990001","bsns_year":"2026","reprt_code":"11011"
+      },
+      "dart-major-shareholder-status": {
+        "corp_code":"00990001","bsns_year":"2026","reprt_code":"11014"
+      }
+    }
+  }'),
  ('local-finance','Local Finance','OFFICIAL_LINK','DATA',true,'0 * * * *',NULL,'APPROVED',
   '{"operationUrls":{"local-finance-disclosures":"https://www.data.go.kr/local/disclosures","local-finance-subsidies":"https://www.data.go.kr/local/subsidies","local-finance-statistics":"https://www.data.go.kr/local/statistics"}}'),
  ('alio','ALIO','OFFICIAL_MANIFEST','DATA',true,'0 * * * *',NULL,'APPROVED',
   '{"manifestUrl":"https://www.alio.go.kr/runtime-manifest.json"}'),
  ('audit-results','Audit Results','OFFICIAL_MANIFEST','DATA',true,'0 * * * *',NULL,'APPROVED',
-  '{"manifestUrl":"https://www.data.go.kr/audit-results/runtime-manifest.json"}');
+  '{"manifestUrl":"https://www.data.go.kr/audit-results/runtime-manifest.json"}'),
+ -- Production remains disabled. This TEST_FIXTURE_ONLY row exercises only the
+ -- closed catalog and synthetic fake-source path; its receipt is not production activation evidence.
+ ('pps-sanctions','PPS Sanctions [TEST_FIXTURE_ONLY]','OFFICIAL_MANIFEST','DATA',true,'0 * * * *',NULL,'APPROVED',
+  '{"manifestUrl":"https://fixture.invalid/pps-sanctions/manifest.json","fixtureMode":"TEST_FIXTURE_ONLY"}');
 SQL
 
-sources=(koneps-contracts koneps-notices open-dart local-finance alio audit-results)
+sources=(koneps-contracts koneps-notices koneps-bid-results open-dart local-finance alio audit-results pps-sanctions)
 index=0
 for source in "${sources[@]}"; do
   index=$((index + 1))
@@ -66,7 +86,15 @@ INSERT INTO ops.source_runs(id,source_id,mode,status,requested_from,requested_to
 VALUES(:'run_id',:'source','FULL','QUEUED','2026-07-01','2026-07-12','runtime ingest',
   '51000000-0000-4000-8000-000000000001');
 INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,run_after)
-VALUES('SOURCE_RUN','ingest-worker',jsonb_build_object('sourceRunId',:'run_id'),'source-run:'||:'run_id','2020-01-01T00:00:00Z'::timestamptz);
+VALUES(
+  'SOURCE_RUN','ingest-worker',
+  jsonb_build_object('sourceRunId',:'run_id') ||
+    CASE WHEN :'source'='pps-sanctions'
+      THEN jsonb_build_object('sourceId',:'source','fixtureMode','TEST_FIXTURE_ONLY')
+      ELSE '{}'::jsonb
+    END,
+  'source-run:'||:'run_id','2020-01-01T00:00:00Z'::timestamptz
+);
 SQL
 done
 
@@ -82,6 +110,11 @@ INGEST_DATABASE_URL="postgresql://gurine_ingest_worker:ingest_test@127.0.0.1:${p
 SUPPLIER_IDENTIFIER_HMAC_KEY="$supplier_identifier_hmac_key" \
 OBJECT_STORE_ADAPTER=filesystem OBJECT_STORE_FILESYSTEM_ROOT="$work/objects" \
 EGRESS_SOURCE_CHANNEL_URL="http://127.0.0.1:${source_port}/source" \
+SOURCE_ALIO_ENABLED=true SOURCE_AUDIT_RESULTS_ENABLED=true \
+SOURCE_KONEPS_BID_RESULTS_ENABLED=true SOURCE_KONEPS_CONTRACTS_ENABLED=true \
+SOURCE_KONEPS_NOTICES_ENABLED=true SOURCE_LOCAL_FINANCE_ENABLED=true \
+SOURCE_OPEN_DART_ENABLED=true SOURCE_PPS_SANCTIONS_ENABLED=true \
+SOURCE_SYNTHETIC_ENABLED=false \
 INGEST_ONCE=true HOSTNAME="ingest-runtime-test" target/debug/gurine-ingest-worker
 
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <<'SQL' >/dev/null
@@ -89,40 +122,64 @@ DO $$
 DECLARE actual bigint;
 BEGIN
   SELECT count(*) INTO actual FROM ops.jobs WHERE queue='ingest-worker' AND status='SUCCEEDED';
-  IF actual <> 6 THEN RAISE EXCEPTION 'ingest succeeded jobs %, expected 6',actual; END IF;
+  IF actual <> 8 THEN RAISE EXCEPTION 'ingest succeeded jobs %, expected 8',actual; END IF;
   SELECT count(*) INTO actual FROM ops.source_runs
    WHERE status='SUCCEEDED' AND records_seen>0 AND report_object_key IS NOT NULL
      AND checkpoint_before IS NOT NULL AND checkpoint_after IS NOT NULL;
-  IF actual <> 6 THEN RAISE EXCEPTION 'source runs %, expected 6',actual; END IF;
+  IF actual <> 8 THEN RAISE EXCEPTION 'source runs %, expected 8',actual; END IF;
   SELECT count(*) INTO actual FROM raw.source_fetches;
-  IF actual <> 44 THEN RAISE EXCEPTION 'source fetches %, expected 44',actual; END IF;
+  IF actual <> 56 THEN RAISE EXCEPTION 'source fetches %, expected 56',actual; END IF;
   SELECT count(*) INTO actual FROM raw.source_documents WHERE status IN ('FETCHED','PARSED');
-  IF actual <> 44 THEN RAISE EXCEPTION 'source documents %, expected 44',actual; END IF;
+  IF actual <> 56 THEN RAISE EXCEPTION 'source documents %, expected 56',actual; END IF;
   SELECT count(*) INTO actual FROM raw.source_documents
    WHERE status='PARSED' AND parser_name='connector-structured-json';
-  IF actual <> 41 THEN RAISE EXCEPTION 'structured parsed documents %, expected 41',actual; END IF;
+  IF actual <> 52 THEN RAISE EXCEPTION 'structured parsed documents %, expected 52',actual; END IF;
   SELECT count(*) INTO actual FROM raw.parsed_records
    WHERE parser_version='connector-structured-json-v1';
-  IF actual <> 38 THEN RAISE EXCEPTION 'structured parsed records %, expected 38',actual; END IF;
+  IF actual <> 49 THEN RAISE EXCEPTION 'structured parsed records %, expected 49',actual; END IF;
   SELECT count(*) INTO actual FROM core.contracts WHERE normalization_version='connector-v1';
   IF actual <> 16 THEN RAISE EXCEPTION 'normalized contracts %, expected 16',actual; END IF;
   SELECT count(*) INTO actual FROM core.field_provenance
    WHERE parser_version='connector-structured-json-v1';
   IF actual <> 16 THEN RAISE EXCEPTION 'contract provenance %, expected 16',actual; END IF;
   SELECT count(*) INTO actual FROM ops.outbox WHERE event_type='source.document_stored.v1';
-  IF actual <> 44 THEN RAISE EXCEPTION 'document stored events %, expected 44',actual; END IF;
+  IF actual <> 56 THEN RAISE EXCEPTION 'document stored events %, expected 56',actual; END IF;
   SELECT count(*) INTO actual FROM ops.source_checkpoints;
-  IF actual <> 44 THEN RAISE EXCEPTION 'source checkpoints %, expected 44',actual; END IF;
+  IF actual <> 56 THEN RAISE EXCEPTION 'source checkpoints %, expected 56',actual; END IF;
   SELECT count(*) INTO actual FROM ops.source_registry
    WHERE configuration->'activationReceipt'->>'sourceRunId' IS NOT NULL;
-  IF actual <> 6 THEN RAISE EXCEPTION 'activation receipts %, expected 6',actual; END IF;
+  IF actual <> 8 THEN RAISE EXCEPTION 'activation receipts %, expected 8',actual; END IF;
+  IF NOT EXISTS(
+    SELECT 1 FROM ops.source_registry
+     WHERE source_id='pps-sanctions'
+       AND display_name='PPS Sanctions [TEST_FIXTURE_ONLY]'
+       AND configuration->>'fixtureMode'='TEST_FIXTURE_ONLY'
+  ) THEN RAISE EXCEPTION 'pps-sanctions runtime row is not fixture-only'; END IF;
+  SELECT count(*) INTO actual FROM ops.jobs
+   WHERE payload->>'sourceId'='pps-sanctions'
+     AND payload->>'fixtureMode'='TEST_FIXTURE_ONLY';
+  IF actual <> 1 THEN RAISE EXCEPTION 'fixture-only sanctions jobs %, expected 1',actual; END IF;
+  SELECT count(*) INTO actual FROM raw.source_documents
+   WHERE source_id='pps-sanctions'
+     AND metadata->>'connectorOperationId'='pps-sanctions-csv'
+     AND content_type='text/csv' AND status='FETCHED'
+     AND parser_name IS NULL AND parser_version IS NULL;
+  IF actual <> 1 THEN RAISE EXCEPTION 'fixture-only sanctions CSV documents %, expected 1',actual; END IF;
+  IF EXISTS(
+    SELECT 1 FROM raw.parsed_records p
+    JOIN raw.source_documents d ON d.id=p.source_document_id
+    WHERE d.source_id='pps-sanctions'
+      AND d.metadata->>'connectorOperationId'='pps-sanctions-csv'
+  ) THEN RAISE EXCEPTION 'blocked sanctions CSV produced parsed records'; END IF;
   IF EXISTS(SELECT 1 FROM ops.jobs WHERE queue='ingest-worker' AND status<>'SUCCEEDED') THEN
     RAISE EXCEPTION 'ingest queue contains incomplete jobs';
   END IF;
 END $$;
 SQL
 
-test "$(wc -l <"$work/source-requests.jsonl")" -eq 44
-test "$(find "$work/objects/raw" -type f | wc -l)" -eq 44
-test "$(find "$work/objects/reports/source-runs" -type f | wc -l)" -eq 6
-echo "6-connector/44-operation checkpoint-raw-outbox-object-store ingest runtime: PASS"
+test "$(wc -l <"$work/source-requests.jsonl")" -eq 56
+test "$(grep -c '"operationId": "pps-sanctions-' "$work/source-requests.jsonl")" -eq 2
+test "$(grep -c 'https://fixture.invalid/pps-sanctions/' "$work/source-requests.jsonl")" -eq 2
+test "$(find "$work/objects/raw" -type f | wc -l)" -eq 56
+test "$(find "$work/objects/reports/source-runs" -type f | wc -l)" -eq 8
+echo "8-connector/56-operation checkpoint-raw-outbox-object-store ingest runtime: PASS"

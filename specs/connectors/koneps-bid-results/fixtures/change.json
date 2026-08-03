@@ -1,0 +1,23 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-bid-results",
+  "operation_id": "award-goods-search",
+  "kind": "change",
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 1,
+      "items": {
+        "item": [
+          {
+            "bidNtceNo": "R6C-SYN-001",
+            "bidNtceOrd": "01",
+            "rgstDt": "202608011100"
+          }
+        ]
+      }
+    }
+  }
+}

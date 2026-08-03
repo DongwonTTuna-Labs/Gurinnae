@@ -1,0 +1,11 @@
+{
+  "fixture_origin": "synthetic-manifest-contract-not-live-evidence",
+  "connector_id": "pps-sanctions",
+  "kind": "error",
+  "manifest_status": {
+    "http_status": 403,
+    "connector_state": "DISABLED",
+    "blocker": "PPS_SANCTIONS_REUSE_RIGHTS_UNCONFIRMED"
+  },
+  "normalization": { "state": "BLOCKED", "output_rows": 0 }
+}

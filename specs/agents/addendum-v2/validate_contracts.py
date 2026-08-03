@@ -22,6 +22,7 @@ PARSER_ADDENDUM = REPO / "specs/parsers/addendum-multimodal.yaml"
 ACCEPTANCE = REPO / "tests/acceptance/ai-multimodal-addendum.feature"
 DATABASE_ADDENDUM = REPO / "specs/database/addendum/0025-evidence-snapshots-search.yaml"
 COMMUNICATION_ADDENDUM = REPO / "specs/database/addendum/0027-communication-consent-delivery.yaml"
+HYPOTHESIS_RECURSION = REPO / "specs/agents/hypothesis-recursion-policy.yaml"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 UUID = "00000000-0000-4000-8000-000000000001"
 UUID_2 = "00000000-0000-4000-8000-000000000002"
@@ -714,7 +715,52 @@ def schema_pin_self_test() -> tuple[bool, list[dict[str, object]]]:
     ] = []
     record_runtime("self-digest-in-own-projection", candidate_schemas=projection_drift)
 
+    evidence_citations = [
+        {"citation_ordinal": 2, "source_kind": "EVIDENCE_SEGMENT", "evidence_segment_id": UUID_2},
+        {"citation_ordinal": 0, "source_kind": "EVIDENCE_SEGMENT", "evidence_segment_id": UUID},
+        {"citation_ordinal": 1, "source_kind": "EVIDENCE_SEGMENT", "evidence_segment_id": UUID},
+        {"citation_ordinal": 3, "source_kind": "RUN_TOOL_ARTIFACT", "evidence_segment_id": None},
+    ]
+    evidence_set = ordered_unique_evidence_segment_ids(evidence_citations)
+    fixtures.append(
+        {
+            "fixture": "hypothesis-detail-evidence-set-dedupe-first",
+            "corruption_rejected": evidence_set == [UUID, UUID_2],
+        }
+    )
+    row_wise_projection = [
+        row["evidence_segment_id"]
+        for row in sorted(evidence_citations, key=lambda row: row["citation_ordinal"])
+        if row["source_kind"] == "EVIDENCE_SEGMENT"
+    ]
+    fixtures.append(
+        {
+            "fixture": "hypothesis-detail-row-wise-duplicate-rejected",
+            "corruption_rejected": row_wise_projection != evidence_set,
+        }
+    )
+
     return all(bool(row["corruption_rejected"]) for row in fixtures), fixtures
+
+
+def ordered_unique_evidence_segment_ids(citations: list[dict[str, Any]]) -> list[str]:
+    first_ordinal_by_segment: dict[str, int] = {}
+    for citation in citations:
+        if citation.get("source_kind") != "EVIDENCE_SEGMENT":
+            continue
+        segment_id = citation.get("evidence_segment_id")
+        ordinal = citation.get("citation_ordinal")
+        if not isinstance(segment_id, str) or not isinstance(ordinal, int):
+            raise ValueError("evidence citation binding is malformed")
+        first_ordinal_by_segment[segment_id] = min(
+            ordinal, first_ordinal_by_segment.get(segment_id, ordinal)
+        )
+    return [
+        segment_id
+        for segment_id, _ in sorted(
+            first_ordinal_by_segment.items(), key=lambda item: (item[1], item[0])
+        )
+    ]
 
 
 def collect_refs(document: Any) -> list[str]:
@@ -1224,6 +1270,115 @@ def agent_output_semantic_errors(value: dict[str, Any]) -> list[str]:
     return errors
 
 
+def r6c_recursion_and_review_tier_errors(
+    authority: dict[str, Any],
+    provenance: dict[str, Any],
+    runtime: dict[str, Any],
+    recursion: dict[str, Any],
+    review_tier: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    normative = authority.get("normative_documents", {})
+    if normative.get("artifact_review_tier") != "artifact-review-tier.yaml":
+        errors.append("R6c artifact review-tier authority is not wired")
+    if normative.get("hypothesis_recursion") != "../hypothesis-recursion-policy.yaml":
+        errors.append("R6c hypothesis-recursion authority is not wired")
+
+    root = recursion.get("trigger_contract", {}).get("root", {})
+    stage = recursion.get("trigger_contract", {}).get("stage", {})
+    if root.get("event_type") != "action.execution_completed.v1" or root.get("root_depth") != 0:
+        errors.append("R6c recursion root is not successful action execution at depth zero")
+    if root.get("accepted_hypothesis_detail") != {
+        "case_binding": "caseId and expectedCaseVersion equal the accepted suggestion case and the action-proposal target identity and version.",
+        "statement_digest": "SHA-256 over the raw statement UTF-8 bytes.",
+        "evidence_segment_set_digest": "SHA-256 over the canonical JSON array of unique evidence_segment_id UUIDs ordered by each segment's first/minimum citation_ordinal; repeated citations to the same segment remain in the all-citation binding but contribute one set member.",
+        "unknown_set_digest": "SHA-256 over the canonical JSON bytes of the accepted payload unknowns array in its declared order.",
+        "research_artifact_boundary": "RUN_TOOL_ARTIFACT citations are excluded from evidenceSegmentSetDigest and remain bound by the immutable citation all-and-only verifier and OFFICIAL_UNREVIEWED review-tier gate.",
+    }:
+        errors.append("R6c accepted HYPOTHESIS detail digest preimages drifted")
+    if stage.get("event_type") != "agent.run_completed.v1":
+        errors.append("R6c recursion stage trigger is not agent.run_completed.v1")
+    state_machine = recursion.get("state_machine", {})
+    if state_machine.get("stages") != ["MARKET_RESEARCHER", "SKEPTIC"]:
+        errors.append("R6c recursion stages are not closed to market-researcher then skeptic")
+    if state_machine.get("dedupe_preimage_order") != [
+        "caseId",
+        "hypothesisExecutionDigest",
+        "snapshotDigest",
+        "stage",
+        "depth",
+    ]:
+        errors.append("R6c recursion dedupe preimage order drifted")
+    if state_machine.get("claim_drafter", {}).get("automatic_execution") != "forbidden":
+        errors.append("R6c recursion does not forbid automatic claim drafting")
+    dispositions = recursion.get("closed_dispositions", {})
+    if dispositions.get("started") != "STARTED" or dispositions.get(
+        "durable_no_op_or_block"
+    ) != [
+        "POLICY_ABSENT",
+        "POLICY_DISABLED",
+        "MAX_DEPTH_REACHED",
+        "CASE_BUDGET_BLOCKED",
+        "NOT_HYPOTHESIS",
+        "NOT_SUCCEEDED",
+        "NODE_NOT_RECURSIVE",
+        "STAGE_NOT_MARKET_RESEARCHER",
+        "RUN_NOT_SUCCEEDED",
+        "PLAN_TERMINAL",
+    ]:
+        errors.append("R6c recursion disposition registry drifted")
+    policy = recursion.get("immutable_policy", {})
+    if policy.get("production_seed") != "forbidden" or policy.get("defaults") != "forbidden":
+        errors.append("R6c recursion policy gained a production seed or default")
+    fixture = recursion.get("test_fixture_only_policy", {})
+    if fixture.get("production_seed") is not False or fixture.get("maxDepth") != 2:
+        errors.append("R6c recursion fixture-only policy boundary drifted")
+    if [
+        fixture.get("caseBudgetMicrosKrw"),
+        fixture.get("marketResearcherStageBudgetMicrosKrw"),
+        fixture.get("skepticStageBudgetMicrosKrw"),
+    ] != [3_000_000, 2_000_000, 1_000_000]:
+        errors.append("R6c recursion fixture-only budget values drifted")
+
+    tiers = review_tier.get("closed_review_tiers", {})
+    if set(tiers) != {"OFFICIAL_UNREVIEWED", "HUMAN_PROMOTED"}:
+        errors.append("R6c artifact review-tier registry is not closed")
+    unreviewed = tiers.get("OFFICIAL_UNREVIEWED", {})
+    promoted = tiers.get("HUMAN_PROMOTED", {})
+    if unreviewed.get("initial_classification") != "RESTRICTED":
+        errors.append("R6c unreviewed artifact is not initially RESTRICTED")
+    if "MODEL_INPUT" not in unreviewed.get("forbidden_use", []):
+        errors.append("R6c unreviewed artifact is not blocked from model input")
+    if promoted.get("default_classification") != "forbidden":
+        errors.append("R6c promoted artifact classification gained a default")
+    if promoted.get("reviewed_classification_required") != [
+        "PUBLIC",
+        "INTERNAL",
+        "RESTRICTED",
+        "PERSONAL_DATA",
+        "LEGAL_HOLD",
+    ]:
+        errors.append("R6c reviewed classification registry drifted")
+    research = provenance.get("research_artifact", {})
+    if research.get("initial_state") != {
+        "reviewTier": "OFFICIAL_UNREVIEWED",
+        "reviewedClassification": "RESTRICTED",
+    }:
+        errors.append("R6c provenance does not bind the initial artifact review state")
+    if "MODEL_INPUT" not in research.get("prohibited_before_promotion", []):
+        errors.append("R6c provenance permits unpromoted artifact model input")
+    investigator_fetch = (
+        runtime.get("per_agent_tool_request_constraints", {})
+        .get("investigator", {})
+        .get("source.fetch", {})
+    )
+    if investigator_fetch.get("allowed_request_kinds") != ["FETCH_URL"]:
+        errors.append("R6c investigator source.fetch is not FETCH_URL-only")
+    if investigator_fetch.get("denied_request_kinds") != ["SEARCH_PUBLIC_WEB"]:
+        errors.append("R6c investigator web search is not explicitly denied")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json-output", type=Path)
@@ -1241,10 +1396,12 @@ def main() -> int:
     errors: list[str] = []
     yaml_paths = [
         ROOT / "authority.yaml",
+        ROOT / "artifact-review-tier.yaml",
         ROOT / "network-provider.yaml",
         ROOT / "provenance-promotion.yaml",
         ROOT / "runtime-contracts.yaml",
         ROOT / "schema-index.yaml",
+        HYPOTHESIS_RECURSION,
         PARSER_ADDENDUM,
     ]
     yaml_documents: dict[Path, dict[str, Any]] = {}
@@ -1265,6 +1422,15 @@ def main() -> int:
     statuses = {document.get("status") for document in yaml_documents.values()}
     if len(statuses) != 1:
         errors.append(f"agent/parser addendum status is not atomically aligned: {sorted(str(item) for item in statuses)}")
+    errors.extend(
+        r6c_recursion_and_review_tier_errors(
+            yaml_documents.get(ROOT / "authority.yaml", {}),
+            yaml_documents.get(ROOT / "provenance-promotion.yaml", {}),
+            yaml_documents.get(ROOT / "runtime-contracts.yaml", {}),
+            yaml_documents.get(HYPOTHESIS_RECURSION, {}),
+            yaml_documents.get(ROOT / "artifact-review-tier.yaml", {}),
+        )
+    )
     index = yaml_documents.get(ROOT / "schema-index.yaml", {})
     try:
         database_contract = load_yaml(DATABASE_ADDENDUM)
@@ -1492,6 +1658,68 @@ def main() -> int:
                         errors.append(f"{direction} for {source_id} was accepted by {target_id}")
                     else:
                         negative_count += 1
+
+        relationship_request_path = (
+            ROOT / "tools/relationship-neighbors.request.schema.json"
+        ).resolve()
+        relationship_response_path = (
+            ROOT / "tools/relationship-neighbors.response.schema.json"
+        ).resolve()
+        relationship_cross_version_negatives = [
+            (
+                relationship_request_path,
+                {
+                    "schemaVersion": "relationship.neighbors.request.v2",
+                    "runId": UUID,
+                    "inputSnapshotId": UUID_2,
+                    "inputSnapshotSha256": "0" * 64,
+                    "supplierId": UUID,
+                    "selector": 1,
+                    "relationshipKinds": [],
+                    "asOf": None,
+                    "limit": 1,
+                },
+            ),
+            (
+                relationship_request_path,
+                {
+                    "schemaVersion": "relationship.neighbors.request.v3",
+                    "runId": UUID,
+                    "inputSnapshotId": UUID_2,
+                    "inputSnapshotSha256": "0" * 64,
+                    "selector": {"kind": "PERSON", "personNodeRef": "1" * 64},
+                    "supplierId": 1,
+                    "relationshipKinds": [],
+                    "asOf": None,
+                    "limit": 1,
+                },
+            ),
+            (
+                relationship_response_path,
+                {
+                    "schemaVersion": "relationship.neighbors.response.v2",
+                    "supplierId": UUID,
+                    "queryDigest": 1,
+                    "neighbors": [],
+                },
+            ),
+            (
+                relationship_response_path,
+                {
+                    "schemaVersion": "relationship.neighbors.response.v3",
+                    "queryDigest": "0" * 64,
+                    "supplierId": 1,
+                    "neighbors": [],
+                },
+            ),
+        ]
+        for target_path, malformed in relationship_cross_version_negatives:
+            if not validate_instance(target_path, malformed, schemas, registry):
+                errors.append(
+                    f"{target_path}: malformed opposite-version field was accepted"
+                )
+            else:
+                negative_count += 1
 
     claim_path = (ROOT / "tools/claim-language-check.response.schema.json").resolve()
     claim_request_path = (ROOT / "tools/claim-language-check.request.schema.json").resolve()

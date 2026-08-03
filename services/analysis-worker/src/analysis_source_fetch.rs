@@ -1,8 +1,20 @@
 use super::*;
+use gurine_agent_orchestration::research::{
+    ResearchRedirect, ResearchRequestKind, ResearchSafeHeader, Sha256Digest,
+};
+use gurine_persistence_postgres::research_artifacts::{
+    ResearchArtifactRepository, ResearchArtifactRepositoryError, ResearchFetchWrite,
+};
 
 mod output;
 mod pending;
+mod rights;
 mod validation;
+
+use rights::{SourceUseRootInput, build_source_use_root, project_rights};
+
+const INITIAL_RESEARCH_CLASSIFICATION: &str = "RESTRICTED";
+const INITIAL_RESEARCH_REVIEW_TIER: &str = "OFFICIAL_UNREVIEWED";
 
 pub(super) struct PendingSourceFetch {
     pub(super) request_kind: &'static str,
@@ -343,7 +355,15 @@ fn response_metadata(
     ];
     let safe_headers = Value::Array(safe_header_names.iter().filter_map(|name| {
         let value = response.headers().get(*name)?.to_str().ok()?;
-        Some(json!({"name": name, "safeValue": value, "valueSha256": sha256(value.as_bytes())}))
+        // A redirect location may contain path/query identifiers.  Keep its
+        // digest as immutable fetch metadata, but never echo the raw value to
+        // the model-facing tool response.
+        let safe_value = if *name == "location" {
+            Value::Null
+        } else {
+            Value::String(value.to_owned())
+        };
+        Some(json!({"name": name, "safeValue": safe_value, "valueSha256": sha256(value.as_bytes())}))
     }).collect());
     let redirects = response
         .headers()
@@ -403,127 +423,6 @@ fn validate_source_response(
     Ok(())
 }
 
-struct RightsProjection {
-    capability_id: String,
-    occurred_at: String,
-    expires_at: Value,
-    dimensions: Value,
-    digest: String,
-}
-
-fn project_rights(
-    rights: &Value,
-    artifact_id: Uuid,
-    asset_id: Uuid,
-    content_sha256: &str,
-    policy_version: &str,
-    source_id: &str,
-) -> Result<RightsProjection, Failure> {
-    let capability_id = rights
-        .get("decisionId")
-        .and_then(Value::as_str)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionId".to_owned()))?
-        .to_owned();
-    let capability_version = rights
-        .get("decisionVersion")
-        .and_then(Value::as_i64)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionVersion".to_owned()))?;
-    let capability_digest = rights
-        .get("decisionSha256")
-        .and_then(Value::as_str)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "decisionSha256".to_owned()))?
-        .to_owned();
-    let occurred_at = rights
-        .get("effectiveAt")
-        .and_then(Value::as_str)
-        .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_INVALID", "effectiveAt".to_owned()))?
-        .to_owned();
-    let expires_at = rights.get("expiresAt").cloned().unwrap_or(Value::Null);
-    let dimensions = rights
-        .get("dimensions")
-        .cloned()
-        .unwrap_or_else(|| json!({}));
-    let right = |name: &str| {
-        dimensions
-            .get(name)
-            .and_then(Value::as_str)
-            .unwrap_or("UNKNOWN")
-    };
-    let identity = json!({
-        "schemaVersion":"asset-rights-decision.v1","decisionId":asset_id,"assetId":asset_id,
-        "assetSha256":content_sha256,"assetRevision":1,"decisionVersion":1,
-        "assetKind":"RESEARCH_ARTIFACT","researchArtifactId":artifact_id,"decisionKind":"GRANT",
-        "accessRight":right("accessRight"),"privateStorageRight":right("privateStorageRight"),
-        "modelEgressRight":right("modelEgressRight"),"modelUseRight":right("modelUseRight"),
-        "derivativeCreationRight":right("derivativeCreationRight"),"excerptRight":right("excerptRight"),
-        "redistributionRight":right("redistributionRight"),"commercialUseRight":right("commercialUseRight"),
-        "publicDisplayRight":right("publicDisplayRight"),"policyVersion":policy_version,
-        "policySha256":sha256(policy_version.as_bytes()),"legalBasisCode":"PUBLIC_RESEARCH",
-        "legalBasisReference":source_id,"jurisdiction":"GLOBAL","attributionRequired":false,
-        "effectiveAt":occurred_at,"expiresAt":expires_at,"capabilityDecisionId":capability_id,
-        "capabilityDecisionVersion":capability_version,"capabilityDecisionSha256":capability_digest
-    });
-    Ok(RightsProjection {
-        capability_id,
-        occurred_at,
-        expires_at,
-        dimensions,
-        digest: sha256(&canonical_bytes(&identity)?),
-    })
-}
-
-struct SourceUseRootInput<'a> {
-    source_use_id: Uuid,
-    turn: &'a ProviderTurnIdentity,
-    call: &'a gurine_agent_orchestration::runtime::ToolCall,
-    artifact_id: Uuid,
-    asset_id: Uuid,
-    fetch_id: Uuid,
-    artifact_sha256: &'a str,
-    content_sha256: &'a str,
-    locator: &'a str,
-    rights: &'a RightsProjection,
-}
-
-fn build_source_use_root(input: &SourceUseRootInput<'_>) -> Value {
-    let SourceUseRootInput {
-        source_use_id,
-        turn,
-        call,
-        artifact_id,
-        asset_id,
-        fetch_id,
-        artifact_sha256,
-        content_sha256,
-        locator,
-        rights,
-    } = input;
-    let right = |name: &str| {
-        rights
-            .dimensions
-            .get(name)
-            .and_then(Value::as_str)
-            .unwrap_or("UNKNOWN")
-    };
-    json!({
-        "schemaVersion":"source-use.v2","sourceUseId":source_use_id,"agentRunId":turn.run_id,
-        "providerTurnId":turn.turn_id,"toolCallId":call.call_id,"parentSourceUseId":Value::Null,
-        "parentSourceUseSha256":Value::Null,"useKind":"TOOL_QUERY","sourceKind":"RESEARCH_ARTIFACT",
-        "sourceIdentity":{"kind":"RESEARCH_ARTIFACT","researchArtifactId":artifact_id,"assetId":asset_id,
-            "assetRevision":1,"artifactSha256":artifact_sha256,"contentSha256":content_sha256,"sourceFetchId":fetch_id},
-        "locator":{"kind":"HTML_CSS_SELECTOR","value":locator,"locatorSha256":sha256(locator.as_bytes())},
-        "selectedContentSha256":content_sha256,"classification":"PUBLIC",
-        "rightsDecision":{"decisionId":asset_id,"capabilityDecisionId":rights.capability_id,
-            "decisionVersion":1,"decisionSha256":rights.digest,"effectiveAt":rights.occurred_at,
-            "expiresAt":rights.expires_at,"accessRight":right("accessRight"),
-            "privateStorageRight":right("privateStorageRight"),"modelEgressRight":right("modelEgressRight"),
-            "modelUseRight":right("modelUseRight"),"derivativeCreationRight":right("derivativeCreationRight"),
-            "excerptRight":right("excerptRight"),"redistributionRight":right("redistributionRight"),
-            "commercialUseRight":right("commercialUseRight"),"publicDisplayRight":right("publicDisplayRight")},
-        "providerReceiptId":Value::Null,"occurredAt":rights.occurred_at
-    })
-}
-
 pub(super) async fn persist_research_fetch(
     executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
@@ -532,37 +431,69 @@ pub(super) async fn persist_research_fetch(
     result_sha256: &str,
     source: &PendingSourceFetch,
 ) -> Result<(), Failure> {
-    let _: Value = sqlx::query_scalar!(
-        "SELECT ops.record_research_fetch_v1($1,$2,$3,$4,CAST($5 AS char(64)),$6,$7,$8,$9,$10,$11,$12,CAST($13 AS char(64)),$14,$15,$16,CAST($17 AS char(64)),$18,$19,$20,$21,$22,CAST($23 AS char(64)),$24,$25)",
-        turn.run_id,
-        turn.turn_id,
+    let request_kind = ResearchRequestKind::parse(source.request_kind)
+        .map_err(|_| Failure::Terminal("SOURCE_ARTIFACT_INVALID", "request_kind".to_owned()))?;
+    let safe_headers =
+        serde_json::from_value::<Vec<ResearchSafeHeader>>(source.safe_headers.clone())
+            .map_err(|_| Failure::Terminal("SOURCE_ARTIFACT_INVALID", "safe_headers".to_owned()))?;
+    let redirect_chain = serde_json::from_value::<Vec<ResearchRedirect>>(source.redirects.clone())
+        .map_err(|_| Failure::Terminal("SOURCE_ARTIFACT_INVALID", "redirect_chain".to_owned()))?;
+    let write = ResearchFetchWrite {
+        request_kind,
+        agent_run_id: turn.run_id,
+        provider_turn_id: turn.turn_id,
         tool_call_id,
         call_id,
-        &turn.input_snapshot_sha256,
-        source.request_kind,
-        source.source_id,
-        &source.external_locator,
-        source.source_url_redacted.as_deref(),
-        source.final_url_redacted.as_deref(),
-        source.http_status,
-        source.content_media_type.as_deref(),
-        &source.request_sha256,
-        &source.content,
-        &source.object_key,
-        source.policy_version,
-        result_sha256,
-        source.fetch_id,
-        source.asset_id,
-        source.artifact_id,
-        source.source_use_id,
-        &source.source_use_sha256,
-        &source.content_safety_receipt_sha256,
-        &source.safe_headers,
-        &source.redirects,
-    )
-    .fetch_one(&mut *executor)
-    .await
-    .map_err(database)?
-    .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
+        input_snapshot_sha256: research_digest(
+            &turn.input_snapshot_sha256,
+            "input_snapshot_sha256",
+        )?,
+        source_id: source.source_id,
+        external_locator: &source.external_locator,
+        source_url_redacted: source.source_url_redacted.as_deref(),
+        final_url_redacted: source.final_url_redacted.as_deref(),
+        http_status: u16::try_from(source.http_status)
+            .map_err(|_| Failure::Terminal("SOURCE_ARTIFACT_INVALID", "http_status".to_owned()))?,
+        content_media_type: source.content_media_type.as_deref(),
+        request_sha256: research_digest(&source.request_sha256, "request_sha256")?,
+        content: &source.content,
+        object_key: &source.object_key,
+        policy_version: source.policy_version,
+        result_sha256: research_digest(result_sha256, "result_sha256")?,
+        fetch_id: source.fetch_id,
+        asset_id: source.asset_id,
+        artifact_id: source.artifact_id,
+        source_use_id: source.source_use_id,
+        source_use_sha256: research_digest(&source.source_use_sha256, "source_use_sha256")?,
+        content_safety_receipt_sha256: research_digest(
+            &source.content_safety_receipt_sha256,
+            "content_safety_receipt_sha256",
+        )?,
+        safe_headers,
+        redirect_chain,
+    };
+    let repository = ResearchArtifactRepository::new();
+    match request_kind {
+        ResearchRequestKind::SearchPublicWeb => {
+            repository.record_discovery(executor, &write).await?;
+        }
+        ResearchRequestKind::FetchUrl => {
+            repository.insert_or_replay(executor, &write).await?;
+        }
+    }
     Ok(())
+}
+
+fn research_digest(value: &str, field: &'static str) -> Result<Sha256Digest, Failure> {
+    Sha256Digest::parse(value)
+        .map_err(|_| Failure::Terminal("SOURCE_ARTIFACT_INVALID", field.to_owned()))
+}
+
+impl From<ResearchArtifactRepositoryError> for Failure {
+    fn from(error: ResearchArtifactRepositoryError) -> Self {
+        match error {
+            ResearchArtifactRepositoryError::Database(source) => database(source),
+            other => Failure::Terminal("SOURCE_ARTIFACT_INVALID", other.to_string()),
+        }
+    }
 }
