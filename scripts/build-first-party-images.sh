@@ -5,13 +5,13 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
 services=(
-  migrator public-api control-api identity-api submission-api ingest-worker
+  migrator public-api control-api identity-api billing-gateway submission-api ingest-worker
   analysis-worker projection-worker notification-worker workflow-worker
   document-extractor scheduler egress-gateway oidc-test-provider
   public-web review-console response-portal
 )
 
-[[ "${#services[@]}" -eq 17 ]]
+[[ "${#services[@]}" -eq 18 ]]
 docker compose --file compose.yaml build "${services[@]}"
 
 config_json="$(docker compose --file compose.yaml config --format json)"
@@ -23,4 +23,4 @@ for service in "${services[@]}"; do
   docker image inspect "$image" >/dev/null
 done
 
-printf '17 first-party production images: PASS\n'
+printf '18 first-party production images: PASS\n'

@@ -20,8 +20,10 @@ layers:
   - crates/source-connectors
   - crates/agent-orchestration
   - crates/observability
+  - crates/payment-providers
   composition:
   - services/analysis-worker
+  - services/billing-gateway
   - services/control-api
   - services/document-extractor
   - services/egress-gateway

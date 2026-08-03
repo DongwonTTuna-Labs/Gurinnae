@@ -1,0 +1,28 @@
+{
+  "authority": "TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY",
+  "amountAuthority": "TEST_FIXTURE_ONLY_NOT_TARIFF_OR_LIVE_PRICE",
+  "currency": "KRW",
+  "executionMode": "TEST_FIXTURE_ONLY",
+  "scheduleOwnership": "MERCHANT_SCHEDULED",
+  "webhookTruth": "AUTHENTICATED_FETCH_ONLY",
+  "providers": [
+    {
+      "provider": "TOSS_PAYMENTS",
+      "credentialKind": "TOSS_BILLING_KEY",
+      "signatureSupport": "NOT_AVAILABLE_FETCH_REQUIRED",
+      "fixtureRoot": "toss-payments"
+    },
+    {
+      "provider": "KAKAO_PAY",
+      "credentialKind": "KAKAO_SUBSCRIPTION_ID",
+      "signatureSupport": "NOT_AVAILABLE_FETCH_REQUIRED",
+      "fixtureRoot": "kakao-pay"
+    },
+    {
+      "provider": "STRIPE",
+      "credentialKind": "STRIPE_OFF_SESSION_PAYMENT_METHOD",
+      "signatureSupport": "STRIPE_V1_HMAC_SHA256",
+      "fixtureRoot": "stripe"
+    }
+  ]
+}

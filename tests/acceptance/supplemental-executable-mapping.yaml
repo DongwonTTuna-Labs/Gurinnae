@@ -10,9 +10,9 @@
     },
     {
       "path": "tests/acceptance/business-model-addendum.feature",
-      "scenario_count": 41,
-      "scenario_set_sha256": "22979b3db8f06c8b035a785615489ffb90fac0800bc374747fc3df744411ce85",
-      "sha256": "08ee604a628fddaba37fac5c63f4df6d7f378d8262d4eabbea6372eec95cb21d"
+      "scenario_count": 48,
+      "scenario_set_sha256": "a7cf6fa23d918ac8e2595a1ba2a1fc90e8546a138917dbe17db8ad7321b3e664",
+      "sha256": "499c0aa4d9ff9c84989d6b658f60ae90e3924c6d991182725744b44fe1db7b50"
     },
     {
       "path": "tests/acceptance/journey-graph-addendum.feature",
@@ -46,7 +46,7 @@
     "zero_retry_required": true
   },
   "runtime_state_embedded": false,
-  "scenario_count": 168,
+  "scenario_count": 175,
   "scenarios": [
     {
       "feature_file": "tests/acceptance/ai-multimodal-addendum.feature",
@@ -846,9 +846,135 @@
       "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
       "runner_kind": "RUST_NEXTEST",
       "runtime_profile_id": "BUSINESS_LEDGER_V1",
-      "scenario_contract_sha256": "910a2be24134bd113837e10df1353f7919092206f2bf7f3bc84dded673c56cca",
+      "scenario_contract_sha256": "f3caff0409080edae067c8654ef691cf88b5d4532c8806b21007e52d508cf986",
       "scenario_id": "AC-BUSINESS_MODEL-041",
       "scenario_title": "additive review feature는 실행 mapping 없이는 release gate가 아니다",
+      "skip_policy": "FORBIDDEN",
+      "test_target": "business_model_addendum"
+    },
+    {
+      "feature_file": "tests/acceptance/business-model-addendum.feature",
+      "implementation_test_id": "ac_business_model_042",
+      "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
+      "prerequisite_argv": [
+        "bash",
+        "scripts/test-r6e-monetization-runtime.sh",
+        "--lease",
+        "AC-BUSINESS_MODEL-042"
+      ],
+      "runner_kind": "RUST_NEXTEST",
+      "runtime_profile_id": "BUSINESS_LEDGER_V1",
+      "scenario_contract_sha256": "039c0002a0635f531732a79c7cf47f2c89dd3c8ab4670bed398f14b6ddc32317",
+      "scenario_id": "AC-BUSINESS_MODEL-042",
+      "scenario_title": "economics cash tax import는 typed 승인 executor와 최소 DB 권한만 사용한다",
+      "skip_policy": "FORBIDDEN",
+      "test_target": "business_model_addendum"
+    },
+    {
+      "feature_file": "tests/acceptance/business-model-addendum.feature",
+      "implementation_test_id": "ac_business_model_043",
+      "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
+      "prerequisite_argv": [
+        "bash",
+        "scripts/test-r6e-monetization-runtime.sh",
+        "--lease",
+        "AC-BUSINESS_MODEL-043"
+      ],
+      "runner_kind": "RUST_NEXTEST",
+      "runtime_profile_id": "BUSINESS_LEDGER_V1",
+      "scenario_contract_sha256": "20cd56cbbee473aa102c5df872fb5e7f2d87b5382599c281d5f4342b19a202b3",
+      "scenario_id": "AC-BUSINESS_MODEL-043",
+      "scenario_title": "첫 tariff는 승인된 원가 close 뒤에서만 6000 또는 7000 margin gate를 통과한다",
+      "skip_policy": "FORBIDDEN",
+      "test_target": "business_model_addendum"
+    },
+    {
+      "feature_file": "tests/acceptance/business-model-addendum.feature",
+      "implementation_test_id": "ac_business_model_044",
+      "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
+      "prerequisite_argv": [
+        "bash",
+        "scripts/test-r6e-monetization-runtime.sh",
+        "--lease",
+        "AC-BUSINESS_MODEL-044"
+      ],
+      "runner_kind": "RUST_NEXTEST",
+      "runtime_profile_id": "BUSINESS_LEDGER_V1",
+      "scenario_contract_sha256": "f651521fb26164da5e628de93608200b3e318e3db57dd03e577f2c39df250e4d",
+      "scenario_id": "AC-BUSINESS_MODEL-044",
+      "scenario_title": "donation test fixture는 production 결제나 entitlement 권위가 아니다",
+      "skip_policy": "FORBIDDEN",
+      "test_target": "business_model_addendum"
+    },
+    {
+      "feature_file": "tests/acceptance/business-model-addendum.feature",
+      "implementation_test_id": "ac_business_model_045",
+      "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
+      "prerequisite_argv": [
+        "bash",
+        "scripts/test-r6e-monetization-runtime.sh",
+        "--lease",
+        "AC-BUSINESS_MODEL-045"
+      ],
+      "runner_kind": "RUST_NEXTEST",
+      "runtime_profile_id": "BUSINESS_LEDGER_V1",
+      "scenario_contract_sha256": "52ee9fa7d488a297f5fb29d114cd1bd773d553be0871f262d0bbc5ba526c0abd",
+      "scenario_id": "AC-BUSINESS_MODEL-045",
+      "scenario_title": "webhook은 검증과 unique claim 뒤 provider 재조회로만 확정된다",
+      "skip_policy": "FORBIDDEN",
+      "test_target": "business_model_addendum"
+    },
+    {
+      "feature_file": "tests/acceptance/business-model-addendum.feature",
+      "implementation_test_id": "ac_business_model_046",
+      "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
+      "prerequisite_argv": [
+        "bash",
+        "scripts/test-r6e-monetization-runtime.sh",
+        "--lease",
+        "AC-BUSINESS_MODEL-046"
+      ],
+      "runner_kind": "RUST_NEXTEST",
+      "runtime_profile_id": "BUSINESS_LEDGER_V1",
+      "scenario_contract_sha256": "97564258fb14f0a8739e493e9579951bd5069aa2253fbe8d1a88352474b8a086",
+      "scenario_id": "AC-BUSINESS_MODEL-046",
+      "scenario_title": "payment failure는 review task만 만들고 계약이나 공개 접근을 자동 변경하지 않는다",
+      "skip_policy": "FORBIDDEN",
+      "test_target": "business_model_addendum"
+    },
+    {
+      "feature_file": "tests/acceptance/business-model-addendum.feature",
+      "implementation_test_id": "ac_business_model_047",
+      "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
+      "prerequisite_argv": [
+        "bash",
+        "scripts/test-r6e-monetization-runtime.sh",
+        "--lease",
+        "AC-BUSINESS_MODEL-047"
+      ],
+      "runner_kind": "RUST_NEXTEST",
+      "runtime_profile_id": "BUSINESS_LEDGER_V1",
+      "scenario_contract_sha256": "93ecd43365e3a4463ae875d72d2499bd2c27bfc352ff2a01402c13566b0bf940",
+      "scenario_id": "AC-BUSINESS_MODEL-047",
+      "scenario_title": "donation은 candidate와 독립 disclosure 승인 뒤에만 PUB-023에 공개된다",
+      "skip_policy": "FORBIDDEN",
+      "test_target": "business_model_addendum"
+    },
+    {
+      "feature_file": "tests/acceptance/business-model-addendum.feature",
+      "implementation_test_id": "ac_business_model_048",
+      "implementation_test_path": "tests/integration/acceptance/business_model_addendum.rs",
+      "prerequisite_argv": [
+        "bash",
+        "scripts/test-r6e-monetization-runtime.sh",
+        "--lease",
+        "AC-BUSINESS_MODEL-048"
+      ],
+      "runner_kind": "RUST_NEXTEST",
+      "runtime_profile_id": "BUSINESS_LEDGER_V1",
+      "scenario_contract_sha256": "cb9296c9dd6f35ea51b35fefc9911aac29b704390d9f54203f7b541a7534837c",
+      "scenario_id": "AC-BUSINESS_MODEL-048",
+      "scenario_title": "R6e의 두 신규 event payload는 닫힌 source-bound oracle이다",
       "skip_policy": "FORBIDDEN",
       "test_target": "business_model_addendum"
     },

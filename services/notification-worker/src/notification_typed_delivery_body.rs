@@ -102,7 +102,7 @@
     };
     let provider_id = state
         .delivery
-        .send_for_channel_with_binding(&message, &channel, &provider_idempotency_key, &binding)
+        .send_for_channel_with_binding(&message, channel, &provider_idempotency_key, &binding)
         .await;
     let provider_id = match provider_id {
         Ok(value) => value,

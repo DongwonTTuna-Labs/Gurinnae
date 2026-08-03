@@ -8,10 +8,11 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from pglast import parse_sql
+from pglast import parse_plpgsql, parse_sql
 from pglast.ast import TransactionStmt
 from pglast.enums import TransactionStmtKind
 from pglast.parser import ParseError
+from pglast.stream import RawStream
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,12 +34,30 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0038_r6d_legal_hardening.sql",
     "0039_r6d_authority_closure.sql",
     "0040_r6d_privacy_authority_closure.sql",
+    "0041_r6e_monetization_runtime.sql",
 )
 EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
     EXPECTED_ADDITIVE_MIGRATIONS
 )
 LEGACY_EXPLICIT_TRANSACTION_PROFILES = {
     "0030_v13_submission_session_hardening.sql": 29,
+}
+LEGACY_ROLE_DDL_PROFILES = {
+    # 0030 is immutable historical provenance. Its role statements are tracked
+    # as a deferred spec conflict and must not authorize new role DDL.
+    "0030_v13_submission_session_hardening.sql",
+}
+LEGACY_DYNAMIC_DO_PROFILES = {
+    # 0038 is immutable historical provenance. Its two dynamic DO blocks clone
+    # existing function definitions and are byte-pinned by the additive
+    # inventory; this exception must not authorize dynamic SQL in later work.
+    "0038_r6d_legal_hardening.sql",
+}
+ROLE_DDL_STATEMENT_TYPES = {
+    "AlterRoleStmt",
+    "CreateRoleStmt",
+    "DropRoleStmt",
+    "GrantRoleStmt",
 }
 
 
@@ -50,6 +69,87 @@ def migration_names(directory: Path) -> tuple[str, ...]:
     return tuple(
         path.name for path in sorted(directory.glob("[0-9][0-9][0-9][0-9]_*.sql"))
     )
+
+
+def _plpgsql_exec_queries(value: object) -> tuple[tuple[str, ...], bool]:
+    queries: list[str] = []
+    dynamic = False
+
+    def visit(node: object) -> None:
+        nonlocal dynamic
+        if isinstance(node, dict):
+            statement = node.get("PLpgSQL_stmt_execsql")
+            if isinstance(statement, dict):
+                expression = statement.get("sqlstmt", {}).get("PLpgSQL_expr", {})
+                query = expression.get("query")
+                if isinstance(query, str):
+                    queries.append(query)
+            if "PLpgSQL_stmt_dynexecute" in node:
+                dynamic = True
+            for child in node.values():
+                visit(child)
+        elif isinstance(node, list):
+            for child in node:
+                visit(child)
+
+    visit(value)
+    return tuple(queries), dynamic
+
+
+def _raise_if_role_ddl(statement: object, migration_name: str) -> None:
+    statement_type = type(statement).__name__
+    if statement_type in ROLE_DDL_STATEMENT_TYPES:
+        raise MigrationVerificationError(
+            f"{migration_name}: role DDL is forbidden ({statement_type})"
+        )
+
+
+def verify_role_ddl_closure(sql: str, migration_name: str) -> None:
+    """Forbid post-base role or membership mutation outside immutable 0030.
+
+    PostgreSQL parses a DO body as one string literal, so inspecting only the
+    top-level SQL AST would allow role DDL to hide inside PL/pgSQL. Parse each
+    anonymous block and inspect its static SQL statements as well.
+    """
+
+    if migration_name in LEGACY_ROLE_DDL_PROFILES:
+        return
+    try:
+        statements = parse_sql(sql)
+    except ParseError as error:
+        raise MigrationVerificationError(
+            f"{migration_name}: PostgreSQL parser failed: {error}"
+        ) from error
+
+    for raw_statement in statements:
+        statement = raw_statement.stmt
+        _raise_if_role_ddl(statement, migration_name)
+        if type(statement).__name__ != "DoStmt":
+            continue
+        canonical = RawStream()(statement)
+        try:
+            block = parse_plpgsql(canonical)
+        except ParseError as error:
+            raise MigrationVerificationError(
+                f"{migration_name}: PL/pgSQL parser failed while checking role DDL: "
+                f"{error}"
+            ) from error
+        queries, dynamic = _plpgsql_exec_queries(block)
+        if dynamic and migration_name not in LEGACY_DYNAMIC_DO_PROFILES:
+            raise MigrationVerificationError(
+                f"{migration_name}: dynamic SQL in DO is forbidden while "
+                "checking role DDL"
+            )
+        for query in queries:
+            try:
+                nested_statements = parse_sql(query)
+            except ParseError as error:
+                raise MigrationVerificationError(
+                    f"{migration_name}: nested SQL parser failed while checking "
+                    f"role DDL: {error}"
+                ) from error
+            for nested in nested_statements:
+                _raise_if_role_ddl(nested.stmt, migration_name)
 
 
 def verify_transaction_closure(sql: str, migration_name: str) -> None:
@@ -182,9 +282,10 @@ def verify_migrations(root: Path = ROOT) -> tuple[str, ...]:
     base_names = migration_names(root / "specs/database/migrations")
     for migration_name in runtime_names:
         migration_path = root / "db/migrations" / migration_name
-        verify_transaction_closure(
-            migration_path.read_text(encoding="utf-8"), migration_name
-        )
+        sql = migration_path.read_text(encoding="utf-8")
+        verify_transaction_closure(sql, migration_name)
+        if migration_name in EXPECTED_ADDITIVE_MIGRATIONS:
+            verify_role_ddl_closure(sql, migration_name)
     if len(runtime_names) != EXPECTED_RUNTIME_MIGRATIONS:
         raise MigrationVerificationError(
             f"runtime migration count must be {EXPECTED_RUNTIME_MIGRATIONS}, "

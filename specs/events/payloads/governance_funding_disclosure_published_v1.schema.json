@@ -1,0 +1,404 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/governance.funding_disclosure_published.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "disclosureId",
+    "revisionId",
+    "revision",
+    "priorRevision",
+    "priorRevisionDigest",
+    "revisionDigest",
+    "fiscalYear",
+    "fiscalQuarter",
+    "periodStart",
+    "periodEnd",
+    "snapshotBatchId",
+    "snapshotDigest",
+    "fundingPolicyVersion",
+    "fundingPolicyDigest",
+    "policySnapshotDigest",
+    "conflictSnapshotDigest",
+    "quorumSnapshotDigest",
+    "concentrationBand",
+    "quorumClass",
+    "requiresOversightReview",
+    "requiresBoardApproval",
+    "requiresEnhancedPublicDisclosure",
+    "hasRelatedPartyGate",
+    "conditionalGateSetDigest",
+    "policyRequestOutcomeDigest",
+    "sourceLinkSetDigest",
+    "entryCount",
+    "entrySetDigest",
+    "publicContentDigest",
+    "proposalId",
+    "proposalVersion",
+    "executionId",
+    "executionGeneration",
+    "approvalDigest",
+    "executionDigest",
+    "decisionReceiptSetDigest",
+    "independentCaseReviewSetDigest",
+    "countedDecisions",
+    "independentCaseReviews",
+    "publisherUserId",
+    "effectiveAt",
+    "publishedAt",
+    "receiptDigest"
+  ],
+  "properties": {
+    "disclosureId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "revisionId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "priorRevision": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "priorRevisionDigest": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "revisionDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "fiscalYear": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9999
+    },
+    "fiscalQuarter": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "periodStart": {
+      "type": "string",
+      "format": "date"
+    },
+    "periodEnd": {
+      "type": "string",
+      "format": "date"
+    },
+    "snapshotBatchId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "snapshotDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "fundingPolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "fundingPolicyDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "policySnapshotDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "conflictSnapshotDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "quorumSnapshotDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "concentrationBand": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "LE_5_PERCENT",
+        "GT_5_TO_15_PERCENT",
+        "GT_15_TO_25_PERCENT",
+        "GT_25_PERCENT"
+      ]
+    },
+    "quorumClass": {
+      "type": "string",
+      "enum": [
+        "STANDARD",
+        "OVERSIGHT",
+        "BOARD",
+        "RELATED_PARTY",
+        "OVERSIGHT_RELATED_PARTY",
+        "BOARD_RELATED_PARTY"
+      ]
+    },
+    "requiresOversightReview": {
+      "type": "boolean"
+    },
+    "requiresBoardApproval": {
+      "type": "boolean"
+    },
+    "requiresEnhancedPublicDisclosure": {
+      "type": "boolean"
+    },
+    "hasRelatedPartyGate": {
+      "type": "boolean"
+    },
+    "conditionalGateSetDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "policyRequestOutcomeDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "sourceLinkSetDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "entryCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "entrySetDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "publicContentDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "proposalId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "proposalVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "executionId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "executionGeneration": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "approvalDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "executionDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "decisionReceiptSetDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "independentCaseReviewSetDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "countedDecisions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "description": "Ordered by slotOrdinal ascending, then decisionId ascending; actorId values are pairwise distinct.",
+      "items": {
+        "$ref": "#/$defs/countedDecision"
+      }
+    },
+    "independentCaseReviews": {
+      "type": "array",
+      "maxItems": 10000,
+      "uniqueItems": true,
+      "description": "One binding for each distinct related case, ordered by relatedCaseId UUID ascending, then decisionId ascending.",
+      "items": {
+        "$ref": "#/$defs/independentCaseReview"
+      }
+    },
+    "publisherUserId": {
+      "$ref": "#/$defs/uuid",
+      "description": "Equals actorId in the funding_publisher counted-decision tuple."
+    },
+    "effectiveAt": {
+      "$ref": "#/$defs/utcMicrosecond"
+    },
+    "publishedAt": {
+      "$ref": "#/$defs/utcMicrosecond"
+    },
+    "receiptDigest": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "revision": {
+            "const": 1
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "priorRevision": {
+            "type": "null"
+          },
+          "priorRevisionDigest": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "priorRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "priorRevisionDigest": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "utcMicrosecond": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+    },
+    "countedDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slotOrdinal",
+        "slotId",
+        "decisionId",
+        "decisionReceiptDigest",
+        "actorId"
+      ],
+      "properties": {
+        "slotOrdinal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "slotId": {
+          "type": "string",
+          "enum": [
+            "funding_preparer",
+            "funding_publisher",
+            "oversight_reviewer",
+            "board_approver"
+          ]
+        },
+        "decisionId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "decisionReceiptDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "actorId": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "slotOrdinal": {
+              "const": 1
+            },
+            "slotId": {
+              "const": "funding_preparer"
+            }
+          }
+        },
+        {
+          "properties": {
+            "slotOrdinal": {
+              "const": 2
+            },
+            "slotId": {
+              "const": "funding_publisher"
+            }
+          }
+        },
+        {
+          "properties": {
+            "slotOrdinal": {
+              "const": 3
+            },
+            "slotId": {
+              "const": "oversight_reviewer"
+            }
+          }
+        },
+        {
+          "properties": {
+            "slotOrdinal": {
+              "const": 4
+            },
+            "slotId": {
+              "const": "board_approver"
+            }
+          }
+        }
+      ]
+    },
+    "independentCaseReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relatedCaseId",
+        "publicationProposalId",
+        "publicationProposalVersion",
+        "publicationApprovalDigest",
+        "decisionId",
+        "decisionReceiptDigest",
+        "reviewerActorId"
+      ],
+      "properties": {
+        "relatedCaseId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "publicationProposalId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "publicationProposalVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "publicationApprovalDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "decisionId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "decisionReceiptDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "reviewerActorId": {
+          "$ref": "#/$defs/uuid"
+        }
+      }
+    }
+  }
+}

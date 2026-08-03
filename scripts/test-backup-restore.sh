@@ -17,8 +17,8 @@ trap cleanup EXIT
 
 for container in "$source_container" "$restore_container"; do
   docker run --rm --detach --name "$container" \
-    --env POSTGRES_DB=gurine --env POSTGRES_USER=postgres --env POSTGRES_PASSWORD=postgres \
-    --publish 127.0.0.1::5432 postgres:18.4-bookworm >/dev/null
+    --env POSTGRES_DB=gurine --env POSTGRES_USER=postgres --env POSTGRES_HOST_AUTH_METHOD=trust \
+    --publish 127.0.0.1::5432 postgres:18.4-bookworm@sha256:d9c83446333daec3f0588cc709adb80c26090b7f9f0f7ec8d43c243385d79818 >/dev/null
 done
 for container in "$source_container" "$restore_container"; do
   ready_streak=0
@@ -35,9 +35,8 @@ for container in "$source_container" "$restore_container"; do
 done
 
 cd "$root"
-for migration in db/migrations/*.sql; do
-  docker exec -i "$source_container" psql -v ON_ERROR_STOP=1 -U postgres -d gurine <"$migration" >/dev/null
-done
+mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
+bash scripts/apply-test-migrations-with-r6e-roles.sh "$source_container" gurine "${migrations[@]}"
 docker exec -i "$source_container" psql -v ON_ERROR_STOP=1 -U postgres -d gurine \
   <db/test-fixtures/reference-seed.sql >/dev/null
 

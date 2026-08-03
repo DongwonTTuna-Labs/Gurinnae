@@ -23,13 +23,13 @@
     },
     {
       "path": "tests/acceptance/supplemental-executable-mapping.yaml",
-      "sha256": "9e0b0379d51396bb630a1849123db0c6b98af8feeff6688701a25b565764d972",
-      "size": 114015
+      "sha256": "1a9b23c249baae99e0c8711e20af1fd160f692af8a131854ce9ed9395ff734ac",
+      "size": 118667
     },
     {
       "path": "tests/acceptance/effective-execution-registry.yaml",
-      "sha256": "7b0a3d3b7defa9dd6f7c3c11a950c84b394f9a215cd6745bba8f94942f2057bf",
-      "size": 11752348
+      "sha256": "092f172c87645a27913acfb2e6870503a6f904022f8948071564edd9e7757159",
+      "size": 12090719
     }
   ],
   "execution_contract": {
@@ -44,6 +44,90 @@
     "scenario_receipt_schema": "specs/acceptance/execution-receipt-v3.schema.json",
     "source_tree_evidence_forbidden": true,
     "zero_or_multiple_selection_is_failure": true
+  },
+  "final_source_inventory_contract": {
+    "additive_external_operation_count": 51,
+    "additive_external_operation_ids": [
+      "attestEntityMaterialUseClosure",
+      "attestOrganizationOfficialChannel",
+      "cancelActionExecution",
+      "cancelAgentRun",
+      "cancelCommunicationDelivery",
+      "claimActionReview",
+      "classifyEntityPersonhood",
+      "closeIncidentPostmortem",
+      "containIncident",
+      "createActionProposal",
+      "createPrivacyCorrectionPlan",
+      "createPrivacyRequest",
+      "createResponseAppeal",
+      "decideJourneyHandoff",
+      "decideResponseExtension",
+      "declareConflict",
+      "downloadTransparencyReport",
+      "exchangePrivacyRequestReceiptToken",
+      "getActionExecutionReceipt",
+      "getActionProposal",
+      "getCommunicationDeliveryReceipt",
+      "getIncident",
+      "getPrivacyRequest",
+      "getResponseAppeal",
+      "getResponseAppealWorkspace",
+      "getRetentionRequest",
+      "listActionApprovalQueue",
+      "listRecordClassSchedules",
+      "listResponseAppeals",
+      "listRetentionRequests",
+      "previewActionDraft",
+      "promoteResearchArtifactToEvidence",
+      "reconcileCommunicationDelivery",
+      "releaseLegalHold",
+      "requestCommunicationEndpointLink",
+      "resolveIncident",
+      "retryActionExecution",
+      "revokeOrganizationOfficialChannel",
+      "startIncidentRecovery",
+      "submitActionDecision",
+      "submitActionForReview",
+      "transitionResponseAppeal",
+      "transitionRetentionRequest",
+      "triageIncident",
+      "unlinkCommunicationEndpoint",
+      "updateActionDraft",
+      "verifyCommunicationEndpointLink",
+      "verifyResponseOrganizationIdentity",
+      "withdrawActionDecision",
+      "withdrawActionProposal",
+      "withdrawConflict"
+    ],
+    "additive_external_private_identity_intersection_count": 0,
+    "all_scope_http_command_operation_count": 148,
+    "all_scope_http_non_get_operation_count": 145,
+    "all_scope_http_operation_count": 271,
+    "all_scope_http_query_operation_count": 123,
+    "base_additive_intersection_count": 0,
+    "base_external_operation_count": 217,
+    "compose_service_count": 21,
+    "final_external_command_operation_count": 145,
+    "final_external_non_get_operation_count": 142,
+    "final_external_operation_count": 268,
+    "final_external_query_operation_count": 123,
+    "inventory_sha256": "6d8093d6b1028a2a01886311294bface328f80da684316a996871e2a836ddd4d",
+    "private_identity_api_operation_count": 3,
+    "private_identity_api_operation_ids": [
+      "decideSupplierRelationshipAssertion",
+      "recordSupplierIdentityResolution",
+      "recordSupplierRelationshipAssertion"
+    ],
+    "required_additive_external_operation_ids": [
+      "downloadTransparencyReport"
+    ],
+    "required_additive_screen_ids": [
+      "PUB-035"
+    ],
+    "runtime_service_count": 18,
+    "screen_count": 95,
+    "source_derived": true
   },
   "forbidden_runtime_keys": [
     "current_status",
@@ -62,7 +146,7 @@
     },
     {
       "path": "Makefile",
-      "sha256": "ce77bab45e3fc7c8c3d520ec9f8bb2e1be34761270de1c718a69376440fbfbb5",
+      "sha256": "32ac9d71b600156d32c8aa76d1bd8e27899ddfc28359c5a6ff4265a2041eb148",
       "size": 8692
     },
     {
@@ -87,8 +171,8 @@
     },
     {
       "path": "infra/docker/rust-service/Dockerfile",
-      "sha256": "aefe60cdbfa41dbce48d28a524285d81b4a93d1e2cad37ba31c4fb5a4591553a",
-      "size": 14134
+      "sha256": "3836f57c3a8241576c82d03d9f7d6bd5366aa0fad38a29d7c73762614506a5af",
+      "size": 14305
     },
     {
       "path": "infra/images.lock",
@@ -107,13 +191,13 @@
     },
     {
       "path": "scripts/generate_acceptance_design_registry.py",
-      "sha256": "d507f5e379334e45513f15078253c70cb2d6db74c7b0a69d8f3d08869a2f44d0",
-      "size": 8140
+      "sha256": "91d0cbbdcdbfeb97e93c56bbe65e6a1e3aef0ff23dd26bc5bf5d3cf6e8afae9c",
+      "size": 14938
     },
     {
       "path": "scripts/generate_effective_execution_registry.py",
-      "sha256": "7802cde83b2665607e2c39956b0c2b109be2641a15a10349bb5cd046b512f5b3",
-      "size": 25055
+      "sha256": "ec63681bed2803e3214060cbc6f818985d81019d0804e4c2e503b6ce100d8996",
+      "size": 37631
     },
     {
       "path": "scripts/generate_journey_registry.py",
@@ -146,6 +230,11 @@
       "size": 761
     },
     {
+      "path": "scripts/validation/http_operation_inventory.py",
+      "sha256": "ffb3b0925e1b795510cace4bbe49e5f57a1b0d933136ef56ab3cd4cd4378d6ef",
+      "size": 4453
+    },
+    {
       "path": "scripts/verify_source_archive.py",
       "sha256": "1cc886a667560ba0fc3c7c4827b4843ba60a5da31d73a9007bb06ff49bd5a555",
       "size": 7322
@@ -153,7 +242,7 @@
   ],
   "registry_kind": "SUPPLEMENTAL_ACCEPTANCE_DESIGN_REGISTRY",
   "release_policy": {
-    "all_439_scenarios_required": true,
+    "all_effective_scenarios_required": true,
     "all_runtime_layers_required": true,
     "archive_and_clean_extraction_binding_required": true,
     "assertion_mutation_survivor_count": 0,
@@ -162,20 +251,20 @@
     "skipped_count": 0,
     "source_unchanged_during_evidence_run": true
   },
-  "runtime_contracts_sha256": "638d9cd14f108b0e44b4c26cb244a55a1e7b4bf3bf42d78059a02704a9f71244",
+  "runtime_contracts_sha256": "f6fac77e2945e5190c1cf786fa6065623910109239a71f7a6003dd0ba1525a53",
   "runtime_state_embedded": false,
   "scenario_contract": {
     "background_clause_inheritance_required": true,
     "effective_feature_count": 40,
-    "effective_scenario_count": 439,
+    "effective_scenario_count": 446,
     "exact_scenario_identity_required": true,
     "example_row_and_expansion_digest_required": true,
-    "gherkin_example_count": 80,
-    "gherkin_instance_count": 2466,
-    "gherkin_outline_count": 11,
-    "gherkin_scenario_bound_clause_count": 2020,
-    "gherkin_source_step_count": 1646,
-    "scenario_set_sha256": "8f7528b4dc4093df30aa0c91cdd58cc439939243ffb4e567a955ef60172bff26"
+    "gherkin_example_count": 82,
+    "gherkin_instance_count": 2520,
+    "gherkin_outline_count": 12,
+    "gherkin_scenario_bound_clause_count": 2069,
+    "gherkin_source_step_count": 1695,
+    "scenario_set_sha256": "4b85e84b32030e3273605a008fb9f3f1ef46b29dd1aeee8f09e05b26734a818e"
   },
   "schema_version": 2,
   "schemas": [
@@ -191,12 +280,12 @@
     },
     {
       "path": "specs/acceptance/run-index-v1.schema.json",
-      "sha256": "4d58dc276ea305fde670f88ccc998a6f74fefb79163ea01009cdcc7e78f699d4",
+      "sha256": "a75d629c09d7ca16fd3936cdc823206680178651ac50eb2949f1e3d732bc3793",
       "size": 3819
     },
     {
       "path": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
-      "sha256": "fa7053c272f652b7f2eefa4e7a721b8df7d5b6aa491e7202c6b9a821c54777e0",
+      "sha256": "c0c4c9d4cc551a75d9dce238d4f50177b5fca5e2e9b254292ca8078842699742",
       "size": 11218
     }
   ],

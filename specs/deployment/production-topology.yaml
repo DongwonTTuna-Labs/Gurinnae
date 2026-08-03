@@ -3,6 +3,7 @@ specification_version: 13.0.0
 status: FINAL
 services:
 - analysis-worker
+- billing-gateway
 - clamav
 - control-api
 - document-extractor
@@ -19,6 +20,7 @@ services:
 - public-web
 - response-portal
 - review-console
+- role-provisioner
 - scheduler
 - submission-api
 - workflow-worker
@@ -27,10 +29,17 @@ ingress:
   response-portal: public HTTPS with anti-abuse rate limits
   review-console: private/VPN or identity-aware HTTPS
   public-api: public HTTPS
+  billing-gateway: private Public Web BFF only; provider fixture ingress is TEST_MODE_ONLY and live provider ingress is disabled and unconfigured
   submission-api: public only through bounded routes/BFF
   control-api: no public ingress
   identity-api: private only; reached through Review Console BFF
-egress: All external network traffic is mediated by egress-gateway channels.
+egress: All external network traffic is mediated by egress-gateway channels. Billing Gateway has no direct egress and R6e has no live
+  payment-provider channel, hosts or credentials; any future live provider transport requires separate approval, a strong request-bound
+  caller assertion and an env-sourced egress allowlist before it can be enabled.
+external_finance_integrations:
+  payment_gateway: DISABLED and unconfigured; TEST_ONLY fixture transport is invalid outside GURINE_ENV=test
+  tax_invoice_asp: DISABLED and unconfigured; R6e accepts only separately authorized typed import evidence and never performs a live ASP call
+  missing_configuration: fail closed without synthesizing payment, cash, tax-issuance or entitlement truth
 storage:
   postgresql: PostgreSQL 18.4-compatible managed or dedicated service
   object_store: versioned encrypted S3-compatible buckets

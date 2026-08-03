@@ -76,5 +76,12 @@ describe("anonymous submission BFF rate limiting", () => {
         "192.0.2.1",
       ),
     ).toBe("case:case-a:3");
+    expect(
+      anonymousDestination(
+        "private.QueueDonationIntent",
+        { tierId: "fixture-tier" },
+        "192.0.2.1",
+      ),
+    ).toBe("client:192.0.2.1");
   });
 });

@@ -490,6 +490,137 @@ SQL
     fail "an enabled connector lacks current production source-license evidence"
 }
 
+database_url_uses_actor() {
+  local database_url="$1"
+  local actor="$2"
+  [[ "$database_url" =~ ^postgres(ql)?://${actor}([:@/?#]) ]]
+}
+
+validate_role_provisioner_separation() {
+  local database_url_name
+  local database_url
+  local actor="$ROLE_PROVISIONER_EXPECTED_ACTOR"
+
+  [[ "$actor" =~ ^[a-z_][a-z0-9_]{0,62}$ ]] ||
+    fail "ROLE_PROVISIONER_EXPECTED_ACTOR must be an unquoted PostgreSQL role name"
+  database_url_uses_actor "$ROLE_PROVISIONER_DATABASE_URL" "$actor" ||
+    fail "ROLE_PROVISIONER_DATABASE_URL must authenticate as ROLE_PROVISIONER_EXPECTED_ACTOR"
+
+  for database_url_name in \
+    MIGRATOR_DATABASE_URL PUBLIC_DATABASE_URL CONTROL_DATABASE_URL \
+    IDENTITY_DATABASE_URL SUBMISSION_DATABASE_URL INGEST_DATABASE_URL \
+    ANALYSIS_DATABASE_URL PROJECTOR_DATABASE_URL NOTIFICATION_DATABASE_URL \
+    WORKFLOW_DATABASE_URL DOCUMENT_EXTRACTOR_DATABASE_URL \
+    SCHEDULER_DATABASE_URL EGRESS_DATABASE_URL BILLING_DATABASE_URL \
+    ECONOMICS_DATABASE_URL; do
+    database_url="${!database_url_name:-}"
+    [[ -z "$database_url" || "$database_url" != "$ROLE_PROVISIONER_DATABASE_URL" ]] ||
+      fail "ROLE_PROVISIONER_DATABASE_URL must be separate from runtime and migrator URLs"
+    if [[ -n "$database_url" ]] && database_url_uses_actor "$database_url" "$actor"; then
+      fail "ROLE_PROVISIONER_EXPECTED_ACTOR is forbidden in runtime and migrator URLs"
+    fi
+  done
+}
+
+validate_r6e_runtime_role_contract() {
+  local expected_migration_checksum
+  local migration_path="$root/db/migrations/0041_r6e_monetization_runtime.sql"
+  local result
+
+  [[ -f "$migration_path" && -s "$migration_path" ]] ||
+    fail "0041 migration SQL is missing"
+  expected_migration_checksum="$(sha384sum -- "$migration_path" | awk '{print $1}')" ||
+    fail "0041 migration checksum could not be computed"
+  [[ "$expected_migration_checksum" =~ ^[0-9a-f]{96}$ ]] ||
+    fail "0041 migration checksum is invalid"
+
+  if ! result="$(psql "$ROLE_PROVISIONER_DATABASE_URL" --no-password -X -qAt \
+    -v ON_ERROR_STOP=1 \
+    -v expected_actor="$ROLE_PROVISIONER_EXPECTED_ACTOR" \
+    -v expected_migration_checksum="$expected_migration_checksum" \
+    2>/dev/null <<'SQL'
+SET search_path=pg_catalog,pg_temp;
+WITH expected(role_name,can_login,connection_limit) AS MATERIALIZED (
+  VALUES
+    ('gurine_economics_writer'::text,false,-1),
+    ('gurine_payment_writer'::text,false,-1),
+    ('gurine_billing_gateway'::text,true,8),
+    ('gurine_economics_importer'::text,true,4)
+), role_state AS MATERIALIZED (
+  SELECT auth.oid,expected.role_name
+  FROM expected
+  JOIN pg_catalog.pg_authid AS auth ON auth.rolname=expected.role_name
+  JOIN pg_catalog.pg_roles AS visible_role ON visible_role.oid=auth.oid
+  WHERE visible_role.rolcanlogin=expected.can_login
+    AND visible_role.rolconnlimit=expected.connection_limit
+    AND NOT visible_role.rolsuper
+    AND NOT visible_role.rolcreatedb
+    AND NOT visible_role.rolcreaterole
+    AND NOT visible_role.rolinherit
+    AND NOT visible_role.rolreplication
+    AND NOT visible_role.rolbypassrls
+    AND auth.rolpassword IS NULL
+    AND visible_role.rolvaliduntil IS NULL
+    AND visible_role.rolconfig IS NULL
+), ledger AS MATERIALIZED (
+  SELECT count(*) AS row_count,
+    count(*) FILTER (WHERE NOT success) AS failed_count,
+    min(version) AS min_version,
+    max(version) AS max_version,
+    count(*) FILTER (
+      WHERE version=41
+        AND success
+        AND description='r6e monetization runtime'
+        AND pg_catalog.encode(checksum,'hex')=:'expected_migration_checksum'
+    ) AS exact_row_41_count
+  FROM public._sqlx_migrations
+)
+SELECT session_user=:'expected_actor'
+  AND current_user=session_user
+  AND EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_roles AS actor
+    WHERE actor.rolname=:'expected_actor'
+      AND actor.rolsuper
+  )
+  AND (SELECT count(*) FROM role_state)=4
+  AND NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_auth_members AS membership
+    JOIN role_state AS target
+      ON target.oid=membership.roleid OR target.oid=membership.member
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_db_role_setting AS setting
+    JOIN role_state AS target ON target.oid=setting.setrole
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_shdepend AS dependency
+    JOIN role_state AS target ON target.oid=dependency.refobjid
+    WHERE dependency.refclassid='pg_authid'::pg_catalog.regclass
+      AND dependency.deptype IN ('a','o')
+      AND dependency.dbid IS DISTINCT FROM (
+        SELECT oid FROM pg_catalog.pg_database
+        WHERE datname=pg_catalog.current_database()
+      )
+  )
+  AND (SELECT row_count=41
+    AND failed_count=0
+    AND min_version=1
+    AND max_version=41
+    AND exact_row_41_count=1
+    FROM ledger)
+  AND ops.assert_r6e_runtime_role_postconditions_v1() IS TRUE;
+SQL
+  )"; then
+    fail "R6e runtime-role catalog query failed"
+  fi
+  [[ "$result" == "t" ]] ||
+    fail "R6e runtime-role contract or migration row 41 is invalid"
+}
+
 csv_contains() {
   local csv="$1"
   local expected="$2"
@@ -506,23 +637,28 @@ csv_contains() {
   return 1
 }
 
-for command in jq sha256sum psql; do
+for command in awk jq psql sha256sum sha384sum; do
   command -v "$command" >/dev/null 2>&1 || fail "$command is required"
 done
 
 for name in \
   POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD \
+  ROLE_PROVISIONER_DATABASE_URL ROLE_PROVISIONER_EXPECTED_ACTOR \
   MIGRATOR_DATABASE_URL PUBLIC_DATABASE_URL CONTROL_DATABASE_URL IDENTITY_DATABASE_URL \
   SUBMISSION_DATABASE_URL INGEST_DATABASE_URL ANALYSIS_DATABASE_URL PROJECTOR_DATABASE_URL \
   NOTIFICATION_DATABASE_URL WORKFLOW_DATABASE_URL DOCUMENT_EXTRACTOR_DATABASE_URL \
-  SCHEDULER_DATABASE_URL EGRESS_DATABASE_URL \
+  SCHEDULER_DATABASE_URL EGRESS_DATABASE_URL BILLING_DATABASE_URL \
   PUBLIC_API_INTERNAL_URL CONTROL_API_INTERNAL_URL IDENTITY_API_INTERNAL_URL \
-  SUBMISSION_API_INTERNAL_URL PUBLIC_BASE_URL REVIEW_BASE_URL RESPONSE_BASE_URL \
+  SUBMISSION_API_INTERNAL_URL BILLING_GATEWAY_INTERNAL_URL \
+  PUBLIC_BASE_URL REVIEW_BASE_URL RESPONSE_BASE_URL \
+  BILLING_GATEWAY_MODE \
   BOT_CHALLENGE_SECRET_KEY BOT_CHALLENGE_SITE_KEY \
   OIDC_EGRESS_URL OIDC_ISSUER_URL OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_REDIRECT_URI \
   OIDC_STEP_UP_REDIRECT_URI OIDC_SCOPES EMAIL_ADAPTER OBJECT_STORE_ADAPTER; do
   required "$name"
 done
+
+validate_role_provisioner_separation
 
 for name in \
   GURINE_OPERATING_LEGAL_ENTITY GURINE_PRIVACY_CONTROLLER \
@@ -555,12 +691,38 @@ reject_forbidden_deployment_markers \
 
 [[ "$EGRESS_DATABASE_URL" =~ ^postgres(ql)?://gurine_egress_gateway([:@/]) ]] ||
   fail "EGRESS_DATABASE_URL must authenticate as gurine_egress_gateway"
+if [[ -n "${ECONOMICS_DATABASE_URL:-}" ]]; then
+  [[ "$ECONOMICS_DATABASE_URL" =~ ^postgres(ql)?://gurine_economics_importer([:@/]) ]] ||
+    fail "ECONOMICS_DATABASE_URL must authenticate as gurine_economics_importer when configured"
+fi
+[[ "$BILLING_DATABASE_URL" =~ ^postgres(ql)?://gurine_billing_gateway([:@/]) ]] ||
+  fail "BILLING_DATABASE_URL must authenticate as gurine_billing_gateway"
+[[ "$BILLING_GATEWAY_MODE" == "DISABLED" ]] ||
+  fail "BILLING_GATEWAY_MODE must be DISABLED for production preflight"
+[[ -z "${DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN:-}" ]] ||
+  fail "DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN is forbidden outside test mode"
+[[ -z "${DONATION_TEST_PAYMENT_OUTCOME:-}" ]] ||
+  fail "DONATION_TEST_PAYMENT_OUTCOME is forbidden outside test mode"
+for name in \
+  PAYMENT_FIXTURE_BILLING_HMAC_KEY_CURRENT \
+  PAYMENT_FIXTURE_BILLING_HMAC_KEY_PREVIOUS \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION; do
+  [[ -z "${!name:-}" ]] || fail "$name is forbidden outside test mode"
+done
 
 for name in \
   AUDIT_CHAIN_HMAC_KEY FIELD_ENCRYPTION_KEY_CURRENT TOKEN_HMAC_KEY \
   SUPPLIER_IDENTIFIER_HMAC_KEY \
   IDENTITY_SERVICE_HMAC_KEY_CURRENT IDENTITY_ASSERTION_HMAC_KEY_CURRENT \
   PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT \
+  PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT \
   SESSION_COOKIE_KEY_CURRENT SUBMISSION_COOKIE_KEY_CURRENT; do
   base64_key "$name"
 done
@@ -652,6 +814,7 @@ enabled_json="$(enabled_connector_json "${enabled_connectors[@]}")" ||
   fail "enabled connector set could not be encoded"
 validate_source_license_bindings "$enabled_json"
 validate_source_license_evidence
+validate_r6e_runtime_role_contract
 validate_approved_record_class_schedules
 validate_privacy_request_access_policy
 

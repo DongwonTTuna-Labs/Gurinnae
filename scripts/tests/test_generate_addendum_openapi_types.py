@@ -289,6 +289,111 @@ class AddendumOpenApiR6dTypeTests(unittest.TestCase):
             expected_sort,
         )
 
+    def test_transparency_report_download_get_contract_is_closed(self) -> None:
+        operation = next(
+            row
+            for row in self.operations
+            if row["operation_id"] == "downloadTransparencyReport"
+        )
+        self.assertEqual(operation["method"], "GET")
+        self.assertEqual(
+            operation["path"],
+            "/v1/transparency-reports/{reportId}/download",
+        )
+
+        node, schemas, _ = self.operation_artifacts("downloadTransparencyReport")
+        parameters = {
+            parameter["name"]: parameter
+            for parameter in node["parameters"]
+        }
+        self.assertEqual(
+            parameters["reportId"],
+            {
+                "name": "reportId",
+                "in": "path",
+                "required": True,
+                "schema": {"type": "string", "format": "uuid"},
+            },
+        )
+        self.assertEqual(
+            parameters["format"],
+            {
+                "name": "format",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["JSON", "CSV"],
+                    "default": "JSON",
+                },
+            },
+        )
+        self.assertEqual(
+            node["responses"]["200"],
+            {
+                "description": "Successful response",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/TransparencyReportDownloadV1"
+                        }
+                    }
+                },
+            },
+        )
+        self.assertEqual(
+            node["x-error-codes"],
+            [
+                "INVALID_PARAMETER",
+                "RESOURCE_NOT_FOUND",
+                "PRECONDITION_FAILED",
+                "RATE_LIMITED",
+                "INTERNAL_ERROR",
+            ],
+        )
+        self.assertEqual(
+            {
+                status: response["x-error-codes"]
+                for status, response in node["responses"].items()
+                if status != "200"
+            },
+            {
+                "400": ["INVALID_PARAMETER"],
+                "404": ["RESOURCE_NOT_FOUND"],
+                "422": ["PRECONDITION_FAILED"],
+                "429": ["RATE_LIMITED"],
+                "500": ["INTERNAL_ERROR"],
+            },
+        )
+
+        response = schemas["TransparencyReportDownloadV1"]
+        self.assertFalse(response["additionalProperties"])
+        self.assertEqual(
+            response["required"],
+            [
+                "reportId",
+                "status",
+                "reportKind",
+                "revision",
+                "notice",
+                "filename",
+                "mediaType",
+                "byteLength",
+                "contentSha256",
+                "contentBase64",
+                "format",
+                "rowCount",
+                "sourceRevisionDigest",
+                "projectionDigest",
+                "publicContentDigest",
+                "generatedAt",
+            ],
+        )
+        self.assertEqual(
+            set(response["properties"]),
+            set(response["required"]),
+        )
+
     def test_r6d_command_receipt_operation_id_preserves_pattern(self) -> None:
         schemas: dict = {}
         add_contract_schema(

@@ -1,10 +1,23 @@
+#[derive(Clone, Copy)]
+struct WorkflowEventContext<'a> {
+    pool: &'a PgPool,
+    economics_pool: Option<&'a PgPool>,
+    store: &'a Store,
+    scanner: &'a ClamAvScanner,
+    field_keys: &'a EnvelopeKeyRing,
+    worker_id: &'a str,
+    producer_job: ProducerJobFence,
+}
+
 async fn handle_event(
     pool: &PgPool,
+    economics_pool: Option<&PgPool>,
     store: &Store,
     scanner: &ClamAvScanner,
     field_keys: &EnvelopeKeyRing,
+    worker_id: &str,
     job: &ClaimedJob,
-) -> Result<Value, Failure> {
+) -> Result<WorkflowJobCompletion, Failure> {
     if job.job_type != "EVENT_DELIVERY" {
         return Err(Failure::Terminal(
             "UNSUPPORTED_JOB_TYPE",
@@ -29,16 +42,26 @@ async fn handle_event(
         .and_then(Value::as_object)
         .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "payload is missing".to_owned()))?;
     if workflow_inbox_processed(pool, consumer_id, event_id).await? {
-        return Ok(json!({"deduplicated":true,"eventId":event_id}));
+        return Ok(WorkflowJobCompletion::WorkerOwned(
+            json!({"deduplicated":true,"eventId":event_id}),
+        ));
     }
-    let metrics = reconcile_event(
+    let context = WorkflowEventContext {
         pool,
+        economics_pool,
         store,
         scanner,
         field_keys,
-        job.id,
-        job.fence.lease_token,
-        job.fence.fencing_token,
+        worker_id,
+        producer_job: ProducerJobFence {
+            id: job.id,
+            lease_token: job.fence.lease_token,
+            fencing_token: job.fence.fencing_token,
+            lease_expires_at: job.lease_expires_at,
+        },
+    };
+    let completion = reconcile_event(
+        context,
         event_id,
         event_type,
         consumer_id,
@@ -46,9 +69,13 @@ async fn handle_event(
         payload,
     )
     .await?;
-    mark_workflow_inbox_processed(pool, consumer_id, event_id).await?;
-    tracing::info!(%event_id,event_type,"workflow event reconciled");
-    Ok(metrics)
+    if let WorkflowJobCompletion::WorkerOwned(metrics) = completion {
+        mark_workflow_inbox_processed(pool, consumer_id, event_id).await?;
+        tracing::info!(%event_id,event_type,"workflow event reconciled");
+        Ok(WorkflowJobCompletion::WorkerOwned(metrics))
+    } else {
+        Ok(WorkflowJobCompletion::OwnerTerminalized)
+    }
 }
 
 async fn workflow_inbox_processed(
@@ -72,19 +99,13 @@ async fn workflow_inbox_processed(
 }
 
 async fn reconcile_event(
-    pool: &PgPool,
-    store: &Store,
-    scanner: &ClamAvScanner,
-    field_keys: &EnvelopeKeyRing,
-    producer_job_id: Uuid,
-    producer_job_lease_token: Uuid,
-    producer_job_fencing_token: i64,
+    context: WorkflowEventContext<'_>,
     source_event_id: Uuid,
     event_type: &str,
     consumer_id: &str,
     aggregate_id: Uuid,
     payload: &serde_json::Map<String, Value>,
-) -> Result<Value, Failure> {
+) -> Result<WorkflowJobCompletion, Failure> {
     let metrics = if consumer_id == "action-execution-worker" {
         if event_type != "action.execution_authorized.v1" {
             return Err(Failure::Terminal(
@@ -92,16 +113,20 @@ async fn reconcile_event(
                 format!("{consumer_id}:{event_type}"),
             ));
         }
-        execute_approved_action(
-            pool,
-            field_keys,
-            producer_job_id,
-            producer_job_lease_token,
-            producer_job_fencing_token,
+        let action_context = ActionExecutionContext {
+            pool: context.pool,
+            economics_pool: context.economics_pool,
+            field_keys: context.field_keys,
+            worker_id: context.worker_id,
+            producer_job: context.producer_job,
+        };
+        return execute_approved_action(
+            action_context,
+            source_event_id,
             aggregate_id,
             payload,
         )
-        .await?
+        .await;
     } else if consumer_id == "response-submission-materializer" {
         if event_type != "workflow.response_submitted.v2" {
             return Err(Failure::Terminal(
@@ -109,49 +134,40 @@ async fn reconcile_event(
                 format!("{consumer_id}:{event_type}"),
             ));
         }
-        reconcile_response_submission_v2(pool, source_event_id, aggregate_id, payload).await?
+        reconcile_response_submission_v2(context.pool, source_event_id, aggregate_id, payload)
+            .await?
     } else if matches!(
         consumer_id,
         "response-request-materializer" | "response-clock-worker"
     ) {
-        reconcile_communication_delivery_receipt(pool, consumer_id, payload).await?
+        reconcile_communication_delivery_receipt(context.pool, consumer_id, payload).await?
     } else if is_party_name_correction_delegation_event(consumer_id, event_type) {
         reconcile_privacy_response_party_name_correction_delegation(
-            pool,
+            context.pool,
             source_event_id,
             aggregate_id,
             payload,
-            producer_job_id,
-            producer_job_lease_token,
-            producer_job_fencing_token,
+            context.producer_job.id,
+            context.producer_job.lease_token,
+            context.producer_job.fencing_token,
         )
         .await?
     } else if consumer_id != "workflow-worker" {
         reconcile_retention_consumer(consumer_id, event_type, aggregate_id, payload)?
     } else {
         reconcile_workflow_worker_event(
-            pool,
-            store,
-            scanner,
-            producer_job_id,
-            producer_job_lease_token,
-            producer_job_fencing_token,
+            context,
             event_type,
             aggregate_id,
             payload,
         )
         .await?
     };
-    Ok(metrics)
+    Ok(WorkflowJobCompletion::WorkerOwned(metrics))
 }
 
 async fn reconcile_workflow_worker_event(
-    pool: &PgPool,
-    store: &Store,
-    scanner: &ClamAvScanner,
-    producer_job_id: Uuid,
-    producer_job_lease_token: Uuid,
-    producer_job_fencing_token: i64,
+    context: WorkflowEventContext<'_>,
     event_type: &str,
     aggregate_id: Uuid,
     payload: &serde_json::Map<String, Value>,
@@ -159,25 +175,25 @@ async fn reconcile_workflow_worker_event(
     match event_type {
         "action.execution_completed.v1" => {
             reconcile_hypothesis_execution_completed(
-                pool,
+                context.pool,
                 payload,
-                producer_job_id,
-                producer_job_lease_token,
-                producer_job_fencing_token,
+                context.producer_job.id,
+                context.producer_job.lease_token,
+                context.producer_job.fencing_token,
             )
             .await
         }
         "agent.run_completed.v1" => {
-            let agent_run = reconcile_agent_run(pool, payload).await?;
+            let agent_run = reconcile_agent_run(context.pool, payload).await?;
             match agent_run.contract_version {
                 AgentRunContractVersion::V1 => Ok(agent_run.metrics),
                 AgentRunContractVersion::V2 => {
                     let recursion = reconcile_hypothesis_recursion_stage_completed(
-                        pool,
+                        context.pool,
                         payload,
-                        producer_job_id,
-                        producer_job_lease_token,
-                        producer_job_fencing_token,
+                        context.producer_job.id,
+                        context.producer_job.lease_token,
+                        context.producer_job.fencing_token,
                     )
                     .await?;
                     Ok(json!({"agentRun":agent_run.metrics,"hypothesisRecursion":recursion}))
@@ -185,17 +201,37 @@ async fn reconcile_workflow_worker_event(
             }
         }
         "attachment.correction_scan_requested.v1" => {
-            scan_attachment(pool, store, scanner, "CORRECTION", aggregate_id).await
+            scan_attachment(
+                context.pool,
+                context.store,
+                context.scanner,
+                "CORRECTION",
+                aggregate_id,
+            )
+            .await
         }
         "attachment.response_scan_requested.v1" => {
-            scan_attachment(pool, store, scanner, "RESPONSE", aggregate_id).await
+            scan_attachment(
+                context.pool,
+                context.store,
+                context.scanner,
+                "RESPONSE",
+                aggregate_id,
+            )
+            .await
         }
-        "audit.export_requested.v1" => export_audit(pool, store, aggregate_id).await,
+        "audit.export_requested.v1" => {
+            export_audit(context.pool, context.store, aggregate_id).await
+        }
         "detection.signal_created.v1" => {
-            reconcile_signal_created(pool, payload, producer_job_id).await
+            reconcile_signal_created(context.pool, payload, context.producer_job.id).await
         }
-        "export.dataset_requested.v1" => export_dataset(pool, store, aggregate_id).await,
-        "source.schema_drift_detected.v1" => reconcile_schema_drift(pool, payload).await,
+        "export.dataset_requested.v1" => {
+            export_dataset(context.pool, context.store, aggregate_id).await
+        }
+        "source.schema_drift_detected.v1" => {
+            reconcile_schema_drift(context.pool, payload).await
+        }
         _ => Err(Failure::Terminal(
             "UNSUPPORTED_EVENT_TYPE",
             event_type.to_owned(),
@@ -515,61 +551,5 @@ async fn reconcile_agent_run(
 }
 
 #[cfg(test)]
-mod agent_run_contract_version_tests {
-    use super::{
-        AgentRunContractVersion, AgentRunReconciliationPath, Failure, agent_run_metrics,
-        agent_run_reconciliation_path,
-    };
-    use uuid::Uuid;
-
-    #[test]
-    fn only_v2_requires_the_recursion_owner() {
-        assert!(matches!(
-            AgentRunContractVersion::try_from(1),
-            Ok(AgentRunContractVersion::V1)
-        ));
-        assert!(matches!(
-            AgentRunContractVersion::try_from(2),
-            Ok(AgentRunContractVersion::V2)
-        ));
-        for invalid in [0, 3] {
-            let error = AgentRunContractVersion::try_from(invalid)
-                .expect_err("unknown agent-run contract version must fail closed");
-            assert!(matches!(error, Failure::Terminal(_, _)));
-        }
-    }
-
-    #[test]
-    fn v1_preserves_legacy_non_success_and_metrics_contract() {
-        for status in ["FAILED", "CANCELLED", "BUDGET_BLOCKED"] {
-            let error = agent_run_reconciliation_path(AgentRunContractVersion::V1, status, None)
-                .expect_err("legacy non-success must remain terminal");
-            assert!(matches!(
-                error,
-                Failure::Terminal("AGENT_RUN_NOT_SUCCEEDED", _)
-            ));
-        }
-        let path =
-            agent_run_reconciliation_path(AgentRunContractVersion::V1, "SUCCEEDED", Some("FAILED"))
-                .expect("legacy code did not trust the event status field");
-        let metrics = agent_run_metrics(path, Uuid::from_u128(1), "SUCCEEDED", 2);
-        assert_eq!(metrics.as_object().map(|object| object.len()), Some(2));
-        assert!(metrics.get("status").is_none());
-    }
-
-    #[test]
-    fn v2_requires_exact_event_status_and_forwards_terminal_states() {
-        assert!(
-            agent_run_reconciliation_path(AgentRunContractVersion::V2, "SUCCEEDED", None).is_err()
-        );
-        assert!(
-            agent_run_reconciliation_path(AgentRunContractVersion::V2, "SUCCEEDED", Some("FAILED"))
-                .is_err()
-        );
-        assert_eq!(
-            agent_run_reconciliation_path(AgentRunContractVersion::V2, "FAILED", Some("FAILED"))
-                .expect("v2 terminal owner path"),
-            AgentRunReconciliationPath::V2Terminal
-        );
-    }
-}
+#[path = "workflow_event_contract_version_tests.rs"]
+mod agent_run_contract_version_tests;

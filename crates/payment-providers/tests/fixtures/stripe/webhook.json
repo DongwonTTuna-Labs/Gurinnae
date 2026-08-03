@@ -1,0 +1,1 @@
+{"id":"stripe-event-test","type":"payment_intent.succeeded","data":{"object":{"id":"stripe-payment-test"}}}

@@ -61,6 +61,29 @@ fn response_materialized_v2_is_accepted_by_its_two_projection_consumers() {
 }
 
 #[test]
+fn funding_disclosure_publication_has_distinct_public_and_audit_deliveries() {
+    assert!(addendum_event_is_accepted(
+        "audit-indexer",
+        "governance.funding_disclosure_published.v1"
+    ));
+    for consumer in [
+        "public-projection-worker",
+        "projection-worker",
+        "cost-projector",
+        "submission-projector",
+    ] {
+        assert!(!addendum_event_is_accepted(
+            consumer,
+            "governance.funding_disclosure_published.v1"
+        ));
+    }
+    assert!(!addendum_event_is_accepted(
+        "audit-indexer",
+        "governance.funding_disclosure_publish_requested.v1"
+    ));
+}
+
+#[test]
 fn verified_revision_payload_preserves_frozen_evidence_metadata() {
     let revision_id = Uuid::from_u128(1);
     let payload = json!({

@@ -1,23 +1,207 @@
 schema_version: 1
-specification_version: 13.1.0-business-model-r3
-contract_version: 2026-07-15.business-model.r3
-decision_revision: 2
+specification_version: 13.1.0-business-model-r6e
+contract_version: 2026-08-02.business-model.r6e
+decision_revision: 3
 status: REVIEW_REQUIRED
 authority:
   archive: gurine-codex-authority-pack-v13.0.0-20260712.zip
   sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
   rule: This contract closes the business-model decisions left implicit by the pinned v13 authority; retired packs and unrelated Gurinnae material are not inputs.
 
+supervisor_decision_v1:
+  decision_id: R6E_SUPERVISOR_DECISION_V1
+  authority_label: 감독자 결정 v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  decision_revision: 1
+  status: APPROVED_AS_RECOMMENDED
+  provenance:
+    approval_path: .fable-sol/r6e-authority-approval.md
+    approval_sha256: a73ccb4da942c32b70ac7056dfe2d65b6c5595beb3e64e22999b07eb0f939f47
+    recommendation_record: .fable-sol/run-r6e.log lines 15-104
+  revision_policy:
+    ordinary_revision_forbidden: true
+    only_allowed_round: a later pre-production review jointly owned by the designated legal and finance owners
+    update_shape: a new explicit supervisor decision revision that preserves the prior decision as provenance; silent reinterpretation or partial package substitution is forbidden
+  approved_packages_ordered_exactly:
+    - ordinal: 1
+      package_id: ECO-AUTHORITY-V1
+      approval: APPROVED_AS_RECOMMENDED
+      economics_import_target:
+        expected_version_value: null
+        sentinel_one_forbidden: true
+        narrow_schema_exception: Only ECONOMICS_IMPORT may use the nullable action_proposals and ApprovalBinding target-version branch; every other action kind keeps its positive-version rule.
+      commercial_contract_offer_parent:
+        schema_version_value: 1
+        schema_version_json_type: number
+      first_tariff_bootstrap:
+        cardinality: one-shot
+        stage: PILOT
+        required_margin_bps: 6000
+        prerequisites_ordered_exactly:
+          - tariff and commercial-contract history for the same deployment and SKU is zero
+          - current GA READY count is zero
+          - one approved complete and current cost close is locked and digest-equal
+          - the approved detail binds the intended first contract and qualification tuple plus both validity periods
+        later_contract_fence: The later commercial-contract import must exactly match the approved bootstrap tuple or fail with write zero.
+      low_margin_branch:
+        applies_to: [tariff, discount]
+        sqlstate: "55000"
+        writes: 0
+        exception_authority: UNAVAILABLE
+      approved_operation_identity_rule: Usage successor receipt and fact IDs plus every invoice, header, line, membership, revenue, cash, tax, and correction child ID are explicit approved operation bytes; PostgreSQL must not invent hidden random identities.
+      invoice_adjustment_rule: An adjustment may reference only an earlier non-adjustment line in the same approved invoice array; cross-invoice, adjustment-to-adjustment, cyclic, forward, or missing references are rejected with write zero.
+      digest_abi:
+        name: GURINE_LENGTH_PREFIXED_UTF8_V1
+        scope: economics, usage, invoice, revenue, cash, tax-invoice and accounting-correction records; funding digests are explicitly excluded
+        framing: unsigned u64 big-endian byte length frames domain, schema version, type tag, and value separately
+        scalar_rules: explicit NULL; fixed-six decimal; lowercase UUID and SHA-256; UTC timestamp with exactly six fractional digits; arrays include an explicit member count
+        preimage_rule: Preserve declared field order and include every immutable business column except the self digest and created_at or updated_at timestamps.
+        verification: PostgreSQL and Rust golden vectors plus one-byte mutation rejection are mandatory.
+    - ordinal: 2
+      package_id: PAID-EVIDENCE-V2-AUTHORITY
+      approval: APPROVED_AS_RECOMMENDED
+      v1_preservation: Migration 0029 V1 bytes and relations are immutable and must not be reinterpreted.
+      migration_fence: Any existing paid packet, member, or outcome row stops migration; no backfill is allowed.
+      member_digest_order:
+        - Compute each V2 member leaf without the global member-set digest in its preimage.
+        - Compute the global member-set digest from leaves in ordinal order.
+        - Store the category-local digest separately as categoryDigest.
+      review_snapshot_extension: Add the twelve review-snapshot fields declared by 0028 forward-only and enforce zero-or-all presence.
+      outcome_packet_fks: Both directions use MATCH FULL DEFERRABLE INITIALLY DEFERRED.
+      terminal_binding: Bind the existing four VerifiedWorkflowProofV1 milestones, terminal receipt, policy, formula, timezone, and effective-until evidence.
+      subject_hmac:
+        domain: PAID_OUTCOME_SUBJECT_HMAC_V2
+        keyring: independent current and previous versions
+        forbidden_reuse: payment, webhook, public-web, assertion, or any other key domain
+        injection: TEST_FIXTURE only
+    - ordinal: 3
+      package_id: PAYMENT-TEST-V1
+      approval: APPROVED_AS_RECOMMENDED
+      runtime_mode:
+        default: DISABLED
+        production: DISABLED
+        only_non_disabled_mode: TEST_ONLY
+        source_live_credentials: 0
+      keyrings_ordered_exactly:
+        - name: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY
+          current_key: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT
+          current_version: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION
+          previous_key: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS
+          previous_version: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION
+        - name: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY
+          current_key: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT
+          current_version: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION
+          previous_key: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS
+          previous_version: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION
+      key_rule: Current issues new values; the persisted opaque key version selects current or previous. Webhook assertion and public-web keys cannot be reused or used as derivation inputs.
+      missing_billing_material_rule: Missing in-memory billing material after restart fails closed; automatic recovery, replacement, recharge, or resubmission is forbidden.
+      recurring_schedule_policy_b:
+        anchor: first_charge_at UTC monthly anchor with non-drifting month-end clamp
+        eligible_window: current UTC month only; catch-up and backcharge are forbidden
+        occurrence_identity: [schedule_id, schedule_version, scheduledFor]
+        occurrence_uniqueness: permanent
+        later_month_blockers: [PENDING, ACCEPTED, RECONCILIATION_REQUIRED]
+        next_month_release_authorities: [DEFINITIVE_PRE_DISPATCH_REJECTION, FETCH_CONFIRMED_SUCCESS, FETCH_CONFIRMED_REFUND, FETCH_CONFIRMED_FAILURE]
+        same_occurrence_resubmission_writes: 0
+        scheduler_effect_exactly: insert one DONATION_CHARGE job
+        direct_effects_forbidden: [payment, contract, entitlement, public_access]
+      payment_review:
+        exact_request_field: reviewAssigneeUserId
+        applies_to: [TEST_ONLY donation intent, recordCollectionFailure]
+        digest_binding: request, immutable detail and receipt
+        topic: PAYMENT_REVIEW_V1
+        source_kinds_exactly: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE]
+        authorization_gate: one active internal subject, one current authorization, exactly one endpoint and evaluator, and a source-bound deployment must all match
+        mismatch_effect: SQLSTATE 55000 and write zero
+        due_at: occurredAt plus exactly 24 hours
+        reconciliation_required_effect: no task, notification, or automatic retry
+        forbidden_effects: [external_dunning, automatic_entitlement_change, automatic_contract_change, automatic_public_access_change]
+        fixture_identity_rule: Test UUIDs and digests may be created only as TEST_FIXTURE data in an ephemeral test database; they have no production or accounting authority.
+    - ordinal: 4
+      package_id: GFD-AUTHORITY-V1
+      approval: APPROVED_AS_RECOMMENDED
+      review_slots_ordered_exactly:
+        - {ordinal: 1, slot_id: funding_preparer, capability: funding.manage, allowed_roles: [EXECUTIVE_APPROVER, OPERATIONS], conditional: false}
+        - {ordinal: 2, slot_id: funding_publisher, capability: funding.publish, allowed_roles: [EXECUTIVE_APPROVER], conditional: false}
+        - {ordinal: 3, slot_id: oversight_reviewer, capability: review.legal, allowed_roles: [LEGAL_REVIEWER], conditional_on: requires_oversight_review}
+        - {ordinal: 4, slot_id: board_approver, capability: funding.publish, allowed_roles: [EXECUTIVE_APPROVER], conditional_on: requires_board_approval}
+      slot_rule: Every counted slot also requires actions.review and STEP_UP; counted actors are pairwise distinct, and VACANT never satisfies quorum. Conditional slots exist only when their exact boolean is true.
+      related_case_prerequisite: Every distinct related case has one current existing PUBLICATION.independent_editorial APPROVE with review.editorial, role EDITOR or PUBLISHER, actions.review and STEP_UP.
+      target_revision: Candidate revision N is 1 for the first publication and locked head plus 1 thereafter; zero sentinel is forbidden.
+      publisher:
+        service: workflow-worker
+        database_principal: gurine_workflow_worker
+        function: editorial.publish_funding_disclosure_v1
+        function_owner: gurine_migrator
+        direct_table_dml: 0
+      digest_abi:
+        name: GURINE_CANONICAL_JSON_V1
+        object_shape: closed exact keyset
+        scalar_rules: fixed-six decimal strings, UTC timestamps with exactly six fractional digits, explicit null
+        public_content_rule: includes each stored entryDigest
+        revision_preimage_rule: excludes receiptDigest
+        computation_order: entry and set digests, then revisionDigest, then receiptDigest, then event and response digests
+        counted_decision_tuple_order: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+      published_event_rule: governance.funding_disclosure_published.v1 requires revision and prior revision, period, snapshot, policy, conflict, concentration, conditional gates, entry and public-content digests, proposal, execution, approval, counted decisions, related-case reviews, publisher, effective and published timestamps, and receipt digest.
+      implementation_hold:
+        affected_operations_exactly: [createActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision]
+        database_error: {sqlstate: "55000", message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, writes: 0}
+        external_error: {code: INTERNAL_ERROR, http_status: 500}
+        release_rule: Approval alone does not remove the hold; every authority, ACL, digest, event and test obligation must first be implemented and verified.
+  narrowing_directives_ordered_exactly:
+    - id: R6E-NARROW-001
+      rule: The four package values and rules are 감독자 결정 v1 and may be revised only by the later pre-production legal and finance owner review described above.
+    - id: R6E-NARROW-002
+      rule: Low-margin tariff and discount exception branches remain exact SQLSTATE 55000 with write zero until separate oversight authority exists.
+    - id: R6E-NARROW-003
+      exact_public_copy: 후원은 접근권이 아니며 조사 대상 면제가 아닙니다
+      rule: Existing funding-name, amount-band and concentration-band disclosure policy remains unchanged; no threshold or amount is invented by R6e.
+      concentration_bands_ordered_exactly: [UNKNOWN, LE_5_PERCENT, GT_5_TO_15_PERCENT, GT_15_TO_25_PERCENT, GT_25_PERCENT]
+      identity_disclosure_modes_ordered_exactly: [NAMED, CATEGORY_ONLY, WITHHELD_LEGAL]
+      amount_band_rule: amount_band_lower and amount_band_upper come only from the exact approval-bound funding snapshot and policy; missing authority remains UNKNOWN and no numeric band is defaulted.
+    - id: R6E-NARROW-004
+      rule: TEST_ONLY, default and production DISABLED, and absence of live credentials in source are mandatory negative-test assertions.
+    - id: R6E-NARROW-005
+      rule: Payment failure or authoritative-fetch mismatch never automatically changes entitlement, contract, or public access; negative tests are mandatory.
+    - id: R6E-NARROW-006
+      rule: SPEC-CONFLICT-034 and its 0030 precedent remain record-only and untouched in R6e.
+  unresolved_canonical_delta_gates:
+    status: OPEN_FAIL_CLOSED
+    completion_effect: The approved policy packages remain binding, but the normative authority source cannot be declared frozen and no migration, owner ABI, marker, generated artifact, fixture or runtime may claim FINAL from this decision alone.
+    gates_ordered_exactly:
+      - id: ECO-PER-DIGEST-REGISTRY
+        gap: GURINE_LENGTH_PREFIXED_UTF8_V1 framing is approved, but the exact per-digest domain, schema-version, type-tag, immutable field-order and nullable/array preimage registry for every economics, usage, invoice, revenue, cash, tax and correction digest is not decision-complete.
+        closure: one canonical typed registry set-equal across product contracts, PostgreSQL and Rust, with golden vectors and one-byte mutations, followed by an additional supervisor approval
+      - id: PAID-V2-PHYSICAL-PROOF-SCHEMA
+        gap: V2 ordering and isolation rules are approved, but the exact twelve-field review-snapshot delta, V2 physical payload/record schemas, candidate keys, bidirectional FK columns and four-milestone terminal proof bytes are not decision-complete.
+        closure: exact forward-only physical and proof schemas plus no-existing-row migration fence, independently reviewed and additionally approved before implementation
+      - id: PAYMENT-REVIEW-COMMUNICATION-AUTHORITY
+        gap: reviewAssigneeUserId, 24-hour due time and exact-one authorization policy are approved, but the exact internal communication subject, authorization, endpoint/evaluator candidate keys, source-deployment binding, owner function and receipt ABI are not decision-complete.
+        closure: one closed typed communication-authority and receipt contract with zero/multiple/mismatch write-zero cases, independently reviewed and additionally approved before implementation
+      - id: GFD-CANONICAL-OWNER-ABI
+        gap: GFD quorum, publisher ownership and digest ordering are approved, but the exact typed approval-detail source, lossless owner loader, publish argument/result ABI, lock order, 43-field event bytes and activation matrix are not decision-complete.
+        closure: one closed typed GFD owner-ABI canonical delta that derives business values only from locked approval-bound database authority, independently reviewed and additionally approved before implementation
+    fail_closed_latches:
+      - Low-margin tariff and discount branches remain SQLSTATE 55000 with write zero.
+      - Production payment remains DISABLED and contains no live credential.
+      - FUNDING_DISCLOSURE six-operation authority-unavailable mapping remains SQLSTATE 55000 and INTERNAL_ERROR/500.
+      - No implementation may infer missing fields, identifiers, digests, candidate keys, or owner ABI from current runtime source.
+
 scope:
   sku: EVIDENCE_WORKSPACE_ORGANIZATION_V1
   deployment: one isolated organization per physical deployment
   reporting_currency: KRW
   accounting_timezone: deployment-bound IANA timezone; Asia/Seoul is the first deployment default
-  commercial_ui: existing review-console screens only
+  commercial_ui: existing review-console screens only; PUB-035 is a separate public fundraising screen and is not a commercial SKU surface
   no_new_surface: true
+  no_new_surface_scope: No fourth product surface is created; PUB-035 at /donate is one route inside the existing public-web surface, not a new surface.
+  no_new_commercial_surface: true
   no_self_service_checkout: true
   no_payment_api: true
-  contracting_and_cash_collection: signed external operating records imported through typed, audited boundaries
+  no_payment_api_scope: This frozen sentinel forbids B2B checkout, card billing, payment execution, receivable mutation, and tax-remittance APIs; the TEST_ONLY donation funding boundary is separate and grants no SKU, contract, or entitlement.
+  no_commercial_payment_api: true
+  contracting_and_cash_collection: V1 B2B offers only a signed written contract, externally issued electronic tax-invoice acknowledgement, and bank-transfer collection. Cash application accepts signed typed external BANK_TRANSFER or PG_SETTLEMENT evidence with an exact invoice fence, but PG_SETTLEMENT is accounting import only and creates no checkout, card billing, live PG, live ASP, receivable ledger, payment execution, SKU, or entitlement.
+  public_fundraising_surface: {screen_id: PUB-035, route: /donate, boundary: TEST_ONLY}
 
 business_thesis:
   customer: Korean investigative newsrooms and public-interest research organizations with 3-20 recurring procurement investigators
@@ -39,10 +223,11 @@ business_thesis:
     - public readers and subscribers
     - response subjects, suppliers, agencies, witnesses, and people appearing in source data
     - sources, correction requesters, appellants, and privacy-rights requesters
+    - individual donors
   non_participant_rule: Non-participants are never leads, billable units, advertising audiences, cross-session profiles, or product-training inputs; their access and rights do not depend on a customer contract.
   deferred_segments:
     - multi-tenant SaaS
-    - self-service checkout and card billing
+    - B2B self-service checkout and card billing
     - public-agency internal audit product
     - general corporate compliance product
     - commercial ranking, due-diligence scoring, or automated wrongdoing claims
@@ -163,8 +348,9 @@ value_delivery:
 commercial_trust_firewall:
   invariants:
     - Payment never changes detection thresholds, source priority, case priority, factual wording, publication timing, response opportunity, correction priority, or evidence and approval gates.
+    - Donation never changes investigation, source, publication, correction, response, appeal, privacy, accessibility, or public-access priority, and a donor receives no investigation exemption or special treatment.
     - Customer data never enters public editorial work, model training, cross-deployment analysis, fundraising, or another customer deployment.
-    - Billing, customer, contract, invoice, acquisition, and funder identity is unavailable to public, submission, detection, and editorial-priority paths.
+    - Billing, customer, contract, invoice, acquisition, raw donor, payment-method, provider-customer, and settlement identity is unavailable to public, submission, detection, and editorial-priority paths. Only an independently approved funding-disclosure projection may publish policy-permitted funding categories, names, amount bands, and concentration bands.
     - Customer output is labelled as customer-controlled work and is not an official Gurinnae finding.
     - A related public case requires disclosure, recusal, independent review, and the ordinary publication gate; no commercial receipt satisfies an editorial gate.
     - Cost or margin failure changes price, quota, efficiency, support, or sale decisions only; it never weakens evidence, privacy, rights, correction, response, accessibility, or approval behavior.
@@ -196,6 +382,185 @@ free_public_access_policy:
     - Contract expiry, suspension, quota exhaustion, invoice failure, churn, or a commercial hard stop may block private processing and delivery only; it cannot remove, truncate, delay, or make less verifiable any free_public_access_policy.free_forever member.
     - Free public access is not a trial tier, acquisition discount, metered preview, or paid-workspace entitlement. Paid workspace value is private repeated workflow execution and accountable receipts, never exclusive factual completeness.
     - The same source object may participate in both boundaries only through separately authorized projections with distinct scope and evidence digests; customer identity and private work never enter the public projection.
+    - Donation success, failure, cancellation, refund, test-adapter state, or provider outage changes no free_public_access_policy.free_forever member and grants no access entitlement.
+
+donation_funding_boundary:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_packages: [PAYMENT-TEST-V1, GFD-AUTHORITY-V1]
+  authority_directive: R6E-NARROW-003
+  scope: public fundraising only; never EVIDENCE_WORKSPACE_ORGANIZATION_V1, a customer contract, a billable meter, payment entitlement, paid-workspace value, or a commercial payment API
+  runtime_mode: TEST_ONLY
+  provider_rule: Toss, Kakao, and Stripe adapters are deterministic fixture adapters only; live PG credentials, endpoints, captures, refunds, and payment-success claims are forbidden
+  tier_rule: No reviewed production donation-tier authority exists in R6e, so every production tier and donation action is UNAVAILABLE; no price, benefit, or payment success may be invented
+  fact_rule: A donation fact never creates an invoice, revenue, cash application, contract, SKU, capability, entitlement, product-value, investigation-priority, or editorial-priority fact
+  public_projection_rule: Only an independently approved aggregate funding-disclosure projection may become public; raw donor, provider, method, charge, webhook, or payment identity never crosses the public boundary
+  free_access_rule: Donation state cannot remove, delay, meter, prioritize, truncate, or weaken any free fact, public API/export, basic verified subscription, response, correction, appeal, privacy, accessibility, or unsubscribe path
+  required_public_copy: 후원은 접근권이 아니며 조사 대상 면제가 아닙니다
+  donation_screen:
+    id: PUB-035
+    route: /donate
+    surface: public-web
+    production_state_without_authority: UNAVAILABLE
+    contact_fallback: PUB-026 at /contact
+    forbidden: [fabricated price, fabricated tier, fabricated payment success, enabled live checkout, SKU benefit, entitlement benefit]
+  funding_report_download:
+    screen: PUB-023
+    operation_id: downloadTransparencyReport
+    method_and_path: GET /v1/transparency-reports/{reportId}/download
+    public_operation_delta: 1
+    authority: exact current approved public funding-disclosure revision, revision digest, and public content digest
+    forbidden: [private donation fact, raw donor identity, provider payload, fabricated report, unavailable-link placeholder]
+
+economics_import_runtime_contract:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_package: ECO-AUTHORITY-V1
+  action_kind: ECONOMICS_IMPORT
+  import_kind_count_exactly: 11
+  import_kinds_exactly:
+    - recordCommercialQualification
+    - importCostAllocationClose
+    - createTariffVersion
+    - recordCommercialContractPeriod
+    - recordUsageWindow
+    - recordInvoice
+    - recordRevenue
+    - recordAccountingCorrection
+    - recordCashApplication
+    - recordTaxInvoiceIssuance
+    - recordCollectionFailure
+  typed_detail:
+    relation: ops.action_approval_economics_import_details
+    completeness: The immutable detail stores the complete closed discriminator payload and every typed target field, source-evidence ID/digest binding, policy digest, as-of instant, and prior-version fence needed for execution; a digest-only target, arbitrary relation name, free-form map, or caller-supplied governance field is invalid.
+    canonicalization: PostgreSQL validates the typed payload, derives canonical UTF-8 bytes and every detail/operation/source-set digest, and equality-checks flattened columns before approval or execution.
+    evidence_rule: Every price, amount, state, and external acknowledgement must come from the signed typed evidence bound by the detail; missing evidence is UNKNOWN or rejection and is never defaulted or invented.
+  governance:
+    proposer_capabilities_exactly: [actions.propose, budgets.manage]
+    reviewer_capabilities_exactly: [actions.review, budgets.manage]
+    assurance: STEP_UP
+    separation_of_duty: proposer actor differs from every counted approving actor and is excluded from the counted review assignment
+    path: ActionProposal plus immutable typed detail -> independent counted ActionDecision -> exact ExecutionAuthorization -> private.ExecuteEconomicsImport
+    executor: private.ExecuteEconomicsImport
+    effect_owner_and_caller: workflow-worker.economics-import-executor
+    database_principal: gurine_economics_importer through a dedicated DB pool and credential that no billing-gateway or other runtime module may reuse
+    billing_gateway_boundary: billing-gateway is payment-only and cannot propose, review, execute, import, or directly mutate economics relations
+  owner_relation_mapping_exactly_24:
+    signed_economics_import_owner:
+      - ops.fx_rate_facts
+      - ops.acquisition_source_receipts
+      - ops.cost_allocations
+      - ops.tariff_versions
+      - ops.commercial_contract_periods
+      - ops.usage_window_receipts
+      - ops.usage_facts
+      - ops.discount_decisions
+      - ops.invoice_facts
+      - ops.invoice_line_facts
+      - ops.invoice_usage_memberships
+      - ops.revenue_facts
+      - ops.accounting_corrections
+      - ops.commercial_qualification_receipts
+      - ops.offer_profile_capabilities
+    product_runtime_owner: [ops.product_events, ops.outcome_facts, ops.sku_readiness_evaluations, ops.sku_readiness_items, ops.paid_evidence_packets, ops.paid_evidence_packet_members]
+    funding_governance_owner: [ops.funding_concentration_snapshots, editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries]
+    rule: The set above has exactly 24 relations. Each relation has one exact typed owner function and allowlisted caller; generic relation-name dispatch, dynamic SQL, generic JSON CRUD, and runtime-role table DML are forbidden.
+  legacy_execute_side_door:
+    revoked_from_runtime_roles_exactly: [ops.record_commercial_qualification_receipt_v1, ops.record_revenue_fact_v1, ops.record_invoice_fact_v1, ops.record_invoice_line_fact_v1, ops.record_usage_fact_v1, ops.record_invoice_usage_membership_v1, ops.record_accounting_correction_v1, ops.record_outcome_fact_v1, ops.record_paid_evidence_packet_v1]
+    rule: Legacy helpers may remain private implementation details, but every runtime EXECUTE grant that bypasses proposal, independent decision, execution authorization, typed detail, or owner-function validation is revoked.
+
+cost_close_bootstrap_contract:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_package: ECO-AUTHORITY-V1
+  source: importCostAllocationClose accepts only a manual signed typed cost import under economics_import_runtime_contract; scraped estimates, inferred zero cost, and caller-authored digest placeholders are forbidden.
+  database_derivation: PostgreSQL resolves the complete period and line set, source/category/FX/correction membership, expected and captured counts, coverage ratios, allocation totals, and canonical row/allocation/close digests from locked typed evidence.
+  tariff_fence: createTariffVersion is rejected unless the exact bound cost-allocation head is closed, complete, eligible, current, and digest-equal; absent, partial, UNKNOWN, unclosed, or stale cost evidence never becomes zero and cannot authorize a tariff.
+  test_fixture: A deterministic cost fixture is allowed only in an ephemeral test database with authority TEST_FIXTURE; it has no production readiness, price, tariff, margin, or accounting authority.
+
+cash_and_tax_runtime_contract:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_package: ECO-AUTHORITY-V1
+  governance: recordCashApplication and recordTaxInvoiceIssuance use the same typed detail, STEP_UP, independent review, exact invoice-version/digest fence, and private.ExecuteEconomicsImport path as every economics import.
+  cash_source_kinds_exactly:
+    BANK_TRANSFER: signed typed external bank-transfer settlement evidence bound to the exact immutable invoice ID, version, record digest, and reconciliation digest
+    PG_SETTLEMENT: signed typed external PG_SETTLEMENT_IMPORT accounting evidence bound to the same exact invoice fence; Gurinnae does not initiate, capture, fetch, or settle the provider payment
+  cash_rule: Both source kinds may create or reverse an ops.cash_application_facts head. Invoice existence, provider state without the signed import, elapsed time, and missing cash evidence cannot synthesize cash or receivable state; donation facts, donation attempts, and donation provider evidence can never be applied to a commercial invoice.
+  tax_invoice: Only a signed external electronic tax-invoice acknowledgement may create or replace an ops.tax_invoice_issuance_receipts head. Confirmed issuance or cancellation requires the exact approval-number HMAC and external ASP receipt digest; missing evidence remains UNKNOWN.
+  external_runtime: Gurinnae performs no bank transfer, cash collection, PG charge or settlement, live provider fetch, live ASP call, tax remittance, receivable mutation, checkout, card charge, or B2B payment execution.
+  independence: Cash and tax-invoice facts are append-only authorities separate from contract, invoice correctness, revenue, paid value, entitlement, and public access; each correction binds the exact predecessor and source signature.
+
+donation_payment_contract:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_package: PAYMENT-TEST-V1
+  runtime_modes: {default: DISABLED, allowed_exactly: [DISABLED, TEST_ONLY], production: DISABLED}
+  production_availability: UNAVAILABLE
+  provider_interface:
+    name: PaymentProvider
+    methods_exactly: [capabilities, issue_billing_key, charge, refund, verify_webhook, fetch_payment]
+    scheduling: MERCHANT_SCHEDULED
+    adapters: [TOSS_PAYMENTS_TEST_FIXTURE, KAKAO_PAY_TEST_FIXTURE, STRIPE_TEST_FIXTURE]
+    test_fixture_webhook_ingress: TEST_ONLY permits only authenticated deterministic fixture webhook traffic on the internal billing-gateway ingress in the test environment.
+    live_public_provider_webhook_ingress: DISABLED; no live or publicly reachable provider webhook endpoint, credential, charge, refund, or production success claim exists in R6e.
+    live_rule: TEST_ONLY internal fixture ingress never authorizes a live/public provider ingress and every non-test configuration fails closed as DISABLED.
+  truth_rule: verify_webhook returns only an authenticated routing hint. Only fetch_payment is provider-payment truth, and only a fetched terminal confirmed result may append a donation fact; pending, failed, ambiguous, or unreconciled observations never become success.
+  idempotency: Persist the exact request digest and provider idempotency-key HMAC before a provider attempt. Same identity and request returns the stored result, changed input conflicts, and ambiguous send state requires authoritative fetch reconciliation without automatic resubmission.
+  secret_boundary: Raw billing keys, authorization tokens, webhook bodies/signatures, provider customer identity, and payment-method secrets remain outside PostgreSQL, logs, errors, Debug, audit, and events; only a version-pinned opaque secret reference, domain-separated HMACs, and non-replayable digests may persist.
+  authority_rule: No reviewed production donation tier exists, so production remains UNAVAILABLE and no amount, tier, benefit, entitlement, or payment success is invented.
+  required_negative_tests:
+    - default mode and production mode are DISABLED and source contains no live credential or default secret
+    - a fetch mismatch, failed charge, refund, provider outage, or missing post-restart billing material changes no entitlement, commercial contract, or public access
+    - the scheduler inserts at most one DONATION_CHARGE job per occurrence and never performs payment or catch-up itself
+  fixture_identity_rule: Test UUIDs and digests may be created only as TEST_FIXTURE data in an ephemeral test database; they cannot be loaded, inferred, or treated as production, billing, funding, or accounting authority.
+
+dunning_contract:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_package: PAYMENT-TEST-V1
+  trigger_authorities_exactly:
+    PROVIDER_FETCH_CONFIRMED: explicit signed provider failure evidence confirmed by authoritative fetch and bound to the exact payment attempt context
+    BANK_RETURN_CONFIRMED: exact signed external collection-failure evidence with the immutable invoice ID, version, record digest, and reconciliation digest
+  trigger_rule: recordCollectionFailure accepts exactly one trigger authority above; absence, elapsed time, missing cash application, missing webhook, an initial charge response, and inferred overdue state are never failure authority.
+  automatic_effect_exactly: create one operator-visible review task and notification receipt
+  automatic_effects_forbidden: [commercial contract mutation, capability mutation, entitlement mutation, invoice mutation, revenue mutation, public-access mutation, publication mutation, investigation-priority mutation]
+  private_contract_change: Suspension, ending, or cancellation requires a separate human-approved recordCommercialContractPeriod REPLACEMENT with exact predecessor version/digest, STEP_UP, independent counted review, and ordinary execution authorization; dunning never invokes it automatically.
+
+funding_projection_runtime_contract:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_package: GFD-AUTHORITY-V1
+  authority_directive: R6E-NARROW-003
+  source: Only a current donation-fact head backed by an authoritative fetched confirmed payment or refund may enter funding aggregation; payment method, attempt, webhook hint, failed/pending state, and raw identity are excluded.
+  ordered_path: ops.donation_facts -> candidate ops.funding_concentration_snapshots -> independent FUNDING_DISCLOSURE proposal/review/execution -> editorial.funding_disclosure_revisions and editorial.funding_disclosure_entries -> public funding projection -> PUB-023 and downloadTransparencyReport
+  approval_rule: A donation fact or candidate snapshot never publishes automatically. The existing funding-disclosure separation-of-duty, conflict, concentration, completeness, and publication gates apply unchanged.
+  privacy_rule: Public output contains only policy-permitted aggregate/category/name/amount-band/concentration fields and exact public source digests; donor HMACs, provider identifiers, payment methods, charge attempts, webhook evidence, and secret references remain private.
+  unknown_rule: Missing denominator, disputed grouping, incomplete source set, stale approval, refund ambiguity, or digest mismatch remains typed UNKNOWN and blocks public success claims.
+  download_rule: PUB-023 and downloadTransparencyReport expose only the exact approved revision with its revision/content/source-set digests and deterministic bytes; fabricated, stale-fallback, or private-data downloads are forbidden.
+
+paid_evidence_v2_authority_contract:
+  authority_decision: R6E_SUPERVISOR_DECISION_V1
+  authority_package: PAID-EVIDENCE-V2-AUTHORITY
+  versioning:
+    v1_preservation: Every 0029 PaidEvidencePacketV1/member/outcome relation and canonical byte contract remains byte-identical and is never reinterpreted as V2.
+    v2_shape: V2 is a forward-only additive contract with separately named payloads, preimages, constraints, functions, and key domain.
+    existing_row_fence: Migration stops before any schema effect when any paid packet, paid packet member, or paid-bound outcome row exists; backfill, coercion, or mixed V1/V2 interpretation is forbidden.
+  member_digest:
+    leaf_rule: Each V2 member leaf preimage excludes the global memberSetDigest and includes its category-local digest under the exact field name categoryDigest.
+    computation_order: leaf digests first, then the global member-set digest over the complete leaves in ordinal order
+    rejection_rule: A global digest inside a leaf, a caller-supplied leaf digest, independently reordered category and ordinal arrays, or incomplete membership is invalid.
+  review_snapshot:
+    field_delta_exactly: 12
+    source: the twelve paid-review snapshot fields already declared by migration 0028 but absent from the physical relation
+    presence_rule: zero fields for a non-paid snapshot or all twelve exact fields for a paid-eligible snapshot; every partial shape is rejected
+    migration_rule: forward-only; existing bytes are not reconstructed or guessed
+  packet_outcome_cycle:
+    foreign_key_rule: Both outcome-to-packet and packet-to-outcome composite foreign keys use MATCH FULL DEFERRABLE INITIALLY DEFERRED.
+    same_transaction_rule: The final packet and eligible outcome bind atomically without weakening either direction or permitting a partially null composite key.
+  terminal_binding:
+    workflow_proofs: the existing four ordered VerifiedWorkflowProofV1 milestones
+    additional_authorities: [exact terminal receipt, policy digest, formula digest, accounting timezone, effective-until]
+    stale_rule: Missing, expired, reordered, partially present, or digest-mismatched evidence is UNKNOWN and cannot finalize a packet or outcome.
+  subject_hmac:
+    domain: PAID_OUTCOME_SUBJECT_HMAC_V2
+    key_versions: [CURRENT, PREVIOUS]
+    issue_rule: Current issues new HMACs and persisted version selects current or previous for verification.
+    isolation_rule: Payment, webhook, public-web, assertion, donor, billing-key, and generic identity keys cannot be reused or used to derive this keyring.
+    injection_rule: TEST_FIXTURE only; production/default source contains no fixture key.
 
 funnel_contract:
   subject: one deployment_id plus organization_id plus EVIDENCE_WORKSPACE_ORGANIZATION_V1
@@ -309,6 +674,7 @@ activation_measurement_contract:
   ordering: elapsedHours ASC, observationKind EVENT before RIGHT_CENSORED before TERMINAL_WITHOUT_EVENT for equal finite bounds, then qualificationEpisodeHmac ASC only inside the server digest; the HMAC is never serialized to aggregate screens
 
 paid_mvw_contract:
+  authority: paid_evidence_v2_authority_contract for V2 packet and terminal bindings; 0029 V1 bytes remain governed by their original authority
   metric_id: BM-VALUE-PAID-MVW
   unit: one unique root outcome-fact chain
   paid_semantics: Paid means the workflow occurred inside a current paid SKU contract after DATA_READY. It does not mean invoice issued, cash collected, or revenue recognized; those authorities are deliberately independent.
@@ -367,10 +733,15 @@ economic_fact_boundary_contract:
       proves: captured/allocated/unknown/unallocated cost for one exact period
       does_not_prove: revenue, product value, or invoice accuracy
     cash:
-      source: signed external accounting/bank settlement record imported only if a future typed authority approved by the owner exists
-      proves: cash settlement/application only
-      does_not_prove: revenue, paid MVW, invoice correctness, tax correctness, or entitlement
-      v1_product_status: OUT_OF_SCOPE_NO_TABLE_NO_API; no cash value is synthesized from invoice or contract state
+      source: current ops.cash_application_facts heads imported from signed typed external BANK_TRANSFER or PG_SETTLEMENT evidence and bound to the exact immutable invoice id, version, record digest, and reconciliation digest
+      proves: application of one externally settled bank-transfer or PG-settlement amount to one exact commercial invoice only
+      does_not_prove: revenue, paid MVW, invoice correctness, tax correctness, entitlement, receivable balance, provider charge success, or cash-ledger completeness
+      v1_product_status: SIGNED_TYPED_IMPORT_ONLY_NO_PAYMENT_EXECUTION_OR_CASH_LEDGER_API; PG_SETTLEMENT is an imported accounting fact, never a live provider path, B2B checkout, donation-to-invoice bridge, or payment entitlement; absence remains UNKNOWN and no cash value is synthesized from invoice, contract, webhook, or provider state
+    tax_invoice_issuance:
+      source: current ops.tax_invoice_issuance_receipts heads imported from a signed external issuance acknowledgement and bound to the exact immutable invoice id, version, and digest
+      proves: external electronic tax-invoice issuance acknowledgement only
+      does_not_prove: tax remittance, cash collection, revenue recognition, payment, entitlement, or invoice correctness
+      v1_product_status: SIGNED_TYPED_IMPORT_ONLY_NO_LIVE_ASP; Gurinnae never calls an ASP in v1 and missing acknowledgement remains UNKNOWN
     tax:
       source: tax-exclusive/tax columns and tax-policy digest on immutable invoice lines plus append-only tax-targeted correction
       proves: invoice tax basis/liability presentation under the bound policy
@@ -405,7 +776,7 @@ tax_credit_and_cash_boundary:
     CASH_APPLICATION:
       effect: changes receivable/cash settlement only in the external accounting authority; never product entitlement, revenue timing, or paid MVW
   no_double_effect: One source credit/settlement identity may resolve to exactly one primary economic class. A policy-approved split uses distinct ordered components whose amounts conserve the signed source total and whose component-set digest is bound by every target correction.
-  v1_runtime_boundary: Gurinnae has no checkout, payment, receivable, cash-ledger, or tax-remittance API. Existing invoice/revenue/cost screens must label those states separately and show UNKNOWN when the required external accounting acknowledgement is absent.
+  v1_runtime_boundary: Gurinnae has no checkout, commercial payment-execution, receivable-balance, general cash-ledger, tax-remittance, live-PG, or live-ASP API. V1 accepts only signed typed tax-invoice issuance plus external BANK_TRANSFER or PG_SETTLEMENT cash-application imports with exact invoice fences. PG_SETTLEMENT import is accounting evidence only and donation-to-invoice application is forbidden. Invoice, revenue, cost, tax-invoice issuance, and cash application remain separate authorities, and every missing external acknowledgement displays UNKNOWN.
 
 pricing_and_billing:
   sku: EVIDENCE_WORKSPACE_ORGANIZATION_V1
@@ -1532,20 +1903,37 @@ database_requirements:
     operation_projection:
       - Business metric read functions return closed scalar/composite types, formula and input digests, and typed unknown reasons; serde_json::Value or free-form metric maps are forbidden.
   additive_relation_budget:
-    required_cross_file_relations_exactly: [ops.commercial_qualification_receipts]
-    relation_purpose: one append-only human qualification-episode decision receipt authority; it is the sole business-model relation this contract requests beyond the current physical catalog
+    pre_r6e_active_table_count: 302
+    post_r6e_active_table_count: 309
+    previously_approved_relation_count_exactly: 1
+    r6e_new_relation_count_exactly: 7
+    cumulative_business_model_relation_count_exactly: 8
+    required_cross_file_relations_exactly:
+      - ops.commercial_qualification_receipts
+      - ops.action_approval_economics_import_details
+      - ops.cash_application_facts
+      - ops.tax_invoice_issuance_receipts
+      - ops.payment_method_bindings
+      - ops.payment_charge_attempts
+      - ops.provider_webhook_receipts
+      - ops.donation_facts
+    r6e_relation_groups:
+      approved_economics_import_detail: [ops.action_approval_economics_import_details]
+      b2b_signed_typed_import_authority: [ops.cash_application_facts, ops.tax_invoice_issuance_receipts]
+      donation_test_mode_only_authority: [ops.payment_method_bindings, ops.payment_charge_attempts, ops.provider_webhook_receipts, ops.donation_facts]
+    budget_rule: The R6e additive budget is exactly seven new relations beyond the 302-table pre-R6e inventory. No alias, generic fact table, provider-specific table, donation-tier table, entitlement table, receivable ledger, cash ledger, collection-failure table, or commercial-payment table may expand this set.
     new_general_lifecycle_relations_forbidden: [ops.commercial_lifecycle_facts, ops.commercial_stage_facts, ops.commercial_stage_events, ops.funnel_stage_facts, ops.customer_lifecycle_events]
     new_stage_events_exactly: []
-    non_qualified_stage_rule: CONFIGURED, DATA_READY, FIRST_PAID_VALUE, ACTIVATED, RETAINED, AT_RISK, and CHURNED are deterministic read projections over the named existing immutable relations. They are never imported, written, cached as authority, corrected through a stage ledger, or emitted as a general commercial lifecycle event.
+    non_qualified_stage_rule: CONFIGURED, DATA_READY, FIRST_PAID_VALUE, ACTIVATED, RETAINED, AT_RISK, and CHURNED remain deterministic read projections over the named immutable authorities; none becomes an imported, written, cached-authority, or general lifecycle relation or event.
     cache_rule: A materialized/cache representation may exist only as a rebuildable non-authoritative derivative that carries the exact source-set/formula/policy/as_of digest, is denied to qualification/accounting writers, and can be dropped without losing business truth.
-    validator_rule: The required relation set and forbidden relation/event names are checked across database inventory, persistence registry, domain events, API DTOs, migrations, and generated manifests; an alias or generic fact table does not evade the budget.
+    validator_rule: The exact eight-name cumulative set, the one-plus-seven provenance split, the 302-to-309 active-table transition, relation groups, and forbidden names are checked across database inventory, persistence registry, domain events, API DTOs, migrations, and generated manifests.
   required_new_authority:
     name: ops.commercial_qualification_receipts
     cross_file_status: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
     authority_kind: QUALIFICATION_EPISODE_RECEIPT_ONLY
     reason: Only the human commercial qualification-episode decision is not derivable from current immutable product/economics facts. Every later stage is projected and must not create a general commercial-stage ledger or event stream.
     migration: 0029_product_economics.sql after ops.accounting_corrections as creation ordinal 21
-    inventory_effect_if_adopted: exactly one active relkind-r qualification receipt relation and zero new commercial-stage domain events; owner, persistence, hold, privilege, global inventory and validator registries are updated atomically in the review-required design
+    inventory_effect_if_adopted: This subsection contributes exactly the one previously approved qualification relation. Together with the seven R6e relations in additive_relation_budget, the cumulative business-model additive relation set is exactly eight; no general commercial-stage relation or event is added.
     mutation: append-only ORIGINAL/REPLACEMENT/REVERSAL receipt chain with one current leaf per deployment/organization/SKU/qualification_episode_id
     required_fields:
       id: uuid primary key
@@ -1685,7 +2073,7 @@ open_cross_file_blockers:
     physical_contract_status: CLOSED_AWAITING_INDEPENDENT_REVIEW
     runtime_status: OPEN
     owner: Database and product contract owners
-    current_truth: ops.commercial_qualification_receipts is now an explicit 0029 physical contract and source-derived inventory member; its SQL migration, typed importer and runtime proof do not yet exist.
+    current_truth: db/migrations/0029_product_economics.sql defines ops.commercial_qualification_receipts, 0030 supplies its owner-function and projection source, and 0041 wires the typed economics-import boundary. Source is present, but exact current PostgreSQL catalog/runtime/concurrency evidence, Rust repository round-trip and qualification-projection tests, and independent final review remain pending.
     required_change: Implement only the closed minimal qualification authority, privilege/retention/idempotency/audit contract and deterministic projections; do not add general stage rows/events.
     closure_evidence: PostgreSQL catalog/runtime/concurrency tests plus repository round-trip and qualification projection tests
   - id: BM-XF-002-READINESS-CATALOG
@@ -1693,7 +2081,7 @@ open_cross_file_blockers:
     physical_contract_status: CLOSED
     runtime_status: OPEN
     owner: Database and SKU-readiness owners
-    current_truth: The R3 0029 physical contract now closes PILOT_ENTRY_READINESS and the exact 14/17/18 mandatory, twelve conditional, and 26/29/30 visible sets; migrations, source-derived inventory/digests, evaluator runtime, and every offered-subset tests are not implemented.
+    current_truth: The 0029 schema/catalog, 0030 projection readers, and 0041 typed readiness evaluator/writer source now cover PILOT_ENTRY_READINESS and the exact 14/17/18 mandatory, twelve conditional, and 26/29/30 visible sets. Exact current PostgreSQL set-equality and evaluator execution, source-derived inventory/digest proof, every-offered-subset tests, and validator evidence remain pending.
     required_change: Implement the closed R3 catalog in migration/repository/evaluator code, regenerate source-derived digests/counts, and prove every offered subset while keeping unoffered rows visible and nonblocking.
     closure_evidence: exact catalog set-equality, PostgreSQL readiness evaluation, every offered-subset test, and current validator PASS
   - id: BM-XF-003-PAID-PACKET-TERMINAL-REGISTRY
@@ -1701,7 +2089,7 @@ open_cross_file_blockers:
     physical_contract_status: OPEN
     runtime_status: OPEN
     owner: Command/event/database and AI-data owners
-    current_truth: PaidEvidencePacketV1 and a physical ORGANIZATION_DECISION terminal resolver are contract requirements but not closed runtime types/candidate-key mappings.
+    current_truth: The 0029 migration now defines paid packet/member types, relations, keys, and the closed terminal kinds, while 0030 supplies ORGANIZATION_DECISION and OUTBOUND_DELIVERY terminal resolvers plus the packet writer source. Exact current FK/candidate-key catalog proof, invalid-pair, retry, correction and concurrency execution, and Rust repository/runtime evidence remain pending.
     required_change: Implement the closed packet, physical terminal registry, exact decision/delivery binding, correction-head eligibility, and strict paid-MVW read path.
     closure_evidence: closed schemas, FK/candidate-key catalog proof, invalid-pair tests, retries/corrections concurrency tests, and Rust repository/runtime tests
   - id: BM-XF-004-INVOICE-MEMBERSHIP
@@ -1709,7 +2097,7 @@ open_cross_file_blockers:
     physical_contract_status: CLOSED
     registry_and_runtime_status: OPEN
     owner: Database and Finance/Data owners
-    current_truth: The R3 0029 physical contract now declares ops.invoice_usage_memberships with immutable ORIGINAL/RESTATEMENT chains, ZERO_USAGE and INCLUDED_ALLOWANCE rows without charge lines, BILLED_OVERAGE line binding, current-root exactly-once guards, and ops.read_invoice_membership_v1 over an unfiltered expected meter/window grid. Global inventory, SQL migration, repository/function runtime, and canaries remain absent.
+    current_truth: The 0029 migration implements ops.invoice_usage_memberships and ops.read_invoice_membership_v1, 0030 supplies the write-path source, 0041 consumes the authority in current readiness/tariff source, and a Rust read adapter exists. Exact current catalog/runtime proof for zero-overage, duplicate, omitted, reversed, partial, unknown and overlapping-window cases plus the 64-client close and correction canaries remains pending.
     required_change: Implement and register the closed physical contract byte-for-byte, make every due partial/unknown/gap block invoice/revenue/readiness, and execute the declared concurrency/property tests.
     closure_evidence: zero-overage, duplicate, omitted, reversed, partial, unknown, overlapping-window, 64-client close, and correction tests
   - id: BM-XF-005-SLA
@@ -1717,7 +2105,7 @@ open_cross_file_blockers:
     physical_contract_status: CLOSED
     registry_and_runtime_status: OPEN
     owner: SRE, Database, and Finance owners
-    current_truth: The R3 0029 physical contract now declares explicit tariff offer and contract selection states, signed SLA policy version/digest, target, capability/exclusion/service-credit/measurement digests, exact selected tuple binding, and gap-checked ops.read_sla_metric_inputs_v1 minute inputs. Global inventory, SQL/runtime implementation, incident integration, and service-credit correction execution remain absent.
+    current_truth: The 0029/0030/0041 SQL source now contains the tariff/contract SLA fields and ops.read_sla_metric_inputs_v1 readers rather than only a paper contract. Exact current runtime integration with incidents and service-credit corrections, plus DST, overlap, gap, maintenance-cap, provider-fault and unknown-target PostgreSQL/runtime evidence, remains pending.
     required_change: Implement and register the closed tuple and read function, map due credits to immutable corrections, and execute DST/overlap/gap/maintenance/provider/unknown-target tests.
     closure_evidence: DST/overlap/gap/maintenance-cap/provider-fault/unknown-target/service-credit PostgreSQL and runtime tests
   - id: BM-XF-006-REVENUE-INTERVAL-OVERLAP
@@ -1725,7 +2113,7 @@ open_cross_file_blockers:
     physical_contract_status: CLOSED
     registry_and_runtime_status: OPEN
     owner: Database and Finance owners
-    current_truth: The R3 0029 physical contract now declares a domain-separated invoice-line plus recognition-policy advisory lock, deterministic existing-row/correction-leaf lock order, exact half-open overlap predicate, positive correction-adjusted interval selection, adjacency allowance, and atomic reversal/replacement semantics. No SQL migration, function implementation, catalog proof, or concurrency execution exists yet.
+    current_truth: The 0029 revenue relation/index source, 0030 revenue writer, and 0041 typed economics-import boundary now exist. Exact contract parity for the domain-separated advisory lock, half-open overlap and correction-leaf guards, adjacency and atomic reversal/replacement behavior, plus catalog proof and boundary/64-client concurrency execution, remains pending.
     required_change: Implement the closed SERIALIZABLE exclusion-equivalent guard and prove boundary adjacency, partial/full overlap, correction movement, restore, and phantom-free 64-client behavior.
     closure_evidence: boundary-adjacent, partial/full overlap, concurrent split, correction, restore, and 64-client tests
   - id: BM-XF-007-UNATTRIBUTED-CAC
@@ -1733,7 +2121,7 @@ open_cross_file_blockers:
     physical_contract_status: CLOSED
     registry_and_runtime_status: OPEN
     owner: Database and Finance owners
-    current_truth: The R3 0029 physical contract now declares ATTRIBUTED and UNATTRIBUTED acquisition line shapes, a no-organization/no-receipt pool digest for captured unattributed cost, complete-set-first ops.read_cac_metric_inputs_v1 semantics, null CAC plus ATTRIBUTION_UNKNOWN on any gap, and no-lower-subset canaries. No SQL migration, repository/function runtime, or property execution exists yet.
+    current_truth: The 0029 ops.read_cac_metric_inputs_v1 source, 0030 business projection, 0041 typed acquisition/attribution import source, and a Rust read adapter now exist. Exact current PostgreSQL/runtime/property evidence for missing, stale and reversed attribution, unattributed pools, FX, corrections, and the no-lower-CAC invariant remains pending.
     required_change: Implement and register the closed cost-allocation shapes/read function and prove missing/stale/reversed attribution, unallocated pool, FX, correction, and no-lower-CAC behavior.
     closure_evidence: missing/stale/reversed attribution, unallocated pool, FX, correction, and no-lower-CAC property tests
   - id: BM-XF-008-API-CONTRACTS
@@ -1741,20 +2129,20 @@ open_cross_file_blockers:
     api_contract_status: OPEN
     runtime_status: OPEN
     owner: API and frontend contract owners
-    current_truth: getInternalDashboard, getBudgetOverview, getOperationsOverview, exportCostReport, and searchAuditEvents do not yet expose the closed business response types/dimensions declared here; generated OpenAPI/clients are unchanged.
-    required_change: Extend the existing operations without a new route, close authorization and error semantics, regenerate OpenAPI/clients, and prove formula/digest parity across API/UI/export.
+    current_truth: All five existing operation IDs, relevant BusinessHealth OpenAPI schemas, generated control-client symbols/types, and partial Rust query/export source now exist. Exact closed response/dimension binding is not yet established across all five, and export, authorization/error, API/UI formula-and-digest, byte-parity, and final generated-source freeze evidence remains pending.
+    required_change: Extend the existing business-metric operations without a new business-metric route, close authorization and error semantics, regenerate OpenAPI/clients, and prove formula/digest parity across API/UI/export.
     closure_evidence: schema set-equality, generated client diff, auth tests, contract/integration tests, and byte-equivalent metric response fixtures
   - id: BM-XF-009-RUNTIME-AND-EXECUTION-MAPPING
     status: OPEN
     mapping_catalog_status: CLOSED
     runtime_status: OPEN
     owner: Rust, SvelteKit, QA, and traceability owners
-    current_truth: tests/acceptance/supplemental-executable-mapping.yaml now has exactly one skip_policy FORBIDDEN catalog row for each AC-BUSINESS_MODEL-001..041 ID, but all 41 rows are implementation_status MISSING, tests/integration/acceptance/business_model_addendum.rs and the gurine-acceptance-tests package are absent, and no complete Rust projection/repository, SvelteKit states, browser flow, or production fact path proves the feature.
+    current_truth: The feature, source-derived supplemental mapping, gurine-acceptance-tests package/target, and Rust test source now contain exactly 48 AC-BUSINESS_MODEL IDs/rows/functions with skip_policy FORBIDDEN. AC-001..041 are the pre-R6e mapped source set; AC-042..048 are the R6e additions with prerequisite mappings and source present, but their leased PostgreSQL fixture execution and durable acceptance receipts remain pending. Complete production-path, SvelteKit/browser state, accessibility/responsive, and frozen final-digest evidence is also pending.
     required_change: Implement real PostgreSQL-to-Rust-to-generated-client-to-SvelteKit behavior, all states and exports, create every declared non-skipped test path/ID and make every declared command execute successfully, then freeze its traceability/manifest/digest inputs.
     closure_evidence: mapped test execution with skip_policy FORBIDDEN, production-data smoke, browser accessibility/responsive evidence, and frozen-digest independent review
 
 screen_operation_mapping:
-  no_new_route_rule: No fourth surface, tenant switcher, sales CRM, checkout, invoice-payment, or entitlement route is created.
+  no_new_route_rule: No fourth product surface, tenant switcher, sales CRM, commercial checkout, invoice-payment, commercial-payment, or entitlement screen route is created. Exactly one new public-web screen route, PUB-035 at /donate, is allowed solely as the TEST_ONLY fundraising boundary; it never becomes a SKU, contract, entitlement, price, or live-PG surface. PUB-023 gains exactly one public transparency-report download operation, which is an API operation rather than another screen route, and PUB-026 is reused at its existing /contact route. No other screen or payment route is permitted.
   closed_codes:
     metric_id: exact sorted keys of metrics in this contract; generation fails on any missing or extra ID
     breach_action: [NONE, COMPLETE_QUALIFICATION, CLOSE_ATTRIBUTION, REVIEW_COHORT_LOSS, COMPLETE_CONFIGURATION, REPAIR_DATA_READINESS, VERIFY_PAID_PACKET, RECOVER_VALUE_WORKFLOW, RECONCILE_USAGE_AND_INVOICE, RECONCILE_REVENUE, CLOSE_COST_AND_FX_GAPS, ADJUST_PRICE_QUOTA_OR_EFFICIENCY, RESTORE_SUPPORT_CAPACITY, RESTORE_SLA_AND_TELEMETRY, CONTAIN_TRUST_INCIDENT, REVIEW_PRODUCT_PAUSE]
@@ -1972,12 +2360,12 @@ acceptance:
   feature: tests/acceptance/business-model-addendum.feature
   feature_tag: '@additive-review'
   contract_status: REVIEW_REQUIRED
-  scenario_count: 41
+  scenario_count: 48
   metric_dictionary: implementation-evidence/business-model-metric-dictionary.md
   required_execution_mapping:
     path: tests/acceptance/supplemental-executable-mapping.yaml
-    current_status: CATALOG_PRESENT_IMPLEMENTATION_MISSING
-    current_truth: All 41 scenario IDs are present once with skip_policy FORBIDDEN, but each is implementation_status MISSING, the declared tests/integration/acceptance/business_model_addendum.rs path is absent, and the declared gurine-acceptance-tests package/commands are not executable.
+    current_status: SOURCE_PRESENT_RUNTIME_AND_FINAL_EVIDENCE_PENDING
+    current_truth: All 48 scenario IDs are present once with skip_policy FORBIDDEN and map to existing tests/integration/acceptance/business_model_addendum.rs functions in the gurine-acceptance-tests business_model_addendum target. AC-001..041 are the pre-R6e mapped source set and AC-042..048 add R6e prerequisite mappings; the latter still require leased PostgreSQL fixture execution and durable acceptance receipts, while complete runtime, browser, and frozen-digest evidence remains pending for final closure.
     rule: Every AC-BUSINESS_MODEL scenario requires exactly one skip_policy FORBIDDEN mapping with a present implementation path and an executing command before release freeze.
   final_tag_rule: '@final is forbidden while any open_cross_file_blockers row is OPEN or the supplemental mapping/runtime evidence is absent.'
   hard_rules:

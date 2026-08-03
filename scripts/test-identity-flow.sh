@@ -42,16 +42,14 @@ cargo build -p gurine-oidc-test-provider -p gurine-egress-gateway -p gurine-iden
 docker run --rm -d --name "$container" \
   -e POSTGRES_DB=gurine_identity_test \
   -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_HOST_AUTH_METHOD=trust \
   -p 127.0.0.1::5432 \
-  postgres:18.4-bookworm >/dev/null
+  postgres:18.4-bookworm@sha256:d9c83446333daec3f0588cc709adb80c26090b7f9f0f7ec8d43c243385d79818 >/dev/null
 
 bash scripts/wait-postgres-container.sh "$container" gurine_identity_test
 
-for migration in db/migrations/*.sql; do
-  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d gurine_identity_test \
-    < "$migration" >/dev/null
-done
+mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
+bash scripts/apply-test-migrations-with-r6e-roles.sh "$container" gurine_identity_test "${migrations[@]}"
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d gurine_identity_test \
   < db/test-fixtures/reference-seed.sql >/dev/null
 docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d gurine_identity_test -c \

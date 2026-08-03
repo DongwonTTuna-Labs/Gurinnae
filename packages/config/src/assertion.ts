@@ -38,7 +38,7 @@ export function downstreamRequestBinding(input: {
 export function serviceAssertion(input: {
   keyBase64: string;
   issuer: "public-web" | "response-portal" | "review-console";
-  audience: "submission-api" | "identity-api";
+  audience: "submission-api" | "identity-api" | "billing-gateway";
   method: string;
   path: string;
   rawQuery?: string;
@@ -83,7 +83,7 @@ export async function assertedJson(input: {
   baseUrl: string;
   keyBase64: string;
   issuer: "public-web" | "response-portal" | "review-console";
-  audience: "submission-api" | "identity-api";
+  audience: "submission-api" | "identity-api" | "billing-gateway";
   path: string;
   body: Record<string, unknown>;
   headers?: Record<string, string>;
@@ -101,7 +101,7 @@ export async function assertedRequest(input: {
   baseUrl: string;
   keyBase64: string;
   issuer: "public-web" | "response-portal" | "review-console";
-  audience: "submission-api" | "identity-api";
+  audience: "submission-api" | "identity-api" | "billing-gateway";
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   rawQuery?: string;
@@ -162,7 +162,7 @@ export function serviceAssertionFetch(input: {
   fetch: typeof globalThis.fetch;
   keyBase64: string;
   issuer: "public-web" | "response-portal" | "review-console";
-  audience: "submission-api" | "identity-api";
+  audience: "submission-api" | "identity-api" | "billing-gateway";
   additionalHeaders?: Record<string, string>;
 }): typeof globalThis.fetch {
   return async (resource, init) => {

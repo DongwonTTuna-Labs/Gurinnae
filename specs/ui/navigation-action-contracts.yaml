@@ -1,6 +1,6 @@
 schema_version: 1
 status: REVIEW_REQUIRED
-scope: all 108 authority navigation actions with owner-resolved destinations
+scope: all 109 authority navigation actions with owner-resolved destinations
 sources:
 - specs/ui/screen-catalog.yaml
 - specs/product/owner-addendum-2026-07-14.yaml#route_contract
@@ -1055,6 +1055,21 @@ navigation_contracts:
       disabled: any required binding is absent, invalid, stale or outside the route allowlist
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-PUB-034-VIEW-STATUS
+  PUB-035.contact:
+    status: resolved
+    target:
+      screen_id: PUB-026
+      route: /contact
+    bindings: {}
+    preserved_query_keys: []
+    safe_return: source_screen
+    invalid_behavior: fixed_target_error
+    history_semantics: PUSH
+    availability_by_state:
+      enabled: all required typed bindings are present, authorized and current
+      disabled: any required binding is absent, invalid, stale or outside the route allowlist
+    arrival_focus: destination main heading, selected record heading, or named fragment heading
+    oracle: UX-NAV-PUB-035-CONTACT
   RSP-001.continue:
     status: resolved
     target:
@@ -2244,7 +2259,7 @@ navigation_contracts:
     arrival_focus: destination main heading, selected record heading, or named fragment heading
     oracle: UX-NAV-ADM-003-OPEN-ROLE
 owner_decisions:
-- Dynamic task and notification links use only server-produced href fields validated against the 94-route same-origin catalog.
+- Dynamic task and notification links use only server-produced href fields validated against the 95-route same-origin catalog.
 - Response help and link-reissue paths use the public contact form without carrying response object identity in the URL.
 - Additional-material navigation on RSP-006 opens guidance only; it does not invent a supplemental-submission API.
 - Query preservation excludes cursor, token, proof and secret fields and uses only the exact per-screen allowlists in this file.

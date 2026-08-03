@@ -14,17 +14,26 @@ v13 원본과 base provenance를 검증하는 기준이며 현재 `specs/`를 �
 
 ## 완성 수량
 
-- Public 34 + Response 8 + Internal 52 = **94 화면**
-- Public 43 + Submission 34 + Control 134 + Browser Identity 6 = **217 외부 operation**
-- Private Identity = **9 operation**
-- **110 query**, **107 command**: HTTP non-GET write 104 + protocol GET command 3
-- Persistence mapping 217, optimistic-concurrency contract 66
-- PostgreSQL **24 migration, 107 active table, 72 active first-party function**, service/privilege role 13
+- Public 35 + Response 8 + Internal 52 = **95 화면**
+- Frozen base Public 43 + Submission 34 + Control 134 + Browser Identity 6 = **217 외부 operation**
+- Addendum HTTP 54 = external 51 (Public 1 + Submission 8 + Control 42) + `PRIVATE_IDENTITY_API` supplier command 3이며 두 집합은 disjoint다.
+- Final Public 44 + Submission 42 + Control 176 + Browser Identity 6 = **268 외부 operation**
+- Final external은 **123 query**, **145 command**이며 command는 HTTP non-GET write 142 + protocol GET command 3이다.
+- All-scope HTTP는 final external 268 + `PRIVATE_IDENTITY_API` 3의 disjoint union인 **271 operation**이며 **123 query**, **148 command**, HTTP non-GET write 145다. 별도의 기존 Internal Identity Service contract는 **9 operation**이다.
+- All-scope HTTP Persistence mapping 271 (base 217 + disjoint addendum 54), optimistic-concurrency contract 66
+- PostgreSQL **41 runtime migration** (24 base + 17 post-base, owner-declared 15), **309 active table**; frozen v13 first-party function/service-role baseline 72/13
 - Agent 5, read-only tool 9, deterministic evaluation 50
 - Connector 8, upstream operation 56
 - Detection rule 15, concrete oracle evaluation 450
-- Cargo member 32, Bun workspace 9, Compose service 20
+- Cargo member 34, Bun workspace 9, runtime service 18 (backend 15 + frontend 3), Compose service 21, deployment image 18
 - Acceptance feature 35, scenario 271
+
+## 상용·후원 경계
+
+- 공개 사실·근거·정정 이력·소명권·기본 구독·합리적 public API/export는 무료로 계속 제공하며 후원·계약·청구 상태가 이를 제한하지 않는다.
+- B2B Evidence Workspace가 제공하는 수금 방식은 서면계약·외부 전자세금계산서·계좌이체뿐이며 self-service checkout과 commercial payment API는 없다. 이미 외부에서 완료된 PG 정산은 exact invoice에 결합된 서명 typed `PG_SETTLEMENT_IMPORT` 회계 증거로만 수용하며, live PG·카드 결제·entitlement·후원→invoice 경로를 만들지 않는다.
+- 후원은 SKU·고객계약·청구·entitlement와 무관한 **TEST_MODE_ONLY** 재원 경계다. live PG/ASP를 호출하지 않으며 운영 tier 권위가 없으면 `UNAVAILABLE`이다. 가격·tier·결제 성공을 발명하지 않는다.
+- `PUB-035`는 기존 public-web의 `/donate` 화면이고, `PUB-023`은 승인된 공개 재원 revision을 내려받는 public operation 1개를 갖는다.
 
 ## 필수 불변식
 
@@ -81,7 +90,7 @@ E2E/visual test가 공유하는 단일 UI build 경계다.
 - Rust unit/integration/property test와 SQLx prepare
 - PostgreSQL 18.4 clean migration·routine resolution·privilege/RLS·immutability·lifecycle·submission·CSRF·authorization runtime test
 - OpenAPI/client deterministic regeneration
-- Svelte SSR build, 94-route E2E·visual·accessibility
+- Svelte SSR build, 95-route E2E·visual·accessibility
 - Agent, Connector, Parser/OCR, Detection evaluation
 - Docker network isolation, restart persistence, backup/restore
 - security header, session, CSRF, assertion, IDOR, prompt-injection test

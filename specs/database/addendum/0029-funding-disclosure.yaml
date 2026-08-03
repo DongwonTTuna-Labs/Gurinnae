@@ -1237,7 +1237,8 @@ public_projection_contract:
     transaction: SERIALIZABLE
     source_reader: editorial.read_public_funding_projection_inputs_v1 is internal-only and cannot be executed by gurine_public_projector
     mutation: Claim one typed projection work item and insert exactly one immutable FUNDING_DISCLOSURE report per source revision. Same event/source digest returns the stored receipt; changed digest is PROJECTION_REPLAY_CONFLICT. Prior public report is never updated or hidden; supersedes_report_id forms gapless history.
-    atomic_writes: [projection work claim, source verification, public transparency report revision, inbox and job terminalization, audit, public.funding_disclosure_projected.v1 outbox, immutable typed receipt]
+    atomic_writes: [projection work claim, source verification, public transparency report revision, inbox and job terminalization, audit, immutable typed receipt]
+    outbox_contract: {events: [], receipt_outbox_event_ids: [], cardinality: exactly-zero}
   acl:
     public.transparency_reports:
       gurine_public_api: [SELECT]

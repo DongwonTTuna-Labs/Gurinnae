@@ -20,8 +20,9 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 40 ]]; then
-  printf 'expected exactly 40 migrations, found %s\n' "${#migrations[@]}" >&2
+source scripts/apply-test-migrations-with-r6e-roles.sh
+if [[ "${#migrations[@]}" -lt 41 ]]; then
+  printf 'expected at least 41 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -45,13 +46,15 @@ fi
 docker run --rm --detach --name "$container" \
   --env POSTGRES_DB="$database" \
   --env POSTGRES_USER=postgres \
-  --env POSTGRES_PASSWORD=postgres \
+  --env POSTGRES_HOST_AUTH_METHOD=trust \
   "$postgres_image" >/dev/null
 bash scripts/wait-postgres-container.sh "$container" "$database"
 
+r6e_test_migrations_prepare "$container" "$database" "${migrations[@]}"
+r6e_test_migrations_provision
+
 for migration in "${migrations[@]:0:39}"; do
-  docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
-    -U postgres -d "$database" <"$migration" >/dev/null
+  r6e_test_migrations_apply_next "$migration"
 done
 
 # Commit two TEST_ONLY pre-0040 rows so the migration's staged-legacy behavior
@@ -61,8 +64,9 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -v r6d40_seed_legacy=1 -U postgres -d "$database" \
   <db/test-fixtures/r6d-privacy-authority-closure-runtime.sql >/dev/null
 
-docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
-  -U postgres -d "$database" <"${migrations[39]}" >/dev/null
+r6e_test_migrations_apply_next "${migrations[39]}"
+r6e_test_migrations_apply_remaining
+r6e_test_migrations_assert_complete
 
 # Legal-hold receipts are retention-governance records.  Reuse the repository's
 # existing disposable TEST_ONLY authority graph; no operating policy is seeded.

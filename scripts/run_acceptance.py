@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Run all 439 acceptance scenarios and seal external, append-only evidence."""
+"""Run the complete acceptance scenario set and seal append-only evidence."""
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -11,6 +11,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import secrets
+import selectors
 import stat
 import subprocess
 import sys
@@ -23,10 +24,12 @@ from design_bundle_digest import build_manifest as build_design_manifest
 from create_source_archive import excluded as source_archive_excluded
 from generate_effective_execution_registry import (
     BASE_MAPPING,
+    CURRENT_EFFECTIVE_SCENARIO_COUNT,
     OUTPUT as EFFECTIVE_REGISTRY,
     SUPPLEMENTAL_MAPPING,
     canonical_sha256,
 )
+from generate_supplemental_execution_mapping import prerequisite_argv_for_scenario
 from git_authority import AUTHORITY_ZIP_SHA256
 from source_provenance import source_tree_digest, worktree_inventory
 from validation.acceptance_machine import (
@@ -62,10 +65,329 @@ AUTO_VERIFICATION_LOG_NAME = "verify-final.log"
 EXTRACTION_RECEIPT_SCHEMA = Path(
     "specs/acceptance/extraction-receipt-v1.schema.json"
 )
+DATABASE_URL_ENVIRONMENTS = (
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "GURINNAE_DATABASE_URL",
+    "ECONOMICS_DATABASE_URL",
+    "BILLING_DATABASE_URL",
+    "PROJECTOR_DATABASE_URL",
+)
+R6E_ROLE_USERS = {
+    "ECONOMICS_DATABASE_URL": "gurine_economics_importer",
+    "BILLING_DATABASE_URL": "gurine_billing_gateway",
+    "PROJECTOR_DATABASE_URL": "gurine_public_projector",
+}
+R6E_SCENARIO_ROLE_ENVIRONMENTS = {
+    "AC-BUSINESS_MODEL-042": ("ECONOMICS_DATABASE_URL",),
+    "AC-BUSINESS_MODEL-043": ("ECONOMICS_DATABASE_URL",),
+    "AC-BUSINESS_MODEL-044": ("BILLING_DATABASE_URL",),
+    "AC-BUSINESS_MODEL-045": ("BILLING_DATABASE_URL",),
+    "AC-BUSINESS_MODEL-046": ("BILLING_DATABASE_URL", "ECONOMICS_DATABASE_URL"),
+    "AC-BUSINESS_MODEL-047": ("BILLING_DATABASE_URL", "PROJECTOR_DATABASE_URL"),
+    "AC-BUSINESS_MODEL-048": ("BILLING_DATABASE_URL",),
+}
+PREREQUISITE_READY_KEYS = {
+    "schema_version",
+    "status",
+    "scenario_id",
+    "host",
+    "port",
+    "database",
+    "container",
+}
+PREREQUISITE_CONTAINER_RE = re.compile(r"gurine-r6e-monetization-[0-9]+")
 
 
 class AcceptanceRunError(RuntimeError):
     """The authoritative run cannot continue without inventing evidence."""
+
+
+@dataclass(frozen=True)
+class EffectiveScenarioCounts:
+    base: int
+    supplemental: int
+    effective: int
+
+
+@dataclass
+class RuntimePrerequisiteLease:
+    process: Any
+    scenario_id: str
+    host: str
+    port: int
+    database: str
+    container: str
+    _closed: bool = False
+
+    def child_environment(self, base: dict[str, str]) -> dict[str, str]:
+        environment = dict(base)
+        for name in DATABASE_URL_ENVIRONMENTS:
+            environment.pop(name, None)
+        control_url = self._database_url("gurine_control_api")
+        environment["GURINNAE_DATABASE_URL"] = control_url
+        environment["DATABASE_URL"] = control_url
+        for name in R6E_SCENARIO_ROLE_ENVIRONMENTS[self.scenario_id]:
+            environment[name] = self._database_url(R6E_ROLE_USERS[name])
+        return environment
+
+    def _database_url(self, user: str) -> str:
+        return f"postgresql://{user}@{self.host}:{self.port}/{self.database}"
+
+    def close(self, successful: bool) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        cleanup_error = _finish_prerequisite_process(
+            self.process, self.scenario_id, self.container
+        )
+        if cleanup_error is not None and successful:
+            raise AcceptanceRunError(cleanup_error)
+
+    def __enter__(self) -> RuntimePrerequisiteLease:
+        return self
+
+    def __exit__(self, error_type: object, error: object, traceback: object) -> bool:
+        self.close(error_type is None)
+        return False
+
+
+def effective_scenario_counts(
+    registry: dict[str, Any],
+) -> EffectiveScenarioCounts:
+    """Derive runner totals from the validated registry and its scenario rows."""
+    counts = registry.get("counts")
+    scenarios = registry.get("scenarios")
+    if not isinstance(counts, dict) or not isinstance(scenarios, list):
+        raise AcceptanceRunError("acceptance registry count contract is missing")
+    declared = (
+        counts.get("base_scenarios"),
+        counts.get("supplemental_scenarios"),
+        counts.get("effective_scenarios"),
+    )
+    if any(type(value) is not int for value in declared):
+        raise AcceptanceRunError("acceptance registry counts must be integers")
+    derived = (
+        sum(
+            isinstance(row, dict) and row.get("origin") == "BASE_V13"
+            for row in scenarios
+        ),
+        sum(
+            isinstance(row, dict) and row.get("origin") == "SUPPLEMENTAL_V1"
+            for row in scenarios
+        ),
+        len(scenarios),
+    )
+    if declared != derived or declared[2] != declared[0] + declared[1]:
+        raise AcceptanceRunError(
+            f"acceptance registry count mismatch: declared={declared!r} derived={derived!r}"
+        )
+    return EffectiveScenarioCounts(*declared)
+
+
+def _redact_database_urls(content: bytes, environment: dict[str, str]) -> bytes:
+    redacted = content
+    for name in DATABASE_URL_ENVIRONMENTS:
+        value = environment.get(name, "")
+        if value:
+            redacted = redacted.replace(value.encode("utf-8"), b"[REDACTED_DATABASE_URL]")
+    return redacted
+
+
+def _prerequisite_environment(base: dict[str, str]) -> dict[str, str]:
+    environment = dict(base)
+    for name in DATABASE_URL_ENVIRONMENTS:
+        environment.pop(name, None)
+    return environment
+
+
+def _read_prerequisite_line(process: Any, timeout_seconds: int) -> bytes:
+    if process.stdout is None:
+        raise AcceptanceRunError("runtime prerequisite stdout pipe is unavailable")
+    descriptor = process.stdout.fileno()
+    deadline = time.monotonic() + timeout_seconds
+    buffer = bytearray()
+    with selectors.DefaultSelector() as selector:
+        selector.register(descriptor, selectors.EVENT_READ)
+        while b"\n" not in buffer:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not selector.select(remaining):
+                raise AcceptanceRunError("runtime prerequisite timed out before ready")
+            chunk = os.read(descriptor, 4096)
+            if not chunk:
+                raise AcceptanceRunError("runtime prerequisite exited before ready")
+            buffer.extend(chunk)
+            if len(buffer) > 4096:
+                raise AcceptanceRunError("runtime prerequisite ready response is oversized")
+    line, separator, trailing = bytes(buffer).partition(b"\n")
+    if not separator or trailing:
+        raise AcceptanceRunError("runtime prerequisite ready response is not one closed line")
+    return line
+
+
+def _parse_prerequisite_ready(line: bytes, scenario_id: str) -> dict[str, object]:
+    value = load_closed_json_bytes(line, f"{scenario_id} runtime prerequisite")
+    if not isinstance(value, dict) or set(value) != PREREQUISITE_READY_KEYS:
+        raise AcceptanceRunError("runtime prerequisite ready response keys differ")
+    valid = (
+        value.get("schema_version") == 1
+        and value.get("status") == "READY"
+        and value.get("scenario_id") == scenario_id
+        and value.get("host") == "127.0.0.1"
+        and type(value.get("port")) is int
+        and 1 <= int(value["port"]) <= 65535
+        and value.get("database") == "gurine_r6e_monetization"
+        and isinstance(value.get("container"), str)
+        and PREREQUISITE_CONTAINER_RE.fullmatch(str(value["container"]))
+    )
+    if not valid:
+        raise AcceptanceRunError("runtime prerequisite ready identity differs")
+    return value
+
+
+def _expected_prerequisite_container(process: Any) -> str:
+    process_id = getattr(process, "pid", None)
+    if type(process_id) is not int or process_id <= 0:
+        raise AcceptanceRunError("runtime prerequisite process identity is invalid")
+    return f"gurine-r6e-monetization-{process_id}"
+
+
+def _validate_prerequisite_container(
+    ready: dict[str, object], process: Any
+) -> str:
+    expected = _expected_prerequisite_container(process)
+    if ready.get("container") != expected:
+        raise AcceptanceRunError("runtime prerequisite ready container differs")
+    return expected
+
+
+def _remove_prerequisite_container(container: str) -> str | None:
+    if PREREQUISITE_CONTAINER_RE.fullmatch(container) is None:
+        return "runtime prerequisite cleanup target is invalid"
+    try:
+        subprocess.run(
+            ["docker", "container", "rm", "--force", container],
+            check=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=15,
+        )
+        inventory = subprocess.run(
+            [
+                "docker",
+                "container",
+                "ls",
+                "--all",
+                "--format",
+                "{{.Names}}",
+                "--filter",
+                f"name=^/{container}$",
+            ],
+            check=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "runtime prerequisite container cleanup failed"
+    if inventory.returncode != 0 or (inventory.stdout or b"").strip():
+        return "runtime prerequisite container cleanup failed"
+    return None
+
+
+def _abort_prerequisite_process(process: Any, container: str) -> str | None:
+    try:
+        process.communicate(input=b"\n", timeout=10)
+    except (BrokenPipeError, OSError, subprocess.TimeoutExpired):
+        try:
+            process.terminate()
+        except OSError:
+            pass
+        try:
+            process.communicate(timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            try:
+                process.kill()
+                process.communicate(timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+    return _remove_prerequisite_container(container)
+
+
+def _finish_prerequisite_process(
+    process: Any, scenario_id: str, container: str
+) -> str | None:
+    process_cleanup_failed = False
+    try:
+        stdout, _ = process.communicate(input=b"\n", timeout=30)
+    except (BrokenPipeError, OSError, subprocess.TimeoutExpired):
+        process_cleanup_failed = True
+        stdout = b""
+        try:
+            process.kill()
+            process.communicate(timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    container_cleanup_error = _remove_prerequisite_container(container)
+    if (
+        process_cleanup_failed
+        or process.returncode != 0
+        or (stdout or b"").strip()
+        or container_cleanup_error is not None
+    ):
+        return f"runtime prerequisite cleanup failed for {scenario_id}"
+    return None
+
+
+def open_runtime_prerequisite(
+    root: Path,
+    row: dict[str, Any],
+    base_environment: dict[str, str],
+    timeout_seconds: int,
+) -> RuntimePrerequisiteLease | None:
+    scenario_id = str(row["scenario_id"])
+    execution = row.get("execution", {})
+    argv = execution.get("prerequisite_argv") if isinstance(execution, dict) else None
+    if argv is None:
+        return None
+    expected = prerequisite_argv_for_scenario(scenario_id)
+    if argv != expected or not isinstance(argv, list):
+        raise AcceptanceRunError(f"runtime prerequisite argv differs: {scenario_id}")
+    try:
+        process = subprocess.Popen(
+            argv,
+            cwd=root,
+            env=_prerequisite_environment(base_environment),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+        )
+    except OSError as error:
+        raise AcceptanceRunError(
+            f"runtime prerequisite could not start for {scenario_id}"
+        ) from error
+    expected_container = _expected_prerequisite_container(process)
+    try:
+        ready = _parse_prerequisite_ready(
+            _read_prerequisite_line(process, timeout_seconds), scenario_id
+        )
+        container = _validate_prerequisite_container(ready, process)
+    except (AcceptanceRunError, MachineReportError, OSError, ValueError) as error:
+        cleanup_error = _abort_prerequisite_process(process, expected_container)
+        if cleanup_error is not None:
+            raise AcceptanceRunError(cleanup_error) from error
+        raise
+    return RuntimePrerequisiteLease(
+        process=process,
+        scenario_id=scenario_id,
+        host=str(ready["host"]),
+        port=int(ready["port"]),
+        database=str(ready["database"]),
+        container=container,
+    )
 
 
 def utc_now() -> str:
@@ -789,6 +1111,8 @@ def run_process(
         raise AcceptanceRunError(
             f"acceptance command terminated by signal {-completed.returncode}: {argv!r}"
         )
+    completed.stdout = _redact_database_urls(completed.stdout or b"", environment)
+    completed.stderr = _redact_database_urls(completed.stderr or b"", environment)
     return completed, duration_ms
 
 
@@ -1261,7 +1585,7 @@ def mutation_runs(
     return summary, [summary, *all_paths]
 
 
-def execute_scenario(
+def _execute_scenario_with_environment(
     run: ExclusiveRunDirectory,
     root: Path,
     row: dict[str, Any],
@@ -1343,6 +1667,9 @@ def execute_scenario(
         "run_argv": selector["run_argv"],
         "run_argv_sha256": canonical_sha256(ARGV_DOMAIN, selector["run_argv"]),
     }
+    prerequisite_argv = row["execution"].get("prerequisite_argv")
+    if prerequisite_argv is not None:
+        invocation["prerequisite_argv"] = prerequisite_argv
     main_artifact_paths = [
         environment_path,
         *discovery_paths,
@@ -1393,6 +1720,43 @@ def execute_scenario(
     return receipt_path, receipt, all_paths
 
 
+def execute_scenario(
+    run: ExclusiveRunDirectory,
+    root: Path,
+    row: dict[str, Any],
+    registry: dict[str, Any],
+    common: dict[str, object],
+    base_environment: dict[str, str],
+    environment_path: Path,
+    timeout_seconds: int,
+) -> tuple[Path, dict[str, object], list[Path]]:
+    lease = open_runtime_prerequisite(
+        root, row, base_environment, timeout_seconds
+    )
+    if lease is None:
+        return _execute_scenario_with_environment(
+            run,
+            root,
+            row,
+            registry,
+            common,
+            base_environment,
+            environment_path,
+            timeout_seconds,
+        )
+    with lease:
+        return _execute_scenario_with_environment(
+            run,
+            root,
+            row,
+            registry,
+            common,
+            lease.child_environment(base_environment),
+            environment_path,
+            timeout_seconds,
+        )
+
+
 def seal_payload(run: ExclusiveRunDirectory, run_index_path: Path) -> dict[str, object]:
     members: list[dict[str, object]] = []
     for path in sorted(run.path.rglob("*")):
@@ -1428,7 +1792,7 @@ def seal_payload(run: ExclusiveRunDirectory, run_index_path: Path) -> dict[str, 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run and seal all 439 acceptance scenarios."
+        description="Run and seal the complete effective acceptance scenario set."
     )
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument(
@@ -1482,6 +1846,7 @@ def main() -> int:
     structural, registry = validate_static(root)
     if structural.problems:
         raise AcceptanceRunError(f"acceptance contract is invalid: {structural.problems[:3]}")
+    scenario_counts = effective_scenario_counts(registry)
     source_checks = validate_sources(root, registry)
     if source_checks.problems:
         raise AcceptanceRunError(f"acceptance source is invalid: {source_checks.problems[:3]}")
@@ -1624,11 +1989,20 @@ def main() -> int:
                 "size": receipt_artifact["size"],
             }
         )
-        print(f"ACCEPTANCE_SCENARIO: {position}/439 PASS {row['scenario_id']}", flush=True)
+        print(
+            "ACCEPTANCE_SCENARIO: "
+            f"{position}/{scenario_counts.effective} PASS {row['scenario_id']}",
+            flush=True,
+        )
 
     source_after = source_inventory_without_evidence(root, evidence_root)
     if source_after != source_before:
         raise AcceptanceRunError("source tree changed during acceptance execution")
+    if len(entries) != scenario_counts.effective:
+        raise AcceptanceRunError(
+            "executed acceptance scenario count differs from the registry: "
+            f"{len(entries)} != {scenario_counts.effective}"
+        )
     aggregate_rows = [
         [row["scenario_id"], row["origin"], row["path"], row["sha256"], row["size"]]
         for row in sorted(entries, key=lambda value: str(value["scenario_id"]))
@@ -1642,10 +2016,10 @@ def main() -> int:
         "completed_at": utc_now(),
         "bindings": common,
         "counts": {
-            "base_scenarios": 271,
-            "supplemental_scenarios": 168,
-            "effective_scenarios": 439,
-            "passed": 439,
+            "base_scenarios": scenario_counts.base,
+            "supplemental_scenarios": scenario_counts.supplemental,
+            "effective_scenarios": scenario_counts.effective,
+            "passed": len(entries),
             "failed": 0,
             "skipped": 0,
             "retried": 0,
@@ -1698,7 +2072,7 @@ def main() -> int:
             sort_keys=True,
         )
     )
-    print("ACCEPTANCE_RUN_439: PASS")
+    print(f"ACCEPTANCE_RUN_{scenario_counts.effective}: PASS")
     return 0
 
 
@@ -1707,5 +2081,8 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except (AcceptanceRunError, MachineReportError, OSError, ValueError) as error:
-        print(f"ACCEPTANCE_RUN_439: FAIL: {error}", file=sys.stderr)
+        print(
+            f"ACCEPTANCE_RUN_{CURRENT_EFFECTIVE_SCENARIO_COUNT}: FAIL: {error}",
+            file=sys.stderr,
+        )
         raise SystemExit(1)

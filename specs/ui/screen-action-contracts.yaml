@@ -20,11 +20,11 @@ counts:
   visible_placements: 88
   journey_visible_actions: 17
   legacy_side_door_fences: 30
-  base_actions: 259
-  effective_actions: 364
+  base_actions: 261
+  effective_actions: 366
 action_registry_set_equality:
   base_source: specs/ui/screen-catalog.yaml#screens[].actions[]
-  base_keys: 259
+  base_keys: 261
   additive_source: command placement registry
   additive_keys: 88
   journey_source: explicit canonical journey visible-action registry

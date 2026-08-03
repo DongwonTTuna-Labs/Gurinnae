@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/notification.payment_review_requested.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewTaskId",
+    "reviewTaskVersion",
+    "reviewTaskDigest",
+    "sourceKind",
+    "sourceReceiptId",
+    "sourceReceiptDigest",
+    "occurredAt"
+  ],
+  "properties": {
+    "reviewTaskId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "reviewTaskVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "reviewTaskDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sourceKind": {
+      "type": "string",
+      "enum": [
+        "DONATION_PAYMENT_FAILURE",
+        "SIGNED_COLLECTION_FAILURE"
+      ]
+    },
+    "sourceReceiptId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "sourceReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

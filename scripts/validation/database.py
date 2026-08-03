@@ -6,17 +6,13 @@ from pathlib import Path
 
 from pglast import parse_sql
 
-from verify_migrations import EXPECTED_ADDITIVE_MIGRATIONS
+from verify_migrations import (
+    EXPECTED_ADDITIVE_MIGRATIONS,
+    EXPECTED_BASE_MIGRATIONS,
+    EXPECTED_RUNTIME_MIGRATIONS,
+)
 
-from .database_additive_inventory import (
-    _extract_additive_inventory,
-    _validate_r6d_inventory,
-)
-from .database_event_inventory import _event_registry_inventory
-from .database_payload_inventory import (
-    _resolve_local_schema_refs,
-    _validate_event_payload_inventory,
-)
+from .database_additive_inventory import _validate_r6d_inventory
 from .loaders import load_json, load_yaml
 from .models import Validation
 
@@ -75,6 +71,9 @@ def validate(root: Path, result: Validation) -> None:
     }
     runtime_catalog = load_yaml(root / 'specs/database/runtime-security-tests.yaml')
     runtime_evidence = load_json(root / 'verification/postgres-runtime-baseline.json')
+    owner_database_delta = load_yaml(
+        root / 'specs/product/owner-addendum-2026-07-14.yaml'
+    )['database_delta']
     _validate_r6d_inventory(root, result)
 
     migrations = sorted((root / 'specs/database/migrations').glob('*.sql'))
@@ -95,9 +94,17 @@ def validate(root: Path, result: Validation) -> None:
     triggers = [f'{schema}.{table}:{name}' for name, schema, table in TRIGGER_RE.findall(combined)]
     schemas = sorted(set(re.findall(r'CREATE SCHEMA IF NOT EXISTS\s+([a-z_]+)', combined, re.I)))
 
+    result.require(
+        len(migrations) == EXPECTED_BASE_MIGRATIONS == owner_database_delta['base_migrations'],
+        f'immutable base migration count mismatch: {len(migrations)}',
+    )
     result.require(len(migrations) == catalog['migration_count'], f'migration count mismatch {len(migrations)} vs {catalog["migration_count"]}')
     result.require(schemas == catalog['schemas'] == ['core', 'editorial', 'extensions', 'intake', 'ops', 'public', 'raw'], f'database schema set mismatch: {schemas}')
     result.require(len(tables) == catalog['table_count'], f'table count mismatch {len(tables)} vs {catalog["table_count"]}')
+    result.require(
+        catalog['table_count'] == owner_database_delta['base_active_tables'] == 107,
+        'immutable base table count differs from owner provenance',
+    )
     result.require(set(tables) == {f"{item['schema']}.{item['table']}" for item in catalog['tables']}, 'schema catalog table set differs from SQL')
     result.require(len(set(functions)) > 0, 'first-party database functions are missing')
     result.require(len(policies) == catalog['policy_count'] == 5, f'RLS policy definition count mismatch {len(policies)}')
@@ -187,16 +194,68 @@ def validate(root: Path, result: Validation) -> None:
 
     result.require(privilege['status'] == 'FINAL', 'privilege matrix must be FINAL')
     result.require(matrix['operation_count'] == 217 and len(matrix['operations']) == 217, 'operation-table matrix must cover 217 operations')
-    runtime_additive_migrations = [
-        root / 'db/migrations' / migration_name
-        for migration_name in EXPECTED_ADDITIVE_MIGRATIONS
-    ]
+    runtime_migrations = sorted((root / 'db/migrations').glob('*.sql'))
+    runtime_names = tuple(path.name for path in runtime_migrations)
+    runtime_additive_migrations = runtime_migrations[EXPECTED_BASE_MIGRATIONS:]
+    result.require(
+        len(runtime_migrations) == EXPECTED_RUNTIME_MIGRATIONS == 41,
+        f'runtime migration count differs: {len(runtime_migrations)}',
+    )
+    result.require(
+        runtime_names[EXPECTED_BASE_MIGRATIONS:] == EXPECTED_ADDITIVE_MIGRATIONS,
+        'runtime post-base migration inventory differs',
+    )
+    result.require(
+        all(
+            runtime_migrations[position].read_bytes() == migration.read_bytes()
+            for position, migration in enumerate(migrations)
+        ),
+        'runtime migration prefix differs byte-for-byte from the immutable base layer',
+    )
+    result.require(
+        len(owner_database_delta['migrations'])
+        == owner_database_delta['additive_migrations']
+        == 15
+        and set(owner_database_delta['migrations']) <= set(EXPECTED_ADDITIVE_MIGRATIONS),
+        'owner-declared migration layer differs from the runtime post-base layer',
+    )
     for migration in runtime_additive_migrations:
         try:
             parse_sql(migration.read_text(encoding='utf-8'))
         except Exception as exc:
             result.error(f'{migration.name}: runtime additive PostgreSQL parser failed: {exc}')
     runtime_tables, runtime_functions = created_runtime_relations(runtime_additive_migrations)
+    runtime_combined = '\n'.join(
+        path.read_text(encoding='utf-8') for path in runtime_migrations
+    )
+    runtime_table_definitions = [
+        f'{schema}.{table}' for schema, table in TABLE_RE.findall(runtime_combined)
+    ]
+    runtime_dropped_tables = {
+        f'{schema}.{table}' for schema, table in DROP_TABLE_RE.findall(runtime_combined)
+    }
+    final_runtime_tables = {
+        table for table in runtime_table_definitions if table not in runtime_dropped_tables
+    }
+    additive_runtime_tables = final_runtime_tables - set(tables)
+    result.require(
+        len(runtime_table_definitions) - len(runtime_dropped_tables)
+        == len(final_runtime_tables),
+        'runtime migration table inventory contains duplicate active definitions',
+    )
+    result.require(
+        len(additive_runtime_tables)
+        == owner_database_delta['additive_table_count']
+        == 202,
+        f'additive runtime table count differs: {len(additive_runtime_tables)}',
+    )
+    result.require(
+        len(final_runtime_tables)
+        == owner_database_delta['final_active_tables']
+        == catalog['table_count'] + len(additive_runtime_tables)
+        == 309,
+        f'final runtime table count differs: {len(final_runtime_tables)}',
+    )
     valid_relations = set(tables) | set(functions) | runtime_tables | runtime_functions | {
         'content_repository',
         'generated_openapi',
@@ -215,9 +274,21 @@ def validate(root: Path, result: Validation) -> None:
     result.require(runtime_catalog['status'] == 'FINAL' and runtime_catalog['test_count'] >= 35, 'runtime security test catalog incomplete')
     result.require(runtime_evidence.get('result') == 'PASS', 'PostgreSQL runtime baseline is not PASS')
     result.require(runtime_evidence.get('postgresqlVersion') == '18.4', 'runtime baseline is not PostgreSQL 18.4')
-    result.require(runtime_evidence.get('migrationCount') == catalog['migration_count'], 'runtime baseline migration count differs from catalog')
+    result.require(
+        runtime_evidence.get('migrationCount') == catalog['migration_count'],
+        'frozen base runtime evidence migration count differs from the base catalog',
+    )
     active_counts = runtime_evidence.get('catalogCounts', {})
-    result.require(active_counts == {'tables':catalog['table_count'],'functions':catalog['function_count'],'triggers':catalog['trigger_count'],'policies':catalog['policy_count']}, 'runtime baseline catalog counts differ')
+    result.require(
+        active_counts
+        == {
+            'tables': catalog['table_count'],
+            'functions': catalog['function_count'],
+            'triggers': catalog['trigger_count'],
+            'policies': catalog['policy_count'],
+        },
+        'frozen base runtime evidence catalog counts differ',
+    )
     result.require(runtime_evidence.get('concurrencyContractCount') == 66 and runtime_evidence.get('concurrencyCatalogResolved') == 66, 'runtime concurrency baseline differs')
     required_runtime_names = {'active-catalog-object-counts','actor-assertion-replay-rejected','audit-event-mutation-rejected','audit-export-role-lifecycle','audit-runtime-chain','clean-migration-apply','closed-response-request-rejected','concurrency-contract-catalog-resolution','control-api-step-up-authorization-claim-denied','correction-attachment-cross-session-idor-rejected','correction-draft-session-reuse-rejected','correction-session-atomic-submit-and-receipt','csrf-hash-rotation','default-privilege-denied:gurine_analysis_worker','default-privilege-denied:gurine_auditor','default-privilege-denied:gurine_control_api','default-privilege-denied:gurine_document_extractor','default-privilege-denied:gurine_identity_api','default-privilege-denied:gurine_ingest_worker','default-privilege-denied:gurine_notification_worker','default-privilege-denied:gurine_public_api','default-privilege-denied:gurine_public_projector','default-privilege-denied:gurine_scheduler','default-privilege-denied:gurine_submission_api','default-privilege-denied:gurine_workflow_worker','duplicate-response-submit-rejected','expired-response-request-rejected','extension-schema-isolation','identity-role-editorial-denied','legacy-step-up-proof-objects-removed','legal-hold-immutable-after-placement','legal-hold-place-concurrency','postgres-version','public-role-private-schema-denied','public-role-write-denied','queue-and-source-primary-key-concurrency','response-active-session-reuse-rejected','response-attachment-cross-session-idor-rejected','response-draft-create-from-zero','response-draft-nonzero-create-rejected','response-magic-token-exchange','response-magic-token-replay-rejected','response-pending-session-reuse-rejected','response-scoped-draft-and-attachment','response-session-promotion','response-session-submit-and-receipt','response-submission-unique-constraint','review-snapshot-mutation-rejected','routine-signature-resolution','rule-run-terminal-mutation-rejected','rule-run-valid-terminal-transition','runtime-roles-no-superuser-or-bypassrls','schema-mapping-approve-concurrency','schema-mapping-reject-concurrency','security-definer-search-path','security-definer-search-path-hijack-resistant','service-assertion-replay-rejected','single-response-submission','source-document-invalid-lifecycle-rejected','source-document-valid-lifecycle-transition','stale-csrf-rotation-rejected','step-up-authorization-closed','step-up-authorization-fourth-issue-rejected','step-up-authorization-three-assertion-issues','submission-direct-write-denied','submission-service-assertion-replay-rejected','submission-session-least-privilege','subscription-session-lifecycle','subscription-session-reuse-rejected'}
     result.require(required_runtime_names <= set(runtime_evidence.get('requiredTests', [])), 'runtime baseline mandatory canary set differs')
@@ -228,8 +299,12 @@ def validate(root: Path, result: Validation) -> None:
     )
     result.stats.update({
         'database_schemas': len(schemas),
-        'database_migrations': len(migrations),
-        'database_tables': len(tables),
+        'base_database_migrations': len(migrations),
+        'post_base_database_migrations': len(runtime_additive_migrations),
+        'runtime_database_migrations': len(runtime_migrations),
+        'base_database_tables': len(tables),
+        'additive_database_tables': len(additive_runtime_tables),
+        'final_database_tables': len(final_runtime_tables),
         'database_table_definitions': len(table_definitions),
         'database_functions': catalog['function_count'],
         'database_function_definitions': len(function_definitions),

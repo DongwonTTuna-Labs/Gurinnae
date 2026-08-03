@@ -25,6 +25,30 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+  role-provisioner:
+    <<: *runtime-hardening
+    image: postgres:18.4-bookworm
+    user: postgres
+    entrypoint:
+    - /bin/bash
+    - /opt/gurine/infra/scripts/provision-r6e-roles.sh
+    command: []
+    environment:
+      ROLE_PROVISIONER_DATABASE_URL: ${ROLE_PROVISIONER_DATABASE_URL}
+      ROLE_PROVISIONER_EXPECTED_ACTOR: ${ROLE_PROVISIONER_EXPECTED_ACTOR}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: 'no'
+    volumes:
+    - ./db/control-plane:/opt/gurine/db/control-plane:ro
+    - ./db/migrations/0041_r6e_monetization_runtime.sql:/opt/gurine/db/migrations/0041_r6e_monetization_runtime.sql:ro
+    - ./infra/scripts/provision-r6e-roles.sh:/opt/gurine/infra/scripts/provision-r6e-roles.sh:ro
   migrator:
     <<: *runtime-hardening
     build:
@@ -43,6 +67,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      role-provisioner:
+        condition: service_completed_successfully
     networks:
     - data
     restart: 'no'
@@ -156,6 +182,51 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
+    networks:
+    - internal
+    - data
+    read_only: true
+    tmpfs:
+    - /tmp
+    restart: unless-stopped
+  billing-gateway:
+    <<: *runtime-hardening
+    build:
+      context: .
+      dockerfile: infra/docker/rust-service/Dockerfile
+      target: billing-gateway
+    environment:
+      DATABASE_URL: ${BILLING_DATABASE_URL}
+      BILLING_DATABASE_URL: ${BILLING_DATABASE_URL:-}
+      BILLING_GATEWAY_BIND_ADDR: ${BILLING_GATEWAY_BIND_ADDR:-0.0.0.0:8092}
+      BILLING_GATEWAY_MODE: ${BILLING_GATEWAY_MODE:-DISABLED}
+      BILLING_LEASE_SECONDS: ${BILLING_LEASE_SECONDS:-}
+      BILLING_ONCE: ${BILLING_ONCE:-false}
+      BILLING_POLL_MILLIS: ${BILLING_POLL_MILLIS:-}
+      BILLING_WORKER_ID: ${BILLING_WORKER_ID:-}
+      DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN: ${DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN:-}
+      DONATION_TEST_PAYMENT_OUTCOME: ${DONATION_TEST_PAYMENT_OUTCOME:-}
+      GURINE_ENV: ${GURINE_ENV:-development}
+      PAYMENT_FIXTURE_BILLING_HMAC_KEY_CURRENT: ${PAYMENT_FIXTURE_BILLING_HMAC_KEY_CURRENT:-}
+      PAYMENT_FIXTURE_BILLING_HMAC_KEY_PREVIOUS: ${PAYMENT_FIXTURE_BILLING_HMAC_KEY_PREVIOUS:-}
+      PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT: ${PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT:-}
+      PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION: ${PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION:-}
+      PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS: ${PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS:-}
+      PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION: ${PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION:-}
+      PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT: ${PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT:-}
+      PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION: ${PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION:-}
+      PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS: ${PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS:-}
+      PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION: ${PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION:-}
+      PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT: ${PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT:-}
+      PUBLIC_WEB_BILLING_HMAC_KEY_PREVIOUS: ${PUBLIC_WEB_BILLING_HMAC_KEY_PREVIOUS:-}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/app/gurine-billing-gateway", "healthcheck", "--url", "http://127.0.0.1:8092/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
     networks:
     - internal
     - data
@@ -361,6 +432,7 @@ services:
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
       TOKEN_HMAC_KEY: ${TOKEN_HMAC_KEY:-}
+      ECONOMICS_DATABASE_URL: ${ECONOMICS_DATABASE_URL:-}
       WORKFLOW_DATABASE_URL: ${WORKFLOW_DATABASE_URL:-}
     networks:
     - internal
@@ -523,6 +595,7 @@ services:
       dockerfile: infra/docker/svelte-bun/Dockerfile
       target: public-web
     environment:
+      BILLING_GATEWAY_INTERNAL_URL: http://billing-gateway:8092
       PUBLIC_API_INTERNAL_URL: http://public-api:8080
       SUBMISSION_API_INTERNAL_URL: http://submission-api:8082
       BOT_CHALLENGE_SITE_KEY: ${BOT_CHALLENGE_SITE_KEY:-}
@@ -538,6 +611,15 @@ services:
       SUBMISSION_COOKIE_KEY_PREVIOUS: ${SUBMISSION_COOKIE_KEY_PREVIOUS:-}
       PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT: ${PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT}
       PUBLIC_WEB_SUBMISSION_HMAC_KEY_PREVIOUS: ${PUBLIC_WEB_SUBMISSION_HMAC_KEY_PREVIOUS:-}
+      PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT: ${PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT:-}
+      DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN: ${DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN:-}
+    depends_on:
+      billing-gateway:
+        condition: service_healthy
+      public-api:
+        condition: service_healthy
+      submission-api:
+        condition: service_healthy
     ports:
     - 0.0.0.0:3000:3000
     networks:

@@ -148,6 +148,30 @@ describe("service assertion request canonicalization", () => {
     );
   });
 
+  it("binds the public-web billing gateway audience without exposing body bytes", () => {
+    const secretBody = "fixture-payment-token-secret";
+    const assertion = serviceAssertion({
+      keyBase64: Buffer.alloc(32, 7).toString("base64"),
+      issuer: "public-web",
+      audience: "billing-gateway",
+      method: "POST",
+      path: "/internal/v1/donation-intents",
+      body: secretBody,
+      contentType: "application/json",
+      idempotencyKey: "33333333-3333-4333-8333-333333333333",
+    });
+
+    const claims = payload(assertion);
+    expect(claims).toMatchObject({
+      iss: "public-web",
+      aud: "billing-gateway",
+      method: "POST",
+      path: "/internal/v1/donation-intents",
+      bodySha256: createHash("sha256").update(secretBody).digest("hex"),
+    });
+    expect(JSON.stringify(claims)).not.toContain(secretBody);
+  });
+
   it("rejects empty and duplicate next submission session headers", async () => {
     expect(() =>
       serviceAssertion({

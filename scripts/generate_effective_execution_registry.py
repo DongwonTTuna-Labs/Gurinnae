@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the static 439-scenario executable acceptance registry.
+"""Generate the complete static executable acceptance registry.
 
 Runtime status and receipts are intentionally absent.  They belong to an
 external, append-only evidence root and bind this file's SHA-256 as an input.
@@ -7,6 +7,7 @@ external, append-only evidence root and bind this file's SHA-256 as an input.
 from __future__ import annotations
 
 import argparse
+import collections
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
@@ -16,10 +17,21 @@ from typing import Any
 import yaml
 
 from git_authority import AUTHORITY_ZIP_SHA256, GitAuthorityError, authority_file
+from generate_supplemental_execution_mapping import prerequisite_argv_for_scenario
 from validation.acceptance_gherkin import (
     canonical_sha256,
     compile_features,
     ordered_pair_set_sha256,
+)
+from validation.http_operation_inventory import (
+    ADDITIVE_OPERATION_CONTRACT,
+    ADDITIVE_RESOURCE_CONTRACT,
+    BASE_OPERATION_CONTRACT,
+    derive_http_operation_inventory,
+    non_get_count,
+    operation_api_counts,
+    operation_ids,
+    operation_kind_counts,
 )
 
 
@@ -28,10 +40,24 @@ OUTPUT = "tests/acceptance/effective-execution-registry.yaml"
 BASE_LOCK = "tests/acceptance/base-v13.lock.yaml"
 BASE_MAPPING = "tests/acceptance/executable-mapping.yaml"
 SUPPLEMENTAL_MAPPING = "tests/acceptance/supplemental-executable-mapping.yaml"
+FINAL_PRODUCT_CONTRACT = "specs/product/final-product-contract.yaml"
+BUSINESS_MODEL_CONTRACT = "specs/product/business-model-contract.yaml"
+SCREEN_CATALOG = "specs/ui/screen-catalog.yaml"
+SERVICE_CONFIG_MAP = "specs/deployment/service-config-map.yaml"
+COMPOSE_CONTRACT = "compose.yaml"
 PROFILE_DOMAIN = b"GURINNAE-ACCEPTANCE-RUNTIME-PROFILE-V1\0"
 SELECTOR_DOMAIN = b"GURINNAE-ACCEPTANCE-SELECTOR-V1\0"
 OBSERVATION_LAYER_DOMAIN = b"GURINNAE-ACCEPTANCE-OBSERVATION-LAYER-EDGE-V1\0"
 ORACLE_LAYER_DOMAIN = b"GURINNAE-ACCEPTANCE-ORACLE-LAYER-EDGE-V1\0"
+FINAL_INVENTORY_DOMAIN = b"GURINNAE-ACCEPTANCE-FINAL-SOURCE-INVENTORY-V1\0"
+FROZEN_BASE_SCENARIO_COUNT = 271
+CURRENT_SUPPLEMENTAL_SCENARIO_COUNT = 175
+CURRENT_EFFECTIVE_SCENARIO_COUNT = (
+    FROZEN_BASE_SCENARIO_COUNT + CURRENT_SUPPLEMENTAL_SCENARIO_COUNT
+)
+CURRENT_ACCEPTANCE_RUN_TARGET = (
+    f"run-acceptance-{CURRENT_EFFECTIVE_SCENARIO_COUNT}"
+)
 
 RUNTIME_LAYERS: dict[str, dict[str, object]] = {
     "rust-1.97.0-domain-application": {
@@ -56,7 +82,7 @@ RUNTIME_LAYERS: dict[str, dict[str, object]] = {
     },
     "docker-compose-production-topology": {
         "probe_kind": "COMPOSE_TOPOLOGY",
-        "required_compose_service_count": 20,
+        "required_compose_service_count": 22,
         "probe_argv_template": [
             "python3", "-B", "scripts/acceptance_layer_probe.py",
             "--layer-id", "docker-compose-production-topology",
@@ -163,10 +189,21 @@ def _unique_mapping(
     deep: bool = False,
 ) -> dict[Any, Any]:
     result: dict[Any, Any] = {}
+    explicit: set[Any] = set()
     for key_node, value_node in node.value:
+        if key_node.tag == "tag:yaml.org,2002:merge":
+            merged = loader.construct_object(value_node, deep=deep)
+            merged_values = merged if isinstance(merged, list) else [merged]
+            for inherited in merged_values:
+                if not isinstance(inherited, dict):
+                    raise RegistryError("YAML merge value must be a mapping")
+                for key, value in inherited.items():
+                    result.setdefault(key, value)
+            continue
         key = loader.construct_object(key_node, deep=deep)
-        if key in result:
+        if key in explicit:
             raise RegistryError(f"duplicate YAML key: {key!r}")
+        explicit.add(key)
         result[key] = loader.construct_object(value_node, deep=deep)
     return result
 
@@ -192,6 +229,254 @@ def _load(root: Path, relative: str) -> dict[str, Any]:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _source_descriptor(root: Path, relative: str) -> dict[str, object]:
+    path = root / relative
+    if path.is_symlink() or not path.is_file():
+        raise RegistryError(f"final inventory source is missing: {relative}")
+    return {
+        "path": relative,
+        "sha256": _sha256(path),
+        "size": path.stat().st_size,
+    }
+
+
+def _unique_ids(
+    rows: object,
+    key: str,
+    source: str,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise RegistryError(f"{source} must contain a list of mappings")
+    typed_rows = list(rows)
+    ids = [row.get(key) for row in typed_rows]
+    if not all(isinstance(value, str) and value for value in ids):
+        raise RegistryError(f"{source} contains an invalid {key}")
+    string_ids = [value for value in ids if isinstance(value, str)]
+    if len(string_ids) != len(set(string_ids)):
+        raise RegistryError(f"{source} contains duplicate {key} values")
+    return typed_rows, string_ids
+
+
+def _final_source_inventory(root: Path) -> dict[str, object]:
+    product = _load(root, FINAL_PRODUCT_CONTRACT)
+    counts = product.get("counts")
+    if not isinstance(counts, dict):
+        raise RegistryError("final product count contract is missing")
+
+    screen_document = _load(root, SCREEN_CATALOG)
+    screen_rows, screen_ids = _unique_ids(
+        screen_document.get("screens"), "id", SCREEN_CATALOG
+    )
+    screen_by_surface = collections.Counter(row.get("surface") for row in screen_rows)
+    expected_screen_by_surface = {
+        "public": 35,
+        "response": 8,
+        "internal": 52,
+    }
+    business = _load(root, BUSINESS_MODEL_CONTRACT)
+    try:
+        fundraising_screen_id = business["donation_funding_boundary"][
+            "donation_screen"
+        ]["id"]
+        funding_download_operation_id = business["donation_funding_boundary"][
+            "funding_report_download"
+        ]["operation_id"]
+    except (KeyError, TypeError) as error:
+        raise RegistryError("R6e final screen/operation pointers are missing") from error
+    if (
+        len(screen_ids) != counts.get("screens")
+        or len(screen_ids) != 95
+        or screen_by_surface != expected_screen_by_surface
+        or fundraising_screen_id != "PUB-035"
+        or fundraising_screen_id not in screen_ids
+    ):
+        raise RegistryError("final 95-screen inventory or PUB-035 binding differs")
+
+    operation_inventory = derive_http_operation_inventory(root)
+    base_rows, base_operation_ids = _unique_ids(
+        list(operation_inventory.base_external),
+        "operation_id",
+        BASE_OPERATION_CONTRACT,
+    )
+    additive_rows, additive_operation_ids = _unique_ids(
+        list(operation_inventory.additive_all),
+        "operation_id",
+        ADDITIVE_OPERATION_CONTRACT,
+    )
+    additive_external_rows = list(operation_inventory.additive_external)
+    private_identity_rows = list(operation_inventory.private_identity_api)
+    additive_external_ids = operation_ids(additive_external_rows)
+    private_identity_ids = operation_ids(private_identity_rows)
+    base_id_set = set(base_operation_ids)
+    additive_id_set = set(additive_operation_ids)
+    additive_external_id_set = set(additive_external_ids)
+    private_identity_id_set = set(private_identity_ids)
+    if (
+        base_id_set & additive_id_set
+        or additive_external_id_set & private_identity_id_set
+        or additive_external_id_set | private_identity_id_set != additive_id_set
+        or additive_external_id_set
+        != operation_inventory.declared_additive_external_ids
+        or additive_external_id_set
+        != operation_inventory.binding_additive_external_ids
+        or private_identity_id_set
+        != operation_inventory.declared_private_identity_api_ids
+        or private_identity_id_set
+        != operation_inventory.binding_private_identity_api_ids
+    ):
+        raise RegistryError("HTTP operation source partitions differ or collide")
+    if funding_download_operation_id not in additive_external_id_set:
+        raise RegistryError("funding download is absent from additive external operations")
+    final_external_rows = [*base_rows, *additive_external_rows]
+    final_external_ids = operation_ids(final_external_rows)
+    all_scope_rows = [*base_rows, *additive_rows]
+    all_scope_ids = operation_ids(all_scope_rows)
+    final_by_api = operation_api_counts(final_external_rows)
+    final_by_kind = operation_kind_counts(final_external_rows)
+    private_identity_by_kind = operation_kind_counts(private_identity_rows)
+    all_scope_by_kind = operation_kind_counts(all_scope_rows)
+    expected_operation_by_api = {
+        "public-api": counts.get("public_operations"),
+        "submission-api": counts.get("submission_operations"),
+        "control-api": counts.get("control_operations"),
+        "identity-provider": counts.get("identity_flows"),
+    }
+    if (
+        len(base_operation_ids) != 217
+        or len(additive_operation_ids) != 54
+        or len(additive_external_ids) != 51
+        or len(private_identity_ids) != 3
+        or len(final_external_ids) != counts.get("operations")
+        or len(final_external_ids) != 268
+        or final_by_api != expected_operation_by_api
+        or final_by_kind
+        != {
+            "QUERY": counts.get("query_operations"),
+            "COMMAND": counts.get("command_operations"),
+        }
+        or non_get_count(final_external_rows)
+        != counts.get("http_write_operations")
+    ):
+        raise RegistryError("final external operation layer differs from product counts")
+    if (
+        operation_api_counts(additive_external_rows)
+        != {"public-api": 1, "submission-api": 8, "control-api": 42}
+        or operation_kind_counts(additive_external_rows)
+        != {"QUERY": 13, "COMMAND": 38}
+        or non_get_count(additive_external_rows) != 38
+        or operation_api_counts(private_identity_rows) != {"identity-api": 3}
+        or private_identity_by_kind != {"COMMAND": 3}
+        or non_get_count(private_identity_rows) != 3
+    ):
+        raise RegistryError("additive external/private Identity API layers differ")
+    expected_all_scope_counts = {
+        "all_scope_http_operations": len(all_scope_ids),
+        "all_scope_http_query_operations": all_scope_by_kind["QUERY"],
+        "all_scope_http_command_operations": all_scope_by_kind["COMMAND"],
+        "all_scope_http_write_operations": non_get_count(all_scope_rows),
+    }
+    if (
+        expected_all_scope_counts
+        != {
+            "all_scope_http_operations": 271,
+            "all_scope_http_query_operations": 123,
+            "all_scope_http_command_operations": 148,
+            "all_scope_http_write_operations": 145,
+        }
+        or any(
+            counts.get(key) != value
+            for key, value in expected_all_scope_counts.items()
+        )
+    ):
+        raise RegistryError("complete all-scope HTTP operation layer differs")
+
+    service_document = _load(root, SERVICE_CONFIG_MAP)
+    _, service_ids = _unique_ids(
+        service_document.get("services"), "service", SERVICE_CONFIG_MAP
+    )
+    compose_document = _load(root, COMPOSE_CONTRACT)
+    compose_services = compose_document.get("services")
+    if not isinstance(compose_services, dict):
+        raise RegistryError("Compose service inventory must be a mapping")
+    compose_service_ids = sorted(compose_services)
+    if len(service_ids) != counts.get("services") or len(service_ids) != 18:
+        raise RegistryError("final 18-service runtime inventory differs")
+    if (
+        len(compose_service_ids) != counts.get("compose_services")
+        or len(compose_service_ids) != 22
+    ):
+        raise RegistryError("final 22-service Compose inventory differs")
+
+    sources = [
+        _source_descriptor(root, relative)
+        for relative in (
+            FINAL_PRODUCT_CONTRACT,
+            BUSINESS_MODEL_CONTRACT,
+            SCREEN_CATALOG,
+            BASE_OPERATION_CONTRACT,
+            ADDITIVE_OPERATION_CONTRACT,
+            ADDITIVE_RESOURCE_CONTRACT,
+            SERVICE_CONFIG_MAP,
+            COMPOSE_CONTRACT,
+        )
+    ]
+    body: dict[str, object] = {
+        "sources": sources,
+        "screens": {
+            "count": len(screen_ids),
+            "by_surface": dict(sorted(screen_by_surface.items())),
+            "required_additive_ids": [fundraising_screen_id],
+            "ids": sorted(screen_ids),
+        },
+        "external_operations": {
+            "base_count": len(base_operation_ids),
+            "additive_count": len(additive_external_ids),
+            "final_count": len(final_external_ids),
+            "by_api": dict(sorted(final_by_api.items())),
+            "by_kind": dict(sorted(final_by_kind.items())),
+            "non_get_count": non_get_count(final_external_rows),
+            "additive_ids": sorted(additive_external_ids),
+            "required_additive_ids": [funding_download_operation_id],
+            "ids": sorted(final_external_ids),
+        },
+        "private_identity_api_operations": {
+            "count": len(private_identity_ids),
+            "by_api": {"identity-api": len(private_identity_ids)},
+            "by_kind": dict(sorted(private_identity_by_kind.items())),
+            "non_get_count": non_get_count(private_identity_rows),
+            "ids": sorted(private_identity_ids),
+        },
+        "all_scope_http_operations": {
+            "count": len(all_scope_ids),
+            "by_kind": dict(sorted(all_scope_by_kind.items())),
+            "non_get_count": non_get_count(all_scope_rows),
+            "ids": sorted(all_scope_ids),
+        },
+        "operation_partitions": {
+            "base_additive_intersection_count": len(base_id_set & additive_id_set),
+            "additive_external_private_identity_intersection_count": len(
+                additive_external_id_set & private_identity_id_set
+            ),
+            "additive_partition_complete": (
+                additive_external_id_set | private_identity_id_set
+                == additive_id_set
+            ),
+        },
+        "runtime_services": {
+            "count": len(service_ids),
+            "ids": sorted(service_ids),
+        },
+        "compose_services": {
+            "count": len(compose_service_ids),
+            "ids": compose_service_ids,
+        },
+    }
+    return {
+        **body,
+        "inventory_sha256": canonical_sha256(FINAL_INVENTORY_DOMAIN, body),
+    }
 
 
 def _authority_feature_descriptor(root: Path, relative: str) -> dict[str, object]:
@@ -380,12 +665,21 @@ def _execution_contract(
     else:
         raise RegistryError(f"unsupported acceptance runner path: {path}")
     profile_id = _profile_id(row, "PLAYWRIGHT" if runner_kind == "PLAYWRIGHT" else "RUST")
+    expected_prerequisite = prerequisite_argv_for_scenario(scenario_id)
+    has_prerequisite = "prerequisite_argv" in row
+    if has_prerequisite != (expected_prerequisite is not None):
+        raise RegistryError(f"runtime prerequisite presence differs: {scenario_id}")
+    if has_prerequisite and row.get("prerequisite_argv") != expected_prerequisite:
+        raise RegistryError(f"runtime prerequisite argv differs: {scenario_id}")
+    execution: dict[str, object] = {
+        "implementation_test_path": path,
+        "selector": selector,
+        "runtime_profile_id": profile_id,
+    }
+    if expected_prerequisite is not None:
+        execution["prerequisite_argv"] = expected_prerequisite
     return (
-        {
-            "implementation_test_path": path,
-            "selector": selector,
-            "runtime_profile_id": profile_id,
-        },
+        execution,
         profile_id,
     )
 
@@ -395,6 +689,11 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
     lock = _load(root, BASE_LOCK)
     if lock.get("authority_zip_sha256") != AUTHORITY_ZIP_SHA256:
         raise RegistryError("base lock authority digest mismatch")
+    if lock.get("scenario_count") != FROZEN_BASE_SCENARIO_COUNT:
+        raise RegistryError(
+            "base lock scenario count differs from the frozen authority: "
+            f"{lock.get('scenario_count')!r} != {FROZEN_BASE_SCENARIO_COUNT}"
+        )
     feature_rows = lock.get("features")
     if not isinstance(feature_rows, list):
         raise RegistryError("base lock features must be a list")
@@ -436,12 +735,19 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
         raise RegistryError("supplemental feature/mapping scenario set mismatch")
     if base_ids & supplemental_ids:
         raise RegistryError("base/supplemental scenario collision")
-    if len(base_ids) != 271 or len(supplemental_ids) != 168:
+    if (
+        len(base_ids) != FROZEN_BASE_SCENARIO_COUNT
+        or len(supplemental_ids) != CURRENT_SUPPLEMENTAL_SCENARIO_COUNT
+        or len(contracts) != CURRENT_EFFECTIVE_SCENARIO_COUNT
+    ):
         raise RegistryError(
-            f"unexpected scenario counts: base={len(base_ids)}, supplemental={len(supplemental_ids)}"
+            "unexpected scenario counts: "
+            f"base={len(base_ids)}, supplemental={len(supplemental_ids)}, "
+            f"effective={len(contracts)}"
         )
 
     runtime_contracts = _runtime_profiles()
+    final_source_inventory = _final_source_inventory(root)
     unique_source_steps = {
         (
             contract.feature_file,
@@ -559,6 +865,7 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
                 "path": SUPPLEMENTAL_MAPPING,
                 "sha256": _sha256(root / SUPPLEMENTAL_MAPPING),
             },
+            "final_inventory_sources": final_source_inventory["sources"],
         },
         "counts": {
             "base_features": len(base_paths),
@@ -598,6 +905,7 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
             ),
         },
         "runtime_contracts": runtime_contracts,
+        "final_source_inventory": final_source_inventory,
         "features": feature_manifest,
         "scenarios": scenario_rows,
         "forbidden_runtime_keys": [

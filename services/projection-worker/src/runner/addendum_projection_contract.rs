@@ -10,6 +10,7 @@ pub(super) fn event_is_accepted(consumer_id: &str, event_type: &str) -> bool {
                 | "action.execution_authorized.v1"
                 | "editorial.response_materialized.v2"
                 | "response.submitted.v2"
+                | "governance.funding_disclosure_published.v1"
         ),
         "cost-projector" => event_type == "communication.delivery_receipt_recorded.v1",
         "submission-projector" => matches!(

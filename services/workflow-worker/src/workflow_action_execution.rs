@@ -36,6 +36,8 @@ struct EncryptedRendering {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum ApprovedExecutionKind {
     Communication,
+    EconomicsImport,
+    FundingDisclosure,
     Hypothesis,
 }
 
@@ -47,26 +49,49 @@ struct ApprovedExecution {
     kind: ApprovedExecutionKind,
 }
 
+#[derive(Clone, Copy)]
+struct ActionExecutionContext<'a> {
+    pool: &'a PgPool,
+    economics_pool: Option<&'a PgPool>,
+    field_keys: &'a EnvelopeKeyRing,
+    worker_id: &'a str,
+    producer_job: ProducerJobFence,
+}
+
 async fn execute_approved_action(
-    pool: &PgPool,
-    field_keys: &EnvelopeKeyRing,
-    producer_job_id: Uuid,
-    producer_job_lease_token: Uuid,
-    producer_job_fencing_token: i64,
+    context: ActionExecutionContext<'_>,
+    source_event_id: Uuid,
     aggregate_id: Uuid,
     payload: &serde_json::Map<String, Value>,
-) -> Result<Value, Failure> {
+) -> Result<WorkflowJobCompletion, Failure> {
     let approved_execution = approved_execution(payload, aggregate_id)?;
+    let economics_pool =
+        economics_pool_for_execution(approved_execution.kind, context.economics_pool)?;
+    if approved_execution.kind == ApprovedExecutionKind::EconomicsImport {
+        let economics_pool = economics_pool.ok_or_else(economics_database_unavailable)?;
+        return execute_approved_economics_import(
+            economics_pool,
+            source_event_id,
+            context.producer_job,
+            context.worker_id,
+            &approved_execution,
+        )
+        .await;
+    }
     if approved_execution.kind == ApprovedExecutionKind::Hypothesis {
-        let producer_job = ProducerJobFence {
-            id: producer_job_id,
-            lease_token: producer_job_lease_token,
-            fencing_token: producer_job_fencing_token,
-        };
         return execute_approved_hypothesis(
-            pool,
-            field_keys,
-            producer_job,
+            context.pool,
+            context.field_keys,
+            context.producer_job,
+            &approved_execution,
+        )
+        .await
+        .map(WorkflowJobCompletion::WorkerOwned);
+    }
+    if approved_execution.kind == ApprovedExecutionKind::FundingDisclosure {
+        return execute_approved_funding_disclosure(
+            source_event_id,
+            context.producer_job,
             &approved_execution,
         )
         .await;
@@ -83,17 +108,29 @@ async fn execute_approved_action(
             "execution kind".to_owned(),
         ));
     };
-    let approved =
-        load_approved_action(pool, field_keys, execution_id, generation, event_payload).await?;
+    let approved = load_approved_action(
+        context.pool,
+        context.field_keys,
+        execution_id,
+        generation,
+        event_payload,
+    )
+    .await?;
     let endpoint =
-        load_communication_endpoint(pool, execution_id, generation, &approved.action).await?;
-    let destination = communication_destination(field_keys, &approved.action, &endpoint)?;
-    let rendering = encrypted_rendering(field_keys, execution_id, destination, &approved.action)?;
+        load_communication_endpoint(context.pool, execution_id, generation, &approved.action)
+            .await?;
+    let destination = communication_destination(context.field_keys, &approved.action, &endpoint)?;
+    let rendering = encrypted_rendering(
+        context.field_keys,
+        execution_id,
+        destination,
+        &approved.action,
+    )?;
     let endpoint_snapshot_digest: String = endpoint
         .try_get("endpoint_snapshot_digest")
         .map_err(database)?;
     dispatch_communication(
-        pool,
+        context.pool,
         execution_id,
         generation,
         approved,
@@ -101,6 +138,25 @@ async fn execute_approved_action(
         rendering,
     )
     .await
+    .map(WorkflowJobCompletion::WorkerOwned)
+}
+
+fn economics_pool_for_execution(
+    kind: ApprovedExecutionKind,
+    economics_pool: Option<&PgPool>,
+) -> Result<Option<&PgPool>, Failure> {
+    if kind == ApprovedExecutionKind::EconomicsImport && economics_pool.is_none() {
+        Err(economics_database_unavailable())
+    } else {
+        Ok(economics_pool)
+    }
+}
+
+fn economics_database_unavailable() -> Failure {
+    Failure::Retryable(
+        "ECONOMICS_OWNER_ABI_UNAVAILABLE",
+        "redacted:economics-database-not-configured".to_owned(),
+    )
 }
 
 fn approved_execution(
@@ -124,6 +180,12 @@ fn approved_execution(
     let kind = match (action_kind, target_command) {
         (Some("COMMUNICATION"), Some("private.DispatchCommunicationIntent")) => {
             ApprovedExecutionKind::Communication
+        }
+        (Some("ECONOMICS_IMPORT"), Some("private.ExecuteEconomicsImport")) => {
+            ApprovedExecutionKind::EconomicsImport
+        }
+        (Some("FUNDING_DISCLOSURE"), Some("private.PublishFundingDisclosureRevision")) => {
+            ApprovedExecutionKind::FundingDisclosure
         }
         (Some("HYPOTHESIS"), Some("createHypothesis")) => ApprovedExecutionKind::Hypothesis,
         _ => {
@@ -375,7 +437,10 @@ fn communication_action(payload: &Value) -> Result<CommunicationAction, Failure>
     }
     if let Some(proposal) = payload.get("proposal") {
         let binding = proposal.get("recipientBinding").ok_or_else(|| {
-            Failure::Terminal("COMMUNICATION_RECIPIENT_BINDING_MISSING", "recipientBinding".to_owned())
+            Failure::Terminal(
+                "COMMUNICATION_RECIPIENT_BINDING_MISSING",
+                "recipientBinding".to_owned(),
+            )
         })?;
         let purpose = required_text(proposal, "purpose")?;
         return Ok(CommunicationAction {
@@ -399,14 +464,22 @@ fn communication_action(payload: &Value) -> Result<CommunicationAction, Failure>
                 .unwrap_or("구린네 근거 확인 요청")
                 .to_owned(),
             body: required_text(proposal, "draftText")?,
-            citations: proposal.get("citationIds").cloned().unwrap_or_else(|| json!([])),
+            citations: proposal
+                .get("citationIds")
+                .cloned()
+                .unwrap_or_else(|| json!([])),
         });
     }
     let recipients = payload
         .get("recipients")
         .and_then(Value::as_array)
         .filter(|values| values.len() == 1)
-        .ok_or_else(|| Failure::Terminal("COMMUNICATION_RECIPIENT_COUNT_UNSUPPORTED", "one exact recipient required".to_owned()))?;
+        .ok_or_else(|| {
+            Failure::Terminal(
+                "COMMUNICATION_RECIPIENT_COUNT_UNSUPPORTED",
+                "one exact recipient required".to_owned(),
+            )
+        })?;
     let recipient = recipients.first().ok_or_else(|| {
         Failure::Terminal("COMMUNICATION_RECIPIENT_MISSING", "recipients".to_owned())
     })?;
@@ -424,7 +497,10 @@ fn communication_action(payload: &Value) -> Result<CommunicationAction, Failure>
         template_revision: required_positive_i64(payload, "templateRevision")?.to_string(),
         subject: required_text(payload, "subject")?,
         body: required_text(payload, "bodyPlainText")?,
-        citations: payload.get("attachmentIds").cloned().unwrap_or_else(|| json!([])),
+        citations: payload
+            .get("attachmentIds")
+            .cloned()
+            .unwrap_or_else(|| json!([])),
     })
 }
 
@@ -433,18 +509,29 @@ fn communication_class(purpose: &str) -> Result<&'static str, Failure> {
         "SUBSCRIPTION_UPDATE" => Ok("SUBSCRIPTION_UPDATE"),
         "PRODUCT_MARKETING" | "DISCRETIONARY_OUTREACH" => Ok("DISCRETIONARY_EXTERNAL"),
         "INTERNAL_ACTION_REQUEST" => Ok("INTERNAL_ACTION_REQUEST"),
-        "ENDPOINT_VERIFICATION" | "RIGHT_OF_REPLY_REQUEST" | "RIGHT_OF_REPLY_REMINDER"
-        | "RESPONSE_RECEIPT" | "CORRECTION_STATUS" | "CORRECTION_RETRACTION_NOTICE"
-        | "PRIVACY_TRANSACTIONAL_NOTICE" | "SECURITY_TRANSACTIONAL_NOTICE"
-        | "INCIDENT_RECOVERY" | "SYSTEM_TRANSACTIONAL" => Ok("SYSTEM_TRANSACTIONAL"),
-        _ => Err(Failure::Terminal("COMMUNICATION_PURPOSE_INVALID", purpose.to_owned())),
+        "ENDPOINT_VERIFICATION"
+        | "RIGHT_OF_REPLY_REQUEST"
+        | "RIGHT_OF_REPLY_REMINDER"
+        | "RESPONSE_RECEIPT"
+        | "CORRECTION_STATUS"
+        | "CORRECTION_RETRACTION_NOTICE"
+        | "PRIVACY_TRANSACTIONAL_NOTICE"
+        | "SECURITY_TRANSACTIONAL_NOTICE"
+        | "INCIDENT_RECOVERY"
+        | "SYSTEM_TRANSACTIONAL" => Ok("SYSTEM_TRANSACTIONAL"),
+        _ => Err(Failure::Terminal(
+            "COMMUNICATION_PURPOSE_INVALID",
+            purpose.to_owned(),
+        )),
     }
 }
 
 fn endpoint_logical_type(channel: &str) -> &'static str {
     match channel {
         "SMTP_EMAIL" => "email-address",
-        "SOLAPI_SMS" | "SOLAPI_KAKAO_BIZMESSAGE" | "TWILIO_VOICE"
+        "SOLAPI_SMS"
+        | "SOLAPI_KAKAO_BIZMESSAGE"
+        | "TWILIO_VOICE"
         | "META_WHATSAPP_BUSINESS_CLOUD" => "phone-number",
         "SIGNED_WEBHOOK" => "uri",
         _ => "provider-identifier",
@@ -479,7 +566,10 @@ fn required_digest(value: &Value, key: &'static str) -> Result<String, Failure> 
         if is_sha256(&digest) {
             Ok(digest)
         } else {
-            Err(Failure::Terminal("ACTION_PAYLOAD_FIELD_INVALID", key.to_owned()))
+            Err(Failure::Terminal(
+                "ACTION_PAYLOAD_FIELD_INVALID",
+                key.to_owned(),
+            ))
         }
     })
 }

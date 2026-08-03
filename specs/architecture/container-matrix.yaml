@@ -40,6 +40,13 @@ compose_services:
     - test
     depends_on:
       migrator: service_completed_successfully
+  billing-gateway:
+    profiles:
+    - full
+    - test
+    depends_on:
+      migrator: service_completed_successfully
+    public_port_default: false
   control-api:
     profiles:
     - full
@@ -66,6 +73,7 @@ compose_services:
     - test
     depends_on:
       public-api: service_healthy
+      billing-gateway: service_healthy
   review-console:
     profiles:
     - full
@@ -149,3 +157,5 @@ smoke_tests:
 - oidc-login-and-step-up-bff
 - four-client-boundary
 - split-worker-database-role-boundary
+- billing-gateway-disabled-and-test-only-mode
+- billing-gateway-no-direct-table-dml-or-egress

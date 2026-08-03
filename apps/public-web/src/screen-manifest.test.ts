@@ -13,8 +13,8 @@ const EXPLICITLY_EMPTY_PROJECTION_SECTIONS = new Set([
 ]);
 
 describe("public screen manifest", () => {
-  it("materializes all 34 unique public screens", () => {
-    assertScreens(screens, 34);
+  it("materializes all 35 unique public screens", () => {
+    assertScreens(screens, 35);
     assertTypedContracts(screens);
   });
 });

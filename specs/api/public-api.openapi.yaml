@@ -18,6 +18,7 @@ tags:
 - name: rule
 - name: source
 - name: supplier
+- name: addendum
 paths:
   /v1/agencies:
     get:
@@ -3553,6 +3554,85 @@ paths:
       security: []
       x-assurance-level: NONE
       x-step-up-required: false
+  /v1/transparency-reports/{reportId}/download:
+    get:
+      operationId: downloadTransparencyReport
+      summary: downloadTransparencyReport
+      tags:
+      - addendum
+      x-operation-kind: QUERY
+      x-capability: none
+      x-assurance-level: NONE
+      x-error-codes:
+      - INVALID_PARAMETER
+      - RESOURCE_NOT_FOUND
+      - PRECONDITION_FAILED
+      - RATE_LIMITED
+      - INTERNAL_ERROR
+      security: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransparencyReportDownloadV1'
+        '400':
+          description: 'Problem response: INVALID_PARAMETER'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INVALID_PARAMETER
+        '404':
+          description: 'Problem response: RESOURCE_NOT_FOUND'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - RESOURCE_NOT_FOUND
+        '422':
+          description: 'Problem response: PRECONDITION_FAILED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - PRECONDITION_FAILED
+        '429':
+          description: 'Problem response: RATE_LIMITED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - RATE_LIMITED
+        '500':
+          description: 'Problem response: INTERNAL_ERROR'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - INTERNAL_ERROR
+      parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - JSON
+          - CSV
+          default: JSON
 components:
   securitySchemes: {}
   schemas:
@@ -7516,4 +7596,112 @@ components:
       - format
       - rowCount
       - appliedFilters
+      - generatedAt
+    AddendumProblemDetailsV1:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        requestId:
+          type: string
+          format: uuid
+        detail:
+          type:
+          - string
+          - 'null'
+      required:
+      - code
+      - title
+      - status
+      - requestId
+    DownloadTransparencyReportRequestV1:
+      type: object
+      additionalProperties: false
+      properties:
+        reportId:
+          type: string
+          format: uuid
+      required:
+      - reportId
+    TransparencyReportDownloadV1:
+      type: object
+      additionalProperties: false
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: READY
+        reportKind:
+          type: string
+          const: FUNDING_DISCLOSURE
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        notice:
+          type: string
+          const: 이상 징후 기록이며 위법·부패의 확정이 아님
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mediaType:
+          type: string
+          enum:
+          - application/json
+          - text/csv
+        byteLength:
+          type: integer
+          format: int64
+          minimum: 1
+        contentSha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        contentBase64:
+          type: string
+          minLength: 1
+        format:
+          type: string
+          enum:
+          - JSON
+          - CSV
+        rowCount:
+          type: integer
+          format: int64
+          minimum: 0
+        sourceRevisionDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        projectionDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        publicContentDigest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+      - reportId
+      - status
+      - reportKind
+      - revision
+      - notice
+      - filename
+      - mediaType
+      - byteLength
+      - contentSha256
+      - contentBase64
+      - format
+      - rowCount
+      - sourceRevisionDigest
+      - projectionDigest
+      - publicContentDigest
       - generatedAt

@@ -63,6 +63,7 @@ const placements = {
   "PUB-032": header("view-data", "contact"),
   "PUB-033": header("report-accessibility", "request-alternative"),
   "PUB-034": header("retry", "go-home", "view-status"),
+  "PUB-035": placed(["contact"], {}, ["queue-donation"]),
 } as const satisfies Readonly<Record<string, PublicActionPlacement>>;
 
 export const PUBLIC_ACTION_PLACEMENT_SCREEN_IDS = Object.freeze(

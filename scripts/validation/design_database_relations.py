@@ -58,17 +58,91 @@ def _candidate_keys(row: dict[str, Any]) -> set[tuple[str, ...]]:
     return candidates
 
 
+def _added_columns(
+    document: dict[str, Any],
+    rows: dict[str, dict[str, Any]],
+    result: Validation,
+) -> dict[str, tuple[str, ...]]:
+    changes = document.get("existing_relation_changes")
+    result.require(
+        isinstance(changes, list),
+        "forward existing_relation_changes must be a list",
+    )
+    if not isinstance(changes, list):
+        return {}
+
+    additions: dict[str, tuple[str, ...]] = {}
+    for change_index, change in enumerate(changes, 1):
+        if not isinstance(change, dict) or "added_columns" not in change:
+            continue
+        relation = change.get("relation")
+        relation_valid = isinstance(relation, str) and relation in rows
+        result.require(
+            relation_valid,
+            f"forward added columns change {change_index} targets an unknown relation {relation!r}",
+        )
+        raw_columns = change.get("added_columns")
+        columns_valid = isinstance(raw_columns, list) and bool(raw_columns)
+        result.require(
+            columns_valid,
+            f"forward added columns for {relation!r} must be a nonempty list",
+        )
+        if not relation_valid or not columns_valid or not isinstance(relation, str):
+            continue
+        result.require(
+            relation not in additions,
+            f"forward added columns relation is declared more than once: {relation}",
+        )
+        existing_columns = set(_column_names(rows[relation]))
+        names: list[str] = []
+        for column_index, raw_column in enumerate(raw_columns, 1):
+            exact_shape = isinstance(raw_column, dict) and set(raw_column) == {
+                "name",
+                "type",
+                "nullable",
+                "default",
+            }
+            result.require(
+                exact_shape,
+                f"{relation}: added column {column_index} must contain exactly name, type, nullable and default",
+            )
+            if not exact_shape or not isinstance(raw_column, dict):
+                continue
+            name = raw_column.get("name")
+            valid_name = (
+                isinstance(name, str)
+                and re.fullmatch(r"[a-z][a-z0-9_]*", name) is not None
+                and name not in existing_columns
+                and name not in names
+            )
+            result.require(
+                valid_name,
+                f"{relation}: added column {column_index} has an invalid or duplicate name",
+            )
+            result.require(
+                isinstance(raw_column.get("type"), str)
+                and bool(raw_column.get("type"))
+                and isinstance(raw_column.get("nullable"), bool),
+                f"{relation}: added column {name!r} has an invalid physical type or nullability",
+            )
+            if valid_name and isinstance(name, str):
+                names.append(name)
+        additions[relation] = tuple(names)
+    return additions
+
+
 def _added_candidate_keys(
     document: dict[str, Any],
     rows: dict[str, dict[str, Any]],
     result: Validation,
+    added_columns: dict[str, tuple[str, ...]] | None = None,
 ) -> dict[str, tuple[tuple[str, tuple[str, ...]], ...]]:
-    """Parse only explicit forward candidate keys from the R6c addendum."""
+    """Parse only explicit forward candidate keys from one additive fragment."""
 
     changes = document.get("existing_relation_changes")
     result.require(
         isinstance(changes, list),
-        "R6c existing_relation_changes must be a list",
+        "forward existing_relation_changes must be a list",
     )
     if not isinstance(changes, list):
         return {}
@@ -82,7 +156,7 @@ def _added_candidate_keys(
         if not isinstance(change, dict):
             result.require(
                 False,
-                f"R6c existing relation change {change_index} must be a mapping",
+                f"forward existing relation change {change_index} must be a mapping",
             )
             continue
         raw_keys = change.get("added_candidate_keys")
@@ -97,22 +171,24 @@ def _added_candidate_keys(
         )
         result.require(
             relation_valid,
-            f"R6c existing relation change {change_index} targets an unknown relation {relation!r}",
+            f"forward existing relation change {change_index} targets an unknown relation {relation!r}",
         )
         keys_valid = isinstance(raw_keys, list) and bool(raw_keys)
         result.require(
             keys_valid,
-            f"R6c added_candidate_keys for {relation!r} must be a nonempty list",
+            f"forward added_candidate_keys for {relation!r} must be a nonempty list",
         )
         if not relation_valid or not keys_valid or not isinstance(relation, str):
             continue
         result.require(
             relation not in seen_relations,
-            f"R6c added candidate-key relation is declared more than once: {relation}",
+            f"forward added candidate-key relation is declared more than once: {relation}",
         )
         seen_relations.add(relation)
         existing_candidates = _candidate_keys(rows[relation])
-        relation_columns = set(_column_names(rows[relation]))
+        relation_columns = set(_column_names(rows[relation])) | set(
+            (added_columns or {}).get(relation, ())
+        )
 
         for key_index, raw_key in enumerate(raw_keys, 1):
             exact_shape = isinstance(raw_key, dict) and set(raw_key) == {
@@ -167,7 +243,7 @@ def _added_candidate_keys(
             name_is_new = name not in seen_names
             result.require(
                 name_is_new,
-                f"R6c added candidate-key name is duplicated: {name}",
+                f"forward added candidate-key name is duplicated: {name}",
             )
             if not columns_exist or not key_is_new or not name_is_new:
                 continue

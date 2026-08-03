@@ -17,6 +17,7 @@ import { env } from "$env/dynamic/private";
 import { publicRuntimeState } from "$lib/view-models/runtime";
 import { publicCasePresentation } from "./public-case-presentation";
 import { verifiedPublicDownloadPayload } from "./public-export";
+import { publicFundingPresentation } from "./public-funding-presentation";
 import {
   publicDatasetPresentation,
   publicFailClosedLedgerPresentation,
@@ -67,6 +68,9 @@ export { publicScreenDestinations };
 
 export const INVALID_REQUIRED_SEARCH_CONDITIONS_MESSAGE =
   "필수 검색 조건이 올바르지 않습니다.";
+export const PUBLIC_FUNDING_TEST_FIXTURE_QUERY = "__testFixture";
+export const PUBLIC_FUNDING_LIST_UNAVAILABLE_FIXTURE =
+  "FUNDING_LIST_UNAVAILABLE";
 
 type PublicInitialLoadPlan =
   | { kind: "request"; query: Record<string, unknown> }
@@ -96,6 +100,29 @@ export function publicInitialLoadPlan(
     return { kind: "request", query: { ...query, sort: "published_desc" } };
   }
   return { kind: "request", query };
+}
+
+function publicFundingFixtureQuery(
+  screenId: string,
+  operationId: string,
+  current: URLSearchParams,
+  query: Record<string, unknown>,
+): Record<string, unknown> {
+  const selector = current.getAll(PUBLIC_FUNDING_TEST_FIXTURE_QUERY);
+  if (
+    env.GURINE_ENV !== "test" ||
+    screenId !== "PUB-023" ||
+    operationId !== "listTransparencyReports" ||
+    selector.length !== 1 ||
+    selector[0] !== PUBLIC_FUNDING_LIST_UNAVAILABLE_FIXTURE
+  ) {
+    return query;
+  }
+  return {
+    ...query,
+    [PUBLIC_FUNDING_TEST_FIXTURE_QUERY]:
+      PUBLIC_FUNDING_LIST_UNAVAILABLE_FIXTURE,
+  };
 }
 
 export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
@@ -167,7 +194,10 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     }
   }
   let resolved = 0;
+  let fundingReportListUnavailable = false;
   for (const contract of screen.dataOperations) {
+    if (screen.id === "PUB-035" && contract.api === "billing-gateway-private")
+      continue;
     if (contract.method !== "GET") continue;
     if (bootstrapCorrection && contract.api === "submission-api") continue;
     if (
@@ -229,7 +259,12 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         }
         continue;
       }
-      const { query } = plan;
+      const query = publicFundingFixtureQuery(
+        screen.id,
+        contract.operation_id,
+        event.url.searchParams,
+        plan.query,
+      );
       const result =
         contract.api === "submission-api"
           ? await submissionLoadRequest(
@@ -288,6 +323,12 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       }
       resolved += 1;
     } catch (error) {
+      if (
+        screen.id === "PUB-023" &&
+        contract.operation_id === "listTransparencyReports"
+      ) {
+        fundingReportListUnavailable = true;
+      }
       if (contract.blocking)
         errors.push(
           error instanceof Error
@@ -330,12 +371,14 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   let publicCase: ReturnType<typeof publicCasePresentation>;
   let publicSeo: ReturnType<typeof publicSeoPresentation>;
   let publicStatus: ReturnType<typeof publicStatusPresentation>;
+  let fundingTransparency: ReturnType<typeof publicFundingPresentation>;
   let presentationFailed = false;
   try {
     ledgerPresentation = publicLedgerPresentation(screen.id, data);
     publicDatasets = publicDatasetPresentation(screen.id, data);
     publicCase = publicCasePresentation(screen.id, data, event.url);
     publicStatus = publicStatusPresentation(screen.id, data);
+    fundingTransparency = publicFundingPresentation(screen.id, data);
     publicSeo = publicSeoPresentation(screen.id, screen.title, data, event.url);
   } catch {
     presentationFailed = true;
@@ -348,6 +391,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       event.url,
     );
     publicStatus = undefined;
+    fundingTransparency = undefined;
     errors.push(
       screen.id === "PUB-004"
         ? "공개 사건 응답 형식이 올바르지 않습니다."
@@ -363,19 +407,34 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       (Object.hasOwn(PUBLIC_LEDGER_CONTRACTS, screen.id)
         ? {}
         : buildRowSelectionNavigationOptions(screen.id, projectionData)));
+  const destinations = {
+    ...publicScreenDestinations(
+      screen,
+      event.url.pathname,
+      projectionData,
+      event.url.searchParams,
+    ),
+    ...(fundingTransparency?.reports[0]
+      ? {
+          "download-report": fundingTransparency.reports[0].jsonDownloadHref,
+        }
+      : {}),
+  };
   const runtime: ScreenRuntime = {
     state: presentationFailed
       ? "error"
-      : neutralInitialState && errors.length === 0 && resolved === 0
-        ? neutralInitialState
-        : publicRuntimeState({
-            errors: errors.length,
-            resolved,
-            hasData,
-            invalidFilter: errors.some((error) =>
-              error.includes("필수 검색 조건"),
-            ),
-          }),
+      : fundingReportListUnavailable && fundingTransparency
+        ? "partial"
+        : neutralInitialState && errors.length === 0 && resolved === 0
+          ? neutralInitialState
+          : publicRuntimeState({
+              errors: errors.length,
+              resolved,
+              hasData,
+              invalidFilter: errors.some((error) =>
+                error.includes("필수 검색 조건"),
+              ),
+            }),
     pathname: event.url.pathname,
     data: {},
     projection: projectFetchedData(screen, projectionData),
@@ -393,6 +452,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       : {}),
     ...(publicSeo ? { publicSeo } : {}),
     ...(publicStatus ? { publicStatusContext: publicStatus } : {}),
+    ...(fundingTransparency ? { fundingTransparency } : {}),
     ...(screen.id === "PUB-020"
       ? { formOperationIds: { "download-dataset": "createDatasetExport" } }
       : {}),
@@ -437,12 +497,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       ? { notice: event.url.searchParams.get("notice") ?? "" }
       : {}),
     search: event.url.search,
-    destinations: publicScreenDestinations(
-      screen,
-      event.url.pathname,
-      projectionData,
-      event.url.searchParams,
-    ),
+    destinations,
     ...(Object.keys(navigationOptions).length > 0 ? { navigationOptions } : {}),
   };
   return { screen, runtime };

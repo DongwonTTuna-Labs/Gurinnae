@@ -4,15 +4,18 @@ use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
 use response_submission_audit::handle_response_submitted_v2;
 use serde_json::{Map, Value, json};
-use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
 mod addendum_projection_contract;
 mod agency_projection;
 mod entity_retention_anonymization;
+mod funding_candidate_projection;
+mod funding_disclosure_projection;
 mod response_materialized_projection;
 mod response_submission_audit;
+mod support;
+use support::{database, parse_uuid, sha256};
 #[derive(Debug, Error)]
 pub enum WorkerError {
     #[error("projection worker initialization failed")]
@@ -24,6 +27,11 @@ pub enum WorkerError {
 enum Failure {
     Terminal(&'static str, String),
     Retryable(&'static str, String),
+}
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum CompletionOwner {
+    Worker,
+    DatabaseOwnerFunction,
 }
 pub async fn run(config: Config) -> Result<(), WorkerError> {
     let pool = connect(&PoolConfig {
@@ -62,11 +70,12 @@ async fn process_one(pool: &PgPool, worker: &Worker) -> Result<bool, WorkerError
     let Some(job) = worker.claim(pool).await.map_err(WorkerError::Job)? else {
         return Ok(false);
     };
-    match handle(pool, &job).await {
-        Ok(metrics) => worker
+    match handle(pool, worker, &job).await {
+        Ok((CompletionOwner::Worker, metrics)) => worker
             .complete(pool, &job, metrics)
             .await
             .map_err(WorkerError::Job)?,
+        Ok((CompletionOwner::DatabaseOwnerFunction, _)) => {}
         Err(Failure::Terminal(code, detail)) => {
             worker
                 .fail(pool, &job, code, &detail, false, json!({}))
@@ -82,7 +91,11 @@ async fn process_one(pool: &PgPool, worker: &Worker) -> Result<bool, WorkerError
     }
     Ok(true)
 }
-async fn handle(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
+async fn handle(
+    pool: &PgPool,
+    worker: &Worker,
+    job: &ClaimedJob,
+) -> Result<(CompletionOwner, Value), Failure> {
     if job.job_type != "EVENT_DELIVERY" {
         return Err(Failure::Terminal(
             "UNSUPPORTED_JOB_TYPE",
@@ -90,6 +103,25 @@ async fn handle(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
         ));
     }
     let event_id = parse_uuid(&job.payload, "/eventId")?;
+    if funding_disclosure_projection::claims(&job.payload) {
+        return funding_disclosure_projection::handle(pool, job, event_id)
+            .await
+            .map(|result| (CompletionOwner::DatabaseOwnerFunction, result));
+    }
+    if funding_candidate_projection::claims(&job.payload) {
+        return funding_candidate_projection::handle(pool, worker, job, event_id)
+            .await
+            .map(|result| (CompletionOwner::DatabaseOwnerFunction, result));
+    }
+    handle_worker_completed(pool, job, event_id)
+        .await
+        .map(|result| (CompletionOwner::Worker, result))
+}
+async fn handle_worker_completed(
+    pool: &PgPool,
+    job: &ClaimedJob,
+    event_id: Uuid,
+) -> Result<Value, Failure> {
     if entity_retention_anonymization::claims(pool, event_id, &job.payload).await? {
         return entity_retention_anonymization::handle_entity_retention_anonymized_v1(
             pool,
@@ -163,6 +195,11 @@ async fn reconcile_addendum_projection(
             &job.payload,
         )
         .await;
+    }
+    if consumer_id == funding_disclosure_projection::AUDIT_CONSUMER_ID
+        && event_type == funding_disclosure_projection::EVENT_TYPE
+    {
+        funding_disclosure_projection::validate_audit_delivery(&job.payload, event_id)?;
     }
     if consumer_id == "cost-projector" {
         verify_cost_receipt(pool, job).await?;
@@ -553,30 +590,6 @@ async fn update_inbox(tx: &mut Transaction<'_, Postgres>, event_id: Uuid) -> Res
     } else {
         Err(Failure::Terminal("STALE_INBOX", event_id.to_string()))
     }
-}
-
-fn parse_uuid(value: &Value, pointer: &str) -> Result<Uuid, Failure> {
-    value
-        .pointer(pointer)
-        .and_then(Value::as_str)
-        .and_then(|value| Uuid::parse_str(value).ok())
-        .ok_or_else(|| {
-            Failure::Terminal(
-                "INVALID_EVENT_PAYLOAD",
-                format!("{pointer} is missing or invalid"),
-            )
-        })
-}
-
-fn sha256(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
-fn database(error: sqlx::Error) -> Failure {
-    Failure::Retryable("DATABASE_UNAVAILABLE", error.to_string())
 }
 
 #[cfg(test)]

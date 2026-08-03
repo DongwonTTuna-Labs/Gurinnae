@@ -11,6 +11,19 @@ from jsonschema import Draft202012Validator
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from generate_effective_execution_registry import (
+    CURRENT_ACCEPTANCE_RUN_TARGET,
+    CURRENT_EFFECTIVE_SCENARIO_COUNT,
+    CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+    FROZEN_BASE_SCENARIO_COUNT,
+    RegistryError,
+    _execution_contract,
+)
+from generate_supplemental_execution_mapping import (
+    R6E_PREREQUISITE_SCENARIO_IDS,
+    build_mapping,
+    prerequisite_argv_for_scenario,
+)
 from validation.effective_acceptance import (
     Checks,
     EXECUTION_SCHEMA,
@@ -21,6 +34,7 @@ from validation.effective_acceptance import (
     _typescript_test_titles,
     validate_static,
 )
+from validation.effective_acceptance_impl import _validate_runtime_prerequisites
 from validation.supplemental_acceptance_source import rust_observation_bindings
 
 
@@ -28,10 +42,69 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class EffectiveAcceptanceContractTests(unittest.TestCase):
+    def test_r6e_prerequisite_mapping_is_exactly_042_through_048(self) -> None:
+        rows = {
+            row["scenario_id"]: row for row in build_mapping(ROOT)["scenarios"]
+        }
+        actual = {
+            scenario_id
+            for scenario_id, row in rows.items()
+            if "prerequisite_argv" in row
+        }
+        self.assertEqual(actual, set(R6E_PREREQUISITE_SCENARIO_IDS))
+        for scenario_id in actual:
+            self.assertEqual(
+                rows[scenario_id]["prerequisite_argv"],
+                prerequisite_argv_for_scenario(scenario_id),
+            )
+        self.assertNotIn("prerequisite_argv", rows["AC-BUSINESS_MODEL-041"])
+
+    def test_effective_generator_rejects_prerequisite_presence_mutations(self) -> None:
+        rows = {
+            row["scenario_id"]: row for row in build_mapping(ROOT)["scenarios"]
+        }
+        missing = dict(rows["AC-BUSINESS_MODEL-042"])
+        missing.pop("prerequisite_argv")
+        with self.assertRaisesRegex(RegistryError, "presence differs"):
+            _execution_contract(missing, missing["scenario_id"], missing["scenario_title"])
+
+        unexpected = dict(rows["AC-BUSINESS_MODEL-041"])
+        unexpected["prerequisite_argv"] = ["bash", "unexpected.sh"]
+        with self.assertRaisesRegex(RegistryError, "presence differs"):
+            _execution_contract(
+                unexpected, unexpected["scenario_id"], unexpected["scenario_title"]
+            )
+
+    def test_validator_kills_prerequisite_argv_and_scenario_set_mutations(self) -> None:
+        rows = {
+            scenario_id: {
+                "execution": {
+                    "prerequisite_argv": prerequisite_argv_for_scenario(scenario_id)
+                }
+            }
+            for scenario_id in R6E_PREREQUISITE_SCENARIO_IDS
+        }
+        rows["AC-BUSINESS_MODEL-042"]["execution"]["prerequisite_argv"] = [
+            "bash",
+            "-c",
+            "unsafe interpolation",
+        ]
+        rows["AC-BUSINESS_MODEL-041"] = {
+            "execution": {"prerequisite_argv": ["bash", "unexpected.sh"]}
+        }
+        checks = Checks("mutation")
+        _validate_runtime_prerequisites(rows, checks)
+        codes = {problem.code for problem in checks.problems}
+        self.assertIn("runtime_prerequisite_scenario_set", codes)
+        self.assertIn("runtime_prerequisite_argv", codes)
+
     def test_current_static_contract_is_generated_and_closed(self) -> None:
         checks, registry = validate_static(ROOT)
         self.assertEqual(checks.problems, [])
-        self.assertEqual(registry["counts"]["effective_scenarios"], 439)
+        self.assertEqual(
+            registry["counts"]["effective_scenarios"],
+            CURRENT_EFFECTIVE_SCENARIO_COUNT,
+        )
 
     def test_typescript_comments_and_strings_cannot_create_a_test(self) -> None:
         titles, calls = _typescript_test_titles(
@@ -144,9 +217,32 @@ class EffectiveAcceptanceContractTests(unittest.TestCase):
         errors = list(Draft202012Validator(counts_schema).iter_errors(value))
         self.assertTrue(errors)
 
-    def test_run_index_cannot_claim_fewer_than_426_receipts(self) -> None:
+    def test_run_index_schema_requires_current_exact_counts(self) -> None:
         schema = json.loads((ROOT / RUN_INDEX_SCHEMA).read_text(encoding="utf-8"))
+        count_properties = schema["properties"]["counts"]["properties"]
+        self.assertEqual(
+            count_properties["base_scenarios"]["const"],
+            FROZEN_BASE_SCENARIO_COUNT,
+        )
+        self.assertEqual(
+            count_properties["supplemental_scenarios"]["const"],
+            CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+        )
+        self.assertEqual(
+            count_properties["effective_scenarios"]["const"],
+            CURRENT_EFFECTIVE_SCENARIO_COUNT,
+        )
+        self.assertEqual(
+            count_properties["passed"]["const"],
+            CURRENT_EFFECTIVE_SCENARIO_COUNT,
+        )
         receipts_schema = schema["properties"]["receipts"]
+        self.assertEqual(
+            receipts_schema["minItems"], CURRENT_EFFECTIVE_SCENARIO_COUNT
+        )
+        self.assertEqual(
+            receipts_schema["maxItems"], CURRENT_EFFECTIVE_SCENARIO_COUNT
+        )
         errors = list(Draft202012Validator(receipts_schema).iter_errors([]))
         self.assertTrue(errors)
 
@@ -155,7 +251,7 @@ class EffectiveAcceptanceContractTests(unittest.TestCase):
             root = Path(directory)
             makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
             makefile = makefile.replace(
-                "verify-execution-evidence: run-acceptance-439",
+                f"verify-execution-evidence: {CURRENT_ACCEPTANCE_RUN_TARGET}",
                 "verify-execution-evidence: verify-specs",
             )
             (root / "Makefile").write_text(makefile, encoding="utf-8")
@@ -171,9 +267,9 @@ class EffectiveAcceptanceContractTests(unittest.TestCase):
             root = Path(directory)
             (root / "Makefile").write_text(
                 "verify-specs:\n"
-                "run-acceptance-439: verify-specs\n"
+                f"{CURRENT_ACCEPTANCE_RUN_TARGET}: verify-specs\n"
                 "\tpython3 -B scripts/run_acceptance.py\n"
-                "verify-execution-evidence: run-acceptance-439\n"
+                f"verify-execution-evidence: {CURRENT_ACCEPTANCE_RUN_TARGET}\n"
                 "\tpython3 -B scripts/validation/effective_acceptance.py --mode evidence\n"
                 "verify-acceptance: verify-execution-evidence\n",
                 encoding="utf-8",

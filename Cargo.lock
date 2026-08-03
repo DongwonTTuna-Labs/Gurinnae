@@ -1752,6 +1752,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "gurine-billing-gateway"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "base64 0.22.1",
+ "gurine-auth",
+ "gurine-jobs",
+ "gurine-observability",
+ "gurine-payment-providers",
+ "gurine-persistence-postgres",
+ "hmac 0.12.1",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "zeroize",
+]
+
+[[package]]
 name = "gurine-control-api"
 version = "0.1.0"
 dependencies = [
@@ -2050,6 +2075,21 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+]
+
+[[package]]
+name = "gurine-payment-providers"
+version = "0.1.0"
+dependencies = [
+ "hmac 0.12.1",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "subtle",
+ "thiserror 2.0.18",
+ "tokio",
+ "uuid",
+ "zeroize",
 ]
 
 [[package]]

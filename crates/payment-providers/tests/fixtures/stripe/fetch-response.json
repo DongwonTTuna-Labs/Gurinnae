@@ -1,0 +1,1 @@
+{"paymentIntentId":"stripe-payment-test","merchantOrderId":"order-stripe-fixture-1","amount":3000,"currency":"KRW","status":"succeeded","refundedAmount":0,"observedAtUnix":1700000002}

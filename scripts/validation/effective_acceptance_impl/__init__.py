@@ -32,6 +32,10 @@ from generate_acceptance_design_registry import (
 )
 from generate_effective_execution_registry import (
     BASE_MAPPING,
+    CURRENT_ACCEPTANCE_RUN_TARGET,
+    CURRENT_EFFECTIVE_SCENARIO_COUNT,
+    CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+    FROZEN_BASE_SCENARIO_COUNT,
     OBSERVATION_LAYER_DOMAIN,
     ORACLE_LAYER_DOMAIN,
     OUTPUT as EFFECTIVE_REGISTRY,
@@ -41,7 +45,11 @@ from generate_effective_execution_registry import (
     render_registry,
 )
 from git_authority import AUTHORITY_ZIP_SHA256
-from generate_supplemental_execution_mapping import render_mapping
+from generate_supplemental_execution_mapping import (
+    R6E_PREREQUISITE_SCENARIO_IDS,
+    prerequisite_argv_for_scenario,
+    render_mapping,
+)
 from source_provenance import source_tree_digest, worktree_inventory
 from validation.supplemental_acceptance_registry import _test_declarations
 from validation.acceptance_machine import (
@@ -319,8 +327,8 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
         checks.need(False, "acceptance_make_graph", "Makefile", "parseable", str(error))
         return
     required_edges = {
-        "run-acceptance-439": {"verify-specs"},
-        "verify-execution-evidence": {"run-acceptance-439"},
+        CURRENT_ACCEPTANCE_RUN_TARGET: {"verify-specs"},
+        "verify-execution-evidence": {CURRENT_ACCEPTANCE_RUN_TARGET},
         "verify-acceptance": {"verify-execution-evidence"},
     }
     for target, required in required_edges.items():
@@ -348,12 +356,12 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
             [],
             forbidden,
         )
-    run_recipes = targets.get("run-acceptance-439", ([], []))[1]
+    run_recipes = targets.get(CURRENT_ACCEPTANCE_RUN_TARGET, ([], []))[1]
     evidence_recipes = targets.get("verify-execution-evidence", ([], []))[1]
     checks.need(
         any("scripts/run_acceptance.py" in recipe for recipe in run_recipes),
         "acceptance_make_runner",
-        "Makefile#run-acceptance-439",
+        f"Makefile#{CURRENT_ACCEPTANCE_RUN_TARGET}",
         "scripts/run_acceptance.py",
         run_recipes,
     )
@@ -391,8 +399,14 @@ def validate_static(root: Path) -> tuple[Checks, dict[str, Any]]:
         checks.need(False, "mapping_generation", SUPPLEMENTAL_MAPPING, "deterministic", str(error))
 
     registry: dict[str, Any] = {}
+    source_derived_counts: dict[str, object] = {}
     try:
         expected_registry = render_registry(root)
+        expected_document = json.loads(expected_registry)
+        if isinstance(expected_document, dict) and isinstance(
+            expected_document.get("counts"), dict
+        ):
+            source_derived_counts = dict(expected_document["counts"])
         registry_path = root / EFFECTIVE_REGISTRY
         current = registry_path.read_bytes() if registry_path.is_file() else b""
         checks.need(
@@ -484,33 +498,34 @@ def validate_static(root: Path) -> tuple[Checks, dict[str, Any]]:
     )
     counts = registry.get("counts", {}) if registry else {}
     checks.need(
-        counts.get("base_features") == 35
-        and counts.get("base_scenarios") == 271
-        and counts.get("supplemental_features") == 5
-        and counts.get("supplemental_scenarios") == 168
-        and counts.get("effective_features") == 40
-        and counts.get("effective_scenarios") == 439
-        and counts.get("gherkin_source_steps") == 1646
-        and counts.get("gherkin_outlines") == 11
-        and counts.get("gherkin_examples") == 80
-        and counts.get("gherkin_clause_instances") == 2466,
-        "effective_acceptance_counts",
+        bool(source_derived_counts) and counts == source_derived_counts,
+        "effective_acceptance_source_derived_counts",
         EFFECTIVE_REGISTRY,
-        {
-            "base_features": 35,
-            "base_scenarios": 271,
-            "supplemental_features": 5,
-            "supplemental_scenarios": 168,
-            "effective_features": 40,
-            "effective_scenarios": 439,
-            "gherkin_source_steps": 1646,
-            "gherkin_outlines": 11,
-            "gherkin_examples": 80,
-            "gherkin_clause_instances": 2466,
-        },
+        source_derived_counts,
         counts,
     )
+    expected_authority_counts = {
+        "base_features": 35,
+        "base_scenarios": FROZEN_BASE_SCENARIO_COUNT,
+        "supplemental_features": 5,
+        "supplemental_scenarios": CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+        "effective_features": 40,
+        "effective_scenarios": CURRENT_EFFECTIVE_SCENARIO_COUNT,
+    }
+    actual_authority_counts = (
+        {key: counts.get(key) for key in expected_authority_counts}
+        if isinstance(counts, dict)
+        else {}
+    )
+    checks.need(
+        actual_authority_counts == expected_authority_counts,
+        "effective_acceptance_counts",
+        EFFECTIVE_REGISTRY,
+        expected_authority_counts,
+        actual_authority_counts,
+    )
     rows = _mapping_rows(registry, EFFECTIVE_REGISTRY, checks)
+    _validate_runtime_prerequisites(rows, checks)
     expected_oracle_count = sum(
         len(row.get("oracle_contracts", [])) for row in rows.values()
     )
@@ -634,14 +649,65 @@ def validate_static(root: Path) -> tuple[Checks, dict[str, Any]]:
             "oracle_layer_edges": counts.get("oracle_layer_edges"),
         },
     )
+    origin_counts = {
+        "BASE_V13": sum(row.get("origin") == "BASE_V13" for row in rows.values()),
+        "SUPPLEMENTAL_V1": sum(
+            row.get("origin") == "SUPPLEMENTAL_V1" for row in rows.values()
+        ),
+    }
+    expected_origin_counts = {
+        "BASE_V13": FROZEN_BASE_SCENARIO_COUNT,
+        "SUPPLEMENTAL_V1": CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+    }
     checks.need(
-        len(rows) == 439,
+        len(rows) == CURRENT_EFFECTIVE_SCENARIO_COUNT
+        and origin_counts == expected_origin_counts,
         "effective_registry_identity",
         EFFECTIVE_REGISTRY,
-        439,
-        len(rows),
+        {
+            "effective": CURRENT_EFFECTIVE_SCENARIO_COUNT,
+            "origins": expected_origin_counts,
+        },
+        {"effective": len(rows), "origins": origin_counts},
     )
     return checks, registry
+
+
+def _validate_runtime_prerequisites(
+    rows: dict[str, dict[str, Any]], checks: Checks
+) -> None:
+    expected_ids = set(R6E_PREREQUISITE_SCENARIO_IDS)
+    actual_ids = {
+        scenario_id
+        for scenario_id, row in rows.items()
+        if isinstance(row.get("execution"), dict)
+        and "prerequisite_argv" in row["execution"]
+    }
+    checks.same(
+        expected_ids,
+        actual_ids,
+        "runtime_prerequisite_scenario_set",
+        ("AC042..048", EFFECTIVE_REGISTRY),
+    )
+    forbidden_shell = re.compile(r"[\n;&|<>`$\\{}]")
+    for scenario_id in sorted(expected_ids):
+        execution = rows.get(scenario_id, {}).get("execution", {})
+        argv = execution.get("prerequisite_argv") if isinstance(execution, dict) else None
+        checks.need(
+            argv == prerequisite_argv_for_scenario(scenario_id)
+            and isinstance(argv, list)
+            and bool(argv)
+            and all(
+                isinstance(value, str)
+                and bool(value)
+                and forbidden_shell.search(value) is None
+                for value in argv
+            ),
+            "runtime_prerequisite_argv",
+            scenario_id,
+            prerequisite_argv_for_scenario(scenario_id),
+            argv,
+        )
 
 
 def _cargo_test_targets(root: Path, checks: Checks) -> dict[str, str]:
@@ -1990,6 +2056,11 @@ def _validate_scenario_receipt(
             selector.get("run_argv"),
         ),
     }
+    prerequisite_argv = (
+        execution.get("prerequisite_argv") if isinstance(execution, dict) else None
+    )
+    if prerequisite_argv is not None:
+        expected_invocation["prerequisite_argv"] = prerequisite_argv
     checks.need(
         invocation == expected_invocation,
         "scenario_invocation",

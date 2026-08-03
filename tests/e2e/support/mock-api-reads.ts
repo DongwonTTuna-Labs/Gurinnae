@@ -5,6 +5,7 @@ import {
   actionQueueResponse,
 } from "./mock-api-action-reads";
 import { handleExchange } from "./mock-api-exchange";
+import { publicFundingRead } from "./mock-api-funding";
 import { mockOperationId } from "./mock-api-openapi";
 import { publicOpenApiMockResponse } from "./mock-api-openapi-document";
 import {
@@ -34,6 +35,8 @@ export async function handleReadRoutes(
   if (submissionRead) return submissionRead;
 
   if (request.method === "GET") {
+    const fundingRead = publicFundingRead(url);
+    if (fundingRead) return fundingRead;
     const publicDownload = publicDownloadRead(url);
     if (publicDownload) return publicDownload;
     if (url.pathname === "/v1/openapi.json") return publicOpenApiMockResponse();
@@ -204,73 +207,6 @@ export async function handleReadRoutes(
           unknowns: [],
         },
         links: [],
-      });
-    }
-    if (url.pathname === "/v1/content/funding") {
-      const updatedAt = "2026-07-19T00:00:00Z";
-      return Response.json({
-        id: { id: "funding", status: "PUBLISHED", version: 1 },
-        version: 1,
-        status: "PUBLISHED",
-        updatedAt,
-        title: "재원 공개",
-        summary:
-          "재원·비용·이해상충 공개 상태와 편집 독립성 기준을 확인합니다.",
-        data: {
-          version: "1.0",
-          title: "재원 공개",
-          updatedAt,
-          sections: [
-            {
-              id: "principles",
-              heading: "독립성 원칙",
-              body: "후원자와 편집의 방화벽을 유지합니다.",
-              links: [],
-            },
-            {
-              id: "income",
-              heading: "재원",
-              body: "서명된 공개 자료가 없어 금액대를 확인할 수 없습니다.",
-              links: [],
-            },
-            {
-              id: "expenses",
-              heading: "비용",
-              body: "인프라·법률 검토 비용은 아직 확인되지 않았습니다.",
-              links: [],
-            },
-            {
-              id: "donors",
-              heading: "공개 기준",
-              body: "후원 집중도 기준과 독립 검토 기준을 적용합니다.",
-              links: [],
-            },
-            {
-              id: "conflicts",
-              heading: "이해상충",
-              body: "회피·독립 검토·공개 범위를 기록합니다.",
-              links: [],
-            },
-            {
-              id: "reports",
-              heading: "보고서",
-              body: "기간별 transparency report를 확인할 수 있습니다.",
-              links: [],
-            },
-          ],
-          sourceLinks: [],
-        },
-        links: [{ rel: "reports", href: "/transparency-reports" }],
-      });
-    }
-    if (url.pathname === "/v1/transparency-reports") {
-      return Response.json({
-        items: [],
-        appliedFilters: {
-          periodFrom: url.searchParams.get("periodFrom") ?? undefined,
-          periodTo: url.searchParams.get("periodTo") ?? undefined,
-        },
-        asOf: "2026-07-19T00:00:00Z",
       });
     }
     if (url.pathname === "/v1/cases/synthetic-record") {

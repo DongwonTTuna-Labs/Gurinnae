@@ -1,0 +1,3475 @@
+schema_version: 1
+proposal_version: 2026-08-02.0041-r6e-monetization-runtime.v1
+status: REVIEW_REQUIRED
+
+scope:
+  migration: 0041_r6e_monetization_runtime.sql
+  migration_sha256: PENDING_FINAL_SQL
+  migration_line_count: 19245
+  pglast_statement_count: 519
+  exact_relations:
+    - ops.action_approval_economics_import_details
+    - ops.cash_application_facts
+    - ops.tax_invoice_issuance_receipts
+    - ops.payment_method_bindings
+    - ops.payment_charge_attempts
+    - ops.provider_webhook_receipts
+    - ops.donation_facts
+  exact_new_relation_count: 7
+  relation_delta: 7
+  exact_altered_relation_count: 14
+  altered_relations:
+    - ops.event_types
+    - ops.action_proposals
+    - ops.action_proposal_versions
+    - ops.in_flight_effects
+    - ops.execution_authorizations
+    - editorial.conflict_snapshots
+    - ops.invoice_facts
+    - editorial.review_snapshots
+    - ops.paid_evidence_packets
+    - ops.funding_concentration_snapshots
+    - ops.sku_readiness_items
+    - ops.sku_readiness_evaluations
+    - ops.tasks
+    - public.transparency_reports
+  compatibility_views: []
+  purpose: >-
+    R6e records the approved high-level, reviewed, typed, owner-function-only
+    runtime contracts for product economics, signed cash and tax-invoice import,
+    the TEST-only donation ledger, and the GFD/PUB-023 projection. Exact ECO
+    wire/digest, Paid V2 physical/proof, and payment-review communication
+    bindings remain open fail-closed subgates, so this non-final snapshot does
+    not itself open or close a production runtime path.
+  relation_count_rule: >-
+    Only CREATE TABLE statements count. The approval detail plus the six
+    cash, tax, payment, webhook, and donation relations are the exact seven
+    additive relkind-r relations. ALTER, type, routine, trigger, ACL, registry,
+    projection, and collection-review-task statements add zero relations.
+
+authority_and_compatibility:
+  precedence:
+    - AGENTS.md
+    - FINAL_BUILD_CONTRACT.md
+    - specs/product/final-product-contract.yaml
+    - specs/engineering/code-quality-contract.yaml
+    - specs/domain/state-machines.yaml
+    - specs/api/operation-contracts.yaml
+    - specs/application/command-semantics.yaml
+    - specs/api/operation-persistence.yaml
+    - specs/events/event-catalog.yaml
+    - specs/database
+    - specs/product/business-model-contract.yaml
+    - this_addendum_for_0041_physical_closure
+  business_model_rule: >-
+    specs/product/business-model-contract.yaml is the top-level product and
+    economics contract for R6e. This physical addendum narrows implementation
+    details and may not weaken its free-access, no-invention, governance,
+    payment, privacy, or publication boundaries.
+  historical_migration_rule: >-
+    Migrations 0001 through 0040 remain byte-preserved. Every physical R6e
+    change is forward-only in 0041.
+  transaction_rule: >-
+    One outer BEGIN is the first parsed statement and terminal COMMIT is the
+    last parsed statement.
+  seed_rule: >-
+    No production price, tariff, cost, contract, invoice, revenue, cash,
+    tax-invoice, donation tier, billing key, merchant, donor, or provider result
+    is seeded. Deterministic values are permitted only in an ephemeral test
+    database and are labelled TEST_FIXTURE.
+  free_public_access_rule: >-
+    Public facts, evidence locators and source links, current revisions and
+    history, corrections and retractions, limitation and uncertainty notices,
+    response and appeal rights, privacy and accessibility flows, methodology,
+    governance, funding and conflict disclosures, basic verified subscriptions,
+    and reasonable public API/export remain free forever. Contract, invoice,
+    collection, dunning, donation, provider, or entitlement state cannot hide,
+    delay, truncate, reprioritize, or weaken any of them.
+  b2b_no_checkout_rule: >-
+    V1 B2B authority is a signed written contract, externally issued electronic
+    tax-invoice acknowledgement, and bank-transfer collection recorded through
+    signed typed import. There is no B2B self-service checkout, card billing,
+    live PG, live ASP, receivable ledger, cash ledger, tax remittance, payment
+    execution, or commercial entitlement API.
+  donation_boundary_rule: >-
+    Donation payment is DISABLED by default and TEST_ONLY when explicitly
+    enabled. Toss Payments, Kakao Pay, and Stripe are deterministic fixture
+    adapters only. Donation creates no SKU, contract, invoice, revenue, cash
+    application, capability, entitlement, paid value, investigation priority,
+    publication priority, or investigation exemption.
+  fail_closed_rule: >-
+    Missing, partial, stale, superseded, reversed, unclosed, UNKNOWN,
+    digest-mismatched, unauthorized, non-STEP_UP, live-provider, or
+    non-test-payment authority produces no protected write or public success
+    claim. Elapsed time and caller-authored digests never repair authority.
+  pending_derivation_rule: >-
+    While the approved authority packages are not fully implemented and
+    independently verified,
+    global.yaml#relation_inventory.stable_derivation_snapshot.snapshot_status
+    remains exactly PENDING_STABLE_0041_DERIVATION and every addendum inventory
+    freeze remains PENDING. No FINAL enum may be invented. Design and static
+    validation report the blockers; every artifact-ready or final gate rejects
+    the pending status even if all current hashes and byte counts are populated.
+
+supervisor_authority_decision_v1:
+  authority_label: 감독자 결정 v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  decision_revision: 1
+  status: APPROVED_HIGH_LEVEL_CANONICAL_SUBGATES_OPEN
+  recommendation_record: .fable-sol/run-r6e.log lines 15-104
+  approval_record: .fable-sol/r6e-authority-approval.md
+  approval_record_sha256: a73ccb4da942c32b70ac7056dfe2d65b6c5595beb3e64e22999b07eb0f939f47
+  higher_contract: specs/product/business-model-contract.yaml#supervisor_decision_v1
+  approved_packages_ordered_exactly:
+    - ECO-AUTHORITY-V1
+    - PAID-EVIDENCE-V2-AUTHORITY
+    - PAYMENT-TEST-V1
+    - GFD-AUTHORITY-V1
+  revision_policy: >-
+    These four package values and rules are binding as 감독자 결정 v1. They may
+    be revised only by a later explicit pre-production review jointly owned by
+    the designated legal and finance owners, recorded as a new decision revision
+    that preserves this decision as provenance. This is a product authority
+    decision, not an external legal or financial approval.
+  implementation_hold_rule: >-
+    Approval fixes the high-level package choices but does not supply any exact
+    wire/digest, V2 physical/proof, or payment-review communication binding that
+    the recommendation did not enumerate. Those canonical subgates remain open
+    and fail-closed. No routine, relation, projection, payment mode, fixture, or
+    acceptance path is READY; every existing pre-write latch remains active
+    until the complete approved package plus each canonical subgate, ACL, event,
+    runtime, negative test, and independent evidence is implemented and verified
+    together. No FINAL SHA-256 is asserted while 0041 remains under mutation hold.
+
+statement_inventory:
+  create_table_count: 7
+  create_view_count: 0
+  owner_routine_count: 101
+  trigger_count: 11
+  explicit_index_count: 23
+  event_registry_upsert_count: 6
+  pglast_statement_count: 519
+  object_inventory_sha256: PENDING_FINAL_SQL
+  object_inventory_preimage: >-
+    SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered
+    relations, views, altered relations, routine signatures, trigger statements,
+    and the six effective event rows: two R6e-owned events plus four explicit
+    historical forward overrides. Per-statement hashes and indexes are separate.
+
+standalone_type_inventory:
+  freeze_status: PENDING_FINAL_SQL
+  count_exactly: PENDING_FINAL_SQL
+  types_in_order: []
+  inventory_sha256: PENDING_FINAL_SQL
+  extraction_rule: >-
+    Parse only top-level CREATE TYPE statements from the final 0041 migration
+    AST and preserve their migration statement order. Implicit table row types,
+    referenced pre-existing types, casts, function arguments and returns, and
+    ALTER statements do not count as standalone type declarations.
+  exactness_rule: >-
+    Final validation rejects the pending marker, an empty inventory, duplicate
+    names, a count or digest mismatch, order drift, a parsed CREATE TYPE absent
+    from this inventory, and a declared type absent from the parsed migration.
+    inventory_sha256 is SHA-256 of compact UTF-8 JSON for types_in_order.
+
+existing_relation_changes:
+  - relation: ops.event_types
+    authority: >-
+      Register exactly donation.fact_recorded.v1 and
+      notification.payment_review_requested.v1 as R6e-owned events. Forward
+      correct exactly four named 0030 event contracts only through this explicit
+      latest-owner contract.
+    alter_statement_sha256: []
+  - relation: ops.action_proposals
+    authority: ECONOMICS_IMPORT action-kind and target closure.
+    alter_statement_sha256:
+      - 23fd0286d4d0840c1fb9109617a8418ab22b7af5f25e4bf766dfa0dcffa68320
+      - 8e7d668162d13c51e701aa82678543d6d3410337e1a25c9b62e014c06c1815a1
+      - 6553fc3a26e4a8c5dfa1ac5882f140bd921e89fb801320bc2edec0174aaea324
+      - 3be3c38cb4bc8fcfc50aecddd756f8faac4a4732e047c5fb6f93b4cc290e5875
+  - relation: ops.action_proposal_versions
+    authority: ECONOMICS_IMPORT immutable typed-detail binding.
+    alter_statement_sha256:
+      - ce0f698a52bd33480f173cb0c0874c81fbe09816acd64ecf8f0c811ae5409a6d
+      - 3bb281ea6d2c44f26f843c39050b1a5bcdeee28d3b45cd11132e203315099212
+  - relation: ops.in_flight_effects
+    authority: ECONOMICS_IMPORT execution-effect closure.
+    alter_statement_sha256:
+      - baec1b3c17a0daa8fe7f999d7a94fcb8ae1c999d50dc27bcbdd3f987274eacf5
+      - fa68d40c381826182f606e1219ec244034fdb812fbfd95fb81939064d7c32558
+  - relation: ops.execution_authorizations
+    authority: ECONOMICS_IMPORT exact execution authorization.
+    alter_statement_sha256:
+      - 5b2d70e22dd922e52073bb4ecf1eccb3f6284803cc90c8204a1058f0f86a48c7
+      - d5ea01105077532c99c2ac55718e67da527966aa230efd8d3df78b28ba603536
+  - relation: editorial.conflict_snapshots
+    authority: ECONOMICS_IMPORT review-time conflict snapshot closure.
+    alter_statement_sha256:
+      - 2d1acef7604f2947229d00aca537159a8ebc79f7efb0b0bf436ac9e2050241f0
+      - 77e0a8f68d28e15b1660abfc71a79604edaf4927fe9389fca2b9d94dfe810fb3
+  - relation: ops.invoice_facts
+    authority: >-
+      Add immutable record_digest and its candidate keys for exact cash and
+      tax-invoice fences. If any legacy invoice exists, 0041 aborts rather than
+      inventing a historical digest.
+    added_columns:
+      - {name: record_digest, type: char(64), nullable: false, default: null}
+    backfill_rule: >-
+      No value is backfilled. The migration requires the relation to be empty,
+      then adds NOT NULL and lowercase SHA-256 constraints; any historical row
+      aborts with R6E_INVOICE_RECORD_DIGEST_BACKFILL_AUTHORITY_REQUIRED.
+    added_candidate_keys:
+      - {name: invoice_facts_record_digest_uq, columns: [record_digest]}
+      - {name: invoice_facts_record_reference_uq, columns: [id, record_digest]}
+    alter_statement_sha256:
+      - 033ca00804e1592b50c5837df14ddae82f6c6ac53c3ada68a5840610eca44453
+      - a051c20996cf299ecc4b028eafa2af71aceeceb0c520404c046afa43a43cc738
+      - 52bfbe57583630579e9bd914939cd5c23d727576f7003117ebb770e6716eb315
+      - 2850f643b67470c4221b398147f962a530709dc458013b38780005432414d5e9
+      - 3ebccb9600fa9289b1982e2cab7a857e7d51aa80b8fbf516f0cd755b3b55c2ce
+  - relation: editorial.review_snapshots
+    authority: >-
+      PAID-EVIDENCE-V2-AUTHORITY forward-only review-snapshot closure. The
+      currently observed four-column catalog delta and the approved remaining
+      twelve-field zero-or-all delta are specified by
+      paid_evidence_packet_digest_authority_gate; no backfill is authorized.
+    alter_statement_sha256: []
+  - relation: ops.paid_evidence_packets
+    authority: >-
+      PAID-EVIDENCE-V2-AUTHORITY additive V2 storage and reciprocal packet to
+      outcome binding. V1 bytes and rows remain unchanged, and implementation
+      remains pre-write latched until the V2 DAG and both deferred FKs are proven.
+    alter_statement_sha256: []
+  - relation: ops.funding_concentration_snapshots
+    authority: >-
+      Closed donation-fact candidate provenance used only as input to the
+      independently reviewed GFD-AUTHORITY-V1 publication path.
+    alter_statement_sha256: []
+  - relation: ops.sku_readiness_items
+    authority: >-
+      R6e readiness input binding for the approved economics import path; no
+      authority decision, fixture, or UNKNOWN state is converted to READY.
+    alter_statement_sha256: []
+  - relation: ops.sku_readiness_evaluations
+    authority: >-
+      R6e typed readiness evaluation writes observed in the current non-final
+      0041 inventory; FINAL statement hashes remain pending SQL freeze.
+    alter_statement_sha256: []
+  - relation: ops.tasks
+    authority: >-
+      PAYMENT-TEST-V1 request-bound payment-review task shape and exact atomic
+      task, intent, outbox, and audit path. Reconciliation creates no task.
+    alter_statement_sha256: []
+  - relation: public.transparency_reports
+    authority: >-
+      GFD-AUTHORITY-V1 source-bound PUB-023 projection and deterministic download
+      binding. Private donation/payment identity and unapproved revisions remain
+      excluded.
+    alter_statement_sha256: []
+
+compatibility_views: {}
+view_inventory: []
+
+tables:
+  ops.action_approval_economics_import_details:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0041_r6e_monetization_runtime.sql#CREATE TABLE ops.action_approval_economics_import_details
+    create_statement_sha256: 2f25e7e76a581cb0b02c4bb93e855cbaf6ca138bedcb0d951d4fe0cbaa258c6c
+    owning_component: services/control-api::action_approval
+    owning_domain: gurine_domain::action::EconomicsImportApprovalDetail
+    detail_kind: ECONOMICS_IMPORT
+    validator: ops.economics_import_operation_v1_is_valid(ops.economics_import_operation_v1)
+    source_binding_contract: >-
+      Proposal rationale evidenceSegmentIds are set-equal to locked
+      raw.evidence_segments IDs. Wire sourceEvidenceDigests is a distinct sorted
+      compiler input only: the database compares it with the distinct digest set
+      resolved from those locked rows and then discards it. Persisted
+      source_evidence_segment_ids and source_evidence_digests are database-derived
+      parallel ID-sorted pairs; IDs are unique while positional digests may
+      repeat and therefore have equal cardinality. source_evidence_set_digest
+      binds the derived pairs. There is no stored public-set column.
+    columns:
+      proposal_id: {type: uuid, nullable: false}
+      proposal_version: {type: bigint, nullable: false}
+      detail_kind: {type: text, nullable: false}
+      detail_binding_canonical: {type: bytea, nullable: false}
+      action_detail_digest: {type: char(64), nullable: false}
+      approval_digest: {type: char(64), nullable: false}
+      content_digest: {type: char(64), nullable: false}
+      operation_id: {type: text, nullable: false}
+      operation_value: {type: ops.economics_import_operation_v1, nullable: false}
+      operation_canonical: {type: bytea, nullable: false}
+      operation_digest: {type: char(64), nullable: false}
+      source_evidence_segment_ids: {type: "uuid[]", nullable: false}
+      source_evidence_digests: {type: "char(64)[]", nullable: false}
+      source_evidence_set_digest: {type: char(64), nullable: false}
+      import_policy_digest: {type: char(64), nullable: false}
+      as_of: {type: timestamptz, nullable: false}
+      creator_actor_id: {type: uuid, nullable: false}
+      proposer_capability_set_digest: {type: char(64), nullable: false}
+      reviewer_capability_set_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    column_order:
+      - proposal_id
+      - proposal_version
+      - detail_kind
+      - detail_binding_canonical
+      - action_detail_digest
+      - approval_digest
+      - content_digest
+      - operation_id
+      - operation_value
+      - operation_canonical
+      - operation_digest
+      - source_evidence_segment_ids
+      - source_evidence_digests
+      - source_evidence_set_digest
+      - import_policy_digest
+      - as_of
+      - creator_actor_id
+      - proposer_capability_set_digest
+      - reviewer_capability_set_digest
+      - created_at
+    primary_key:
+      name: action_approval_economics_import_details_pk
+      columns: [proposal_id, proposal_version]
+    unique_constraints:
+      - name: action_approval_economics_import_details_binding_uq
+        columns: [proposal_id, proposal_version, detail_kind, action_detail_digest]
+      - name: action_approval_economics_import_details_approval_uq
+        columns: [proposal_id, proposal_version, approval_digest, operation_digest]
+    foreign_keys:
+      - name: action_approval_economics_import_details_creator_actor_id_fkey
+        columns: [creator_actor_id]
+        references: ops.users(id)
+        on_delete: RESTRICT
+      - name: action_approval_economics_import_details_version_fk
+        columns: [proposal_id, proposal_version, detail_kind, action_detail_digest]
+        references: ops.action_proposal_versions(proposal_id,version,action_detail_kind,action_detail_digest)
+        on_delete: RESTRICT
+        deferrable: INITIALLY DEFERRED
+      - name: action_approval_economics_import_details_approval_fk
+        columns: [proposal_id, proposal_version, approval_digest]
+        references: ops.action_proposal_versions(proposal_id,version,approval_digest)
+        on_delete: RESTRICT
+        deferrable: INITIALLY DEFERRED
+    checks:
+      - name: action_approval_economics_import_details_kind_ck
+        expression: detail_kind = 'ECONOMICS_IMPORT'
+      - name: action_approval_economics_import_details_operation_ck
+        expression: >-
+          operation_id IN ('recordCommercialQualification',
+          'importCostAllocationClose','createTariffVersion',
+          'recordCommercialContractPeriod','recordUsageWindow','recordInvoice',
+          'recordRevenue','recordAccountingCorrection','recordCashApplication',
+          'recordTaxInvoiceIssuance','recordCollectionFailure')
+      - name: action_approval_economics_import_details_digest_ck
+        expression: >-
+          action_detail_digest ~ '^[0-9a-f]{64}$'
+          AND approval_digest ~ '^[0-9a-f]{64}$'
+          AND content_digest ~ '^[0-9a-f]{64}$'
+          AND operation_digest ~ '^[0-9a-f]{64}$'
+          AND source_evidence_set_digest ~ '^[0-9a-f]{64}$'
+          AND import_policy_digest ~ '^[0-9a-f]{64}$'
+          AND proposer_capability_set_digest ~ '^[0-9a-f]{64}$'
+          AND reviewer_capability_set_digest ~ '^[0-9a-f]{64}$'
+      - name: action_approval_economics_import_details_evidence_ck
+        expression: >-
+          cardinality(source_evidence_segment_ids) =
+          cardinality(source_evidence_digests)
+          AND cardinality(source_evidence_segment_ids) BETWEEN 1 AND 1000
+          AND ops.economics_uuid_array_is_sorted_unique_v1(
+          source_evidence_segment_ids)
+          AND ops.sha256_text_array_is_valid_v1(
+          source_evidence_digests::text[])
+      - name: action_approval_economics_import_details_canonical_ck
+        expression: >-
+          octet_length(detail_binding_canonical) > 0
+          AND ops.economics_import_operation_v1_is_valid(operation_value) IS TRUE
+          AND (operation_value).import_kind = operation_id
+          AND operation_canonical = ops.canonical_jsonb_v1(to_jsonb(operation_value))
+          AND operation_digest = encode(
+          extensions.digest(operation_canonical,'sha256'),'hex')
+    immutable_binding: >-
+      detail_kind is ECONOMICS_IMPORT; operation_id equals the closed composite
+      discriminator; exactly one of eleven branches is non-null. Evidence IDs
+      are sorted and unique; each parallel digest is non-null lowercase SHA-256
+      and may repeat; the cardinality-equal ID and digest pairs exactly match
+      locked raw evidence. Before insertion, the compiler proves that the
+      discarded wire sourceEvidenceDigests distinct set equals the distinct set
+      derived from these pairs. All stored canonical bytes and digests are
+      database-derived.
+    grants:
+      freeze_status: FINAL
+      execution_reader_privileges: {}
+      runtime_direct_table_dml_grants_exactly: []
+      outer_routine:
+        signature: ops.execute_action_approval_v1(text,jsonb,uuid) RETURNS jsonb
+        owner_role: gurine_migrator
+        execute_roles: [gurine_control_api]
+      internal_materializer_routine:
+        signature: ops.execute_economics_action_approval_v1(p_operation text,p_request jsonb,p_actor uuid) RETURNS jsonb
+        owner_role: gurine_migrator
+        execute_roles: []
+      rule: >-
+        The table remains owned by gurine_migrator and every LOGIN/runtime
+        principal has zero direct table DML. Only the existing migrator-owned
+        outer action routine is executable by control-api; its internal
+        migrator-owned economics compiler has no PUBLIC/runtime EXECUTE.
+        The inert economics-writer receives no privilege. Claim, complete, and
+        fail execute as exact economics-importer sessions through
+        migrator-owned SECURITY DEFINER entry routines.
+    alter_statement_sha256:
+      - 6c0dda23f2131b3229d76251fe733fae6e4d2b87ac5751ba41e20c9b530b943d
+
+  ops.cash_application_facts:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0041_r6e_monetization_runtime.sql#CREATE TABLE ops.cash_application_facts
+    create_statement_sha256: 02eb11c878afc5953eed8f76c48627b139991f97a3dd57be60b55a9361b8a1b7
+    columns:
+      id: {type: uuid, nullable: false}
+      root_fact_id: {type: uuid, nullable: false}
+      revision: {type: bigint, nullable: false}
+      fact_effect: {type: text, nullable: false}
+      supersedes_fact_id: {type: uuid, nullable: true}
+      predecessor_fact_digest: {type: char(64), nullable: true}
+      invoice_fact_id: {type: uuid, nullable: false}
+      invoice_fact_digest: {type: char(64), nullable: false}
+      invoice_reconciliation_digest: {type: char(64), nullable: false}
+      source_kind: {type: text, nullable: false}
+      source_system_id: {type: text, nullable: false}
+      source_settlement_identity_hmac: {type: char(64), nullable: false}
+      source_settlement_hmac_key_version: {type: text, nullable: false}
+      source_settlement_amount: {type: "numeric(24,6)", nullable: false}
+      applied_amount: {type: "numeric(24,6)", nullable: false}
+      currency: {type: char(3), nullable: false}
+      source_record_digest: {type: char(64), nullable: false}
+      source_signature_digest: {type: char(64), nullable: false}
+      import_receipt_digest: {type: char(64), nullable: false}
+      applied_at: {type: timestamptz, nullable: false}
+      fact_digest: {type: char(64), nullable: false}
+      recorded_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    column_order:
+      - id
+      - root_fact_id
+      - revision
+      - fact_effect
+      - supersedes_fact_id
+      - predecessor_fact_digest
+      - invoice_fact_id
+      - invoice_fact_digest
+      - invoice_reconciliation_digest
+      - source_kind
+      - source_system_id
+      - source_settlement_identity_hmac
+      - source_settlement_hmac_key_version
+      - source_settlement_amount
+      - applied_amount
+      - currency
+      - source_record_digest
+      - source_signature_digest
+      - import_receipt_digest
+      - applied_at
+      - fact_digest
+      - recorded_at
+    primary_key: {name: cash_application_facts_pkey, columns: [id]}
+    unique_constraints:
+      - {name: cash_application_root_revision_uq, columns: [root_fact_id, revision]}
+      - {name: cash_application_fact_digest_uq, columns: [fact_digest]}
+      - {name: cash_application_reference_uq, columns: [id, fact_digest]}
+      - {name: cash_application_source_identity_uq, columns: [source_system_id, source_settlement_identity_hmac, revision]}
+    foreign_keys:
+      - {name: cash_application_root_fk, columns: [root_fact_id], references: "ops.cash_application_facts(id)", on_delete: RESTRICT, deferrable: "INITIALLY DEFERRED"}
+      - {name: cash_application_supersedes_fk, columns: [supersedes_fact_id, predecessor_fact_digest], references: "ops.cash_application_facts(id,fact_digest)", on_delete: RESTRICT, match: FULL}
+      - {name: cash_application_invoice_fk, columns: [invoice_fact_id, invoice_fact_digest], references: "ops.invoice_facts(id,record_digest)", on_delete: RESTRICT}
+    checks:
+      - name: cash_application_chain_ck
+        expression: >-
+          revision > 0 AND ((fact_effect = 'ORIGINAL' AND revision = 1
+          AND root_fact_id = id AND supersedes_fact_id IS NULL
+          AND predecessor_fact_digest IS NULL) OR
+          (fact_effect = 'REVERSAL' AND revision > 1 AND root_fact_id <> id
+          AND supersedes_fact_id IS NOT NULL
+          AND predecessor_fact_digest IS NOT NULL))
+      - name: cash_application_shape_ck
+        expression: >-
+          source_kind IN ('BANK_TRANSFER','PG_SETTLEMENT')
+          AND length(btrim(source_system_id)) BETWEEN 1 AND 128
+          AND length(btrim(source_settlement_hmac_key_version)) BETWEEN 1 AND 100
+          AND source_settlement_amount > 0 AND applied_amount > 0
+          AND applied_amount <= source_settlement_amount
+          AND currency ~ '^[A-Z]{3}$'
+      - name: cash_application_digest_ck
+        expression: >-
+          (predecessor_fact_digest IS NULL OR
+          predecessor_fact_digest ~ '^[0-9a-f]{64}$')
+          AND invoice_fact_digest ~ '^[0-9a-f]{64}$'
+          AND invoice_reconciliation_digest ~ '^[0-9a-f]{64}$'
+          AND source_settlement_identity_hmac ~ '^[0-9a-f]{64}$'
+          AND source_record_digest ~ '^[0-9a-f]{64}$'
+          AND source_signature_digest ~ '^[0-9a-f]{64}$'
+          AND import_receipt_digest ~ '^[0-9a-f]{64}$'
+          AND fact_digest ~ '^[0-9a-f]{64}$'
+    chain: >-
+      Append-only ORIGINAL or REVERSAL with an exact predecessor ID plus digest
+      and at most one successor.
+    source_kinds_exactly: [BANK_TRANSFER, PG_SETTLEMENT]
+    invoice_fence: [invoice_fact_id, invoice_fact_digest, invoice_reconciliation_digest]
+    independence: >-
+      Proves only application of signed external settlement evidence to one
+      immutable invoice. It proves no revenue, paid value, invoice correctness,
+      tax correctness, entitlement, receivable balance, or public-access state.
+    grants:
+      gurine_public_projector: []
+      owner_routine_only: all runtime direct relation privileges are revoked
+    alter_statement_sha256:
+      - 05ae5e57926f6df347e8e340737f6e119b6b88cfd90d3f99ff527a714812c74e
+      - 510a846515ba618f7acddb1dd9402121d97f96fc03bad6d070955d6dde0ef5e3
+      - f50900380e26b3e2d39593e4f3f612fc4b577ce6a3973ff8c3c686fefabf70f7
+      - d0ea40ef3b9386bf25258bd33207bb3e31a98d98678a4ba653a6aa75053431f9
+
+  ops.tax_invoice_issuance_receipts:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0041_r6e_monetization_runtime.sql#CREATE TABLE ops.tax_invoice_issuance_receipts
+    create_statement_sha256: e2f35efc697c3c05ce762896767a885dc71e14f3633efe4ba1b34aa9e9178b78
+    columns:
+      id: {type: uuid, nullable: false}
+      root_receipt_id: {type: uuid, nullable: false}
+      revision: {type: bigint, nullable: false}
+      receipt_effect: {type: text, nullable: false}
+      supersedes_receipt_id: {type: uuid, nullable: true}
+      predecessor_receipt_digest: {type: char(64), nullable: true}
+      invoice_fact_id: {type: uuid, nullable: false}
+      invoice_fact_digest: {type: char(64), nullable: false}
+      invoice_reconciliation_digest: {type: char(64), nullable: false}
+      taxable_amount: {type: "numeric(24,6)", nullable: false}
+      tax_amount: {type: "numeric(24,6)", nullable: false}
+      currency: {type: char(3), nullable: false}
+      issuance_state: {type: text, nullable: false}
+      approval_number_hmac: {type: char(64), nullable: true}
+      approval_number_hmac_key_version: {type: text, nullable: true}
+      asp_receipt_reference_hmac: {type: char(64), nullable: true}
+      asp_receipt_reference_hmac_key_version: {type: text, nullable: true}
+      asp_receipt_digest: {type: char(64), nullable: true}
+      source_system_id: {type: text, nullable: false}
+      source_record_digest: {type: char(64), nullable: false}
+      source_signature_digest: {type: char(64), nullable: false}
+      import_receipt_digest: {type: char(64), nullable: false}
+      issued_at: {type: timestamptz, nullable: true}
+      cancelled_at: {type: timestamptz, nullable: true}
+      receipt_digest: {type: char(64), nullable: false}
+      recorded_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    column_order:
+      - id
+      - root_receipt_id
+      - revision
+      - receipt_effect
+      - supersedes_receipt_id
+      - predecessor_receipt_digest
+      - invoice_fact_id
+      - invoice_fact_digest
+      - invoice_reconciliation_digest
+      - taxable_amount
+      - tax_amount
+      - currency
+      - issuance_state
+      - approval_number_hmac
+      - approval_number_hmac_key_version
+      - asp_receipt_reference_hmac
+      - asp_receipt_reference_hmac_key_version
+      - asp_receipt_digest
+      - source_system_id
+      - source_record_digest
+      - source_signature_digest
+      - import_receipt_digest
+      - issued_at
+      - cancelled_at
+      - receipt_digest
+      - recorded_at
+    primary_key: {name: tax_invoice_issuance_receipts_pkey, columns: [id]}
+    unique_constraints:
+      - {name: tax_invoice_root_revision_uq, columns: [root_receipt_id, revision]}
+      - {name: tax_invoice_receipt_digest_uq, columns: [receipt_digest]}
+      - {name: tax_invoice_reference_uq, columns: [id, receipt_digest]}
+    foreign_keys:
+      - {name: tax_invoice_root_fk, columns: [root_receipt_id], references: "ops.tax_invoice_issuance_receipts(id)", on_delete: RESTRICT, deferrable: "INITIALLY DEFERRED"}
+      - {name: tax_invoice_supersedes_fk, columns: [supersedes_receipt_id, predecessor_receipt_digest], references: "ops.tax_invoice_issuance_receipts(id,receipt_digest)", on_delete: RESTRICT, match: FULL}
+      - {name: tax_invoice_invoice_fk, columns: [invoice_fact_id, invoice_fact_digest], references: "ops.invoice_facts(id,record_digest)", on_delete: RESTRICT}
+    checks:
+      - name: tax_invoice_chain_ck
+        expression: >-
+          revision > 0 AND ((receipt_effect = 'ORIGINAL' AND revision = 1
+          AND root_receipt_id = id AND supersedes_receipt_id IS NULL
+          AND predecessor_receipt_digest IS NULL) OR
+          (receipt_effect = 'REPLACEMENT' AND revision > 1
+          AND root_receipt_id <> id AND supersedes_receipt_id IS NOT NULL
+          AND predecessor_receipt_digest IS NOT NULL))
+      - name: tax_invoice_state_ck
+        expression: >-
+          issuance_state IN ('PENDING_ASP','ISSUED_CONFIRMED','CANCELLED_CONFIRMED')
+          AND ((issuance_state = 'PENDING_ASP'
+          AND approval_number_hmac IS NULL
+          AND approval_number_hmac_key_version IS NULL
+          AND asp_receipt_reference_hmac IS NULL
+          AND asp_receipt_reference_hmac_key_version IS NULL
+          AND asp_receipt_digest IS NULL AND issued_at IS NULL
+          AND cancelled_at IS NULL) OR
+          (issuance_state = 'ISSUED_CONFIRMED'
+          AND approval_number_hmac IS NOT NULL
+          AND approval_number_hmac_key_version IS NOT NULL
+          AND asp_receipt_reference_hmac IS NOT NULL
+          AND asp_receipt_reference_hmac_key_version IS NOT NULL
+          AND asp_receipt_digest IS NOT NULL AND issued_at IS NOT NULL
+          AND cancelled_at IS NULL) OR
+          (issuance_state = 'CANCELLED_CONFIRMED'
+          AND approval_number_hmac IS NOT NULL
+          AND approval_number_hmac_key_version IS NOT NULL
+          AND asp_receipt_reference_hmac IS NOT NULL
+          AND asp_receipt_reference_hmac_key_version IS NOT NULL
+          AND asp_receipt_digest IS NOT NULL AND issued_at IS NOT NULL
+          AND cancelled_at IS NOT NULL AND cancelled_at >= issued_at))
+          AND taxable_amount >= 0 AND tax_amount >= 0
+          AND currency ~ '^[A-Z]{3}$'
+          AND length(btrim(source_system_id)) BETWEEN 1 AND 128
+      - name: tax_invoice_digest_ck
+        expression: >-
+          (predecessor_receipt_digest IS NULL OR
+          predecessor_receipt_digest ~ '^[0-9a-f]{64}$')
+          AND invoice_fact_digest ~ '^[0-9a-f]{64}$'
+          AND invoice_reconciliation_digest ~ '^[0-9a-f]{64}$'
+          AND (approval_number_hmac IS NULL OR
+          approval_number_hmac ~ '^[0-9a-f]{64}$')
+          AND (asp_receipt_reference_hmac IS NULL OR
+          asp_receipt_reference_hmac ~ '^[0-9a-f]{64}$')
+          AND (asp_receipt_digest IS NULL OR
+          asp_receipt_digest ~ '^[0-9a-f]{64}$')
+          AND source_record_digest ~ '^[0-9a-f]{64}$'
+          AND source_signature_digest ~ '^[0-9a-f]{64}$'
+          AND import_receipt_digest ~ '^[0-9a-f]{64}$'
+          AND receipt_digest ~ '^[0-9a-f]{64}$'
+    chain: >-
+      Append-only ORIGINAL or REPLACEMENT with an exact predecessor ID plus
+      digest and at most one successor. Cancellation is a replacement state.
+    authority: >-
+      Only signed external electronic tax-invoice acknowledgement is accepted.
+      Approval number and ASP reference persist only as keyed HMAC plus key
+      version; raw values and live ASP calls are forbidden.
+    grants:
+      gurine_public_projector: []
+      owner_routine_only: all runtime direct relation privileges are revoked
+    alter_statement_sha256:
+      - 9bd0ad8e87c4ae73b417537693d1f8f9920babefa9f519b784e9cfc92891ff1a
+      - b6ac307adf656890e79c65b910775cdc6c7b9047b8ce89b76185284200715c38
+      - 6937ceac4714092264937bb364741fabe48223f726af3f9a7af6f5d88104dbc0
+      - c077d4e0f4667f8a07b98fe7f3240910d226b9c3012bcc2ebe006318fd3ac6c0
+
+  ops.payment_method_bindings:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0041_r6e_monetization_runtime.sql#CREATE TABLE ops.payment_method_bindings
+    create_statement_sha256: 930f5d69e654229df7dd2465a6321432d580b079fe89f50a270e7da0ce1ff23c
+    columns:
+      id: {type: uuid, nullable: false}
+      root_binding_id: {type: uuid, nullable: false}
+      revision: {type: bigint, nullable: false}
+      binding_effect: {type: text, nullable: false}
+      supersedes_binding_id: {type: uuid, nullable: true}
+      predecessor_record_digest: {type: char(64), nullable: true}
+      deployment_id: {type: uuid, nullable: false}
+      environment: {type: text, nullable: false}
+      provider: {type: text, nullable: false}
+      merchant_account_hmac: {type: char(64), nullable: false}
+      merchant_hmac_key_version: {type: text, nullable: false}
+      donor_hmac: {type: char(64), nullable: false}
+      donor_hmac_key_version: {type: text, nullable: false}
+      billing_key_secret_reference: {type: text, nullable: false}
+      billing_key_hmac: {type: char(64), nullable: false}
+      billing_key_hmac_key_version: {type: text, nullable: false}
+      schedule_kind: {type: text, nullable: false}
+      schedule_id: {type: uuid, nullable: false}
+      schedule_version: {type: bigint, nullable: false}
+      schedule_digest: {type: char(64), nullable: false}
+      offer_version_id: {type: uuid, nullable: false}
+      offer_digest: {type: char(64), nullable: false}
+      tier_id: {type: text, nullable: false}
+      first_charge_at: {type: timestamptz, nullable: false}
+      mandate_amount: {type: "numeric(24,6)", nullable: false}
+      currency: {type: char(3), nullable: false}
+      consent_receipt_digest: {type: char(64), nullable: false}
+      mandate_digest: {type: char(64), nullable: false}
+      binding_state: {type: text, nullable: false}
+      bound_at: {type: timestamptz, nullable: false}
+      revoked_at: {type: timestamptz, nullable: true}
+      record_digest: {type: char(64), nullable: false}
+      recorded_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: payment_method_bindings_pkey, columns: [id]}
+    unique_constraints:
+      - {name: payment_method_binding_root_revision_uq, columns: [root_binding_id, revision]}
+      - {name: payment_method_binding_record_digest_uq, columns: [record_digest]}
+      - {name: payment_method_binding_reference_uq, columns: [id, record_digest]}
+    foreign_keys:
+      - {name: payment_method_binding_root_fk, columns: [root_binding_id], references: "ops.payment_method_bindings(id)", on_delete: RESTRICT, deferrable: "INITIALLY DEFERRED"}
+      - {name: payment_method_binding_supersedes_fk, columns: [supersedes_binding_id, predecessor_record_digest], references: "ops.payment_method_bindings(id,record_digest)", on_delete: RESTRICT, match: FULL}
+    checks:
+      - name: payment_method_binding_chain_ck
+        expression: >-
+          revision > 0 AND ((binding_effect = 'ORIGINAL' AND revision = 1
+          AND root_binding_id = id AND supersedes_binding_id IS NULL
+          AND predecessor_record_digest IS NULL AND binding_state = 'ACTIVE'
+          AND revoked_at IS NULL) OR
+          (binding_effect = 'REPLACEMENT' AND revision > 1
+          AND root_binding_id <> id AND supersedes_binding_id IS NOT NULL
+          AND predecessor_record_digest IS NOT NULL AND binding_state = 'ACTIVE'
+          AND revoked_at IS NULL) OR
+          (binding_effect = 'REVOCATION' AND revision > 1
+          AND root_binding_id <> id AND supersedes_binding_id IS NOT NULL
+          AND predecessor_record_digest IS NOT NULL AND binding_state = 'REVOKED'
+          AND revoked_at IS NOT NULL AND revoked_at >= bound_at))
+      - name: payment_method_binding_provider_ck
+        expression: >-
+          provider IN ('TOSS_PAYMENTS','KAKAO_PAY','STRIPE')
+          AND environment = 'TEST' AND schedule_kind IN ('ONE_TIME','MONTHLY')
+          AND schedule_version > 0 AND first_charge_at >= bound_at
+          AND mandate_amount > 0 AND currency ~ '^[A-Z]{3}$'
+          AND length(btrim(merchant_hmac_key_version)) BETWEEN 1 AND 100
+          AND length(btrim(donor_hmac_key_version)) BETWEEN 1 AND 100
+          AND length(btrim(billing_key_hmac_key_version)) BETWEEN 1 AND 100
+          AND billing_key_secret_reference ~
+          '^fixture://billing-key/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}@v2$'
+          AND length(btrim(tier_id)) BETWEEN 1 AND 128
+      - name: payment_method_binding_digest_ck
+        expression: >-
+          (predecessor_record_digest IS NULL OR
+          predecessor_record_digest ~ '^[0-9a-f]{64}$')
+          AND merchant_account_hmac ~ '^[0-9a-f]{64}$'
+          AND donor_hmac ~ '^[0-9a-f]{64}$'
+          AND billing_key_hmac ~ '^[0-9a-f]{64}$'
+          AND consent_receipt_digest ~ '^[0-9a-f]{64}$'
+          AND mandate_digest ~ '^[0-9a-f]{64}$'
+          AND schedule_digest ~ '^[0-9a-f]{64}$'
+          AND offer_digest ~ '^[0-9a-f]{64}$'
+          AND record_digest ~ '^[0-9a-f]{64}$'
+    mode: TEST_ONLY_MERCHANT_SCHEDULED
+    provider_values: [TOSS_PAYMENTS, KAKAO_PAY, STRIPE]
+    schedule_values: [ONE_TIME, MONTHLY]
+    secret_rule: >-
+      Raw billing keys never enter PostgreSQL. Only a version-pinned fixture
+      secret reference, domain-separated HMACs, and non-replayable digests are
+      stored.
+    chain: Append-only ORIGINAL, REPLACEMENT, or REVOCATION with one successor.
+    grants:
+      gurine_public_projector: []
+      owner_routine_only: all runtime direct relation privileges are revoked
+    alter_statement_sha256:
+      - 6c0d9544d1ae2525a70b6895b3a957474ee69ccc08062716d6ee9a2669b3f70b
+      - 7d61cb8d63ee4d3540bfdd095e9672269311a210daa71fada028a32381a3b0b6
+      - 5f4d617b784961a09b5226c1382a7098a9b3eed6bb8fd9e25b50b4b2fc629b92
+
+  ops.payment_charge_attempts:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0041_r6e_monetization_runtime.sql#CREATE TABLE ops.payment_charge_attempts
+    create_statement_sha256: a6ada7e55253e17ace8861aa68f306e0115682a61749e81b5ce50b06129a4eea
+    columns:
+      id: {type: uuid, nullable: false}
+      root_attempt_id: {type: uuid, nullable: false}
+      observation_version: {type: bigint, nullable: false}
+      observation_effect: {type: text, nullable: false}
+      supersedes_attempt_id: {type: uuid, nullable: true}
+      predecessor_record_digest: {type: char(64), nullable: true}
+      payment_method_binding_id: {type: uuid, nullable: false}
+      payment_method_binding_digest: {type: char(64), nullable: false}
+      provider: {type: text, nullable: false}
+      provider_idempotency_key_hmac: {type: char(64), nullable: false}
+      provider_idempotency_hmac_key_version: {type: text, nullable: false}
+      provider_charge_hmac: {type: char(64), nullable: true}
+      provider_charge_hmac_key_version: {type: text, nullable: true}
+      purpose: {type: text, nullable: false}
+      amount: {type: "numeric(24,6)", nullable: false}
+      currency: {type: char(3), nullable: false}
+      attempt_state: {type: text, nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      provider_fetch_digest: {type: char(64), nullable: true}
+      requested_at: {type: timestamptz, nullable: false}
+      provider_observed_at: {type: timestamptz, nullable: true}
+      terminal_at: {type: timestamptz, nullable: true}
+      record_digest: {type: char(64), nullable: false}
+      recorded_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: payment_charge_attempts_pkey, columns: [id]}
+    unique_constraints:
+      - {name: payment_charge_attempt_root_version_uq, columns: [root_attempt_id, observation_version]}
+      - {name: payment_charge_attempt_record_digest_uq, columns: [record_digest]}
+      - {name: payment_charge_attempt_row_reference_uq, columns: [id, record_digest]}
+      - {name: payment_charge_attempt_reference_uq, columns: [root_attempt_id, record_digest]}
+    foreign_keys:
+      - {name: payment_charge_attempt_root_fk, columns: [root_attempt_id], references: "ops.payment_charge_attempts(id)", on_delete: RESTRICT, deferrable: "INITIALLY DEFERRED"}
+      - {name: payment_charge_attempt_supersedes_fk, columns: [supersedes_attempt_id, predecessor_record_digest], references: "ops.payment_charge_attempts(id,record_digest)", on_delete: RESTRICT, match: FULL}
+      - {name: payment_charge_attempt_binding_fk, columns: [payment_method_binding_id, payment_method_binding_digest], references: "ops.payment_method_bindings(id,record_digest)", on_delete: RESTRICT}
+    checks:
+      - name: payment_charge_attempt_chain_ck
+        expression: >-
+          observation_version > 0 AND ((observation_effect = 'ORIGINAL'
+          AND observation_version = 1 AND root_attempt_id = id
+          AND supersedes_attempt_id IS NULL
+          AND predecessor_record_digest IS NULL) OR
+          (observation_effect = 'OBSERVATION' AND observation_version > 1
+          AND root_attempt_id <> id AND supersedes_attempt_id IS NOT NULL
+          AND predecessor_record_digest IS NOT NULL))
+      - name: payment_charge_attempt_state_ck
+        expression: >-
+          provider IN ('TOSS_PAYMENTS','KAKAO_PAY','STRIPE')
+          AND purpose = 'DONATION' AND amount > 0
+          AND currency ~ '^[A-Z]{3}$'
+          AND attempt_state IN ('REQUESTED','PROVIDER_ACCEPTED','SUCCEEDED',
+          'FAILED','REFUNDED','RECONCILIATION_REQUIRED')
+          AND (provider_charge_hmac IS NULL) =
+          (provider_charge_hmac_key_version IS NULL)
+          AND (provider_fetch_digest IS NULL OR provider_charge_hmac IS NOT NULL)
+          AND ((attempt_state IN ('SUCCEEDED','FAILED','REFUNDED')
+          AND provider_fetch_digest IS NOT NULL
+          AND provider_observed_at IS NOT NULL
+          AND provider_charge_hmac IS NOT NULL) OR
+          attempt_state IN ('REQUESTED','PROVIDER_ACCEPTED',
+          'RECONCILIATION_REQUIRED'))
+          AND (attempt_state IN ('SUCCEEDED','FAILED','REFUNDED')) =
+          (terminal_at IS NOT NULL)
+          AND (provider_observed_at IS NULL OR provider_observed_at >= requested_at)
+      - name: payment_charge_attempt_digest_ck
+        expression: >-
+          (predecessor_record_digest IS NULL OR
+          predecessor_record_digest ~ '^[0-9a-f]{64}$')
+          AND payment_method_binding_digest ~ '^[0-9a-f]{64}$'
+          AND provider_idempotency_key_hmac ~ '^[0-9a-f]{64}$'
+          AND (provider_charge_hmac IS NULL OR
+          provider_charge_hmac ~ '^[0-9a-f]{64}$')
+          AND request_digest ~ '^[0-9a-f]{64}$'
+          AND (provider_fetch_digest IS NULL OR
+          provider_fetch_digest ~ '^[0-9a-f]{64}$')
+          AND record_digest ~ '^[0-9a-f]{64}$'
+    purpose: DONATION
+    chain: >-
+      Append-only ORIGINAL request followed by OBSERVATION successors; exact
+      provider plus provider-idempotency-key HMAC is unique at version one.
+    terminal_rule: >-
+      SUCCEEDED, FAILED, and REFUNDED require authoritative fetch digest,
+      provider-observed time, provider-charge HMAC, and terminal time. Pending
+      or ambiguous observations never become a donation fact.
+    grants:
+      gurine_public_projector: []
+      owner_routine_only: all runtime direct relation privileges are revoked
+    alter_statement_sha256:
+      - 9cacb3a5600bb5193982a6d38c363815d821a4859c55b33aefc5d4d427795f10
+      - 8a3b4e083c467325f34ff56fb8cbc78313fdbec458ed2b18e3934ca6738e9f4d
+      - 03698ced2a8cf74136730dc11a97e2c7dd732ce452bb1489aac10f7d26cad06f
+      - 13bc6112973460e1838788d4524eecb7900046e39c16ef4ea5c86685c34423f1
+
+  ops.provider_webhook_receipts:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0041_r6e_monetization_runtime.sql#CREATE TABLE ops.provider_webhook_receipts
+    create_statement_sha256: 0357fc160467c7e0675f1f58dbfe25011ee89766939fed8a7e91ed23c55d9e96
+    columns:
+      id: {type: uuid, nullable: false}
+      deployment_id: {type: uuid, nullable: false}
+      environment: {type: text, nullable: false}
+      provider: {type: text, nullable: false}
+      merchant_account_hmac: {type: char(64), nullable: false}
+      merchant_hmac_key_version: {type: text, nullable: false}
+      provider_config_digest: {type: char(64), nullable: false}
+      provider_event_identity_hmac: {type: char(64), nullable: false}
+      provider_event_hmac_key_version: {type: text, nullable: false}
+      delivery_identity_hmac: {type: char(64), nullable: false}
+      delivery_hmac_key_version: {type: text, nullable: false}
+      body_digest: {type: char(64), nullable: false}
+      header_set_digest: {type: char(64), nullable: false}
+      body_byte_length: {type: bigint, nullable: false}
+      signature_state: {type: text, nullable: false}
+      signature_evidence_digest: {type: char(64), nullable: true}
+      received_at: {type: timestamptz, nullable: false}
+      fetch_state: {type: text, nullable: false}
+      provider_object_identity_hmac: {type: char(64), nullable: true}
+      provider_object_hmac_key_version: {type: text, nullable: true}
+      provider_fetch_request_digest: {type: char(64), nullable: true}
+      provider_fetch_response_digest: {type: char(64), nullable: true}
+      provider_payment_state: {type: text, nullable: true}
+      fetched_at: {type: timestamptz, nullable: true}
+      resulting_charge_attempt_id: {type: uuid, nullable: true}
+      resulting_charge_attempt_digest: {type: char(64), nullable: true}
+      resulting_donation_fact_id: {type: uuid, nullable: true}
+      resulting_donation_fact_digest: {type: char(64), nullable: true}
+      receipt_digest: {type: char(64), nullable: false}
+      recorded_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: provider_webhook_receipts_pkey, columns: [id]}
+    unique_constraints:
+      - name: provider_webhook_event_identity_uq
+        columns: [deployment_id, environment, provider, merchant_account_hmac, provider_event_identity_hmac]
+      - name: provider_webhook_delivery_identity_uq
+        columns: [deployment_id, environment, provider, merchant_account_hmac, delivery_identity_hmac]
+      - {name: provider_webhook_receipt_digest_uq, columns: [receipt_digest]}
+      - {name: provider_webhook_reference_uq, columns: [id, receipt_digest]}
+    foreign_keys:
+      - {name: provider_webhook_charge_fk, columns: [resulting_charge_attempt_id, resulting_charge_attempt_digest], references: "ops.payment_charge_attempts(id,record_digest)", on_delete: RESTRICT, match: FULL, deferrable: "INITIALLY DEFERRED"}
+      - {name: provider_webhook_donation_fk, columns: [resulting_donation_fact_id, resulting_donation_fact_digest], references: "ops.donation_facts(id,fact_digest)", on_delete: RESTRICT, match: FULL, deferrable: "INITIALLY DEFERRED"}
+    checks:
+      - name: provider_webhook_shape_ck
+        expression: >-
+          provider IN ('TOSS_PAYMENTS','KAKAO_PAY','STRIPE')
+          AND environment = 'TEST'
+          AND signature_state IN ('VERIFIED','FAILED','NOT_SUPPORTED')
+          AND fetch_state IN ('NOT_ATTEMPTED','FETCH_CONFIRMED','FETCH_NOT_FOUND')
+          AND body_byte_length BETWEEN 1 AND 10485760
+          AND ((signature_state = 'NOT_SUPPORTED'
+          AND signature_evidence_digest IS NULL) OR
+          (signature_state IN ('VERIFIED','FAILED')
+          AND signature_evidence_digest IS NOT NULL))
+          AND (signature_state <> 'FAILED' OR fetch_state = 'NOT_ATTEMPTED')
+          AND ((fetch_state = 'FETCH_CONFIRMED'
+          AND provider_object_identity_hmac IS NOT NULL
+          AND provider_object_hmac_key_version IS NOT NULL
+          AND provider_fetch_request_digest IS NOT NULL
+          AND provider_fetch_response_digest IS NOT NULL
+          AND provider_payment_state IS NOT NULL AND fetched_at IS NOT NULL) OR
+          (fetch_state <> 'FETCH_CONFIRMED'
+          AND provider_object_identity_hmac IS NULL
+          AND provider_object_hmac_key_version IS NULL
+          AND provider_fetch_request_digest IS NULL
+          AND provider_fetch_response_digest IS NULL
+          AND provider_payment_state IS NULL AND fetched_at IS NULL))
+          AND (resulting_charge_attempt_id IS NULL) =
+          (resulting_charge_attempt_digest IS NULL)
+          AND (resulting_donation_fact_id IS NULL) =
+          (resulting_donation_fact_digest IS NULL)
+          AND (resulting_donation_fact_id IS NULL OR fetch_state = 'FETCH_CONFIRMED')
+      - name: provider_webhook_digest_ck
+        expression: >-
+          provider_event_identity_hmac ~ '^[0-9a-f]{64}$'
+          AND merchant_account_hmac ~ '^[0-9a-f]{64}$'
+          AND provider_config_digest ~ '^[0-9a-f]{64}$'
+          AND delivery_identity_hmac ~ '^[0-9a-f]{64}$'
+          AND body_digest ~ '^[0-9a-f]{64}$'
+          AND header_set_digest ~ '^[0-9a-f]{64}$'
+          AND (signature_evidence_digest IS NULL OR
+          signature_evidence_digest ~ '^[0-9a-f]{64}$')
+          AND (provider_object_identity_hmac IS NULL OR
+          provider_object_identity_hmac ~ '^[0-9a-f]{64}$')
+          AND (provider_fetch_request_digest IS NULL OR
+          provider_fetch_request_digest ~ '^[0-9a-f]{64}$')
+          AND (provider_fetch_response_digest IS NULL OR
+          provider_fetch_response_digest ~ '^[0-9a-f]{64}$')
+          AND (resulting_charge_attempt_digest IS NULL OR
+          resulting_charge_attempt_digest ~ '^[0-9a-f]{64}$')
+          AND (resulting_donation_fact_digest IS NULL OR
+          resulting_donation_fact_digest ~ '^[0-9a-f]{64}$')
+          AND receipt_digest ~ '^[0-9a-f]{64}$'
+    mode: TEST_ONLY
+    unique_event_scope: [deployment_id, environment, provider, merchant_account_hmac, provider_event_identity_hmac]
+    signature_states: [VERIFIED, FAILED, NOT_SUPPORTED]
+    fetch_states: [NOT_ATTEMPTED, FETCH_CONFIRMED, FETCH_NOT_FOUND]
+    truth_rule: >-
+      Webhook verification is only an authenticated routing hint. A resulting
+      terminal attempt or donation requires FETCH_CONFIRMED and exact provider
+      request, response, and object-identity digests. Raw body, headers, and
+      signatures never persist.
+    grants:
+      gurine_public_projector: []
+      owner_routine_only: all runtime direct relation privileges are revoked
+    alter_statement_sha256:
+      - 446c79cb444cc764f7ae8f0682f887113cef404c982d139d95eba70677cabc10
+      - 6abfa58256e3c8c3926cf00040bbeb82bb779135747a9c6d10e9dfb8e8ae836d
+      - 9e440a28dd4dc2e414102ba7d760782537b0be2af09a9d0b2212b4e2da9a4599
+
+  ops.donation_facts:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0041_r6e_monetization_runtime.sql#CREATE TABLE ops.donation_facts
+    create_statement_sha256: 3dc29e697aa37eb503dc8f5cbcfacad036521206a4ec1cc61fd2e4429fdce309
+    columns:
+      id: {type: uuid, nullable: false}
+      root_fact_id: {type: uuid, nullable: false}
+      revision: {type: bigint, nullable: false}
+      fact_effect: {type: text, nullable: false}
+      supersedes_fact_id: {type: uuid, nullable: true}
+      predecessor_fact_digest: {type: char(64), nullable: true}
+      deployment_id: {type: uuid, nullable: false}
+      payment_charge_attempt_id: {type: uuid, nullable: false}
+      payment_charge_attempt_digest: {type: char(64), nullable: false}
+      donor_hmac: {type: char(64), nullable: false}
+      donor_hmac_key_version: {type: text, nullable: false}
+      donor_group_hmac: {type: char(64), nullable: false}
+      donor_group_hmac_key_version: {type: text, nullable: false}
+      amount: {type: "numeric(24,6)", nullable: false}
+      currency: {type: char(3), nullable: false}
+      amount_basis: {type: ops.funding_amount_basis, nullable: false}
+      funding_source_kind: {type: ops.funding_source_kind, nullable: false}
+      investigation_exemption: {type: boolean, nullable: false, default: false}
+      access_entitlement_granted: {type: boolean, nullable: false, default: false}
+      provider_fetch_digest: {type: char(64), nullable: false}
+      recognized_at: {type: timestamptz, nullable: false}
+      fact_digest: {type: char(64), nullable: false}
+      recorded_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: {name: donation_facts_pkey, columns: [id]}
+    unique_constraints:
+      - {name: donation_fact_root_revision_uq, columns: [root_fact_id, revision]}
+      - {name: donation_fact_digest_uq, columns: [fact_digest]}
+      - {name: donation_fact_reference_uq, columns: [id, fact_digest]}
+      - {name: donation_fact_charge_revision_uq, columns: [payment_charge_attempt_id, revision]}
+    foreign_keys:
+      - {name: donation_fact_root_fk, columns: [root_fact_id], references: "ops.donation_facts(id)", on_delete: RESTRICT, deferrable: "INITIALLY DEFERRED"}
+      - {name: donation_fact_supersedes_fk, columns: [supersedes_fact_id, predecessor_fact_digest], references: "ops.donation_facts(id,fact_digest)", on_delete: RESTRICT, match: FULL}
+      - {name: donation_fact_charge_fk, columns: [payment_charge_attempt_id, payment_charge_attempt_digest], references: "ops.payment_charge_attempts(id,record_digest)", on_delete: RESTRICT}
+    checks:
+      - name: donation_fact_chain_ck
+        expression: >-
+          revision > 0 AND ((fact_effect = 'ORIGINAL' AND revision = 1
+          AND root_fact_id = id AND supersedes_fact_id IS NULL
+          AND predecessor_fact_digest IS NULL) OR
+          (fact_effect IN ('REPLACEMENT','REVERSAL') AND revision > 1
+          AND root_fact_id <> id AND supersedes_fact_id IS NOT NULL
+          AND predecessor_fact_digest IS NOT NULL))
+      - name: donation_fact_public_firewall_ck
+        expression: >-
+          amount > 0 AND currency ~ '^[A-Z]{3}$'
+          AND funding_source_kind = 'DONATION'
+          AND investigation_exemption = false
+          AND access_entitlement_granted = false
+      - name: donation_fact_digest_ck
+        expression: >-
+          (predecessor_fact_digest IS NULL OR
+          predecessor_fact_digest ~ '^[0-9a-f]{64}$')
+          AND payment_charge_attempt_digest ~ '^[0-9a-f]{64}$'
+          AND donor_hmac ~ '^[0-9a-f]{64}$'
+          AND donor_group_hmac ~ '^[0-9a-f]{64}$'
+          AND provider_fetch_digest ~ '^[0-9a-f]{64}$'
+          AND fact_digest ~ '^[0-9a-f]{64}$'
+    chain: >-
+      Append-only ORIGINAL, REPLACEMENT, or REVERSAL with an exact predecessor
+      ID plus digest and at most one successor.
+    payment_fence: [payment_charge_attempt_id, payment_charge_attempt_digest, provider_fetch_digest]
+    firewall_checks:
+      - funding_source_kind is DONATION
+      - investigation_exemption is false
+      - access_entitlement_granted is false
+    projection_rule: >-
+      Private donor and payment facts never publish directly. Only the current
+      fetch-confirmed donation head may enter a candidate funding concentration
+      snapshot, followed by independent FUNDING_DISCLOSURE review and the
+      ordinary public projection gate.
+    grants:
+      gurine_public_projector: []
+      owner_routine_only: all runtime direct relation privileges are revoked
+    alter_statement_sha256:
+      - 769191aa98ad28473d9f9c02546414e26809ec01fc80bbc76cba7ba1888d1e13
+      - 459aa654c88c2c5dbda70f060998f547d60b0e73efc6369eeafb332aaf2a2d5c
+      - f6273100f0b35c70b3e1a0e3c00dd8601b649ac0a1bf77f398a63b8043ba4f40
+      - 94c59f72ca0dda1c6d748209b65243c3994589cc1a270b20c3fbbf76af67cc93
+
+owner_routines:
+  - signature: ops.economics_closed_composite_required_v1(p_value jsonb, p_nullable_keys text[]) RETURNS boolean
+    canonical_ddl_sha256: 6e1ceb66565faaf06cd6f6584159925be98528a4fbaac5a8dedcaf7c405b5f2c
+  - signature: ops.economics_import_operation_v1_is_valid(p_value ops.economics_import_operation_v1) RETURNS boolean
+    canonical_ddl_sha256: b366b98ef6059f825a48a07bc73ce95cdec7f49d2dbce595b82ca49e4a7a4e86
+  - signature: ops.insert_fx_rate_fact_v1(p_row ops.fx_rate_facts) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 4893df5cba1aca6debb6ee0b4eb40ecb4aee633e0c81436e36b2a7887687357f
+  - signature: ops.insert_acquisition_source_receipt_v1(p_row ops.acquisition_source_receipts) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 611e874a867d9efc2f637863a277a915757a086f0756250a43cf1064c0c1b6db
+  - signature: ops.insert_cost_allocation_v1(p_row ops.cost_allocations) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 9076915b980f894c985fde48e64a592bdb2d97c41a2733312acb87e3a2082b60
+  - signature: ops.insert_tariff_version_v1(p_row ops.tariff_versions) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: cfab12389980d48dd692c78ac5f40da0e44ff2365a9eea60954d0bc7fcf6753f
+  - signature: ops.insert_commercial_contract_period_v1(p_row ops.commercial_contract_periods) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: a5af2c25d1ecd4f497e0ff992f51ab110b9f452040436ee530f553de23da3d27
+  - signature: ops.insert_usage_window_receipt_v1(p_row ops.usage_window_receipts) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: f32ea82c2e6ad45962692cc30643da3cee4b1e3e96b6f386e16b7e0a0adc096e
+  - signature: ops.insert_discount_decision_v1(p_row ops.discount_decisions) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: d0de7c3dd7487d92138888a4662920be1d1205fd28906f41fd8dd813b610992e
+  - signature: ops.insert_offer_profile_capability_v1(p_row ops.offer_profile_capabilities) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 2a37632319f8e085977edc8e8ab5e9999b9e826aa12a23b16fb418fc27488770
+  - signature: ops.insert_usage_fact_v1(p_row ops.usage_facts) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 0a5af1530ec1e87c7bad97ad1f09f97e2d26928c5ede1b891983f0b19177daeb
+  - signature: ops.insert_invoice_fact_v1(p_row ops.invoice_facts) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: ab1ba5db29b1cd6713f21a5a6dfadf89de519bb3f4b89f0626003262c973f920
+  - signature: ops.insert_invoice_line_fact_v1(p_row ops.invoice_line_facts) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 87daf345ad2ade7cb9ec56c6bc5cc113f7dfab638e401945db00d822c7c3a4ae
+  - signature: ops.insert_invoice_usage_membership_v1(p_row ops.invoice_usage_memberships) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 611d18d50d5b3b0db9b512d8ef43500ac99364f75edf472aca73b5f5a005e794
+  - signature: ops.insert_revenue_fact_v1(p_row ops.revenue_facts) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: cf99897f0b802e511d5473e7b838ff32a401386c0c409cd25e2a641ad62c6b05
+  - signature: ops.insert_accounting_correction_v1(p_row ops.accounting_corrections) RETURNS ops.economics_import_result_row_v1
+    canonical_ddl_sha256: 9d3b3ed8793610381a6e6ea778a2b761799b94f8ce91d97c7f233ac5b23eb05d
+  - signature: >-
+      ops.record_commercial_qualification_receipt_v1(p_input
+      ops.commercial_qualification_receipt_input_v1, p_idempotency_key text)
+      RETURNS ops.economics_mutation_receipt_v1
+    canonical_ddl_sha256: 793cdf34ac54b614e07308930dc548ecd29e8dfdb72de5d1d10bb7f4b299e8bc
+  - signature: >-
+      ops.materialize_paid_evidence_packet_subject_v1(p_subject
+      ops.paid_evidence_packet_subject_input_v1, p_idempotency_key text)
+      RETURNS ops.economics_mutation_receipt_v1
+    canonical_ddl_sha256: 82ac1bd4a5e4098491e5f78d9b313833cba52c08c2dc93d80076e480be1ed132
+  - signature: >-
+      ops.record_product_event_v1(p_emission_id uuid, p_event_name text,
+      p_event_catalog_digest char(64), p_deployment_id uuid,
+      p_workflow_instance_hmac char(64), p_workflow_key_version bigint,
+      p_workflow_started_at timestamptz, p_workflow_expires_at timestamptz,
+      p_occurred_at timestamptz, p_screen_id text, p_surface text,
+      p_app_version text, p_specification_version text, p_properties jsonb,
+      p_event_digest char(64)) RETURNS ops.economics_mutation_receipt_v1
+    canonical_ddl_sha256: 18f79373644d953021b2428f0faf617bdfdd6809501d1cacf0b95434907c3c6f
+  - signature: >-
+      ops.import_funding_snapshot_v1(p_import ops.funding_snapshot_import_v1,
+      p_entries ops.funding_snapshot_entry_input_v1[]) RETURNS
+      ops.funding_snapshot_import_receipt_v1
+    canonical_ddl_sha256: f781f07a3263d306ab4b57f77feef1a1c821b9c343130fe29ffa96a1b2107a12
+  - signature: >-
+      ops.record_sku_readiness_evaluation_v1(p_evaluation
+      ops.sku_readiness_evaluation_input_v1, p_items
+      ops.sku_readiness_item_input_v1[]) RETURNS
+      ops.economics_mutation_receipt_v1
+    canonical_ddl_sha256: 84d8f706777c62d51b7046356d92355f6e2be4765bc42390c4c0d631dea0d17e
+  - signature: >-
+      ops.project_donation_fact_candidate_v1(p_input
+      ops.donation_funding_candidate_projection_v1) RETURNS
+      ops.donation_funding_candidate_receipt_v1
+    canonical_ddl_sha256: 41b715fdce9f79c7f920c47e28ea88ec5919a9232d49452f35bd67f83b2e68cd
+
+support_function_catalog:
+  functions:
+    - signature: ops.economics_closed_composite_required_v1(jsonb,text[]) RETURNS boolean
+      execute_roles: []
+    - signature: ops.economics_import_operation_v1_is_valid(ops.economics_import_operation_v1) RETURNS boolean
+      execute_roles: []
+  rule: >-
+    Both validators are internal-only immutable helpers owned by
+    gurine_migrator. PUBLIC and every runtime principal have zero direct
+    EXECUTE; owner routines invoke them under a fixed search path.
+
+trigger_inventory:
+  - statement: CREATE TRIGGER ops_action_approval_economics_import_details_immutable BEFORE DELETE OR UPDATE ON ops.action_approval_economics_import_details FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+    canonical_ddl_sha256: 9e6c38eb4b9a4a5e4241b1f6173487a2038cdc32e8fca34aac0a4620e9d35111
+  - statement: CREATE TRIGGER ops_cash_application_facts_immutable BEFORE DELETE OR UPDATE ON ops.cash_application_facts FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+    canonical_ddl_sha256: a9cf811714066af425edc50aabfca4f5466de4fef6929208b00ac18ee43de63c
+  - statement: CREATE TRIGGER ops_tax_invoice_issuance_receipts_immutable BEFORE DELETE OR UPDATE ON ops.tax_invoice_issuance_receipts FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+    canonical_ddl_sha256: 45f3966d4b55aeeb0c87ff8a8b6de7c91486b0f859e8ee8d297f573b1fa9ac6a
+  - statement: CREATE TRIGGER ops_payment_method_bindings_immutable BEFORE DELETE OR UPDATE ON ops.payment_method_bindings FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+    canonical_ddl_sha256: ed548c13fcf613eb81ef0958e650d4a376d66949d85587f5c8cca0bc76c5fe88
+  - statement: CREATE TRIGGER ops_payment_charge_attempts_immutable BEFORE DELETE OR UPDATE ON ops.payment_charge_attempts FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+    canonical_ddl_sha256: c510324a581a7680468075dd8675724da255a25bb79496d35501e55353a42a57
+  - statement: CREATE TRIGGER ops_provider_webhook_receipts_immutable BEFORE DELETE OR UPDATE ON ops.provider_webhook_receipts FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+    canonical_ddl_sha256: 1ccccb500d77258f50a6af93a7b9eca028faa63c57f173310b195bbe1d3b38fa
+  - statement: CREATE TRIGGER ops_donation_facts_immutable BEFORE DELETE OR UPDATE ON ops.donation_facts FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+    canonical_ddl_sha256: 94b3666ea4ba94ad34974bd7cf41976ae9d807b3b3646a0c53807e6712f51797
+
+index_inventory:
+  - statement: CREATE UNIQUE INDEX cash_application_one_successor_uq ON ops.cash_application_facts (supersedes_fact_id) WHERE supersedes_fact_id IS NOT NULL
+    canonical_ddl_sha256: fa0c60d1a49fcfca1974cc156ce45931b14819ce5318072e9e9b1591dd25b171
+  - statement: CREATE INDEX cash_application_invoice_fk_idx ON ops.cash_application_facts (invoice_fact_id, invoice_fact_digest, id)
+    canonical_ddl_sha256: d813d0356160f8a507d229de1b813fd8ccebd69fad3bc641d15cce6b8af8d37e
+  - statement: CREATE UNIQUE INDEX tax_invoice_one_successor_uq ON ops.tax_invoice_issuance_receipts (supersedes_receipt_id) WHERE supersedes_receipt_id IS NOT NULL
+    canonical_ddl_sha256: caa6493c538499131bbd5ec5c0756b55ac9ab3b03a7b1910257e33115c9c0221
+  - statement: CREATE UNIQUE INDEX payment_method_binding_one_successor_uq ON ops.payment_method_bindings (supersedes_binding_id) WHERE supersedes_binding_id IS NOT NULL
+    canonical_ddl_sha256: 84275c43afc36855bc738552d1c8b9261f0c38a39a10fe327b96a644fcab27cb
+  - statement: CREATE UNIQUE INDEX payment_method_binding_active_uq ON ops.payment_method_bindings (provider, merchant_account_hmac, donor_hmac, schedule_kind) WHERE binding_effect = 'ORIGINAL'
+    canonical_ddl_sha256: dea24595b6698c175d03f4a92cbbeb6ca2d29aa72a1ad7e8b6608ba336a11b49
+  - statement: CREATE UNIQUE INDEX payment_method_binding_schedule_offer_uq ON ops.payment_method_bindings (schedule_id, schedule_version, offer_version_id, tier_id, revision)
+    canonical_ddl_sha256: d7943fa5c4240eae9672ffe998e7df82f5bfbb9f27cce5036ff764dbd613ba98
+  - statement: CREATE UNIQUE INDEX payment_charge_attempt_one_successor_uq ON ops.payment_charge_attempts (supersedes_attempt_id) WHERE supersedes_attempt_id IS NOT NULL
+    canonical_ddl_sha256: 69ad77bbc43f0e23a2322bfe8cd6ba84e50aa40f79e06865b0ff344403749ead
+  - statement: CREATE UNIQUE INDEX payment_charge_attempt_provider_idempotency_uq ON ops.payment_charge_attempts (provider, provider_idempotency_key_hmac) WHERE observation_version = 1
+    canonical_ddl_sha256: 53e87490a53caad6fc57a183bcba8786c7448c0146ee80c71893ef81def4cbfc
+  - statement: CREATE UNIQUE INDEX donation_fact_one_successor_uq ON ops.donation_facts (supersedes_fact_id) WHERE supersedes_fact_id IS NOT NULL
+    canonical_ddl_sha256: 5ea31e2850cd921aa01dfe8b20129fe4a2fab8832f7b4a23f39bc86a4a0c9d34
+
+event_registry_contract:
+  statement: >-
+    One exact two-row R6e-owned upsert plus four exact historical
+    forward-override declarations; no marker block, partial jsonb_set, or third
+    R6e-owned event.
+  schema_equivalence_rule: >-
+    Every named source JSON and embedded payload_schema is structurally
+    identical, including the canonical draft-2020-12 $schema and event-specific
+    $id. UUID properties use the active lowercase RFC 4122 regex shape; a
+    format: uuid substitution, metadata omission, or validator weakening is
+    forbidden.
+  exact_upsert_count: 2
+  historical_event_forward_override_count: 4
+  owned_events_in_order:
+    - event_type: donation.fact_recorded.v1
+      category: DOMAIN
+      schema_version: 1
+      payload_schema_uri: payloads/donation_fact_recorded_v1.schema.json
+      payload_schema_path: specs/events/payloads/donation_fact_recorded_v1.schema.json
+      payload_schema_sha256: PENDING_PAYLOAD_SCHEMA_FILE
+      embedded_json_equivalent: true
+      fields_exactly:
+        - donationFactId
+        - donationFactDigest
+        - chargeAttemptId
+        - chargeAttemptDigest
+        - providerFetchDigest
+        - occurredAt
+    - event_type: notification.payment_review_requested.v1
+      category: DOMAIN
+      schema_version: 1
+      payload_schema_uri: payloads/notification_payment_review_requested_v1.schema.json
+      payload_schema_path: specs/events/payloads/notification_payment_review_requested_v1.schema.json
+      payload_schema_sha256: PENDING_PAYLOAD_SCHEMA_FILE
+      embedded_json_equivalent: true
+      fields_exactly:
+        - reviewTaskId
+        - reviewTaskVersion
+        - reviewTaskDigest
+        - sourceKind
+        - sourceReceiptId
+        - sourceReceiptDigest
+        - occurredAt
+      source_kind_values: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE]
+  historical_event_forward_overrides:
+    - event_type: governance.funding_disclosure_published.v1
+      ordered_current_upsert_position: 1
+      prior_source_identity:
+        migration: 0030_v13_submission_session_hardening.sql
+        event_ordinal: 81
+        event_type: governance.funding_disclosure_published.v1
+        payload_schema_uri: payloads/governance_funding_disclosure_published_v1.schema.json
+        embedded_payload_schema_canonical_sha256: c9cf1fb62dde577bfde32a44a15ef025554041811290e24eb01c6012abba98c2
+      current_payload_schema_path: specs/events/payloads/governance_funding_disclosure_published_v1.schema.json
+      current_payload_schema_sha256: PENDING_PAYLOAD_SCHEMA_FILE
+      current_fields_exactly:
+        - disclosureId
+        - revisionId
+        - revision
+        - revisionDigest
+        - snapshotBatchId
+        - snapshotDigest
+        - concentrationBand
+        - entrySetDigest
+        - priorRevision
+        - effectiveAt
+        - receiptDigest
+      reason: >-
+        The projector must bind an immutable revision ID and digest and may not
+        infer them from private tables or event prose.
+    - event_type: action.proposal_created.v1
+      ordered_current_upsert_position: 2
+      prior_source_identity:
+        migration: 0030_v13_submission_session_hardening.sql
+        event_ordinal: 13
+        event_type: action.proposal_created.v1
+        payload_schema_uri: payloads/action_proposal_created_v1.schema.json
+        embedded_payload_schema_canonical_sha256: b507da8c2d569991b0a20be81048807cc421b790b46fe1b3ff41cf098a1afbe3
+      current_payload_schema_path: specs/events/payloads/action_proposal_created_v1.schema.json
+      current_payload_schema_sha256: PENDING_PAYLOAD_SCHEMA_FILE
+      current_change: add ECONOMICS_IMPORT to the closed actionKind enum
+      reason: >-
+        ECONOMICS_IMPORT proposals must be representable without widening
+        actionKind to an open string.
+    - event_type: governance.funding_snapshot_created.v1
+      ordered_current_upsert_position: 3
+      prior_source_identity:
+        migration: 0030_v13_submission_session_hardening.sql
+        event_ordinal: 82
+        event_type: governance.funding_snapshot_created.v1
+        payload_schema_uri: payloads/governance_funding_snapshot_created_v1.schema.json
+        embedded_payload_schema_canonical_sha256: 8f51ba77238989d867b92ee7b491ade1cd36c29e04f25a4b38e3b096e7d95229
+      current_payload_schema_path: specs/events/payloads/governance_funding_snapshot_created_v1.schema.json
+      current_payload_schema_sha256: PENDING_PAYLOAD_SCHEMA_FILE
+      current_fields_exactly:
+        - snapshotBatchId
+        - fiscalYear
+        - asOf
+        - reportingCurrency
+        - fxSnapshotDigest
+        - denominatorState
+        - denominatorUnknownReason
+        - denominator
+        - denominatorApprovalDigest
+        - entrySetDigest
+        - snapshotDigest
+        - receiptDigest
+      reason: >-
+        The authoritative UNKNOWN denominator branch must remain emit-capable
+        without inventing a denominator or approval digest.
+    - event_type: commercial.sku_readiness_evaluated.v1
+      ordered_current_upsert_position: 4
+      prior_source_identity:
+        migration: 0030_v13_submission_session_hardening.sql
+        event_ordinal: 49
+        event_type: commercial.sku_readiness_evaluated.v1
+        payload_schema_uri: payloads/commercial_sku_readiness_evaluated_v1.schema.json
+        embedded_payload_schema_canonical_sha256: 4fd006606a95490f1dfccfb667f7db8261ff90d83413579d46afbb68e4a05d3c
+      current_payload_schema_path: specs/events/payloads/commercial_sku_readiness_evaluated_v1.schema.json
+      current_payload_schema_sha256: PENDING_PAYLOAD_SCHEMA_FILE
+      current_fields_exactly:
+        - evaluationId
+        - deploymentId
+        - organizationId
+        - sku
+        - environment
+        - readinessStage
+        - configurationDigest
+        - catalogVersion
+        - catalogDigest
+        - policyDigest
+        - offeredCapabilitySetDigest
+        - itemIdentitySetDigest
+        - evaluationIdentityDigest
+        - evaluatedAt
+        - evidenceCutoffAt
+        - itemCount
+        - requiredItemCount
+        - satisfiedRequiredItemCount
+        - blockedRequiredItemCount
+        - unknownRequiredItemCount
+        - itemSetDigest
+        - state
+        - blockerSetDigest
+        - evaluationDigest
+        - receiptDigest
+      reason: >-
+        Readiness evaluation must preserve the closed UNKNOWN state and every
+        deterministic rebuild and evidence fence field.
+  inherited_emit_dependencies:
+    - governance.funding_disclosure_published.v1
+
+economics_import_runtime_contract:
+  authority: supervisor_authority_decision_v1.ECO-AUTHORITY-V1
+  action_kind: ECONOMICS_IMPORT
+  target_type: ECONOMICS_IMPORT
+  capability: economics.import
+  typed_detail_relation: ops.action_approval_economics_import_details
+  target_version_contract:
+    wire_path: draft.target.expectedVersion
+    exact_value: null
+    storage_rule: >-
+      action_proposals target version and ApprovalBinding target version are
+      nullable only when the authoritative action kind is ECONOMICS_IMPORT.
+      Every other action kind retains its positive-version invariant.
+    forbidden_substitutions:
+      - positive integer 1 sentinel
+      - zero sentinel
+      - inferred target version
+      - nullable target version for another action kind
+  action_detail_kind_additive_merge:
+    historical_owner: specs/database/addendum/0026-agent-action-approval.yaml
+    historical_kinds_in_order:
+      - HYPOTHESIS
+      - CLAIM
+      - TASK
+      - COMPARABLE
+      - COMMUNICATION
+      - PUBLICATION
+      - RETRACTION
+      - RULE_ACTIVATION
+      - ROLE_GRANT
+      - KILL_SWITCH
+      - COMMUNICATION_AUTHORIZATION
+      - ASSET_RIGHTS_DECISION
+      - RETENTION_SCHEDULE
+      - FUNDING_DISCLOSURE
+      - CAPABILITY_ACTIVATION
+      - RESPONSE_POLICY_CALENDAR
+      - COMMERCIAL_CONTROL
+      - PROVIDER_CONTROL
+    additive_kind: ECONOMICS_IMPORT
+    additive_relation: ops.action_approval_economics_import_details
+    resulting_count_exactly: 19
+    rule: >-
+      Historical 0026 bytes and its eighteen mappings remain unchanged. 0041
+      adds exactly one closed kind-to-detail mapping; an ECONOMICS_IMPORT
+      proposal must have exactly one matching detail row and zero rows in all
+      eighteen historical detail relations.
+  wire_discriminator: draft.operation.operationId
+  database_discriminator: operation_value.import_kind
+  import_kind_count_exactly: 11
+  variants_in_order:
+    - operation_id: recordCommercialQualification
+      target_relations: [ops.acquisition_source_receipts, ops.commercial_qualification_receipts]
+      atomic_cardinality: optional zero-or-one acquisition source plus exactly one qualification receipt
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    - operation_id: importCostAllocationClose
+      target_relations: [ops.fx_rate_facts, ops.cost_allocations]
+      atomic_cardinality: zero-or-more inline FX facts plus one period head and one-or-more allocation lines
+      allowed_result_effects: [RECORDED, REPLACED]
+    - operation_id: createTariffVersion
+      target_relations: [ops.tariff_versions]
+      atomic_cardinality: exactly one tariff version
+      allowed_result_effects: [RECORDED]
+    - operation_id: recordCommercialContractPeriod
+      target_relations: [ops.commercial_contract_periods, ops.offer_profile_capabilities]
+      atomic_cardinality: exactly one contract period plus exactly twelve ordered offer-capability rows
+      allowed_result_effects: [RECORDED, REPLACED]
+      native_capability_insert_count_exactly: 12
+      offer_parent_schema_version:
+        canonical_type: CommercialContractOfferParentV1
+        json_type: number
+        exact_value: 1
+        caller_selectable: false
+        offer_capability_schema_version_field: absent
+      apply_receipt:
+        result_count_exactly: 3
+        logical_result_rows_exactly:
+          commercial_contract_period:
+            resource_kind: COMMERCIAL_CONTRACT_PERIOD
+            identity: persisted contract period ID and version
+            digest: database-derived contract record digest
+          offer_profile_capability_set:
+            resource_kind: OFFER_PROFILE_CAPABILITY
+            identity: persisted offer_profile_id and offer_profile_version
+            digest: database-recomputed offer_capability_set_digest
+          audit_event:
+            resource_kind: ECONOMICS_IMPORT_AUDIT_EVENT
+            identity: persisted economics import audit event ID
+            digest: database-derived audit payload digest
+        forbidden_result_identities:
+          - synthetic capability UUID
+          - one result row per capability insert
+          - twelve duplicate capability result keys
+        rule: >-
+          The twelve native capability inserts remain one atomic relation write
+          set. Their receipt identity is one logical capability-set row, so the
+          contract row, capability-set row, and audit row produce result_count
+          three without changing target atomic cardinality.
+    - operation_id: recordUsageWindow
+      target_relations: [ops.usage_window_receipts, ops.usage_facts]
+      atomic_cardinality: exactly one paired usage-window receipt and usage fact
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    - operation_id: recordInvoice
+      target_relations: [ops.discount_decisions, ops.invoice_facts, ops.invoice_line_facts, ops.invoice_usage_memberships]
+      atomic_cardinality: zero-or-more discounts, exactly one invoice, one-or-more lines, and complete expected usage memberships
+      allowed_result_effects: [RECORDED, REPLACED]
+    - operation_id: recordRevenue
+      target_relations: [ops.revenue_facts]
+      atomic_cardinality: one-or-more revenue facts fenced to persisted invoice-line ID and digest
+      allowed_result_effects: [RECORDED]
+    - operation_id: recordAccountingCorrection
+      target_relations: [ops.accounting_corrections]
+      atomic_cardinality: one-or-more append-only corrections
+      allowed_result_effects: [RECORDED, REVERSED]
+    - operation_id: recordCashApplication
+      target_relations: [ops.cash_application_facts]
+      atomic_cardinality: one-or-more signed imported facts
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    - operation_id: recordTaxInvoiceIssuance
+      target_relations: [ops.tax_invoice_issuance_receipts]
+      atomic_cardinality: one-or-more signed imported receipts
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    - operation_id: recordCollectionFailure
+      target_relations: [ops.tasks]
+      atomic_cardinality: exactly one operator review task and no economics, entitlement, or public-access mutation
+      allowed_result_effects: [REVIEW_TASK_CREATED]
+  detail_closure:
+    - >-
+      The outer operation has exactly one non-null branch and contains no
+      relation name, dynamic SQL target, arbitrary JSON map, caller-supplied
+      audit identity, approval identity, execution identity, row digest, or
+      governance state.
+    - >-
+      Source evidence is always an exact evidence-segment ID plus stored digest.
+      PostgreSQL locks raw.evidence_segments, proves sorted set equality with
+      the proposal rationale evidence IDs, compiles the closed target, and
+      derives canonical bytes and every detail, operation, row, set, audit,
+      receipt, and response digest.
+    - >-
+      Caller-supplied price, amount, external acknowledgement, or accounting
+      state is accepted only when present in the exact signed typed evidence.
+      Missing evidence remains UNKNOWN or rejects before writes.
+  approved_operation_identity_contract:
+    authority_location: immutable approved operation bytes
+    caller_approved_identity_classes_exactly:
+      - every new, root, and successor usage-window receipt ID
+      - every new, root, and successor usage-fact ID
+      - every invoice header ID
+      - every invoice line ID
+      - every invoice usage-membership ID
+      - every revenue-fact ID
+      - every cash-application ID
+      - every tax-invoice issuance-receipt ID
+      - every accounting-correction ID
+    database_generated_hidden_identity: forbidden
+    replay_rule: >-
+      The approved identities participate in operation bytes, detail and receipt
+      digests, idempotency, predecessor fences, and exact replay. PostgreSQL may
+      not repair a missing identity with a random value.
+  invoice_adjustment_graph:
+    allowed_reference: >-
+      An adjustment line may reference only an earlier non-adjustment line in
+      the same ordered approved invoice array.
+    rejected_references_exactly:
+      - cross-invoice
+      - adjustment-to-adjustment
+      - cyclic
+      - forward
+      - missing
+    rejection_effect: transaction delta zero
+  economics_digest_abi:
+    name: GURINE_LENGTH_PREFIXED_UTF8_V1
+    authority_level: APPROVED_HIGH_LEVEL
+    applies_to_exactly:
+      - economics
+      - usage
+      - invoice
+      - revenue
+      - cash
+      - tax-invoice
+      - accounting-correction
+    hash: SHA-256
+    frame_length: unsigned u64 big-endian byte length
+    separately_framed_components_in_order:
+      - domain
+      - schema version
+      - type tag
+      - value
+    scalar_and_collection_rules:
+      - NULL is explicit and never omitted or conflated with an empty value.
+      - Arrays carry an explicit member count and preserve the declared order.
+      - Decimal values use fixed-six representation.
+      - UUID and SHA-256 text is lowercase.
+      - Timestamps are UTC with exactly six fractional digits.
+    field_order_rule: >-
+      Preserve every exact field order already declared by the active 0029
+      database contracts. Where 0029 declares a record but omits a digest
+      preimage, the approved inclusion set is every immutable business column
+      except the self digest and created_at or updated_at; the exact order remains
+      part of canonical_authority_gate and cannot be inferred from catalog order.
+    verification_required_exactly:
+      - PostgreSQL golden vectors
+      - Rust golden vectors
+      - cross-language byte equality
+      - one-byte mutation rejection
+    funding_digest_use: forbidden
+    canonical_authority_gate:
+      status: OPEN_QUESTION_FAIL_CLOSED
+      open_question_id: R6E-ECO-WIRE-DIGEST-CANONICAL-AUTHORITY
+      unresolved_exact_inputs_in_order:
+        - exact closed wire field inventory for every affected import variant
+        - exact domain and schema-version value for every affected digest
+        - exact type-tag vocabulary and bytes
+        - exact NULL and array-member byte grammar beyond the approved high-level rules
+        - exact field order for every 0029 record whose active contract omits one
+        - byte-exact PostgreSQL and Rust golden vectors
+      fail_closed_choice: >-
+        No affected branch becomes callable from the high-level ABI name alone.
+        Before any protected write, the branch remains excluded or uses its
+        existing internal fail-closed latch with transaction delta zero. This
+        addendum invents no database message, external error, tag literal,
+        domain literal, field order, or golden value.
+  governance:
+    proposer_capabilities_exactly: [actions.propose, budgets.manage]
+    reviewer_capabilities_exactly: [actions.review, budgets.manage]
+    assurance: STEP_UP
+    separation_of_duty: >-
+      The proposer actor differs from every counted approving actor and is in
+      every counted review assignment exclusion set. Capability and STEP_UP
+      authority are revalidated at draft, submit, decision, claim, and execute.
+    ordered_path:
+      - ActionProposal plus immutable economics detail
+      - independent counted ActionDecision
+      - exact ExecutionAuthorization
+      - private.ExecuteEconomicsImport
+    logical_executor: workflow-worker.economics-import-executor
+    database_principal: gurine_economics_importer
+    claim_dispositions_exactly:
+      - EXECUTE
+      - REPLAY
+      - VERSION_CONFLICT
+      - FENCE_STALE
+      - EXPIRED
+      - IN_PROGRESS
+      - IDEMPOTENCY_CONFLICT
+    transaction_rule: >-
+      Claim, all branch-specific database writes, audit, immutable execution
+      receipt, authorization/effect completion, inbox completion, and job
+      terminalization are one SERIALIZABLE transaction. SQLSTATE 40001 is only
+      PostgreSQL serialization retry and never a semantic disposition.
+  tariff_stage_rule:
+    ordinary_rule: >-
+      Outside the exact first-tariff bootstrap, the caller does not select stage.
+      PostgreSQL resolves the current commercial_stage_target_contract and
+      rejects absent, stale, ambiguous, or digest-mismatched stage authority.
+    first_tariff_bootstrap:
+      cardinality: one-shot
+      stage: PILOT
+      required_variable_gross_margin_basis_points: 6000
+      scope_key: [deployment_id, sku]
+      prerequisites_ordered_exactly:
+        - tariff history count is zero for the same deployment and SKU
+        - commercial-contract history count is zero for the same deployment and SKU
+        - current GENERAL_AVAILABILITY READY count is zero
+        - one approved complete current eligible digest-equal cost close is locked
+        - the approved detail binds the intended first contract and qualification tuple
+        - the approved detail binds both tariff and intended contract validity periods
+      consumption_rule: >-
+        The subsequent first recordCommercialContractPeriod import must match the
+        approved bootstrap contract, qualification, deployment, SKU, tariff, and
+        both validity-period bindings exactly. A mismatch fails before write and
+        does not preserve authority for another tuple.
+      forbidden_inferences:
+        - date
+        - price
+        - projected margin
+        - caller or operator assertion
+        - route
+        - tariff label
+        - existing non-current or reversed row
+    low_margin_tariff_discount_branch:
+      authority_status: UNAVAILABLE_PENDING_SEPARATE_OVERSIGHT_AUTHORITY
+      applies_to: [tariff, discount]
+      sqlstate: "55000"
+      transaction_delta_exactly: 0
+      callable_success_path: false
+      rule: >-
+        감독자 결정 v1 deliberately does not open any low-margin exception.
+        Approval, fixture data, elapsed time, or the PILOT bootstrap cannot bypass
+        the ordinary margin CHECK or create an oversight decision.
+  cost_close_bootstrap:
+    - >-
+      The first close accepts only manually supplied signed typed cost evidence.
+      Estimates, inferred zero, UNKNOWN coercion, or dummy digest are forbidden.
+    - >-
+      PostgreSQL derives the complete period and line membership, FX and
+      correction membership, expected and captured counts, coverage ratios,
+      totals, allocation set, row, close, and receipt digests from locked input.
+    - >-
+      createTariffVersion requires the exact current closed, complete, eligible,
+      digest-equal cost head. An absent, partial, UNKNOWN, unclosed, stale, or
+      superseded cost close cannot create a tariff.
+    - >-
+      A deterministic test fixture is allowed only with authority TEST_FIXTURE
+      in an ephemeral database and proves executable procedure only, never a
+      production price, margin, cost, or readiness claim.
+
+nested_source_resolution_contract:
+  - nested_kind: acquisition_source
+    operation_id: recordCommercialQualification
+    relation: ops.acquisition_source_receipts
+    composite_type: ops.economics_acquisition_source_import_v1
+    modes_exactly: [APPEND, EXISTING]
+    cardinality: >-
+      Exactly one resolution composite. APPEND carries exactly one closed row
+      and writes one new receipt; EXISTING carries an exact current ID,
+      revision, and digest fence and writes zero acquisition rows.
+  - nested_kind: fx_rate
+    operation_id: importCostAllocationClose
+    relation: ops.fx_rate_facts
+    composite_type: ops.economics_fx_rate_source_import_v1
+    modes_exactly: [APPEND, EXISTING]
+    cardinality: >-
+      A non-null zero-or-more array ordered by source ordinal. Every APPEND
+      element carries one closed row and writes one new FX fact; every EXISTING
+      element carries an exact current ID, revision, and digest fence and
+      writes zero FX rows.
+  - nested_kind: discount
+    operation_id: recordInvoice
+    relation: ops.discount_decisions
+    composite_type: ops.economics_discount_source_import_v1
+    modes_exactly: [APPEND, EXISTING]
+    cardinality: >-
+      A non-null zero-or-more array ordered by source ordinal. Every APPEND
+      element carries one closed row and writes one new discount decision;
+      every EXISTING element carries an exact current ID, revision, and digest
+      fence and writes zero discount rows.
+
+economics_relation_ownership_exactly_24:
+  signed_economics_import_owner:
+    - ops.fx_rate_facts
+    - ops.acquisition_source_receipts
+    - ops.cost_allocations
+    - ops.tariff_versions
+    - ops.commercial_contract_periods
+    - ops.usage_window_receipts
+    - ops.usage_facts
+    - ops.discount_decisions
+    - ops.invoice_facts
+    - ops.invoice_line_facts
+    - ops.invoice_usage_memberships
+    - ops.revenue_facts
+    - ops.accounting_corrections
+    - ops.commercial_qualification_receipts
+    - ops.offer_profile_capabilities
+  product_runtime_owner:
+    - ops.product_events
+    - ops.outcome_facts
+    - ops.sku_readiness_evaluations
+    - ops.sku_readiness_items
+    - ops.paid_evidence_packets
+    - ops.paid_evidence_packet_members
+  funding_governance_owner:
+    - ops.funding_concentration_snapshots
+    - editorial.funding_disclosure_revisions
+    - editorial.funding_disclosure_entries
+  count_rule: The three ordered sets contain exactly 24 distinct relations.
+  one_owner_rule: >-
+    Every relation has one exact typed SECURITY DEFINER owner function and one
+    allowlisted logical producer. Runtime table DML, generic relation-name
+    dispatch, dynamic SQL, generic JSON CRUD, and unreviewed economics helpers
+    are forbidden.
+  legacy_side_door_revoke_exactly:
+    - ops.record_commercial_qualification_receipt_v1
+    - ops.record_revenue_fact_v1
+    - ops.record_invoice_fact_v1
+    - ops.record_invoice_line_fact_v1
+    - ops.record_usage_fact_v1
+    - ops.record_invoice_usage_membership_v1
+    - ops.record_accounting_correction_v1
+    - ops.record_outcome_fact_v1
+    - ops.record_paid_evidence_packet_v1
+
+economics_relation_owner_matrix_contract:
+  freeze_status: FINAL
+  active_relation_count_exactly: 21
+  unavailable_relation_count_exactly: 3
+  row_keys_exactly:
+    - execute_roles
+    - logical_producer
+    - operation_id
+    - owner_routine_signature
+    - relation
+  unavailable_row_keys_exactly:
+    - authority_gate
+    - execute_roles
+    - owner_role
+    - owner_routine_signature
+    - relation
+    - runtime_status
+  closure_rule: >-
+    The active and unavailable rows form a disjoint exact partition of the 24
+    economics relations. Every active row binds one parsed typed direct mutator,
+    exact runtime EXECUTE roles, and one logical producer. The three unavailable
+    rows have no replacement owner routine, no EXECUTE role, and no direct DML;
+    their legacy paths remain revoked until their separate canonical authority
+    and implementation gates close.
+
+economics_relation_owner_matrix:
+  - relation: ops.fx_rate_facts
+    owner_routine_signature: ops.insert_fx_rate_fact_v1(p_row ops.fx_rate_facts) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: importCostAllocationClose
+  - relation: ops.acquisition_source_receipts
+    owner_routine_signature: ops.insert_acquisition_source_receipt_v1(p_row ops.acquisition_source_receipts) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordCommercialQualification
+  - relation: ops.cost_allocations
+    owner_routine_signature: ops.insert_cost_allocation_v1(p_row ops.cost_allocations) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: importCostAllocationClose
+  - relation: ops.tariff_versions
+    owner_routine_signature: ops.insert_tariff_version_v1(p_row ops.tariff_versions) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: createTariffVersion
+  - relation: ops.commercial_contract_periods
+    owner_routine_signature: ops.insert_commercial_contract_period_v1(p_row ops.commercial_contract_periods) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordCommercialContractPeriod
+  - relation: ops.usage_window_receipts
+    owner_routine_signature: ops.insert_usage_window_receipt_v1(p_row ops.usage_window_receipts) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordUsageWindow
+  - relation: ops.usage_facts
+    owner_routine_signature: ops.insert_usage_fact_v1(p_row ops.usage_facts) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordUsageWindow
+  - relation: ops.discount_decisions
+    owner_routine_signature: ops.insert_discount_decision_v1(p_row ops.discount_decisions) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordInvoice
+  - relation: ops.invoice_facts
+    owner_routine_signature: ops.insert_invoice_fact_v1(p_row ops.invoice_facts) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordInvoice
+  - relation: ops.invoice_line_facts
+    owner_routine_signature: ops.insert_invoice_line_fact_v1(p_row ops.invoice_line_facts) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordInvoice
+  - relation: ops.invoice_usage_memberships
+    owner_routine_signature: ops.insert_invoice_usage_membership_v1(p_row ops.invoice_usage_memberships) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordInvoice
+  - relation: ops.revenue_facts
+    owner_routine_signature: ops.insert_revenue_fact_v1(p_row ops.revenue_facts) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordRevenue
+  - relation: ops.accounting_corrections
+    owner_routine_signature: ops.insert_accounting_correction_v1(p_row ops.accounting_corrections) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordAccountingCorrection
+  - relation: ops.commercial_qualification_receipts
+    owner_routine_signature: >-
+      ops.record_commercial_qualification_receipt_v1(p_input
+      ops.commercial_qualification_receipt_input_v1, p_idempotency_key text)
+      RETURNS ops.economics_mutation_receipt_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordCommercialQualification
+  - relation: ops.offer_profile_capabilities
+    owner_routine_signature: ops.insert_offer_profile_capability_v1(p_row ops.offer_profile_capabilities) RETURNS ops.economics_import_result_row_v1
+    execute_roles: []
+    logical_producer: workflow-worker.economics-import-executor
+    operation_id: recordCommercialContractPeriod
+  - relation: ops.product_events
+    owner_routine_signature: >-
+      ops.record_product_event_v1(p_emission_id uuid, p_event_name text,
+      p_event_catalog_digest char(64), p_deployment_id uuid,
+      p_workflow_instance_hmac char(64), p_workflow_key_version bigint,
+      p_workflow_started_at timestamptz, p_workflow_expires_at timestamptz,
+      p_occurred_at timestamptz, p_screen_id text, p_surface text,
+      p_app_version text, p_specification_version text, p_properties jsonb,
+      p_event_digest char(64)) RETURNS ops.economics_mutation_receipt_v1
+    execute_roles: [gurine_workflow_worker]
+    logical_producer: workflow-worker.product-event-recorder
+    operation_id: recordProductEvent
+  - relation: ops.sku_readiness_evaluations
+    owner_routine_signature: >-
+      ops.record_sku_readiness_evaluation_v1(p_evaluation
+      ops.sku_readiness_evaluation_input_v1, p_items
+      ops.sku_readiness_item_input_v1[]) RETURNS
+      ops.economics_mutation_receipt_v1
+    execute_roles: [gurine_workflow_worker]
+    logical_producer: workflow-worker.sku-readiness-evaluator
+    operation_id: recordSkuReadinessEvaluation
+  - relation: ops.sku_readiness_items
+    owner_routine_signature: >-
+      ops.record_sku_readiness_evaluation_v1(p_evaluation
+      ops.sku_readiness_evaluation_input_v1, p_items
+      ops.sku_readiness_item_input_v1[]) RETURNS
+      ops.economics_mutation_receipt_v1
+    execute_roles: [gurine_workflow_worker]
+    logical_producer: workflow-worker.sku-readiness-evaluator
+    operation_id: recordSkuReadinessEvaluation
+  - relation: ops.paid_evidence_packets
+    owner_routine_signature: >-
+      ops.materialize_paid_evidence_packet_subject_v1(p_subject
+      ops.paid_evidence_packet_subject_input_v1, p_idempotency_key text)
+      RETURNS ops.economics_mutation_receipt_v1
+    execute_roles: []
+    logical_producer: workflow-worker.paid-evidence-materializer
+    operation_id: materializePaidEvidencePacketSubject
+  - relation: ops.paid_evidence_packet_members
+    owner_routine_signature: >-
+      ops.materialize_paid_evidence_packet_subject_v1(p_subject
+      ops.paid_evidence_packet_subject_input_v1, p_idempotency_key text)
+      RETURNS ops.economics_mutation_receipt_v1
+    execute_roles: []
+    logical_producer: workflow-worker.paid-evidence-materializer
+    operation_id: materializePaidEvidencePacketSubject
+  - relation: ops.funding_concentration_snapshots
+    owner_routine_signature: >-
+      ops.import_funding_snapshot_v1(p_import ops.funding_snapshot_import_v1,
+      p_entries ops.funding_snapshot_entry_input_v1[]) RETURNS
+      ops.funding_snapshot_import_receipt_v1
+    execute_roles: [gurine_workflow_worker]
+    logical_producer: workflow-worker.signed-funding-import
+    operation_id: importFundingSnapshot
+
+economics_unavailable_relation_rows:
+  - relation: ops.outcome_facts
+    owner_role: gurine_migrator
+    owner_routine_signature: null
+    execute_roles: []
+    runtime_status: UNAVAILABLE_LEGACY_MUTATOR_REVOKED
+    authority_gate: paid_terminal_binding_authority_gate
+  - relation: editorial.funding_disclosure_revisions
+    owner_role: gurine_migrator
+    owner_routine_signature: null
+    execute_roles: []
+    runtime_status: UNAVAILABLE_NO_PUBLISHER_MUTATOR
+    authority_gate: funding_disclosure_publisher_gate
+  - relation: editorial.funding_disclosure_entries
+    owner_role: gurine_migrator
+    owner_routine_signature: null
+    execute_roles: []
+    runtime_status: UNAVAILABLE_NO_PUBLISHER_MUTATOR
+    authority_gate: funding_disclosure_publisher_gate
+
+new_ledger_relation_owner_matrix:
+  freeze_status: FINAL
+  relation_count_exactly: 6
+  row_keys_exactly:
+    - relation
+    - owner_role
+    - owner_access
+    - runtime_direct_table_dml_grants_exactly
+    - owner_routines_in_order
+  routine_entry_keys_exactly:
+    - signature
+    - execute_roles
+    - logical_producer
+    - operation_id
+    - relation_mutations_exactly
+  rows:
+    - relation: ops.cash_application_facts
+      owner_role: gurine_migrator
+      owner_access: OWNER_IMPLIED
+      runtime_direct_table_dml_grants_exactly: []
+      owner_routines_in_order:
+        - signature: ops.insert_cash_application_fact_v1(p_row ops.cash_application_facts) RETURNS ops.economics_import_result_row_v1
+          execute_roles: []
+          logical_producer: workflow-worker.economics-import-executor
+          operation_id: recordCashApplication
+          relation_mutations_exactly: [INSERT]
+    - relation: ops.tax_invoice_issuance_receipts
+      owner_role: gurine_migrator
+      owner_access: OWNER_IMPLIED
+      runtime_direct_table_dml_grants_exactly: []
+      owner_routines_in_order:
+        - signature: ops.insert_tax_invoice_issuance_receipt_v1(p_row ops.tax_invoice_issuance_receipts) RETURNS ops.economics_import_result_row_v1
+          execute_roles: []
+          logical_producer: workflow-worker.economics-import-executor
+          operation_id: recordTaxInvoiceIssuance
+          relation_mutations_exactly: [INSERT]
+    - relation: ops.payment_method_bindings
+      owner_role: gurine_migrator
+      owner_access: OWNER_IMPLIED
+      runtime_direct_table_dml_grants_exactly: []
+      owner_routines_in_order:
+        - signature: ops.claim_r6e_donation_intent_v1(p ops.r6e_donation_intent_claim_v1) RETURNS ops.r6e_donation_intent_claim_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.donation-intent
+          operation_id: claimDonationIntent
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.complete_r6e_payment_method_binding_v1(p ops.r6e_payment_method_binding_complete_v1) RETURNS ops.r6e_payment_method_binding_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.payment-method-binding
+          operation_id: completePaymentMethodBinding
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.fail_r6e_donation_intent_v1(p ops.r6e_donation_intent_fail_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.donation-intent
+          operation_id: failDonationIntent
+          relation_mutations_exactly: [INSERT]
+        - signature: >-
+            ops.apply_r6e_payment_observation_v1(p_attempt_id uuid,
+            p_observation ops.r6e_payment_observation_v1,
+            p_completion_request_digest char(64)) RETURNS
+            ops.r6e_donation_charge_terminal_receipt_v1
+          execute_roles: []
+          logical_producer: billing-gateway.provider-observation-application
+          operation_id: applyPaymentObservation
+          relation_mutations_exactly: [INSERT]
+    - relation: ops.payment_charge_attempts
+      owner_role: gurine_migrator
+      owner_access: OWNER_IMPLIED
+      runtime_direct_table_dml_grants_exactly: []
+      owner_routines_in_order:
+        - signature: >-
+            ops.apply_r6e_payment_observation_v1(p_attempt_id uuid,
+            p_observation ops.r6e_payment_observation_v1,
+            p_completion_request_digest char(64)) RETURNS
+            ops.r6e_donation_charge_terminal_receipt_v1
+          execute_roles: []
+          logical_producer: billing-gateway.provider-observation-application
+          operation_id: applyPaymentObservation
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.claim_r6e_donation_charge_v1(p ops.r6e_donation_charge_claim_v1) RETURNS ops.r6e_donation_charge_claim_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.donation-charge
+          operation_id: claimDonationCharge
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.accept_r6e_donation_charge_v1(p ops.r6e_donation_charge_accept_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.donation-charge
+          operation_id: acceptDonationCharge
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.fail_r6e_donation_charge_v1(p ops.r6e_donation_charge_fail_v1) RETURNS ops.r6e_donation_charge_terminal_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.donation-charge
+          operation_id: failDonationCharge
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.require_r6e_charge_reconciliation_v1(p ops.r6e_charge_reconciliation_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.donation-charge
+          operation_id: requireChargeReconciliation
+          relation_mutations_exactly: [INSERT]
+    - relation: ops.provider_webhook_receipts
+      owner_role: gurine_migrator
+      owner_access: OWNER_IMPLIED
+      runtime_direct_table_dml_grants_exactly: []
+      owner_routines_in_order:
+        - signature: ops.claim_r6e_provider_webhook_v1(p ops.r6e_provider_webhook_claim_v1) RETURNS ops.r6e_provider_webhook_claim_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.provider-webhook
+          operation_id: claimProviderWebhook
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.release_r6e_provider_webhook_claim_v1(p ops.r6e_provider_webhook_release_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.provider-webhook
+          operation_id: releaseProviderWebhookClaim
+          relation_mutations_exactly: [INSERT]
+        - signature: ops.complete_r6e_provider_webhook_v1(p ops.r6e_provider_webhook_complete_v1) RETURNS ops.r6e_provider_webhook_receipt_v1
+          execute_roles: [gurine_billing_gateway]
+          logical_producer: billing-gateway.provider-webhook
+          operation_id: completeProviderWebhook
+          relation_mutations_exactly: [INSERT]
+    - relation: ops.donation_facts
+      owner_role: gurine_migrator
+      owner_access: OWNER_IMPLIED
+      runtime_direct_table_dml_grants_exactly: []
+      owner_routines_in_order:
+        - signature: >-
+            ops.apply_r6e_payment_observation_v1(p_attempt_id uuid,
+            p_observation ops.r6e_payment_observation_v1,
+            p_completion_request_digest char(64)) RETURNS
+            ops.r6e_donation_charge_terminal_receipt_v1
+          execute_roles: []
+          logical_producer: billing-gateway.provider-observation-application
+          operation_id: applyPaymentObservation
+          relation_mutations_exactly: [INSERT]
+  closure_rule: >-
+    Final validation rejects PENDING_FINAL_SQL and every empty routine list. It
+    proves both directions between each declared owner routine and its parsed
+    direct relation DML, permits only logical INSERT in an owner routine, and
+    proves PUBLIC and every LOGIN/runtime role have zero direct table DML.
+    Cash and tax external routines execute only for economics-importer; payment
+    external routines execute only for billing-gateway; internal helpers have
+    no runtime EXECUTE. No undeclared routine may mutate any of the six rows.
+
+funding_snapshot_outer_producer_delegation:
+  relation: ops.funding_concentration_snapshots
+  direct_owner_routine_signature: >-
+    ops.import_funding_snapshot_v1(p_import ops.funding_snapshot_import_v1,
+    p_entries ops.funding_snapshot_entry_input_v1[]) RETURNS
+    ops.funding_snapshot_import_receipt_v1
+  direct_owner_role: gurine_migrator
+  direct_owner_execute_roles_exactly: [gurine_workflow_worker]
+  forbidden_cross_owner_execute_roles_exactly: [gurine_payment_writer]
+  outer_producers_in_order:
+    - logical_producer: workflow-worker.signed-funding-import
+      entry_routine_signature: >-
+        ops.import_funding_snapshot_v1(p_import
+        ops.funding_snapshot_import_v1, p_entries
+        ops.funding_snapshot_entry_input_v1[]) RETURNS
+        ops.funding_snapshot_import_receipt_v1
+      execute_roles: [gurine_workflow_worker]
+      direct_relation_dml: true
+      delegates_to_owner_signature: >-
+        ops.import_funding_snapshot_v1(p_import
+        ops.funding_snapshot_import_v1, p_entries
+        ops.funding_snapshot_entry_input_v1[]) RETURNS
+        ops.funding_snapshot_import_receipt_v1
+    - logical_producer: public-projection-worker.donation-candidate
+      entry_routine_signature: >-
+        ops.project_donation_fact_candidate_v1(p_input
+        ops.donation_funding_candidate_projection_v1) RETURNS
+        ops.donation_funding_candidate_receipt_v1
+      execute_roles: [gurine_public_projector]
+      direct_relation_dml: false
+      delegates_to_owner_signature: >-
+        ops.import_funding_snapshot_v1(p_import
+        ops.funding_snapshot_import_v1, p_entries
+        ops.funding_snapshot_entry_input_v1[]) RETURNS
+        ops.funding_snapshot_import_receipt_v1
+  rule: >-
+    The candidate entry routine shares the gurine_migrator-owned SECURITY
+    DEFINER boundary and may call the sole direct mutator only as a closed typed
+    helper. The helper branches on
+    exact session_user: workflow-worker retains the signed-import provenance;
+    public-projector records producer funding-projector, action
+    DONATION_FUNDING_CANDIDATE_PROJECTED, and authority
+    AUTHENTICATED_DONATION_FACT without claiming economics.import; every other
+    principal is rejected before write. The candidate has no direct INSERT,
+    public-projector has no direct EXECUTE on the helper, and payment-writer has
+    neither helper EXECUTE nor relation DML. Both branches emit the exact event
+    aggregate spelling FundingConcentrationSnapshot.
+
+paid_evidence_packet_digest_authority_gate:
+  status: HIGH_LEVEL_AUTHORITY_APPROVED_CANONICAL_PHYSICAL_OPEN_FAIL_CLOSED
+  open_question_id: R6E-PAID-V2-PHYSICAL-PROOF-CANONICAL-AUTHORITY
+  authority: supervisor_authority_decision_v1.PAID-EVIDENCE-V2-AUTHORITY
+  installed_materializer:
+    signature: ops.materialize_paid_evidence_packet_subject_v1(ops.paid_evidence_packet_subject_input_v1,text) RETURNS ops.economics_mutation_receipt_v1
+    owner_role: gurine_migrator
+    availability: PRE_WRITE_FAIL_CLOSED
+    error_sqlstate: "55000"
+    error_code: PAID_PACKET_DIGEST_AUTHORITY_UNAVAILABLE
+    transaction_delta_exactly: 0
+    non_owner_execute_roles_exactly: []
+    public_execute: false
+    runtime_type_usage_roles_exactly: []
+    denied_runtime_roles_in_order:
+      - gurine_economics_importer
+      - gurine_billing_gateway
+      - gurine_control_api
+      - gurine_workflow_worker
+      - gurine_analysis_worker
+      - gurine_public_projector
+      - gurine_public_api
+      - gurine_submission_api
+      - gurine_ingest_worker
+      - gurine_notification_worker
+      - gurine_scheduler
+      - gurine_document_extractor
+      - gurine_identity_api
+      - gurine_auditor
+  version_contract:
+    v1_preservation: >-
+      Every active 0029 V1 byte contract and paid packet, member, and outcome
+      relation remains unchanged and is never reinterpreted as V2.
+    v2_additive_only: true
+    migration_existing_row_fence: >-
+      If any paid packet row, paid packet member row, or paid-bound outcome row
+      exists, the migration aborts before its first schema effect. Backfill,
+      conversion, mixed-version interpretation, and inferred bytes are forbidden.
+  approved_v2_digest_dag:
+    member_leaf_rule: >-
+      Each V2 member leaf excludes the global memberSetDigest from its preimage
+      and carries its category-local digest under the exact field name
+      categoryDigest.
+    dependency_order_exactly:
+      - all V2 member leaf digests in member ordinal order
+      - one global member-set digest over the complete ordered leaves
+      - the V2 packet digest that binds that global member-set digest
+    no_cycle_oracle: rejects every repeated digest dependency
+    caller_authored_digest: forbidden
+    incomplete_membership: rejected before write
+  canonical_physical_authority_gate:
+    status: OPEN_QUESTION_FAIL_CLOSED
+    unresolved_exact_inputs_in_order:
+      - exact V2 composite, relation, and function identities
+      - exact V2 member, category, set, packet, receipt, and outcome field inventories
+      - exact domain, schema-version, preimage order, and canonical byte grammar
+      - exact categoryDigest membership and packet dependency edges
+      - byte-exact PostgreSQL and Rust golden vectors and one-byte mutations
+      - exact migration ordering around the existing-row abort and reciprocal FKs
+    rule: >-
+      The approved leaf to ordered-set to packet DAG is binding high-level
+      authority, but no physical ABI or digest byte sequence may be inferred from
+      it. The installed V1-named materializer remains unavailable with its exact
+      55000/write-zero behavior.
+  review_snapshot_forward_fix:
+    active_0028_declared_addition_count_exactly: 16
+    physical_pre_0041_declared_additions_present_exactly: 0
+    current_nonfinal_0041_columns_in_order:
+      - {name: member_set_digest, type: char(64), nullable: true}
+      - {name: paid_evidence_member_manifest, type: jsonb, nullable: true}
+      - {name: paid_evidence_member_manifest_canonical, type: bytea, nullable: true}
+      - {name: paid_evidence_member_manifest_digest, type: char(64), nullable: true}
+    current_nonfinal_0041_count_exactly: 4
+    approved_remaining_v2_columns_in_order:
+      - {name: snapshot_format_version, type: text, nullable: true}
+      - {name: snapshot_payload_bytes, type: bytea, nullable: true}
+      - {name: snapshot_byte_length, type: bigint, nullable: true}
+      - {name: member_manifest, type: jsonb, nullable: true}
+      - {name: member_count, type: bigint, nullable: true}
+      - {name: source_family_count, type: integer, nullable: true}
+      - {name: official_outcome_count, type: integer, nullable: true}
+      - {name: counter_evidence_count, type: integer, nullable: true}
+      - {name: copy_safety_set_digest, type: char(64), nullable: true}
+      - {name: epistemic_set_digest, type: char(64), nullable: true}
+      - {name: entity_resolution_set_digest, type: char(64), nullable: true}
+      - {name: ai_provenance_set_digest, type: char(64), nullable: true}
+    approved_remaining_v2_count_exactly: 12
+    final_declared_addition_count_exactly: 16
+    general_snapshot_presence_rule: >-
+      member_set_digest plus the approved remaining twelve fields are zero-or-all
+      for a forward-upgraded snapshot.
+    paid_manifest_presence_rule: >-
+      paid_evidence_member_manifest, its canonical bytes, and its digest are a
+      separate zero-or-all tuple and may be present only on a complete upgraded
+      snapshot that is paid-eligible under the active 0028 contract.
+    legacy_presence_rule: all sixteen fields may remain null; partial tuples are rejected
+    backfill: forbidden
+    catalog_status: APPROVED_DELTA_IMPLEMENTATION_PENDING
+    scope_rule: >-
+      The current four-column snapshot is only a non-final partial implementation.
+      It does not restore the approved remaining twelve fields, satisfy the final
+      zero-or-all rule, prove the V2 leaf DAG, or make the materializer callable.
+  reciprocal_outcome_packet_fks:
+    packet_to_outcome:
+      name: paid_packet_outcome_fk
+      match: FULL
+      deferrable: true
+      initially: DEFERRED
+      current_physical_gap: the preserved 0029 FK is non-deferrable
+    outcome_to_packet:
+      name: outcome_facts_paid_packet_fk
+      match: FULL
+      deferrable: true
+      initially: DEFERRED
+      current_physical_gap: absent from the preserved 0029 migration
+    atomic_rule: >-
+      Both reciprocal composite keys are deferred in the same transaction; a
+      partially null tuple or weakening either direction is forbidden.
+  ownership_rule: >-
+    The installed materializer may appear in the parsed owner-routine inventory
+    only with zero non-owner EXECUTE and an unavailable logical producer until
+    the approved V2 relation/type/function/FK delta and every digest vector are
+    implemented. Authority approval alone is not a runtime writer or acceptance
+    claim.
+
+paid_terminal_binding_authority_gate:
+  status: HIGH_LEVEL_AUTHORITY_APPROVED_CANONICAL_PROOF_OPEN_FAIL_CLOSED
+  open_question_id: R6E-PAID-V2-PHYSICAL-PROOF-CANONICAL-AUTHORITY
+  authority: supervisor_authority_decision_v1.PAID-EVIDENCE-V2-AUTHORITY
+  installed_stub:
+    signature: ops.bind_paid_terminal_receipt_v1(ops.paid_terminal_binding_input_v1,text) RETURNS ops.economics_mutation_receipt_v1
+    owner_role: gurine_migrator
+    availability: PRE_WRITE_FAIL_CLOSED
+    error_sqlstate: "55000"
+    error_code: PAID_PACKET_TERMINAL_NOT_READY
+    transaction_delta_exactly: 0
+    non_owner_execute_roles_exactly: []
+    public_execute: false
+    input_type_runtime_usage_roles_exactly: []
+  approved_terminal_binding:
+    verified_workflow_proof_milestones_ordered_exactly:
+      - OBJECT_FOUND
+      - STATE_FRESHNESS_LIMITATION_SEEN
+      - REVISION_EVIDENCE_OR_REPRODUCTION_OPENED
+      - RESPONSIBLE_OUTCOME_COMPLETED
+    binds_existing_authorities_exactly:
+      - exact terminal receipt
+      - metric policy digest
+      - formula digest
+      - metric timezone
+      - effective-until
+    field_authority_rule: >-
+      Use the active 0029 outcome and paid-packet field definitions. This package
+      adds no other business field and does not copy an unrelated accounting or
+      retention value to repair missing evidence.
+    subject_hmac:
+      domain: PAID_OUTCOME_SUBJECT_HMAC_V2
+      key_versions_exactly: [CURRENT, PREVIOUS]
+      issue_with: CURRENT
+      verify_with_persisted_version: [CURRENT, PREVIOUS]
+      injection: TEST_FIXTURE_ONLY
+      forbidden_reuse_or_derivation:
+        - payment key
+        - webhook key
+        - public-web key
+        - assertion key
+        - donor key
+        - billing-key key
+        - generic identity key
+    canonical_proof_authority_gate:
+      status: OPEN_QUESTION_FAIL_CLOSED
+      unresolved_exact_inputs_in_order:
+        - exact V2 terminal input and stored column inventory
+        - exact mapping from the four active milestones to V2 proof bytes
+        - exact terminal, policy, formula, timezone, and effective-until preimage order
+        - exact PAID_OUTCOME_SUBJECT_HMAC_V2 message preimage and opaque version encoding
+        - exact issuer, verifier, rotation, and restart failure ABI
+        - byte-exact golden and mutation vectors
+  implementation_hold_rule: >-
+    The approved terminal tuple remains unavailable until the V2 DAG, subject
+    HMAC issuer/verifier, exact reciprocal FKs, owner ACL, and terminal/outcome
+    transaction are implemented and verified together. The current stub remains
+    SQLSTATE 55000 with write zero.
+  forbidden_substitutions:
+    - copying accounting_timezone
+    - reusing an unrelated HMAC authority
+    - dummy workflow, milestone, metric, policy, formula, or retention digest
+    - treating the blocked stub as an append or READY path
+
+cash_tax_and_dunning_contract:
+  cash_source_kinds_exactly:
+    - BANK_TRANSFER
+    - PG_SETTLEMENT
+  cash_import_rule: >-
+    Both source kinds require signed typed external evidence and exact invoice
+    ID, version, record-digest, and reconciliation-digest fences. PG_SETTLEMENT
+    is an accounting import only and never initiates, captures, fetches, or
+    settles a provider payment. Donation evidence cannot apply to a commercial
+    invoice.
+  tax_import_rule: >-
+    Confirmed issuance or cancellation requires signed external acknowledgement,
+    exact invoice fence, approval-number HMAC, key version, ASP-reference HMAC,
+    and ASP receipt digest. Missing authority remains UNKNOWN. No live ASP call
+    is made.
+  collection_failure_authorities_exactly:
+    - PROVIDER_FETCH_CONFIRMED
+    - BANK_RETURN_CONFIRMED
+  dunning_rule: >-
+    Exactly one authority may create one operator-visible review task and one
+    notification receipt. A missing cash application, elapsed time, initial
+    provider response, webhook hint, or inferred overdue state is not failure
+    authority. Dunning changes no contract, capability, entitlement, invoice,
+    revenue, publication, investigation priority, or public access.
+  contract_change_rule: >-
+    Suspension, ending, or cancellation requires a distinct human-approved
+    recordCommercialContractPeriod REPLACEMENT fenced to the exact predecessor.
+    Dunning never invokes that operation automatically.
+
+donation_payment_runtime_contract:
+  authority: supervisor_authority_decision_v1.PAYMENT-TEST-V1
+  runtime_modes: {default: DISABLED, allowed_exactly: [DISABLED, TEST_ONLY], production: DISABLED_AND_UNAVAILABLE}
+  source_live_credentials_exactly: 0
+  mandatory_mode_negative_tests:
+    - omitted mode is DISABLED
+    - production mode is DISABLED and cannot be enabled
+    - TEST_ONLY is the sole non-disabled mode
+    - source contains no default key, fallback secret, or live credential
+  provider_interface:
+    name: PaymentProvider
+    methods_exactly: [capabilities, issue_billing_key, charge, refund, verify_webhook, fetch_payment]
+    scheduling: MERCHANT_SCHEDULED
+    adapters_exactly:
+      - TOSS_PAYMENTS_TEST_FIXTURE
+      - KAKAO_PAY_TEST_FIXTURE
+      - STRIPE_TEST_FIXTURE
+  database_roles:
+    owner: gurine_migrator
+    service: gurine_billing_gateway
+    economics_service_separation: >-
+      gurine_billing_gateway has no economics-import capability, economics
+      relation privilege, economics importer entry-routine EXECUTE, or reusable
+      gurine_economics_importer credential.
+  webhook_truth_rule: >-
+    Receipt first records authenticated TEST fixture delivery identity and
+    verification result. verify_webhook is a hint; fetch_payment is truth. Only
+    an authoritative fetched terminal result may append a terminal charge
+    observation and donation fact. Duplicate provider event identity replays the
+    same receipt and changed delivery/request digests conflict without resubmit.
+  idempotency_rule: >-
+    Persist request digest and provider-idempotency-key HMAC before an attempt.
+    Same logical identity and request returns the stored result; changed input
+    conflicts; ambiguous send requires authoritative fetch reconciliation and
+    never automatic resubmission.
+  scheduler_authority_gate:
+    status: AUTHORITY_RESOLVED_IMPLEMENTATION_PENDING_FAIL_CLOSED
+    resolved_authority_id: R6E-DONATION-SCHEDULER-AUTHORITY
+    routine_identity: ops.enqueue_due_r6e_donation_charge_jobs_v1
+    installed: false
+    callable: false
+    final_routine_matrix_member: false
+    approved_policy:
+      schedule_kind: MONTHLY
+      first_charge_at_required: true
+      anchor: first_charge_at in UTC
+      month_end_clamp: >-
+        Non-drifting: derive each month from the original UTC anchor and clamp
+        only that month's day to its last day; never use a previously clamped
+        occurrence as the next anchor.
+      eligible_window: current UTC month only
+      catch_up: forbidden
+      backcharge: forbidden
+      occurrence_identity_exactly: [schedule_id, schedule_version, scheduledFor]
+      occurrence_uniqueness: permanent
+      same_occurrence_resubmission_writes: 0
+      later_month_blockers_exactly:
+        - pending
+        - accepted
+        - reconciliation_required
+      next_month_release_authorities_exactly:
+        - definitive_pre_dispatch_rejection
+        - fetch_confirmed_success
+        - fetch_confirmed_refund
+        - fetch_confirmed_failure
+      scheduler_effect_exactly: insert one DONATION_CHARGE job
+      direct_effects_forbidden_exactly:
+        - payment
+        - contract
+        - entitlement
+        - public access
+      request_limit_inclusive: {minimum: 1, maximum: 500}
+    fail_closed_rule: >-
+      The schedule authority is resolved, but the named routine remains absent,
+      uncallable, and outside every FINAL matrix until the closed occurrence
+      calculation, status matrix, owner ACL, concurrency fence, and mutation
+      tests are implemented. No current worker may enqueue or backcharge by
+      inferring the approved policy from prose.
+  test_fixture_key_authority:
+    keyrings_ordered_exactly:
+      - name: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY
+        key_slots_exactly: [CURRENT, PREVIOUS]
+        each_slot_requires_opaque_version: true
+      - name: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY
+        key_slots_exactly: [CURRENT, PREVIOUS]
+        each_slot_requires_opaque_version: true
+    issuance_rule: only CURRENT may issue a new identity or vault HMAC
+    verification_rule: >-
+      A persisted opaque key version selects the exact CURRENT or PREVIOUS key;
+      missing, unknown, duplicated, or mismatched versions fail closed.
+    forbidden_reuse_or_derivation:
+      - webhook assertion key
+      - public-web key
+      - actor or service assertion key
+      - either other payment fixture keyring
+    restart_rule: >-
+      Missing in-memory billing material after restart is never recovered from a
+      persisted HMAC, silently replaced, reissued, resubmitted, or recharged.
+      The exact operation fails closed and changes no ledger or access state.
+  secret_boundary: >-
+    Raw billing keys, authorization tokens, webhook bodies and signatures,
+    provider-customer identity, payment-method secrets, and replayable provider
+    payloads are forbidden from PostgreSQL, logs, errors, Debug, audit, events,
+    and exported evidence. Only versioned opaque fixture references, HMACs, and
+    non-replayable digests persist. Payment fixture keys are TEST_ONLY in-memory
+    inputs; default and production configurations contain none.
+  public_firewall: >-
+    Donation success, failure, cancellation, refund, fixture-adapter state, or
+    provider outage grants no access and changes no free-public member. Public
+    donor disclosure occurs only after independent funding governance.
+  exact_public_copy: 후원은 접근권이 아니며 조사 대상 면제가 아닙니다
+  existing_funding_disclosure_policy: >-
+    Existing donor-name, amount-band, and concentration-band rules remain
+    unchanged. A payment or donation fact does not bypass their independent
+    funding governance or UNKNOWN handling.
+  failure_and_refetch_negative_invariant: >-
+    A payment failure, provider-fetch mismatch, RECONCILIATION_REQUIRED state,
+    missing post-restart material, or provider outage automatically changes no
+    entitlement, commercial contract, or public access. Negative tests are
+    mandatory before any TEST_ONLY path is callable.
+
+donation_review_assignee_authority_gate:
+  status: AUTHORITY_RESOLVED_IMPLEMENTATION_PENDING_FAIL_CLOSED
+  resolved_authority_id: R6E-DONATION-REVIEW-ASSIGNEE-AUTHORITY
+  authority: supervisor_authority_decision_v1.PAYMENT-TEST-V1
+  affected_routine: ops.apply_r6e_payment_observation_v1(uuid,ops.r6e_payment_observation_v1,char(64)) RETURNS ops.r6e_donation_charge_terminal_receipt_v1
+  affected_fetched_states_exactly: [FAILED, CANCELED]
+  unsafe_fallback_forbidden: >-
+    Passing NULL to ops.resolve_r6e_payment_review_authority_v1 and selecting
+    the first active user is not assignee authority and may assign a review task
+    across an unrelated subject or tenant.
+  approved_assignee_contract:
+    exact_request_field: reviewAssigneeUserId
+    applies_to_exactly:
+      - TEST_ONLY donation intent
+      - recordCollectionFailure
+    bound_digests_exactly:
+      - request digest
+      - immutable detail digest
+      - receipt digest
+    authority_requirements_exactly:
+      - request-bound assignee identity
+      - active internal subject
+      - current authorization
+    fallback_selection: forbidden
+    no_current_assignee_result: SQLSTATE 55000 and transaction delta zero
+  fail_closed_requirement:
+    enforcement_point: before assignee resolution or any failure-review mutation
+    transaction_delta_exactly: 0
+    unchanged_surfaces_exactly:
+      - ops.payment_charge_attempts
+      - ops.tasks
+      - ops.notification_intents
+      - ops.outbox
+      - ops.audit_events
+      - ops.donation_facts
+      - public projections
+    error_contract: INTERNAL_DATABASE_LATCH_NO_NEW_EXTERNAL_MAPPING
+  b2b_distinction: >-
+    recordCollectionFailure carries exact reviewed reviewAssigneeUserId in its
+    signed typed operation and uses the same request/detail/receipt binding.
+  implementation_boundary: >-
+    Resolver allowlisting, SECURITY DEFINER ownership, grants, revokes, and
+    negative/delta-zero tests are implementation blockers. Fixing those ACLs
+    alone cannot open the donation path; the request/detail/receipt binding and
+    every current-authority check must also be implemented and verified.
+
+payment_review_notification_authority_gate:
+  status: HIGH_LEVEL_AUTHORITY_APPROVED_CANONICAL_COMM_BINDING_OPEN_FAIL_CLOSED
+  open_question_id: R6E-PAYMENT-REVIEW-COMMUNICATION-BINDING-AUTHORITY
+  authority: supervisor_authority_decision_v1.PAYMENT-TEST-V1
+  affected_source_kinds_exactly:
+    - DONATION_PAYMENT_FAILURE
+    - SIGNED_COLLECTION_FAILURE
+  approved_review_contract:
+    topic_scope: PAYMENT_REVIEW_V1
+    review_due_at: occurredAt plus exactly 24 hours
+    current_authority_requirements_exactly:
+      - one active internal subject
+      - one current authorization
+      - exactly one current endpoint
+      - exactly one current evaluator
+      - deployment derived from and bound to the exact review source
+    atomic_writes_exactly:
+      - one review task
+      - one notification intent
+      - one outbox event
+      - one audit event
+    mismatch_rule: >-
+      Zero, multiple, stale, cross-source, or otherwise mismatched authority
+      raises SQLSTATE 55000 before the first write.
+    reconciliation_required_effects_exactly: []
+    reconciliation_required_forbidden:
+      - task
+      - notification
+      - automatic retry
+  canonical_communication_authority_gate:
+    status: OPEN_QUESTION_FAIL_CLOSED
+    unresolved_exact_inputs_in_order:
+      - exact PAYMENT_REVIEW_V1 TopicScope storage and authorization shape
+      - exact source-to-deployment binding tuple and digest preimage
+      - exact current endpoint candidate key and selection order
+      - exact current evaluator candidate key and selection order
+      - exact task-to-intent authorization timing and positional binding
+      - exact notification request, receipt, outbox, and audit canonical bytes
+    rule: >-
+      The approved topic name, source kinds, exact-one cardinality, source-bound
+      deployment, assignee, and due time do not authorize inventing their missing
+      0027 communication ABI. The combined path remains write zero until one
+      higher canonical contract supplies every tuple above.
+  current_implementation_forbidden:
+    - resolving an unrelated topic or endpoint as a payment-review match
+    - hardcoding deployment identity r6e-test-fixture
+    - treating materializer ownership or ACL repair as notification authority
+  fail_closed_requirement:
+    routine: ops.materialize_payment_review_notification_v1(ops.payment_review_notification_materialize_v1)
+    owner: gurine_migrator
+    runtime_execute_roles_exactly: [gurine_notification_worker]
+    nested_payment_writer_execute_or_type_grant: false
+    enforcement_point: >-
+      after closed payload, task, source, current-assignee, intent, and
+      authorization recomputation but before the nested materializer and its
+      first write
+    sqlstate: "55000"
+    database_message: R6E_PAYMENT_REVIEW_AUTHORIZATION_NOT_CURRENT
+    transaction_delta_exactly: 0
+    combined_task_notification_path_delta_exactly: 0
+    positive_materialization_allowed: false
+    replay_allowed: false
+    error_contract: INTERNAL_DATABASE_LATCH_ONLY_NO_EXTERNAL_MAPPING_INVENTED
+  distinction_from_assignee_gate: >-
+    The request-bound assignee selects the human task owner. This gate separately
+    selects PAYMENT_REVIEW_V1, exact-one endpoint/evaluator, and source-bound
+    deployment authority for both donation and signed B2B collection failures.
+    Both approved contracts must be implemented before the atomic path opens.
+
+funding_disclosure_publisher_gate:
+  status: AUTHORITY_RESOLVED_IMPLEMENTATION_PENDING_FAIL_CLOSED
+  resolved_authority_id: R6E-FUNDING-DISCLOSURE-PUBLISHER-AUTHORITY
+  authority: supervisor_authority_decision_v1.GFD-AUTHORITY-V1
+  review_slots_ordered_exactly:
+    - ordinal: 1
+      slot_id: funding_preparer
+      conditional: false
+      capability: funding.manage
+      allowed_roles_exactly: [EXECUTIVE_APPROVER, OPERATIONS]
+    - ordinal: 2
+      slot_id: funding_publisher
+      conditional: false
+      capability: funding.publish
+      allowed_roles_exactly: [EXECUTIVE_APPROVER]
+    - ordinal: 3
+      slot_id: oversight_reviewer
+      conditional_on: requires_oversight_review
+      capability: review.legal
+      allowed_roles_exactly: [LEGAL_REVIEWER]
+    - ordinal: 4
+      slot_id: board_approver
+      conditional_on: requires_board_approval
+      capability: funding.publish
+      allowed_roles_exactly: [EXECUTIVE_APPROVER]
+  review_slot_rules:
+    common_capability: actions.review
+    assurance: STEP_UP
+    actor_distinctness: pairwise across every instantiated slot
+    vacant_semantics: VACANT never satisfies or closes quorum
+    conditional_rule: >-
+      Ordinal 3 exists only when requires_oversight_review is true and ordinal 4
+      exists only when requires_board_approval is true. An absent conditional
+      requirement creates no assignment and contributes no counted decision.
+  related_case_prerequisite:
+    cardinality: exactly one per distinct related case
+    existing_action_kind: PUBLICATION
+    existing_slot_id: independent_editorial
+    decision: APPROVE
+    capability: review.editorial
+    allowed_roles_exactly: [EDITOR, PUBLISHER]
+    common_capability: actions.review
+    assurance: STEP_UP
+    current_and_exact_binding_required: true
+  target_revision_contract:
+    semantic: candidate revision N to be published
+    first_revision: 1
+    later_revision: locked current head plus 1
+    minimum: 1
+    zero_sentinel: forbidden
+    null: forbidden
+    final_transaction_fence: locked head plus 1 equals candidate N
+  publisher_acl:
+    logical_operation: private.PublishFundingDisclosureRevision
+    physical_service: workflow-worker
+    runtime_database_principal: gurine_workflow_worker
+    sole_mutation_function: editorial.publish_funding_disclosure_v1
+    function_owner: gurine_migrator
+    security: SECURITY DEFINER
+    non_owner_execute_roles_exactly: [gurine_workflow_worker]
+    runtime_direct_table_dml_grants_exactly: []
+    public_execute: false
+  digest_and_event_authority:
+    digest_abi: closed Gurine Canonical JSON V1
+    scalar_rules:
+      - numeric(24,6) is a fixed-six-decimal JSON string
+      - timestamps are UTC with exactly six fractional digits
+      - nullable values are explicit null and keys are never omitted
+    public_content_rule: includes each stored entryDigest
+    revision_preimage_excludes_exactly:
+      - revisionDigest
+      - receiptDigest
+      - createdAt
+    computation_order_exactly:
+      - entry and set digests
+      - revisionDigest
+      - receiptDigest
+      - event and response digests
+    counted_decision_tuple_fields_in_order:
+      - slotOrdinal
+      - slotId
+      - decisionId
+      - decisionReceiptDigest
+      - actorId
+    counted_decision_order: slotOrdinal ascending, then decisionId ascending
+    independently_sorted_parallel_arrays: forbidden
+    published_event: governance.funding_disclosure_published.v1
+    published_event_required_binding: >-
+      Revision and prior revision, period, snapshot, policy, conflict,
+      concentration, conditional gates, entry and public-content digests,
+      proposal, execution, approval, counted decisions, related-case reviews,
+      publisher, effective and published timestamps, and receipt digest are all
+      required and digest-bound.
+  implementation_gaps_in_order:
+    - >-
+      The authoritative funding.manage and funding.publish capability-to-role
+      mappings are not seeded or mapped in the database.
+    - >-
+      No dedicated publisher routine implements the authoritative
+      gurine_migrator owner and gurine_workflow_worker-only non-owner EXECUTE
+      boundary. Economics-writer-owned pure digest helpers are separate
+      internal utilities and do not implement or conflict with that publisher.
+  authority_resolution_rule: >-
+    The package above resolves the prior quorum, related-case, target-version,
+    ACL, digest-order, and event authority conflicts. It does not remove the
+    current mutation latch until those rules and their tests are implemented.
+  external_error_contract_resolution:
+    database_error: {sqlstate: "55000", code: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE}
+    bounded_control_mapping:
+      rust_variant: ServiceError::Persistence
+      external_code: INTERNAL_ERROR
+      http_status: 500
+      exact_match_required:
+        sqlstate: "55000"
+        database_message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE
+    affected_dispatch_operations_exactly:
+      - createActionProposal
+      - updateActionDraft
+      - previewActionDraft
+      - submitActionForReview
+      - claimActionReview
+      - submitActionDecision
+    higher_authority_source: specs/product/addendum-resource-error-contracts.yaml:2959-2965
+    higher_authority_status: >-
+      All six operations already declare INTERNAL_ERROR and their generated
+      OpenAPI operations already expose HTTP 500. The bounded mapping adds no
+      new public error code, response, retryability claim, or extension.
+    implementation_evidence:
+      mapping: services/control-api/src/service/command_addendum_errors.rs
+      regression_tests: services/control-api/src/service/command_addendum_error_tests.rs
+    near_miss_rule: >-
+      Any different operation, SQLSTATE, message casing, message suffix, or
+      missing message falls through to the pre-existing generic database error
+      classifier. This exact pair must not broaden another operation or convert
+      an unrelated 55000 into the funding authority latch.
+    codegen_delta_required: false
+    control_api_mapping_implemented: true
+    publisher_authority_resolved: true
+    publisher_implementation_ready: false
+  lifecycle_gate:
+    source_freeze_status: FINAL
+    enforcement_point: final action dispatcher before the first write
+    action_kind: FUNDING_DISCLOSURE
+    dispatcher_signature: ops.execute_action_approval_v1(text,jsonb,uuid) RETURNS jsonb
+    dispatcher_source_signature: >-
+      ops.execute_action_approval_v1(p_operation text, p_request jsonb,
+      p_actor uuid) RETURNS jsonb
+    dispatcher_canonical_ddl_sha256: 52a1ee07d93054b073976548ce65d511d5360c30f5827cd7cf49c8ee84f730d6
+    discriminator_contract:
+      create:
+        top_level_path: actionKind
+        canonical_draft_path: draft.kind
+        funding_gate_if_either_matches: true
+      update:
+        persisted_source: ops.action_proposals.action_kind
+        canonical_draft_path: draft.kind
+        funding_gate_if_either_matches: true
+      later_operations:
+        operations_exactly:
+          - previewActionDraft
+          - submitActionForReview
+          - claimActionReview
+          - submitActionDecision
+        sole_authority: persisted ops.action_proposals.action_kind
+      legacy_path:
+        path: draft.actionKind
+        authoritative_discriminator: false
+        funding_unavailable_sentinel: FUNDING_DISCLOSURE
+        rule: >-
+          The legacy key can only strengthen fail-closed detection: value
+          FUNDING_DISCLOSURE triggers the funding gate, but no legacy value may
+          establish, replace, or repair an authoritative action kind.
+      smuggling_regression_exactly: >-
+        A TASK top-level discriminator combined with canonical draft.kind
+        FUNDING_DISCLOSURE, the inverse mismatch, and the equivalent persisted
+        versus canonical-draft FUNDING mismatch are all blocked by the exact
+        funding gate before legacy delegation with transaction delta zero.
+        Legacy draft.actionKind FUNDING_DISCLOSURE is also blocked but can never
+        bypass or replace an authoritative discriminator.
+      non_funding_mismatch_external_contract:
+        status: UNRESOLVED_OUTSIDE_THIS_DATABASE_ADDENDUM
+        rust_action_kind_mismatch_variant_present: false
+        update_error_contract_allows_action_kind_mismatch: false
+        rule: >-
+          This addendum authorizes no SQLSTATE, message, Rust error, or HTTP
+          mapping for a mismatch where neither authoritative discriminator is
+          FUNDING_DISCLOSURE, or for a payload that supplies only a non-FUNDING
+          legacy draft.actionKind value. Any such mapping requires a higher
+          resource-error and OpenAPI contract decision.
+    supported_operations_exactly:
+      - createActionProposal
+      - updateActionDraft
+      - previewActionDraft
+      - submitActionForReview
+      - claimActionReview
+      - submitActionDecision
+    error_sqlstate: "55000"
+    error_code: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE
+    behavior: reject each supported operation before its first write
+    transaction_delta_exactly: 0
+    delta_scope: >-
+      Action proposal and detail rows, assignments, decisions, authorizations,
+      effects, funding revisions and entries, audit and outbox events, inbox,
+      jobs, job attempts, and public projections all remain unchanged.
+    absent_runtime_surfaces_exactly:
+      - funding executor
+      - funding publisher
+      - funding claim routine
+      - funding completion routine
+      - funding failure routine
+    absent_surface_rule: >-
+      These surfaces are not installed and are not executable. They are an
+      implementation gap, not implicit lifecycle operations, and must not appear
+      as routines or operation names in a FINAL function matrix.
+  independently_finalizable_read_only_surfaces:
+    - eleven pure funding-disclosure digest helpers
+    - existing-approved-revision public source reader
+  closure_rule: >-
+    No funding publisher function, owner assignment, service EXECUTE grant, or
+    lifecycle success contract may be marked FINAL until the complete approved
+    GFD package is implemented and independently verified. The existing exact
+    55000 to INTERNAL_ERROR/500 hold remains authoritative in the interim.
+
+funding_projection_digest_abi_gate:
+  status: AUTHORITY_RESOLVED_IMPLEMENTATION_PENDING_FAIL_CLOSED
+  resolved_authority_id: R6E-PUB-PRIVATE-DIGEST-FRAMING
+  authority: supervisor_authority_decision_v1.GFD-AUTHORITY-V1
+  distinction_from_publisher_gate: >-
+    The private digest framing is now approved, but these functions remain
+    unavailable until the closed JSON ABI, revised revision preimage, event
+    payload, publisher ACL, and cross-language vectors are implemented. The
+    publisher implementation hold remains a separate required gate.
+  installed_functions:
+    source_reader:
+      signature: editorial.read_public_funding_projection_inputs_v1(uuid,char(64)) RETURNS SETOF editorial.funding_public_projection_input_v1
+      available: false
+      failure_before_exactly: [source-read, success-return]
+    projector:
+      signature: public.project_funding_disclosure_revision_v2(public.funding_disclosure_projection_v2) RETURNS public.projection_mutation_receipt_v2
+      available: false
+      failure_before_exactly: [source-read, replay-return, write, success-return]
+  failure:
+    sqlstate: "55000"
+    code: FUNDING_PROJECTION_DIGEST_ABI_UNAVAILABLE
+    transaction_delta_exactly: 0
+  pure_digest_helpers_in_order:
+    - editorial.funding_disclosure_sha256_v1(jsonb) RETURNS char(64)
+    - editorial.funding_disclosure_conditional_gate_set_digest_v1(jsonb) RETURNS char(64)
+    - editorial.funding_disclosure_source_entry_set_digest_v1(jsonb) RETURNS char(64)
+    - editorial.funding_disclosure_counterparty_group_set_digest_v1(jsonb) RETURNS char(64)
+    - editorial.funding_disclosure_independent_review_set_digest_v1(jsonb) RETURNS char(64)
+    - editorial.funding_disclosure_source_link_set_digest_v1(text[]) RETURNS char(64)
+    - editorial.funding_disclosure_entry_digest_v1(jsonb) RETURNS char(64)
+    - editorial.funding_disclosure_entry_set_digest_v1(integer,jsonb) RETURNS char(64)
+    - editorial.funding_disclosure_policy_request_outcome_digest_v1(integer,integer,integer,integer,integer,integer) RETURNS char(64)
+    - editorial.funding_disclosure_public_content_digest_v1(editorial.funding_public_revision_v1,editorial.funding_public_entry_v1[]) RETURNS char(64)
+    - editorial.funding_disclosure_revision_digest_v1(jsonb) RETURNS char(64)
+  helper_runtime_execute_roles_exactly: []
+  helper_public_execute: false
+  public_readiness_claim: forbidden
+  approved_digest_abi_ref: funding_disclosure_publisher_gate.digest_and_event_authority
+  closure_rule: >-
+    The reader and projector always raise the exact failure before reading a
+    source row, returning a replay receipt, writing, or returning success. The
+    pure helpers remain internal and non-runtime while implementation is
+    incomplete; authority approval alone cannot support a PUB-023 availability,
+    download, or end-to-end readiness claim.
+
+pub_023_projection_contract:
+  runtime_status: AUTHORITY_RESOLVED_IMPLEMENTATION_PENDING
+  runtime_gate: funding_projection_digest_abi_gate
+  public_readiness_claim: forbidden
+  source_path:
+    - current fetch-confirmed ops.donation_facts head
+    - candidate ops.funding_concentration_snapshots
+    - independent FUNDING_DISCLOSURE proposal, review, and execution
+    - editorial.funding_disclosure_revisions and editorial.funding_disclosure_entries
+    - public.transparency_reports FUNDING_DISCLOSURE revision
+    - PUB-023 and downloadTransparencyReport
+  automatic_publication: forbidden
+  existing_public_relation: public.transparency_reports
+  additive_columns_in_order:
+    - {name: report_kind, type: text, nullable: false, default: GENERAL}
+    - {name: source_revision_id, type: uuid, nullable: true}
+    - {name: source_disclosure_id, type: uuid, nullable: true}
+    - {name: source_revision, type: bigint, nullable: true}
+    - {name: source_revision_digest, type: char(64), nullable: true}
+    - {name: supersedes_report_id, type: uuid, nullable: true}
+    - {name: report_schema_version, type: bigint, nullable: true}
+    - {name: projection_digest, type: char(64), nullable: true}
+    - {name: projected_at, type: timestamptz, nullable: true}
+  projection_input:
+    type: public.funding_disclosure_projection_v2
+    fields_in_order:
+      - {name: event_id, type: uuid, nullable: false}
+      - {name: disclosure_id, type: uuid, nullable: false}
+      - {name: revision_id, type: uuid, nullable: false}
+      - {name: revision, type: bigint, nullable: false}
+      - {name: revision_digest, type: char(64), nullable: false}
+      - {name: snapshot_batch_id, type: uuid, nullable: false}
+      - {name: snapshot_digest, type: char(64), nullable: false}
+      - {name: concentration_band, type: editorial.funding_concentration_band, nullable: false}
+      - {name: entry_set_digest, type: char(64), nullable: false}
+      - {name: prior_revision, type: bigint, nullable: true}
+      - {name: effective_at, type: timestamptz, nullable: false}
+      - {name: receipt_digest, type: char(64), nullable: false}
+      - {name: job_id, type: uuid, nullable: false}
+      - {name: job_lease_token, type: uuid, nullable: false}
+      - {name: job_fencing_token, type: bigint, nullable: false}
+  projection_receipt:
+    type: public.projection_mutation_receipt_v2
+    fields_in_order:
+      - {name: operation_id, type: text}
+      - {name: event_id, type: uuid}
+      - {name: source_aggregate_id, type: uuid}
+      - {name: source_aggregate_version, type: bigint}
+      - {name: source_aggregate_digest, type: char(64)}
+      - {name: projection_id, type: uuid}
+      - {name: projection_version, type: bigint}
+      - {name: projection_digest, type: char(64)}
+      - {name: projected_row_count, type: bigint}
+      - {name: inbox_receipt_digest, type: char(64)}
+      - {name: job_receipt_digest, type: char(64)}
+      - {name: audit_event_id, type: uuid}
+      - {name: outbox_event_ids, type: "uuid[]"}
+      - {name: receipt_digest, type: char(64)}
+      - {name: completed_at, type: timestamptz}
+  source_reader:
+    signature: editorial.read_public_funding_projection_inputs_v1(uuid,char(64)) RETURNS SETOF editorial.funding_public_projection_input_v1
+    installation_status: INSTALLED_BUT_UNAVAILABLE
+    availability_gate: funding_projection_digest_abi_gate
+    failure_sqlstate: "55000"
+    failure_code: FUNDING_PROJECTION_DIGEST_ABI_UNAVAILABLE
+    failure_before_exactly: [source-read, success-return]
+    runtime_execute_roles: []
+  projector:
+    signature: public.project_funding_disclosure_revision_v2(public.funding_disclosure_projection_v2) RETURNS public.projection_mutation_receipt_v2
+    installation_status: INSTALLED_BUT_UNAVAILABLE
+    availability_gate: funding_projection_digest_abi_gate
+    failure_sqlstate: "55000"
+    failure_code: FUNDING_PROJECTION_DIGEST_ABI_UNAVAILABLE
+    failure_before_exactly: [source-read, replay-return, write, success-return]
+    currently_reachable_success_path: false
+    execute_roles: [gurine_public_projector]
+    transaction: SERIALIZABLE
+    worker_fence: >-
+      job_id, job_lease_token, and positive job_fencing_token must exactly bind
+      the current unexpired RUNNING EVENT_DELIVERY job and its unfinished
+      current attempt. A stale, expired, substituted, or non-current fence is
+      SQLSTATE 40001 and writes nothing.
+    lease_token_storage: >-
+      The raw lease token is call-scoped and never persists. Only lowercase
+      SHA-256 of job_lease_token::text may enter the job receipt, attempt
+      metrics, audit details, or replay evidence.
+    replay_fence: >-
+      Replay must reproduce the same job ID, lease-token digest, and fencing
+      token that terminalized the original projection; another worker fence
+      cannot recover or adopt that receipt.
+    target_atomic_writes_if_digest_authority_is_resolved:
+      - exact work, event, source, and prior-head locks
+      - rights, hold, source, entry-set, and digest verification
+      - exactly one immutable public report
+      - inbox receipt and EVENT_DELIVERY job terminalization
+      - current job-attempt terminalization
+      - audit event
+      - immutable typed projection receipt
+    outbox_event_ids: []
+    outer_worker_completion: forbidden
+  projection_digest_preimage_keys_in_order:
+    - reportKind
+    - sourceRevisionId
+    - sourceDisclosureId
+    - sourceRevision
+    - sourceRevisionDigest
+    - periodStart
+    - periodEnd
+    - title
+    - summary
+    - report
+    - publishedAt
+    - supersedesReportId
+  canonicalization: RFC 8785 through ops.canonical_jsonb_v1 followed by SHA-256
+  acl:
+    gurine_public_projector_table_privileges: []
+    gurine_public_projector_function_execute: [public.project_funding_disclosure_revision_v2]
+    gurine_migrator_owner_internal:
+      public.transparency_reports: [SELECT, INSERT]
+      ops.inbox: [SELECT, "UPDATE(processed_at,result)"]
+      ops.jobs:
+        - SELECT
+        - UPDATE(status,completed_at,lease_owner,lease_token,lease_expires_at,version,last_error_code,last_error_detail)
+      ops.job_attempts:
+        - SELECT
+        - UPDATE(finished_at,outcome,error_code,error_detail,metrics)
+    gurine_public_api: {public.transparency_reports: [SELECT]}
+    all_other_runtime_roles: []
+  current_download_state: UNAVAILABLE_NO_READINESS_CLAIM
+  download_rule_if_digest_authority_is_resolved: >-
+    PUB-023 and downloadTransparencyReport expose deterministic bytes for the
+    exact approved public revision with its revision, content, source-set, and
+    projection digests. Private donation/payment identities, fabricated reports,
+    stale fallback, and unavailable-link placeholders are forbidden.
+
+runtime_role_preflight_contract:
+  provisioning_authority: checksummed control-plane provisioning runs before 0041
+  migration_role_ddl: forbidden
+  preflight_do_canonical_sha256: 07ae0ed6a20f66efb6a9eb53b0ba8297f528f796a97def7467a2126655e6fff9
+  roles:
+    - {role: gurine_economics_writer, can_login: false, inherit: false, superuser: false, createdb: false, createrole: false, replication: false, bypassrls: false, connection_limit: -1, memberships_exactly: []}
+    - {role: gurine_payment_writer, can_login: false, inherit: false, superuser: false, createdb: false, createrole: false, replication: false, bypassrls: false, connection_limit: -1, memberships_exactly: []}
+    - {role: gurine_billing_gateway, can_login: true, inherit: false, superuser: false, createdb: false, createrole: false, replication: false, bypassrls: false, connection_limit: 8, memberships_exactly: []}
+    - {role: gurine_economics_importer, can_login: true, inherit: false, superuser: false, createdb: false, createrole: false, replication: false, bypassrls: false, connection_limit: 4, memberships_exactly: []}
+  prior_authority_rule: >-
+    Before any 0041 grant, every role has zero pg_auth_members rows as roleid
+    or member, zero pg_db_role_setting rows, and zero pg_shdepend ACL or owner
+    dependencies cluster-wide. Missing roles raise
+    R6E_RUNTIME_ROLE_MISSING; pre-privileged, membered, owning, configured, or
+    attribute-drifted roles abort with SQLSTATE 42501. The 0041 migration never
+    creates or repairs a role.
+
+runtime_role_postcondition_contract:
+  freeze_status: FINAL
+  oracle:
+    signature: ops.assert_r6e_runtime_role_postconditions_v1() RETURNS boolean
+    language: SQL
+    volatility: STABLE
+    security: INVOKER
+    search_path: [pg_catalog, pg_temp]
+    owner_role: gurine_migrator
+    execute_roles_exactly: []
+    success_result: true
+    mismatch_message: R6E_RUNTIME_ROLE_POSTCONDITION_FAILED
+    mismatch_sqlstate: "42501"
+    categories_in_order:
+      - ROLE_ATTRIBUTES
+      - MEMBERSHIP
+      - ROLE_SETTINGS
+      - OBJECT_OWNERSHIP
+      - INERT_WRITER_ACL
+      - SCHEMA_ACL
+      - ROUTINE_ACL
+      - TYPE_ACL
+      - RELATION_AND_COLUMN_ACL
+      - DATABASE_AND_DEFAULT_ACL
+  role_profiles:
+    - role: gurine_economics_writer
+      can_login: false
+      connection_limit: -1
+      memberships_exactly: []
+      owned_objects_exactly: []
+      direct_acl_dependencies_exactly: []
+      schema_privileges_exactly: []
+      routine_execute_exactly: []
+      type_usage_exactly: []
+    - role: gurine_payment_writer
+      can_login: false
+      connection_limit: -1
+      memberships_exactly: []
+      owned_objects_exactly: []
+      direct_acl_dependencies_exactly: []
+      schema_privileges_exactly: []
+      routine_execute_exactly: []
+      type_usage_exactly: []
+    - role: gurine_billing_gateway
+      can_login: true
+      connection_limit: 8
+      memberships_exactly: []
+      owned_objects_exactly: []
+      schema_privileges_exactly: [ops.USAGE]
+      routine_execute_count_exactly: 13
+      type_usage_count_exactly: 21
+      direct_relation_or_column_privileges_exactly: []
+      database_and_default_privileges_exactly: []
+    - role: gurine_economics_importer
+      can_login: true
+      connection_limit: 4
+      memberships_exactly: []
+      owned_objects_exactly: []
+      schema_privileges_exactly: [ops.USAGE]
+      routine_execute_count_exactly: 3
+      type_usage_exactly: []
+      direct_relation_or_column_privileges_exactly: []
+      database_and_default_privileges_exactly: []
+  owner_routines_in_order:
+    - ops.consume_billing_gateway_assertion_jti_v1(text,uuid,text,text,timestamptz,char(64)) RETURNS boolean
+    - ops.claim_r6e_donation_intent_v1(ops.r6e_donation_intent_claim_v1) RETURNS ops.r6e_donation_intent_claim_receipt_v1
+    - ops.complete_r6e_payment_method_binding_v1(ops.r6e_payment_method_binding_complete_v1) RETURNS ops.r6e_payment_method_binding_receipt_v1
+    - ops.fail_r6e_donation_intent_v1(ops.r6e_donation_intent_fail_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+    - ops.claim_r6e_donation_charge_job_v1(ops.r6e_donation_charge_job_claim_v1) RETURNS ops.r6e_donation_charge_job_claim_receipt_v1
+    - ops.claim_r6e_donation_charge_v1(ops.r6e_donation_charge_claim_v1) RETURNS ops.r6e_donation_charge_claim_receipt_v1
+    - ops.accept_r6e_donation_charge_v1(ops.r6e_donation_charge_accept_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+    - ops.complete_r6e_donation_charge_v1(ops.r6e_donation_charge_complete_v1) RETURNS ops.r6e_donation_charge_terminal_receipt_v1
+    - ops.fail_r6e_donation_charge_v1(ops.r6e_donation_charge_fail_v1) RETURNS ops.r6e_donation_charge_terminal_receipt_v1
+    - ops.require_r6e_charge_reconciliation_v1(ops.r6e_charge_reconciliation_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+    - ops.claim_r6e_provider_webhook_v1(ops.r6e_provider_webhook_claim_v1) RETURNS ops.r6e_provider_webhook_claim_receipt_v1
+    - ops.complete_r6e_provider_webhook_v1(ops.r6e_provider_webhook_complete_v1) RETURNS ops.r6e_provider_webhook_receipt_v1
+    - ops.release_r6e_provider_webhook_claim_v1(ops.r6e_provider_webhook_release_v1) RETURNS ops.r6e_payment_transition_receipt_v1
+    - ops.claim_economics_import_execution_v1(uuid,uuid,bigint,uuid,uuid,bigint,char(64),char(64),text) RETURNS jsonb
+    - ops.fail_economics_import_execution_v1(uuid,uuid,bigint,uuid,bigint,text,char(64),uuid) RETURNS jsonb
+    - ops.complete_economics_import_execution_v1(uuid,uuid,bigint,uuid,bigint,uuid) RETURNS jsonb
+  restricted_non_migrator_gurine_role_count_exactly: 17
+  restricted_routine_execute_rows:
+    - signature: ops.materialize_paid_evidence_packet_subject_v1(ops.paid_evidence_packet_subject_input_v1,text) RETURNS ops.economics_mutation_receipt_v1
+      owner_role: gurine_migrator
+      runtime_status: HIGH_LEVEL_APPROVED_CANONICAL_V2_AUTHORITY_OPEN
+      non_owner_execute_roles_exactly: []
+      public_execute: false
+    - signature: ops.bind_paid_terminal_receipt_v1(ops.paid_terminal_binding_input_v1,text) RETURNS ops.economics_mutation_receipt_v1
+      owner_role: gurine_migrator
+      runtime_status: HIGH_LEVEL_APPROVED_CANONICAL_V2_PROOF_AUTHORITY_OPEN
+      non_owner_execute_roles_exactly: []
+      public_execute: false
+  role_function_execute_allowlist:
+    - {signature: "ops.consume_billing_gateway_assertion_jti_v1(text,uuid,text,text,timestamptz,char(64)) RETURNS boolean", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.claim_r6e_donation_intent_v1(ops.r6e_donation_intent_claim_v1) RETURNS ops.r6e_donation_intent_claim_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.complete_r6e_payment_method_binding_v1(ops.r6e_payment_method_binding_complete_v1) RETURNS ops.r6e_payment_method_binding_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.fail_r6e_donation_intent_v1(ops.r6e_donation_intent_fail_v1) RETURNS ops.r6e_payment_transition_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.claim_r6e_donation_charge_job_v1(ops.r6e_donation_charge_job_claim_v1) RETURNS ops.r6e_donation_charge_job_claim_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.claim_r6e_donation_charge_v1(ops.r6e_donation_charge_claim_v1) RETURNS ops.r6e_donation_charge_claim_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.accept_r6e_donation_charge_v1(ops.r6e_donation_charge_accept_v1) RETURNS ops.r6e_payment_transition_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.complete_r6e_donation_charge_v1(ops.r6e_donation_charge_complete_v1) RETURNS ops.r6e_donation_charge_terminal_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.fail_r6e_donation_charge_v1(ops.r6e_donation_charge_fail_v1) RETURNS ops.r6e_donation_charge_terminal_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.require_r6e_charge_reconciliation_v1(ops.r6e_charge_reconciliation_v1) RETURNS ops.r6e_payment_transition_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.claim_r6e_provider_webhook_v1(ops.r6e_provider_webhook_claim_v1) RETURNS ops.r6e_provider_webhook_claim_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.complete_r6e_provider_webhook_v1(ops.r6e_provider_webhook_complete_v1) RETURNS ops.r6e_provider_webhook_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.release_r6e_provider_webhook_claim_v1(ops.r6e_provider_webhook_release_v1) RETURNS ops.r6e_payment_transition_receipt_v1", roles_exactly: [gurine_billing_gateway]}
+    - {signature: "ops.claim_economics_import_execution_v1(uuid,uuid,bigint,uuid,uuid,bigint,char(64),char(64),text) RETURNS jsonb", roles_exactly: [gurine_economics_importer]}
+    - {signature: "ops.fail_economics_import_execution_v1(uuid,uuid,bigint,uuid,bigint,text,char(64),uuid) RETURNS jsonb", roles_exactly: [gurine_economics_importer]}
+    - {signature: "ops.complete_economics_import_execution_v1(uuid,uuid,bigint,uuid,bigint,uuid) RETURNS jsonb", roles_exactly: [gurine_economics_importer]}
+  type_usage_rows:
+    - {type: ops.r6e_donation_intent_claim_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_intent_claim_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_payment_method_binding_complete_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_payment_method_binding_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_intent_fail_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_payment_transition_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_claim_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_job_claim_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_job_claim_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_claim_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_payment_observation_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_complete_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_accept_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_fail_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_donation_charge_terminal_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_charge_reconciliation_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_provider_webhook_claim_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_provider_webhook_claim_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_provider_webhook_complete_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_provider_webhook_receipt_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.r6e_provider_webhook_release_v1, roles_exactly: [gurine_billing_gateway]}
+    - {type: ops.paid_evidence_packet_subject_input_v1, roles_exactly: []}
+    - {type: ops.paid_evidence_packet_member_input_v1, roles_exactly: []}
+    - {type: ops.paid_terminal_binding_input_v1, roles_exactly: []}
+  schema_privilege_rows:
+    - {role: gurine_economics_writer, privileges_exactly: []}
+    - {role: gurine_payment_writer, privileges_exactly: []}
+    - {role: gurine_billing_gateway, privileges_exactly: [ops.USAGE]}
+    - {role: gurine_economics_importer, privileges_exactly: [ops.USAGE]}
+  owner_relation_acl_rows: []
+  protected_relation_rows: []
+  legacy_execute_denies:
+    - signature: ops.consume_assertion_jti(text,uuid,text,text,timestamptz,char(64)) RETURNS boolean
+      denied_roles_exactly: [gurine_billing_gateway]
+      replacement: ops.consume_billing_gateway_assertion_jti_v1(text,uuid,text,text,timestamptz,char(64)) RETURNS boolean
+  exactness_rule: >-
+    The migration and post-migration catalog set-compare the four externally
+    provisioned role profiles, the exact 13 billing and three economics
+    entry-routine EXECUTE grants, 21 billing composite USAGE grants, and the two
+    service schema-USAGE grants in both directions. Both writer roles retain
+    zero ACL or ownership dependency. All four roles have zero direct relation,
+    column, database, or default-ACL privilege and no membership or role-local
+    setting. The billing wrapper alone may call the pre-existing generic replay
+    helper; billing-gateway has zero direct EXECUTE on that generic helper.
+
+additive_role_registry:
+  base_registry: specs/database/addendum/global.yaml#privilege_closure.required_roles
+  roles_in_order:
+    - role: gurine_economics_writer
+      schema_usage_exactly: []
+    - role: gurine_payment_writer
+      schema_usage_exactly: []
+    - role: gurine_billing_gateway
+      schema_usage_exactly: [ops]
+    - role: gurine_economics_importer
+      schema_usage_exactly: [ops]
+  count_exactly: 4
+  merge_rule: >-
+    The effective runtime role set is the disjoint set union of the immutable
+    global required_roles and this ordered four-role registry. None of the four
+    R6e roles belongs to global.yaml. Both compatibility writer roles remain
+    inert with zero schema usage; only billing-gateway and economics-importer
+    receive exact ops schema USAGE through 0041.
+
+acl_contract:
+  role_provisioning_precondition: runtime_role_preflight_contract
+  owner_roles:
+    economics: gurine_migrator
+    payment: gurine_migrator
+  service_roles:
+    economics: gurine_economics_importer
+    payment: gurine_billing_gateway
+  table_dml_rule: >-
+    PUBLIC and every LOGIN/runtime role have zero direct INSERT, UPDATE, DELETE,
+    TRUNCATE, REFERENCES, or TRIGGER privilege on all seven new relations and
+    all 24 economics relations. Mutation occurs only inside fixed-search-path,
+    SECURITY DEFINER, typed owner functions.
+  table_select_rule: >-
+    On all seven new private relations and all 24 economics relations, Control
+    API, workflow worker, billing gateway, economics importer, projector,
+    scheduler, notification worker, public API, submission API, analysis
+    worker, ingest worker, identity API, document extractor, and PUBLIC have
+    zero direct SELECT. The Public API may read only the separately declared
+    public projection. Any auditor SELECT exception is explicit, read-only, and
+    grants no owner-function execution or secret-bearing output.
+  owner_internal_grant_rule: >-
+    The NOLOGIN gurine_migrator owner uses owner-implied access only inside its
+    fixed SECURITY DEFINER routines. The compatibility writer roles own zero
+    objects and receive zero privilege. The funding projector routine may use
+    the migrator owner's access to public.transparency_reports plus the exact
+    inbox, jobs, and job-attempt columns declared above; none of that authority
+    is granted, inherited, or SET ROLE reachable by a LOGIN/runtime principal.
+  function_rule: >-
+    PUBLIC execute is revoked. Each service receives EXECUTE only on its exact
+    narrow routine list and USAGE only on required closed composites. The
+    compatibility writer roles are NOLOGIN, own zero objects, and receive zero
+    privilege. Service roles are NOINHERIT and cannot SET ROLE to the migrator
+    or reuse each other's credentials.
+  mutation_guard: >-
+    Every new ledger relation rejects UPDATE and DELETE for all roles,
+    including the owner. Corrections append a new exact predecessor-bound row.
+
+implementation_requirements:
+  current_snapshot_notice: >-
+    At initial addendum authoring time, the migration contains the seven tables,
+    closed operation composites, validator functions, immutable triggers, event
+    schemas, invoice digest closure, and legacy EXECUTE revokes. The following
+    required runtime closures must exist before this addendum may be promoted
+    from REVIEW_REQUIRED.
+  required_before_ready:
+    - >-
+      ECONOMICS_IMPORT create, update, preview, submit, review decision, claim,
+      execute, complete, and fail lifecycle wrappers that intercept the generic
+      path and cannot fall through to a TASK or legacy detail.
+    - >-
+      Exact evidence-set compiler and detail owner that lock proposal rationale
+      and raw evidence rows, derive ID-sorted positional pairs, compare the
+      distinct derived digest set with the wire sourceEvidenceDigests set, then
+      discard the wire set and derive every stored canonical byte and digest.
+    - >-
+      Eleven relation-specific economics branch owners and a complete exact
+      one-owner matrix for all 24 economics relations.
+    - >-
+      ECO-AUTHORITY-V1 target-version exception, one-shot PILOT bootstrap,
+      CommercialContractOfferParentV1 numeric schemaVersion 1, explicit approved
+      identities, invoice adjustment DAG, GURINE_LENGTH_PREFIXED_UTF8_V1 golden
+      vectors, and permanent low-margin 55000/write-zero negative coverage.
+    - >-
+      PAID-EVIDENCE-V2-AUTHORITY additive V2 types/relations/DAG, remaining
+      twelve review-snapshot fields, existing-row abort, both MATCH FULL deferred
+      reciprocal FKs, exact terminal evidence, and isolated subject-HMAC keyring.
+    - >-
+      TEST-only payment binding, charge/refund/fetch reconciliation, webhook
+      receipt, donation fact, scheduler enqueue, and notification materializer
+      owner routines with replay and changed-input conflict behavior.
+    - >-
+      PAYMENT-TEST-V1 separate current/previous keyrings, UTC non-drifting monthly
+      occurrence scheduler, request-bound review assignee, PAYMENT_REVIEW_V1
+      exact-one routing, 24-hour due time, and zero entitlement/contract/public
+      access effects for every failure and re-fetch mismatch.
+    - >-
+      PUB-023 nine-column public relation hardening, source reader, typed
+      projection input/receipt, one-transaction projector, immutable public
+      funding revision guard, and public API download read boundary.
+    - >-
+      GFD-AUTHORITY-V1 exact quorum slots, related-case prerequisites, candidate
+      revision N, migrator-owned publisher ACL, closed JSON digest ABI, complete
+      published event, and unchanged six-operation 55000/INTERNAL_ERROR hold
+      until end-to-end implementation evidence exists.
+    - >-
+      Removal of direct billing/control SELECT grants and exact function-only
+      runtime ACL, plus a catalog test proving economics and payment credentials
+      cannot cross-call.
+    - >-
+      Ephemeral PostgreSQL 18.4 fixture proof for first cost close, tariff gate,
+      all eleven import branches, webhook fetch truth and duplicate handling,
+      no-entitlement dunning, donation funding candidate projection, ACL, replay,
+      and fail-closed negative cases.
+
+OPEN_QUESTIONS:
+  - id: R6E-ECO-WIRE-DIGEST-CANONICAL-AUTHORITY
+    status: BLOCKING_ECONOMICS_POSITIVE_APPLY_AND_GOLDEN_VECTORS
+    approved_high_level_authority: 감독자 결정 v1 / ECO-AUTHORITY-V1
+    question: >-
+      Supply the exact closed wire inventory plus per-record domain,
+      schema-version, type-tag bytes, NULL/array grammar, every omitted field
+      order, and byte-exact PostgreSQL/Rust golden vectors for
+      GURINE_LENGTH_PREFIXED_UTF8_V1 without changing the approved inclusion and
+      scalar rules.
+    fail_closed_choice: >-
+      Affected economics branches remain excluded or pre-write fail-closed with
+      transaction delta zero. No domain, tag, field order, golden value,
+      database message, or external error is guessed.
+  - id: R6E-PAID-V2-PHYSICAL-PROOF-CANONICAL-AUTHORITY
+    status: BLOCKING_PAID_V2_MIGRATION_MATERIALIZER_TERMINAL_AND_OUTCOME
+    approved_high_level_authority: 감독자 결정 v1 / PAID-EVIDENCE-V2-AUTHORITY
+    question: >-
+      Supply the exact V2 type/relation/function/field inventory, digest domains
+      and preimages, category and global-set edges, terminal proof mapping,
+      PAID_OUTCOME_SUBJECT_HMAC_V2 message/version ABI, migration ordering, and
+      byte-exact vectors while preserving V1 and the approved reciprocal FKs.
+    fail_closed_choice: >-
+      Both installed paid stubs retain their exact SQLSTATE 55000/write-zero
+      latches and zero runtime EXECUTE/type USAGE. No backfill, partial FK, paid
+      outcome, or READY claim is allowed.
+  - id: R6E-PAYMENT-REVIEW-COMMUNICATION-BINDING-AUTHORITY
+    status: BLOCKING_PAYMENT_REVIEW_NOTIFICATION_AND_COMBINED_TASK_PATH
+    approved_high_level_authority: 감독자 결정 v1 / PAYMENT-TEST-V1
+    question: >-
+      Supply the exact PAYMENT_REVIEW_V1 TopicScope/authorization storage,
+      source-to-deployment tuple, endpoint/evaluator candidate keys and ordering,
+      task-to-intent timing, and request/receipt/outbox/audit canonical bytes.
+    fail_closed_choice: >-
+      The combined task and notification path retains exact SQLSTATE 55000 with
+      transaction delta zero. No unrelated topic, endpoint, evaluator, hardcoded
+      deployment, positive materialization, or replay is allowed.
+
+SUPERVISOR_PACKAGE_DECISIONS_AND_LATCHES:
+  - id: R6E-PAYMENT-REVIEW-NOTIFICATION-AUTHORITY
+    status: HIGH_LEVEL_APPROVED_CANONICAL_COMM_BINDING_OPEN
+    authority: 감독자 결정 v1 / PAYMENT-TEST-V1
+    prior_conflict: >-
+      The closed 0027 TopicScope has no INTERNAL_TASK or PAYMENT_REVIEW variant
+      and forbids PURPOSE_WIDE. A topic that depends on the newly generated task
+      ID cannot have prior exact authorization; choosing an unrelated topic or
+      endpoint and hardcoding r6e-test-fixture deployment invents notification
+      authority, especially for signed B2B collection failures.
+    fail_closed_choice: >-
+      Until a higher contract fixes topic-scope semantics, endpoint and evaluator
+      selection, and deployment derivation, notification intent and event writes
+      remain delta zero. The notification-worker-only materializer recomputes
+      the closed payload, task, source, current assignee, intent, and existing
+      authorization, then raises SQLSTATE 55000 with exact database message
+      R6E_PAYMENT_REVIEW_AUTHORIZATION_NOT_CURRENT before its first write.
+      Positive materialization and replay are both forbidden; the currently
+      combined task-plus-notification path also remains entirely delta zero.
+      No external error code or HTTP status is invented.
+    resolution: >-
+      Use stable PAYMENT_REVIEW_V1, the two exact source kinds, one active
+      internal subject and authorization, exact-one current endpoint/evaluator,
+      source-bound deployment, occurredAt plus 24 hours, and atomic task, intent,
+      outbox, and audit writes. Zero, multiple, stale, or mismatched authority is
+      SQLSTATE 55000 with write zero; RECONCILIATION_REQUIRED creates none.
+  - id: R6E-DONATION-REVIEW-ASSIGNEE-AUTHORITY
+    status: RESOLVED_BY_PAYMENT_TEST_V1_IMPLEMENTATION_PENDING
+    authority: 감독자 결정 v1 / PAYMENT-TEST-V1
+    prior_conflict: >-
+      The donation FAILED and CANCELED paths carry no exact assignee authority.
+      Resolving NULL to the first active user is a cross-subject assignment, not
+      a governance rule. Resolver ACL repair cannot supply the missing assignee,
+      subject, tenant, eligibility, no-assignee, or fallback contract.
+    fail_closed_choice: >-
+      Before assignee resolution or any payment-failure review mutation, the
+      affected branch fails with transaction delta zero. No SQLSTATE, message,
+      Rust error, or HTTP status is invented by this database addendum. B2B
+      recordCollectionFailure remains separate from provider observation because
+      its reviewed signed operation carries reviewAssigneeUserId.
+    resolution: >-
+      TEST_ONLY donation intent and recordCollectionFailure require exact
+      reviewAssigneeUserId bound into request, immutable detail, and receipt
+      digests. There is no first-active-user, cross-subject, or other fallback.
+  - id: R6E-PAID-PACKET-DIGEST-AUTHORITY
+    status: HIGH_LEVEL_APPROVED_CANONICAL_PHYSICAL_PROOF_OPEN
+    authority: 감독자 결정 v1 / PAID-EVIDENCE-V2-AUTHORITY
+    prior_conflict: >-
+      PaidEvidencePacketMemberRecordV1 includes packetMemberSetDigest in each
+      member record, while the active dependency order derives ten member-record
+      digests before member_set_digest and the no-cycle oracle rejects repeated
+      digest dependencies. The native ten-leaf authority is also incomplete, so
+      no exact first digest can be derived without inventing a contract.
+    fail_closed_choice: >-
+      The installed materializer raises SQLSTATE 55000 with code
+      PAID_PACKET_DIGEST_AUTHORITY_UNAVAILABLE before its first write and has
+      zero workflow, runtime, or PUBLIC EXECUTE and zero runtime type USAGE. The
+      four nullable review-snapshot forward-fix columns are independently valid
+      catalog closure only; they have no backfill, do not restore the remaining
+      0028 additions, and do not prove the materializer callable.
+    resolution: >-
+      Preserve V1; add a forward-only V2 leaf to ordered-set to packet DAG whose
+      leaf excludes the global set digest and stores categoryDigest separately.
+      Existing paid rows abort migration with no backfill. The active 0028
+      inventory is sixteen fields: four currently forward-added and twelve still
+      required with the approved zero-or-all closure.
+  - id: R6E-PAID-TERMINAL-BINDING-AUTHORITY
+    status: HIGH_LEVEL_APPROVED_CANONICAL_PHYSICAL_PROOF_OPEN
+    authority: 감독자 결정 v1 / PAID-EVIDENCE-V2-AUTHORITY
+    prior_conflict: >-
+      The active authority does not define the workflow proof schema or
+      milestone mapping, metric policy, formula, timezone, or effectiveUntil
+      rule, or the subject-scope HMAC issuer and verifier. These are independent
+      of the paid member DAG and cannot be copied or synthesized.
+    fail_closed_choice: >-
+      The installed bind stub raises SQLSTATE 55000 with code
+      PAID_PACKET_TERMINAL_NOT_READY before its first read or write and has zero
+      non-owner or PUBLIC EXECUTE and zero runtime input-type USAGE. A future V2
+      member DAG alone does not enable terminal binding, outcome append, or paid
+      success.
+    resolution: >-
+      Bind the existing four ordered VerifiedWorkflowProofV1 milestones, exact
+      terminal receipt, existing policy/formula/timezone/effective-until fields,
+      and the separate PAID_OUTCOME_SUBJECT_HMAC_V2 current/previous TEST_FIXTURE
+      keyring. Both reciprocal packet/outcome FKs are MATCH FULL DEFERRABLE
+      INITIALLY DEFERRED.
+  - id: R6E-DONATION-SCHEDULER-AUTHORITY
+    status: RESOLVED_BY_PAYMENT_TEST_V1_IMPLEMENTATION_PENDING
+    authority: 감독자 결정 v1 / PAYMENT-TEST-V1
+    prior_conflict: >-
+      MONTHLY, first_charge_at, due ACTIVE RECURRING bindings, and request limit
+      1 through 500 do not determine a day anchor, timezone, short-month clamp,
+      missed-period catch-up or backcharge rule, prior FAILED, CANCELED, or
+      RECONCILIATION_REQUIRED handling, duplicate horizon, or next-slot policy.
+      Selecting any behavior would invent when money may be charged.
+    fail_closed_choice: >-
+      ops.enqueue_due_r6e_donation_charge_jobs_v1 remains uninstalled and
+      uncallable, creates no job, and is excluded from the FINAL routine and
+      EXECUTE matrices. No schedule or retry policy is inferred.
+    resolution: >-
+      first_charge_at is a UTC monthly anchor with non-drifting month-end clamp;
+      only the current UTC month is eligible, catch-up/backcharge is forbidden,
+      and (schedule_id,schedule_version,scheduledFor) is permanently unique.
+      Pending, accepted, and reconciliation states block later months; only the
+      four approved definitive/fetch-confirmed outcomes release a separate next
+      month. The scheduler inserts only one DONATION_CHARGE job.
+  - id: R6E-TARIFF-STAGE-BOOTSTRAP-AUTHORITY
+    status: RESOLVED_BY_ECO_AUTHORITY_V1_IMPLEMENTATION_PENDING
+    authority: 감독자 결정 v1 / ECO-AUTHORITY-V1
+    prior_conflict: >-
+      The commercial stage resolver authorizes PILOT only from the first
+      current paid-workspace contract and GENERAL_AVAILABILITY only from an
+      exact current non-reversed READY GA evaluation at or before the cutoff.
+      The first paid-workspace contract already requires an exact tariff foreign
+      key, so no current contract exists to authorize the stage of the tariff
+      needed to create that contract. The stage-specific 6000 and 7000 basis
+      point thresholds are consequences of an already resolved stage, not a
+      reverse stage resolver.
+    fail_closed_choice: >-
+      createTariffVersion remains outside the callable FINAL economics apply
+      matrix. Before its first protected write, the tariff branch raises exact
+      SQLSTATE 55000 and leaves tariff, contract, receipt, audit, outbox, inbox,
+      job, and idempotency state unchanged. Date, price, margin, threshold,
+      caller assertion, operator flag, route, or tariff label cannot infer
+      PILOT or GENERAL_AVAILABILITY. No database message or external error
+      mapping is invented here, and the branch contributes no READY count.
+    resolution: >-
+      Permit exactly one PILOT bootstrap only when same deployment/SKU tariff
+      and contract history are both zero, current GA READY is zero, a complete
+      current approved cost close is locked, and the approval binds the intended
+      first contract/qualification tuple and both validity periods. The later
+      contract import must match exactly. Required margin is 6000; no GA or
+      low-margin inference is authorized.
+  - id: R6E-COMMERCIAL-OFFER-PARENT-SCHEMA-VERSION-AUTHORITY
+    status: RESOLVED_BY_ECO_AUTHORITY_V1_IMPLEMENTATION_PENDING
+    authority: 감독자 결정 v1 / ECO-AUTHORITY-V1
+    prior_conflict: >-
+      OfferProfileV1 authoritatively fixes numeric schemaVersion 1 and
+      OfferCapabilityV1 has no schemaVersion field. In contrast,
+      CommercialContractOfferParentV1 places schemaVersion first in its exact
+      digest preimage but no higher contract fixes that scalar's exact value or
+      encoding. The strings commercial-contract-offer-parent.v1,
+      offer-capability.v1, and offer-profile.v1 occur nowhere in the active
+      authority and cannot be inferred from type names.
+    fail_closed_choice: >-
+      recordCommercialContractPeriod remains outside the callable FINAL
+      economics apply matrix. Before its first write, the contract branch raises
+      SQLSTATE 55000 and leaves every contract, capability, receipt, audit,
+      outbox, inbox, job, and idempotency row unchanged. No database message or
+      external error mapping is invented here. Numeric 1 is used only where the
+      OfferProfileV1 contract explicitly authorizes it, and OfferCapabilityV1
+      remains schemaVersion-free.
+    resolution: >-
+      CommercialContractOfferParentV1.schemaVersion is exact JSON number 1.
+      OfferCapabilityV1 remains schemaVersion-free. PostgreSQL and Rust must
+      adopt identical bytes and golden mutation vectors before the branch opens.
+  - id: R6E-FUNDING-DISCLOSURE-PUBLISHER-AUTHORITY
+    status: RESOLVED_BY_GFD_AUTHORITY_V1_IMPLEMENTATION_PENDING
+    authority: 감독자 결정 v1 / GFD-AUTHORITY-V1
+    prior_conflict: >-
+      Base and conditional slot identities alone do not supply the conditional
+      capability, roles, ordinal, assurance, or producer. Base capabilities are
+      authoritative but not seeded or role-mapped in the database for
+      funding.manage and funding.publish, rich-target target-version nullability
+      conflicts with the generic action target, and no installed publisher
+      implements the authoritative 0029 gurine_migrator/workflow-worker ACL.
+      Economics-writer-owned pure helpers are internal utilities, not a
+      publisher implementation or ACL conflict. Selecting an unspecified
+      conditional-slot, related-case prerequisite, target-version, or counted
+      decision evidence-ordering rule would invent authorization and publication
+      governance; independently sorted decision ID and digest arrays also lose
+      the required positional binding. The bounded INTERNAL_ERROR/500 mapping
+      for the exact database latch closes only the external redaction boundary;
+      it supplies none of the missing publisher authority.
+    fail_closed_choice: >-
+      Apply funding_disclosure_publisher_gate: the final action dispatcher
+      rejects its exact six FUNDING_DISCLOSURE operations before their first
+      write with SQLSTATE 55000, code
+      FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, and transaction delta exactly
+      zero. A separate executor, publisher, claim, completion, or failure
+      routine is not installed or executable. Pure digest helpers and the
+      reader for an already approved existing revision remain separately
+      declarable; no publisher function or owner/EXECUTE matrix is FINAL. The
+      exact six-operation database latch maps only to the already-declared
+      request-id-only INTERNAL_ERROR/500 boundary; near misses use the existing
+      generic classifier, and no publisher or PUB-023 readiness claim follows.
+    resolution: >-
+      Apply the exact four ordered slots, actions.review plus STEP_UP, pairwise
+      actor distinctness, conditional-slot booleans and VACANT semantics; one
+      current PUBLICATION.independent_editorial prerequisite per distinct case;
+      candidate target revision N; and the migrator-owned workflow-worker-only
+      publisher ACL. Approval does not remove the existing six-operation hold.
+  - id: R6E-PUB-PRIVATE-DIGEST-FRAMING
+    status: RESOLVED_BY_GFD_AUTHORITY_V1_IMPLEMENTATION_PENDING
+    authority: 감독자 결정 v1 / GFD-AUTHORITY-V1
+    prior_conflict: >-
+      The 0029 funding source declares private revision and entry digests but
+      does not provide an executable canonical framing for recomputing every
+      private digest in the 0041 reader.
+    fail_closed_choice: >-
+      The installed reader and projector both raise SQLSTATE 55000 with code
+      FUNDING_PROJECTION_DIGEST_ABI_UNAVAILABLE before source read, write,
+      replay return, or success return, with transaction delta exactly zero.
+      Eleven pure digest helpers remain internal with no runtime or PUBLIC
+      EXECUTE. Their existence does not support a PUB-023 availability,
+      download, projection, or end-to-end readiness claim.
+    resolution: >-
+      Use closed Gurine Canonical JSON V1, fixed-six decimal strings, UTC
+      microsecond timestamps and explicit null; include stored entryDigest in
+      public content; exclude receiptDigest from the revision preimage; compute
+      entry/set, revision, receipt, then event/response; and bind counted
+      decisions as ordered (slotOrdinal,slotId,decisionId,decisionReceiptDigest,
+      actorId) tuples rather than independently sorted arrays.

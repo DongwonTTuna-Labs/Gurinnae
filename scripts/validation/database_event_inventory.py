@@ -121,6 +121,14 @@ def _column_reference(node: Any) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _qualified_column_reference(node: Any) -> tuple[str, ...] | None:
+    fields = getattr(node, 'fields', ()) or ()
+    values = tuple(getattr(field, 'sval', None) for field in fields)
+    if not values or not all(isinstance(value, str) for value in values):
+        return None
+    return values
+
+
 def _do_jsonb_bindings(body: str) -> dict[str, dict[str, Any]]:
     text_payloads: dict[str, dict[str, Any]] = {}
     for match in DO_JSON_TEXT_RE.finditer(body):
@@ -164,6 +172,15 @@ def _event_rows_from_insert(
     result.require(
         update_columns == EVENT_COLUMNS[1:],
         f'{context}: event registry conflict update columns differ',
+    )
+    update_sources = [
+        _qualified_column_reference(getattr(target, 'val', None))
+        for target in getattr(conflict, 'targetList', ()) or ()
+    ]
+    result.require(
+        update_sources
+        == [('excluded', column) for column in EVENT_COLUMNS[1:]],
+        f'{context}: event registry conflict update values differ',
     )
     rows = getattr(statement.selectStmt, 'valuesLists', ()) or ()
     result.require(bool(rows), f'{context}: event registry upsert must use VALUES rows')

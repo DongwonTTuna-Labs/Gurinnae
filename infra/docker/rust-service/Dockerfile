@@ -112,6 +112,10 @@ FROM runtime AS identity-api
 COPY --from=build /workspace/target/release/gurine-identity-api /app/gurine-identity-api
 ENTRYPOINT ["/app/gurine-identity-api"]
 
+FROM runtime AS billing-gateway
+COPY --from=build /workspace/target/release/gurine-billing-gateway /app/gurine-billing-gateway
+ENTRYPOINT ["/app/gurine-billing-gateway"]
+
 FROM runtime AS submission-api
 COPY --from=build /workspace/target/release/gurine-submission-api /app/gurine-submission-api
 ENTRYPOINT ["/app/gurine-submission-api"]

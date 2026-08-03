@@ -98,15 +98,18 @@ def parse_rows(raw: str, width: int) -> dict[str, tuple[str, ...]]:
 
 
 def parse_binding_list(raw: str) -> list[dict[str, str]]:
-    """Parse an authored ``operation.path->viewModelField`` list."""
+    """Parse authored operation bindings, using ``::`` for dotted operation IDs."""
 
     bindings: list[dict[str, str]] = []
     for item in raw.split(","):
         source, separator, target = item.strip().partition("->")
         if separator != "->" or not source or not target:
             raise ValueError(f"invalid authored semantic binding: {item}")
-        operation_id, dot, field_path = source.partition(".")
-        if not dot or not operation_id or not field_path:
+        if "::" in source:
+            operation_id, separator, field_path = source.partition("::")
+        else:
+            operation_id, separator, field_path = source.partition(".")
+        if not separator or not operation_id or not field_path:
             raise ValueError(f"invalid authored operation source: {source}")
         bindings.append(
             {
@@ -155,6 +158,7 @@ PUB-031|controller|history|rights|security|retention|rights
 PUB-032|service|changes|content|data|liability|data
 PUB-033|commitment|conformance|commitment|roadmap|limitations|contact
 PUB-034|message|impact|message|reference|impact|actions
+PUB-035|mode|mode|independence|donation|mode|donation
 RSP-001|identity|verification|process|security|deadline|verification
 RSP-002|questions|deadline|questions|references|public-use|questions
 RSP-003|progress|save|questions|statement|consent|save
@@ -263,6 +267,7 @@ PUB-031|getPrivacyPolicy.id->policy_revision,getPrivacyPolicy.title->controller_
 PUB-032|getTerms.id->terms_revision,getTerms.title->terms_title|getTerms.status->terms_status,getTerms.updatedAt->updated_at|getTerms.summary->service_terms,getTerms.data->content_and_data_terms|getTerms.links->supporting_policies|getTerms.data->liability_and_prohibitions|getTerms.links->data_route
 PUB-033|getAccessibilityStatement.id->statement_revision,getAccessibilityStatement.title->statement_title|getAccessibilityStatement.status->conformance_status,getAccessibilityStatement.updatedAt->updated_at|getAccessibilityStatement.summary->commitment,getAccessibilityStatement.data->conformance_detail|getAccessibilityStatement.links->audit_and_roadmap|getAccessibilityStatement.data->known_limitations|getAccessibilityStatement.links->support_route
 PUB-034|getPublicSystemStatus.status->system_status,getPublicSystemStatus.asOf->as_of|getPublicSystemStatus.affectedCapabilities->affected_capabilities|getPublicSystemStatus.publicMessage->answer_first_message|getPublicSystemStatus.sourceStatus->status_evidence|getPublicSystemStatus.affectedCapabilities->unknown_impact|getPublicSystemStatus.$projection.safe_actions->safe_actions
+PUB-035|private.GetDonationFixtureOffer::authority->fixture_authority,private.GetDonationFixtureOffer::offerVersionId->offer_version_id|private.GetDonationFixtureOffer::productionReadinessEffect->production_readiness_effect|private.GetDonationFixtureOffer::authority->independence_authority|private.GetDonationFixtureOffer::offerDigest->offer_digest,private.GetDonationFixtureOffer::currency->currency,private.GetDonationFixtureOffer::tiers->fixture_tiers|private.GetDonationFixtureOffer::authority->unavailable_authority,private.GetDonationFixtureOffer::productionReadinessEffect->production_readiness_effect|private.GetDonationFixtureOffer::tiers->available_tiers,private.GetDonationFixtureOffer::cadences->available_cadences,private.GetDonationFixtureOffer::providers->available_providers
 RSP-001|getResponseAccessStatus.id->request_reference,getResponseAccessStatus.title->request_title|getResponseAccessStatus.status->access_status,getResponseAccessStatus.version->access_version|getResponseAccessStatus.summary->request_process,getResponseAccessStatus.data->deadline_and_sender|getResponseAccessStatus.links->security_support|getResponseAccessStatus.data->access_unknowns|getResponseAccessStatus.links->verification_action
 RSP-002|getResponseRequest.requestId->request_id,getResponseRequest.partyName->party_name|getResponseRequest.status->request_status,getResponseRequest.dueAt->due_at|getResponseRequest.questions->questions,getResponseRequest.publicationScope->publication_scope|getResponseRequest.attachmentsPolicy->attachment_policy,getResponseRequest.contact->verified_contact|getResponseRequest.publicationScope->publication_uncertainty|getResponseRequest.contact->support_action
 RSP-003|getResponseDraft.requestId->request_id,getResponseDraft.version->draft_version|getResponseDraft.savedAt->saved_at,getResponseDraft.expiresAt->expires_at|getResponseDraft.answers->answers|getResponseDraft.attachments->attachments,getResponseDraft.publicationConsent->consent_evidence|getResponseDraft.$projection.validation_unknowns->validation_unknowns|getResponseDraft.$projection.save_action->save_action
@@ -356,8 +361,9 @@ PUB-020.schemas|listPublicDatasets.$projection.schema_dictionary_projection->sch
 PUB-020.corrections|listPublicDatasets.$projection.correction_semantics_projection->correction_semantics_projection
 PUB-021.pagination|getPublicApiDocumentation.$projection.pagination_contract_projection->pagination_contract_projection
 PUB-022.team|getAboutContent.$projection.operating_entity_projection->operating_entity_projection
-PUB-023.expenses|getFundingContent.$projection.expense_projection->expense_projection
-PUB-023.donors|getFundingContent.$projection.donor_disclosure_projection->donor_disclosure_projection
+PUB-023.expenses|getFundingContent.data->funding_sections
+PUB-023.donors|getFundingContent.data->funding_sections
+PUB-035.receipt|private.QueueDonationIntent::requestId->request_id,private.QueueDonationIntent::jobId->job_id,private.QueueDonationIntent::status->receipt_status,private.QueueDonationIntent::receiptDigest->receipt_digest
 PUB-025.language|getEditorialPolicy.$projection.language_policy_projection->language_policy_projection
 PUB-025.response|getEditorialPolicy.$projection.right_of_reply_projection->right_of_reply_projection
 PUB-027.issue|getCorrectionRequestDraft.requestedChanges->requested_changes,getCorrectionRequestDraft.version->draft_version
@@ -436,6 +442,48 @@ ACC-001.notifications|getCurrentAccount.$projection.notification_projection->not
 )
 
 
+# Runtime-final exceptions are explicit and screen-owned.  They do not turn a
+# generic API ``data`` member into browser authority: the named strict mapper
+# must validate its closed inputs and emit only the named view-model.  Keeping
+# this registry set-equal to the small verified exception avoids treating an
+# invented ``$projection`` path as if it were an API field.
+SPECIALIZED_RUNTIME_MAPPERS = {
+    "PUB-023": {
+        "status": "FINAL",
+        "mapper": "apps/public-web/src/lib/server/public-funding-presentation.ts#publicFundingPresentation",
+        "view_model": "packages/ui/src/funding-transparency.ts#FundingTransparencyViewModel",
+        "strict_input_operations": [
+            "getFundingContent",
+            "listTransparencyReports",
+        ],
+        "download_bff": {
+            "route": "apps/public-web/src/routes/downloads/transparency-reports/[reportId]/+server.ts",
+            "response_mapper": "apps/public-web/src/lib/server/transparency-report-response.ts#transparencyReportResponse",
+            "byte_verifier": "apps/public-web/src/lib/server/transparency-report-download.ts#verifyTransparencyReportDownload",
+        },
+        "output_fields": [
+            "status",
+            "summary",
+            "updatedAt",
+            "sections",
+            "reports",
+        ],
+        "tests": [
+            "apps/public-web/src/lib/server/public-funding-presentation.test.ts",
+            "apps/public-web/src/lib/server/transparency-report-download.test.ts",
+            "apps/public-web/src/routes/downloads/transparency-reports/[reportId]/server.test.ts",
+            "tests/e2e/screens/pub-023.spec.ts",
+        ],
+        "rules": [
+            "Funding content and report-list DTOs are strict-validated before FundingTransparencyViewModel construction.",
+            "The expenses section remains UNAVAILABLE without approved public expense authority; no value is inferred.",
+            "The first approved report alone supplies the primary action, while every report keeps same-reportId JSON and CSV routes.",
+            "Downloaded bytes, format, filename, media type, length and all revision/content digests must match before response.",
+        ],
+    }
+}
+
+
 PROFILE_STATE_LABELS = {
     "awaiting-query": "검색어 입력 대기",
     "initial-loading": "처음 불러오는 중",
@@ -488,6 +536,8 @@ MANIFEST_STATE_SIGNAL_PATHS = {
     "unauthorized": "runtimeSignals.accessDecision",
     "forbidden": "runtimeSignals.accessDecision",
     "conflict": "runtimeSignals.concurrencyResult",
+    "method-unavailable": "runtimeSignals.methodAvailability",
+    "receipt": "runtimeSignals.receiptState",
 }
 
 
@@ -519,6 +569,8 @@ MANIFEST_STATE_REFINEMENTS = {
         "unauthorized": [],
         "forbidden": [],
         "conflict": [],
+        "method-unavailable": [],
+        "receipt": [],
     },
     "internal-data": {
         "loading": ["loading", "refreshing"],
@@ -719,6 +771,7 @@ rate-limited|요청 속도 제한|degraded
 reauth-required|재인증 필요|access
 receipt-expired-link|영수증 링크 만료|access
 receipt-temporarily-unavailable|영수증 일시 이용 불가|failure
+receipt|후원 의향 접수 영수증|receipt
 redacted-event|민감 감사 내용 가림|security
 redacted-input|민감 입력 가림|security
 regression|품질 회귀 감지|blocked
@@ -1138,6 +1191,74 @@ PRIORITY_SCREEN_REFINEMENTS: dict[str, dict[str, Any]] = {
                 "focus_test_id": "pub_018__heading",
             }
         ],
+    },
+    "PUB-023": {
+        "primary_action_id": "download-report",
+        "primary_consequence": "선택한 승인된 immutable funding disclosure revision을 같은 reportId에 결속된 canonical URL에서 다운로드한다.",
+        "exact_section_copy": {
+            "income": "후원·지원금·조직용 서비스.",
+            "reports": "기간별 투명성 보고서.",
+        },
+        "exact_section_source_bindings": {
+            "income": [
+                "getFundingContent.data",
+                "FundingDisclosurePublicV1.periodStart",
+                "FundingDisclosurePublicV1.periodEnd",
+                "FundingDisclosurePublicV1.revision",
+                "FundingDisclosurePublicV1.amountBand",
+                "FundingDisclosurePublicV1.concentrationState",
+            ],
+            "donors": [
+                "FundingDisclosurePublicV1.publicName",
+                "FundingDisclosurePublicV1.nonDisclosureReason",
+                "FundingDisclosurePublicV1.sourceLinks",
+                "FundingDisclosurePublicV1.unknownReason",
+            ],
+            "reports": [
+                "listTransparencyReports.items[].id",
+                "listTransparencyReports.items[].href",
+                "downloadTransparencyReport.reportId",
+                "downloadTransparencyReport.sourceRevisionDigest",
+                "downloadTransparencyReport.projectionDigest",
+                "downloadTransparencyReport.publicContentDigest",
+                "downloadTransparencyReport.contentSha256",
+            ],
+        },
+        "download_contract": {
+            "request_binding": {
+                "reportId": "listTransparencyReports.items[].id",
+            },
+            "href_binding": "listTransparencyReports.items[].href",
+            "must_equal": "/v1/transparency-reports/{reportId}/download",
+            "missing_or_mismatched_item": "DISABLED_FAIL_CLOSED",
+        },
+        "funding_concentration_contract": {
+            "states": [
+                "UNKNOWN",
+                "LE_5_PERCENT",
+                "GT_5_TO_15_PERCENT",
+                "GT_15_TO_25_PERCENT",
+                "GT_25_PERCENT",
+            ],
+            "unknown_reasons": [
+                "DENOMINATOR_UNKNOWN",
+                "GROUPING_DISPUTED",
+                "MULTIPLE_UNKNOWN_CAUSES",
+            ],
+            "inference_forbidden": True,
+        },
+    },
+    "PUB-035": {
+        "primary_action_id": "queue-donation",
+        "primary_consequence": "TEST_ONLY에서만 후원 의향을 QUEUED로 접수하며 결제·청구 성공을 주장하지 않는다.",
+        "exact_section_copy": {
+            "mode": "테스트 전용 제안만 제공하며 운영 기준이 없으면 후원을 접수하지 않습니다.",
+            "donation": "테스트 전용 금액대와 일회·정기 후원, 결제사 선택을 확인합니다.",
+            "receipt": "접수 대기 영수증만 표시하며 결제·청구 성공을 뜻하지 않습니다.",
+        },
+        "exact_notice": "후원은 접근권이 아니며 조사 대상 면제가 아닙니다",
+        "production_state": "UNAVAILABLE",
+        "production_action_enabled": False,
     },
     "PUB-005": {
         "primary_action_id": "view-latest",
@@ -1623,9 +1744,10 @@ def additive_operation_metadata(
         raise ValueError("additive resources: operation_bindings must be a mapping")
     binding = operation_bindings.get(operation_id)
     if not isinstance(binding, dict):
-        raise ValueError(f"{operation_id}: missing additive external operation binding")
-    if binding.get("scope") != "ADDITIVE_EXTERNAL":
-        raise ValueError(f"{operation_id}: operation binding is not ADDITIVE_EXTERNAL")
+        raise ValueError(f"{operation_id}: missing additive HTTP operation binding")
+    operation_scope = binding.get("scope")
+    if operation_scope not in {"ADDITIVE_EXTERNAL", "PRIVATE_IDENTITY_API"}:
+        raise ValueError(f"{operation_id}: unsupported additive HTTP operation scope")
 
     request_schemas = resources.get("request_schemas_by_operation")
     if not isinstance(request_schemas, dict):
@@ -1656,7 +1778,7 @@ def additive_operation_metadata(
 
     metadata = {
         "operation_id": operation_id,
-        "scope": "ADDITIVE_EXTERNAL",
+        "scope": operation_scope,
         "status": "READY",
         "api": operation.get("api"),
         "method": operation.get("method"),
@@ -1669,6 +1791,66 @@ def additive_operation_metadata(
     for field in ("api", "method", "path"):
         if not isinstance(metadata[field], str) or not metadata[field]:
             raise ValueError(f"{operation_id}: missing additive {field}")
+    return metadata
+
+
+def private_billing_operation_metadata(
+    operation_id: str,
+    operation: dict[str, Any],
+    resources: dict[str, Any],
+) -> dict[str, Any]:
+    bindings = resources.get("private_billing_gateway_operation_bindings")
+    if not isinstance(bindings, dict):
+        raise ValueError("private billing operation bindings must be a mapping")
+    binding = bindings.get(operation_id)
+    if not isinstance(binding, dict) or binding.get("scope") != "PRIVATE_BILLING_GATEWAY":
+        raise ValueError(f"{operation_id}: missing private billing operation binding")
+    if binding.get("operation_kind") != operation.get("operation_kind"):
+        raise ValueError(f"{operation_id}: private billing operation kind mismatch")
+
+    request_definitions = resources.get("private_billing_gateway_request_schemas")
+    if not isinstance(request_definitions, dict):
+        raise ValueError("private billing request schemas must be a mapping")
+    request_definition = request_definitions.get(operation_id)
+    if not isinstance(request_definition, dict):
+        raise ValueError(f"{operation_id}: missing private billing request schema")
+    request_schema = binding.get("request_schema")
+    if request_definition.get("name") != request_schema or operation.get(
+        "request_schema"
+    ) != request_schema:
+        raise ValueError(f"{operation_id}: private billing request schema mismatch")
+
+    response_schema = binding.get("success_schema")
+    if operation.get("response_schema") != response_schema:
+        raise ValueError(f"{operation_id}: private billing response schema mismatch")
+    if not isinstance(resources.get("schemas", {}).get(response_schema), dict):
+        raise ValueError(f"{operation_id}: private billing response schema is undefined")
+
+    entrypoint = operation.get("entrypoint")
+    if not isinstance(entrypoint, dict):
+        raise ValueError(f"{operation_id}: private billing entrypoint is missing")
+    success_status = binding.get("success_status")
+    if not isinstance(success_status, int) or isinstance(success_status, bool):
+        raise ValueError(f"{operation_id}: private billing success status is invalid")
+    declared_success = entrypoint.get("success_status")
+    if declared_success is not None and declared_success != success_status:
+        raise ValueError(f"{operation_id}: private billing success status mismatch")
+
+    metadata = {
+        "operation_id": operation_id,
+        "scope": "PRIVATE_BILLING_GATEWAY",
+        "status": "READY",
+        "api": "billing-gateway-private",
+        "method": entrypoint.get("method"),
+        "path": entrypoint.get("path"),
+        "request_schema": request_schema,
+        "response_schema": response_schema,
+        "success_status": success_status,
+        "operation": operation,
+    }
+    for field in ("method", "path"):
+        if not isinstance(metadata[field], str) or not metadata[field]:
+            raise ValueError(f"{operation_id}: missing private billing {field}")
     return metadata
 
 
@@ -1685,10 +1867,18 @@ def build_external_operation_catalog(
         "operation_id",
         "additive operations",
     )
-    duplicates = sorted(set(base_by) & set(additive_by))
+    private_by = addendum_operations.get("private_billing_gateway_operations")
+    if not isinstance(private_by, dict):
+        raise ValueError("private billing operations must be a mapping")
+    duplicates = sorted(
+        (set(base_by) & set(additive_by))
+        | (set(base_by) & set(private_by))
+        | (set(additive_by) & set(private_by))
+    )
     if duplicates:
         raise ValueError(
-            f"duplicate external operation IDs across base/additive catalogs: {duplicates}"
+            "duplicate operation IDs across base/additive/private billing catalogs: "
+            f"{duplicates}"
         )
 
     operation_bindings = resources.get("operation_bindings")
@@ -1699,13 +1889,35 @@ def build_external_operation_catalog(
         for operation_id, binding in operation_bindings.items()
         if isinstance(binding, dict) and binding.get("scope") == "ADDITIVE_EXTERNAL"
     }
-    if external_binding_ids != set(additive_by):
-        missing = sorted(set(additive_by) - external_binding_ids)
-        extra = sorted(external_binding_ids - set(additive_by))
+    private_identity_binding_ids = {
+        operation_id
+        for operation_id, binding in operation_bindings.items()
+        if isinstance(binding, dict)
+        and binding.get("scope") == "PRIVATE_IDENTITY_API"
+    }
+    additive_http_ids = external_binding_ids | private_identity_binding_ids
+    if (
+        external_binding_ids & private_identity_binding_ids
+        or additive_http_ids != set(additive_by)
+    ):
+        missing = sorted(set(additive_by) - additive_http_ids)
+        extra = sorted(additive_http_ids - set(additive_by))
         raise ValueError(
-            "additive external operation binding set mismatch: "
+            "additive HTTP operation binding partition mismatch: "
             f"missing={missing}, extra={extra}"
         )
+    declared_sets = resources.get("set_equality")
+    if not isinstance(declared_sets, dict):
+        raise ValueError("additive resources: set_equality must be a mapping")
+    if set(declared_sets.get("additive_external_operation_ids", [])) != (
+        external_binding_ids
+    ) or set(declared_sets.get("private_identity_api_operation_ids", [])) != (
+        private_identity_binding_ids
+    ):
+        raise ValueError("additive HTTP operation declared sets differ from binding scopes")
+    private_bindings = resources.get("private_billing_gateway_operation_bindings")
+    if not isinstance(private_bindings, dict) or set(private_bindings) != set(private_by):
+        raise ValueError("private billing operation binding set mismatch")
 
     catalog: dict[str, dict[str, Any]] = {
         operation_id: {
@@ -1726,6 +1938,14 @@ def build_external_operation_catalog(
         {
             operation_id: additive_operation_metadata(operation, resources)
             for operation_id, operation in additive_by.items()
+        }
+    )
+    catalog.update(
+        {
+            operation_id: private_billing_operation_metadata(
+                operation_id, operation, resources
+            )
+            for operation_id, operation in private_by.items()
         }
     )
     return catalog
@@ -1780,6 +2000,7 @@ def additive_operation_contract(operation: dict[str, Any], resources: dict[str, 
     response_fields = schema_fields(operation.get("response", ""), resources)
     browser_request, server_request = split_browser_fields(request_fields)
     browser_response, server_response = split_browser_fields(response_fields)
+    private_identity_api = metadata["scope"] == "PRIVATE_IDENTITY_API"
     return {
         "operation_id": operation["operation_id"],
         "source": "specs/product/addendum-operation-contracts.yaml",
@@ -1794,12 +2015,62 @@ def additive_operation_contract(operation: dict[str, Any], resources: dict[str, 
         "success_status": metadata["success_status"],
         "response_field_set": browser_response,
         "server_only_response_field_set": server_response,
-        "browser_boundary": "BFF_PROJECTED" if server_request or server_response else "BROWSER_SAFE_PROJECTION_REQUIRED",
-        "rendering_rule": "DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.",
+        "browser_boundary": (
+            "BFF_PROJECTED_SERVER_ONLY_OPERATION"
+            if private_identity_api
+            else "BFF_PROJECTED"
+            if server_request or server_response
+            else "BROWSER_SAFE_PROJECTION_REQUIRED"
+        ),
+        "rendering_rule": (
+            "Private Identity API DTO 전체 렌더링과 browser direct 호출을 금지하고 review-console BFF가 화면별 allowlist만 투영한다."
+            if private_identity_api
+            else "DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다."
+        ),
     }
 
 
-def operation_ui_dependencies(operation: dict[str, Any]) -> list[str]:
+def private_billing_operation_contract(
+    metadata: dict[str, Any], resources: dict[str, Any]
+) -> dict[str, Any]:
+    operation_id = metadata["operation_id"]
+    request_definition = resources["private_billing_gateway_request_schemas"][
+        operation_id
+    ]
+    required = set(
+        request_definition.get(
+            "required", request_definition.get("fields", {}).keys()
+        )
+    )
+    request_fields = [
+        {"name": name, "type": field_type, "required": name in required}
+        for name, field_type in request_definition.get("fields", {}).items()
+    ]
+    response_fields = schema_fields(metadata["response_schema"], resources)
+    browser_request, server_request = split_browser_fields(request_fields)
+    browser_response, server_response = split_browser_fields(response_fields)
+    return {
+        "operation_id": operation_id,
+        "source": "specs/product/addendum-operation-contracts.yaml#private_billing_gateway_operations",
+        "kind": metadata["operation"]["operation_kind"],
+        "api": metadata["api"],
+        "method": metadata["method"],
+        "path": metadata["path"],
+        "request_schema": metadata["request_schema"],
+        "request_field_set": browser_request,
+        "server_only_request_field_set": server_request,
+        "response_schema": metadata["response_schema"],
+        "success_status": metadata["success_status"],
+        "response_field_set": browser_response,
+        "server_only_response_field_set": server_response,
+        "browser_boundary": "BFF_PROJECTED_SERVER_ONLY_OPERATION",
+        "rendering_rule": "Private billing-gateway DTO 전체 렌더링과 browser direct 호출을 금지하고 public-web BFF가 화면별 allowlist만 투영한다.",
+    }
+
+
+def operation_ui_dependencies(
+    operation: dict[str, Any], *, closed_data_mapper: bool = False
+) -> list[str]:
     fields = operation["response_field_set"]
     names = {field.get("name") for field in fields if isinstance(field, dict)}
     dependencies: list[str] = []
@@ -1807,7 +2078,7 @@ def operation_ui_dependencies(operation: dict[str, Any]) -> list[str]:
         dependencies.append(
             f"{operation['operation_id']} requires a closed non-empty response field contract before its UI can ship."
         )
-    if "data" in names:
+    if "data" in names and not closed_data_mapper:
         dependencies.append(
             f"{operation['operation_id']} must replace its generic data field with a closed screen-owned projection."
         )
@@ -2440,7 +2711,7 @@ def build_effective_contracts(
     additive_by = {
         operation_id: operation["operation"]
         for operation_id, operation in external_catalog.items()
-        if operation["scope"] == "ADDITIVE_EXTERNAL"
+        if operation["scope"] in {"ADDITIVE_EXTERNAL", "PRIVATE_IDENTITY_API"}
     }
     component_by = unique_by_key(
         component_catalog["components"], "id", "component catalog"
@@ -2514,10 +2785,23 @@ def build_effective_contracts(
             )
             if operation["scope"] == "BASE":
                 operation_rows.append(base_operation_contract(operation["operation"]))
-            elif operation["operation_id"] not in additive_screen_operations:
+            elif operation["scope"] == "PRIVATE_BILLING_GATEWAY":
+                operation_rows.append(
+                    private_billing_operation_contract(operation, resources)
+                )
+            elif operation["scope"] == "ADDITIVE_EXTERNAL" and operation[
+                "operation_id"
+            ] not in additive_screen_operations:
                 raise ValueError(
                     f"{screen_id}:{operation['operation_id']}: additive data requirement "
                     "has no authored section binding"
+                )
+            elif operation["scope"] not in {
+                "ADDITIVE_EXTERNAL",
+                "PRIVATE_BILLING_GATEWAY",
+            }:
+                raise ValueError(
+                    f"{screen_id}:{operation['operation_id']}: unsupported operation scope"
                 )
         operation_rows.sort(key=lambda row: row["operation_id"])
         for operation_id, section_id in sorted(additive_bindings_by_screen.get(screen_id, [])):
@@ -2554,10 +2838,26 @@ def build_effective_contracts(
             dimension["component"] = resolved["component"]
             dimension["component_variant"] = resolved["variant"]
             dimension["component_resolution_source"] = resolved["resolution_source"]
+        runtime_mapper = SPECIALIZED_RUNTIME_MAPPERS.get(screen_id)
+        strict_input_operations = (
+            set(runtime_mapper["strict_input_operations"])
+            if runtime_mapper is not None
+            else set()
+        )
+        if not strict_input_operations <= {
+            operation["operation_id"] for operation in operation_rows
+        }:
+            raise ValueError(
+                f"{screen_id}: specialized runtime mapper names an unbound input operation"
+            )
         integration_dependencies = [
             dependency
             for operation in operation_rows
-            for dependency in operation_ui_dependencies(operation)
+            for dependency in operation_ui_dependencies(
+                operation,
+                closed_data_mapper=operation["operation_id"]
+                in strict_input_operations,
+            )
         ] + projection_dependencies + section_projection_dependencies
         typed_view_model = f"{snake_screen(screen_id).title().replace('_', '')}ScreenVmV1"
         row: dict[str, Any] = {
@@ -2618,12 +2918,22 @@ def build_effective_contracts(
             "operation_field_contracts": operation_rows,
             "integration_dependencies": integration_dependencies,
             "design_contract_status": "DECISION_FINAL",
-            "runtime_implementation_status": "OPEN_IMPLEMENTATION",
+            "runtime_implementation_status": (
+                runtime_mapper["status"]
+                if runtime_mapper is not None and not integration_dependencies
+                else "OPEN_IMPLEMENTATION"
+            ),
             "dto_rendering_forbidden": True,
             "raw_json_form_forbidden": True,
         }
         if refinement:
             row["priority_semantic_refinement"] = copy.deepcopy(refinement)
+        if runtime_mapper is not None:
+            if integration_dependencies:
+                raise ValueError(
+                    f"{screen_id}: FINAL specialized runtime mapper retains integration dependencies"
+                )
+            row["specialized_runtime_mapper"] = copy.deepcopy(runtime_mapper)
         rows.append(row)
     manifest_mismatches = sum(
         set(manifest_by[screen["id"]]["states"])
@@ -2654,7 +2964,7 @@ def build_effective_contracts(
             "specs/product/addendum-resource-error-contracts.yaml",
         ],
         "rules": [
-            "The screen set is exactly equal to the 94-screen authority catalog.",
+            "The screen set is exactly equal to the 95-screen authority catalog.",
             "Every screen binds object, state, answer, evidence, unknown and next action through its authored operation-to-field registry.",
             "A route renders only its screen-specific typed view-model; generic renderers, response dumps and JSON forms are forbidden.",
             "Operation field sets are copied from their exact closed contracts and do not authorize presentation of every DTO field.",
@@ -2696,8 +3006,8 @@ def build_effective_contracts(
         },
         "canonical_profile_set_equality_oracle": {
             "screen_key_set": "effective screens == screen-catalog screens == screen-build-manifest screens",
-            "row_count": 94,
-            "canonical_profile_source_count": 94,
+            "row_count": 95,
+            "canonical_profile_source_count": 95,
             "manifest_refinement_count": manifest_mismatches,
             "archetype_override_count": archetype_mismatches,
             "canonical_profile_state_occurrences": sum(
@@ -2741,14 +3051,14 @@ def build_effective_contracts(
                 "console",
                 "client log",
             ],
-            "set_equality_scan": "all 94 closed screen schemas + all 492 section leaf/nested/array allowlists + all action and journey browser bindings",
+            "set_equality_scan": "all 95 closed screen schemas + all 496 section leaf/nested/array allowlists + all action and journey browser bindings",
             "runtime_status": "OPEN_IMPLEMENTATION",
         },
         "implementation_requirements": [
             "Generate one handwritten BFF mapper and one runtime validator for each typed_view_model; a generic screen mapper is forbidden.",
             "Resolve every per-screen integration_dependencies item in the owning API/resource schema before implementation status can become FINAL.",
             "Add field-removal contract tests proving object, state, answer, evidence, unknown, owner/deadline and next-action fields are required.",
-            "Provide realistic non-empty fixtures for all 94 view-models without exposing token, session, credential or assertion fields.",
+            "Provide realistic non-empty fixtures for all 95 view-models without exposing token, session, credential or assertion fields.",
         ],
         "screens": rows,
     }
@@ -4158,7 +4468,7 @@ def build_accessibility_contracts(
                 "history_restore_focus_test_id": f"{snake_screen(screen_id)}__action__{action_id.replace('-', '_')}",
             }
         )
-    if len(screen_rows) != 94 or len(nav_rows) != 108:
+    if len(screen_rows) != 95 or len(nav_rows) != 109:
         raise ValueError("responsive or navigation focus source set changed")
     document = {
         "schema_version": 1,
@@ -4172,8 +4482,8 @@ def build_accessibility_contracts(
             "specs/ui/navigation-action-contracts.yaml",
         ],
         "set_equality": {
-            "screen_contracts": 94,
-            "navigation_focus_contracts": 108,
+            "screen_contracts": 95,
+            "navigation_focus_contracts": 109,
             "required_viewport_zoom_checks_per_screen": 5,
         },
         "global_rules": [
@@ -4272,8 +4582,24 @@ def build_documents() -> dict[str, dict[str, Any]]:
         component["id"]: component for component in component_catalog["components"]
     }
     screen_by = {screen["id"]: screen for screen in catalog["screens"]}
+    manifest_by = {screen["id"]: screen for screen in manifest["screens"]}
     for screen_id, refinement in PRIORITY_SCREEN_REFINEMENTS.items():
         section_ids = {section["id"] for section in screen_by[screen_id]["sections"]}
+        screen_sections = {
+            section["id"]: section for section in screen_by[screen_id]["sections"]
+        }
+        manifest_sections = {
+            section["id"]: section
+            for section in manifest_by[screen_id]["section_order"]
+        }
+        for section_id, exact_copy in refinement.get("exact_section_copy", {}).items():
+            if section_id not in screen_sections or section_id not in manifest_sections:
+                raise ValueError(f"{screen_id}.{section_id}: exact copy section missing")
+            if (
+                screen_sections[section_id].get("purpose") != exact_copy
+                or manifest_sections[section_id].get("purpose") != exact_copy
+            ):
+                raise ValueError(f"{screen_id}.{section_id}: exact section copy differs")
         for section_id, override in refinement.get("component_overrides", {}).items():
             if section_id not in section_ids:
                 raise ValueError(f"{screen_id}.{section_id}: component override section missing")

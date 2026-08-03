@@ -21,7 +21,7 @@ trap cleanup EXIT
 docker run --rm -d --name "$container" \
   -e POSTGRES_DB="$database" \
   -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_HOST_AUTH_METHOD=trust \
   -p 127.0.0.1::5432 \
   postgres:18.4-bookworm@sha256:d9c83446333daec3f0588cc709adb80c26090b7f9f0f7ec8d43c243385d79818 >/dev/null
 
@@ -40,9 +40,8 @@ for _ in $(seq 1 60); do
 done
 [[ -n "$port" && "$ready" == 1 ]] || { echo "workspace postgres was not ready" >&2; exit 1; }
 
-for migration in "$root"/db/migrations/*.sql; do
-  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
-done
+mapfile -t migrations < <(printf '%s\n' "$root"/db/migrations/*.sql | LC_ALL=C sort)
+bash "$root"/scripts/apply-test-migrations-with-r6e-roles.sh "$container" "$database" "${migrations[@]}"
 
 database_url="postgres://postgres:postgres@127.0.0.1:${port}/${database}"
 observation_path="/tmp/gurine-acceptance-observation-${BASHPID}"

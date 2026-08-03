@@ -7,6 +7,7 @@ inputs. Handwritten policy modules are never overwritten once present.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -24,6 +25,23 @@ OPENAPI_DOCUMENTS = {
     "control-api": "specs/generated/control-api.openapi.json",
     "identity-provider": "specs/generated/identity-provider.openapi.json",
     "identity-service-internal": "specs/generated/identity-service-internal.openapi.json",
+}
+ADDITIVE_OPERATION_CONTRACT = "specs/product/addendum-operation-contracts.yaml"
+ADDITIVE_RESOURCE_CONTRACT = "specs/product/addendum-resource-error-contracts.yaml"
+ADDITIVE_EXTERNAL_AUTH = {
+    "PUBLIC_QUERY": ("anonymous", "not-applicable"),
+    "CONTROL_QUERY": ("actor-assertion-and-capability", "not-applicable"),
+    "CONTROL_COMMAND": ("actor-assertion-and-capability", "required"),
+    "SUBMISSION_SCOPED_QUERY": (
+        "bff-service-assertion-and-scoped-submission-session",
+        "not-applicable",
+    ),
+    "SUBMISSION_SCOPED_COMMAND": (
+        "bff-service-assertion-and-scoped-submission-session",
+        "required",
+    ),
+    "SUBMISSION_ANONYMOUS_COMMAND": ("bff-service-assertion", "required"),
+    "SUBMISSION_RECEIPT_EXCHANGE_COMMAND": ("bff-service-assertion", "required"),
 }
 
 
@@ -613,8 +631,110 @@ subtle = {{ path = "vendor/subtle-2.6.0" }}
     )
 
 
+def additive_external_operations() -> list[dict[str, Any]]:
+    addendum = load_yaml(ADDITIVE_OPERATION_CONTRACT)
+    resource_contract = load_yaml(ADDITIVE_RESOURCE_CONTRACT)
+    source_rows = addendum.get("operations")
+    bindings = resource_contract.get("operation_bindings")
+    if not isinstance(source_rows, list) or not isinstance(bindings, dict):
+        raise ValueError("additive operation contracts have an invalid shape")
+    declared_sets = resource_contract.get("set_equality")
+    if not isinstance(declared_sets, dict):
+        raise ValueError("additive resource contract has no set-equality declarations")
+
+    def declared_ids(name: str) -> set[str]:
+        values = declared_sets.get(name)
+        if not isinstance(values, list) or not all(
+            isinstance(value, str) for value in values
+        ):
+            raise ValueError(f"additive resource contract has invalid {name}")
+        return set(values)
+
+    rows_by_id = {
+        row["operation_id"]: row
+        for row in source_rows
+        if isinstance(row, dict) and isinstance(row.get("operation_id"), str)
+    }
+    if len(rows_by_id) != len(source_rows):
+        raise ValueError("additive operation contract contains duplicate or invalid ids")
+    external_ids = {
+        operation_id
+        for operation_id, binding in bindings.items()
+        if isinstance(binding, dict) and binding.get("scope") == "ADDITIVE_EXTERNAL"
+    }
+    private_ids = {
+        operation_id
+        for operation_id, binding in bindings.items()
+        if isinstance(binding, dict) and binding.get("scope") != "ADDITIVE_EXTERNAL"
+    }
+    source_ids = set(rows_by_id)
+    declared_external_ids = declared_ids("additive_external_operation_ids")
+    declared_private_identity_ids = declared_ids("private_identity_api_operation_ids")
+    declared_private_service_ids = declared_ids("private_control_service_operation_ids")
+    if external_ids & private_ids:
+        raise ValueError("additive external and private operation bindings overlap")
+    if external_ids != declared_external_ids:
+        raise ValueError("additive external bindings differ from the declared set")
+    if declared_private_identity_ids & external_ids:
+        raise ValueError("private identity operations appear in additive external bindings")
+    if declared_private_service_ids & external_ids:
+        raise ValueError("private service operations appear in additive external bindings")
+    if source_ids != external_ids | (source_ids & private_ids):
+        raise ValueError("additive operation bindings contain unknown source ids")
+    if external_ids - source_ids:
+        raise ValueError("additive external bindings are missing source operations")
+    if source_ids & private_ids != declared_private_identity_ids:
+        raise ValueError("additive source operations include an unexpected private boundary")
+
+    external_rows: list[dict[str, Any]] = []
+    for operation_id in sorted(external_ids):
+        source = rows_by_id[operation_id]
+        binding = bindings[operation_id]
+        profile = binding.get("transport_profile") if isinstance(binding, dict) else None
+        auth_contract = ADDITIVE_EXTERNAL_AUTH.get(profile)
+        if auth_contract is None:
+            raise ValueError(
+                f"{operation_id}: unsupported additive external transport profile {profile!r}"
+            )
+        api = source.get("api")
+        method = source.get("method")
+        kind = source.get("kind")
+        assurance = source.get("assurance")
+        capability = source.get("capability")
+        if api not in {"public-api", "submission-api", "control-api"}:
+            raise ValueError(f"{operation_id}: invalid additive external api {api!r}")
+        if not all(isinstance(value, str) and value for value in (method, kind, assurance)):
+            raise ValueError(f"{operation_id}: incomplete additive external operation")
+        auth, idempotency = auth_contract
+        external_rows.append(
+            {
+                "operation_id": operation_id,
+                "api": api,
+                "method": method,
+                "path": source.get("path"),
+                "auth": auth,
+                "capability": capability if isinstance(capability, str) else "none",
+                "idempotency": idempotency,
+                "operation_kind": kind,
+                "assurance_level": assurance,
+                "step_up_required": assurance == "STEP_UP",
+            }
+        )
+    return external_rows
+
+
 def operation_catalog() -> list[dict[str, Any]]:
     operations = list(load_yaml("specs/api/operation-contracts.yaml")["operations"])
+    base_ids = {
+        operation["operation_id"]
+        for operation in operations
+        if isinstance(operation, dict) and isinstance(operation.get("operation_id"), str)
+    }
+    external_operations = additive_external_operations()
+    external_ids = {operation["operation_id"] for operation in external_operations}
+    if base_ids & external_ids:
+        raise ValueError("base and additive external operation catalogs overlap")
+    operations.extend(external_operations)
     identity_document = json.loads(
         (ROOT / OPENAPI_DOCUMENTS["identity-service-internal"]).read_text(encoding="utf-8")
     )
@@ -645,6 +765,15 @@ def operation_catalog() -> list[dict[str, Any]]:
 def operation_spec_sources(
     operations: list[dict[str, Any]], samples: dict[str, tuple[int, str, Any]]
 ) -> dict[str, str]:
+    operation_ids = {operation["operation_id"] for operation in operations}
+    sample_ids = set(samples)
+    if operation_ids != sample_ids:
+        missing_samples = sorted(operation_ids - sample_ids)
+        extra_samples = sorted(sample_ids - operation_ids)
+        raise ValueError(
+            "operation catalog and response samples differ: "
+            f"missing_samples={missing_samples}, extra_samples={extra_samples}"
+        )
     by_api: dict[str, list[dict[str, Any]]] = {}
     for operation in operations:
         by_api.setdefault(operation["api"], []).append(operation)
@@ -1261,11 +1390,19 @@ button:focus-visible, a:focus-visible { outline: 3px solid #d17039; outline-offs
     )
 
 
-def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Materialize the source-derived Rust and SvelteKit product surface."
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    parse_args(argv)
     rust_workspace()
     screens = load_yaml("specs/ui/screen-build-manifest.yaml")["screens"]
     frontend_workspace(screens)
-    print("materialized Rust workspace and 94 SvelteKit routes")
+    print(f"materialized Rust workspace and {len(screens)} SvelteKit routes")
 
 
 if __name__ == "__main__":

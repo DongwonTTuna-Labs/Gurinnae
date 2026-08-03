@@ -170,7 +170,7 @@ def main() -> None:
     document["scope"] = "all 102 authority navigation actions with owner-resolved destinations"
     document.pop("ambiguities", None)
     document["owner_decisions"] = [
-        "Dynamic task and notification links use only server-produced href fields validated against the 94-route same-origin catalog.",
+        "Dynamic task and notification links use only server-produced href fields validated against the 95-route same-origin catalog.",
         "Response help and link-reissue paths use the public contact form without carrying response object identity in the URL.",
         "Additional-material navigation on RSP-006 opens guidance only; it does not invent a supplemental-submission API.",
         "Query preservation excludes cursor, token, proof and secret fields and uses only the exact per-screen allowlists in this file.",

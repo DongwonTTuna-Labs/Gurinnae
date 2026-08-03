@@ -50,6 +50,8 @@ install -D -m 0644 "$fixture_dir/generated-legal-content-published.json" \
   "$preflight_fixture_root/verification/generated-legal-content.json"
 install -D -m 0644 "$root/specs/legal/law-enforcement-request-procedure.yaml" \
   "$preflight_fixture_root/specs/legal/law-enforcement-request-procedure.yaml"
+install -D -m 0644 "$root/db/migrations/0041_r6e_monetization_runtime.sql" \
+  "$preflight_fixture_root/db/migrations/0041_r6e_monetization_runtime.sql"
 preflight_script="$preflight_fixture_root/infra/scripts/production-preflight.sh"
 draft_legal_content="$fixture_dir/generated-legal-content-draft.json"
 published_legal_content="$fixture_dir/generated-legal-content-published.json"
@@ -64,6 +66,8 @@ open_dart_bindings_sha="$(sha256sum "$open_dart_bindings" | awk '{print $1}')"
 
 preflight_env=(
   GURINE_ENV=production POSTGRES_DB=gurine POSTGRES_USER=gurine POSTGRES_PASSWORD=strong-test-value
+  ROLE_PROVISIONER_DATABASE_URL=postgresql://cluster_admin:secret@postgres/gurine
+  ROLE_PROVISIONER_EXPECTED_ACTOR=cluster_admin
   MIGRATOR_DATABASE_URL=postgresql://migrator:secret@postgres/gurine
   PUBLIC_DATABASE_URL=postgresql://public:secret@postgres/gurine
   CONTROL_DATABASE_URL=postgresql://control:secret@postgres/gurine
@@ -75,10 +79,24 @@ preflight_env=(
   NOTIFICATION_DATABASE_URL=postgresql://notification:secret@postgres/gurine
   WORKFLOW_DATABASE_URL=postgresql://workflow:secret@postgres/gurine
   DOCUMENT_EXTRACTOR_DATABASE_URL=postgresql://extractor:secret@postgres/gurine
+  ECONOMICS_DATABASE_URL=
   SCHEDULER_DATABASE_URL=postgresql://scheduler:secret@postgres/gurine
   EGRESS_DATABASE_URL=postgresql://gurine_egress_gateway:secret@postgres/gurine
+  BILLING_DATABASE_URL=postgresql://gurine_billing_gateway:secret@postgres/gurine
   PUBLIC_API_INTERNAL_URL=http://public-api:8080 CONTROL_API_INTERNAL_URL=http://control-api:8081
   IDENTITY_API_INTERNAL_URL=http://identity-api:8083 SUBMISSION_API_INTERNAL_URL=http://submission-api:8082
+  BILLING_GATEWAY_INTERNAL_URL=http://billing-gateway:8092 BILLING_GATEWAY_MODE=DISABLED
+  DONATION_TEST_PAYMENT_OUTCOME=
+  PAYMENT_FIXTURE_BILLING_HMAC_KEY_CURRENT=
+  PAYMENT_FIXTURE_BILLING_HMAC_KEY_PREVIOUS=
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT=
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION=
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS=
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION=
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT=
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION=
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS=
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION=
   PUBLIC_BASE_URL=https://public.gurine.test REVIEW_BASE_URL=https://review.gurine.test
   RESPONSE_BASE_URL=https://respond.gurine.test OIDC_EGRESS_URL=http://egress-gateway:8090/oidc
   OIDC_ISSUER_URL=https://identity.gurine.test OIDC_CLIENT_ID=gurine-review
@@ -94,6 +112,7 @@ preflight_env=(
   AUDIT_CHAIN_HMAC_KEY="$key" FIELD_ENCRYPTION_KEY_CURRENT="$key" TOKEN_HMAC_KEY="$key"
   SUPPLIER_IDENTIFIER_HMAC_KEY="$supplier_identifier_hmac_key"
   IDENTITY_SERVICE_HMAC_KEY_CURRENT="$key" IDENTITY_ASSERTION_HMAC_KEY_CURRENT="$key"
+  PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT="$key"
   PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT="$key" RESPONSE_PORTAL_SUBMISSION_HMAC_KEY_CURRENT="$key"
   SESSION_COOKIE_KEY_CURRENT="$key" SUBMISSION_COOKIE_KEY_CURRENT="$key"
   BOT_CHALLENGE_SECRET_KEY="$key" BOT_CHALLENGE_SITE_KEY=turnstile-production-test-site-key
@@ -125,6 +144,7 @@ run_preflight_mode_with_results() {
     GURINE_TEST_SCHEDULE_RESULT="$schedule_result" \
     GURINE_TEST_SOURCE_LICENSE_RESULT="$source_license_result" \
     GURINE_TEST_PRIVACY_ACCESS_POLICY_RESULT="${GURINE_TEST_PRIVACY_ACCESS_POLICY_RESULT:-t}" \
+    GURINE_TEST_R6E_ROLE_RESULT="${GURINE_TEST_R6E_ROLE_RESULT:-t}" \
     GURINE_TEST_PSQL_AVAILABLE=true "$@" \
     bash -c '
       command() {
@@ -178,6 +198,19 @@ run_preflight_mode_with_results() {
           case "$GURINE_TEST_PRIVACY_ACCESS_POLICY_RESULT" in
             t|f) printf "%s\n" "$GURINE_TEST_PRIVACY_ACCESS_POLICY_RESULT" ;;
             missing|duplicate|expired|malformed|test_only) printf "f\n" ;;
+            query_error) return 1 ;;
+            *) return 1 ;;
+          esac
+        elif [[ "$query" == *ops.assert_r6e_runtime_role_postconditions_v1* ]]; then
+          [[ "$query" == *pg_authid* \
+            && "$query" == *pg_auth_members* \
+            && "$query" == *pg_db_role_setting* \
+            && "$query" == *pg_shdepend* \
+            && "$query" == *actor.rolsuper* \
+            && "$query" == *public._sqlx_migrations* \
+            && "$query" == *expected_migration_checksum* ]] || return 1
+          case "$GURINE_TEST_R6E_ROLE_RESULT" in
+            t|f) printf "%s\n" "$GURINE_TEST_R6E_ROLE_RESULT" ;;
             query_error) return 1 ;;
             *) return 1 ;;
           esac
@@ -387,6 +420,49 @@ done
 expect_preflight_failure \
   "GURINE_PRIVACY_CONTROLLER must be a non-blank value between 2 and 512 characters" \
   "GURINE_PRIVACY_CONTROLLER=   "
+expect_preflight_failure \
+  "ROLE_PROVISIONER_DATABASE_URL must authenticate as ROLE_PROVISIONER_EXPECTED_ACTOR" \
+  ROLE_PROVISIONER_DATABASE_URL=postgresql://wrong_actor:secret@postgres/gurine
+expect_preflight_failure \
+  "ROLE_PROVISIONER_DATABASE_URL must be separate from runtime and migrator URLs" \
+  ROLE_PROVISIONER_DATABASE_URL=postgresql://cluster_admin:secret@postgres/gurine \
+  MIGRATOR_DATABASE_URL=postgresql://cluster_admin:secret@postgres/gurine
+expect_preflight_failure \
+  "ROLE_PROVISIONER_EXPECTED_ACTOR is forbidden in runtime and migrator URLs" \
+  MIGRATOR_DATABASE_URL=postgresql://cluster_admin:different@postgres/gurine
+expect_preflight_failure \
+  "BILLING_DATABASE_URL must authenticate as gurine_billing_gateway" \
+  BILLING_DATABASE_URL=postgresql://control:secret@postgres/gurine
+expect_preflight_failure \
+  "ECONOMICS_DATABASE_URL must authenticate as gurine_economics_importer when configured" \
+  ECONOMICS_DATABASE_URL=postgresql://workflow:secret@postgres/gurine
+expect_preflight_failure \
+  "BILLING_GATEWAY_MODE must be DISABLED for production preflight" \
+  BILLING_GATEWAY_MODE=TEST_ONLY
+expect_preflight_failure \
+  "DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN is forbidden outside test mode" \
+  DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN=fixture-payment-token
+expect_preflight_failure \
+  "DONATION_TEST_PAYMENT_OUTCOME is forbidden outside test mode" \
+  DONATION_TEST_PAYMENT_OUTCOME=SUCCEEDED
+for fixture_name in \
+  PAYMENT_FIXTURE_BILLING_HMAC_KEY_CURRENT \
+  PAYMENT_FIXTURE_BILLING_HMAC_KEY_PREVIOUS \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS \
+  PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS \
+  PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION; do
+  expect_preflight_failure \
+    "$fixture_name is forbidden outside test mode" \
+    "$fixture_name=fixture-value"
+done
+expect_preflight_failure \
+  "PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT is not valid base64" \
+  PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT=not-base64
 
 expect_preflight_failure \
   "GURINE_EXTERNAL_KOREAN_COUNSEL_REVIEW_PATH is required" \
@@ -506,6 +582,12 @@ expect_preflight_failure \
 
 expect_preflight_failure "psql is required" GURINE_TEST_PSQL_AVAILABLE=false
 expect_preflight_failure_with_results \
+  "R6e runtime-role catalog query failed" t t \
+  GURINE_TEST_R6E_ROLE_RESULT=query_error
+expect_preflight_failure_with_results \
+  "R6e runtime-role contract or migration row 41 is invalid" t t \
+  GURINE_TEST_R6E_ROLE_RESULT=f
+expect_preflight_failure_with_results \
   "deployment database approved record-class schedule query failed" query_error t
 for schedule_failure in \
   empty required_class_gap pii_class_gap agent_runtime_gap unknown_extra \
@@ -537,6 +619,8 @@ expect_preflight_failure_with_results \
   "an enabled connector lacks current production source-license evidence" \
   t f "${open_dart_env[@]}"
 expect_preflight_success "${open_dart_env[@]}"
+expect_preflight_success \
+  ECONOMICS_DATABASE_URL=postgresql://gurine_economics_importer:secret@postgres/gurine
 expect_preflight_success
 
 printf 'production rejection and TEST_HARNESS structural preflight gates: PASS\n'
@@ -545,11 +629,11 @@ if [[ "$preflight_only" == "true" ]]; then
 fi
 
 "${compose[@]}" up --detach --wait --wait-timeout 300
-[[ "$("${compose[@]}" config --services | wc -l)" -eq 20 ]]
+[[ "$("${compose[@]}" config --services | wc -l)" -eq 22 ]]
 expect_compose_database_to_block_unready_legal_state
 
 application_services=(
-  migrator public-api control-api identity-api submission-api ingest-worker analysis-worker
+  role-provisioner migrator public-api control-api identity-api billing-gateway submission-api ingest-worker analysis-worker
   projection-worker notification-worker workflow-worker document-extractor scheduler egress-gateway
   oidc-test-provider public-web review-console response-portal
 )
@@ -564,12 +648,18 @@ for service in "${application_services[@]}"; do
   }
 done
 
-for service in public-api control-api identity-api submission-api ingest-worker analysis-worker \
+for service in public-api control-api identity-api billing-gateway submission-api ingest-worker analysis-worker \
   projection-worker notification-worker workflow-worker document-extractor scheduler egress-gateway \
   public-web review-console response-portal; do
   container_id="$("${compose[@]}" ps --quiet "$service")"
   [[ "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$container_id")" == "true" ]]
 done
+
+role_provisioner_id="$("${compose[@]}" ps --all --quiet role-provisioner)"
+[[ "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$role_provisioner_id")" == "true" ]]
+[[ "$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$role_provisioner_id")" == "no" ]]
+[[ -z "$(docker inspect --format '{{range .Mounts}}{{if .RW}}{{.Destination}}{{end}}{{end}}' \
+  "$role_provisioner_id")" ]]
 
 for service in "${application_services[@]}"; do
   container_id="$("${compose[@]}" ps --all --quiet "$service")"
@@ -605,7 +695,7 @@ mail_file="$("${compose[@]}" exec -T notification-worker sh -c 'find /var/lib/gu
 [[ -n "$mail_file" ]]
 
 "${compose[@]}" up --detach --force-recreate --wait --wait-timeout 300 \
-  public-api control-api identity-api submission-api ingest-worker analysis-worker projection-worker \
+  public-api control-api identity-api billing-gateway submission-api ingest-worker analysis-worker projection-worker \
   notification-worker workflow-worker document-extractor scheduler egress-gateway public-web review-console response-portal
 
 "${compose[@]}" exec -T postgres psql -At -U gurine_dev -d gurine -c \
@@ -613,7 +703,7 @@ mail_file="$("${compose[@]}" exec -T notification-worker sh -c 'find /var/lib/gu
 "${compose[@]}" exec -T submission-api sh -c "test \"\$(cat /var/lib/gurine-objects/restart-marker)\" = '$marker'"
 "${compose[@]}" exec -T notification-worker sh -c "test -f '$mail_file'"
 
-for service in public-api control-api identity-api submission-api; do
+for service in public-api control-api identity-api billing-gateway submission-api; do
   container_id="$("${compose[@]}" ps --quiet "$service")"
   "${compose[@]}" kill --signal SIGTERM "$service" >/dev/null
   for _ in $(seq 1 60); do
@@ -626,4 +716,4 @@ for service in public-api control-api identity-api submission-api; do
   "${compose[@]}" up --detach --no-deps --wait --wait-timeout 120 "$service" >/dev/null
 done
 
-printf '20-service non-root/read-only/no-new-privileges/cap-drop/network/restart/volume/SIGTERM production stack: PASS\n'
+printf '22-service non-root/read-only/no-new-privileges/cap-drop/network/restart/volume/SIGTERM production stack: PASS\n'

@@ -162,7 +162,35 @@ mod tests {
     use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
     use serde_json::json;
 
-    use super::dataset_parquet;
+    use super::{
+        Failure, WorkflowJobResolution, dataset_parquet, workflow_job_resolution,
+    };
+
+    #[test]
+    fn owner_terminal_contract_breach_skips_all_generic_job_mutation() {
+        let resolution = workflow_job_resolution(Err(
+            Failure::OwnerTerminalizedContractInvalid(
+                "ECONOMICS_IMPORT_TERMINAL_RECEIPT_INVALID",
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_owned(),
+            ),
+        ));
+        assert!(matches!(
+            resolution,
+            WorkflowJobResolution::StopOnOwnerContract { .. }
+        ));
+    }
+
+    #[test]
+    fn owner_outcome_unknown_skips_all_generic_job_mutation() {
+        let resolution = workflow_job_resolution(Err(Failure::OwnerOutcomeUnknown(
+            "COMPLETE",
+            "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789".to_owned(),
+        )));
+        assert!(matches!(
+            resolution,
+            WorkflowJobResolution::StopOnOwnerOutcomeUnknown { .. }
+        ));
+    }
 
     #[test]
     fn dataset_parquet_round_trips_with_apache_reader() {

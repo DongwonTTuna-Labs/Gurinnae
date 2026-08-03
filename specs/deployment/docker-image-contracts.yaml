@@ -20,6 +20,7 @@ images:
   dockerfile: infra/docker/rust-service/Dockerfile
   targets:
   - public-api
+  - billing-gateway
   - control-api
   - submission-api
   - identity-api

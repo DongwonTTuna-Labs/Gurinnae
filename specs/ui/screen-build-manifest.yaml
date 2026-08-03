@@ -2842,7 +2842,7 @@ screens:
     id: income
     title: 재원
     component: StructuredContentSection
-    purpose: 후원·grant·API/SaaS.
+    purpose: 후원·지원금·조직용 서비스.
     test_id: pub_023__section__income
   - order: 3
     id: expenses
@@ -2854,29 +2854,34 @@ screens:
     id: donors
     title: 공개 기준
     component: StructuredContentSection
-    purpose: 기준 이상 후원 공개.
+    purpose: 승인된 공개명·비공개 사유·출처 링크와 UNKNOWN 사유.
     test_id: pub_023__section__donors
   - order: 5
     id: conflicts
     title: 이해상충
     component: DecisionReviewPanel
-    purpose: 회피·검토.
+    purpose: 승인된 이해상충·완화·독립 검토 결과.
     test_id: pub_023__section__conflicts
   - order: 6
     id: reports
     title: 보고서
     component: StructuredContentSection
-    purpose: 기간별 transparency report.
+    purpose: 기간별 투명성 보고서.
     test_id: pub_023__section__reports
   actions:
   - id: download-report
     label: 투명성 보고서 다운로드
     capability: none
+    operation_id: downloadTransparencyReport
+    request_binding:
+      reportId: listTransparencyReports.items[].id
+    href_binding:
+      source: listTransparencyReports.items[].href
+      must_equal: /v1/transparency-reports/{reportId}/download
     interaction_kind: DOWNLOAD
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    local_only: true
   - id: view-governance
     label: 거버넌스 보기
     capability: none
@@ -2898,6 +2903,32 @@ screens:
     path: /v1/transparency-reports
     blocking: false
     response_schema: TransparencyReportsPage
+  - operation_id: downloadTransparencyReport
+    api: public-api
+    method: GET
+    path: /v1/transparency-reports/{reportId}/download
+    blocking: false
+    request_schema: DownloadTransparencyReportRequestV1
+    response_schema: TransparencyReportDownloadV1
+    success_status: 200
+  section_operation_bindings:
+    reports: listTransparencyReports
+  funding_disclosure_projection:
+    source: public.transparency_reports where report_kind=FUNDING_DISCLOSURE
+    visibility: approved immutable FundingDisclosurePublicV1 revisions only
+    concentration_states:
+    - UNKNOWN
+    - LE_5_PERCENT
+    - GT_5_TO_15_PERCENT
+    - GT_15_TO_25_PERCENT
+    - GT_25_PERCENT
+    unknown_reasons:
+    - DENOMINATOR_UNKNOWN
+    - GROUPING_DISPUTED
+    - MULTIPLE_UNKNOWN_CAUSES
+    unknown_rule: Missing denominator evidence remains UNKNOWN with DENOMINATOR_UNKNOWN; disputed grouping remains UNKNOWN with GROUPING_DISPUTED; multiple causes use MULTIPLE_UNKNOWN_CAUSES. No lower band or numeric value is inferred.
+    evidence_rule: Each visible fact remains bound to its approved revision, public caveat and rights-filtered source links; absent evidence is never rendered as confirmed.
+    download_rule: listTransparencyReports item id and href must bind the same reportId accepted by downloadTransparencyReport.
   states:
   - loading
   - success
@@ -2925,6 +2956,7 @@ screens:
   forbidden:
   - 후원자 조사 면제
   - native ad와 사건 혼합
+  - UNKNOWN·근거 부재를 수치 또는 낮은 집중도 band로 추론
   acceptance:
   - Route `/about/funding` renders under its declared access mode.
   - The section order exactly matches this manifest.
@@ -4296,6 +4328,189 @@ screens:
     view_model: apps/public-web/src/lib/view-models/pub-034.ts
     e2e: tests/e2e/screens/pub-034.spec.ts
     visual: tests/visual/pub-034.spec.ts
+- id: PUB-035
+  surface: public
+  route: /donate
+  title: 후원
+  archetype: GUIDED_FORM
+  access: anonymous
+  layout:
+    wide: 12-column; status and independence 12; donation form 8 + receipt/status rail 4
+    medium: 8-column; status and independence precede form and receipt
+    compact: single column preserving mode → independence → donation → receipt
+    container: public_main
+  above_fold_order:
+  - mode
+  - independence
+  - donation
+  - receipt
+  section_order:
+  - order: 1
+    id: mode
+    title: 운영 상태
+    component: StatusAndRevisionHeader
+    purpose: 테스트 전용 제안만 제공하며 운영 기준이 없으면 후원을 접수하지 않습니다.
+    test_id: pub_035__section__mode
+  - order: 2
+    id: independence
+    title: 후원 독립성
+    component: KnownUnknownResponse
+    purpose: 후원은 접근권이 아니며 조사 대상 면제가 아닙니다
+    test_id: pub_035__section__independence
+  - order: 3
+    id: donation
+    title: 후원 의향
+    component: GuidedFormSection
+    purpose: 테스트 전용 금액대와 일회·정기 후원, 결제사 선택을 확인합니다.
+    test_id: pub_035__section__donation
+  - order: 4
+    id: receipt
+    title: 접수 상태
+    component: DecisionReceipt
+    purpose: 접수 대기 영수증만 표시하며 결제·청구 성공을 뜻하지 않습니다.
+    test_id: pub_035__section__receipt
+  actions:
+  - id: queue-donation
+    label: 후원 의향 접수
+    capability: none
+    operation_id: private.QueueDonationIntent
+    interaction_kind: COMMAND
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    server_only: true
+    browser_direct: false
+    availability:
+      default: DISABLED
+      production:
+        state: UNAVAILABLE
+        reason: TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY
+        enabled: false
+      test_only:
+        authority: TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY
+        tier: TEST_FIXTURE
+        lifecycle: EPHEMERAL
+        enabled: true
+    request_contract:
+      cadence:
+      - ONE_TIME
+      - RECURRING
+      provider:
+      - TOSS_PAYMENTS
+      - KAKAO_PAY
+      - STRIPE
+      tier_source: private.GetDonationFixtureOffer.tiers[].tierId
+      offer_binding:
+      - offerVersionId
+      - offerDigest
+      secret_boundary: paymentAuthorizationToken is server-consumed and never enters browser projection, persistence, logs, errors or receipts
+    response_contract:
+      schema: DonationIntentQueuedReceiptV1
+      status: QUEUED
+      means_payment_success: false
+  - id: contact
+    label: 문의
+    capability: none
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
+  data_operations:
+  - operation_id: private.GetDonationFixtureOffer
+    api: billing-gateway-private
+    method: GET
+    path: /internal/v1/donation-offers
+    blocking: true
+    request_schema: GetDonationFixtureOfferRequestV1
+    response_schema: DonationFixtureOfferV1
+    success_status: 200
+    server_only: true
+    availability: TEST_ONLY
+    production_status: 503
+    production_service_state: DISABLED
+    production_state: UNAVAILABLE
+  - operation_id: private.QueueDonationIntent
+    api: billing-gateway-private
+    method: POST
+    path: /internal/v1/donation-intents
+    blocking: false
+    request_schema: DonationIntentQueueRequestV1
+    response_schema: DonationIntentQueuedReceiptV1
+    success_status: 202
+    server_only: true
+    availability: TEST_ONLY
+    production_state: UNAVAILABLE
+  section_operation_bindings:
+    receipt: private.QueueDonationIntent
+  donation_authority:
+    authority: TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY
+    production_state: UNAVAILABLE
+    production_action_enabled: false
+    fixture_tier:
+      kind: TEST_FIXTURE
+      lifecycle: EPHEMERAL
+      amount_source: private.GetDonationFixtureOffer.tiers[].amountWholeKrw
+    cadence:
+    - ONE_TIME
+    - RECURRING
+    providers:
+    - TOSS_PAYMENTS
+    - KAKAO_PAY
+    - STRIPE
+    exact_notice: 후원은 접근권이 아니며 조사 대상 면제가 아닙니다
+    receipt_status: QUEUED
+    receipt_does_not_prove:
+    - PAYMENT_SUCCESS
+    - CHARGE_SUCCESS
+  states:
+  - loading
+  - success
+  - empty
+  - partial
+  - stale
+  - error
+  - method-unavailable
+  - receipt
+  responsive:
+    wide: 12-column; status and independence 12; donation form 8 + receipt/status rail 4
+    medium: 8-column; status and independence precede form and receipt
+    compact: single column preserving mode → independence → donation → receipt
+    container: public_main
+  accessibility:
+    landmarks:
+    - header
+    - navigation
+    - main
+    - footer
+    heading_rule: exactly one h1; section headings descend without skipping
+    focus_rule: primary action and error summary are reachable; dialogs restore focus
+    live_regions: save status, submission receipt, background refresh and command completion
+  analytics_events: []
+  forbidden:
+  - production tier·금액·결제 또는 청구 성공 발명
+  - 브라우저에서 billing-gateway private operation 직접 호출
+  - raw service assertion·payment authorization token 노출
+  - 후원자 접근권·조사 면제
+  - PUB-026에 새 문의 category 추가
+  acceptance:
+  - Route `/donate` renders under its declared access mode.
+  - The section order exactly matches this manifest.
+  - Production renders UNAVAILABLE and keeps queue-donation disabled.
+  - TEST_ONLY uses only ephemeral TEST_FIXTURE tiers and server-only billing-gateway operations.
+  - A QUEUED receipt never claims payment or charge success.
+  - Donation creates no entitlement or contract and has no public-access effect.
+  - Production/live payment credentials do not exist; TEST_ONLY fixtures neither contain nor require them.
+  - The exact independence notice remains visible in all states.
+  - Compact layout preserves semantic order and all critical actions.
+  implementation_files:
+    page: apps/public-web/src/routes/donate/+page.svelte
+    server_load_or_actions: apps/public-web/src/routes/donate/+page.server.ts
+    layout: apps/public-web/src/routes/+layout.server.ts
+    error_boundary: apps/public-web/src/routes/+error.svelte
+    view_model: apps/public-web/src/lib/view-models/pub-035.ts
+    e2e: tests/e2e/screens/pub-035.spec.ts
+    visual: tests/visual/pub-035.spec.ts
 - id: RSP-001
   surface: response
   route: /respond/access

@@ -91,9 +91,9 @@ export async function assertScreenInventory(): Promise<void> {
     }),
   );
   const modules = await routeScreens();
-  expect(catalog, "screen catalog count").toHaveLength(94);
+  expect(catalog, "screen catalog count").toHaveLength(95);
   for (const [surface, count] of [
-    ["public", 34],
+    ["public", 35],
     ["response", 8],
     ["internal", 52],
   ] as const)
@@ -120,7 +120,13 @@ export async function assertScreenInventory(): Promise<void> {
         .map((screen) => screen.route),
       `${surface} routes unique`,
     );
-  expect(modules, "route screen modules").toHaveLength(94);
+  expect(catalog).toContainEqual({
+    id: "PUB-035",
+    route: "/donate",
+    surface: "public",
+    testPrefix: "pub_035",
+  });
+  expect(modules, "route screen modules").toHaveLength(95);
   assertUnique(
     modules.map((screen) => screen.id),
     "route module ids unique",
@@ -136,7 +142,7 @@ export async function assertRouteOperationOwnership(): Promise<void> {
     (screen) => screen.dataOperations,
   );
   const operations = apiOperations();
-  expect(data, "screen.ts dataOperations").toHaveLength(225);
+  expect(data, "screen.ts dataOperations").toHaveLength(228);
   for (const item of data) {
     const matches = operations.filter(
       (operation) => operation.id === item.operationId,
@@ -205,7 +211,7 @@ export function assertHumanReadableSheets(): void {
   const nested = globSync("specs/ui/screens/**/*.md").filter((path) =>
     relative("specs/ui/screens", path).includes("/"),
   );
-  expect(direct, "direct screen sheets").toHaveLength(94);
+  expect(direct, "direct screen sheets").toHaveLength(95);
   expect(nested, "milestone-era nested screen sheets").toEqual([]);
   expect(
     direct.map((path) => basename(path, ".md")).sort(),
@@ -252,7 +258,7 @@ export function assertFinalComponents(): void {
       };
     },
   );
-  expect(sections, "section component references").toHaveLength(492);
+  expect(sections, "section component references").toHaveLength(496);
   expect(components, "component catalog").toHaveLength(58);
   assertUnique(
     components.map((component) => component.id),

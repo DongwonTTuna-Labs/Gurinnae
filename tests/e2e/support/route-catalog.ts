@@ -36,10 +36,18 @@ export function routeCatalog(): RouteContract[] {
     }
   }
   if (complete(current)) contracts.push(current);
-  if (contracts.length !== 94)
+  if (contracts.length !== 95)
     throw new Error(
-      `route catalog expected 94 screens, got ${contracts.length}`,
+      `route catalog expected 95 screens, got ${contracts.length}`,
     );
+  const donation = contracts.find(({ screenId }) => screenId === "PUB-035");
+  if (
+    !donation ||
+    donation.surface !== "public" ||
+    donation.route !== "/donate" ||
+    donation.app !== "apps/public-web"
+  )
+    throw new Error("route catalog PUB-035 donation membership drifted");
   const sections = screenSections();
   return contracts.map((contract) => ({
     ...contract,

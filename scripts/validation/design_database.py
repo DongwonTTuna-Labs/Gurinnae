@@ -2,14 +2,19 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-import hashlib
 import re
 
 from .design_database_approval import _validate_approval_option_b
+from .design_database_derivation import validate_derivation_hashes
+from .design_database_economics import validate_economics_owner_matrix
+from .design_database_evidence import validate_economics_evidence_pair_contract
 from .design_database_journeys import validate_journey_database
+from .design_database_payment import _validate_billing_key_fixture_reference
 from .design_database_support import (
+    APPROVAL_DETAIL_EXTENSION_PATH,
+    FORWARD_CANDIDATE_KEY_PATHS,
     PHYSICAL_TABLE_PATHS,
-    R6C_FORWARD_CANDIDATE_KEY_PATH,
+    _added_columns,
     _added_candidate_keys,
     _candidate_keys,
     _check_expressions,
@@ -26,44 +31,6 @@ from .design_database_support import (
 from .design_support import physical_migration_name
 from .loaders import load_yaml
 from .models import Validation
-
-def validate_derivation_hashes(
-    root: Path,
-    global_contract: dict[str, Any],
-    result: Validation,
-) -> None:
-    snapshot = global_contract.get("relation_inventory", {}).get(
-        "stable_derivation_snapshot", {}
-    )
-    pinned = snapshot.get("input_sha256")
-    result.require(
-        isinstance(pinned, dict),
-        "database stable derivation snapshot input_sha256 must be a mapping",
-    )
-    if not isinstance(pinned, dict):
-        return
-    result.require(
-        set(pinned) == set(PHYSICAL_TABLE_PATHS),
-        "database stable derivation snapshot paths are not set-equal to physical fragments",
-    )
-    for relative in sorted(set(pinned) | set(PHYSICAL_TABLE_PATHS)):
-        path = root / relative
-        digest = pinned.get(relative)
-        result.require(
-            isinstance(digest, str)
-            and re.fullmatch(r"[0-9a-f]{64}", digest) is not None,
-            f"{relative}: stable derivation digest is not lowercase SHA-256",
-        )
-        result.require(
-            path.is_file(),
-            f"{relative}: stable derivation input is missing",
-        )
-        if path.is_file() and isinstance(digest, str):
-            actual = hashlib.sha256(path.read_bytes()).hexdigest()
-            result.require(
-                digest == actual,
-                f"{relative}: stable derivation digest differs from exact current bytes",
-            )
 
 
 def validate_physical_contracts(root: Path, result: Validation) -> None:
@@ -83,18 +50,87 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
         for document in documents.values()
         for relation, row in _rows(document).items()
     }
-    forward_document = documents.get(R6C_FORWARD_CANDIDATE_KEY_PATH)
-    forward_candidate_keys = (
-        _added_candidate_keys(forward_document, rows, result)
-        if isinstance(forward_document, dict)
-        else {}
-    )
+    forward_added_column_rows: dict[str, list[str]] = {}
+    for path in FORWARD_CANDIDATE_KEY_PATHS:
+        forward_document = documents.get(path)
+        additions = (
+            _added_columns(forward_document, rows, result)
+            if isinstance(forward_document, dict)
+            else {}
+        )
+        for relation, columns in additions.items():
+            known = forward_added_column_rows.setdefault(relation, [])
+            for column in columns:
+                result.require(
+                    column not in known,
+                    f"forward added column is duplicated across fragments: {relation}.{column}",
+                )
+                if column not in known:
+                    known.append(column)
+    forward_added_columns = {
+        relation: tuple(columns)
+        for relation, columns in forward_added_column_rows.items()
+    }
+
+    forward_candidate_key_rows: dict[
+        str, list[tuple[str, tuple[str, ...]]]
+    ] = {}
+    forward_candidate_key_names: set[str] = set()
+    forward_candidate_key_identities: set[tuple[str, tuple[str, ...]]] = set()
+    for path in FORWARD_CANDIDATE_KEY_PATHS:
+        forward_document = documents.get(path)
+        additions = (
+            _added_candidate_keys(
+                forward_document,
+                rows,
+                result,
+                forward_added_columns,
+            )
+            if isinstance(forward_document, dict)
+            else {}
+        )
+        for relation, keys in additions.items():
+            for name, columns in keys:
+                identity = (relation, columns)
+                result.require(
+                    name not in forward_candidate_key_names,
+                    f"forward candidate-key name is duplicated across fragments: {name}",
+                )
+                result.require(
+                    identity not in forward_candidate_key_identities,
+                    f"forward candidate key is duplicated across fragments: {relation}{columns}",
+                )
+                if (
+                    name in forward_candidate_key_names
+                    or identity in forward_candidate_key_identities
+                ):
+                    continue
+                forward_candidate_key_names.add(name)
+                forward_candidate_key_identities.add(identity)
+                forward_candidate_key_rows.setdefault(relation, []).append(
+                    (name, columns)
+                )
+    forward_candidate_keys = {
+        relation: tuple(keys)
+        for relation, keys in forward_candidate_key_rows.items()
+    }
     _validate_approval_option_b(
         root,
         documents["specs/database/addendum/0026-agent-action-approval.yaml"],
+        documents[APPROVAL_DETAIL_EXTENSION_PATH],
         rows,
         result,
     )
+    validate_economics_owner_matrix(
+        documents[APPROVAL_DETAIL_EXTENSION_PATH],
+        global_contract,
+        result,
+    )
+    validate_economics_evidence_pair_contract(
+        documents[APPROVAL_DETAIL_EXTENSION_PATH],
+        result,
+    )
+    _validate_billing_key_fixture_reference(rows, result)
     validate_journey_database(
         documents["specs/database/addendum/0028-governance-operations.yaml"],
         documents["specs/database/addendum/0027-communication-consent-delivery.yaml"],
@@ -197,7 +233,9 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
     generated_constraint_count = 0
     parsed_expression_count = 0
     for relation, row in rows.items():
-        columns = set(_column_names(row))
+        columns = set(_column_names(row)) | set(
+            forward_added_columns.get(relation, ())
+        )
         candidates = _candidate_keys(row) | {
             columns
             for _name, columns in forward_candidate_keys.get(relation, ())
@@ -252,7 +290,9 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
             if target_row is None:
                 continue
             result.require(
-                set(target_columns) <= set(_column_names(target_row)),
+                set(target_columns)
+                <= set(_column_names(target_row))
+                | set(forward_added_columns.get(target_relation, ())),
                 f"{relation}: foreign key {name or source_columns} targets missing columns on {target_relation}",
             )
             target_candidates = _candidate_keys(target_row) | {
@@ -287,6 +327,9 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
     result.stats["generated_constraint_names"] = generated_constraint_count
     result.stats["forward_candidate_keys_validated"] = sum(
         len(keys) for keys in forward_candidate_keys.values()
+    )
+    result.stats["forward_added_columns_validated"] = sum(
+        len(columns) for columns in forward_added_columns.values()
     )
     result.stats["public_projector_direct_relation_grants"] = len(
         actual_projector_grants

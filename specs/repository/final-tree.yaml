@@ -128,6 +128,19 @@ cargo_workspace:
     - metrics.rs
     - redaction.rs
     - health.rs
+    crates/payment-providers:
+    - lib.rs
+    - error.rs
+    - fixture.rs
+    - model.rs
+    - provider.rs
+    - providers/mod.rs
+    - providers/kakao_pay.rs
+    - providers/stripe.rs
+    - providers/toss_payments.rs
+    - secret.rs
+    - transport.rs
+    - vault.rs
     crates/persistence-postgres:
     - lib.rs
     - pool.rs
@@ -168,6 +181,22 @@ cargo_workspace:
     - config.rs
     - health.rs
     - handlers/mod.rs
+    - shutdown.rs
+    services/billing-gateway:
+    - main.rs
+    - lib.rs
+    - app.rs
+    - routes.rs
+    - state.rs
+    - runner.rs
+    - config.rs
+    - digest.rs
+    - health.rs
+    - payment/mod.rs
+    - payment/engine.rs
+    - payment/fixture_offer.rs
+    - payment/model.rs
+    - payment/store.rs
     - shutdown.rs
     services/control-api:
     - main.rs

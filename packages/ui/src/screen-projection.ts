@@ -87,7 +87,7 @@ type RouteContract =
 
 /**
  * This is the closed browser projection registry.  Its keys are derived from
- * the generated 94-screen authority registry and are checked at runtime as
+ * the generated 95-screen authority registry and are checked at runtime as
  * well as compile time; a new screen cannot silently fall through a generic
  * page mapper.
  */

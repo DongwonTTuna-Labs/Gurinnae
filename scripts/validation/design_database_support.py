@@ -9,6 +9,7 @@ from pglast import parse_sql
 from pglast.visitors import Visitor
 
 from .design_database_relations import (
+    _added_columns,
     _added_candidate_keys,
     _candidate_keys,
     _column_names,
@@ -35,10 +36,16 @@ PHYSICAL_TABLE_PATHS = (
     "specs/database/addendum/0038-r6d-legal-hardening.yaml",
     "specs/database/addendum/0039-r6d-authority-closure.yaml",
     "specs/database/addendum/0040-r6d-privacy-authority-closure.yaml",
+    "specs/database/addendum/0041-r6e-monetization-runtime.yaml",
 )
 
-R6C_FORWARD_CANDIDATE_KEY_PATH = (
-    "specs/database/addendum/0037-r6c-conflict-investigation.yaml"
+FORWARD_CANDIDATE_KEY_PATHS = (
+    "specs/database/addendum/0037-r6c-conflict-investigation.yaml",
+    "specs/database/addendum/0041-r6e-monetization-runtime.yaml",
+)
+
+APPROVAL_DETAIL_EXTENSION_PATH = (
+    "specs/database/addendum/0041-r6e-monetization-runtime.yaml"
 )
 
 APPROVAL_BINDING_V1_FIELDS = (
@@ -95,6 +102,7 @@ APPROVAL_DETAIL_RELATIONS = {
     "RESPONSE_POLICY_CALENDAR": "ops.action_approval_response_policy_calendar_details",
     "COMMERCIAL_CONTROL": "ops.action_approval_commercial_control_details",
     "PROVIDER_CONTROL": "ops.action_approval_provider_control_details",
+    "ECONOMICS_IMPORT": "ops.action_approval_economics_import_details",
 }
 
 

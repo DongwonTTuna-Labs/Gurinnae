@@ -269,6 +269,11 @@
           "minItems": 2,
           "items": { "type": "string", "minLength": 1 }
         },
+        "prerequisite_argv": {
+          "type": "array",
+          "minItems": 4,
+          "items": { "type": "string", "minLength": 1 }
+        },
         "run_argv_sha256": { "$ref": "#/$defs/sha256" }
       }
     }

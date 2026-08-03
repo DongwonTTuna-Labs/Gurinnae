@@ -10,6 +10,15 @@ global_deny:
 - numeric IP literals
 - DNS rebinding
 - redirect outside channel allowlist
+future_live_payment_provider:
+  status: UNCONFIGURED
+  runtime_channel_present: false
+  fail_closed: All payment-provider network calls remain disabled in R6e.
+  prerequisites:
+  - separately approved live-provider contract
+  - strong request-bound billing-gateway caller assertion verified by egress-gateway
+  - dedicated egress-gateway channel with an environment-sourced host allowlist
+  - merchant and webhook credentials owned only by egress-gateway
 channels:
   source:
     callers:

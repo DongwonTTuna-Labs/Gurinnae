@@ -49,6 +49,10 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
         process_publication_created(state, &job, &event).await?;
         return Ok(true);
     }
+    if event.event_type == PAYMENT_REVIEW_REQUESTED_EVENT_TYPE {
+        process_payment_review_notification_claim(state, &job, &event).await?;
+        return Ok(true);
+    }
     if is_privacy_notification_event(&event.event_type) {
         process_privacy_notification_claim(state, &job, &event).await?;
         return Ok(true);

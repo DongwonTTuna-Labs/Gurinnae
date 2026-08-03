@@ -2,7 +2,7 @@ schema_version: 2
 owner_addendum: specs/product/owner-addendum-2026-07-14.yaml
 status: REVIEW_REQUIRED
 binding_count: derived as len(bindings)
-aggregate_alias_count: 23
+aggregate_alias_count: 25
 rules:
   - Each noun has one canonical type and owner; prose cannot create runtime state.
   - Existing v13 state machines and guards are imported without reinterpretation.
@@ -14,6 +14,7 @@ aggregate_aliases:
   - {aggregate: BusinessCalendarVersion, canonical_noun: ResponseDeliveryClockDecision, rust_type: gurine_domain::response::BusinessCalendarVersion, repository: crates/persistence-postgres::response_clock, identity: calendar_id+version, concurrency: append-only-version+effective-range-exclusion}
   - {aggregate: ConflictDeclaration, canonical_noun: ConflictSnapshot, rust_type: gurine_domain::governance::ConflictDeclaration, repository: crates/persistence-postgres::conflicts, identity: declaration_id, concurrency: append-only-effective-period}
   - {aggregate: CostAllocationPeriod, canonical_noun: ProductOutcome, rust_type: gurine_domain::economics::CostAllocationPeriod, repository: crates/persistence-postgres::product_economics, identity: period_start+period_end+currency+version, concurrency: immutable-period-close+superseding-correction}
+  - {aggregate: DonationFact, canonical_noun: PaymentRuntime, rust_type: gurine_billing_gateway::payment::store::DonationFactEventReceipt, repository: services/billing-gateway::payment::store::PaymentOwnerFunctions, identity: donation_fact_id+donation_fact_digest, concurrency: append-only-fact+exact-provider-fetch-digest}
   - {aggregate: EntityMaterialUseClosure, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RetentionDecision, repository: crates/persistence-postgres::retention, identity: entity_kind+entity_id+closure_version+receipt_digest, concurrency: unique-subject+immutable-receipt+expected-entity-updated-at+personhood-receipt-composite}
   - {aggregate: EntityPersonhoodClassification, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RetentionDecision, repository: crates/persistence-postgres::retention, identity: entity_kind+entity_id+classification_version+receipt_digest, concurrency: unique-subject+immutable-receipt+expected-entity-updated-at}
   - {aggregate: EntityRetentionExecution, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RetentionDecision, repository: crates/persistence-postgres::retention, identity: execution_receipt_id+execution_receipt_digest, concurrency: unique-job+fencing-token+unique-subject+immutable-receipt}
@@ -31,6 +32,7 @@ aggregate_aliases:
   - {aggregate: LegalHoldCoverage, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::LegalHoldCoverage, repository: crates/persistence-postgres::retention, identity: hold_id+release_sequence+coverage_digest, concurrency: append-only-nonoverlapping-coverage-cells}
   - {aggregate: OutboundDelivery, canonical_noun: CommunicationIntent, rust_type: gurine_domain::communication::OutboundDelivery, repository: crates/persistence-postgres::communication, identity: delivery_id+delivery_version, concurrency: expected-version+monotonic-provider-evidence}
   - {aggregate: OrganizationOfficialChannelAssertion, canonical_noun: ResponseSubmission, rust_type: gurine_domain::response::ResponseSubmission, repository: crates/persistence-postgres::response_submission, identity: assertion_id+authority_version+authority_receipt_id+authority_receipt_digest, concurrency: unique-assertion+immutable-authority-receipt+current-unexpired-unrevoked-assertion}
+  - {aggregate: PaymentReviewTask, canonical_noun: PaymentRuntime, rust_type: gurine_billing_gateway::payment::store::PaymentReviewEventReceipt, repository: services/billing-gateway::payment::store::PaymentOwnerFunctions, identity: review_task_id+review_task_version+review_task_digest, concurrency: one-immutable-task-per-exact-source-receipt}
   - {aggregate: PrivacyRequest, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::PrivacyRequest, repository: crates/persistence-postgres::retention, identity: retention_request_id+decision_version, concurrency: immutable-request+expected-decision-version}
   - {aggregate: ProductFact, canonical_noun: ProductOutcome, rust_type: gurine_observability::product::ProductFact, repository: crates/persistence-postgres::product_economics, identity: fact_id+fact_digest, concurrency: immutable-terminal-fact+superseding-correction}
   - {aggregate: PaidEvidencePacket, canonical_noun: ProductOutcome, rust_type: gurine_observability::product::PaidEvidencePacket, repository: crates/persistence-postgres::paid_evidence_packets, identity: packet_id+packet_version+packet_subject_digest, concurrency: immutable-ten-member-subject+one-terminal-binding}
@@ -230,10 +232,10 @@ bindings:
     owner: crates/domain
     application: crates/application::action_approval
     repository: crates/persistence-postgres::action_approval
-    relations: [ops.action_proposals, ops.action_proposal_versions, ops.action_approval_hypothesis_details, ops.action_approval_claim_details, ops.action_approval_task_details, ops.action_approval_comparable_details, ops.action_approval_communication_details, ops.action_approval_publication_details, ops.action_approval_retraction_details, ops.action_approval_rule_activation_details, ops.action_approval_role_grant_details, ops.action_approval_kill_switch_details, ops.action_approval_communication_authorization_details, ops.action_approval_asset_rights_details, ops.action_approval_retention_schedule_details, ops.action_approval_funding_disclosure_details, ops.action_approval_capability_activation_details, ops.action_approval_response_policy_calendar_details, ops.action_approval_commercial_control_details, ops.action_approval_provider_control_details, ops.action_review_assignments, ops.action_decisions]
+    relations: [ops.action_proposals, ops.action_proposal_versions, ops.action_approval_hypothesis_details, ops.action_approval_claim_details, ops.action_approval_task_details, ops.action_approval_comparable_details, ops.action_approval_communication_details, ops.action_approval_publication_details, ops.action_approval_retraction_details, ops.action_approval_rule_activation_details, ops.action_approval_role_grant_details, ops.action_approval_kill_switch_details, ops.action_approval_communication_authorization_details, ops.action_approval_asset_rights_details, ops.action_approval_retention_schedule_details, ops.action_approval_funding_disclosure_details, ops.action_approval_capability_activation_details, ops.action_approval_response_policy_calendar_details, ops.action_approval_commercial_control_details, ops.action_approval_provider_control_details, ops.action_approval_economics_import_details, ops.action_review_assignments, ops.action_decisions]
     identity: action_proposal_id+version+approval_digest
     concurrency: expected-version+idempotency-key
-    operations: [listActionApprovalQueue, createActionProposal, getActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision, withdrawActionProposal, withdrawActionDecision]
+    operations: [listActionApprovalQueue, createActionProposal, getActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision, withdrawActionProposal, withdrawActionDecision, private.ExecuteEconomicsImport]
     events: [action.proposal_created.v1, action.proposal_updated.v1, action.review_requested.v1, action.review_claimed.v1, action.decision_recorded.v1, action.proposal_withdrawn.v1, action.decision_withdrawn.v1, action.review_vacancy_filled.v1]
     errors: [ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_QUORUM_INSUFFICIENT, ACTION_CONFLICT_UNRESOLVED]
   - noun: ExecutionAuthorization
@@ -818,6 +820,30 @@ bindings:
     operations: [getBudgetOverview, listProviders, getOperationsOverview]
     events: [commercial.sku_readiness_evaluated.v1]
     errors: [SKU_READINESS_BLOCKED, SKU_READINESS_EVIDENCE_STALE]
+  - noun: PaymentRuntime
+    rust_type: gurine_billing_gateway::payment::PaymentEngine
+    owner: services/billing-gateway
+    application: services/billing-gateway::payment
+    repository: services/billing-gateway::payment::store::PaymentOwnerFunctions
+    relations:
+      - ops.cash_application_facts
+      - ops.tax_invoice_issuance_receipts
+      - ops.payment_method_bindings
+      - ops.payment_charge_attempts
+      - ops.provider_webhook_receipts
+      - ops.donation_facts
+    identity: typed-runtime-receipt-id+canonical-request-digest+owner-receipt-digest
+    concurrency: durable-claim-before-provider-call+idempotency-digest+append-only-fact+authoritative-fetch-reconciliation
+    operations: [private.GetDonationFixtureOffer, private.QueueDonationIntent, private.ReceivePaymentWebhook]
+    events: [donation.fact_recorded.v1, notification.payment_review_requested.v1]
+    errors: [INVALID_REQUEST, SERVICE_ASSERTION_INVALID, IDEMPOTENCY_CONFLICT, PAYMENT_WEBHOOK_CONFLICT, PAYMENT_RUNTIME_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+    invariants:
+      owner_function_surface: closed typed operations only; table names, arbitrary SQL and generic JSON are forbidden
+      payment_effect: no contract, entitlement, factual or editorial priority, publication, detection or public-access mutation
+      public_projection: private donation facts may create only a funding snapshot candidate; publication requires the existing independently reviewed FundingDisclosure path
+      private_fact_read: projection-worker uses an exact SECURITY DEFINER owner lookup; direct ops.donation_facts SELECT is forbidden
+      governance_binding: when revisionId or revisionDigest is present, the database owner recomputes and locks it; caller-trusted governance bindings are forbidden
+      production_payment: disabled; deterministic TEST_MODE_ONLY fixtures have no production authority
   - noun: FundingDisclosure
     rust_type: gurine_domain::governance::FundingDisclosure
     owner: crates/domain
@@ -826,6 +852,6 @@ bindings:
     relations: [ops.funding_concentration_snapshots, editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries]
     identity: snapshot_batch_id+disclosure_revision
     concurrency: immutable-snapshot+independent-publisher
-    operations: [getFundingContent, listTransparencyReports, getBudgetOverview, submitActionDecision]
+    operations: [getFundingContent, listTransparencyReports, downloadTransparencyReport, getBudgetOverview, submitActionDecision]
     events: [governance.funding_snapshot_created.v1, governance.funding_disclosure_published.v1]
     errors: [FUNDING_DENOMINATOR_UNKNOWN, FUNDING_DISCLOSURE_STALE, FUNDING_SOD_REQUIRED]

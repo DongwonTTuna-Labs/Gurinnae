@@ -1909,8 +1909,8 @@ screenshots, traces, or artifacts. Mapping declarations are not execution eviden
 dependency of `make verify-final`. It verifies the byte-immutable v13 base lock,
 then reads the source-derived effective executable registry and scenario-ID
 precedence overlay; it never rewrites the 35 base feature files, base catalog, or
-base mapping. The registry separately preserves the 271 base and 168 supplemental
-identities and their 439-row union. It rejects any undeclared acceptance test in
+base mapping. The registry separately preserves the 271 base and 175 supplemental
+identities and their source-derived 446-row union. It rejects any undeclared acceptance test in
 declared targets and requires set equality across feature IDs, registry rows,
 discovered tests, started/terminal tests, and external receipts for each base,
 supplemental, and effective set. Supplemental IDs cannot replace or double-count a
@@ -1972,8 +1972,8 @@ start/duration/attempt/status; exit/discovered/started/terminal/passed/failed/
 skipped/retried/assertion counts; exact runtime-layer receipts; and SHA-256, byte
 size and media type for every log, trace, screenshot and artifact.
 
-A sorted aggregate index hashes the 271 base and 168 supplemental receipts and
-their 439-row union. Release requires unique set-equal IDs, attempt 1, PASS, exit
+A sorted aggregate index hashes the 271 base and 175 supplemental receipts and
+their source-derived 446-row union. Release requires unique set-equal IDs, attempt 1, PASS, exit
 zero, discovered/started/terminal/passed one, failed/skipped/retried zero, positive
 assertion count, and verified artifacts. `skip`, `fixme`, `pending`, `quarantine`,
 `#[ignore]`, focused/only, missing path, duplicate ID, zero test/assertion, timeout,
@@ -1988,7 +1988,7 @@ not authoritative receipts. One clean source commit proves completion in this
 order:
 
 1. run `make verify-prearchive`, which performs source/static/build checks but does
-   not run or claim the 271-base/168-supplemental authoritative acceptance sets;
+   not run or claim the 271-base/175-supplemental authoritative acceptance sets;
 2. create a candidate deterministic source archive twice and require byte identity;
 3. extract one candidate into a new empty directory and verify sidecar, manifest,
    source-tree digest and zero dependency/build/evidence residue;
@@ -1997,7 +1997,7 @@ order:
    extraction-receipt SHA-256 as immutable inputs;
 5. AC-FINAL_DELIVERY-001 consumes those inputs and verifies the current extracted
    tree; it never searches for an archive that has not yet been created;
-6. require the fresh set-equal base, supplemental and 439-row union receipt indexes
+6. require the fresh set-equal base, supplemental and 446-row union receipt indexes
    to be bound to the extracted tree/design/archive digests;
 7. obtain all implementation LGTM verdicts against that exact commit and evidence.
    If any source changes, discard the candidate and all verdicts and restart at 1;

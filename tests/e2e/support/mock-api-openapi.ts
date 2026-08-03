@@ -7,6 +7,7 @@ import controlApi from "../../../specs/generated/control-api.openapi.json";
 import identityServiceInternal from "../../../specs/generated/identity-service-internal.openapi.json";
 import publicApi from "../../../specs/generated/public-api.openapi.json";
 import submissionApi from "../../../specs/generated/submission-api.openapi.json";
+import { validatePrivateDonationMockContract } from "./mock-api-donation";
 import { isCanonicalPublicOpenApiDocument } from "./mock-api-openapi-document";
 
 const HTTP_METHODS = new Set(["delete", "get", "patch", "post", "put"]);
@@ -428,6 +429,20 @@ export async function validateMockResponse(
 ): Promise<Response> {
   const url = new URL(request.url);
   if (isBypassed(request, url)) return response;
+  const privateDonation = await validatePrivateDonationMockContract(
+    request,
+    response,
+  );
+  if (privateDonation) {
+    if (privateDonation.ok) return response;
+    return failureResponse(request, response, privateDonation.operationId, [
+      {
+        instancePath: "",
+        schemaPath: "#/private-donation-contract",
+        message: privateDonation.message ?? "private donation contract failed",
+      },
+    ]);
+  }
   const lookup = findContract(request, url, response.status);
   if (!lookup.ok)
     return failureResponse(request, response, lookup.operationId, [

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the byte-locked base and the 439-scenario effective hard gate."""
+"""Validate the byte-locked base and complete effective acceptance hard gate."""
 from __future__ import annotations
 
 import sys

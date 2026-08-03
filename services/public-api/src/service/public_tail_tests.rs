@@ -3,7 +3,7 @@ mod tests {
     use super::{
         CaseCardRow, OffsetDateTime, PUBLIC_CASE_RESPONSE_FIELDS, PageNoticeAuthority, Query,
         ServiceError, Value, case_card, case_seo_description, non_conclusion,
-        normalize_public_case, page_seo_description, public_report_scalar, region_filters,
+        normalize_public_case, page_seo_description, region_filters,
         retain_fields, revision_non_conclusion_state, search_result_notices,
     };
     use serde_json::json;
@@ -296,30 +296,6 @@ mod tests {
         assert_eq!(
             revision_non_conclusion_state("PUBLISHED_EXPLAINED", "PUBLISHED_ANOMALY"),
             "PUBLISHED_ANOMALY"
-        );
-    }
-
-    #[test]
-    fn public_report_scalar_rejects_nested_private_shapes() {
-        assert_eq!(
-            public_report_scalar("income", &json!({"contact": "private@example.test"})),
-            None
-        );
-        assert_eq!(
-            public_report_scalar("income", &json!(["internal note"])),
-            None
-        );
-    }
-
-    #[test]
-    fn public_report_scalar_keeps_bounded_public_primitives() {
-        assert_eq!(
-            public_report_scalar("thresholds", &json!(15)),
-            Some("thresholds: 15".to_owned())
-        );
-        assert_eq!(
-            public_report_scalar("conflicts", &json!("NONE_DECLARED")),
-            None
         );
     }
 

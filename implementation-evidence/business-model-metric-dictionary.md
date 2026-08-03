@@ -6,7 +6,7 @@ Contract: `2026-07-15.business-model.r3`
 
 Authority SHA-256: `960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5`
 
-이 문서는 `specs/product/business-model-contract.yaml`의 사람이 읽는 운영 사전이다. 수식, window, exclusion, source, owner, breach action 또는 unknown 처리에 충돌이 있으면 YAML의 동일 metric ID/version이 우선한다. 현재 cross-file blocker가 열려 있고 supplemental catalog의 41개 행은 모두 `implementation_status: MISSING`이므로 이 문서는 release-ready 또는 LGTM 증거가 아니다.
+이 문서는 `specs/product/business-model-contract.yaml`의 사람이 읽는 운영 사전이다. 수식, window, exclusion, source, owner, breach action 또는 unknown 처리에 충돌이 있으면 YAML의 동일 metric ID/version이 우선한다. 현재 supplemental catalog의 48개 scenario는 모두 `skip_policy: FORBIDDEN`이며 source mapping과 integration acceptance target이 존재한다. 다만 leased PostgreSQL runtime 실행과 durable acceptance receipt, 완전한 browser 및 frozen-digest evidence는 아직 없으므로 이 문서는 release-ready 또는 LGTM 증거가 아니다.
 
 ## 고정된 사업 축
 
@@ -95,23 +95,23 @@ Revenue는 current immutable `ops.revenue_facts`만이다. 계약 commitment와 
 
 `PILOT_ENTRY_READINESS`는 funnel `ACTIVATED`와 다른 pre-activation admission gate이며 mandatory가 정확히 14개다: paid processing activation, deployment isolation, OIDC/roster, data/key/queue isolation, source rights, telemetry/alert/runbook, backup/restore, incident ownership, current contract/tariff, billing/cost path, P75 pilot margin과 support capacity. 실제 billing 이후 3개가 추가되어 17개, GA에서 CAC가 추가되어 18개다.
 
-Public Web, verified email, API/export, webhook, daily/weekly digest와 SMS/Telegram/WhatsApp/LINE/Kakao/voice는 정확히 12개 conditional row이며 **signed offer에 포함된 경우에만** blocking requirement다. 판매하지 않은 channel은 NOT_APPLICABLE/UNCONFIGURED이며 core pilot을 막지 않는다. 판매한 순간 exact provider/legal/consent/cost production activation receipt가 필요하다. R3 `0029-invoice-revenue-sku.yaml`의 물리 계약은 이 14/17/18 mandatory, 12 conditional, stage별 26/29/30 visible item count로 교정되었다. 다만 migration/evaluator/generated inventory와 every-offered-subset runtime proof는 아직 OPEN이다.
+Public Web, verified email, API/export, webhook, daily/weekly digest와 SMS/Telegram/WhatsApp/LINE/Kakao/voice는 정확히 12개 conditional row이며 **signed offer에 포함된 경우에만** blocking requirement다. 판매하지 않은 channel은 NOT_APPLICABLE/UNCONFIGURED이며 core pilot을 막지 않는다. 판매한 순간 exact provider/legal/consent/cost production activation receipt가 필요하다. R3 `0029-invoice-revenue-sku.yaml`의 물리 계약은 이 14/17/18 mandatory, 12 conditional, stage별 26/29/30 visible item count로 교정되었다. Migration, evaluator, generated inventory와 source-level offered-subset mapping은 존재한다. 다만 leased PostgreSQL의 every-offered-subset runtime proof와 final evidence는 아직 OPEN이다.
 
 ## OPEN cross-file blockers
 
 이 세 파일만으로 닫을 수 없는 다음 항목은 의도적으로 OPEN이다.
 
-- Qualification authority: 최소 `ops.commercial_qualification_receipts`와 typed importer/catalog/runtime가 아직 없다. 다른 stage ledger/event는 만들지 않는다.
-- Readiness catalog: R3 물리 계약은 CLOSED지만 migration/evaluator/generated inventory와 every-offered-subset runtime proof가 OPEN이다.
-- Paid packet/terminal registry: `PaidEvidencePacketV1`과 물리 `ORGANIZATION_DECISION` resolver가 없다.
-- Invoice membership: R3 물리 계약은 `ops.invoice_usage_memberships`와 `ops.read_invoice_membership_v1`로 CLOSED지만 global registry, migration, repository/function runtime과 canary 실행이 OPEN이다.
-- SLA: R3 물리 계약은 signed policy/target/capability/exclusion/credit/measurement tuple과 `ops.read_sla_metric_inputs_v1`로 CLOSED지만 migration/runtime/incident/service-credit 실행이 OPEN이다.
-- Revenue overlap: R3 물리 계약은 line+policy lock, exact half-open predicate와 correction semantics로 CLOSED지만 SQL/function/catalog/concurrency 실행이 OPEN이다.
-- Unattributed CAC: R3 물리 계약은 ATTRIBUTED/UNATTRIBUTED pool과 `ops.read_cac_metric_inputs_v1`로 CLOSED지만 migration/repository/function/property-test 실행이 OPEN이다.
-- API: 기존 다섯 operation DTO/OpenAPI/generated client가 25개 business metric과 evidence types를 아직 노출하지 않는다.
-- Runtime/mapping: 41개 supplemental catalog 행과 `skip_policy: FORBIDDEN`은 존재하지만 모두 `implementation_status: MISSING`이고 선언한 Rust test/package, SvelteKit states/browser 및 production smoke가 없다.
+- Qualification authority: `ops.commercial_qualification_receipts`와 typed importer/catalog/runtime source가 존재한다. Leased PostgreSQL runtime/canary와 durable acceptance evidence는 OPEN이다. 다른 stage ledger/event는 만들지 않는다.
+- Readiness catalog: R3 physical contract, migration/evaluator/generated inventory와 source-level mapping이 존재한다. Every-offered-subset leased PostgreSQL runtime proof와 final evidence는 OPEN이다.
+- Paid packet/terminal registry: `PaidEvidencePacketV1`과 physical `ORGANIZATION_DECISION` resolver source가 존재한다. Runtime execution/canary와 durable acceptance evidence는 OPEN이다.
+- Invoice membership: `ops.invoice_usage_memberships`, `ops.read_invoice_membership_v1`, migration/repository/function source와 acceptance mapping이 존재한다. Leased PostgreSQL canary/runtime과 durable acceptance evidence는 OPEN이다.
+- SLA: signed policy/target/capability/exclusion/credit/measurement tuple과 `ops.read_sla_metric_inputs_v1` source/migration path가 존재한다. Runtime incident/service-credit 실행과 durable evidence는 OPEN이다.
+- Revenue overlap: line+policy lock, exact half-open predicate/correction semantics의 SQL/function/catalog/concurrency source path가 존재한다. Leased PostgreSQL runtime/concurrency evidence는 OPEN이다.
+- Unattributed CAC: ATTRIBUTED/UNATTRIBUTED pool, `ops.read_cac_metric_inputs_v1` source/migration path와 source test가 존재한다. Leased PostgreSQL repository/function/property execution과 durable evidence는 OPEN이다.
+- API: 다섯 operation의 source route, Rust/OpenAPI/client source tree와 business projection type이 존재한다. 다만 handwritten wrapper/view-model 완결을 의미하지 않으며, full-stack runtime API proof와 final evidence는 OPEN이다.
+- Runtime/mapping: supplemental catalog는 48개 scenario며 모두 `skip_policy: FORBIDDEN`이다. AC-001..048 source mapping과 48개 integration acceptance function이 존재하며 current contract status는 `SOURCE_PRESENT_RUNTIME_AND_FINAL_EVIDENCE_PENDING`이다. Leased PostgreSQL fixture 실행, durable acceptance receipt, 완전한 SvelteKit/browser 및 production-smoke/frozen-digest evidence는 아직 없다.
 
-따라서 feature tag는 `@additive-review`이고 contract status는 `REVIEW_REQUIRED`이다. 위 blocker가 닫히고 41개 scenario가 `skip_policy: FORBIDDEN`으로 실제 실행되기 전에는 `@final`, LGTM 또는 release-ready를 주장하지 않는다.
+따라서 feature tag는 `@additive-review`이고 contract status는 `REVIEW_REQUIRED`이다. 위 runtime/final-evidence blocker가 닫히고 48개 scenario가 `skip_policy: FORBIDDEN`으로 leased PostgreSQL runtime에서 실제 실행되어 durable receipt를 남기기 전에는 `@final`, LGTM 또는 release-ready를 주장하지 않는다.
 
 ## 화면과 operation
 

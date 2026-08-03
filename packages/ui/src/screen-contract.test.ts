@@ -58,9 +58,12 @@ describe("typed screen contract", () => {
           .sections.length,
       0,
     );
-    expect(ids).toHaveLength(94);
-    expect(new Set(ids).size).toBe(94);
-    expect(sections).toBe(492);
+    expect(ids).toHaveLength(95);
+    expect(new Set(ids).size).toBe(95);
+    expect(ROUTE_SCREEN_CONTRACTS["PUB-035"]).toMatchObject({
+      route: "/donate",
+    });
+    expect(sections).toBe(496);
     const emptyGeneratedSections = ids.flatMap((id) =>
       ROUTE_SCREEN_CONTRACTS[id as keyof typeof ROUTE_SCREEN_CONTRACTS].sections
         .filter((section) => section.fields.length === 0)

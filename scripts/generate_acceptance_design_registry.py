@@ -17,6 +17,9 @@ from git_authority import AUTHORITY_ZIP_SHA256
 from generate_effective_execution_registry import (
     BASE_LOCK,
     BASE_MAPPING,
+    CURRENT_EFFECTIVE_SCENARIO_COUNT,
+    CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+    FROZEN_BASE_SCENARIO_COUNT,
     OUTPUT as EFFECTIVE_REGISTRY,
     SUPPLEMENTAL_MAPPING,
 )
@@ -51,6 +54,7 @@ PROOF_SEMANTICS = (
     "scripts/source_provenance.py",
     "scripts/validation/acceptance_gherkin.py",
     "scripts/validation/effective_acceptance.py",
+    "scripts/validation/http_operation_inventory.py",
     "scripts/verify_source_archive.py",
 )
 
@@ -74,11 +78,107 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
     root = root.resolve()
     effective = json.loads((root / EFFECTIVE_REGISTRY).read_text(encoding="utf-8"))
     counts = effective.get("counts", {})
-    if not isinstance(counts, dict) or counts.get("effective_scenarios") != 439:
-        raise ValueError("effective execution registry is not the closed 439-scenario set")
+    expected_scenario_counts = {
+        "base_scenarios": FROZEN_BASE_SCENARIO_COUNT,
+        "supplemental_scenarios": CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+        "effective_scenarios": CURRENT_EFFECTIVE_SCENARIO_COUNT,
+    }
+    actual_scenario_counts = (
+        {key: counts.get(key) for key in expected_scenario_counts}
+        if isinstance(counts, dict)
+        else {}
+    )
+    if actual_scenario_counts != expected_scenario_counts:
+        raise ValueError(
+            "effective execution registry scenario counts differ: "
+            f"expected={expected_scenario_counts!r} actual={actual_scenario_counts!r}"
+        )
     runtime_contracts = effective.get("runtime_contracts")
     if not isinstance(runtime_contracts, dict):
         raise ValueError("effective execution registry has no runtime contracts")
+    final_inventory = effective.get("final_source_inventory")
+    if not isinstance(final_inventory, dict):
+        raise ValueError("effective execution registry has no final source inventory")
+    screen_inventory = final_inventory.get("screens")
+    operation_inventory = final_inventory.get("external_operations")
+    private_identity_inventory = final_inventory.get(
+        "private_identity_api_operations"
+    )
+    all_scope_inventory = final_inventory.get("all_scope_http_operations")
+    operation_partitions = final_inventory.get("operation_partitions")
+    runtime_services = final_inventory.get("runtime_services")
+    compose_services = final_inventory.get("compose_services")
+    external_ids = (
+        set(operation_inventory.get("ids", []))
+        if isinstance(operation_inventory, dict)
+        else set()
+    )
+    additive_external_ids = (
+        set(operation_inventory.get("additive_ids", []))
+        if isinstance(operation_inventory, dict)
+        else set()
+    )
+    private_identity_ids = (
+        set(private_identity_inventory.get("ids", []))
+        if isinstance(private_identity_inventory, dict)
+        else set()
+    )
+    all_scope_ids = (
+        set(all_scope_inventory.get("ids", []))
+        if isinstance(all_scope_inventory, dict)
+        else set()
+    )
+    if (
+        not isinstance(screen_inventory, dict)
+        or screen_inventory.get("count") != 95
+        or screen_inventory.get("required_additive_ids") != ["PUB-035"]
+        or not isinstance(operation_inventory, dict)
+        or operation_inventory.get("base_count") != 217
+        or operation_inventory.get("additive_count") != 51
+        or operation_inventory.get("final_count") != 268
+        or operation_inventory.get("by_api")
+        != {
+            "control-api": 176,
+            "identity-provider": 6,
+            "public-api": 44,
+            "submission-api": 42,
+        }
+        or operation_inventory.get("by_kind")
+        != {"COMMAND": 145, "QUERY": 123}
+        or operation_inventory.get("non_get_count") != 142
+        or operation_inventory.get("required_additive_ids")
+        != ["downloadTransparencyReport"]
+        or len(external_ids) != 268
+        or len(additive_external_ids) != 51
+        or not additive_external_ids <= external_ids
+        or not isinstance(private_identity_inventory, dict)
+        or private_identity_inventory.get("count") != 3
+        or private_identity_inventory.get("by_api") != {"identity-api": 3}
+        or private_identity_inventory.get("by_kind") != {"COMMAND": 3}
+        or private_identity_inventory.get("non_get_count") != 3
+        or len(private_identity_ids) != 3
+        or not isinstance(all_scope_inventory, dict)
+        or all_scope_inventory.get("count") != 271
+        or all_scope_inventory.get("by_kind")
+        != {"COMMAND": 148, "QUERY": 123}
+        or all_scope_inventory.get("non_get_count") != 145
+        or len(all_scope_ids) != 271
+        or external_ids | private_identity_ids != all_scope_ids
+        or external_ids & private_identity_ids
+        or additive_external_ids & private_identity_ids
+        or not isinstance(operation_partitions, dict)
+        or operation_partitions.get("base_additive_intersection_count") != 0
+        or operation_partitions.get(
+            "additive_external_private_identity_intersection_count"
+        ) != 0
+        or operation_partitions.get("additive_partition_complete") is not True
+        or not isinstance(runtime_services, dict)
+        or runtime_services.get("count") != 18
+        or not isinstance(compose_services, dict)
+        or compose_services.get("count") != 22
+        or not isinstance(final_inventory.get("inventory_sha256"), str)
+    ):
+        raise ValueError("effective final screen/operation/service inventory differs")
     return {
         "schema_version": 2,
         "specification_version": "13.0.0",
@@ -111,6 +211,58 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
             "exact_scenario_identity_required": True,
             "background_clause_inheritance_required": True,
             "example_row_and_expansion_digest_required": True,
+        },
+        "final_source_inventory_contract": {
+            "source_derived": True,
+            "inventory_sha256": final_inventory["inventory_sha256"],
+            "screen_count": screen_inventory["count"],
+            "required_additive_screen_ids": screen_inventory[
+                "required_additive_ids"
+            ],
+            "base_external_operation_count": operation_inventory["base_count"],
+            "additive_external_operation_count": operation_inventory[
+                "additive_count"
+            ],
+            "final_external_operation_count": operation_inventory["final_count"],
+            "final_external_query_operation_count": operation_inventory[
+                "by_kind"
+            ]["QUERY"],
+            "final_external_command_operation_count": operation_inventory[
+                "by_kind"
+            ]["COMMAND"],
+            "final_external_non_get_operation_count": operation_inventory[
+                "non_get_count"
+            ],
+            "additive_external_operation_ids": operation_inventory["additive_ids"],
+            "required_additive_external_operation_ids": operation_inventory[
+                "required_additive_ids"
+            ],
+            "private_identity_api_operation_count": private_identity_inventory[
+                "count"
+            ],
+            "private_identity_api_operation_ids": private_identity_inventory[
+                "ids"
+            ],
+            "all_scope_http_operation_count": all_scope_inventory["count"],
+            "all_scope_http_query_operation_count": all_scope_inventory[
+                "by_kind"
+            ]["QUERY"],
+            "all_scope_http_command_operation_count": all_scope_inventory[
+                "by_kind"
+            ]["COMMAND"],
+            "all_scope_http_non_get_operation_count": all_scope_inventory[
+                "non_get_count"
+            ],
+            "base_additive_intersection_count": operation_partitions[
+                "base_additive_intersection_count"
+            ],
+            "additive_external_private_identity_intersection_count": (
+                operation_partitions[
+                    "additive_external_private_identity_intersection_count"
+                ]
+            ),
+            "runtime_service_count": runtime_services["count"],
+            "compose_service_count": compose_services["count"],
         },
         "assertion_contract": {
             "contract_version": 3,
@@ -148,7 +300,7 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
             _member(root, relative) for relative in PROOF_SEMANTICS
         ],
         "release_policy": {
-            "all_439_scenarios_required": True,
+            "all_effective_scenarios_required": True,
             "all_runtime_layers_required": True,
             "failed_count": 0,
             "skipped_count": 0,

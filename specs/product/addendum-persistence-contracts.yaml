@@ -3,20 +3,180 @@ specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 counts:
   base_tables: 107
-  additive_tables: 195
-  final_active_tables: 302
-  migrations: 38
+  additive_tables: 202
+  final_active_tables: 309
+  migrations: 39
 rules:
-- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0040, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0041, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
 - Runtime roles never own schema objects and receive only declared table/view/function grants.
 - Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
 - Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
 - JSONB payload columns are sqlx::types::Json<ClosedRustType>; serde_json::Value and string dispatch are forbidden.
-- The statement-level source for every additive external command, private application command, base-operation atomic extension and private callback operation is specs/product/addendum-command-semantics.yaml; inventories are source-derived rather than frozen numeric counts.
-- Query, command and callback persistence inventories are source-derived and exact set-equal to their authority registries; route-only, template-only
+- The statement-level source for every additive external command, private application command, private billing-gateway operation, base-operation atomic extension and private callback operation is specs/product/addendum-command-semantics.yaml; inventories are source-derived rather than frozen numeric counts.
+- Query, command, private billing-gateway and callback persistence inventories are source-derived and exact set-equal to their authority registries; route-only, template-only
   and generic repository fallbacks are forbidden.
 - One effect_owner and atomic_transition_group owns every command mutation. A worker may continue a durable attempt but cannot rematerialize a
   business effect owned by the initiating command.
+supervisor_decision_v1:
+  decision_id: R6E_SUPERVISOR_DECISION_V1
+  authority_label: 감독자 결정 v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  decision_revision: 1
+  status: APPROVED_AS_RECOMMENDED
+  canonical_contract: specs/product/business-model-contract.yaml#supervisor_decision_v1
+  canonical_contract_status: NORMATIVE_AUTHORITY_FROZEN
+  provenance:
+    approval_path: .fable-sol/r6e-authority-approval.md
+    approval_sha256: a73ccb4da942c32b70ac7056dfe2d65b6c5595beb3e64e22999b07eb0f939f47
+    recommendation_record: .fable-sol/run-r6e.log lines 15-104
+  approved_packages_ordered_exactly:
+    - {ordinal: 1, package_id: ECO-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 2, package_id: PAID-EVIDENCE-V2-AUTHORITY, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 3, package_id: PAYMENT-TEST-V1, approval: APPROVED_AS_RECOMMENDED, review_due_hours: 24}
+    - {ordinal: 4, package_id: GFD-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+  revision_policy:
+    ordinary_revision_forbidden: true
+    only_allowed_round: a later pre-production review jointly owned by the designated legal and finance owners
+    update_shape: a new explicit supervisor decision revision preserving this decision as provenance; silent reinterpretation, partial package substitution and in-place weakening are forbidden
+  binding_rule: Every package value and narrowing directive is set-equal to specs/product/business-model-contract.yaml#supervisor_decision_v1 and specs/product/addendum-approval-policy.yaml#approved_r6e_authority_bindings; this persistence restatement may only narrow implementation and must not infer missing physical identifiers or schema.
+  package_contracts:
+    ECO-AUTHORITY-V1:
+      approval: APPROVED_AS_RECOMMENDED
+      economics_import_target_version:
+        action_kind: ECONOMICS_IMPORT
+        expected_version: null
+        nullable_storage_scope_exactly: [ops.action_proposals ECONOMICS_IMPORT branch, ApprovalBindingV1 ECONOMICS_IMPORT branch]
+        other_action_kinds: positive target version remains mandatory
+        forbidden_sentinel: 1
+      commercial_contract_offer_parent_schema_version: JSON number 1
+      first_tariff_bootstrap:
+        cardinality: one-shot
+        stage: PILOT
+        required_margin_bps: 6000
+        prerequisites_ordered_exactly:
+          - tariff and commercial-contract history for the same deployment and SKU is zero
+          - current GA READY count is zero
+          - one approved complete and current cost close is locked and digest-equal
+          - the approved detail binds the intended first contract and qualification tuple plus both validity periods
+          - every later commercial-contract import exactly matches the bootstrap tuple
+      low_margin_tariff_and_discount_branch:
+        exception_authority: UNAVAILABLE_UNTIL_SEPARATE_OVERSIGHT_DECISION
+        sqlstate: "55000"
+        writes: 0
+      approved_identity_rule: The usage successor receipt and fact IDs and every invoice, header, line, membership, revenue, cash, tax and correction child ID are explicit approved operation bytes; PostgreSQL creates no hidden random identity.
+      invoice_adjustment_rule: An adjustment references only an earlier non-adjustment line in the same approved invoice array; cross-invoice, adjustment-to-adjustment, cyclic, forward and missing references fail with write zero.
+      digest_abi:
+        name: GURINE_LENGTH_PREFIXED_UTF8_V1
+        scope: economics, usage, invoice, revenue, cash, tax-invoice and accounting-correction records
+        framing: unsigned u64 big-endian byte length frames domain, schema version, type tag and value separately
+        scalar_rules: explicit NULL, explicit array member count, fixed-six decimal, lowercase UUID and SHA-256, and UTC timestamp with exactly six fractional digits
+        preimage_rule: Preserve the already-declared field order; where a preimage was omitted, include every immutable business column except the self digest and created_at or updated_at timestamps.
+        verification: PostgreSQL and Rust golden vectors plus one-byte mutation rejection are mandatory.
+        funding_digest_reuse: forbidden
+      OPEN_QUESTIONS:
+        - id: R6E-ECO-PHYSICAL-ABI
+          unresolved: Exact typed owner function argument and result schemas, lock order and SQLSTATE mapping beyond the approved 55000 branch are not supplied by ECO-AUTHORITY-V1.
+          fail_closed: Keep the economics database-final/runtime latch closed; do not invent identifiers or activate a write path.
+        - id: R6E-ECO-UNDECLARED-PREIMAGE-ORDER
+          unresolved: Any digest record lacking one uniquely declared existing field order needs separate schema authority before a physical preimage can be generated.
+          fail_closed: Reject generation instead of choosing an order.
+    PAID-EVIDENCE-V2-AUTHORITY:
+      approval: APPROVED_AS_RECOMMENDED
+      v1_preservation: Migration 0029 V1 relations and canonical bytes remain immutable and are never reinterpreted as V2.
+      migration_fence: Any existing paid packet, paid packet member or paid-bound outcome row stops the migration before schema effects; backfill, coercion and mixed V1/V2 interpretation are forbidden.
+      member_digest:
+        leaf_rule: A V2 member leaf excludes the global member-set digest from its preimage and stores the category-local digest separately as categoryDigest.
+        computation_order: compute every leaf first, then compute the global member-set digest from the complete leaves in ordinal order
+      review_snapshot_extension:
+        field_count: 12
+        direction: forward-only
+        presence_rule: zero-or-all
+      packet_outcome_foreign_keys: Both directions are MATCH FULL DEFERRABLE INITIALLY DEFERRED and bind atomically.
+      terminal_binding:
+        workflow_proof_count: 4
+        workflow_proof_type: VerifiedWorkflowProofV1
+        additional_authorities: [exact terminal receipt, policy digest, formula digest, accounting timezone, effective-until]
+      subject_hmac:
+        domain: PAID_OUTCOME_SUBJECT_HMAC_V2
+        key_versions: [CURRENT, PREVIOUS]
+        forbidden_reuse: payment, webhook, public-web, assertion or any other key domain
+        injection: TEST_FIXTURE only
+      OPEN_QUESTIONS:
+        - id: R6E-PAID-V2-PHYSICAL-SCHEMA
+          unresolved: The approved package does not uniquely name or type the twelve review-snapshot fields or the V2 relations, columns, functions, constraints and complete digest preimages.
+          fail_closed: Do not create or activate a V2 migration and never backfill V1 rows until separate exact schema authority exists.
+        - id: R6E-PAID-V2-TERMINAL-BINDING-SCHEMA
+          unresolved: The approved package identifies four existing VerifiedWorkflowProofV1 milestones and authority categories but does not uniquely enumerate their physical field names, ordering or the full terminal-binding preimage.
+          fail_closed: V2 packet and outcome finalization remains unavailable; V1 bytes and relations remain unchanged.
+    PAYMENT-TEST-V1:
+      approval: APPROVED_AS_RECOMMENDED
+      runtime_modes: {default: DISABLED, production: DISABLED, only_non_disabled_mode: TEST_ONLY, source_live_credentials: 0}
+      keyrings_ordered_exactly:
+        - {name: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY, versions: [CURRENT, PREVIOUS]}
+        - {name: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY, versions: [CURRENT, PREVIOUS]}
+      key_rule: CURRENT issues new values; a persisted opaque version selects CURRENT or PREVIOUS, and webhook assertion or public-web keys are neither reused nor derivation inputs.
+      restart_rule: Missing in-memory billing material after restart fails closed with no automatic recovery, replacement, recharge or resubmission.
+      recurring_schedule_policy_b:
+        anchor: first_charge_at UTC monthly anchor with non-drifting month-end clamp
+        eligible_window: current UTC month only; catch-up and backcharge are forbidden
+        occurrence_identity: [schedule_id, schedule_version, scheduledFor]
+        occurrence_uniqueness: permanent
+        later_month_blocker: any pending, provider-accepted or reconciliation-required occurrence remains blocking
+        next_month_release_authority: only definitive pre-dispatch rejection or fetch-confirmed success, full refund or failure
+        same_occurrence_resubmission_writes: 0
+        scheduler_effect_exactly: insert one DONATION_CHARGE job
+        scheduler_direct_effects: {payment: 0, contract: 0, entitlement: 0, public_access: 0}
+      payment_review:
+        required_field: reviewAssigneeUserId
+        required_for: [TEST_ONLY donation intent, recordCollectionFailure]
+        digest_binding: exact request, immutable approval detail and receipt
+        topic: PAYMENT_REVIEW_V1
+        source_kinds_exactly: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE]
+        creation_gate: one active internal subject, one current authorization, exactly one endpoint and evaluator, and a source-bound deployment are all current and exact
+        gate_failure: {sqlstate: "55000", writes: 0}
+        due_at: occurredAt plus exactly 24 hours
+        reconciliation_required_effects: {task: 0, notification: 0, automatic_retry: 0}
+        forbidden_automatic_effects: [external_dunning, entitlement_change, contract_change, public_access_change]
+        atomic_success: task, intent, outbox and audit commit in one transaction
+      fixture_identity_rule: Test UUIDs and digests are generated only inside an ephemeral database with TEST_FIXTURE authority.
+      OPEN_QUESTIONS:
+        - id: R6E-PAYMENT-REVIEW-PHYSICAL-BINDING
+          unresolved: PAYMENT-TEST-V1 does not uniquely supply the concrete request, detail and receipt schema paths or canonical preimage field order for reviewAssigneeUserId.
+          fail_closed: Keep the affected owner path database-final blocked until those existing closed schemas are made exact; do not invent a parallel identifier or preimage.
+    GFD-AUTHORITY-V1:
+      approval: APPROVED_AS_RECOMMENDED
+      review_slots_ordered_exactly:
+        - {ordinal: 1, slot_id: funding_preparer, capability: funding.manage, required_capability: actions.review, allowed_roles: [EXECUTIVE_APPROVER, OPERATIONS], assurance: STEP_UP, conditional: false}
+        - {ordinal: 2, slot_id: funding_publisher, capability: funding.publish, required_capability: actions.review, allowed_roles: [EXECUTIVE_APPROVER], assurance: STEP_UP, conditional: false}
+        - {ordinal: 3, slot_id: oversight_reviewer, capability: review.legal, required_capability: actions.review, allowed_roles: [LEGAL_REVIEWER], assurance: STEP_UP, conditional_on: requires_oversight_review}
+        - {ordinal: 4, slot_id: board_approver, capability: funding.publish, required_capability: actions.review, allowed_roles: [EXECUTIVE_APPROVER], assurance: STEP_UP, conditional_on: requires_board_approval}
+      present_slot_count: 2 through 4 according only to the two approved conditional booleans
+      quorum_rule: Counted actors are pairwise distinct across every present slot; an unstaffed required slot remains VACANT and never satisfies quorum.
+      related_case_prerequisite: Each distinct related case has exactly one current existing PUBLICATION independent_editorial APPROVE with actions.review, review.editorial, role EDITOR or PUBLISHER and STEP_UP.
+      target_revision: The publication candidate revision N is at least 1; first publication is 1 and every successor is the locked current head plus 1, while zero is forbidden.
+      publisher:
+        service: workflow-worker
+        database_principal: gurine_workflow_worker
+        function: editorial.publish_funding_disclosure_v1
+        function_owner: gurine_migrator
+        direct_table_dml: 0
+      digest_abi:
+        name: closed Gurine Canonical JSON V1
+        scalar_rules: fixed-six decimal strings, UTC timestamps with exactly six fractional digits and explicit null
+        public_content_rule: includes each stored entryDigest
+        revision_preimage_rule: excludes receiptDigest
+        computation_order: entry and set digests, then revisionDigest, then receiptDigest, then event and response digests
+        counted_decision_tuple_order: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+      published_event_required_bindings: revision and prior revision, period, snapshot, policy, conflict, concentration, conditional gates, entry and public-content digests, proposal, execution, approval, counted decisions, related-case reviews, publisher, effective and published timestamps, and receipt digest
+      implementation_hold:
+        affected_operations_exactly: [createActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision]
+        database_error: {sqlstate: "55000", message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, writes: 0}
+        external_error: {code: INTERNAL_ERROR, http_status: 500}
+        release_rule: Approval alone does not remove the hold; every authority, ACL, digest, event and test obligation must be implemented and verified first.
+      OPEN_QUESTIONS:
+        - id: R6E-GFD-PUBLISHER-PHYSICAL-ABI
+          unresolved: The approved package fixes the publisher service, principal, owner function and no-DML boundary but does not uniquely supply the function argument and result schema, lock order or complete activation matrix.
+          fail_closed: Keep all six lifecycle operations on the approved 55000/write-zero to INTERNAL_ERROR/500 hold until the physical ABI and verification evidence are exact.
 migration_ownership:
   0025_evidence_snapshots_and_search.sql:
   - core.normalization_runs
@@ -227,6 +387,14 @@ migration_ownership:
   - ops.privacy_response_party_name_correction_plan_bindings_v1
   - ops.privacy_response_party_name_correction_approval_bindings_v1
   - ops.privacy_response_party_name_correction_completion_receipts_v1
+  0041_r6e_monetization_runtime.sql:
+  - ops.action_approval_economics_import_details
+  - ops.cash_application_facts
+  - ops.tax_invoice_issuance_receipts
+  - ops.payment_method_bindings
+  - ops.payment_charge_attempts
+  - ops.provider_webhook_receipts
+  - ops.donation_facts
 canonical_existing_relations:
 - ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
 - ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.
@@ -335,6 +503,7 @@ transaction_templates:
     - append observed receipt in a new transaction
     cardinality: one provider idempotency key per delivery/execution generation; ambiguous outcome must be RECONCILIATION_REQUIRED
 operation_transactions:
+  downloadTransparencyReport: typed_query
   listActionApprovalQueue: typed_query
   createActionProposal: optimistic_command
   getActionProposal: typed_query
@@ -462,6 +631,7 @@ exact_persistence_registry:
     queries: specs/product/addendum-operation-contracts.yaml#operations[kind=QUERY]
     external_commands: specs/product/addendum-command-semantics.yaml#external_commands
     private_application_commands: specs/product/addendum-command-semantics.yaml#private_application_commands
+    private_billing_gateway_operations: specs/product/addendum-command-semantics.yaml#private_billing_gateway_operations
     base_operation_atomic_extensions: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions
     private_callbacks: specs/product/addendum-command-semantics.yaml#private_callback_operations
     private_control_service: specs/product/addendum-command-semantics.yaml#private_control_service_commands
@@ -469,10 +639,50 @@ exact_persistence_registry:
     queries: derived len(query_persistence)
     external_commands: derived len(external_command_persistence)
     private_application_commands: derived len(private_application_command_persistence)
+    private_billing_gateway_operations: derived len(private_billing_gateway_persistence)
     base_operation_atomic_extensions: derived len(base_operation_atomic_extension_persistence)
     private_callback_operations: derived len(private_callback_persistence)
     private_control_service: derived len(private_control_service_persistence)
   query_persistence:
+    downloadTransparencyReport:
+      operation_kind: QUERY
+      api: public-api
+      method: GET
+      path: /v1/transparency-reports/{reportId}/download
+      isolation: READ_COMMITTED
+      authorization:
+        capability: null
+        authorization: PUBLIC
+        assurance: NONE
+        predicate: select only the exact immutable public FUNDING_DISCLOSURE projection row; private funding, donation, payment and identity relations are unreachable
+      relations:
+      - public.transparency_reports
+      statements:
+      - VALIDATE reportId and the closed JSON or CSV format selector [exactly-one result]
+      - SELECT the exact report_kind=FUNDING_DISCLOSURE public projection row by reportId [exactly-one or RESOURCE_NOT_FOUND]
+      - VERIFY source revision, source revision digest, report schema version, projection digest and immutable public report shape are complete [exactly-one or PRECONDITION_FAILED]
+      - SERIALIZE deterministic response bytes solely from the selected public report revision and verify checksumSha256 before return [exactly-one]
+      cardinality: exactly-one immutable public transparency revision or RESOURCE_NOT_FOUND/PRECONDITION_FAILED
+      ordering: none; the exact reportId selects one immutable public revision
+      writes: zero including idempotency, audit, outbox, private source reads and projection repair
+      repository_methods: [services/public-api/src/service/public_funding.rs::download_funding_report]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: null
+      forbidden_relations:
+      - editorial.funding_disclosure_revisions
+      - editorial.funding_disclosure_entries
+      - ops.funding_concentration_snapshots
+      - ops.donation_facts
+      - ops.payment_method_bindings
+      - ops.payment_charge_attempts
+      - ops.provider_webhook_receipts
+      errors:
+      - INVALID_PARAMETER
+      - RESOURCE_NOT_FOUND
+      - PRECONDITION_FAILED
+      - INTERNAL_ERROR
     listActionApprovalQueue:
       operation_kind: QUERY
       api: control-api
@@ -497,6 +707,11 @@ exact_persistence_registry:
       cardinality: 0..limit
       ordering: due_at ASC,proposal_id ASC or updated_at DESC,proposal_id DESC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/agents/queries.rs::list_action_approval_queue]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - INVALID_PARAMETER
       - INVALID_CURSOR
@@ -530,6 +745,11 @@ exact_persistence_registry:
       cardinality: exactly-one graph or RESOURCE_NOT_FOUND
       ordering: version,slot,decision,generation order; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/agents/queries.rs::get_action_proposal]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - INVALID_PARAMETER
       - ACTOR_ASSERTION_REQUIRED
@@ -560,6 +780,11 @@ exact_persistence_registry:
       cardinality: exactly-one effect and complete chain or RESOURCE_NOT_FOUND/EXECUTION_RECEIPT_INCOMPLETE
       ordering: generation ASC,receipt_sequence ASC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/agents/queries.rs::get_action_execution_receipt]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - CAPABILITY_DENIED
       - RESOURCE_NOT_FOUND
@@ -589,6 +814,11 @@ exact_persistence_registry:
       cardinality: exactly-one scoped appeal or non-enumerating RESOURCE_NOT_FOUND
       ordering: decision_sequence ASC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/submission-api/src/service/addendum.rs::execute]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - SCOPED_SESSION_REQUIRED
       - RESOURCE_NOT_FOUND
@@ -619,6 +849,11 @@ exact_persistence_registry:
       cardinality: exactly-one delivery and complete chain or RESOURCE_NOT_FOUND/DELIVERY_RECEIPT_INCOMPLETE
       ordering: attempt_ordinal,receipt_sequence,observed_at,id; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/editorial/queries.rs::get_communication_delivery_receipt]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - CAPABILITY_DENIED
       - RESOURCE_NOT_FOUND
@@ -647,6 +882,11 @@ exact_persistence_registry:
       cardinality: exactly-one incident or RESOURCE_NOT_FOUND
       ordering: incident version ASC; SLI window_end DESC,id; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/resilience_cost.rs::get_incident]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - CAPABILITY_DENIED
       - RESOURCE_NOT_FOUND
@@ -673,6 +913,11 @@ exact_persistence_registry:
       cardinality: 0..limit
       ordering: due_at ASC,id ASC or created_at DESC,id DESC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/editorial/queries.rs::list_response_appeals]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - INVALID_PARAMETER
       - INVALID_CURSOR
@@ -703,6 +948,11 @@ exact_persistence_registry:
       cardinality: exactly-one authorized workspace or RESOURCE_NOT_FOUND
       ordering: decision_sequence and evidence receipt sequence ASC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/editorial/queries.rs::get_response_appeal_workspace]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - INVALID_PARAMETER
       - CAPABILITY_DENIED
@@ -734,6 +984,11 @@ exact_persistence_registry:
       cardinality: 0..limit with derived hold flag
       ordering: due_at ASC NULLS LAST,id ASC or created_at DESC,id DESC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/audit_retention_privacy_query.rs::list]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - INVALID_PARAMETER
       - INVALID_CURSOR
@@ -785,6 +1040,11 @@ exact_persistence_registry:
       ordering: decision_version ASC; notice/extension sequence ASC; legacy retention receipt completed_at DESC,execution_generation DESC,id DESC; hold/release sequence ASC; authenticated
         cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/audit_retention_privacy_query.rs::get]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       response_contract:
         schema: RetentionRequestWorkspaceV1
         exact_key_count: 20
@@ -819,6 +1079,11 @@ exact_persistence_registry:
       cardinality: 0..limit
       ordering: record_class ASC,effective_at DESC,revision DESC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      repository_methods: [services/control-api/src/service/domains/audit_retention.rs::record_class_schedule_query]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - INVALID_PARAMETER
       - INVALID_CURSOR
@@ -854,6 +1119,11 @@ exact_persistence_registry:
       cardinality: exactly-one closed PrivacyRequestPublicStatusV2 selected only by an ACTIVE PRIVACY_REQUEST_RECEIPT session or non-enumerating RESOURCE_NOT_FOUND; one-time receipt tokens and other session kinds are rejected; missing terminal receipt closure fails closed
       ordering: notice_sequence ASC and decision_version ASC
       writes: zero including idempotency, audit and outbox
+      repository_methods: [crates/persistence-postgres/src/privacy.rs::PostgresPrivacyRequestRepository::get_owner]
+      domain_events: []
+      integration_events: []
+      audit_action: read.access
+      concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
       errors:
       - SCOPED_SESSION_REQUIRED
       - RESOURCE_NOT_FOUND
@@ -3226,6 +3496,78 @@ exact_persistence_registry:
     cardinality: exactly one current authorization, exactly one typed target effect, one audit, declared outbox set and one gapless execution receipt; exact replay writes zero
     repository_result: validate the approved target digest, call one typed routine, append the definitive or reconciliation-required receipt, and finalize response bytes before commit; no network I/O in transaction
 
+  economics_import_effect_disposition_registry:
+    key: operationId
+    dispositions_exactly: [RECORDED, REPLACED, REVERSED, REVIEW_TASK_CREATED]
+    transport_from_state:
+      aggregate: ECONOMICS_IMPORT
+      state: UNRECORDED
+      meaning: Pre-effect wire sentinel used only to review the requested durable effect; it is not a lifecycle state, stored head, transition source, or state-machine node.
+    variants:
+      recordCommercialQualification:
+        target_relations: [ops.acquisition_source_receipts, ops.commercial_qualification_receipts]
+        atomic_cardinality: optional zero-or-one acquisition source plus exactly one qualification receipt
+        allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+      importCostAllocationClose:
+        target_relations: [ops.fx_rate_facts, ops.cost_allocations]
+        atomic_cardinality: zero-or-more inline FX facts plus one period head and one-or-more allocation lines
+        allowed_result_effects: [RECORDED, REPLACED]
+      createTariffVersion:
+        target_relations: [ops.tariff_versions]
+        atomic_cardinality: exactly one tariff version
+        allowed_result_effects: [RECORDED]
+      recordCommercialContractPeriod:
+        target_relations: [ops.commercial_contract_periods, ops.offer_profile_capabilities]
+        atomic_cardinality: exactly one contract period plus exactly twelve ordered offer-capability rows
+        allowed_result_effects: [RECORDED, REPLACED]
+      recordUsageWindow:
+        target_relations: [ops.usage_window_receipts, ops.usage_facts]
+        atomic_cardinality: exactly one paired usage-window receipt and usage fact
+        allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+      recordInvoice:
+        target_relations: [ops.discount_decisions, ops.invoice_facts, ops.invoice_line_facts, ops.invoice_usage_memberships]
+        atomic_cardinality: zero-or-more discounts, exactly one invoice, one-or-more lines, and complete expected usage memberships
+        allowed_result_effects: [RECORDED, REPLACED]
+      recordRevenue:
+        target_relations: [ops.revenue_facts]
+        atomic_cardinality: one-or-more revenue facts fenced to persisted invoice-line ID and digest
+        allowed_result_effects: [RECORDED]
+      recordAccountingCorrection:
+        target_relations: [ops.accounting_corrections]
+        atomic_cardinality: one-or-more append-only corrections
+        allowed_result_effects: [RECORDED, REVERSED]
+      recordCashApplication:
+        target_relations: [ops.cash_application_facts]
+        atomic_cardinality: one-or-more signed imported facts
+        allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+      recordTaxInvoiceIssuance:
+        target_relations: [ops.tax_invoice_issuance_receipts]
+        atomic_cardinality: one-or-more signed imported receipts
+        allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+      recordCollectionFailure:
+        target_relations: [ops.tasks]
+        atomic_cardinality: exactly one operator review task and no economics, entitlement, or public-access mutation
+        allowed_result_effects: [REVIEW_TASK_CREATED]
+    invariants:
+      - The ordered variant keys are set-equal to EconomicsImportOperationV1 and contain exactly eleven entries.
+      - ActionEffectV1 for ECONOMICS_IMPORT has effectClass INTERNAL_MATERIALIZATION, externalSideEffect false, fromState exactly the transport-only UNRECORDED sentinel and toState exactly one allowed_result_effect for the selected operationId.
+      - Existing ActionProposal, ActionDecision and ExecutionAuthorization lifecycles are the only lifecycle authority. This registry is a closed immutable effect/disposition contract and never defines a pseudo-machine or generic state transition.
+      - Target relations, atomic cardinality and allowed result effects are exact-equal in operation, approval, persistence, command semantics, database addendum and validators.
+
+  economics_import_terminal_contract:
+    owner_dispositions_exactly: [SUCCEEDED, OPERATION_REJECTED, PERMANENT_FAILED]
+    receipt_field: terminalKind
+    generic_action_execution_state_selector:
+      SUCCEEDED: SUCCEEDED
+      OPERATION_REJECTED: PERMANENT_FAILED
+      PERMANENT_FAILED: PERMANENT_FAILED
+    operation_rejected: The nested branch apply is rolled back and only a redacted business or constraint rejection terminalization is retained; it is not retryable and is not reconciliation.
+    commit_ack_ambiguity: SQLSTATE class 08 or equivalent commit acknowledgement uncertainty creates no terminal receipt, terminal state or second submission. The same claim, idempotency identity and execution fence recalls the owner until it returns the committed replay or executes the previously uncommitted transaction.
+    invariants:
+      - The generic action execution state enum remains unchanged and never gains OPERATION_REJECTED.
+      - RECONCILIATION_REQUIRED is absent from the economics owner disposition and EconomicsImportExecutionReceiptV1 terminalKind sets.
+      - Worker job success is selected only by terminalKind SUCCEEDED; no external send, automatic resubmission or new idempotency identity exists in this database-only executor.
+
   private_application_command_persistence:
     private.RecordOutboundDeliveryObservation:
       semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.RecordOutboundDeliveryObservation']"
@@ -3355,10 +3697,157 @@ exact_persistence_registry:
       procedure: ops.create_approved_record_class_schedule_revision_v1
       write_guard: both the immutable RETENTION_SCHEDULE approval detail and appended schedule row enforce the exact 0038 trigger and terminal-action sets; PRESERVE_* is indefinite, NOT_DESTRUCTIVE and NOT_APPLICABLE for restore suppression, while non-preservation is finite and REAPPLY_BEFORE_ACCESS
       receipt: RecordClassScheduleReceiptV1
-    private.PublishFundingDisclosureRevision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.PublishFundingDisclosureRevision']", contract: private_action_executor_persistence_contract, target_relations: [editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries], procedure: editorial.publish_approved_funding_disclosure_revision_v1, receipt: FundingDisclosureExecutionReceiptV1}
+    private.PublishFundingDisclosureRevision:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.PublishFundingDisclosureRevision']"
+      contract: private_action_executor_persistence_contract
+      source_contract_status: SOURCE_ONLY_DATABASE_FINAL_BLOCKED
+      authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.GFD-AUTHORITY-V1
+      authority_status: APPROVED_AS_RECOMMENDED_IMPLEMENTATION_HELD
+      target_relations: [editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries]
+      procedure: editorial.publish_funding_disclosure_v1
+      publisher: {service: workflow-worker, database_principal: gurine_workflow_worker, function_owner: gurine_migrator, direct_table_dml: 0}
+      target_revision: candidate N is at least 1; first is 1 and each successor is the locked current head plus 1; zero is forbidden
+      review_quorum_ref: specs/product/addendum-approval-policy.yaml#action_kind_policies.FUNDING_DISCLOSURE
+      digest_order: entry and set digests, then revisionDigest, then receiptDigest, then event and response digests
+      receipt: FundingDisclosureExecutionReceiptV1
+      implementation_hold:
+        affected_operations_exactly: [createActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision]
+        database_error: {sqlstate: "55000", message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, writes: 0}
+        external_error: {code: INTERNAL_ERROR, http_status: 500}
+        release_rule: every approved slot, distinctness, related-case review, publisher, ACL, digest, event and test obligation must be implemented and verified before activation
+      database_final_blockers:
+        - The publisher service, database principal, function name, function owner and direct-DML prohibition are approved, but the exact callable argument/result ABI, lock order and activation evidence are not supplied by GFD-AUTHORITY-V1 and must not be invented here.
+        - The six-operation 55000/write-zero hold remains until the approved two-to-four-slot quorum, related-case prerequisites, digest chain, event binding and publisher boundary are independently verified together.
     private.DecideCapabilityActivation: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.DecideCapabilityActivation']", contract: private_action_executor_persistence_contract, target_relations: [ops.capability_activation_decisions, ops.capability_activation_evidence], procedure: ops.decide_approved_capability_activation_v1, receipt: CapabilityActivationDecisionReceiptV1}
     private.CreateBusinessCalendarVersion: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateBusinessCalendarVersion']", contract: private_action_executor_persistence_contract, target_relations: [ops.business_calendar_versions], procedure: ops.create_approved_business_calendar_version_v1, receipt: BusinessCalendarVersionReceiptV1}
     private.ApplyCommercialControl: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ApplyCommercialControl']", contract: private_action_executor_persistence_contract, target_relations: [ops.commercial_control_executions, ops.commercial_control_execution_items, ops.commercial_control_import_receipts, ops.commercial_control_acknowledgements], procedure: ops.apply_approved_commercial_control_v1, receipt: CommercialControlExecutionReceiptV1}
+    private.ExecuteEconomicsImport:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ExecuteEconomicsImport']"
+      operation_kind: COMMAND
+      source_contract_status: SOURCE_ONLY_DATABASE_FINAL_BLOCKED
+      authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.ECO-AUTHORITY-V1
+      target_version_contract: target.expectedVersion and ApprovalBindingV1.targetVersion are null only for ECONOMICS_IMPORT; every other action kind remains positive and sentinel 1 is forbidden
+      low_margin_tariff_discount_contract: {sqlstate: "55000", writes: 0, exception_authority: UNAVAILABLE}
+      digest_abi_ref: GURINE_LENGTH_PREFIXED_UTF8_V1; funding digests are excluded
+      isolation: SERIALIZABLE
+      authorization: workflow-worker economics-import executor plus the exact current ECONOMICS_IMPORT ExecutionAuthorization, economics.import capability and immutable STEP_UP receipt
+      effect_owner: workflow-worker.economics-import-executor
+      atomic_transition_group: gurine.private.ExecuteEconomicsImport.v1
+      target_relation_registry: economics_import_effect_disposition_registry.variants
+      state_disposition: action_execution.RUNNING->SUCCEEDED|PERMANENT_FAILED through economics_import_terminal_contract and never through RECONCILIATION_REQUIRED
+      idempotency:
+        identity: [execution_id, generation, execution_digest, effect_idempotency_key_sha256]
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+        commit_ack_ambiguity: retain the identical claim and execution fence and recall only the same owner request; never create a new submission or idempotency identity
+      review_task_cross_effect:
+        authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAYMENT-TEST-V1.payment_review
+        selected_operation_id: recordCollectionFailure
+        source_authority: BANK_RETURN_CONFIRMED
+        source_kind: SIGNED_COLLECTION_FAILURE
+        required_review_assignee_field: reviewAssigneeUserId
+        review_assignee_binding: exact request, immutable approval detail and receipt digest
+        routing_topic: PAYMENT_REVIEW_V1
+        due_at: occurredAt plus exactly 24 hours
+        creation_gate: one active internal subject, one current authorization, exactly one endpoint and evaluator, and a source-bound deployment are all current and exact
+        gate_failure: {sqlstate: "55000", writes: 0}
+        task_authority: task existing typed authority
+        cardinality: {review_task: exactly-one, notification_intent: exactly-one, outbox: exactly-one, economics_effect: zero, entitlement_effect: zero, public_effect: zero}
+        forbidden_automatic_effects: [external_dunning, entitlement_change, contract_change, public_access_change]
+        exact_replay: zero second task, notification intent or notification.payment_review_requested.v1 event
+        caller_relabel: forbidden
+      terminal_contract: economics_import_terminal_contract
+      outbox:
+        events: [action.execution_completed.v1, notification.payment_review_requested.v1]
+        cardinality: action.execution_completed.v1 exactly once for every terminal owner disposition; notification.payment_review_requested.v1 exactly once only for successful recordCollectionFailure
+      receipt: EconomicsImportExecutionReceiptV1
+      errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, STEP_UP_REQUIRED, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      database_final_blockers:
+        - Exact typed owner function names, signatures, arguments, return composites and SQLSTATE mapping are not yet FINAL.
+        - SECURITY DEFINER ownership, PUBLIC revocation, sole caller EXECUTE grants and the twenty-four-relation owner matrix are not yet FINAL.
+        - Exact lock order, status recovery readers and terminal execution plus producer-job atomicity are not yet FINAL.
+        - This source row must not activate the workflow-worker ABI-ready latch until the database contract and runtime adapter are independently verified.
+    private.ExecuteDonationCharge:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ExecuteDonationCharge']"
+      operation_kind: COMMAND
+      source_contract_status: SOURCE_ONLY_DATABASE_FINAL_BLOCKED
+      authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAYMENT-TEST-V1
+      authorization: gurine_billing_gateway plus one exact current RUNNING DONATION_CHARGE job on queue billing-gateway with matching worker, nonexpired lease token, positive fencing token and canonical thirteen-key payload digest
+      effect_owner: payment-owner-function-boundary
+      atomic_transition_group: gurine.private.ExecuteDonationCharge.v1
+      core_target_relations: [ops.payment_method_bindings, ops.payment_charge_attempts, ops.donation_facts]
+      auxiliary_relations: [ops.tasks, ops.audit_events, ops.outbox]
+      job_relations: [ops.jobs, ops.job_attempts]
+      lifecycle_contract:
+        core_target_relations: [ops.payment_method_bindings, ops.payment_charge_attempts, ops.donation_facts]
+        auxiliary_relations: [ops.tasks, ops.audit_events, ops.outbox]
+        success_binding_transitions:
+          SINGLE_CHARGE: {from: ACTIVE, to: REVOKED, terminal_disposition: CONSUMED}
+          RECURRING: {from: ACTIVE, to: ACTIVE, terminal_disposition: RETAINED}
+        success_atomicity: the definitive SUCCEEDED charge attempt, donation fact and credential-use-policy-selected binding transition commit in one payment-owner transaction; only SINGLE_CHARGE appends the ACTIVE to REVOKED consumption transition
+        recurring_scheduler_owner: ops.enqueue_due_r6e_donation_charge_jobs_v1
+        local_reject_terminal_owner: ops.fail_r6e_donation_charge_v1
+        failure_outcomes:
+          LOCAL_REJECT: {attempt_transition: REQUESTED_TO_FAILED, review_tasks: ZERO, donation_facts: ZERO, binding_consumptions: ZERO}
+          FETCHED_FAILED: {attempt_transition: PROVIDER_ACCEPTED_TO_FAILED, review_tasks: EXACTLY_ONE, donation_facts: ZERO, binding_consumptions: ZERO}
+          FETCHED_CANCELED: {attempt_transition: PROVIDER_ACCEPTED_TO_FAILED, review_tasks: EXACTLY_ONE, donation_facts: ZERO, binding_consumptions: ZERO}
+        non_success_rule: replay, reconciliation and every failure append no second binding consumption and authorize no automatic resubmission, new logical charge or new idempotency identity
+        authority_effects: entitlement, access, investigation-priority, publication-priority and public-readiness effects are always zero
+      recurring_scheduler:
+        policy: B
+        actor: scheduler.donation-charge-scheduler
+        owner_function: ops.enqueue_due_r6e_donation_charge_jobs_v1
+        isolation: SERIALIZABLE
+        selector: due current ACTIVE RECURRING binding under a bounded limit of 1..500
+        monthly_anchor: first_charge_at in UTC with non-drifting month-end clamp
+        eligible_window: current UTC month only; catch-up and backcharge are forbidden
+        occurrence_identity: [schedule_id, schedule_version, scheduledFor]
+        occurrence_uniqueness: permanent
+        later_month_blocker: any pending, provider-accepted or reconciliation-required occurrence
+        next_month_release_authority: only definitive pre-dispatch rejection or fetch-confirmed success, full refund or failure
+        same_occurrence_resubmission_writes: 0
+        cardinality: zero-to-limit unique digest-bound DONATION_CHARGE jobs and one closed evaluatedAt/enqueuedCount/jobIds receipt
+        effect_exactly: DONATION_CHARGE job insert
+        direct_payment_effect: zero
+        direct_effects: {payment: zero, contract: zero, entitlement: zero, public_access: zero}
+      transaction_phases:
+        - Claim the exact current job and ACTIVE payment binding and append payment_charge_attempt.REQUESTED before provider I/O.
+        - A definitive provider acceptance appends PROVIDER_ACCEPTED under the same logical charge and claim fence before authoritative fetch completion.
+        - A local pre-dispatch rejection invokes ops.fail_r6e_donation_charge_v1 and appends FAILED with no review task, donation fact, binding consumption or external retry.
+        - Unknown, unavailable, pending or PARTIALLY_REFUNDED evidence appends RECONCILIATION_REQUIRED and keeps the same logical charge, provider idempotency identity and job fence without automatic redispatch.
+        - The shared payment-owner observation apply used by private.ReceivePaymentWebhook appends fetched SUCCEEDED or FAILED; CANCELED is persisted as FAILED, and a full REFUNDED observation appends REFUNDED plus one REVERSAL fact.
+        - Fetch-confirmed SUCCEEDED appends one ORIGINAL donation fact; for SINGLE_CHARGE only it also appends payment_method_binding.REVOKED with reason CONSUMED in that same payment-owner transaction, while RECURRING remains ACTIVE.
+      review_task_cross_effect:
+        authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAYMENT-TEST-V1.payment_review
+        source_authority: PROVIDER_FETCH_CONFIRMED
+        source_states: [FAILED, CANCELED]
+        persisted_attempt_state: FAILED
+        source_kind: DONATION_PAYMENT_FAILURE
+        required_review_assignee_field: reviewAssigneeUserId
+        review_assignee_binding: exact request, immutable detail and receipt digest
+        routing_topic: PAYMENT_REVIEW_V1
+        due_at: occurredAt plus exactly 24 hours
+        creation_gate: one active internal subject, one current authorization, exactly one endpoint and evaluator, and a source-bound deployment are all current and exact
+        gate_failure: {sqlstate: "55000", writes: 0}
+        task_authority: task existing typed authority
+        cardinality: {review_task: exactly-one, notification_intent: exactly-one, outbox: exactly-one, donation_fact: zero, economics_effect: zero, entitlement_effect: zero, public_effect: zero}
+        forbidden_automatic_effects: [external_dunning, entitlement_change, contract_change, public_access_change]
+        reconciliation_required_effects: {task: zero, notification: zero, automatic_retry: zero}
+        exact_replay: zero second task, notification intent or notification.payment_review_requested.v1 event
+        caller_relabel: forbidden
+      success_cardinality:
+        SUCCEEDED_SINGLE_CHARGE: {charge_attempt: exactly-one-new-version, donation_fact: exactly-one-ORIGINAL, donation_outbox: exactly-one, binding_revoke_CONSUMED: exactly-one}
+        SUCCEEDED_RECURRING: {charge_attempt: exactly-one-new-version, donation_fact: exactly-one-ORIGINAL, donation_outbox: exactly-one, binding_revoke: zero, binding_state: ACTIVE}
+        REFUNDED: {charge_attempt: exactly-one-new-version, donation_fact: exactly-one-REVERSAL, donation_outbox: exactly-one, binding_revoke: zero}
+        exact_replay: {all_writes: zero, provider_call: zero, result: stored immutable receipt}
+      secret_boundary: billing key material, authorization token, merchant order identifier, provider payment identifier, raw provider bytes, signatures, lease token and replayable calldata are absent from payloads, receipts, audit, outbox, errors, logs and Debug
+      receipt: DonationChargeExecutionResultV1
+      errors: [INVALID_REQUEST, IDEMPOTENCY_CONFLICT, PAYMENT_RUNTIME_UNAVAILABLE, RECONCILIATION_REQUIRED, INTERNAL_ERROR]
+      database_final_blockers:
+        - Exact claim, acceptance, completion, reconciliation and status-reader owner function signatures and return composites are not yet FINAL; only ops.fail_r6e_donation_charge_v1 and ops.enqueue_due_r6e_donation_charge_jobs_v1 names are source-authorized here.
+        - SECURITY DEFINER ownership, PUBLIC revocation, sole gurine_billing_gateway or scheduler EXECUTE grants and direct relation DML denial are not yet FINAL.
+        - Exact payment lock order, authoritative recovery readers, and terminal attempt plus job completion atomicity are not yet FINAL.
+        - The recurring scheduler function is called by current Rust source but is not yet a verified migration-owned callable ABI.
     private.ExecuteProviderControl:
       semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ExecuteProviderControl']"
       contract: private_action_executor_persistence_contract
@@ -3372,7 +3861,22 @@ exact_persistence_registry:
       operation_selector: exact ProviderControlOperationIdV1 with providerId and expectedVersion equality
       receipt: ProviderControlExecutionReceiptV1
       exact_replay_writes: 0
-    private.MaterializePaidEvidencePacket: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.MaterializePaidEvidencePacket']", isolation: SERIALIZABLE, authorization: workflow-worker service identity plus claimed ops.inbox event and exact qualification contract subject plus ten typed immutable member candidate keys, target_relations: [ops.paid_evidence_packets, ops.paid_evidence_packet_members], procedure: ops.materialize_paid_evidence_packet_subject_v1, digest_rule: PostgreSQL resolves the ten source candidate keys and recomputes packetSubjectDigest before comparing expectedPacketSubjectDigest, receipt: PaidEvidencePacketMaterializationReceiptV1, exact_replay_writes: 0, outbox: [product.paid_evidence_packet_subject_persisted.v1]}
+    private.MaterializePaidEvidencePacket:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.MaterializePaidEvidencePacket']"
+      version_scope: V1_ONLY_UNCHANGED
+      isolation: SERIALIZABLE
+      authorization: workflow-worker service identity plus claimed ops.inbox event and exact qualification contract subject plus ten typed immutable member candidate keys
+      target_relations: [ops.paid_evidence_packets, ops.paid_evidence_packet_members]
+      procedure: ops.materialize_paid_evidence_packet_subject_v1
+      digest_rule: PostgreSQL resolves the ten source candidate keys and recomputes packetSubjectDigest before comparing expectedPacketSubjectDigest
+      receipt: PaidEvidencePacketMaterializationReceiptV1
+      exact_replay_writes: 0
+      outbox: [product.paid_evidence_packet_subject_persisted.v1]
+      paid_evidence_v2:
+        authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAID-EVIDENCE-V2-AUTHORITY
+        implementation_status: OPEN_FAIL_CLOSED
+        v1_preservation: this V1 operation, relation pair, procedure, receipt and canonical bytes are not renamed, widened, reinterpreted or backfilled as V2
+        activation_blocker: the exact V2 schema, identifiers, physical fields and complete digest preimages are not uniquely supplied by the approved high-level package
     ops.execute_due_r6d_entity_retention_job_v1:
       semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['ops.execute_due_r6d_entity_retention_job_v1']"
       isolation: READ_COMMITTED
@@ -3497,6 +4001,106 @@ exact_persistence_registry:
       audit_request_id: jobId
       worker_error_mapping: {'22023': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_OWNER_REJECTED, '0A000': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_UNSUPPORTED, '40001': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_CONFLICT, '55000': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_NOT_READY, PVT09: PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_BLOCKED, other_database_error: PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_OWNER_UNAVAILABLE}
       completion_boundary: the existing Worker.complete transaction changes ops.jobs RUNNING to SUCCEEDED only after the fourteen-key result passes Rust binding validation; it is separate from the response/request mutation transaction
+  private_billing_gateway_persistence:
+    private.GetDonationFixtureOffer:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_billing_gateway_operations['private.GetDonationFixtureOffer']"
+      operation_kind: QUERY
+      source_contract_status: SOURCE_CONFIRMED
+      authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAYMENT-TEST-V1
+      isolation: READ_COMMITTED for durable service-assertion JTI consumption; the offer lookup itself is in-memory and immutable
+      authorization: request-bound public-web service assertion for the exact GET path and request digest with durable JTI replay rejection
+      relations: [ops.assertion_replay_guard]
+      fixture_authority: TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY
+      TEST_ONLY: return the exact immutable DonationFixtureOfferV1 and perform no business, audit, outbox, payment, donation or readiness mutation
+      PRODUCTION: return request-id-only DEPENDENCY_UNAVAILABLE or PAYMENT_RUNTIME_UNAVAILABLE before offer lookup with zero business mutation
+      writes: exactly one authorization replay-guard consume on a fresh valid assertion and zero business-state writes
+      errors: [SERVICE_ASSERTION_INVALID, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+    private.QueueDonationIntent:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_billing_gateway_operations['private.QueueDonationIntent']"
+      operation_kind: COMMAND
+      source_contract_status: SOURCE_ONLY_DATABASE_FINAL_BLOCKED
+      authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAYMENT-TEST-V1
+      authorization: request-bound public-web service assertion plus durable JTI rejection and required Idempotency-Key equal to requestId
+      effect_owner: billing-gateway through the closed payment-owner function boundary
+      atomic_transition_group: gurine.private.QueueDonationIntent.v1
+      authorization_relations: [ops.assertion_replay_guard]
+      core_target_relations: [ops.payment_method_bindings]
+      auxiliary_relations: [ops.jobs, ops.audit_events]
+      fixture_authority: TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY
+      state_disposition: payment_method_binding.NONE->PENDING_PROVIDER->ACTIVE|FAILED; the first charge job is enqueued only after ACTIVE completion, and later RECURRING jobs belong only to ops.enqueue_due_r6e_donation_charge_jobs_v1
+      idempotency:
+        identity: [requestId, Idempotency-Key]
+        request_digest: canonical exact body including offer, tier, cadence and consent binding but excluding persistence of paymentAuthorizationToken
+        exact_replay: return the original five-field DonationIntentQueuedReceiptV1 bytes with zero second binding, job, provider handoff, audit or business write
+        changed_replay: IDEMPOTENCY_CONFLICT with zero business write
+      review_assignment_contract:
+        field: reviewAssigneeUserId
+        required: true
+        binding: exact TEST_ONLY donation-intent request, immutable detail and receipt digest
+        topic: PAYMENT_REVIEW_V1
+        later_failure_due_at: occurredAt plus exactly 24 hours
+      cardinality:
+        fresh_success: {pending_binding_revision: exactly-one, active_binding_revision: exactly-one, initial_charge_job: exactly-one, audit: source-defined, outbox: zero}
+        local_failure_after_claim: {pending_binding_revision: exactly-one, failed_binding_revision: exactly-one, charge_job: zero, outbox: zero}
+        exact_replay: {business_writes: zero, response: byte-identical stored receipt}
+      secret_boundary: paymentAuthorizationToken is consumed once for TEST_ONLY provider handoff and never persists in relation, receipt, audit, outbox, error, log or Debug output
+      receipt: DonationIntentQueuedReceiptV1
+      errors: [INVALID_REQUEST, SERVICE_ASSERTION_INVALID, IDEMPOTENCY_CONFLICT, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+      database_final_blockers:
+        - Exact intent claim, binding completion, binding failure and status-reader owner function names, signatures, return composites and SQLSTATE mapping are not yet FINAL.
+        - SECURITY DEFINER ownership, PUBLIC revocation, sole gurine_billing_gateway EXECUTE grants, direct relation DML denial and payment lock order are not yet FINAL.
+        - The exact atomic owner transaction that couples ACTIVE completion to the initial digest-bound DONATION_CHARGE job and stored replay bytes is not yet FINAL.
+    private.ReceivePaymentWebhook:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_billing_gateway_operations['private.ReceivePaymentWebhook']"
+      operation_kind: COMMAND
+      source_contract_status: SOURCE_ONLY_DATABASE_FINAL_BLOCKED
+      authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAYMENT-TEST-V1
+      authorization: request-bound payment-fixture service assertion with maximum 30-second lifetime, durable JTI rejection, exact method/path/raw-body digest/content-type binding, and provider-specific TEST_ONLY authentication
+      effect_owner: payment-owner-function-boundary
+      atomic_transition_group: gurine.private.ReceivePaymentWebhook.v1
+      authorization_relations: [ops.assertion_replay_guard]
+      webhook_relation: ops.provider_webhook_receipts
+      core_target_relations: [ops.payment_method_bindings, ops.payment_charge_attempts, ops.donation_facts]
+      auxiliary_relations: [ops.tasks, ops.audit_events, ops.outbox]
+      transaction_phases:
+        - Claim one exact provider, event-identity, body-digest, hint-digest and authenticated locator binding before fetch; changed bytes for an existing event identity are PAYMENT_WEBHOOK_CONFLICT.
+        - Provider fetch outside every database transaction is the only payment-state authority; webhook fields and signatures are hints and authentication evidence only.
+        - Fetch failure releases only the same claim; the identical authenticated hint may reclaim RELEASED, while no payment attempt, fact, task, binding or terminal webhook receipt is synthesized.
+        - A fetched observation completes the webhook receipt and invokes the same closed payment-owner apply as private.ExecuteDonationCharge for SUCCEEDED, FAILED, CANCELED, PENDING, PARTIALLY_REFUNDED or full REFUNDED.
+        - Fetch-confirmed SUCCEEDED appends one ORIGINAL fact if absent and consumes an ACTIVE SINGLE_CHARGE binding to REVOKED in that same transaction; RECURRING remains ACTIVE. Full REFUNDED appends one REVERSAL fact without a second binding consume.
+      review_task_cross_effect:
+        authority_ref: specs/product/addendum-persistence-contracts.yaml#supervisor_decision_v1.package_contracts.PAYMENT-TEST-V1.payment_review
+        source_authority: PROVIDER_FETCH_CONFIRMED
+        source_states: [FAILED, CANCELED]
+        persisted_attempt_state: FAILED
+        source_kind: DONATION_PAYMENT_FAILURE
+        required_review_assignee_field: reviewAssigneeUserId
+        review_assignee_binding: exact request, immutable detail and receipt digest
+        routing_topic: PAYMENT_REVIEW_V1
+        due_at: occurredAt plus exactly 24 hours
+        creation_gate: one active internal subject, one current authorization, exactly one endpoint and evaluator, and a source-bound deployment are all current and exact
+        gate_failure: {sqlstate: "55000", writes: 0}
+        task_authority: task existing typed authority
+        cardinality: {review_task: exactly-one, notification_intent: exactly-one, outbox: exactly-one, donation_fact: zero, economics_effect: zero, entitlement_effect: zero, public_effect: zero}
+        forbidden_automatic_effects: [external_dunning, entitlement_change, contract_change, public_access_change]
+        reconciliation_required_effects: {task: zero, notification: zero, automatic_retry: zero}
+        exact_replay: zero second task, notification intent or notification.payment_review_requested.v1 event
+        caller_relabel: forbidden
+      idempotency:
+        exact_finalized_replay: return original PaymentWebhookAcceptanceV1 bytes with disposition DUPLICATE and zero writes or provider fetch
+        changed_event_identity: PAYMENT_WEBHOOK_CONFLICT and zero writes
+        released_reclaim: only the identical provider, event, body, hint, authentication and locator binding may reclaim
+      outbox:
+        donation.fact_recorded.v1: exactly-one only for a newly appended ORIGINAL or REVERSAL fact
+        notification.payment_review_requested.v1: exactly-one only for a newly fetched FAILED or CANCELED donation-payment review task
+        reconciliation_or_replay_or_release: zero
+      secret_boundary: raw body, assertion, signature, provider identifier, billing key, token and merchant order identifier never persist or enter response, audit, outbox, errors, logs or Debug
+      receipt: PaymentWebhookAcceptanceV1
+      errors: [INVALID_REQUEST, SERVICE_ASSERTION_INVALID, PAYMENT_WEBHOOK_CONFLICT, PAYMENT_RUNTIME_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+      database_final_blockers:
+        - Exact webhook claim, completion, release, status-reader and shared payment-observation owner function names, signatures, return composites and SQLSTATE mapping are not yet FINAL.
+        - SECURITY DEFINER ownership, PUBLIC revocation, sole gurine_billing_gateway EXECUTE grants, direct relation DML denial and exact payment lock order are not yet FINAL.
+        - Exact status recovery for CLAIMED or RELEASED receipts and atomic coupling of webhook completion, payment transition, optional binding consumption, fact or review task, audit and outbox are not yet FINAL.
   base_operation_atomic_extension_persistence:
     submitResponse:
       semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.submitResponse
@@ -3567,6 +4171,7 @@ exact_persistence_registry:
   - query persistence equals all additive QUERY IDs derived from addendum-operation-contracts
   - external command persistence equals all additive COMMAND IDs derived from addendum-command-semantics
   - private application command persistence equals all owner-addendum private application command IDs
+  - private billing-gateway persistence equals all owner-addendum private billing-gateway operation IDs, including the exact query and command subsets
   - base operation atomic extension persistence equals all owner-addendum base extension IDs
   - private callback persistence equals all private callback IDs including the read-only verification query
   - query plus command persistence equals all additive external operations, with cardinality derived from source sets rather than numeric literals

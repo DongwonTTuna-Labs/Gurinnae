@@ -35,7 +35,7 @@ const statusSectionId = $derived(statusSectionIdForScreen(screen.sections));
 const actionPlacement = $derived(publicActionPlacement(screen));
 </script>
 
-<div class="section-grid" class:form-grid={variant === "form" || screen.archetype === "GUIDED_FORM"} class:workspace-grid={variant === "workspace"}>
+<div class="section-grid" class:form-grid={variant === "form" || screen.archetype === "GUIDED_FORM"} class:workspace-grid={variant === "workspace"} class:donation-grid={screen.id === "PUB-035"}>
   {#each contract.sections as typedSection, index (typedSection.id)}
     {@const section = sourceSectionForId(screen, typedSection.id)}
     {@const inlineActionIds = sectionActionIds(actionPlacement, typedSection.id)}
@@ -63,6 +63,23 @@ const actionPlacement = $derived(publicActionPlacement(screen));
   .form-grid,
   .workspace-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .donation-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .donation-grid > .section[data-component="StatusAndRevisionHeader"],
+  .donation-grid > .section[data-component="KnownUnknownResponse"] {
+    grid-column: 1 / -1;
+  }
+
+  .donation-grid > .section[data-component="GuidedFormSection"] {
+    grid-column: span 8;
+  }
+
+  .donation-grid > .section[data-component="DecisionReceipt"] {
+    grid-column: span 4;
   }
 
   .form-grid > .section[data-component="GuidedFormSection"] {
@@ -99,11 +116,28 @@ const actionPlacement = $derived(publicActionPlacement(screen));
     .section-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .donation-grid {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+
+    .donation-grid > .section[data-component="GuidedFormSection"] {
+      grid-column: span 5;
+    }
+
+    .donation-grid > .section[data-component="DecisionReceipt"] {
+      grid-column: span 3;
+    }
   }
 
   @media (max-width: 620px) {
     .section-grid {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .donation-grid > .section[data-component="GuidedFormSection"],
+    .donation-grid > .section[data-component="DecisionReceipt"] {
+      grid-column: 1 / -1;
     }
 
     .section {

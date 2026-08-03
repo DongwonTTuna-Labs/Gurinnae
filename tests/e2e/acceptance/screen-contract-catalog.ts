@@ -1,8 +1,29 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "yaml";
+import {
+  addendumOperationContractsFrom,
+  privateBillingApiOperationsFrom,
+} from "./screen-addendum-operation-contracts";
+import {
+  arrayValue,
+  booleanValue,
+  type ObjectValue,
+  objectValue,
+  stringValue,
+} from "./screen-contract-values";
 
-type ObjectValue = Record<string, unknown>;
+export {
+  addendumOperationContractsFrom,
+  privateBillingApiOperationsFrom,
+} from "./screen-addendum-operation-contracts";
+export {
+  arrayValue,
+  booleanValue,
+  objectValue,
+  stringValue,
+} from "./screen-contract-values";
+
 type Section = {
   id: string;
   component: string;
@@ -64,6 +85,7 @@ export type ApiOperation = {
   method: string;
   path: string;
   responses: ObjectValue;
+  source: "GENERATED_OPENAPI" | "PRIVATE_BILLING_REGISTRY";
 };
 const ROOT = resolve(".");
 const API_FILES = {
@@ -74,31 +96,6 @@ const API_FILES = {
   "identity-provider": "identity-provider.openapi.json",
 } as const;
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
-
-function isObjectValue(value: unknown): value is ObjectValue {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function objectValue(value: unknown, context: string): ObjectValue {
-  if (!isObjectValue(value)) throw new Error(`${context} must be an object`);
-  return value;
-}
-
-export function arrayValue(value: unknown, context: string): unknown[] {
-  if (!Array.isArray(value)) throw new Error(`${context} must be an array`);
-  return value;
-}
-
-export function stringValue(value: unknown, context: string): string {
-  if (typeof value !== "string" || value.trim() === "")
-    throw new Error(`${context} must be a non-empty string`);
-  return value;
-}
-
-export function booleanValue(value: unknown, context: string): boolean {
-  if (typeof value !== "boolean") throw new Error(`${context} must be boolean`);
-  return value;
-}
 
 export function stringList(value: unknown, context: string): string[] {
   return arrayValue(value, context).map((entry, index) =>
@@ -275,57 +272,24 @@ export function operationContracts(): Operation[] {
       ),
     };
   });
-  return [...base, ...addendumOperationContracts()];
+  return uniqueOperations([...base, ...addendumOperationContracts()]);
 }
 
 function addendumOperationContracts(): Operation[] {
-  const values = arrayValue(
-    yamlObject("specs/product/addendum-operation-contracts.yaml").operations,
-    "addendum operations",
+  return addendumOperationContractsFrom(
+    yamlObject("specs/product/addendum-operation-contracts.yaml"),
+    yamlObject("specs/product/addendum-resource-error-contracts.yaml"),
   );
-  const bindings = objectValue(
-    yamlObject("specs/product/addendum-resource-error-contracts.yaml")
-      .operation_bindings,
-    "addendum operation bindings",
-  );
-  return values.map((value, index) => {
-    const context = `addendum operations[${index}]`;
-    const item = objectValue(value, context);
-    const operationId = stringValue(
-      item.operation_id,
-      `${context}.operation_id`,
-    );
-    const binding = objectValue(
-      bindings[operationId],
-      `operation_bindings.${operationId}`,
-    );
-    const kind = stringValue(item.kind, `${context}.kind`);
-    const assurance = stringValue(item.assurance, `${context}.assurance`);
-    return {
-      operationId,
-      status: "READY",
-      api: stringValue(item.api, `${context}.api`),
-      method: stringValue(item.method, `${context}.method`),
-      path: stringValue(item.path, `${context}.path`),
-      requestSchema: stringValue(
-        binding.request_schema,
-        `operation_bindings.${operationId}.request_schema`,
-      ),
-      responseSchema: stringValue(
-        binding.success_schema,
-        `operation_bindings.${operationId}.success_schema`,
-      ),
-      kind,
-      mutatesState: kind === "COMMAND",
-      successStatus: String(binding.success_status),
-      capability:
-        item.capability === undefined || item.capability === null
-          ? "none"
-          : stringValue(item.capability, `${context}.capability`),
-      assurance,
-      stepUp: assurance === "STEP_UP",
-    };
-  });
+}
+
+function uniqueOperations<T extends { operationId: string }>(values: T[]): T[] {
+  const seen = new Set<string>();
+  for (const operation of values) {
+    if (seen.has(operation.operationId))
+      throw new Error(`duplicate operation contract: ${operation.operationId}`);
+    seen.add(operation.operationId);
+  }
+  return values;
 }
 
 export function screenDataContracts(): Requirement[] {
@@ -336,7 +300,7 @@ export function screenDataContracts(): Requirement[] {
   const base = values.map((value, index) =>
     requirement(value, `screen-data operations[${index}]`),
   );
-  return [
+  return uniqueOperations([
     ...base,
     ...addendumOperationContracts().map(
       ({
@@ -357,11 +321,11 @@ export function screenDataContracts(): Requirement[] {
         responseSchema,
       }),
     ),
-  ];
+  ]);
 }
 
 export function apiOperations(): ApiOperation[] {
-  return Object.entries(API_FILES).flatMap(([api, filename]) => {
+  const generated = Object.entries(API_FILES).flatMap(([api, filename]) => {
     const document = jsonObject(`specs/generated/${filename}`);
     const paths = objectValue(document.paths, `${filename}.paths`);
     return Object.entries(paths).flatMap(([path, rawPath]) => {
@@ -385,9 +349,29 @@ export function apiOperations(): ApiOperation[] {
               operation.responses,
               `${filename}:${method}:${path}.responses`,
             ),
+            source: "GENERATED_OPENAPI" as const,
           },
         ];
       });
     });
   });
+  const privateBilling = privateBillingApiOperationsFrom(
+    yamlObject("specs/product/addendum-operation-contracts.yaml"),
+    yamlObject("specs/product/addendum-resource-error-contracts.yaml"),
+  );
+  return composeApiOperations(generated, privateBilling);
+}
+
+export function composeApiOperations(
+  generated: readonly ApiOperation[],
+  privateBilling: readonly ApiOperation[],
+): ApiOperation[] {
+  const operations = [...generated, ...privateBilling];
+  const seen = new Set<string>();
+  for (const operation of operations) {
+    if (seen.has(operation.id))
+      throw new Error(`duplicate API operation ownership: ${operation.id}`);
+    seen.add(operation.id);
+  }
+  return operations;
 }

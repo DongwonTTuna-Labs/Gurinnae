@@ -381,6 +381,17 @@ routes:
   view_model: apps/public-web/src/lib/view-models/pub-034.ts
   e2e: tests/e2e/screens/pub-034.spec.ts
   visual: tests/visual/pub-034.spec.ts
+- screen_id: PUB-035
+  surface: public
+  route: /donate
+  app: apps/public-web
+  page: apps/public-web/src/routes/donate/+page.svelte
+  server_load_or_actions: apps/public-web/src/routes/donate/+page.server.ts
+  layout: apps/public-web/src/routes/+layout.server.ts
+  error_boundary: apps/public-web/src/routes/+error.svelte
+  view_model: apps/public-web/src/lib/view-models/pub-035.ts
+  e2e: tests/e2e/screens/pub-035.spec.ts
+  visual: tests/visual/pub-035.spec.ts
 - screen_id: RSP-001
   surface: response
   route: /respond/access

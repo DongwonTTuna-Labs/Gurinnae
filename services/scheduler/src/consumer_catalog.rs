@@ -20,6 +20,12 @@ const RESPONSE_MATERIALIZED_CONSUMERS: &[(&str, &str)] = &[
     ("submission-projector", "projection-worker"),
     ("audit-indexer", "projection-worker"),
 ];
+const FUNDING_DISCLOSURE_CONSUMERS: &[(&str, &str)] = &[
+    ("public-projection-worker", "projection-worker"),
+    ("audit-indexer", "projection-worker"),
+];
+const FUNDING_CANDIDATE_CONSUMERS: &[(&str, &str)] = &[("funding-projector", "projection-worker")];
+const PAYMENT_REVIEW_CONSUMERS: &[(&str, &str)] = &[("notification-worker", "notification-worker")];
 
 fn dataset_snapshot_consumers(
     payload: &Value,
@@ -89,6 +95,8 @@ pub(crate) fn consumers_for(
             &[("projection-worker", "projection-worker")]
         }
         "entity.retention_anonymized.v1" => &[("public-projection-worker", "projection-worker")],
+        "governance.funding_disclosure_published.v1" => FUNDING_DISCLOSURE_CONSUMERS,
+        "donation.fact_recorded.v1" => FUNDING_CANDIDATE_CONSUMERS,
         "action.execution_completed.v1" => ACTION_EXECUTION_COMPLETED_CONSUMERS,
         "agent.run_completed.v1"
         | "attachment.correction_scan_requested.v1"
@@ -116,6 +124,7 @@ pub(crate) fn consumers_for(
         | "notification.user_invitation_requested.v1"
         | "projection.publication_applied.v1" => &[("notification-worker", "notification-worker")],
         "notification.response_submitted.v2" => &[("notification-worker", "notification-worker")],
+        "notification.payment_review_requested.v1" => PAYMENT_REVIEW_CONSUMERS,
         "privacy.request_created.v2"
         | "privacy.request_identity_verified.v1"
         | "privacy.request_extension_notified.v1"
@@ -297,6 +306,47 @@ mod tests {
             consumers_for("entity.retention_anonymized.v1", &serde_json::json!({})),
             Ok(&[("public-projection-worker", "projection-worker")][..])
         );
+    }
+
+    #[test]
+    fn approved_funding_disclosure_routes_to_public_projection_and_audit() {
+        let empty_payload = serde_json::json!({});
+        assert_eq!(
+            consumers_for("governance.funding_disclosure_published.v1", &empty_payload,),
+            Ok(FUNDING_DISCLOSURE_CONSUMERS)
+        );
+        assert_eq!(
+            consumers_for("funding.disclosure_published.v1", &empty_payload),
+            Ok(&[][..])
+        );
+    }
+
+    #[test]
+    fn donation_fact_routes_only_to_private_funding_candidate_projection() {
+        let empty_payload = serde_json::json!({});
+        assert_eq!(
+            consumers_for("donation.fact_recorded.v1", &empty_payload),
+            Ok(FUNDING_CANDIDATE_CONSUMERS)
+        );
+        for unsupported in ["donation.fact_recorded.v0", "donation.payment_succeeded.v1"] {
+            assert_eq!(consumers_for(unsupported, &empty_payload), Ok(&[][..]));
+        }
+    }
+
+    #[test]
+    fn payment_review_request_routes_only_to_notification_worker() {
+        let empty_payload = serde_json::json!({});
+        assert_eq!(
+            consumers_for("notification.payment_review_requested.v1", &empty_payload),
+            Ok(PAYMENT_REVIEW_CONSUMERS)
+        );
+        for unsupported in [
+            "notification.payment_review_request.v1",
+            "notification.payment_review_requested.v2",
+            "payment.review_requested.v1",
+        ] {
+            assert_eq!(consumers_for(unsupported, &empty_payload), Ok(&[][..]));
+        }
     }
 
     #[test]

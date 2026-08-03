@@ -22,10 +22,35 @@ def _external_operation_catalog(root: Path, result: Validation) -> dict[str, dic
             'operation_kind':operation.get('kind'),
             'request_schema':binding.get('request_schema'),
             'response_schema':binding.get('success_schema',operation.get('response')),
+            'success_status':binding.get('success_status'),
             'authorization_errors':operation.get('errors',[]),
             '_additive_external':True,
         })
-    operations=[*base_operations,*additive_operations]
+    private_bindings=additive_resources.get('private_billing_gateway_operation_bindings',{})
+    private_error_sets=additive_resources.get('private_billing_gateway_error_sets',{})
+    private_operations=[]
+    for operation_id,operation in additive_contract.get('private_billing_gateway_operations',{}).items():
+        binding=private_bindings.get(operation_id,{})
+        entrypoint=operation.get('entrypoint',{})
+        result.require(binding.get('scope')=='PRIVATE_BILLING_GATEWAY',f'{operation_id}: private billing binding scope differs')
+        result.require(binding.get('operation_kind')==operation.get('operation_kind'),f'{operation_id}: private billing operation kind differs')
+        result.require(binding.get('request_schema')==operation.get('request_schema'),f'{operation_id}: private billing request schema differs')
+        result.require(binding.get('success_schema')==operation.get('response_schema'),f'{operation_id}: private billing response schema differs')
+        private_operations.append({
+            'operation_id':operation_id,
+            'operation_kind':operation.get('operation_kind'),
+            'api':'billing-gateway-private',
+            'method':entrypoint.get('method'),
+            'path':entrypoint.get('path'),
+            'request_schema':binding.get('request_schema'),
+            'response_schema':binding.get('success_schema'),
+            'success_status':binding.get('success_status'),
+            'authorization_errors':private_error_sets.get(operation_id,[]),
+            '_private_billing_gateway':True,
+        })
+    result.require(set(private_bindings)==set(additive_contract.get('private_billing_gateway_operations',{})),'private billing operation binding set mismatch')
+    result.require(set(private_error_sets)==set(additive_contract.get('private_billing_gateway_operations',{})),'private billing error set mismatch')
+    operations=[*base_operations,*additive_operations,*private_operations]
     counts=collections.Counter(operation['operation_id'] for operation in operations)
     duplicates=sorted(operation_id for operation_id,count in counts.items() if count != 1)
     result.require(not duplicates,f'duplicate external operation IDs across base/additive catalogs: {duplicates}')
@@ -127,8 +152,8 @@ def validate(root: Path, result: Validation) -> None:
     components=load_yaml(root/'specs/ui/component-catalog.yaml'); ops=_external_operation_catalog(root,result)
     commands={c['operation_id']:c for c in load_yaml(root/'specs/application/command-semantics.yaml')['commands']}
     capabilities={c['id'] for c in load_yaml(root/'specs/ui/roles-and-permissions.yaml')['capabilities']}
-    screens=catalog['screens']; result.require(len(screens)==94,f'expected 94 screens, found {len(screens)}')
-    counts=collections.Counter(s['surface'] for s in screens); result.require(counts=={'public':34,'response':8,'internal':52},f'wrong screen counts {dict(counts)}')
+    screens=catalog['screens']; result.require(len(screens)==95,f'expected 95 screens, found {len(screens)}')
+    counts=collections.Counter(s['surface'] for s in screens); result.require(counts=={'public':35,'response':8,'internal':52},f'wrong screen counts {dict(counts)}')
     component_ids={c['id'] for c in components['components']}; result.require(len(component_ids)==58,'expected 58 components')
     proposal_fences=_proposal_only_fences(root,result,ops); matched_fences=set()
     ids=set(); routes=set(); manifest_by={s['id']:s for s in manifest['screens']}
@@ -140,7 +165,12 @@ def validate(root: Path, result: Validation) -> None:
         for req in screen.get('data_requirements',[]):
             oid=req['operation_id']; result.require(req['status']=='READY' and oid in ops,f'{sid}: invalid operation {oid}')
             if oid in ops:
-                for field in ['api','method','path','request_schema','response_schema']: result.require(req.get(field)==ops[oid].get(field),f'{sid}:{oid}: {field} mismatch')
+                fields=['api','method','path','request_schema','response_schema']
+                if 'success_status' in req or ops[oid].get('_private_billing_gateway'):
+                    fields.append('success_status')
+                for field in fields: result.require(req.get(field)==ops[oid].get(field),f'{sid}:{oid}: {field} mismatch')
+                if ops[oid].get('_private_billing_gateway'):
+                    result.require(req.get('server_only') is True,f'{sid}:{oid}: private billing query must be server-only')
         for action in screen.get('actions',[]):
             interaction=action.get('interaction_kind'); level=action.get('assurance_level')
             result.require(interaction in INTERACTIONS,f"{sid}:{action['id']}: invalid interaction_kind")
@@ -153,7 +183,10 @@ def validate(root: Path, result: Validation) -> None:
                 if resolved:
                     contract_oid,op=resolved; result.require(action.get('capability') in {'none',op.get('capability')},f'{sid}:{contract_oid}: capability differs')
                     request={**action.get('fixed_request',{}),**action.get('request_discriminator',{})}
-                    if op['operation_kind']=='QUERY':
+                    if op.get('_private_billing_gateway'):
+                        result.require(action.get('server_only') is True and action.get('browser_direct') is False,f'{sid}:{contract_oid}: private billing action must be BFF-only')
+                        expected='NONE'
+                    elif op['operation_kind']=='QUERY':
                         if op['api']=='control-api': expected='ACTIVE_SESSION'
                         elif op['api']=='identity-provider' and op.get('auth')!='anonymous': expected='ACTIVE_SESSION'
                         elif op['api']=='submission-api' and any(token in op.get('auth','') for token in ['token','proof']): expected='SCOPED_TOKEN'
@@ -187,7 +220,12 @@ def validate(root: Path, result: Validation) -> None:
         result.require((root/'specs/ui/screens'/f'{sid}.md').is_file(),f'{sid}: missing screen sheet')
         result.require(sid in manifest_by and [x['id'] for x in manifest_by[sid]['section_order']]==[x['id'] for x in sections],f'{sid}: build manifest mismatch')
         if sid in manifest_by: result.require(manifest_by[sid].get('actions')==screen.get('actions'),f'{sid}: build manifest actions differ')
+    pub_035_manifest=manifest_by.get('PUB-035',{})
+    result.require(
+        {'method-unavailable','receipt'} <= set(pub_035_manifest.get('states',[])),
+        'PUB-035: build manifest must include method-unavailable and receipt states',
+    )
     stale_fences=sorted(set(proposal_fences)-matched_fences)
     result.require(not stale_fences,f'proposal-only fences do not match screen actions: {stale_fences}')
     nested=[p for p in (root/'specs/ui/screens').rglob('*.md') if p.parent!=root/'specs/ui/screens']; result.require(not nested,'nested obsolete screen sheets exist')
-    result.stats.update({'screens':94,'public_screens':34,'response_screens':8,'internal_screens':52,'components':58})
+    result.stats.update({'screens':95,'public_screens':35,'response_screens':8,'internal_screens':52,'components':58})

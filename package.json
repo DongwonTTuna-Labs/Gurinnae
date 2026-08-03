@@ -11,7 +11,7 @@
     "check": "bun run --filter '*' check",
     "test": "bun run --filter '*' test",
     "test:mock-public": "bun test tests/e2e/support/mock-api-public-ledgers.test.ts tests/e2e/support/mock-api-public-export-reads.test.ts",
-    "test:e2e": "bun run test:mock-public && playwright test tests/e2e/routes.spec.ts tests/e2e/browser-identity.spec.ts tests/e2e/submission-routing.spec.ts tests/e2e/int-002-approval-journey.spec.ts tests/e2e/ops-005-provider-proposal.spec.ts",
+    "test:e2e": "bun run test:mock-public && playwright test tests/e2e/routes.spec.ts tests/e2e/screens/pub-023.spec.ts tests/e2e/screens/pub-035.spec.ts tests/e2e/browser-identity.spec.ts tests/e2e/submission-routing.spec.ts tests/e2e/int-002-approval-journey.spec.ts tests/e2e/ops-005-provider-proposal.spec.ts",
     "test:visual": "playwright test tests/e2e/visual-routes.spec.ts",
     "codegen": "bun run scripts/generate-clients.ts"
   },

@@ -10,7 +10,12 @@ import textwrap
 
 from jsonschema import Draft202012Validator
 
-from generate_effective_execution_registry import build_registry
+from generate_effective_execution_registry import (
+    CURRENT_EFFECTIVE_SCENARIO_COUNT,
+    CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+    FROZEN_BASE_SCENARIO_COUNT,
+    build_registry,
+)
 from generate_supplemental_execution_mapping import build_mapping
 from .acceptance_gherkin import GherkinContractError, compile_feature
 from .effective_acceptance import (
@@ -223,12 +228,16 @@ def _index() -> dict[str, object]:
     receipts = [
         {
             "scenario_id": f"AC-FIXTURE-{index:03d}",
-            "origin": "BASE_V13" if index <= 271 else "SUPPLEMENTAL_V1",
+            "origin": (
+                "BASE_V13"
+                if index <= FROZEN_BASE_SCENARIO_COUNT
+                else "SUPPLEMENTAL_V1"
+            ),
             "path": f"receipts/AC-FIXTURE-{index:03d}.json",
             "sha256": hashlib.sha256(str(index).encode()).hexdigest(),
             "size": 1,
         }
-        for index in range(1, 440)
+        for index in range(1, CURRENT_EFFECTIVE_SCENARIO_COUNT + 1)
     ]
     return {
         "schema_version": 1,
@@ -248,10 +257,10 @@ def _index() -> dict[str, object]:
             "extraction_receipt_sha256": SHA,
         },
         "counts": {
-            "base_scenarios": 271,
-            "supplemental_scenarios": 168,
-            "effective_scenarios": 439,
-            "passed": 439,
+            "base_scenarios": FROZEN_BASE_SCENARIO_COUNT,
+            "supplemental_scenarios": CURRENT_SUPPLEMENTAL_SCENARIO_COUNT,
+            "effective_scenarios": CURRENT_EFFECTIVE_SCENARIO_COUNT,
+            "passed": CURRENT_EFFECTIVE_SCENARIO_COUNT,
             "failed": 0,
             "skipped": 0,
             "retried": 0,
@@ -277,7 +286,11 @@ def self_test() -> tuple[bool, list[dict[str, object]]]:
     record("positive-gherkin", len(compiled.clauses) == 5 and len(compiled.instances) == 10)
     registry = build_registry(ROOT)
     mapping = build_mapping(ROOT)
-    record("effective-counts", registry["counts"]["effective_scenarios"] == 439)
+    record(
+        "effective-counts",
+        registry["counts"]["effective_scenarios"]
+        == CURRENT_EFFECTIVE_SCENARIO_COUNT,
+    )
     record("mapping-status-free", "implementation_status" not in json.dumps(mapping))
     record("registry-runtime-state-free", "execution_receipts" not in set(_walk_keys(registry)))
     record(
@@ -346,6 +359,22 @@ def self_test() -> tuple[bool, list[dict[str, object]]]:
         ("extraction-bad-archive", EXTRACTION_SCHEMA, {**_extraction(), "archive_sha256": "x"}, False),
         ("index-positive", RUN_INDEX_SCHEMA, _index(), True),
         ("index-omission", RUN_INDEX_SCHEMA, {**_index(), "receipts": _index()["receipts"][:-1]}, False),
+        (
+            "index-legacy-total",
+            RUN_INDEX_SCHEMA,
+            {
+                **_index(),
+                "counts": {
+                    **_index()["counts"],
+                    "supplemental_scenarios": (
+                        CURRENT_SUPPLEMENTAL_SCENARIO_COUNT - 7
+                    ),
+                    "effective_scenarios": CURRENT_EFFECTIVE_SCENARIO_COUNT - 7,
+                    "passed": CURRENT_EFFECTIVE_SCENARIO_COUNT - 7,
+                },
+            },
+            False,
+        ),
         ("index-retry", RUN_INDEX_SCHEMA, {**_index(), "counts": {**_index()["counts"], "retried": 1}}, False),
     ]
     for name, schema_name, value, expected_valid in schema_cases:

@@ -6,6 +6,37 @@ from .models import Validation
 from .design_ui_journeys import validate_journey_ui
 
 
+def design_screen_row(
+    result: Validation,
+    row_by: dict[str, dict[str, Any]],
+    screen_id: str,
+) -> dict[str, Any] | None:
+    row = row_by.get(screen_id)
+    result.require(row is not None, f"{screen_id}: screen is missing from design closure")
+    return row
+
+
+def validate_additive_operation_section_closure(
+    result: Validation,
+    screen_id: str,
+    row_operations: dict[str, dict[str, Any]],
+    additive_operations: dict[str, set[str]],
+) -> None:
+    for operation_id, section_ids in additive_operations.items():
+        operation = row_operations.get(operation_id)
+        result.require(
+            operation is not None,
+            f"{screen_id}.{operation_id}: additive operation is missing from design closure",
+        )
+        if operation is None:
+            continue
+        result.require(
+            operation.get("source") == "owner-addendum"
+            and set(operation.get("section_bindings", [])) == section_ids,
+            f"{screen_id}.{operation_id}: additive operation section closure mismatch",
+        )
+
+
 def validate_section_operations(
     result: Validation,
     screen_id: str,

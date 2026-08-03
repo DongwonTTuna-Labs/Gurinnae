@@ -7,6 +7,7 @@ use thiserror::Error;
 #[derive(Clone)]
 pub struct Config {
     pub database_url: String,
+    pub economics_database_url: Option<String>,
     pub field_key_current: [u8; 32],
     pub field_key_previous: Option<[u8; 32]>,
     pub object_store: ObjectStoreConfig,
@@ -80,6 +81,7 @@ impl Config {
         }
         Ok(Self {
             database_url: required("WORKFLOW_DATABASE_URL")?,
+            economics_database_url: optional("ECONOMICS_DATABASE_URL"),
             field_key_current: exact_key(&required("FIELD_ENCRYPTION_KEY_CURRENT")?)?,
             field_key_previous: optional("FIELD_ENCRYPTION_KEY_PREVIOUS")
                 .as_deref()

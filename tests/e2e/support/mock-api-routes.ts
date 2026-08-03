@@ -1,5 +1,6 @@
 import { handleAuthRoutes } from "./mock-api-auth";
 import { handleCommandRoutes } from "./mock-api-command";
+import { handleDonationMock } from "./mock-api-donation";
 import { validateMockResponse } from "./mock-api-openapi";
 import { handleProviderProposalCommands } from "./mock-api-provider-proposal-command";
 import { handleProviderProposalReads } from "./mock-api-provider-proposal-routes";
@@ -35,6 +36,7 @@ export async function handleMockRequest(request: Request): Promise<Response> {
   } else {
     response =
       (await handleAuthRoutes(request, url)) ??
+      (await handleDonationMock(request, url)) ??
       (await handleProviderProposalCommands(request, url)) ??
       (await handleCommandRoutes(request, url)) ??
       (await handleCoreSubmissionRoutes(request, url)) ??

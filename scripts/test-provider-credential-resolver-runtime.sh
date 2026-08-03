@@ -19,16 +19,14 @@ cargo build -p gurine-egress-gateway --bin credential-resolver-probe --locked >/
 
 docker run --rm -d --name "$container" \
   -e POSTGRES_DB=gurine_credential_resolver \
-  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-  -p 127.0.0.1::5432 postgres:18.4-bookworm >/dev/null
+  -e POSTGRES_USER=postgres -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -p 127.0.0.1::5432 postgres:18.4-bookworm@sha256:d9c83446333daec3f0588cc709adb80c26090b7f9f0f7ec8d43c243385d79818 >/dev/null
 bash scripts/wait-postgres-container.sh "$container" gurine_credential_resolver
-for migration in db/migrations/*.sql; do
-  # 0030 intentionally has a second transaction that creates the outbound
-  # aggregate after legacy grants; this resolver probe only needs the stable
-  # provider registry from 0027 and the pinning function from 0031.
-  [[ "$(basename "$migration")" == 0030_* ]] && continue
-  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d gurine_credential_resolver <"$migration" >/dev/null
-done
+mapfile -t migrations < <(
+  printf '%s\n' db/migrations/*.sql | LC_ALL=C sort
+)
+bash scripts/apply-test-migrations-with-r6e-roles.sh \
+  "$container" gurine_credential_resolver "${migrations[@]}"
 
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d gurine_credential_resolver <<'SQL' >/dev/null
 INSERT INTO ops.users(id, oidc_subject, email, display_name, status)

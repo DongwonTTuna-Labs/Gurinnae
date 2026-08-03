@@ -19,6 +19,7 @@ from .models import Validation
 def _validate_approval_option_b(
     root: Path,
     approval_database: dict[str, Any],
+    approval_extension: dict[str, Any],
     rows: dict[str, dict[str, Any]],
     result: Validation,
 ) -> None:
@@ -31,6 +32,24 @@ def _validate_approval_option_b(
     policy_binding = policy["closed_binding_schemas"]["ApprovalBindingV1"]
     resource_binding = resources["schemas"]["ApprovalBindingV1"]
     database_binding = approval_database["closed_json_types"]["ApprovalBindingV1"]
+    extension_contract = approval_extension.get(
+        "economics_import_runtime_contract", {}
+    )
+    extension_kind = extension_contract.get("action_kind")
+    extension_relation = extension_contract.get("typed_detail_relation")
+    extension_registry = (
+        {extension_kind: extension_relation}
+        if isinstance(extension_kind, str) and isinstance(extension_relation, str)
+        else {}
+    )
+    base_detail_kinds = set(database_binding.get("action_detail_kinds", []))
+    result.require(
+        extension_registry
+        == {"ECONOMICS_IMPORT": "ops.action_approval_economics_import_details"}
+        and not (base_detail_kinds & set(extension_registry))
+        and base_detail_kinds | set(extension_registry) == expected_kinds,
+        "0041 approval-detail extension is not the exact additive ECONOMICS_IMPORT branch",
+    )
     result.require(
         len(APPROVAL_BINDING_V1_FIELDS) == len(expected_fields) == 32
         and set(policy_binding.get("required", [])) == expected_fields
@@ -54,8 +73,8 @@ def _validate_approval_option_b(
         and detail_binding.get("required") == ["actionDetailKind", "actionDetail"]
         and set(detail_binding.get("fields", {}))
         == {"actionDetailKind", "actionDetail"}
-        and set(database_binding.get("action_detail_kinds", [])) == expected_kinds,
-        "ActionApprovalDetailBindingV1 is not the closed exact eighteen-branch wrapper",
+        and base_detail_kinds | set(extension_registry) == expected_kinds,
+        "ActionApprovalDetailBindingV1 is not the closed exact nineteen-branch wrapper",
     )
     detail_rows = {
         row.get("detail_kind"): relation
@@ -64,7 +83,7 @@ def _validate_approval_option_b(
         and relation.endswith("_details")
     }
     result.require(
-        len(detail_rows) == len(APPROVAL_DETAIL_RELATIONS) == 18
+        len(detail_rows) == len(APPROVAL_DETAIL_RELATIONS) == 19
         and detail_rows == APPROVAL_DETAIL_RELATIONS,
         "Option B action-kind to typed approval-detail relation registry is not exact",
     )
@@ -94,7 +113,9 @@ def _validate_approval_option_b(
     )
     support_signatures = {
         row["signature"]
-        for row in approval_database["support_function_catalog"]["functions"]
+        for database in (approval_database, approval_extension)
+        for row in database.get("support_function_catalog", {}).get("functions", [])
+        if isinstance(row, dict) and isinstance(row.get("signature"), str)
     }
     common_child_columns = {
         "proposal_id",

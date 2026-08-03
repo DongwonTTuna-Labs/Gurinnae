@@ -11645,6 +11645,7 @@ operations:
   rate_limit: public-read
   errors:
   - '404'
+  - '422'
   - '429'
   - '500'
   blocking_consumers: []
@@ -11691,14 +11692,18 @@ operations:
   concurrency_errors: []
   domain_errors:
   - RESOURCE_NOT_FOUND
+  - PRECONDITION_FAILED
   provider_errors: []
   error_codes:
   - RATE_LIMITED
   - RESOURCE_NOT_FOUND
+  - PRECONDITION_FAILED
   - INTERNAL_ERROR
   http_error_mapping:
     '404':
     - RESOURCE_NOT_FOUND
+    '422':
+    - PRECONDITION_FAILED
     '429':
     - RATE_LIMITED
     '500':
@@ -21498,6 +21503,7 @@ operations:
   rate_limit: public-read
   errors:
   - '400'
+  - '422'
   - '429'
   - '500'
   blocking_consumers: []
@@ -21532,17 +21538,21 @@ operations:
   - RATE_LIMITED
   authorization_errors: []
   concurrency_errors: []
-  domain_errors: []
+  domain_errors:
+  - PRECONDITION_FAILED
   provider_errors: []
   error_codes:
   - INVALID_PARAMETER
   - INVALID_CURSOR
   - RATE_LIMITED
+  - PRECONDITION_FAILED
   - INTERNAL_ERROR
   http_error_mapping:
     '400':
     - INVALID_PARAMETER
     - INVALID_CURSOR
+    '422':
+    - PRECONDITION_FAILED
     '429':
     - RATE_LIMITED
     '500':

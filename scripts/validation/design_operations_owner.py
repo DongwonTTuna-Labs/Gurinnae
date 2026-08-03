@@ -51,64 +51,161 @@ def validate_owner_operations(documents: DesignDocuments) -> OwnerOperationFacts
         and set(owner_operation_kind_counts) == {"QUERY", "COMMAND"},
         "owner additive operation API or kind registry is not closed",
     )
-    additive_api_aliases = {
-        "public": "public-api",
-        "submission": "submission-api",
-        "control": "control-api",
-        "browser_identity": "identity-api",
+    base_counts = counts.get("base", {})
+    additive_counts = counts.get("additive", {})
+    final_counts = counts.get("final", {})
+    private_counts = counts.get("separate_private_inventories", {})
+    kind_counts = counts.get("kind_counts", {})
+    declared_private_identity_ids = counts.get(
+        "private_identity_api_operation_ids", []
+    )
+    expected_private_identity_ids = {
+        operation["operation_id"]
+        for operation in operations
+        if operation.get("api") == "identity-api"
+    }
+    additive_derived = {
+        key: value
+        for key, value in additive_counts.items()
+        if key != "partition_contract"
+    }
+    private_derived = {
+        key: value
+        for key, value in private_counts.items()
+        if key != "scope_rule"
     }
     result.require(
-        nonempty(counts.get("count_rule"))
-        and set(counts.get("base", {}))
+        set(counts)
         == {
-            "public",
-            "submission",
-            "control",
-            "browser_identity",
-            "external_total",
-            "private_identity",
-        }
-        and set(counts.get("final", {}))
-        == {
-            "public",
-            "submission",
-            "control",
-            "browser_identity",
-            "external_total",
-            "private_identity",
-            "private_communication_gateway",
-            "private_control_service",
-            "private_application_commands",
-        }
-        and set(counts.get("kind_counts", {}))
-        == {
+            "count_rule",
+            "external_scope_rule",
+            "all_scope_http_rule",
+            "private_identity_api_scope",
+            "private_identity_api_operation_ids",
+            "private_identity_api_registry_contract",
+            "base_additive_disjointness_rule",
             "base",
             "additive",
-            "external_final",
-            "private_identity",
+            "final",
+            "separate_private_inventories",
+            "kind_counts",
+            "additive_operations",
+        }
+        and all(
+            nonempty(counts.get(field))
+            for field in (
+                "count_rule",
+                "external_scope_rule",
+                "all_scope_http_rule",
+                "private_identity_api_registry_contract",
+                "base_additive_disjointness_rule",
+            )
+        )
+        and counts.get("private_identity_api_scope") == "PRIVATE_IDENTITY_API"
+        and len(declared_private_identity_ids)
+        == len(set(declared_private_identity_ids))
+        and set(declared_private_identity_ids) == expected_private_identity_ids
+        and counts.get("additive_operations") == operations
+        and set(base_counts)
+        == {
+            "external_operation_ids",
+            "public",
+            "submission",
+            "control",
+            "browser_identity",
+            "external_total",
+        }
+        and set(additive_counts)
+        == {
+            "operation_ids",
+            "external_operation_ids",
+            "private_identity_api_operation_ids",
+            "public",
+            "submission",
+            "control",
+            "browser_identity",
+            "external_total",
+            "private_identity_api",
+            "all_scope_http_total",
+            "partition_contract",
+        }
+        and set(final_counts)
+        == {
+            "external_operation_ids",
+            "public",
+            "submission",
+            "control",
+            "browser_identity",
+            "external_total",
+            "private_identity_api_operation_ids",
+            "all_scope_http_operation_ids",
+            "all_scope_http_total",
+        }
+        and set(private_counts)
+        == {
+            "private_identity_service",
             "private_communication_gateway",
+            "private_billing_gateway",
             "private_control_service",
             "private_application_commands",
-            "complete_http_catalog",
+            "scope_rule",
         }
-        and all_derived_markers(counts.get("base"))
-        and all_derived_markers(counts.get("final"))
-        and all_derived_markers(counts.get("kind_counts")),
+        and set(kind_counts)
+        == {
+            "base",
+            "additive_external",
+            "private_identity_api",
+            "external_final",
+            "all_scope_http",
+        }
+        and set(kind_counts.get("base", {}))
+        == {"query", "command", "non_get"}
+        and set(kind_counts.get("additive_external", {}))
+        == {"query", "command", "non_get"}
+        and set(kind_counts.get("private_identity_api", {}))
+        == {"query", "command", "non_get"}
+        and set(kind_counts.get("external_final", {}))
+        == {"query", "command", "non_get", "total"}
+        and set(kind_counts.get("all_scope_http", {}))
+        == {"query", "command", "non_get", "total"}
+        and nonempty(additive_counts.get("partition_contract"))
+        and nonempty(private_counts.get("scope_rule"))
+        and all_derived_markers(base_counts)
+        and all_derived_markers(additive_derived)
+        and all_derived_markers(final_counts)
+        and all_derived_markers(private_derived)
+        and all_derived_markers(kind_counts),
         "owner operation count contract must contain only the complete source-derived API/kind fields",
     )
     result.require(
-        counts.get("additive")
+        additive_counts
         == {
-            alias: f"derived count(additive_operations where api={api})"
-            for alias, api in additive_api_aliases.items()
+            "operation_ids": "derived set(additive_operations[*].operation_id)",
+            "external_operation_ids": "derived set(additive_operations operation IDs where api in [public-api, submission-api, control-api, identity-provider])",
+            "private_identity_api_operation_ids": "derived set(operation_counts.private_identity_api_operation_ids)",
+            "public": "derived count(additive_operations where api=public-api and operation_id in additive.external_operation_ids)",
+            "submission": "derived count(additive_operations where api=submission-api and operation_id in additive.external_operation_ids)",
+            "control": "derived count(additive_operations where api=control-api and operation_id in additive.external_operation_ids)",
+            "browser_identity": "derived count(additive_operations where api=identity-provider and operation_id in additive.external_operation_ids)",
+            "external_total": "derived cardinality(additive.external_operation_ids)",
+            "private_identity_api": "derived cardinality(additive.private_identity_api_operation_ids)",
+            "all_scope_http_total": "derived cardinality(additive.operation_ids)",
+            "partition_contract": "additive.operation_ids is set-equal to the disjoint union of additive.external_operation_ids and additive.private_identity_api_operation_ids; the selected supplier operations are not browser identity flows",
         },
         "owner additive operation count fields must be source-derived by API",
     )
     result.require(
-        counts.get("kind_counts", {}).get("additive")
+        kind_counts.get("additive_external")
         == {
-            "query": "derived count(additive_operations where kind=QUERY)",
-            "command": "derived count(additive_operations where kind=COMMAND)",
+            "query": "derived count(additive_operations where operation_id in additive.external_operation_ids and kind=QUERY)",
+            "command": "derived count(additive_operations where operation_id in additive.external_operation_ids and kind=COMMAND)",
+            "non_get": "derived count(additive_operations where operation_id in additive.external_operation_ids and method is not GET)",
+        }
+        and kind_counts.get("private_identity_api")
+        == {
+            "query": "derived count(additive_operations where operation_id in additive.private_identity_api_operation_ids and kind=QUERY)",
+            "command": "derived count(additive_operations where operation_id in additive.private_identity_api_operation_ids and kind=COMMAND)",
+            "non_get": "derived count(additive_operations where operation_id in additive.private_identity_api_operation_ids and method is not GET)",
         },
         "owner additive operation count fields must be source-derived by kind",
     )

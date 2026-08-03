@@ -7,7 +7,15 @@ export async function assertAcceptanceJourney(
   scenarioId: string,
 ): Promise<RouteContract> {
   const contracts = routeCatalog();
-  expect(contracts, `${scenarioId} route inventory`).toHaveLength(94);
+  expect(contracts, `${scenarioId} route inventory`).toHaveLength(95);
+  expect(contracts).toContainEqual(
+    expect.objectContaining({
+      app: "apps/public-web",
+      route: "/donate",
+      screenId: "PUB-035",
+      surface: "public",
+    }),
+  );
   const screenByJourney: Record<string, string> = {
     ANALYTICS_PRIVACY: "PUB-001",
     PUBLIC_COMPREHENSION: "PUB-004",

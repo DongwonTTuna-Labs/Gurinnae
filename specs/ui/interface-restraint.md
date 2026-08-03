@@ -2,7 +2,7 @@
 
 status: BINDING (AGENTS.md 수준 강제)
 specification_version: 13.0.0+owner-ui-restraint.2
-applies_to: 모든 first-party 화면 (public-web 34, response-portal 8, review-console 52)
+applies_to: 모든 first-party 화면 (public-web 35, response-portal 8, review-console 52)
 reference_exemplar: https://hosungseo.github.io/korea100/ (대한민국 제도 지도)
 precedence: 이 계약은 시각 언어·카피 톤에 관해 `specs/ui/FINAL_DESIGN_SYSTEM.md`,
   `specs/ui/final-reference/`(정적 프로토타입), `specs/ui/design-tokens.yaml`의

@@ -1,4 +1,4 @@
-.PHONY: final-check validate-ui validate-api validate-database validate-architecture verify-postgres-runtime test-document-extractor test-document-extractor-runtime test-event-consumers-runtime test-analysis-runtime test-analysis-negative-runtime test-analysis-production-egress test-ingest-runtime test-scheduler-runtime test-procurement-runtime build-ui test-ui-e2e test-ui-visual test-runtime-quality test-rust-workspace test-sqlx-prepare verify verify-specs run-acceptance-439 verify-execution-evidence verify-acceptance verify-bun verify-codegen verify-runtime verify-containers verify-final source-archive clean-extraction-verify archive-check show-tech-baseline show-product-contract
+.PHONY: final-check validate-ui validate-api validate-database validate-architecture verify-postgres-runtime test-r6e-role-provisioning test-r6e-monetization-runtime test-document-extractor test-document-extractor-runtime test-event-consumers-runtime test-analysis-runtime test-analysis-negative-runtime test-analysis-production-egress test-ingest-runtime test-scheduler-runtime test-procurement-runtime build-ui test-ui-e2e test-ui-visual test-runtime-quality test-rust-workspace test-sqlx-prepare verify verify-specs run-acceptance-446 verify-execution-evidence verify-acceptance verify-bun verify-codegen verify-runtime verify-containers verify-final source-archive clean-extraction-verify archive-check show-tech-baseline show-product-contract
 
 PYTHON ?= python3
 PYTHON_ENV := PYTHONDONTWRITEBYTECODE=1
@@ -35,6 +35,12 @@ validate-architecture:
 
 verify-postgres-runtime:
 	bash -euo pipefail -c 'out="$$(mktemp -t gurine-pg-runtime-XXXXXX.json)"; trap "rm -f $$out; rm -rf verification/postgres-runtime/node_modules" EXIT; cd verification/postgres-runtime; npm ci --ignore-scripts --no-audit --no-fund; npm run verify -- --output "$$out"; cd ../..; PYTHONDONTWRITEBYTECODE=1 $(PYTHON) scripts/compare_postgres_runtime.py "$$out"'
+
+test-r6e-role-provisioning:
+	bash scripts/test-r6e-role-provisioning.sh
+
+test-r6e-monetization-runtime:
+	bash scripts/test-r6e-monetization-runtime.sh
 
 test-document-extractor:
 	docker build --target document-extractor-test -f infra/docker/rust-service/Dockerfile -t gurine-document-extractor-test:25.06.0-5.5.0 .
@@ -92,18 +98,18 @@ verify-specs:
 	$(PYTHON_ENV) $(PYTHON) -B scripts/validation/design_freeze.py --self-test
 	$(PYTHON_ENV) $(PYTHON) -B scripts/validation/design_freeze.py --mode lint
 
-run-acceptance-439: verify-specs
+run-acceptance-446: verify-specs
 	@rustc --version | grep --fixed-strings 'rustc 1.97.0'
 	@cargo nextest --version | grep --fixed-strings 'cargo-nextest 0.9.140'
 	@test "$$(bun --version)" = '1.3.14'
 	@docker compose version >/dev/null
 	PYTHONPATH=scripts $(PYTHON_ENV) $(PYTHON) -B scripts/run_acceptance.py$(if $(ACCEPTANCE_OVERRIDE_ARGS), $(ACCEPTANCE_OVERRIDE_ARGS))
 
-verify-execution-evidence: run-acceptance-439
+verify-execution-evidence: run-acceptance-446
 	@printf 'runner-owned independent evidence validation: PASS\n'
 
 verify-acceptance: verify-execution-evidence
-	@printf '439 exact acceptance scenarios and sealed evidence: PASS\n'
+	@printf '446 exact acceptance scenarios and sealed evidence: PASS\n'
 
 verify-bun: build-ui
 	docker run --rm --user "$$(id -u):$$(id -g)" --env HOME=/tmp --volume "$(CURDIR):/workspace" --workdir /workspace oven/bun:1.3.14-debian@sha256:9dba1a1b43ce28c9d7931bfc4eb00feb63b0114720a0277a8f939ae4dfc9db6f sh -euc 'bun install --frozen-lockfile && bunx biome check . && bun run check && bun run test'
@@ -115,14 +121,16 @@ verify-codegen:
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_legal_content.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_addendum_samples.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_event_payload_registry.py --check
+	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_r6e_pre_0041_markers.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_journey_registry.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/verify_generated_responses.py
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_supplemental_execution_mapping.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_effective_execution_registry.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_acceptance_design_registry.py --check
-	bash -euo pipefail -c 'contracts="packages/ui/src/generated-screen-contracts.ts"; projections="packages/ui/src/generated-screen-projections.ts"; snapshot="$$(mktemp -d -t gurine-screen-codegen-XXXXXX)"; cleanup() { test ! -f "$$snapshot/contracts.ts" || cp "$$snapshot/contracts.ts" "$$contracts"; test ! -f "$$snapshot/projections.ts" || cp "$$snapshot/projections.ts" "$$projections"; rm -f "$$snapshot/contracts.ts" "$$snapshot/projections.ts"; rmdir "$$snapshot"; }; trap cleanup EXIT; trap "exit 130" HUP INT TERM; cp "$$contracts" "$$snapshot/contracts.ts"; cp "$$projections" "$$snapshot/projections.ts"; $(PYTHON_ENV) $(PYTHON) -B scripts/generate_typed_screen_registry.py; cmp "$$snapshot/contracts.ts" "$$contracts"; cmp "$$snapshot/projections.ts" "$$projections"; $(PYTHON_ENV) $(PYTHON) -B scripts/generate_typed_screen_registry.py; cmp "$$snapshot/contracts.ts" "$$contracts"; cmp "$$snapshot/projections.ts" "$$projections"'
+	bash -euo pipefail -c 'contracts="packages/ui/src/generated-screen-contracts.ts"; projections="packages/ui/src/generated-screen-projections.ts"; journeys="packages/ui/src/generated-screen-journeys.ts"; snapshot="$$(mktemp -d -t gurine-screen-codegen-XXXXXX)"; cleanup() { test ! -f "$$snapshot/contracts.ts" || cp "$$snapshot/contracts.ts" "$$contracts"; test ! -f "$$snapshot/projections.ts" || cp "$$snapshot/projections.ts" "$$projections"; test ! -f "$$snapshot/journeys.ts" || cp "$$snapshot/journeys.ts" "$$journeys"; rm -f "$$snapshot/contracts.ts" "$$snapshot/projections.ts" "$$snapshot/journeys.ts"; rmdir "$$snapshot"; }; trap cleanup EXIT; trap "exit 130" HUP INT TERM; cp "$$contracts" "$$snapshot/contracts.ts"; cp "$$projections" "$$snapshot/projections.ts"; cp "$$journeys" "$$snapshot/journeys.ts"; $(PYTHON_ENV) $(PYTHON) -B scripts/generate_typed_screen_registry.py; cmp "$$snapshot/contracts.ts" "$$contracts"; cmp "$$snapshot/projections.ts" "$$projections"; cmp "$$snapshot/journeys.ts" "$$journeys"; $(PYTHON_ENV) $(PYTHON) -B scripts/generate_typed_screen_registry.py; cmp "$$snapshot/contracts.ts" "$$contracts"; cmp "$$snapshot/projections.ts" "$$projections"; cmp "$$snapshot/journeys.ts" "$$journeys"'
 
 verify-runtime: verify-postgres-runtime
+	bash scripts/test-r6e-role-provisioning.sh
 	bash scripts/test-control-flow.sh
 	bash scripts/test-submission-flow.sh
 	bash scripts/test-identity-flow.sh
