@@ -241,8 +241,8 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
         "properties": {name: contract_property(str(value), resource_doc, schemas) for name, value in response_fields.items()},
         "required": list(response_fields),
     }
-    # query_dispatch adds the operation identifier to every query envelope so
-    # receipts and readbacks remain self-describing.  Keep that field in the
+    # The registered query boundary adds the operation identifier to every
+    # query envelope so receipts and readbacks remain self-describing. Keep that field in the
     # additive response contract instead of returning a schema-invalid extra.
     if operation["kind"] == "QUERY":
         schemas[response_name]["properties"]["operationId"] = {"type": "string"}
@@ -359,8 +359,8 @@ def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
                 "required": ["sourceId", "from", "to", "estimatedRecords", "estimatedJobs", "estimatedCostKrw", "estimatedDurationSeconds", "dedupeStrategy", "downstreamEffects"],
             })
     # OPS-004 reuses the historical getBudgetOverview operation and returns
-    # the closed BudgetOverviewResponse envelope. query_dispatch stamps
-    # operationId on that envelope, so the merged schema must permit the
+    # the closed BudgetOverviewResponse envelope. The registered query boundary
+    # stamps operationId on that envelope, so the merged schema must permit the
     # discriminator field as well.
     budget_response = schemas.get("BudgetOverviewResponse")
     if isinstance(budget_response, dict) and isinstance(budget_response.get("properties"), dict):

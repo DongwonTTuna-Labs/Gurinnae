@@ -172,11 +172,31 @@ cargo_workspace:
     - lib.rs
     - app.rs
     - routes/mod.rs
-    - middleware/mod.rs
     - state.rs
     - config.rs
     - health.rs
-    - middleware/actor_assertion.rs
+    - service/mod.rs
+    - service/registry.rs
+    - service/domains/mod.rs
+    - service/domains/agents/mod.rs
+    - service/domains/agents/commands.rs
+    - service/domains/agents/queries.rs
+    - service/domains/cases.rs
+    - service/domains/signals.rs
+    - service/domains/claims_evidence.rs
+    - service/domains/editorial/mod.rs
+    - service/domains/editorial/corrections.rs
+    - service/domains/editorial/publication.rs
+    - service/domains/editorial/queries.rs
+    - service/domains/editorial/responses.rs
+    - service/domains/editorial/reviews.rs
+    - service/domains/rules.rs
+    - service/domains/sources.rs
+    - service/domains/operations.rs
+    - service/domains/identity_governance.rs
+    - service/domains/audit_retention.rs
+    - service/domains/resilience_cost.rs
+    - service/domains/work_management.rs
     services/document-extractor:
     - main.rs
     - lib.rs

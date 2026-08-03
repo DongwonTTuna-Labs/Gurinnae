@@ -1,6 +1,7 @@
 use super::*;
 
 pub(super) async fn command(
+    handler: registry::CommandHandler,
     operation: &OperationSpec,
     request: &HttpRequest,
     body: &[u8],
@@ -19,11 +20,15 @@ pub(super) async fn command(
         return Err(ServiceError::InvalidRequest);
     }
     validate_command(operation.id, payload_object)?;
-    if gurine_api_contracts::addendum::is_control_operation(operation.id) {
-        return addendum_command(
-            operation, request, body, claims, pool, field_keys, request_id, payload,
-        )
-        .await;
+    match domains::command_kind(handler) {
+        domains::CommandKind::Addendum => {
+            return addendum_command(
+                operation, request, body, claims, pool, field_keys, request_id, payload,
+            )
+            .await;
+        }
+        domains::CommandKind::Private => return Err(ServiceError::InvalidRequest),
+        domains::CommandKind::Base => {}
     }
     let actor_id = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
     let session_id = Uuid::parse_str(&claims.sid).map_err(|_| ServiceError::InvalidRequest)?;
@@ -45,7 +50,8 @@ pub(super) async fn command(
         &mut transaction,
     )
     .await?;
-    apply_specialized(
+    domains::apply_command(
+        handler,
         operation.id,
         &prepared.canonical_payload,
         prepared.persisted_id,
