@@ -16,10 +16,17 @@ import { type RequestEvent, redirect } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { publicRuntimeState } from "$lib/view-models/runtime";
 import { publicCasePresentation } from "./public-case-presentation";
+import { verifiedPublicDownloadPayload } from "./public-export";
 import {
   publicDatasetPresentation,
+  publicFailClosedLedgerPresentation,
   publicLedgerPresentation,
 } from "./public-presentation";
+import {
+  publicFailClosedSeoPresentation,
+  publicSeoPresentation,
+} from "./public-seo-presentation";
+import { publicStatusPresentation } from "./public-status-presentation";
 import {
   operationPathParams,
   operationQuery,
@@ -97,7 +104,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   const data: Record<string, unknown> = {};
   const downloads: Record<
     string,
-    { binary: string; mime: string; extension: "json" | "csv" }
+    { binary: string; mime: string; extension: "json" | "csv" | "jsonl" }
   > = {};
   const errors: string[] = [];
   let neutralInitialState: "awaiting-query" | undefined;
@@ -194,7 +201,23 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         screen.id === "PUB-011" &&
         contract.operation_id === "downloadContracts"
       ) {
-        plan = { kind: "request", query: { format: "JSONL" } };
+        const optionalFormatParameters = (
+          indexed.operation.parameters ?? []
+        ).map((parameter) =>
+          parameter.name === "format"
+            ? { ...parameter, required: false }
+            : parameter,
+        );
+        plan = {
+          kind: "request",
+          query: {
+            ...(operationQuery(
+              optionalFormatParameters,
+              event.url.searchParams,
+            ) ?? {}),
+            format: "JSONL",
+          },
+        };
       }
       if (plan.kind === "skip") {
         neutralInitialState = plan.state;
@@ -230,21 +253,31 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       data[contract.operation_id] = result.data;
       if (
         screen.id === "PUB-011" &&
-        contract.operation_id === "downloadContracts" &&
-        isRecord(result.data)
+        contract.operation_id === "downloadContracts"
       ) {
+        const expectedFilters = publicDownloadFilters(query);
+        if (!expectedFilters)
+          throw new Error("계약 내려받기 조건을 검증하지 못했습니다.");
+        const payload = verifiedPublicDownloadPayload(result.data, {
+          format: "JSONL",
+          kind: "CONTRACTS",
+          expectedFilters,
+        });
+        if (!payload)
+          throw new Error("계약 내려받기 파일 무결성을 확인하지 못했습니다.");
+        if (
+          !isRecord(result.data) ||
+          typeof result.data.id !== "string" ||
+          result.data.status !== "READY" ||
+          typeof result.data.version !== "number"
+        )
+          throw new Error("계약 내려받기 영수증을 확인하지 못했습니다.");
         const receipt = {
-          id: typeof result.data.id === "string" ? result.data.id : null,
-          status:
-            typeof result.data.status === "string" ? result.data.status : null,
-          version:
-            typeof result.data.version === "number"
-              ? result.data.version
-              : null,
+          id: result.data.id,
+          status: result.data.status,
+          version: result.data.version,
           format: "JSONL" as const,
         };
-        // Keep the browser boundary allowlisted: this is the BinaryDownload
-        // receipt, not the generated operation DTO or arbitrary API data.
         downloads.download = {
           binary: Buffer.from(`${JSON.stringify(receipt)}\n`, "utf8").toString(
             "base64",
@@ -295,13 +328,26 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   let ledgerPresentation: ReturnType<typeof publicLedgerPresentation>;
   let publicDatasets: ReturnType<typeof publicDatasetPresentation>;
   let publicCase: ReturnType<typeof publicCasePresentation>;
+  let publicSeo: ReturnType<typeof publicSeoPresentation>;
+  let publicStatus: ReturnType<typeof publicStatusPresentation>;
   let presentationFailed = false;
   try {
     ledgerPresentation = publicLedgerPresentation(screen.id, data);
     publicDatasets = publicDatasetPresentation(screen.id, data);
     publicCase = publicCasePresentation(screen.id, data, event.url);
+    publicStatus = publicStatusPresentation(screen.id, data);
+    publicSeo = publicSeoPresentation(screen.id, screen.title, data, event.url);
   } catch {
     presentationFailed = true;
+    ledgerPresentation = publicFailClosedLedgerPresentation(screen.id);
+    publicDatasets = undefined;
+    publicCase = undefined;
+    publicSeo = publicFailClosedSeoPresentation(
+      screen.id,
+      screen.title,
+      event.url,
+    );
+    publicStatus = undefined;
     errors.push(
       screen.id === "PUB-004"
         ? "공개 사건 응답 형식이 올바르지 않습니다."
@@ -310,19 +356,13 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
           : "공개 목록 응답 형식이 올바르지 않습니다.",
     );
   }
-  const navigationOptions =
-    ledgerPresentation?.navigationOptions ??
-    (Object.hasOwn(PUBLIC_LEDGER_CONTRACTS, screen.id)
-      ? {}
-      : buildRowSelectionNavigationOptions(screen.id, data));
-  const projectionData =
-    presentationFailed && screen.id === "PUB-004"
-      ? Object.fromEntries(
-          Object.entries(data).filter(
-            ([operationId]) => operationId !== "getPublicCase",
-          ),
-        )
-      : data;
+  const projectionData = presentationFailed ? {} : data;
+  const navigationOptions = presentationFailed
+    ? {}
+    : (ledgerPresentation?.navigationOptions ??
+      (Object.hasOwn(PUBLIC_LEDGER_CONTRACTS, screen.id)
+        ? {}
+        : buildRowSelectionNavigationOptions(screen.id, projectionData)));
   const runtime: ScreenRuntime = {
     state: presentationFailed
       ? "error"
@@ -349,13 +389,16 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       ? {
           publicCaseLead: publicCase.lead,
           publicEvidence: publicCase.evidence,
-          publicSeo: publicCase.seo,
         }
       : {}),
+    ...(publicSeo ? { publicSeo } : {}),
+    ...(publicStatus ? { publicStatusContext: publicStatus } : {}),
     ...(screen.id === "PUB-020"
       ? { formOperationIds: { "download-dataset": "createDatasetExport" } }
       : {}),
-    ...(Object.keys(downloads).length > 0 ? { downloads } : {}),
+    ...(!presentationFailed && Object.keys(downloads).length > 0
+      ? { downloads }
+      : {}),
     idempotencyKeys: {
       ...actionIdempotencyKeys(screen),
       ...(attachmentUpload ? { "upload-attachment": randomUUID() } : {}),
@@ -397,10 +440,30 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     destinations: publicScreenDestinations(
       screen,
       event.url.pathname,
-      data,
+      projectionData,
       event.url.searchParams,
     ),
     ...(Object.keys(navigationOptions).length > 0 ? { navigationOptions } : {}),
   };
   return { screen, runtime };
+}
+
+function publicDownloadFilters(
+  query: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, string | boolean | readonly string[]>> | undefined {
+  const filters: Record<string, string | boolean | readonly string[]> = {};
+  for (const [name, value] of Object.entries(query)) {
+    if (name === "format") continue;
+    if (typeof value === "string" || typeof value === "boolean") {
+      filters[name] = value;
+    } else if (
+      Array.isArray(value) &&
+      value.every((item) => typeof item === "string")
+    ) {
+      filters[name] = value;
+    } else {
+      return;
+    }
+  }
+  return filters;
 }

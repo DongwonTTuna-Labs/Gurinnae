@@ -4,6 +4,7 @@ use std::{
 };
 
 use actix_web::HttpRequest;
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use gurine_api_contracts::{
     OperationSpec,
     agent_snapshot::agent_case_snapshot_sha256,
@@ -11,7 +12,11 @@ use gurine_api_contracts::{
 };
 use gurine_application::ports::DomainEventSink;
 use gurine_auth::{
-    assertion::{BoundRequest, actor::ActorClaims, canonical::canonical_request_digest},
+    assertion::{
+        BoundRequest,
+        actor::ActorClaims,
+        canonical::{canonical_json, canonical_request_digest},
+    },
     envelope::{EnvelopeKeyRing, encrypt},
 };
 use gurine_domain::{case::CASE_TRANSITIONS, state_catalog::InvestigationState};
@@ -54,6 +59,57 @@ pub struct Output {
     pub replay: bool,
 }
 
+pub(super) struct OwnerCommandReceipt {
+    pub aggregate_id: Uuid,
+    pub aggregate_version: i64,
+    pub audit_event_id: Uuid,
+    pub receipt_digest: String,
+    pub accepted_at: String,
+    pub outbox_event_ids: Vec<Uuid>,
+    pub expected_outbox_count: usize,
+    pub response_fields: Map<String, Value>,
+}
+
+pub(super) struct CommandEffect {
+    pub fields: Map<String, Value>,
+    pub owner_receipt: Option<OwnerCommandReceipt>,
+    pub owner_replaces_aggregate_id: bool,
+}
+
+impl CommandEffect {
+    pub(super) fn none() -> Self {
+        Self {
+            fields: Map::new(),
+            owner_receipt: None,
+            owner_replaces_aggregate_id: false,
+        }
+    }
+
+    pub(super) fn fields(fields: Map<String, Value>) -> Self {
+        Self {
+            fields,
+            owner_receipt: None,
+            owner_replaces_aggregate_id: false,
+        }
+    }
+
+    pub(super) fn owner(receipt: OwnerCommandReceipt) -> Self {
+        Self {
+            fields: Map::new(),
+            owner_receipt: Some(receipt),
+            owner_replaces_aggregate_id: false,
+        }
+    }
+
+    pub(super) fn owner_created(receipt: OwnerCommandReceipt) -> Self {
+        Self {
+            fields: Map::new(),
+            owner_receipt: Some(receipt),
+            owner_replaces_aggregate_id: true,
+        }
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ServiceError {
     #[error("control request is invalid")]
@@ -66,8 +122,28 @@ pub enum ServiceError {
     InvalidStateTransition,
     #[error("control command precondition failed")]
     PreconditionFailed,
+    #[error("an active legal hold blocks the requested control operation")]
+    LegalHoldActive,
+    #[error("the requested legal-hold target kind has no authoritative source relation")]
+    LegalHoldTargetUnsupported,
+    #[error("privacy identity proof does not bind the requested subject and scope")]
+    IdentityProofInvalid,
+    #[error("privacy request scope is invalid")]
+    PrivacyScopeInvalid,
+    #[error("the requested privacy-correction target has no authorized field mapping")]
+    PrivacyCorrectionTargetUnsupported,
+    #[error("privacy request decision version changed")]
+    RetentionVersionConflict,
+    #[error("privacy request state does not permit this operation")]
+    RetentionStateInvalid,
+    #[error("privacy response business calendar authority changed")]
+    BusinessCalendarStale,
+    #[error("required control dependency is unavailable")]
+    DependencyUnavailable,
     #[error("control command capability is denied")]
     CapabilityDenied,
+    #[error("control command requires a current step-up authorization")]
+    StepUpRequired,
     #[error("provider control must be submitted through an action proposal")]
     ProposalRequired,
     #[error("idempotency key was reused with different request bytes")]
@@ -78,7 +154,10 @@ pub enum ServiceError {
 
 mod command;
 mod domains;
+mod owner_receipt;
 mod publication;
+mod publication_guard;
+mod publication_guard_archive;
 mod query_action_proposal;
 mod query_analysis_vm;
 mod query_business;
@@ -90,7 +169,10 @@ mod schema;
 mod util;
 
 use command::*;
+use owner_receipt::*;
 use publication::*;
+use publication_guard::*;
+use publication_guard_archive::*;
 use query_action_proposal::*;
 use query_analysis_vm::*;
 use query_business::*;
@@ -165,7 +247,7 @@ async fn registered_query(
     claims: &ActorClaims,
     pool: &PgPool,
 ) -> Result<Output, ServiceError> {
-    let parameters = query_parameters(request);
+    let parameters = query_parameters(operation.id, request)?;
     let mut data = domains::query(handler, operation, &parameters, claims, pool).await?;
     if operation.id != "exportCostReport"
         && let Some(object) = data.as_object_mut()
@@ -249,12 +331,78 @@ mod tests {
             TestRequest::with_uri("/v1/internal/cases/path-case?caseId=query-case&locale=ko")
                 .param("caseId", "path-case")
                 .to_http_request();
-        let parameters = query_parameters(&request);
+        let parameters = query_parameters("getInternalCase", &request)
+            .unwrap_or_else(|error| panic!("query parameters must parse: {error}"));
         assert_eq!(
             parameters.get("caseId").map(String::as_str),
             Some("path-case")
         );
         assert_eq!(parameters.get("locale").map(String::as_str), Some("ko"));
+    }
+
+    #[test]
+    fn repeated_array_query_parameters_preserve_wire_order_and_decoding() {
+        let request = TestRequest::with_uri(
+            "/v1/internal/queries/list-retention-requests?requestType=ACCESS%2CDELETION&requestType=CORRECTION&state=RECEIVED&state=REVIEW",
+        )
+        .to_http_request();
+        let parameters = query_parameters("listRetentionRequests", &request)
+            .unwrap_or_else(|error| panic!("array query parameters must parse: {error}"));
+        assert_eq!(
+            parameters.get("requestType").map(String::as_str),
+            Some("ACCESS,DELETION,CORRECTION")
+        );
+        assert_eq!(
+            parameters.get("state").map(String::as_str),
+            Some("RECEIVED,REVIEW")
+        );
+
+        let non_privacy_request = TestRequest::with_uri(
+            "/v1/internal/queries/list-jobs?jobStatus=QUEUED&jobStatus=RUNNING",
+        )
+        .to_http_request();
+        let non_privacy_parameters = query_parameters("listJobs", &non_privacy_request)
+            .unwrap_or_else(|error| panic!("OpenAPI array metadata must be generic: {error}"));
+        assert_eq!(
+            non_privacy_parameters.get("jobStatus").map(String::as_str),
+            Some("QUEUED,RUNNING")
+        );
+    }
+
+    #[test]
+    fn undeclared_repeated_query_parameters_fail_closed() {
+        let request =
+            TestRequest::with_uri("/v1/internal/queries/list-jobs?status=QUEUED&status=RUNNING")
+                .to_http_request();
+        assert!(matches!(
+            query_parameters("listJobs", &request),
+            Err(ServiceError::InvalidRequest)
+        ));
+    }
+
+    #[test]
+    fn duplicate_scalar_query_parameters_fail_closed() {
+        let request =
+            TestRequest::with_uri("/v1/internal/queries/list-retention-requests?limit=20&limit=50")
+                .to_http_request();
+        assert!(matches!(
+            query_parameters("listRetentionRequests", &request),
+            Err(ServiceError::InvalidRequest)
+        ));
+    }
+
+    #[test]
+    fn empty_array_elements_are_preserved_for_the_domain_validator() {
+        let request = TestRequest::with_uri(
+            "/v1/internal/queries/list-retention-requests?requestType=&requestType=ACCESS",
+        )
+        .to_http_request();
+        let parameters = query_parameters("listRetentionRequests", &request)
+            .unwrap_or_else(|error| panic!("wire query must remain lossless: {error}"));
+        assert_eq!(
+            parameters.get("requestType").map(String::as_str),
+            Some(",ACCESS")
+        );
     }
 
     #[test]

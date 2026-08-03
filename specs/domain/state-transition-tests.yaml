@@ -78,6 +78,9 @@ positive_transition_cases:
   capability: review.legal
   guards:
     legal_review_required: true
+    independent_editorial_approve_for_exact_snapshot: true
+    named_individual_findings_present: true
+    preview_blocked_pending_legal_override: true
   expected: ALLOW
   audit_action: case.legal_review.started
   domain_events:
@@ -89,6 +92,7 @@ positive_transition_cases:
   guards:
     editorial_approved: true
     legal_review_not_required: true
+    no_named_individual_findings: true
     snapshot_current: true
   expected: ALLOW
   audit_action: case.ready_to_publish
@@ -99,7 +103,9 @@ positive_transition_cases:
   to: READY_TO_PUBLISH
   capability: review.legal
   guards:
-    legal_approved: true
+    independent_editorial_approve_for_exact_snapshot: true
+    legal_reviewer_step_up_approve_with_exact_named_override: true
+    editorial_and_legal_reviewers_distinct: true
     snapshot_current: true
   expected: ALLOW
   audit_action: case.ready_to_publish
@@ -308,6 +314,9 @@ negative_transition_cases:
   capability: public.read
   guards:
     legal_review_required: true
+    independent_editorial_approve_for_exact_snapshot: true
+    named_individual_findings_present: true
+    preview_blocked_pending_legal_override: true
   expected: DENY
   reason: CAPABILITY_DENIED
 - id: deny-submit-legal-review-guard
@@ -316,6 +325,9 @@ negative_transition_cases:
   capability: review.legal
   guards:
     legal_review_required: false
+    independent_editorial_approve_for_exact_snapshot: true
+    named_individual_findings_present: true
+    preview_blocked_pending_legal_override: true
   expected: DENY
   reason: PRECONDITION_FAILED
 - id: deny-ready-from-editorial-capability
@@ -325,6 +337,7 @@ negative_transition_cases:
   guards:
     editorial_approved: true
     legal_review_not_required: true
+    no_named_individual_findings: true
     snapshot_current: true
   expected: DENY
   reason: CAPABILITY_DENIED
@@ -335,6 +348,7 @@ negative_transition_cases:
   guards:
     editorial_approved: false
     legal_review_not_required: true
+    no_named_individual_findings: true
     snapshot_current: true
   expected: DENY
   reason: PRECONDITION_FAILED
@@ -343,7 +357,9 @@ negative_transition_cases:
   to: READY_TO_PUBLISH
   capability: public.read
   guards:
-    legal_approved: true
+    independent_editorial_approve_for_exact_snapshot: true
+    legal_reviewer_step_up_approve_with_exact_named_override: true
+    editorial_and_legal_reviewers_distinct: true
     snapshot_current: true
   expected: DENY
   reason: CAPABILITY_DENIED
@@ -352,7 +368,9 @@ negative_transition_cases:
   to: READY_TO_PUBLISH
   capability: review.legal
   guards:
-    legal_approved: false
+    independent_editorial_approve_for_exact_snapshot: true
+    legal_reviewer_step_up_approve_with_exact_named_override: false
+    editorial_and_legal_reviewers_distinct: true
     snapshot_current: true
   expected: DENY
   reason: PRECONDITION_FAILED

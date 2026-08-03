@@ -1,15 +1,19 @@
 <script lang="ts">
 import type { ScreenSectionProps } from "../../index";
+import { publicSectionNonConclusionNotice } from "../../public-status-notice";
 import { buildRelatedPublicCases } from "../../related-public-cases";
 import { authoritySectionStatus } from "../../screen-projection-values";
+import PublicSectionStatusNotice from "../PublicSectionStatusNotice.svelte";
 
-let { section, runtime, projection }: ScreenSectionProps = $props();
+let { section, screen, runtime, projection }: ScreenSectionProps = $props();
+const actionId = $derived(screen.id === "PUB-012" ? "open-case" : "view-case");
 const cases = $derived(
   buildRelatedPublicCases(
     projection,
-    runtime.navigationOptions?.["open-case"] ?? [],
+    runtime.navigationOptions?.[actionId] ?? [],
   ),
 );
+const sectionNotice = publicSectionNonConclusionNotice();
 const sectionStatus = $derived(
   authoritySectionStatus({
     projectionPresent: projection !== undefined,
@@ -40,11 +44,12 @@ const sectionStatus = $derived(
     >{sectionStatus.message}</p>
   {/if}
   {#if !sectionStatus?.suppressValues && cases.length > 0}
+    <PublicSectionStatusNotice notice={sectionNotice} />
     <ul aria-label="관련 공개 사건 목록">
       {#each cases as item, index (item.href)}
         <li>
           {#if index === 0}
-            <a id="action-open-case" href={item.href} data-action-id="open-case">{item.title}</a>
+            <a id={`action-${actionId}`} href={item.href} data-action-id={actionId}>{item.title}</a>
           {:else}
             <a href={item.href}>{item.title}</a>
           {/if}

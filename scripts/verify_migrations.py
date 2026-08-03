@@ -30,6 +30,9 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0035_r6b_agent_runtime_activation.sql",
     "0036_r6b_pipeline_activation.sql",
     "0037_r6c_conflict_investigation.sql",
+    "0038_r6d_legal_hardening.sql",
+    "0039_r6d_authority_closure.sql",
+    "0040_r6d_privacy_authority_closure.sql",
 )
 EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
     EXPECTED_ADDITIVE_MIGRATIONS

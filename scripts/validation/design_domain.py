@@ -99,6 +99,7 @@ def validate_domain(
         operations.base_operation_ids
         | operations.owner_operation_ids
         | operations.private_control_ids
+        | operations.private_application_ids
     )
     known_event_types = lifecycle.base_event_types | lifecycle.event_type_set
     missing_domain_operations = operations.owner_operation_ids - covered_operations

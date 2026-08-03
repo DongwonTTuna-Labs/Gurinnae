@@ -753,7 +753,6 @@ export type PrivacyRequestReceiptV1 = {
 
 export type ExchangePrivacyRequestReceiptTokenRequestV1 = {
     token: string;
-    proof: BrowserProofV1;
 };
 
 export type PrivacyRequestSessionReceiptV1 = {
@@ -761,7 +760,7 @@ export type PrivacyRequestSessionReceiptV1 = {
     sessionId: string;
     state: 'ACTIVE';
     expiresAt: string;
-    cookieName: string;
+    cookieName: 'gurine_privacy_request_receipt_session';
     tokenConsumedAt: string;
 };
 
@@ -831,7 +830,9 @@ export type PrivacyRequestSummaryV1 = {
     state: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
     jurisdiction: string;
     scopeDigest: string;
-    dueAt: string;
+    identityState: 'PENDING_VERIFICATION' | 'VERIFIED';
+    identityVerifiedAt: string | null;
+    dueAt: string | null;
     createdAt: string;
     updatedAt: string;
 };
@@ -869,7 +870,7 @@ export type EndpointEnrollmentV1 = {
 
 export type EndpointLinkingConsentV1 = {
     decision: 'LINK';
-    purposes: Array<string>;
+    purposes: Array<'SYSTEM_TRANSACTIONAL' | 'SUBSCRIPTION_UPDATE' | 'DISCRETIONARY_EXTERNAL' | 'INTERNAL_ACTION_REQUEST'>;
     policyVersion: string;
     jurisdiction: string;
     locale: string;
@@ -904,11 +905,6 @@ export type PrivacyIdentityProofV1 = {
     kind: 'VERIFIED_ENDPOINT';
     endpointChallengeId: string;
     endpointProof: EndpointVerificationProofV1;
-} | {
-    kind: 'IDENTITY_DOCUMENT_CHALLENGE';
-    challengeId: string;
-    verificationReceiptId: string;
-    verificationReceiptDigest: string;
 };
 
 export type PrivacyRequestScopeV1 = {
@@ -931,6 +927,23 @@ export type BrowserProofV1 = {
     action: 'privacy-request-receipt-exchange';
     clientNonce: string;
     issuedAtEpochSeconds: number | null;
+};
+
+export type PrivacyRequestPublicStatusV2 = {
+    request: PrivacyRequestSummaryV1;
+    decisionReasonCode: string | null;
+    decisionReceiptId: string | null;
+    decisionReceiptSha256: string | null;
+    refusalNoticeReceiptId: string | null;
+    refusalNoticeReceiptSha256: string | null;
+    noticeReceiptIds: Array<string>;
+    noticeReceiptSha256s: Array<string>;
+    nextActionCodes: [
+        'VERIFY_IDENTITY' | 'AWAIT_REVIEW' | 'AWAIT_DECISION' | 'AWAIT_EXECUTION' | 'REVIEW_REFUSAL_NOTICE' | 'COMPLETE'
+    ];
+    asOf: string;
+    links: Array<Link>;
+    operationId: string;
 };
 
 export type CreateContactRequestData = {
@@ -3013,11 +3026,19 @@ export type CreateResponseAppealData = {
 
 export type CreateResponseAppealErrors = {
     /**
+     * Problem response: SCOPED_SESSION_REQUIRED
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: APPEAL_SCOPE_INVALID
+     */
+    403: AddendumProblemDetailsV1;
+    /**
      * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID, APPEAL_WINDOW_CLOSED
+     * Problem response: APPEAL_WINDOW_CLOSED
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -3050,13 +3071,17 @@ export type GetResponseAppealData = {
 
 export type GetResponseAppealErrors = {
     /**
+     * Problem response: SCOPED_SESSION_REQUIRED
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: APPEAL_SCOPE_INVALID
+     */
+    403: AddendumProblemDetailsV1;
+    /**
      * Problem response: RESOURCE_NOT_FOUND
      */
     404: AddendumProblemDetailsV1;
-    /**
-     * Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -3086,11 +3111,19 @@ export type RequestCommunicationEndpointLinkData = {
 
 export type RequestCommunicationEndpointLinkErrors = {
     /**
-     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     * Problem response: SCOPED_SESSION_REQUIRED
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CONSENT_INVALID, ABUSE_PROOF_INVALID
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ENDPOINT_ALREADY_LINKED, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_TYPE_UNSUPPORTED, ENDPOINT_ALREADY_LINKED, CONSENT_INVALID, ABUSE_PROOF_INVALID
+     * Problem response: ENDPOINT_TYPE_UNSUPPORTED
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -3122,13 +3155,17 @@ export type VerifyCommunicationEndpointLinkData = {
 
 export type VerifyCommunicationEndpointLinkErrors = {
     /**
+     * Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_CHALLENGE_INVALID, ENDPOINT_CHALLENGE_EXPIRED
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ENDPOINT_PROOF_INVALID
+     */
+    403: AddendumProblemDetailsV1;
+    /**
      * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_CHALLENGE_INVALID, ENDPOINT_CHALLENGE_EXPIRED, ENDPOINT_PROOF_INVALID
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -3160,13 +3197,17 @@ export type UnlinkCommunicationEndpointData = {
 
 export type UnlinkCommunicationEndpointErrors = {
     /**
-     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     * Problem response: SCOPED_SESSION_REQUIRED
+     */
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ENDPOINT_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ENDPOINT_VERSION_CONFLICT, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_NOT_FOUND, ENDPOINT_VERSION_CONFLICT
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -3200,17 +3241,29 @@ export type CreatePrivacyRequestErrors = {
      */
     400: AddendumProblemDetailsV1;
     /**
+     * Problem response: IDENTITY_PROOF_INVALID, ABUSE_PROOF_INVALID
+     */
+    403: AddendumProblemDetailsV1;
+    /**
      * Problem response: IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, ABUSE_PROOF_INVALID, RATE_LIMITED
+     * Problem response: PRIVACY_SCOPE_INVALID
      */
     422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RATE_LIMITED
+     */
+    429: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: AddendumProblemDetailsV1;
 };
 
 export type CreatePrivacyRequestError = CreatePrivacyRequestErrors[keyof CreatePrivacyRequestErrors];
@@ -3236,13 +3289,25 @@ export type ExchangePrivacyRequestReceiptTokenData = {
 
 export type ExchangePrivacyRequestReceiptTokenErrors = {
     /**
-     * Problem response: TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REPLAYED, ABUSE_PROOF_INVALID, RATE_LIMITED
+     * Problem response: TOKEN_INVALID, TOKEN_EXPIRED
      */
-    422: AddendumProblemDetailsV1;
+    401: AddendumProblemDetailsV1;
+    /**
+     * Problem response: TOKEN_REPLAYED
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RATE_LIMITED
+     */
+    429: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: AddendumProblemDetailsV1;
 };
 
 export type ExchangePrivacyRequestReceiptTokenError = ExchangePrivacyRequestReceiptTokenErrors[keyof ExchangePrivacyRequestReceiptTokenErrors];
@@ -3265,13 +3330,13 @@ export type GetPrivacyRequestData = {
 
 export type GetPrivacyRequestErrors = {
     /**
+     * Problem response: SCOPED_SESSION_REQUIRED
+     */
+    401: AddendumProblemDetailsV1;
+    /**
      * Problem response: RESOURCE_NOT_FOUND
      */
     404: AddendumProblemDetailsV1;
-    /**
-     * Problem response: SCOPED_SESSION_REQUIRED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -3284,7 +3349,7 @@ export type GetPrivacyRequestResponses = {
     /**
      * Successful response
      */
-    200: PrivacyRequestPublicStatusV1;
+    200: PrivacyRequestPublicStatusV2;
 };
 
 export type GetPrivacyRequestResponse = GetPrivacyRequestResponses[keyof GetPrivacyRequestResponses];

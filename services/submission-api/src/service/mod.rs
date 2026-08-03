@@ -10,6 +10,10 @@ mod addendum;
 mod anonymous;
 mod common;
 mod correction;
+mod privacy;
+mod privacy_crypto;
+mod privacy_dto;
+mod privacy_render;
 mod response;
 mod subscription;
 
@@ -19,6 +23,10 @@ pub struct RequestContext<'a> {
     pub issuer: &'a str,
     pub request_id: &'a str,
     pub session_token: Option<&'a str>,
+    pub session_id: Option<Uuid>,
+    pub idempotency_key_hash: Option<&'a str>,
+    pub request_hash: Option<&'a str>,
+    pub next_session_token: Option<&'a str>,
     pub attachment_id: Option<Uuid>,
     pub state: &'a AppState,
 }
@@ -27,6 +35,8 @@ pub struct RequestContext<'a> {
 pub enum ServiceError {
     #[error("submission request is invalid")]
     InvalidRequest,
+    #[error("submission parameter is invalid")]
+    InvalidParameter,
     #[error("submission token is invalid or already consumed")]
     TokenInvalid,
     #[error("submission session is invalid, expired, revoked, or out of scope")]
@@ -41,6 +51,24 @@ pub enum ServiceError {
     AbuseProofInvalid,
     #[error("anonymous abuse proof provider is unavailable")]
     AbuseProofUnavailable,
+    #[error("privacy identity proof is invalid")]
+    IdentityProofInvalid,
+    #[error("privacy request scope is invalid")]
+    PrivacyScopeInvalid,
+    #[error("privacy receipt token is invalid")]
+    PrivacyTokenInvalid,
+    #[error("privacy receipt token is expired")]
+    PrivacyTokenExpired,
+    #[error("privacy receipt token was already consumed")]
+    PrivacyTokenReplayed,
+    #[error("privacy request scoped session is required")]
+    ScopedSessionRequired,
+    #[error("privacy request idempotency conflicts with a finalized request")]
+    IdempotencyConflict,
+    #[error("privacy voice enrollment lacks an approved pre-enrollment consent authority")]
+    PrivacyVoiceConsentAuthorityMissing,
+    #[error("communication endpoint proof-verifier authority is incomplete")]
+    EndpointVerificationAuthorityIncomplete,
     #[error("submission persistence is unavailable")]
     Persistence,
     #[error("submission cryptography failed")]
@@ -49,6 +77,9 @@ pub enum ServiceError {
 
 #[rustfmt::skip]
 pub async fn execute(context: RequestContext<'_>) -> Result<Value, ServiceError> {
+    if is_privacy_operation(context.operation) {
+        return privacy::execute(&context).await;
+    }
     if gurine_api_contracts::addendum::is_submission_operation(context.operation) {
         return addendum::execute(&context).await;
     }
@@ -91,6 +122,13 @@ pub async fn execute(context: RequestContext<'_>) -> Result<Value, ServiceError>
     }
 }
 
+fn is_privacy_operation(operation: &str) -> bool {
+    matches!(
+        operation,
+        "createPrivacyRequest" | "exchangePrivacyRequestReceiptToken" | "getPrivacyRequest"
+    )
+}
+
 async fn create_correction_session(
     body: &[u8],
     issuer: &str,
@@ -108,6 +146,10 @@ async fn create_correction_session(
         issuer,
         request_id,
         session_token: None,
+        session_id: None,
+        idempotency_key_hash: None,
+        request_hash: None,
+        next_session_token: None,
         attachment_id: None,
         state,
     };

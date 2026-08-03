@@ -74,28 +74,108 @@ fn region_code(query: &Query, name: &str, length: usize) -> Result<Option<String
         .transpose()
 }
 
-fn non_conclusion(state: &str) -> Result<&'static str, ServiceError> {
+const OPERATIONAL_INTERPRETATION_NOTICE: &str =
+    "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.";
+const EMPTY_PUBLICATION_NOTICE: &str = "현재 선택한 조건에서 공개된 사례가 없습니다. 이는 문제 없음이나 청렴성을 의미하지 않으며, 수집 범위와 검토 상태에 따라 결과가 달라질 수 있습니다.";
+const PUBLIC_REDISTRIBUTION_NOTICE: &str = "이상 징후 기록이며 위법·부패의 확정이 아님";
+
+fn non_conclusion(state: &str, authority: &Map<String, Value>) -> Result<String, ServiceError> {
     match state {
-        "PUBLISHED_ANOMALY" => Ok(
-            "공개자료 비교에서 설명이 필요한 차이가 확인됐습니다. 현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
-        ),
-        "PUBLISHED_EXPLAINED" => Ok(
-            "처음 탐지된 차이는 추가 자료에서 확인된 구성·서비스·조건의 차이로 설명됩니다. 탐지와 검증 과정을 함께 공개합니다.",
-        ),
-        "OFFICIALLY_CONFIRMED" => Ok(
-            "구린네의 자체 판단이 아니라 공식 기관·법원의 확인 결과를 공개된 범위에서 요약합니다.",
-        ),
-        "CORRECTED" => Ok(
-            "이 페이지는 정정됐습니다. 잘못된 내용과 결론에 미친 영향은 아래 정정 기록에서 확인할 수 있습니다.",
-        ),
-        "RETRACTED" => Ok(
-            "핵심 근거의 오류로 이 게시물을 철회했습니다. 원래 주장은 더 이상 유효하지 않습니다. 오류 원인과 후속 조치를 공개합니다.",
-        ),
-        "TEMPORARILY_RESTRICTED" => Ok(
-            "법적 사유, 권리 보호 또는 안전을 위해 공개를 일시 제한했습니다. 이 제한은 위법성이나 부패 여부에 대한 판단이 아닙니다.",
-        ),
+        "PUBLISHED_ANOMALY" => Ok("공개자료 비교에서 설명이 필요한 차이가 확인됐습니다. 현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.".to_owned()),
+        "PUBLISHED_EXPLAINED" => Ok("처음 탐지된 차이는 추가 자료에서 확인된 구성·서비스·조건의 차이로 설명됩니다. 탐지와 검증 과정을 함께 공개합니다.".to_owned()),
+        "OFFICIALLY_CONFIRMED" => official_confirmation_notice(authority),
+        "CORRECTED" => correction_notice(authority),
+        "RETRACTED" => Ok("핵심 근거의 오류로 이 게시물을 철회했습니다. 원래 주장은 더 이상 유효하지 않습니다. 오류 원인과 후속 조치를 공개합니다.".to_owned()),
+        "TEMPORARILY_RESTRICTED" => Ok("법적 사유, 권리 보호 또는 안전을 위해 공개를 일시 제한했습니다. 이 제한은 위법성이나 부패 여부에 대한 판단이 아닙니다.".to_owned()),
         _ => Err(ServiceError::Persistence),
     }
+}
+
+fn official_confirmation_notice(authority: &Map<String, Value>) -> Result<String, ServiceError> {
+    let confirmation = exact_object(
+        authority,
+        "officialConfirmation",
+        &[
+            "institution",
+            "documentType",
+            "documentDate",
+            "confirmedScope",
+            "sourceLocator",
+            "sourceDigest",
+        ],
+    )?;
+    let institution = required_text(confirmation, "institution")?;
+    let document_type = required_text(confirmation, "documentType")?;
+    let document_date = required_text(confirmation, "documentDate")?;
+    validate_iso_date(document_date)?;
+    let confirmed_scope = required_text(confirmation, "confirmedScope")?;
+    let _source_locator = required_text(confirmation, "sourceLocator")?;
+    let source_digest = required_text(confirmation, "sourceDigest")?;
+    if source_digest.len() != 64
+        || !source_digest
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err(ServiceError::Persistence);
+    }
+    Ok(format!(
+        "{institution}의 {document_type}·{document_date}에서 {confirmed_scope}가 확인됐습니다. 구린네의 자체 판단이 아니라 해당 공식 결과를 요약합니다."
+    ))
+}
+
+fn correction_notice(authority: &Map<String, Value>) -> Result<String, ServiceError> {
+    let correction = exact_object(
+        authority,
+        "correctionNotice",
+        &["appliedAt", "reason", "impactSummary", "revision"],
+    )?;
+    let applied_at = required_text(correction, "appliedAt")?;
+    let applied_date = OffsetDateTime::parse(applied_at, &Rfc3339)
+        .map_err(|_| ServiceError::Persistence)?
+        .date();
+    let reason = required_text(correction, "reason")?;
+    let impact_summary = required_text(correction, "impactSummary")?;
+    if correction
+        .get("revision")
+        .and_then(Value::as_i64)
+        .is_none_or(|revision| revision < 1)
+    {
+        return Err(ServiceError::Persistence);
+    }
+    Ok(format!(
+        "이 페이지는 {applied_date}에 정정됐습니다. {reason}와 {impact_summary}을 아래 정정 기록에서 확인할 수 있습니다."
+    ))
+}
+
+fn exact_object<'a>(
+    parent: &'a Map<String, Value>,
+    key: &str,
+    keys: &[&str],
+) -> Result<&'a Map<String, Value>, ServiceError> {
+    let object = parent
+        .get(key)
+        .and_then(Value::as_object)
+        .ok_or(ServiceError::Persistence)?;
+    if object.len() != keys.len() || keys.iter().any(|key| !object.contains_key(*key)) {
+        return Err(ServiceError::Persistence);
+    }
+    Ok(object)
+}
+
+fn required_text<'a>(object: &'a Map<String, Value>, key: &str) -> Result<&'a str, ServiceError> {
+    object
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or(ServiceError::Persistence)
+}
+
+fn validate_iso_date(value: &str) -> Result<(), ServiceError> {
+    let format = time::format_description::parse("[year]-[month]-[day]")
+        .map_err(|_| ServiceError::Persistence)?;
+    Date::parse(value, &format)
+        .map(|_| ())
+        .map_err(|_| ServiceError::Persistence)
 }
 
 fn revision_non_conclusion_state<'a>(case_state: &'a str, revision_state: &'a str) -> &'a str {
@@ -110,13 +190,32 @@ fn normalize_public_case(
     object: &mut Map<String, Value>,
     public_state: &str,
 ) -> Result<(), ServiceError> {
+    let notice = non_conclusion(public_state, object)?;
+    normalize_public_case_with_notice(object, notice)
+}
+
+fn normalize_public_case_with_authority(
+    object: &mut Map<String, Value>,
+    public_state: &str,
+    authority: &Map<String, Value>,
+) -> Result<(), ServiceError> {
+    let notice = non_conclusion(public_state, authority)?;
+    normalize_public_case_with_notice(object, notice)
+}
+
+fn normalize_public_case_with_notice(
+    object: &mut Map<String, Value>,
+    notice: String,
+) -> Result<(), ServiceError> {
     for key in ["agencyName", "contractName", "amount"] {
         object.entry(key).or_insert(Value::Null);
     }
-    object.insert(
-        "nonConclusion".into(),
-        Value::String(non_conclusion(public_state)?.to_owned()),
-    );
+    if let Some(case) = object.get_mut("case") {
+        let case = case.as_object_mut().ok_or(ServiceError::Persistence)?;
+        case.insert("nonConclusion".into(), Value::String(notice.clone()));
+        retain_fields(case, CASE_CARD_FIELDS);
+    }
+    object.insert("nonConclusion".into(), Value::String(notice));
     if let Some(Value::Array(evidence)) = object.get_mut("evidence") {
         for item in evidence {
             let Some(item) = item.as_object_mut() else {
@@ -134,6 +233,87 @@ fn normalize_public_case(
         }
     }
     Ok(())
+}
+
+const CASE_CARD_FIELDS: &[&str] = &[
+    "slug",
+    "title",
+    "publicState",
+    "summary",
+    "revision",
+    "updatedAt",
+    "responseStatus",
+    "correctionStatus",
+    "nonConclusion",
+    "href",
+];
+
+const PUBLIC_CASE_RESPONSE_FIELDS: &[&str] = &[
+    "slug",
+    "title",
+    "publicState",
+    "revision",
+    "publishedAt",
+    "updatedAt",
+    "summary",
+    "agencyName",
+    "contractName",
+    "amount",
+    "nonConclusion",
+    "confirmedFacts",
+    "criticalUnknowns",
+    "partyResponses",
+    "signals",
+    "comparison",
+    "counterEvidence",
+    "claims",
+    "evidence",
+    "timeline",
+    "corrections",
+    "freshness",
+    "limitations",
+    "seo",
+];
+
+const PUBLIC_CASE_SNAPSHOT_FIELDS: &[&str] = &[
+    "case",
+    "agencyName",
+    "contractName",
+    "amount",
+    "nonConclusion",
+    "confirmedFacts",
+    "criticalUnknowns",
+    "partyResponses",
+    "signals",
+    "comparison",
+    "counterEvidence",
+    "claims",
+    "evidence",
+    "timeline",
+    "corrections",
+    "freshness",
+    "limitations",
+];
+
+const CASE_REPRODUCIBILITY_FIELDS: &[&str] = &[
+    "caseSlug",
+    "ruleId",
+    "ruleVersion",
+    "inputDigest",
+    "resultDigest",
+    "formula",
+    "roundingPolicy",
+    "target",
+    "includedCohort",
+    "excludedCohort",
+    "result",
+    "limitations",
+    "nonConclusion",
+    "seo",
+];
+
+fn retain_fields(object: &mut Map<String, Value>, allowed: &[&str]) {
+    object.retain(|key, _| allowed.contains(&key.as_str()));
 }
 
 fn case_seo_description(summary: &str, case: &Map<String, Value>) -> String {
@@ -155,6 +335,39 @@ fn case_seo_description(summary: &str, case: &Map<String, Value>) -> String {
         parts.push(value.to_owned());
     }
     parts.join(" · ")
+}
+
+fn seo_metadata(title: &str, description: String, canonical_url: String) -> Value {
+    json!({
+        "title": title,
+        "description": description,
+        "openGraphDescription": description,
+        "canonicalUrl": canonical_url,
+        "robots": "index,follow",
+    })
+}
+
+fn operational_seo_description(summary: &str) -> String {
+    format!("{summary} · {OPERATIONAL_INTERPRETATION_NOTICE}")
+}
+
+fn search_result_notices(
+    result_type: &str,
+    status: Option<&str>,
+    authority: Option<&Map<String, Value>>,
+) -> Result<(Option<String>, Option<&'static str>), ServiceError> {
+    match result_type {
+        "CASE" | "CORRECTION" => {
+            let state = status.ok_or(ServiceError::Persistence)?;
+            let authority = authority.ok_or(ServiceError::Persistence)?;
+            Ok((Some(non_conclusion(state, authority)?), None))
+        }
+        "AGENCY" | "SUPPLIER" | "CONTRACT" | "SOURCE" => {
+            Ok((None, Some(OPERATIONAL_INTERPRETATION_NOTICE)))
+        }
+        "RULE" | "DATASET" => Ok((None, None)),
+        _ => Err(ServiceError::Persistence),
+    }
 }
 
 async fn list_reports(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
@@ -227,187 +440,6 @@ fn db(_: sqlx::Error) -> ServiceError {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        CaseCardRow, OffsetDateTime, Query, ServiceError, Value, case_card, case_seo_description,
-        non_conclusion, normalize_public_case, public_report_scalar, region_filters,
-        revision_non_conclusion_state,
-    };
-    use serde_json::json;
-    use std::collections::BTreeMap;
-
-    #[test]
-    fn region_filters_accept_only_consistent_administrative_codes() {
-        let query = Query {
-            values: BTreeMap::from([
-                ("sidoCode".to_owned(), vec!["11".to_owned()]),
-                ("sigunguCode".to_owned(), vec!["11110".to_owned()]),
-            ]),
-            ..Query::default()
-        };
-        assert_eq!(
-            region_filters(&query).expect("valid administrative codes"),
-            (Some("11".to_owned()), Some("11110".to_owned()))
-        );
-        let invalid = Query {
-            values: BTreeMap::from([
-                ("sidoCode".to_owned(), vec!["26".to_owned()]),
-                ("sigunguCode".to_owned(), vec!["11110".to_owned()]),
-            ]),
-            ..Query::default()
-        };
-        assert!(matches!(
-            region_filters(&invalid),
-            Err(ServiceError::InvalidRequest)
-        ));
-    }
-
-    #[test]
-    fn public_case_normalization_closes_lead_and_evidence_fields() {
-        let mut value = json!({"evidence":[{"id":"evidence"}]});
-        let object = value.as_object_mut().expect("object fixture");
-        normalize_public_case(object, "PUBLISHED_ANOMALY").expect("public state");
-        assert_eq!(object.get("agencyName"), Some(&Value::Null));
-        for key in [
-            "documentTitle",
-            "publisher",
-            "publishedAt",
-            "sourceUrl",
-            "pageAnchor",
-        ] {
-            assert_eq!(object["evidence"][0][key], Value::Null, "field {key}");
-        }
-        assert_eq!(
-            object.get("nonConclusion").and_then(Value::as_str),
-            Some(non_conclusion("PUBLISHED_ANOMALY").expect("closed state"))
-        );
-        assert!(case_seo_description("요약", object).contains("위법성이나 부패 여부"));
-    }
-
-    #[test]
-    fn public_case_normalization_preserves_projected_lead_fields() {
-        let mut value = json!({
-            "agencyName":"가상시청",
-            "contractName":"공개 계약",
-            "amount":{"amount":"1000","currency":"KRW"}
-        });
-        let object = value.as_object_mut().expect("object fixture");
-        normalize_public_case(object, "PUBLISHED_ANOMALY").expect("public state");
-        assert_eq!(object["agencyName"], "가상시청");
-        assert_eq!(object["contractName"], "공개 계약");
-        assert_eq!(object["amount"]["amount"], "1000");
-    }
-
-    #[test]
-    fn case_card_serializes_projected_response_and_correction_statuses() {
-        let card = case_card(CaseCardRow {
-            slug: "case-1".to_owned(),
-            title: "공개 사건".to_owned(),
-            public_state: "CORRECTED".to_owned(),
-            summary: "공개 요약".to_owned(),
-            latest_revision: 2,
-            updated_at: OffsetDateTime::UNIX_EPOCH,
-            response_status: Some("RECEIVED".to_owned()),
-            correction_status: Some("PUBLISHED".to_owned()),
-        })
-        .expect("case card");
-        assert_eq!(card["responseStatus"], "RECEIVED");
-        assert_eq!(card["correctionStatus"], "PUBLISHED");
-    }
-
-    #[test]
-    fn public_case_normalization_preserves_frozen_evidence_metadata() {
-        let evidence = json!({
-            "id":"00000000-0000-4000-8000-000000000001",
-            "documentTitle":"공공 조달 계약 원문",
-            "publisher":"가상 중앙조달원",
-            "publishedAt":"2026-07-30T09:15:00Z",
-            "sourceUrl":"https://example.test/contracts/2026-001",
-            "pageAnchor":"page=7"
-        });
-        let mut value = json!({"evidence":[evidence.clone()]});
-        let object = value.as_object_mut().expect("object fixture");
-
-        normalize_public_case(object, "PUBLISHED_ANOMALY").expect("public state");
-
-        assert_eq!(object["evidence"][0], evidence);
-    }
-
-    #[test]
-    fn non_conclusion_maps_all_public_states() {
-        let expected = [
-            (
-                "PUBLISHED_ANOMALY",
-                "공개자료 비교에서 설명이 필요한 차이가 확인됐습니다. 현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
-            ),
-            (
-                "PUBLISHED_EXPLAINED",
-                "처음 탐지된 차이는 추가 자료에서 확인된 구성·서비스·조건의 차이로 설명됩니다. 탐지와 검증 과정을 함께 공개합니다.",
-            ),
-            (
-                "OFFICIALLY_CONFIRMED",
-                "구린네의 자체 판단이 아니라 공식 기관·법원의 확인 결과를 공개된 범위에서 요약합니다.",
-            ),
-            (
-                "CORRECTED",
-                "이 페이지는 정정됐습니다. 잘못된 내용과 결론에 미친 영향은 아래 정정 기록에서 확인할 수 있습니다.",
-            ),
-            (
-                "RETRACTED",
-                "핵심 근거의 오류로 이 게시물을 철회했습니다. 원래 주장은 더 이상 유효하지 않습니다. 오류 원인과 후속 조치를 공개합니다.",
-            ),
-            (
-                "TEMPORARILY_RESTRICTED",
-                "법적 사유, 권리 보호 또는 안전을 위해 공개를 일시 제한했습니다. 이 제한은 위법성이나 부패 여부에 대한 판단이 아닙니다.",
-            ),
-        ];
-
-        for (state, copy) in expected {
-            assert_eq!(non_conclusion(state).ok(), Some(copy), "state {state}");
-        }
-    }
-
-    #[test]
-    fn non_conclusion_rejects_non_public_states() {
-        assert!(matches!(
-            non_conclusion("NEVER_PUBLISHED"),
-            Err(ServiceError::Persistence)
-        ));
-    }
-
-    #[test]
-    fn restricted_case_overrides_historical_revision_non_conclusion() {
-        assert_eq!(
-            revision_non_conclusion_state("TEMPORARILY_RESTRICTED", "PUBLISHED_ANOMALY"),
-            "TEMPORARILY_RESTRICTED"
-        );
-        assert_eq!(
-            revision_non_conclusion_state("PUBLISHED_EXPLAINED", "PUBLISHED_ANOMALY"),
-            "PUBLISHED_ANOMALY"
-        );
-    }
-
-    #[test]
-    fn public_report_scalar_rejects_nested_private_shapes() {
-        assert_eq!(
-            public_report_scalar("income", &json!({"contact": "private@example.test"})),
-            None
-        );
-        assert_eq!(
-            public_report_scalar("income", &json!(["internal note"])),
-            None
-        );
-    }
-
-    #[test]
-    fn public_report_scalar_keeps_bounded_public_primitives() {
-        assert_eq!(
-            public_report_scalar("thresholds", &json!(15)),
-            Some("thresholds: 15".to_owned())
-        );
-        assert_eq!(
-            public_report_scalar("conflicts", &json!("NONE_DECLARED")),
-            None
-        );
-    }
-}
+include!("public_tail_tests.rs");
+#[cfg(test)]
+include!("notice_seo_tests.rs");

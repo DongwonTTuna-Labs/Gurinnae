@@ -11,6 +11,8 @@ pub mod hypothesis_recursion;
 pub mod ids;
 pub mod job;
 pub mod money;
+pub mod privacy;
+mod privacy_policy;
 pub mod procurement;
 pub mod publication;
 pub mod relationship_graph;

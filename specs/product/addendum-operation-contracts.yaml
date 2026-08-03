@@ -114,6 +114,9 @@ action_payloads:
       required: [recordClass, expectedScheduleRevision, purpose, lawfulBasis, trigger, activeDuration, backupDuration, locations, terminalAction, holdBehavior, restoreSuppressionBehavior, effectiveAt, reviewExpiresAt]
       executor: private.CreateRecordClassScheduleRevision
       proposer_capability: retention.policy.manage
+      invariants:
+        - trigger is one closed RetentionScheduleActionTargetV1 value, including CONSENT_REVOKED_AT without retiring any legacy trigger.
+        - terminalAction is one closed RetentionScheduleActionTargetV1 value, including PRESERVE_REFERENCED_REVISION, PRESERVE_IDENTITY_GRAPH and PRESERVE_WITH_PARENT without retiring DELETE, ANONYMIZE or ARCHIVE.
     FUNDING_DISCLOSURE:
       required: [snapshotBatchId, snapshotDigest, priorDisclosureRevision, fiscalYear, amountBand, concentrationBand, purpose, conflictSummary, policyRequestOutcomes, effectiveAt]
       executor: private.PublishFundingDisclosureRevision
@@ -514,6 +517,138 @@ operations:
     response: ResponseExtensionDecisionReceiptV1
     constraints: [APPROVE requires non-null future newDueAt computed by the pinned calendar; REJECT requires null newDueAt]
     errors: [EXTENSION_VERSION_CONFLICT, EXTENSION_STATE_INVALID, BUSINESS_CALENDAR_STALE, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: classifyEntityPersonhood
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/classify-entity-personhood
+    kind: COMMAND
+    capability: users.manage
+    assurance: STEP_UP
+    description: >-
+      Records one immutable human personhood classification for an agency or supplier from a reviewed public-source locator. It never infers natural-person status automatically.
+    request:
+      required: [entityKind, entityId, classification, evidenceSourceLocator, expectedEntityUpdatedAt, reason]
+      fields: {entityKind: 'enum<AGENCY|SUPPLIER>', entityId: uuid, classification: 'enum<NATURAL_PERSON|NOT_NATURAL_PERSON>', evidenceSourceLocator: 'uri-reference[1..2000]', expectedEntityUpdatedAt: datetime, reason: 'string[1..4000]'}
+    server_derived_owner_input:
+      exact_internal_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+      exact_owner_payload_key_count: 14
+      scalar_owner_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+      rule: control-api constructs the six-public-plus-eight-internal JSON owner payload only after public schema and signed actor-assertion validation; all internal fields and scalar owner arguments are forbidden caller input
+      digest_separation: _actorAssertionRequestSha256 is the exact signed wire-request digest and must equal ops.assertion_replay_guard.request_digest for _actorAssertionJti; semanticRequestSha256 is the separately derived idempotency request digest and neither value may substitute for the other
+    response: ClassifyEntityPersonhoodReceiptV1
+    constraints:
+      - A users.manage human reviewer with request-bound STEP_UP authority makes the decision; automation may surface evidence but cannot create the receipt.
+      - The owner locks the exact entity and compares expectedEntityUpdatedAt before it validates the current public evidence locator and appends the receipt.
+      - A new classification never mutates an earlier receipt. Existing entities without a current receipt remain staged legacy and fail closed for closure or anonymization.
+      - The event and public receipt contain no entity name, identifier plaintext, address, contact data, source body or raw reason.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: attestEntityMaterialUseClosure
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-entity-material-use-closure
+    kind: COMMAND
+    capability: users.manage
+    assurance: STEP_UP
+    description: >-
+      Attests material-use closure only after all referring contracts have passed their Asia/Seoul end-of-day boundary, every public revision naming the entity is superseded or retracted, and no legal hold is active.
+    request:
+      required: [entityKind, entityId, personhoodReceiptId, expectedEntityUpdatedAt, reason]
+      fields: {entityKind: 'enum<AGENCY|SUPPLIER>', entityId: uuid, personhoodReceiptId: uuid, expectedEntityUpdatedAt: datetime, reason: 'string[1..4000]'}
+    server_derived_owner_input:
+      exact_internal_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+      exact_owner_payload_key_count: 13
+      scalar_owner_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+      rule: control-api constructs the five-public-plus-eight-internal JSON owner payload only after public schema and signed actor-assertion validation; all internal fields and scalar owner arguments are forbidden caller input
+      digest_separation: _actorAssertionRequestSha256 is the exact signed wire-request digest and must equal ops.assertion_replay_guard.request_digest for _actorAssertionJti; semanticRequestSha256 is the separately derived idempotency request digest and neither value may substitute for the other
+    response: AttestEntityMaterialUseClosureReceiptV1
+    constraints:
+      - personhoodReceiptId must be the exact current immutable NATURAL_PERSON classification for the same entity; caller digests or inferred legacy classifications cannot substitute.
+      - Contract closure uses the final endAt for every referencing contract and the Asia/Seoul 23:59:59 boundary for that date.
+      - A public revision is open until it is superseded or retracted; the immutable historical row remains preserved after it ceases to count as an open reference.
+      - Any active legal hold or incomplete contract/publication coverage returns a typed error with zero writes.
+      - The receipt fixes lastContractEndAt, linked publication revision count and closureAt; later changed material use requires a new authority review and cannot rewrite this fact.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, LEGAL_HOLD_ACTIVE, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: attestOrganizationOfficialChannel
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-organization-official-channel
+    kind: COMMAND
+    capability: responses.review
+    assurance: STEP_UP
+    description: >-
+      Creates one immutable organization official-channel authority receipt and registry assertion after an independent human reviewer revalidates the current EMAIL_LINK endpoint proof or VERIFIED/PUBLIC official document source. Caller-supplied authority digests and OTP-only proof are forbidden.
+    request:
+      required: [organizationKind, organizationId, verificationMethod, sourceId, expiresAt, reason, expectedAuthorityVersion]
+      fields: {organizationKind: 'enum<AGENCY|SUPPLIER>', organizationId: uuid, verificationMethod: 'enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>', sourceId: uuid, expiresAt: datetime, reason: 'string[1..4000]', expectedAuthorityVersion: 'const<1>'}
+      field_descriptions:
+        sourceId: OFFICIAL_DOMAIN_EMAIL selects one current communication_endpoint_verifications.id; OFFICIAL_DOCUMENT selects one current editorial.evidence.id. The caller never supplies an authority receipt ID or digest.
+    server_derived_owner_input:
+      exact_internal_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+      exact_owner_payload_key_count: 15
+      scalar_owner_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+      rule: control-api constructs the seven-public-plus-eight-internal JSON owner payload only after public schema and signed actor-assertion validation; all internal fields and scalar owner arguments are forbidden caller input
+      digest_separation: _actorAssertionRequestSha256 is the exact signed wire-request digest and must equal ops.assertion_replay_guard.request_digest for _actorAssertionJti; semanticRequestSha256 is the separately derived idempotency request digest and neither value may substitute for the other
+    response: AttestOrganizationOfficialChannelReceiptV1
+    constraints:
+      - The reviewer must hold responses.review with a request-bound STEP_UP authorization and be independent from the source-proof producer and represented organization.
+      - OFFICIAL_DOMAIN_EMAIL revalidates the exact VERIFIED EMAIL_LINK endpoint, organization/domain-control proof and current binding in the owner transaction.
+      - OFFICIAL_DOCUMENT revalidates exact VERIFIED/PUBLIC evidence, official-representation binding and current source locator in the owner transaction.
+      - The owner derives and persists authorityReceiptId plus authorityReceiptDigest; the registry assertion binds both through a composite foreign key and cannot outlive expiresAt or a revocation.
+      - Raw endpoint, email, domain, document, locator, proof and reason bytes are absent from the receipt and event.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: revokeOrganizationOfficialChannel
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/revoke-organization-official-channel
+    kind: COMMAND
+    capability: responses.review
+    assurance: STEP_UP
+    description: >-
+      Appends an immutable revocation receipt for a current official-channel assertion. It never deletes or rewrites the authority receipt or registry history.
+    request:
+      required: [assertionId, reasonCode, reason]
+      fields: {assertionId: uuid, reasonCode: 'string[1..100]', reason: 'string[1..4000]'}
+    server_derived_owner_input:
+      exact_internal_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+      exact_owner_payload_key_count: 11
+      scalar_owner_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+      rule: control-api constructs the three-public-plus-eight-internal JSON owner payload only after public schema and signed actor-assertion validation; all internal fields and scalar owner arguments are forbidden caller input
+      digest_separation: _actorAssertionRequestSha256 is the exact signed wire-request digest and must equal ops.assertion_replay_guard.request_digest for _actorAssertionJti; semanticRequestSha256 is the separately derived idempotency request digest and neither value may substitute for the other
+    response: RevokeOrganizationOfficialChannelReceiptV1
+    constraints:
+      - The owner locks the exact active assertion and its authority receipt composite binding; an absent, expired or already-revoked assertion fails closed.
+      - Revocation becomes effective in the same transaction and every response-identity consumer must revalidate it before use.
+      - Raw source proof and reason bytes are absent from the receipt and event.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  - operation_id: verifyResponseOrganizationIdentity
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/verify-response-organization-identity
+    kind: COMMAND
+    capability: responses.review
+    assurance: STEP_UP
+    description: >-
+      Verifies a response organization against the current immutable official-channel authority assertion selected by officialChannelSourceId. The identifier is never a raw communication endpoint verification or document evidence identifier; the owner requires an active, unexpired and unrevoked assertion and revalidates its exact EMAIL domain-control or DOCUMENT official-representation binding in the transaction. Missing authority and OTP-only proof fail closed.
+    request:
+      description: >-
+        Verifies a response organization against one current immutable official-channel authority assertion. The owner revalidates assertion state and the exact underlying authority proof in the transaction; missing authority fails closed.
+      required: [responseId, organizationId, publicationForm, verificationMethod, officialChannelSourceId, reason, expectedVersion]
+      fields: {responseId: uuid, organizationId: uuid, publicationForm: 'enum<FULL|REDACTED>', verificationMethod: 'enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>', officialChannelSourceId: uuid, reason: 'string[1..4000]', expectedVersion: 'int64>=1'}
+      field_descriptions:
+        officialChannelSourceId: >-
+          Identifier of the current immutable official-channel authority assertion. It is never a raw communication endpoint verification ID or official document evidence ID.
+    server_derived_owner_input:
+      exact_internal_fields: [_actorAssertionJti, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+      rule: control-api validates and merges these seven request-bound actor values into the seven-field public body immediately before calling editorial.verify_response_organization_identity_v1; they are forbidden in OpenAPI and caller input
+    response: VerifyResponseOrganizationIdentityReceiptV1
+    transition: UNVERIFIED->SECOND_FACTOR_VERIFIED
+    constraints:
+      - officialChannelSourceId resolves exactly one active, unexpired and unrevoked immutable official-channel authority assertion; a missing or empty registry, absent assertion or failed currentness check writes nothing and has no raw-proof fallback.
+      - OFFICIAL_DOMAIN_EMAIL requires that assertion to bind the exact organization to an EMAIL domain-control receipt and requires the owner to revalidate the exact underlying endpoint, domain-control receipt and response-request binding as current in the transaction.
+      - OFFICIAL_DOCUMENT requires that assertion to bind the exact organization to a DOCUMENT official-representation binding receipt and requires the owner to revalidate the exact underlying document, representation binding and source locator as current in the transaction.
+      - OTP alone never establishes official-channel authority and cannot satisfy either verification method.
+      - Raw email, domain, document, proof and reason bytes are absent from events and receipts.
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   - operation_id: listRetentionRequests
     api: control-api
     method: GET
@@ -525,7 +660,9 @@ operations:
       required: []
       optional: {requestType: 'unique-array<ACCESS|CORRECTION|DELETION|RESTRICTION>[1..4]', state: 'unique-array<RECEIVED|REVIEW|APPROVED|REJECTED|COMPLETED>[1..5]', dueBefore: 'datetime', legalHoldBlocked: 'boolean', cursor: 'cursor', limit: 'int32[1..100]=20', sort: 'DUE_ASC|CREATED_DESC=DUE_ASC'}
     response: RetentionRequestQueuePageV1
-    errors: [INVALID_PARAMETER, INVALID_CURSOR, CAPABILITY_DENIED, INTERNAL_ERROR]
+    constraints:
+      - The query reads only the closed V2 queue projection. Missing or ambiguous projection/cursor authority fails closed as request-id-only DEPENDENCY_UNAVAILABLE 503; it never synthesizes queue rows, legacy status, cursor state, or legal-hold coverage.
+    errors: [INVALID_PARAMETER, INVALID_CURSOR, CAPABILITY_DENIED, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
   - operation_id: getRetentionRequest
     api: control-api
     method: GET
@@ -535,7 +672,49 @@ operations:
     assurance: ACTIVE_SESSION
     request: {required: [retentionRequestId], fields: {retentionRequestId: 'uuid'}}
     response: RetentionRequestWorkspaceV1
-    errors: [INVALID_PARAMETER, CAPABILITY_DENIED, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
+    constraints:
+      - The query reads only the closed V2 workspace and receipt graph. Missing or ambiguous workspace authority fails closed as request-id-only DEPENDENCY_UNAVAILABLE 503; it never falls back to the historical V1 retention JSON or synthesizes receipt, policy, hold, inventory, or completion state.
+      - ACCESS and CORRECTION workspaces for the sole authorized RESPONSE `/partyName` cell include one closed PrivacyResponsePartyNameAccessProjectionV1 produced from the same response-receipt, submission, immutable origin-receipt and editorial-response chain. Its currentValueDigest is SHA-256 of the UTF-8 partyName and its projectionDigest covers the exact redacted authority preimage.
+      - The projection is capability-gated internal data. Public privacy status, receipts, events, audit records and logs never expose partyName, requestedValue, ciphertext or a correction job payload.
+      - completionReceiptId, completionReceiptDigest, completedResponseVersion and completedValueDigest are an all-or-none tuple. They are nonnull only for a completed RESPONSE `/partyName` correction and must equal the immutable completion receipt plus the current projection responseVersion/currentValueDigest.
+    errors: [INVALID_PARAMETER, CAPABILITY_DENIED, RESOURCE_NOT_FOUND, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+  - operation_id: createPrivacyCorrectionPlan
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/create-privacy-correction-plan
+    kind: COMMAND
+    capability: privacy.requests.manage
+    assurance: STEP_UP
+    description: >-
+      Creates one immutable sealed correction plan only for the exact RESPONSE `/partyName` cell after re-reading the same subject-bound ACCESS projection and current-value digest. Every other object-kind and field-path pair is rejected as PRIVACY_CORRECTION_TARGET_UNSUPPORTED with zero writes.
+    request:
+      required: [retentionRequestId, expectedDecisionVersion, targetObjectType, targetObjectId, fieldPath, currentValueDigest, requestedValue, evidenceIds, reason]
+      fields: {retentionRequestId: uuid, expectedDecisionVersion: 'int64>=0', targetObjectType: 'enum<RESPONSE|CORRECTION|SUBSCRIPTION|COMMUNICATION_ENDPOINT|PUBLICATION|EVIDENCE|AUDIT_SUBJECT_RECORD>', targetObjectId: uuid, fieldPath: 'json-pointer[1..1000]', currentValueDigest: sha256, requestedValue: secret-nonempty-string, evidenceIds: 'unique-array<uuid>[1..100]', reason: nonempty_string}
+    server_derived_owner_input:
+      generated_and_sealed_fields: [_correctionPlanId, requestedValueCiphertextBase64, requestedValueSha256]
+      actor_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+      exact_owner_payload_key_count: 19
+      scalar_owner_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+      rule: requestedValue is removed before the owner call and all eleven owner-only JSON fields plus every scalar owner argument are forbidden caller input
+      digest_separation: _actorAssertionRequestSha256 must equal ops.assertion_replay_guard.request_digest for _actorAssertionJti; semanticRequestSha256 and requestedValueSha256 are respectively the idempotency request digest and service-derived plaintext digest, and none of the three may substitute for another
+    response: PrivacyCorrectionPlanReceiptV1
+    authorized_target_field_allowlist:
+      - {targetObjectType: RESPONSE, fieldPath: /partyName, access_projection: PrivacyResponsePartyNameAccessProjectionV1, apply_owner: ops.execute_privacy_response_party_name_correction_job_v1}
+    unsupported_target_contract:
+      error: PRIVACY_CORRECTION_TARGET_UNSUPPORTED
+      http_status: 422
+      mutation_count: zero
+      applies_to: every pair except exactly RESPONSE plus /partyName
+    constraints:
+      - The locked request must have requestType CORRECTION, a verified same-subject exact-scope receipt and an exact decision version in REVIEW; all other request types and states fail closed.
+      - targetObjectType and fieldPath are first validated only as closed enum and bounded JSON Pointer syntax, then exact-matched against the one-entry allowlist. Wildcards, prefixes and inferred aliases are forbidden; every other pair returns PRIVACY_CORRECTION_TARGET_UNSUPPORTED before encryption, idempotency claim, owner writes, audit or effects.
+      - currentValueDigest is caller comparison input, never authority. PostgreSQL recomputes it from the same PrivacyResponsePartyNameAccessProjectionV1 that supplies ACCESS and rejects a stale request, response version, receipt chain or projection digest as RETENTION_VERSION_CONFLICT before plan creation.
+      - The accepted targetObjectId is the materialized editorial response bound through RESPONSE_RECEIPT to the exact submission receipt and immutable response-origin receipt. A submission ID, response-request ID or unrelated response cannot substitute.
+      - Plan creation appends one sealed ops.privacy_correction_plans_v1 row and one immutable source-authority binding while mutating zero response rows. requestedValue plaintext is removed before the owner call and is absent from every response, event, audit field, log and metric.
+      - The reused 0039 plan row's generic currentValueAuthority value HUMAN_REVIEWER_ASSERTION is subordinate provenance for the caller comparison input. Only the 0040 privacy-response-party-name-correction-plan-binding.v1 row with currentValueAuthority RESPONSE_PARTY_NAME_ACCESS_PROJECTION_V1 is final current-value authority, and every APPROVE/COMPLETE fence revalidates that binding.
+      - PUBLICATION, EVIDENCE and AUDIT_SUBJECT_RECORD remain forbidden correction surfaces. CORRECTION, SUBSCRIPTION and COMMUNICATION_ENDPOINT and every RESPONSE path other than `/partyName` remain unsupported; procurement facts, detection results, publication decisions and audit records are never admitted through this operation.
+      - Human APPROVE preserves privacy.request_decision_recorded.v1 and creates exactly one dedicated PRIVACY_RESPONSE_PARTY_NAME_CORRECTION job in the same transaction. Only the fenced workflow worker may apply the value and append the immutable completion receipt and privacy.response_party_name_corrected.v1 event.
+    errors: [INVALID_PARAMETER, IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, PRIVACY_CORRECTION_TARGET_UNSUPPORTED, RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, RESOURCE_NOT_FOUND, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
   - operation_id: transitionRetentionRequest
     api: control-api
     method: POST
@@ -544,11 +723,26 @@ operations:
     capability: privacy.requests.manage
     assurance: STEP_UP
     request:
-      required: [retentionRequestId, expectedDecisionVersion, transition, reasonCode, reason, inventorySnapshotDigest, holdCoverageDigest, completionReceiptId]
-      fields: {retentionRequestId: 'uuid', expectedDecisionVersion: 'int64>=0', transition: 'START_REVIEW|APPROVE|REJECT|COMPLETE', reasonCode: 'string[1..100]', reason: 'string[1..10000]', inventorySnapshotDigest: 'sha256', holdCoverageDigest: 'sha256', completionReceiptId: 'nullable-uuid'}
-    response: RetentionRequestDecisionReceiptV1
-    constraints: [COMPLETE requires a non-null all-location completion receipt and zero active hold coverage; other transitions require null completionReceiptId]
-    errors: [RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, LEGAL_HOLD_ACTIVE, RETENTION_COMPLETION_INCOMPLETE, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      required: [retentionRequestId, expectedDecisionVersion, transition, reasonCode, reason]
+      fields: {retentionRequestId: 'uuid', expectedDecisionVersion: 'int64>=0', transition: 'VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND', reasonCode: 'string[1..100]', reason: 'string[1..10000]', identityProofReceiptId: 'uuid', extensionReasonCode: 'string[1..100]', extensionReason: 'string[1..4000]', extensionBusinessDays: 'int32[1..max]', rejectionReasonCode: 'string[1..100]', rejectionReason: 'string[1..4000]', appealInstructions: 'string[1..4000]'}
+    server_derived_owner_input:
+      actor_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+      scalar_owner_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+      rule: the public variant is sealed first and the eight actor fields are then derived from the authenticated request; every generated sealed actor or scalar owner field is forbidden caller input
+      digest_separation: _actorAssertionRequestSha256 must equal ops.assertion_replay_guard.request_digest for _actorAssertionJti and is distinct from semanticRequestSha256 and every service-derived sealed-plaintext digest
+    response: RetentionRequestDecisionReceiptV2
+    constraints:
+      - VERIFY_IDENTITY requires only identityProofReceiptId in addition to the common fields; PostgreSQL selects exactly one current approved PRIVACY_RESPONSE_CALENDAR row and derives its policy/calendar binding, identityVerifiedAt and request-type dueAt from that row. The immutable supervisor-decision-v1 seed currently yields ten business days but is not a permanent operation constant.
+      - EXTEND requires only extensionReasonCode, extensionReason and extensionBusinessDays in addition to the common fields; PostgreSQL compares the positive requested value and prior extension count with the exact current approved policy row, including its maximum days/count and pre-expiry notice rule. The supervisor-decision-v1 seed currently permits at most ten business days once.
+      - REJECT requires only rejectionReasonCode, rejectionReason and appealInstructions in addition to the common fields; PostgreSQL derives refusal notice dueAt from the exact current approved policy row. The supervisor-decision-v1 seed currently specifies ten business days.
+      - START_REVIEW and APPROVE permit no transition-specific fields. Every field belonging to another variant is forbidden.
+      - Caller-supplied calendar, policy, digest, identityVerifiedAt, dueAt or noticeDueAt values are forbidden comparison substitutes.
+      - COMPLETE is worker-owned after authoritative location receipts and is not an external Control API transition.
+      - START_REVIEW has no unresolved external authority once the locked request already carries an exact VERIFIED identity receipt and policy/calendar binding. VERIFY_IDENTITY is also implemented when identityProofReceiptId is the immutable same-subject exact-scope RESPONSE_RECEIPT authority produced and consumed by the V3 owner.
+      - VERIFY_IDENTITY remains OPEN_FAIL_CLOSED only for VERIFIED_ENDPOINT because no canonical endpoint verifier/runtime producer can create its source receipt. CORRECTION APPROVE is implemented only for exactly one current RESPONSE `/partyName` plan: it revalidates the response version, ACCESS projection and immutable authority chain, requires zero active legal holds, emits the existing privacy.request_decision_recorded.v1 event, and enqueues exactly one dedicated workflow job in the same transaction without mutating the response.
+      - CORRECTION COMPLETE is private and implemented only by the fenced PRIVACY_RESPONSE_PARTY_NAME_CORRECTION worker. ACCESS, DELETION, RESTRICTION and every other CORRECTION target remain OPEN_FAIL_CLOSED until their own typed execution owners exist.
+      - EXTEND and REJECT have complete policy/calendar rules but are reachable only after a successful authoritative VERIFY_IDENTITY. Any unresolved authority maps to request-id-only DEPENDENCY_UNAVAILABLE 503 with zero writes.
+    errors: [INVALID_PARAMETER, IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, BUSINESS_CALENDAR_STALE, LEGAL_HOLD_ACTIVE, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
   - operation_id: listRecordClassSchedules
     api: control-api
     method: GET
@@ -608,27 +802,47 @@ operations:
       required: [requestType, subjectIdentityProof, jurisdiction, scope, contactEndpoint, statement, attestation, privacyConsent, abuseProof]
       fields: {requestType: 'ACCESS|CORRECTION|DELETION|RESTRICTION', subjectIdentityProof: 'PrivacyIdentityProofV1', jurisdiction: 'string[2..64]', scope: 'PrivacyRequestScopeV1', contactEndpoint: 'EndpointEnrollmentV1', statement: 'string[1..10000]', attestation: 'boolean-true', privacyConsent: 'boolean-true', abuseProof: 'AbuseProofV1'}
     response: PrivacyRequestReceiptV1
-    errors: [INVALID_PARAMETER, IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, ABUSE_PROOF_INVALID, RATE_LIMITED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+    constraints:
+      - Success always persists request state RECEIVED with identityState PENDING_VERIFICATION and null identityVerifiedAt/dueAt; submitted proof bytes never imply synchronous verification and are never persisted raw.
+      - The request body contains the exact closed PrivacyRequestScopeV1 and no caller-authored scopeDigest, scopeSha256, subjectProofHash or subjectScopeDigest field. The PostgreSQL owner canonicalizes the validated scope and derives both digests.
+      - 'scopeCanonical = canonical JSON(exact closed PrivacyRequestScopeV1); scopeSha256 = SHA256(scopeCanonical); subjectScopeDigest = SHA256(canonical JSON({schemaVersion: "privacy-subject-scope-v1", subjectProofHash: DB-derived subject proof hash, scopeSha256: DB-derived scopeSha256})). The public scopeDigest field and privacy.request_created.v2 scopeDigest are exactly scopeSha256, never subjectScopeDigest.'
+      - Raw scope is validation-only owner input and is forbidden from persistence, audit, outbox, event, receipt, error and observability bytes; only encrypted scope plus the DB-derived scopeSha256 and subjectScopeDigest are durable.
+      - Before any write, the owner resolves exactly one current, approved, effective and unexpired versioned privacy access policy with the closed payload keys tokenTtlSeconds, readOnlySessionTtlSeconds, cookieProfileId, cookieName, cookiePath and allowedOperations. There is no seed or fallback value.
+      - Missing, duplicate, expired or unapproved privacy access policy maps only to request-id-only DEPENDENCY_UNAVAILABLE 503 with zero writes; CAPABILITY_UNCONFIGURED, INTERNAL_ERROR detail and policy cardinality are never exposed.
+    errors: [INVALID_PARAMETER, IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, ABUSE_PROOF_INVALID, RATE_LIMITED, IDEMPOTENCY_CONFLICT, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
   - operation_id: exchangePrivacyRequestReceiptToken
     api: submission-api
     method: POST
     path: /v1/submission-session/privacy-request-receipt:exchange
     kind: COMMAND
-    authorization: one-time-receipt-token
-    assurance: SCOPED_TOKEN
-    request: {required: [token, proof], fields: {token: 'secret-string[32..4096]', proof: 'BrowserProofV1'}}
+    authorization: request-bound-bff-service-assertion+one-time-receipt-token
+    assurance: ONE_TIME_PROOF
+    request:
+      required: [token]
+      fields: {token: 'secret-string[32..4096]'}
+      headers: {X-Gurine-Service-Assertion: request-bound-service-assertion, X-Gurine-Next-Submission-Session: 'secret-string[43]'}
     response: PrivacyRequestSessionReceiptV1
-    constraints: [token is one-time and never appears in URL, log, analytics, DOM, client storage or response]
-    errors: [TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REPLAYED, ABUSE_PROOF_INVALID, RATE_LIMITED, INTERNAL_ERROR]
+    constraints:
+      - No prior scoped session is accepted or required; only the request-bound BFF service assertion, one-time body token and required BFF-generated X-Gurine-Next-Submission-Session header authorize exchange.
+      - The service assertion and request digest bind the exact next-session header; PostgreSQL stores only its lowercase SHA-256.
+      - Neither one-time token nor next-session token appears in URL, response body, receipt, event, audit, log, trace, metric, analytics, DOM or browser storage.
+      - Success returns cookieName=gurine_privacy_request_receipt_session; only then may the public-web BFF seal its retained raw next-session token into the host-only HttpOnly SameSite=Lax /privacy cookie.
+      - Before any write, the owner resolves exactly one current, approved, effective and unexpired versioned privacy access policy and derives the session TTL, cookie profile and sole allowed read operation from its closed payload; no seed or fallback is permitted.
+      - Missing, duplicate, expired or unapproved privacy access policy maps only to request-id-only DEPENDENCY_UNAVAILABLE 503 with zero token consumption or session/idempotency/audit/outbox writes; CAPABILITY_UNCONFIGURED, INTERNAL_ERROR detail and policy cardinality are never exposed.
+    errors: [TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REPLAYED, RATE_LIMITED, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
   - operation_id: getPrivacyRequest
     api: submission-api
     method: GET
     path: /v1/privacy-request-receipt
     kind: QUERY
-    authorization: privacy-request-receipt-session
+    authorization: derived-session:PRIVACY_REQUEST_RECEIPT
     assurance: SCOPED_TOKEN
     request: {required: []}
-    response: PrivacyRequestPublicStatusV1
+    response: PrivacyRequestPublicStatusV2
+    constraints:
+      - PostgreSQL routine ops.get_privacy_request_v2 is the only projection authority; free-form decision, notice and appeal text is never returned by this query.
+      - nextActionCodes is a closed one-item set derived from persisted request, identity, decision and notice receipts; terminal state without its exact receipt chain fails closed.
+      - Encrypted notice delivery is the authority for detailed notice and appeal wording; this response exposes only immutable receipt identities and digests.
     errors: [SCOPED_SESSION_REQUIRED, RESOURCE_NOT_FOUND, INTERNAL_ERROR]
   - operation_id: declareConflict
     api: control-api
@@ -921,8 +1135,14 @@ operation_screen_bindings:
   getResponseAppealWorkspace: [COR-001.requests]
   transitionResponseAppeal: [COR-001.requests]
   decideResponseExtension: [CAS-008.requests, CAS-008.timeline]
+  classifyEntityPersonhood: [INT-002.handoff]
+  attestEntityMaterialUseClosure: [INT-002.handoff]
+  attestOrganizationOfficialChannel: [CAS-008.verification]
+  revokeOrganizationOfficialChannel: [CAS-008.verification]
+  verifyResponseOrganizationIdentity: [CAS-008.verification]
   listRetentionRequests: [COR-001.requests]
   getRetentionRequest: [COR-001.requests]
+  createPrivacyCorrectionPlan: [COR-001.requests]
   transitionRetentionRequest: [COR-001.requests]
   listRecordClassSchedules: [OPS-001.services]
   requestCommunicationEndpointLink: [PUB-030.delivery]
@@ -1052,6 +1272,34 @@ private_application_commands:
   private.ApplyCommercialControl: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.commercial-control-executor, authorization: private_action_executor_contract, action_kind: COMMERCIAL_CONTROL, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CommercialControlActionTargetV1}, response_schema: CommercialControlExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMERCIAL_CONTROL_TRIGGER_STALE, COMMERCIAL_CONTROL_RECEIPT_INVALID, RECONCILIATION_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.ExecuteProviderControl: {transport: PRIVATE_APPLICATION_COMMAND, caller: analysis-worker.provider-control-executor, authorization: private_action_executor_contract plus exact providerOperationId capability and assurance policy, action_kind: PROVIDER_CONTROL, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: ProviderControlActionTargetV1}, response_schema: ProviderControlExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_DENIED, STEP_UP_REQUIRED, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.MaterializePaidEvidencePacket: {transport: PRIVATE_APPLICATION_COMMAND, caller: workflow-worker.paid-evidence-packet-materializer, authorization: claimed allowlisted source event plus exact organization qualification contract outcome subject and member candidate digests, request_schema: {additional_properties: false, required: [sourceEventId, packetId, organizationId, qualificationEpisodeId, qualificationEpisodeVersion, qualificationEpisodeDigest, commercialContractId, commercialContractVersion, commercialContractDigest, subject, orderedMembers, expectedPacketSubjectDigest], targetRequest: MaterializePaidEvidencePacketRequestV1}, response_schema: PaidEvidencePacketMaterializationReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, PAID_EVIDENCE_SUBJECT_INVALID, PAID_EVIDENCE_MEMBER_SET_INVALID, EVENT_REPLAY_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  ops.execute_due_r6d_entity_retention_job_v1:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: workflow-worker.entity-retention-executor
+    authorization: gurine_workflow_worker database role plus one claimed RUNNING R6D_ENTITY_RETENTION job on queue workflow-worker whose current nonexpired lease token and positive fencing token are passed only as owner-call context
+    request_schema:
+      additional_properties: false
+      required: [schemaVersion, entityKind, entityId, personhoodReceiptId, personhoodReceiptDigest, closureReceiptId, closureReceiptDigest, closureAt, scheduleId, scheduleRevision, scheduleDigest, dueAt, requestDigest, idempotencyDigest, queuedAt]
+      fields: {schemaVersion: 'const<r6d-entity-retention-job.v1>', entityKind: 'enum<AGENCY|SUPPLIER>', entityId: uuid, personhoodReceiptId: uuid, personhoodReceiptDigest: sha256, closureReceiptId: uuid, closureReceiptDigest: sha256, closureAt: datetime, scheduleId: uuid, scheduleRevision: 'int64[1..max]', scheduleDigest: sha256, dueAt: datetime, requestDigest: sha256, idempotencyDigest: sha256, queuedAt: datetime}
+      invariants:
+        - The payload has exactly these fifteen fields; jobId, leaseToken and fencingToken are claimed-job context and are forbidden payload fields.
+        - closureAt is not after dueAt and dueAt is not after queuedAt.
+        - PostgreSQL recomputes requestDigest, idempotencyDigest and every current receipt, schedule, material-use and legal-hold binding before erasing plaintext.
+    response_schema: R6dEntityRetentionExecutionResultV1
+    errors: [INVALID_R6D_ENTITY_RETENTION_JOB, INVALID_R6D_ENTITY_RETENTION_RESULT, R6D_ENTITY_RETENTION_BINDING_MISMATCH, R6D_ENTITY_RETENTION_OWNER_REJECTED, R6D_ENTITY_RETENTION_OWNER_CONFLICT, R6D_ENTITY_RETENTION_OWNER_NOT_READY, R6D_ENTITY_RETENTION_OWNER_UNAVAILABLE]
+  ops.execute_privacy_response_party_name_correction_job_v1:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: workflow-worker.response-party-name-correction-executor
+    authorization: gurine_workflow_worker database role plus one claimed RUNNING PRIVACY_RESPONSE_PARTY_NAME_CORRECTION job on queue workflow-worker whose current nonexpired lease token and positive fencing token are passed only as owner-call context
+    request_schema:
+      additional_properties: false
+      required: [schemaVersion, privacyRequestId, requestDecisionVersion, correctionPlanId, planVersion, planDigest, responseId, expectedResponseVersion, expectedCurrentValueDigest, accessProjectionDigest, privacyIdentityProofReceiptId, privacyIdentityProofReceiptDigest, responseSubmissionReceiptId, responseSubmissionReceiptDigest, responseOriginReceiptId, responseOriginReceiptDigest, approvalTransitionReceiptId, approvalTransitionReceiptDigest, requestedValueSha256, requestedValueAadDigest, requestedValueCiphertextDigest, encryptionKeyId, holdCoverageDigest, queuedAt]
+      fields: {schemaVersion: 'const<privacy-response-party-name-correction-job.v1>', privacyRequestId: uuid, requestDecisionVersion: 'int64[1..max]', correctionPlanId: uuid, planVersion: 'int64[1..max]', planDigest: sha256, responseId: uuid, expectedResponseVersion: 'int64[1..max]', expectedCurrentValueDigest: sha256, accessProjectionDigest: sha256, privacyIdentityProofReceiptId: uuid, privacyIdentityProofReceiptDigest: sha256, responseSubmissionReceiptId: uuid, responseSubmissionReceiptDigest: sha256, responseOriginReceiptId: uuid, responseOriginReceiptDigest: sha256, approvalTransitionReceiptId: uuid, approvalTransitionReceiptDigest: sha256, requestedValueSha256: sha256, requestedValueAadDigest: sha256, requestedValueCiphertextDigest: sha256, encryptionKeyId: 'string[1..200]', holdCoverageDigest: sha256, queuedAt: datetime}
+      invariants:
+        - The payload has exactly these twenty-four fields; jobId, leaseToken and fencingToken are claimed-job context and partyName, requestedValue and ciphertext are forbidden payload fields.
+        - PostgreSQL re-derives and exact-compares every plan, approval, response, ACCESS projection, receipt-chain, legal-hold and job-payload binding before the loader releases the sealed ciphertext envelope.
+        - Plaintext exists only in zeroized worker memory between authenticated envelope decryption and the five-argument database apply call and is forbidden from every result, event, audit, log, trace, metric and error.
+    response_schema: PrivacyResponsePartyNameCorrectionCompletionV1
+    errors: [INVALID_PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_JOB, INVALID_PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_LOAD, INVALID_PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_COMPLETION, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_BINDING_MISMATCH, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_DECRYPTION_FAILED, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_OWNER_REJECTED, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_UNSUPPORTED, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_CONFLICT, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_NOT_READY, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_BLOCKED, PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_OWNER_UNAVAILABLE]
 
 base_operation_atomic_extensions:
   resolveCorrectionRequest:
@@ -1059,7 +1307,7 @@ base_operation_atomic_extensions:
     atomic_transition_group: gurine.command.resolveCorrectionRequest.publish.v1
     effect_owner: control-api.resolveCorrectionRequest
     required_request_overlay: [publicationPreviewId, publicationPreviewDigest, publicationGatePreviewDigest, expectedPublicationRevision, replacementContentDigest]
-    success: correction REVIEW->PUBLISHED and publication current state->CORRECTED with one immutable revision, one gate decision, audit, correction.resolved.v1, publication.revision_created.v1, projection outbox and one stored receipt
+    success: correction REVIEW->PUBLISHED and publication current state->CORRECTED with one immutable revision, one gate decision, audit, exactly one each of correction.resolved.v1, notification.correction_resolved.v1, publication.revision_created.v1 and projection.publication_revision_created.v1, and one stored receipt
   placeTemporaryRestriction:
     atomic_transition_group: gurine.command.placeTemporaryRestriction.v1
     effect_owner: control-api.placeTemporaryRestriction
@@ -1074,5 +1322,25 @@ base_operation_atomic_extensions:
   placeLegalHold:
     atomic_transition_group: gurine.command.placeLegalHold.v2
     effect_owner: control-api.placeLegalHold
-    request_replacement: case-shaped object fields are replaced by closed LegalHoldTargetBindingV1 plus targetDigest, scopeAtoms, affectedIds, authorityReference, expiresAt
-    success: exact concrete target lock, derived/reused immutable target anchor, one hold placement, audit, legal_hold.placed.v1 and stored receipt; case-only version mutation occurs only for case-governed target variants
+    request_replacement: case-shaped object fields are replaced by closed LegalHoldTargetBindingV1 plus scopeAtoms, affectedIds, authorityReference, reasonCode, reason and public-optional nullable expiresAt
+    supported_target_extension:
+      CORRECTION: targetId is correctionSnapshotId and the full tuple binds ops.privacy_correction_snapshots_v1(snapshot_id,correction_id,snapshot_version,snapshot_digest); correctionId remains an explicit object binding
+      SUBSCRIPTION: targetId is subscriptionSnapshotId and the full tuple binds ops.privacy_subscription_snapshots_v1(snapshot_id,subscription_id,snapshot_version,snapshot_digest); subscriptionId remains an explicit object binding
+      COMMUNICATION_ENDPOINT: targetId equals communicationEndpointId and targetVersion plus targetDigest bind the existing intake.communication_endpoints version and endpoint_digest without an endpoint-snapshot substitute
+    unsupported_target:
+      targetKind: AUDIT_SUBJECT_RECORD
+      error: LEGAL_HOLD_TARGET_UNSUPPORTED
+      status: 422
+      reason: no authoritative source relation exists, so no version fence, canonical digest, owner lock or foreign-key anchor can be validated
+      unlock_condition: authorize a versioned immutable audit-subject source relation, canonical digest preimage, owner lock and exact legal-hold anchor foreign key
+    internal_normalization: omitted expiresAt means no expiry and is canonicalized to an explicit JSON null before the idempotency request digest and exact owner payload are derived
+    success: exact concrete target lock, derived/reused immutable target anchor, one hold placement, audit, legal_hold.placed.v2 and stored receipt; case-only version mutation occurs only for case-governed target variants
+    effective_event: legal_hold.placed.v2
+    legacy_event: legal_hold.placed.v1 remains historical schema evidence and is forbidden for new runtime admission
+  approveResponseExcerpt:
+    atomic_transition_group: gurine.command.approveResponseExcerpt.v2
+    effect_owner: control-api.approveResponseExcerpt
+    required_request_overlay: [publicationForm]
+    success: ANONYMOUS requires matching anonymous consent and consumes no organization identity receipt; FULL or REDACTED locks and consumes the exact active SECOND_FACTOR_VERIFIED official-channel identity receipt bound to response, version, content, consent, organization and form before one immutable approval receipt, response update, audit and outbox event commit
+    effective_event: response.excerpt_approved.v2
+    legacy_event: response.excerpt_approved.v1 remains historical schema evidence and is forbidden for new runtime admission

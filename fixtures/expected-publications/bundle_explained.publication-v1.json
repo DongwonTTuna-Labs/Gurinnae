@@ -7,6 +7,7 @@
   "case_id": "case_fixture_bundle_explained",
   "slug": "synthetic-bundle-explained",
   "display_status": "PUBLISHED_EXPLAINED",
+  "non_conclusion": "처음 탐지된 차이는 추가 자료에서 확인된 구성·서비스·조건의 차이로 설명됩니다. 탐지와 검증 과정을 함께 공개합니다.",
   "content_hash": "e3e490530fd1caf3b8ad1b2e4d01a1cc4b240b4b38c993a3f2119d8609d7aa69",
   "title": "유지보수·교육 포함 사실이 확인돼 가격 차이가 설명된 합성 사례",
   "summary": "초기 단가 비교에서는 큰 차이가 보였지만 계약이 단품이 아니라 설치·교육·36개월 유지보수를 포함한 패키지라는 사실이 확인됐다. 따라서 단품 cohort와 직접 비교하지 않는다.",
@@ -169,6 +170,7 @@
   "review_summary": {
     "editor_approval_count": 1,
     "legal_reviewed": false,
+    "legal_review_receipt_sha256": null,
     "policy_version": "editorial-1.0.0"
   }
 }

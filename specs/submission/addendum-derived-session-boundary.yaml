@@ -7,7 +7,7 @@ authority:
   extends_without_replacing: specs/submission/session-boundary.yaml
   database_contract: specs/database/addendum/0027-communication-consent-delivery.yaml
 
-purpose: Close the appeal and communication-profile session boundary without widening RESPONSE_RECEIPT or any other v13 parent session.
+purpose: Close the appeal, communication-profile and privacy-request-receipt session boundary without widening RESPONSE_RECEIPT or any other v13 parent session.
 
 base_invariants:
   browser_direct_submission_api_access: false
@@ -23,7 +23,7 @@ base_invariants:
   next_session_rotation_header:
     name: X-Gurine-Next-Submission-Session
     value: fresh 32-byte base64url-no-padding opaque token generated server-side by the BFF
-    required_for: [createResponseAppeal, requestCommunicationEndpointLink, verifyCommunicationEndpointLink, unlinkCommunicationEndpoint]
+    required_for: [createResponseAppeal, requestCommunicationEndpointLink, verifyCommunicationEndpointLink, unlinkCommunicationEndpoint, exchangePrivacyRequestReceiptToken]
     binding: included in the request body/header digest of the request-bound service assertion and idempotency request digest
     storage: only its lowercase SHA-256 enters PostgreSQL; successful response causes the BFF to seal it in the appropriate child cookie
     forbidden: [browser request, OpenAPI public example, log, trace, audit, outbox, receipt, error]
@@ -42,9 +42,10 @@ derived_session_storage:
   required_columns: [parent_session_id, scope_binding_digest, issuance_receipt_digest, rotation_sequence]
   lineage_digest: RFC8785_JCS(DerivedSubmissionSessionBindingV1{sessionKind,scopeType,scopeId,parentSessionId,parentSessionVersion,parentScopeBindingDigest,bffIssuer,issuedAt,absoluteExpiresAt,rotationSequence}) lowercase SHA-256
   constraints:
-    - Derived rows have one nonnull parent, a positive rotation sequence and lowercase SHA-256 scope/issuance digests.
+    - APPEAL_CREATE, APPEAL_STATUS and COMMUNICATION_PROFILE rows have one nonnull parent, a positive rotation sequence and lowercase SHA-256 scope/issuance digests.
+    - PRIVACY_REQUEST_RECEIPT has no parent, is created only by exchangePrivacyRequestReceiptToken and binds the exact privacy request plus BFF issuer without accepting a prior scoped session.
     - APPEAL_CREATE uses RESPONSE_SUBMISSION scope, APPEAL_STATUS uses APPEAL scope and COMMUNICATION_PROFILE uses COMMUNICATION_SUBJECT scope.
-    - A child issuer equals its parent issuer and is one of public-web or response-portal.
+    - A parented child issuer equals its parent issuer and is one of public-web or response-portal; a PRIVACY_REQUEST_RECEIPT issuer is the exact request-bound public-web BFF issuer.
     - expires_at is no later than issued_at plus the child TTL and no later than any parent or domain window that bounds it.
     - token_hash remains globally unique; scope binding is immutable; status/version follow the existing closed session lifecycle.
 
@@ -77,6 +78,21 @@ session_kinds:
       CORRECTION_RECEIPT: CommunicationOriginCorrectionV1{originObjectType=CORRECTION_REQUEST,originObjectId=parent.scopeId,originObjectVersion=1}
     scope_binding: CommunicationProfileScopeV1{communicationSubjectId,originObjectType,originObjectId,originObjectVersion,originBindingDigest,profileVersion,profileDigest}
     rotation: every successful profile mutation rotates the child token under the same subject scope; changed subject or origin is forbidden
+  PRIVACY_REQUEST_RECEIPT:
+    scope_type: PRIVACY_REQUEST
+    mode: READ_ONLY
+    allowed_operations: [getPrivacyRequest]
+    eligible_parent_kinds: []
+    issuance: exchangePrivacyRequestReceiptToken consumes the exact fresh one-time receipt token only after resolving exactly one current APPROVED effective and unexpired privacy_request_receipt_access_policy, then stores only the SHA-256 of the BFF-retained next-session token
+    scope_binding: exact privacyRequestId resolved from the one-time receipt token HMAC
+    access_policy:
+      logical_authority: specs/product/addendum-command-semantics.yaml#shared_contracts.privacy_request_receipt_access_policy
+      schema_version: privacy-request-receipt-access-policy-v1
+      expiry: database clock plus readOnlySessionTtlSeconds; the session binds the selected policy identity, revision and digest
+      closed_payload_binding: {cookieProfileId: privacy_request_receipt, cookieName: gurine_privacy_request_receipt_session, cookiePath: /privacy, allowedOperations: [getPrivacyRequest]}
+      separation: never reuse the PRIVACY_RESPONSE_CALENDAR policy or any statutory/business-calendar value as a session TTL
+      unavailable: zero, duplicate, expired or otherwise non-current policy returns request-id-only DEPENDENCY_UNAVAILABLE with no token consumption, cookie seal or session/audit/outbox/idempotency-finalization write
+      seed: production seed forbidden; explicit positive TTLs exist only in test/smoke fixtures
 
 private_bff_session_broker:
   ingress: Submission API private service network only
@@ -195,7 +211,7 @@ database_idempotency_boundary:
     derived_exclusion: No legacy class may use a SUBMISSION_DERIVED scope or acquire BFF/session binding; the three derived session kinds start only as BOUND_V1 rows after cutover.
     order: add nullable columns and NOT VALID checks, classify set-equal rows, make format/generation NOT NULL, install transition trigger, validate checks, create exact functions, grant exact EXECUTE/TYPE USAGE, run PostgreSQL 18.4 canary, then admit only the new function-using application revision
   derived_response_safety:
-    allowed_schemas: [IssueCommunicationProfileSessionReceiptV1, IssueResponseAppealCreateSessionReceiptV1, RotateResponseAppealStatusSessionReceiptV1, ResponseAppealReceiptV1, CommunicationEndpointLinkRequestedReceiptV1, CommunicationEndpointVerifiedReceiptV1, CommunicationEndpointUnlinkedReceiptV1]
+    allowed_schemas: [IssueCommunicationProfileSessionReceiptV1, IssueResponseAppealCreateSessionReceiptV1, RotateResponseAppealStatusSessionReceiptV1, ResponseAppealReceiptV1, CommunicationEndpointLinkRequestedReceiptV1, CommunicationEndpointVerifiedReceiptV1, CommunicationEndpointUnlinkedReceiptV1, PrivacyRequestSessionReceiptV1]
     forbidden_recursive_fields: [opaqueSessionToken, nextOpaqueSessionToken, sessionToken, tokenHash, sessionTokenHash, idempotencyKey, idempotencyKeyHash, csrfToken, cookie, setCookie, authorization]
     allowed_headers: [content-type, cache-control, etag, idempotency-replayed]
     forbidden_headers: [set-cookie, authorization, location, x-gurine-submission-session, x-gurine-next-submission-session]
@@ -222,12 +238,13 @@ one_shot_idempotent_replay:
   request_digest: lowercase SHA-256 of exact method, path, canonical query, content type and body bytes
   ordering:
     - Authenticate the request-bound BFF assertion and compute the scope identity/request digest.
+    - exchangePrivacyRequestReceiptToken resolves exactly one current APPROVED effective unexpired privacy_request_receipt_access_policy and its declared cookie profile before the idempotency claim; failure returns request-id-only DEPENDENCY_UNAVAILABLE with no stored response bytes.
     - Lock the idempotency/stored-response claim before validating ACTIVE session status.
-    - RESPONSE_FINAL plus the same request digest and generation returns the stored HTTP status, safe headers and exact response bytes through ops.replay_idempotency_response_v1 immediately, even if APPEAL_CREATE is CONSUMED, COMMUNICATION_PROFILE was rotated or the incomplete-claim lease has elapsed.
+    - RESPONSE_FINAL plus the same request digest and generation returns the stored HTTP status, safe headers and exact response bytes through ops.replay_idempotency_response_v1 immediately, even if APPEAL_CREATE is CONSUMED, COMMUNICATION_PROFILE was rotated or the incomplete-claim lease has elapsed; privacy receipt exchange replay remains subordinate to the current access-policy and cookie-profile gate above.
     - An unexpired changed digest returns IDEMPOTENCY_CONFLICT with a before/after physical-row digest proving zero mutation. IN_PROGRESS never repeats a possible effect.
     - An expired incomplete BOUND_V1 row may return RECLAIMED_EXPIRED only after incrementing generation under lock; a prior-generation worker cannot finalize it. RESPONSE_FINAL and every tombstone are terminal and never reclaimed.
     - Only NEW or RECLAIMED_EXPIRED locks the ACTIVE session and domain graph, performs mutation, consumes/rotates session, writes audit/outbox/receipt, stores the complete exact response tuple and finalizes the claim in one transaction.
-  replay_forbidden_when: token hash, issuer, operation or idempotency key differs; those requests pass through normal non-leaking session validation and cannot retrieve another session's response
+  replay_forbidden_when: token hash, issuer, operation or idempotency key differs, or a privacy receipt exchange has no exact current approved access policy and cookie profile matching its stored policy identity/revision/digest binding; those requests pass through normal non-leaking validation and cannot retrieve stored response bytes
   direct_sql_forbidden: application repositories and all 31 derived/domain boundary signatures use the claim/finalize/replay functions; they never SELECT/INSERT/UPDATE/DELETE/COPY ops.idempotency_keys directly
 
 cookie_profiles:
@@ -239,6 +256,11 @@ cookie_profiles:
     name: gurine_communication_profile_session
     path: /communication-profile
     session_kinds: [COMMUNICATION_PROFILE]
+  privacy_request_receipt:
+    name: gurine_privacy_request_receipt_session
+    path: /privacy
+    session_kinds: [PRIVACY_REQUEST_RECEIPT]
+    ttl_source: privacy_request_receipt_access_policy.readOnlySessionTtlSeconds
   defaults: {domain: absent-host-only, httpOnly: true, secureInProduction: true, sameSite: Lax, envelope: specs/cryptography/submission-session-cookie-envelope.yaml, payload: specs/cryptography/submission-session-cookie-payload.schema.json}
   rotation: BFF seals the already-generated new token only after a successful broker/domain receipt; failure retains the prior usable cookie unless the server receipt says it was terminally consumed
 
@@ -248,6 +270,7 @@ operation_authorization_overlay:
   requestCommunicationEndpointLink: {auth: bff-service-assertion-and-scoped-submission-session, required_session_kind: COMMUNICATION_PROFILE, scope_type: COMMUNICATION_SUBJECT, successful_rotation: COMMUNICATION_PROFILE}
   verifyCommunicationEndpointLink: {auth: bff-service-assertion-and-scoped-submission-session-and-one-time-endpoint-proof, required_session_kind: COMMUNICATION_PROFILE, scope_type: COMMUNICATION_SUBJECT, successful_rotation: COMMUNICATION_PROFILE}
   unlinkCommunicationEndpoint: {auth: bff-service-assertion-and-scoped-submission-session, required_session_kind: COMMUNICATION_PROFILE, scope_type: COMMUNICATION_SUBJECT, successful_rotation: COMMUNICATION_PROFILE}
+  getPrivacyRequest: {auth: bff-service-assertion-and-scoped-submission-session, required_session_kind: PRIVACY_REQUEST_RECEIPT, scope_type: PRIVACY_REQUEST}
 
 acceptance:
   executable_required:
@@ -258,7 +281,7 @@ acceptance:
     - Parent expiry/revocation prevents new child issuance; an already issued child follows its own absolute expiry but every mutation rechecks the current domain authorization and suppression fences.
     - Sixty-four concurrent issue attempts with one token/idempotency/request create one child and one receipt; changed request yields one conflict and no second child.
     - Sixty-four concurrent createResponseAppeal calls create one appeal, consume one APPEAL_CREATE, issue one APPEAL_STATUS and return byte-identical stored responses.
-    - Replay after one-shot consumption or profile rotation returns stored bytes before domain locks; a different key/token/issuer/request never receives those bytes.
+    - APPEAL_CREATE and COMMUNICATION_PROFILE replay after one-shot consumption or profile rotation returns stored bytes before domain locks; privacy receipt exchange first revalidates the current access policy and cookie profile, and a different key/token/issuer/request never receives those bytes.
     - A NEW derived claim succeeds on PostgreSQL 18.4 with all four claim fields present and every terminal field NULL; no retired 0-or-13 cardinality CHECK produces SQLSTATE 23514.
     - Finalize populates the complete terminal tuple once, and replay after APPEAL_CREATE consumption returns byte-identical headers/body/digests for the same generation with zero second session/domain/audit/outbox mutation.
     - The same unexpired key with changed request bytes returns IDEMPOTENCY_CONFLICT and a full-row before/after digest plus xmin/count prove zero mutation.
@@ -266,18 +289,21 @@ acceptance:
     - >-
       The migration canary seeds all legacy shapes: only an unexpired completed known non-derived row yields LEGACY_FINAL_COMPAT; expired/unknown, incomplete-after-drain and partial rows are immutable non-replayable tombstones.
     - Cookies are host-only, path-scoped, sealed and rotated; raw tokens are absent from URLs, HTML, logs, audit, outbox and telemetry fixtures.
+    - exchangePrivacyRequestReceiptToken returns cookieName=gurine_privacy_request_receipt_session; only after that exchange succeeds does the public-web BFF seal its retained raw next-session token into the host-only HttpOnly SameSite=Lax /privacy cookie.
+    - createPrivacyRequest and exchangePrivacyRequestReceiptToken each fail closed with DEPENDENCY_UNAVAILABLE and zero writes when the current APPROVED effective unexpired privacy_request_receipt_access_policy set is not exactly one; no production seed or response-calendar fallback exists.
+    - The PRIVACY_REQUEST_RECEIPT expiresAt and allowed-operation set are derived only from the exact selected privacy-request-receipt-access-policy-v1 payload, and the resulting session preserves its policy identity/revision/digest binding.
     - PostgreSQL ACL inspection proves PUBLIC and nonlisted roles have zero EXECUTE and gurine_submission_api has zero direct table writes.
     - PostgreSQL 18.4 has_table_privilege and has_column_privilege matrices prove submission, control, identity and every other runtime role have zero direct ops.idempotency_keys privilege, including residual column ACLs.
     - Direct SELECT/INSERT/UPDATE/COPY/CTE/RETURNING attempts under submission, control and identity fail SQLSTATE 42501 while exact registered claim/finalize/replay calls succeed.
-    - Cross-role, cross-operation, cross-issuer, cross-session and changed-request replay returns no response bytes or row-existence signal; same binding returns the exact stored bytes once without mutation.
+    - Cross-role, cross-operation, cross-issuer, cross-session and changed-request replay returns no response bytes or row-existence signal; same binding returns the exact stored bytes once without mutation only after any operation-specific current-policy gate succeeds.
     - Finalize rejects token/cookie/verifier JSON fields and Set-Cookie/session headers, and canary verifier/response bytes appear in no view, publication, generated row, audit, outbox, log, trace, metric or error.
     - Search-path trap objects cannot intercept the three SECURITY DEFINER functions; pg_proc ownership, exact one-element ["search_path=pg_catalog, ops"] proconfig, proacl and exact regprocedure signatures match the database contract.
 
 canonical_import_requirements:
-  - specs/submission/session-boundary.yaml must add the three kinds, two cookie profiles and the broker operations while preserving all existing session definitions byte-semantically.
+  - The effective submission-session contract must add the four kinds and three cookie profiles from this overlay while preserving all existing base session definitions byte-semantically.
   - specs/api/operation-contracts.yaml and specs/product/addendum-operation-contracts.yaml must use the exact required_session_kind labels above.
   - Submission OpenAPI and generated clients must expose the three private BFF broker operations and no browser security scheme.
-  - specs/cryptography/submission-session-cookie-payload.schema.json must admit the three new sessionKind values without changing required fields or envelope cryptography.
+  - specs/cryptography/submission-session-cookie-payload.schema.json must admit the four new sessionKind values without changing required fields or envelope cryptography.
   - command/persistence/event contracts must adopt the replay ordering and token-free receipt/event payloads.
   - db migration 0027 must implement the staged legacy classification, claim/terminal CHECK split, transition trigger, generation-fenced functions, ACL reset and the exact PostgreSQL 18.4 canary before this overlay can become FINAL.
   - crates/persistence-postgres/src/idempotency.rs and all direct callers must replace raw table claim/complete/release SQL with the exact generation-fenced functions; failure rolls back the enclosing transaction instead of committing an incomplete claim and later releasing it. The legacy release operation is removed.

@@ -1,0 +1,28 @@
+{
+  "fixtureAuthority": "TEST_ONLY",
+  "schemaVersion": "external-korean-counsel-review-receipt.v1",
+  "issuer": {
+    "name": "TEST_ONLY 외부 검토자",
+    "credentialId": "TEST_ONLY-CREDENTIAL",
+    "jurisdiction": "KR"
+  },
+  "scope": {
+    "kind": "KOREAN_LEGAL_LAUNCH_REVIEW",
+    "documentVersion": "supervisor-decision-v1",
+    "environment": "PRODUCTION",
+    "artifactIds": [
+      "PRIVACY_NOTICE_KO",
+      "TERMS_OF_USE_KO"
+    ],
+    "subjectSha256": "30bdd08df64b4fc2af6bb3f4de903df929e1e2f295ffd9646222fc0b66475ed0"
+  },
+  "timestamps": {
+    "issuedAt": "2026-01-01T00:00:00Z",
+    "validFrom": "2026-01-01T00:00:00Z",
+    "expiresAt": "2099-01-01T00:00:00Z"
+  },
+  "attestation": {
+    "decision": "APPROVED_FOR_PRODUCTION",
+    "statement": "TEST_ONLY 구조 검증용 외부 법률 검토 승인 진술"
+  }
+}

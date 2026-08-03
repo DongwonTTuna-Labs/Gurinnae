@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT x.id,x.source_revision,x.target_revision,x.summary,x.reason,x.published_at,c.slug,c.public_state,r.payload FROM public.corrections x JOIN public.cases c ON c.id=x.case_id JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE x.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "source_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "source_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "target_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "target_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "public_state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "public_state"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "payload"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "185924888ecc942360efb2f6a82dcb6a4fcc583a619583dae12279dbc99bf888"
+}

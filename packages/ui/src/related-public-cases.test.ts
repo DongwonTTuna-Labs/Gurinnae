@@ -9,6 +9,8 @@ describe("buildRelatedPublicCases", () => {
         slug: "case-2026-001",
         title: "해솔시 청사 유지보수 계약",
         publicState: "PUBLISHED_ANOMALY",
+        nonConclusion:
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
         summary: "렌더하지 않는 내부 요약",
         href: "https://attacker.invalid/cases/case-2026-001",
       }),
@@ -18,6 +20,11 @@ describe("buildRelatedPublicCases", () => {
       {
         title: "해솔시 청사 유지보수 계약",
         status: "이상 징후 게시됨",
+        notice: {
+          kind: "NON_CONCLUSION",
+          label: "비확정 고지",
+          text: "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+        },
         href: "/cases/case-2026-001",
       },
     ]);
@@ -28,7 +35,9 @@ describe("buildRelatedPublicCases", () => {
       record({
         slug: "bad/slug",
         title: "한빛군 재난 안전 계약",
-        publicState: "NEVER_PUBLISHED",
+        publicState: "PUBLISHED_EXPLAINED",
+        nonConclusion:
+          "추가 자료로 차이가 설명됐으며 탐지와 검증 과정을 함께 공개합니다.",
         href: "/cases/case-2026-002",
       }),
     ]);
@@ -43,7 +52,12 @@ describe("buildRelatedPublicCases", () => {
     ).toEqual([
       {
         title: "한빛군 재난 안전 계약",
-        status: "게시 이력 없음",
+        status: "소명 병기 게시됨",
+        notice: {
+          kind: "NON_CONCLUSION",
+          label: "비확정 고지",
+          text: "추가 자료로 차이가 설명됐으며 탐지와 검증 과정을 함께 공개합니다.",
+        },
         href: "/cases/case-2026-002",
       },
     ]);
@@ -55,12 +69,16 @@ describe("buildRelatedPublicCases", () => {
         slug: "bad/slug",
         title: "검증되지 않은 경로",
         publicState: "PUBLISHED_ANOMALY",
+        nonConclusion:
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
         href: "/cases/unverified",
       }),
       record({
         slug: "also/bad",
         title: "외부 경로",
         publicState: "PUBLISHED_ANOMALY",
+        nonConclusion:
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
         href: "https://example.com/cases/external",
       }),
       record({ slug: "case-without-status", title: "상태 없음" }),
@@ -79,16 +97,22 @@ describe("buildRelatedPublicCases", () => {
         slug: "invalid/slug",
         title: "제외되는 사건",
         publicState: "PUBLISHED_ANOMALY",
+        nonConclusion:
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
       }),
       record({
         slug: "case-2026-004",
         title: "첫 유효 사건",
         publicState: "PUBLISHED_ANOMALY",
+        nonConclusion:
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
       }),
       record({
         slug: "case-2026-005",
         title: "두 번째 유효 사건",
-        publicState: "NEVER_PUBLISHED",
+        publicState: "PUBLISHED_EXPLAINED",
+        nonConclusion:
+          "추가 자료로 차이가 설명됐으며 탐지와 검증 과정을 함께 공개합니다.",
       }),
     ]);
 
@@ -96,14 +120,53 @@ describe("buildRelatedPublicCases", () => {
       {
         title: "첫 유효 사건",
         status: "이상 징후 게시됨",
+        notice: {
+          kind: "NON_CONCLUSION",
+          label: "비확정 고지",
+          text: "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+        },
         href: "/cases/case-2026-004",
       },
       {
         title: "두 번째 유효 사건",
-        status: "게시 이력 없음",
+        status: "소명 병기 게시됨",
+        notice: {
+          kind: "NON_CONCLUSION",
+          label: "비확정 고지",
+          text: "추가 자료로 차이가 설명됐으며 탐지와 검증 과정을 함께 공개합니다.",
+        },
         href: "/cases/case-2026-005",
       },
     ]);
+  });
+
+  it.each([
+    "PUB-008",
+    "PUB-010",
+  ] as const)("binds %s recentCases to the same closed row model", (screenId) => {
+    const projection = relatedProjection([
+      record({
+        slug: "case-2026-006",
+        title: "기관·업체 관련 공개 사건",
+        publicState: "PUBLISHED_ANOMALY",
+        nonConclusion:
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+      }),
+    ]);
+    const recentCases = {
+      ...projection,
+      screenId,
+      sectionId: "cases",
+      fields: projection.fields.map((field) => ({
+        ...field,
+        name: "recentCases",
+      })),
+    };
+
+    expect(buildRelatedPublicCases(recentCases)).toHaveLength(1);
+    expect(buildRelatedPublicCases(recentCases)[0]?.notice.kind).toBe(
+      "NON_CONCLUSION",
+    );
   });
 
   it("rejects projections from any other screen or section", () => {
@@ -112,6 +175,8 @@ describe("buildRelatedPublicCases", () => {
         slug: "case-2026-003",
         title: "다른 화면의 사건",
         publicState: "PUBLISHED_ANOMALY",
+        nonConclusion:
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
       }),
     ]);
 

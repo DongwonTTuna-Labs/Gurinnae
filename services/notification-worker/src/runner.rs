@@ -117,3 +117,10 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
 include!("notification_jobs.rs");
 include!("notification_prepare.rs");
 include!("notification_helpers.rs");
+include!("privacy_notification_contract.rs");
+include!("privacy_notification_created.rs");
+include!("privacy_notification_payload_validation.rs");
+include!("privacy_notification_helpers.rs");
+include!("privacy_notification_jobs.rs");
+include!("privacy_notification_render.rs");
+include!("privacy_notification_tests.rs");

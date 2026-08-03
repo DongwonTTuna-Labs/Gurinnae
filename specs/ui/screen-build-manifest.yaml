@@ -804,7 +804,7 @@ screens:
     method: GET
     path: /v1/cases/{caseSlug}/reproducibility/download
     blocking: false
-    response_schema: BinaryDownload
+    response_schema: CaseReproducibilityDownload
   states:
   - loading
   - success
@@ -1423,7 +1423,7 @@ screens:
     method: GET
     path: /v1/contracts/download
     blocking: false
-    response_schema: BinaryDownload
+    response_schema: PublicContractsDownload
   states:
   - loading
   - success

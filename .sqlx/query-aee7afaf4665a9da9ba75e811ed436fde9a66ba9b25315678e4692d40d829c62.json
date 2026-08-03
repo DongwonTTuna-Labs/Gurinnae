@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.exchange_privacy_request_receipt_token_v2($1::char(64),$2::char(64),$3,$4,$5::char(64),$6::char(64))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exchange_privacy_request_receipt_token_v2",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Uuid",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "aee7afaf4665a9da9ba75e811ed436fde9a66ba9b25315678e4692d40d829c62"
+}

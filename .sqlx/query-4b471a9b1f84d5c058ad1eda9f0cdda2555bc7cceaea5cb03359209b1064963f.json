@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.r6d_outbox_envelope_digest_v1($1) AS \"digest?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "digest?",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4b471a9b1f84d5c058ad1eda9f0cdda2555bc7cceaea5cb03359209b1064963f"
+}

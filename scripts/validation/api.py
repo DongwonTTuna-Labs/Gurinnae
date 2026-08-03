@@ -1,59 +1,23 @@
 from __future__ import annotations
 
 import collections
-import re
 from pathlib import Path
 
 from openapi_spec_validator import validate_spec
 
+from .api_support import (
+    APIS,
+    CAMEL,
+    HTTP_STATUS,
+    LAYERS,
+    PROVIDER_CONTROL_DIRECT_HTTP_EFFECT,
+    PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS,
+    _error_catalog_for_operation,
+    _ops,
+    _refs,
+)
 from .loaders import load_json, load_yaml
 from .models import Validation
-
-APIS = ['public-api', 'submission-api', 'control-api', 'identity-provider']
-LAYERS = {
-    'TRANSPORT': 'transport_errors',
-    'AUTHORIZATION': 'authorization_errors',
-    'CONCURRENCY': 'concurrency_errors',
-    'DOMAIN': 'domain_errors',
-    'PROVIDER': 'provider_errors',
-    'INTERNAL': 'internal_errors',
-}
-CAMEL = re.compile(r'^[a-z][A-Za-z0-9]*$')
-HTTP_STATUS = re.compile(r'^[1-5][0-9]{2}$')
-PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS = frozenset({
-    'disableProviderRouting',
-    'setModelAutoUpgrade',
-    'testProviderConnection',
-    'upgradeProviderModel',
-})
-PROVIDER_CONTROL_DIRECT_HTTP_EFFECT = {
-    'entrypoint': 'ACTION_PROPOSAL',
-    'state_effect': 'UNCHANGED',
-    'writes': [],
-    'outbox_events': [],
-    'external_effects': [],
-    'authorized_effect_owner': 'private.ExecuteProviderControl',
-}
-
-
-def _ops(doc):
-    out = {}
-    for path, item in doc.get('paths', {}).items():
-        for method, op in item.items():
-            if isinstance(op, dict) and op.get('operationId'):
-                out[op['operationId']] = (method.upper(), path, op)
-    return out
-
-
-def _refs(node):
-    if isinstance(node, dict):
-        if isinstance(node.get('$ref'), str):
-            yield node['$ref']
-        for value in node.values():
-            yield from _refs(value)
-    elif isinstance(node, list):
-        for value in node:
-            yield from _refs(value)
 
 
 def validate(root: Path, result: Validation) -> None:
@@ -67,6 +31,10 @@ def validate(root: Path, result: Validation) -> None:
     errors = load_yaml(root / 'specs/api/error-code-catalog.yaml')['errors']
     error_by = {error['code']: error for error in errors}
     additive_error_by = addendum_resources['error_catalog_additions']
+    base_extension_operation_ids = frozenset(
+        key.partition('.')[0]
+        for key in addendum_resources.get('base_operation_extension_error_sets', {})
+    )
 
     result.require(contract['status'] == 'FINAL', 'operation contract must be FINAL')
     result.require(contract['specification_version'] == '13.0.0', 'operation contract version mismatch')
@@ -84,6 +52,10 @@ def validate(root: Path, result: Validation) -> None:
         PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS <= set(by_id),
         'provider-control side-door operation set is incomplete',
     )
+    result.require(
+        base_extension_operation_ids <= set(by_id),
+        'base operation extension error set names an unknown operation',
+    )
 
     actor_codes = {
         'ACTOR_ASSERTION_REQUIRED',
@@ -96,7 +68,12 @@ def validate(root: Path, result: Validation) -> None:
     for op in operations:
         oid = op['operation_id']
         provider_control_side_door = oid in PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS
-        operation_error_by = error_by | additive_error_by if provider_control_side_door else error_by
+        operation_error_by = _error_catalog_for_operation(
+            oid,
+            error_by,
+            additive_error_by,
+            base_extension_operation_ids,
+        )
         union = []
         result.require(op['status'] == 'READY', f'{oid}: not READY')
         if provider_control_side_door:
@@ -229,6 +206,15 @@ def validate(root: Path, result: Validation) -> None:
                 result.require(node.get('x-operation-kind') == additive['kind'], f'{api}:{oid}: additive operation kind mismatch')
                 result.require(node.get('x-error-codes') == additive.get('errors', []), f'{api}:{oid}: additive error code mismatch')
                 result.require(str(binding.get('success_status')) in node.get('responses', {}), f'{api}:{oid}: additive success status missing')
+                additive_error_catalog = error_by | additive_error_by
+                expected_by_status = collections.defaultdict(list)
+                for code in additive.get('errors', []):
+                    expected_by_status[str(additive_error_catalog[code]['http_status'])].append(code)
+                for status, codes in expected_by_status.items():
+                    result.require(
+                        node.get('responses', {}).get(status, {}).get('x-error-codes') == codes,
+                        f'{api}:{oid}: additive HTTP {status} error projection mismatch',
+                    )
                 if api == 'submission-api':
                     expected_security = ([{'BffServiceAssertion': [], 'ScopedSubmissionSession': []}]
                                          if 'SCOPED' in binding.get('transport_profile', '')
@@ -273,6 +259,46 @@ def validate(root: Path, result: Validation) -> None:
             if schema.get('type') == 'object':
                 result.require(schema.get('additionalProperties') is False or name == 'ProblemDetails', f'{api}: open object schema {name}')
     result.require(all_ids == (set(by_id) | set(addendum_by_id)), 'OpenAPI global set differs')
+
+    public_document = load_yaml(root / 'specs/api/public-api.openapi.yaml')
+    public_schemas = public_document.get('components', {}).get('schemas', {})
+    rule_cases_page = public_schemas.get('RuleCasesPage', {})
+    result.require(
+        rule_cases_page.get('properties', {}).get('seo')
+        == {'$ref': '#/components/schemas/SeoMetadata'}
+        and 'seo' in rule_cases_page.get('required', []),
+        'RuleCasesPage must carry required SeoMetadata so rule-linked case pages preserve the public non-conclusion notice in SEO',
+    )
+    handwritten_resources = load_yaml(root / 'specs/api/resource-schemas.yaml').get('resources', {})
+    reproducibility_operation = _ops(public_document).get('downloadCaseReproducibility')
+    reproducibility_schema_names = {
+        'CaseReproducibilityDownloadAppliedFilters',
+        'CaseReproducibilityDownload',
+    }
+    result.require(
+        by_id['downloadCaseReproducibility'].get('response_schema')
+        == 'CaseReproducibilityDownload'
+        and reproducibility_operation is not None
+        and reproducibility_operation[2].get('responses', {})
+        .get('200', {})
+        .get('content', {})
+        .get('application/json', {})
+        .get('schema')
+        == {'$ref': '#/components/schemas/CaseReproducibilityDownload'},
+        'downloadCaseReproducibility must use its closed download response schema',
+    )
+    result.require(
+        all(
+            public_schemas.get(name) == handwritten_resources.get(name, {}).get('schema')
+            for name in reproducibility_schema_names
+        ),
+        'reproducibility download schemas differ from handwritten resource authority',
+    )
+    result.require(
+        'JSON 파일 본문은 재배포 고지와 상태별 비확정 문구' in reproducibility_operation[2].get('description', '')
+        and 'CSV 파일 본문은 재배포 고지 한 셀 행' in reproducibility_operation[2].get('description', ''),
+        'reproducibility download OpenAPI description omits in-body legal notices',
+    )
 
     internal_y = load_yaml(root / 'specs/api/identity-service-internal.openapi.yaml')
     internal_j = load_json(root / 'specs/api/identity-service-internal.openapi.json')

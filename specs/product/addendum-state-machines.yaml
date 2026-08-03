@@ -212,6 +212,75 @@ machines:
       - {operation: createResponseAppeal, from: NONE, to: RECEIVED, guard: active-APPEAL_CREATE-exact-response-submission-request-receipt-version-digest-composite-and-window, event: response.appeal_created.v1, atomic_transition_group: gurine.command.createResponseAppeal.v1}
       - {operation: transitionResponseAppeal, from: RECEIVED, to: REVIEW|REJECTED|DUPLICATE|WITHDRAWN, guard: expected-sequence-and-typed-reason, event: response.appeal_decision_recorded.v1}
       - {operation: transitionResponseAppeal, from: REVIEW, to: RESOLVED|REJECTED|DUPLICATE|WITHDRAWN, guard: expected-sequence-and-required-evidence, event: response.appeal_decision_recorded.v1}
+  entity_personhood_classification:
+    states: [NATURAL_PERSON, NOT_NATURAL_PERSON]
+    terminal: [NATURAL_PERSON, NOT_NATURAL_PERSON]
+    edges:
+      - {operation: classifyEntityPersonhood, from: NONE, to: NATURAL_PERSON|NOT_NATURAL_PERSON, selector: exact-classification, guard: users-manage-human-step-up-current-entity-version-and-reviewed-public-source-locator, event: entity.personhood_classified.v1, receipt: ClassifyEntityPersonhoodReceiptV1, audit: ENTITY_PERSONHOOD_CLASSIFIED}
+    invariants:
+      - Classification is an immutable human fact; automated inference and caller-authored receipt digests are forbidden.
+      - A changed classification appends a new receipt and never overwrites the prior provenance.
+      - An entity without one current same-entity receipt remains staged legacy and cannot enter closure or anonymization.
+  entity_material_use:
+    states: [OPEN, CLOSED]
+    terminal: [CLOSED]
+    edges:
+      - {operation: attestEntityMaterialUseClosure, from: OPEN, to: CLOSED, guard: current-natural-person-receipt-plus-all-contract-end-dates-past-Asia-Seoul-end-of-day-plus-all-public-revisions-superseded-or-retracted-plus-zero-active-legal-hold, event: entity.material_use_closed.v1, receipt: AttestEntityMaterialUseClosureReceiptV1, audit: ENTITY_MATERIAL_USE_CLOSED}
+    invariants:
+      - Superseded or retracted publication revisions remain immutable history but do not count as open material use.
+      - Any open contract, live publication revision, missing coverage or active legal hold fails closed with zero writes.
+      - A later material use does not rewrite closure; it requires a new reviewed authority episode before any future terminal execution.
+  entity_retention_execution:
+    states: [QUEUED, COMPLETED]
+    terminal: [COMPLETED]
+    edges:
+      - {actor: workflow-worker, private_command: ops.execute_due_r6d_entity_retention_job_v1, from: QUEUED, to: COMPLETED, guard: current-fenced-job-plus-exact-personhood-closure-schedule-due-time-and-zero-active-hold, event: entity.retention_anonymized.v1, receipt: EntityRetentionExecutionReceiptV1, audit: ENTITY_RETENTION_ANONYMIZED}
+    invariants:
+      - Only plaintext name contact address-like fields and natural-person agency identifier values are erased; business and identifier digests remain.
+      - Backup physical disposal is not performed here; the receipt records backupDisposalDueAt for the database-derived due inventory consumed by the existing backup operator procedure.
+      - The database does not record external backup disposal completion in this wave, so a due item is a repeatable disposal candidate and never proof that disposal has or has not occurred.
+      - Exact replay changes no row and emits no second event.
+  organization_official_channel:
+    states: [ACTIVE, EXPIRED, REVOKED]
+    terminal: [EXPIRED, REVOKED]
+    edges:
+      - {operation: attestOrganizationOfficialChannel, from: NONE, to: ACTIVE, guard: independent-response-reviewer-step-up-plus-current-EMAIL_LINK-domain-control-or-VERIFIED-PUBLIC-DOCUMENT-official-representation-proof, event: organization.official_channel_attested.v1, receipt: AttestOrganizationOfficialChannelReceiptV1, audit: ORGANIZATION_OFFICIAL_CHANNEL_ATTESTED}
+      - {operation: revokeOrganizationOfficialChannel, from: ACTIVE, to: REVOKED, guard: current-assertion-and-authority-receipt-composite-binding-plus-step-up, event: organization.official_channel_revoked.v1, receipt: RevokeOrganizationOfficialChannelReceiptV1, audit: ORGANIZATION_OFFICIAL_CHANNEL_REVOKED}
+    invariants:
+      - The assertion is append-only and its authority receipt ID plus digest are a composite foreign-key binding.
+      - OFFICIAL_DOMAIN_EMAIL and OFFICIAL_DOCUMENT source currentness is revalidated on attestation and on every verifyResponseOrganizationIdentity use; OTP alone never establishes authority.
+      - EXPIRED is a derived availability projection only when expiresAt is less than or equal to the current database time; expiry persists no state mutation and emits no event, receipt or audit row.
+      - Derived-expired or revoked assertions are unavailable immediately and cannot be revived; a new proof creates a new assertion.
+  privacy_correction_plan:
+    states: [RECORDED_APPEND_ONLY]
+    terminal: [RECORDED_APPEND_ONLY]
+    edges:
+      - {operation: createPrivacyCorrectionPlan, from: NONE, to: RECORDED_APPEND_ONLY, guard: exact-RESPONSE-partyName-plus-shared-subject-bound-ACCESS-current-digest-and-version-plus-verified-CORRECTION-in-REVIEW-plus-evidence-plus-step-up, availability: IMPLEMENTED_EXACT_ONE_CELL, blocked_error: PRIVACY_CORRECTION_TARGET_UNSUPPORTED_FOR_EVERY_OTHER_PAIR, event: NONE, receipt: PrivacyCorrectionPlanReceiptV1, audit: privacy.correction_plan.create}
+    invariants:
+      - The authorized exact target-kind and field-path allowlist contains one pair only: RESPONSE plus `/partyName`. Every other syntactically valid pair returns PRIVACY_CORRECTION_TARGET_UNSUPPORTED with zero writes.
+      - Plan creation appends one immutable sealed plan and one immutable ACCESS-authority binding while the editorial response and partyName remain unchanged.
+      - Free-form requester statements are supporting explanation only and never substitute for the typed target entity, field path, current-value digest, requested value and evidence binding.
+      - APPROVE revalidates the same projection and zero-active-hold coverage, emits only the existing privacy.request_decision_recorded.v1 approval event and enqueues exactly one dedicated job. The fenced workflow worker alone applies partyName and records the immutable completion receipt and completion event.
+  response_organization_identity:
+    states: [UNVERIFIED, SECOND_FACTOR_VERIFIED]
+    terminal: [SECOND_FACTOR_VERIFIED]
+    edges:
+      - {operation: verifyResponseOrganizationIdentity, from: UNVERIFIED, to: SECOND_FACTOR_VERIFIED, guard: expected-response-version-content-consent-organization-form-plus-exact-step-up-and-current-active-unexpired-unrevoked-official-channel-authority-assertion-with-current-email-domain-control-or-document-official-representation-binding, event: response.organization_identity_verified.v1, receipt: VerifyResponseOrganizationIdentityReceiptV1, audit: RESPONSE_ORGANIZATION_IDENTITY_VERIFIED}
+    invariants:
+      - Verification appends one immutable assertion and one active publication-identity receipt before it updates the response pointer and version.
+      - officialChannelSourceId identifies the current immutable official-channel authority assertion; raw endpoint verification and document evidence identifiers never substitute for it.
+      - The owner revalidates assertion active, expiry and revocation state plus the exact underlying EMAIL domain-control or DOCUMENT official-representation binding in the transition transaction; a missing or empty registry is fail-closed.
+      - FULL and REDACTED are the only verified forms; OTP-only, unverified, caller-authored assertion content and raw official-channel proof are forbidden.
+      - Reverification never mutates an assertion; exact replay writes nothing and a changed request conflicts.
+  response_excerpt_approval:
+    states: [NONE, APPROVED_APPEND_ONLY]
+    terminal: [APPROVED_APPEND_ONLY]
+    edges:
+      - {operation: approveResponseExcerpt, from: NONE, to: APPROVED_APPEND_ONLY, guard: exact-response-version-excerpt-content-consent-and-form-plus-anonymous-consent-or-owner-selected-active-SECOND_FACTOR_VERIFIED-publication-identity-receipt, event: response.excerpt_approved.v2, receipt: approveResponseExcerptReceipt, audit: RESPONSE_EXCERPT_APPROVED}
+    invariants:
+      - ANONYMOUS consumes no organization identity receipt; FULL or REDACTED consumes exactly one current receipt bound to response, version, content, consent, organization and form.
+      - OTP_ONLY and UNVERIFIED never authorize public excerpt approval, and the caller cannot choose an assertion ID.
+      - The approval receipt is immutable; exact replay writes nothing and a changed request conflicts.
   response_extension:
     states: [SUBMITTED, APPROVED, REJECTED]
     terminal: [APPROVED, REJECTED]
@@ -271,21 +340,78 @@ machines:
       - A temporarily restricted revision retains its prior public state and requires full gate revalidation before restoration.
   privacy_request:
     states: [RECEIVED, REVIEW, APPROVED, REJECTED, COMPLETED]
+    identity_states: [PENDING_VERIFICATION, VERIFIED]
     terminal: [REJECTED, COMPLETED]
     edges:
-      - {operation: createPrivacyRequest, from: NONE, to: RECEIVED, guard: subject-proof-scope-consent-abuse-proof, event: privacy.request_created.v1}
-      - {operation: transitionRetentionRequest, from: RECEIVED, to: REVIEW, guard: expected-decision-version, event: privacy.request_decision_recorded.v1}
-      - {operation: transitionRetentionRequest, from: REVIEW, to: APPROVED|REJECTED, guard: policy-scope-hold-review, event: privacy.request_decision_recorded.v1}
-      - {operation: transitionRetentionRequest, from: APPROVED, to: COMPLETED, guard: all-location-receipt-and-zero-active-hold-coverage, event: retention.execution_completed.v1}
+      - {operation: createPrivacyRequest, from: NONE, to: RECEIVED, selector: identity-NONE-to-PENDING_VERIFICATION, guard: exact-closed-scope-and-subject-proof-with-owner-derived-scopeSha256-and-subjectScopeDigest-plus-exact-one-current-approved-effective-unexpired-access-policy-and-no-synchronous-identity-approval, event: privacy.request_created.v2}
+      - {operation: transitionRetentionRequest, from: RECEIVED, to: RECEIVED, selector: transition-VERIFY_IDENTITY-and-identity-PENDING_VERIFICATION-to-VERIFIED, guard: expected-decision-version-and-exact-identity-proof-receipt-subject-scope-plus-exact-current-approved-policy-and-calendar-row, event: privacy.request_identity_verified.v1}
+      - {operation: transitionRetentionRequest, from: RECEIVED, to: REVIEW, selector: transition-START_REVIEW-and-identity-VERIFIED, guard: expected-decision-version-and-nonnull-identityVerifiedAt-dueAt-policy-calendar-bindings, event: privacy.request_decision_recorded.v1}
+      - {operation: transitionRetentionRequest, from: REVIEW, to: APPROVED, selector: transition-APPROVE-and-requestType-CORRECTION-and-exact-RESPONSE-partyName-plan, guard: expected-decision-version-plus-single-current-plan-and-ACCESS-projection-version-digest-revalidation-plus-zero-active-hold-and-exactly-one-dedicated-job, event: privacy.request_decision_recorded.v1}
+      - {operation: transitionRetentionRequest, from: REVIEW, to: REJECTED, selector: transition-REJECT, guard: expected-decision-version-plus-rejection-reason-appeal-instructions-and-immutable-refusal-notice-receipts, event: privacy.request_refusal_notified.v1}
+      - {operation: transitionRetentionRequest, from: RECEIVED|REVIEW|APPROVED, to: RECEIVED|REVIEW|APPROVED, selector: transition-EXTEND-and-destination-equals-locked-source-state, guard: identity-VERIFIED-and-current-dueAt-not-expired-and-requested-positive-business-days-plus-current-approved-policy-maximum-count-timing-and-immutable-extension-notice-receipts, event: privacy.request_extension_notified.v1}
+      - {actor: workflow-worker, private_command: ops.execute_privacy_response_party_name_correction_job_v1, from: APPROVED, to: COMPLETED, selector: requestType-CORRECTION-and-exact-RESPONSE-partyName-plan, guard: claimed-job-lease-and-fencing-token-plus-current-plan-approval-response-version-value-digest-receipt-chain-hold-and-job-payload-fences, event: privacy.response_party_name_corrected.v1, receipt: PrivacyResponsePartyNameCorrectionCompletionReceiptV1, effect_owner: ops.execute_privacy_response_party_name_correction_job_v1, atomic_transition_group: gurine.worker.executePrivacyResponsePartyNameCorrection.v1}
+      - {actor: retention-worker, from: APPROVED, to: COMPLETED, selector: every-non-Q4-request-type-or-target, availability: OPEN_FAIL_CLOSED, guard: dedicated-per-request-type-execution-owner-required, event: retention.execution_completed.v1, effect_owner: retention-worker, atomic_transition_group: gurine.worker.completePrivacyRequest.v2}
+    deadline_policy:
+      policy_id: PRIVACY_RESPONSE_CALENDAR
+      selection: every authoritative transition locks exactly one active, effective, unexpired and approved policy row plus its exact calendar version; missing, duplicate, stale or unapproved rows fail closed
+      calculation: the owner uses only the selected row's request-type due days, extension maximum/count/timing, refusal notice days, timezone, day unit and ordered holiday set, then persists policy/calendar version and digests in immutable receipts
+      immutable_declared_seed:
+        policy_version: supervisor-decision-v1
+        authority: supervisor-decision-v1
+        timezone: Asia/Seoul
+        day_unit: BUSINESS_DAY
+        holiday_source: immutable ordered Republic of Korea holiday dates pinned in the selected policy/calendar version
+        clock_start: VERIFY_IDENTITY is the only transition that sets identityVerifiedAt and initial dueAt; unverified requests retain null for both fields
+        request_due_business_days: {ACCESS: 10, CORRECTION: 10, DELETION: 10, RESTRICTION: 10}
+        extension: {maximum_business_days: 10, maximum_count: 1, must_be_recorded_before_current_due_at: true, notice_receipt_required: true}
+        refusal: {notice_due_business_days_after_decision: 10, reason_required: true, appeal_instructions_required: true, notice_receipt_required: true}
+      future_approved_versions: allowed only as new immutable rows with the same closed field shape, independent approval/effective interval and a new canonical policy/calendar digest; they may change declared values without mutating the supervisor-decision-v1 seed or prior request receipts
+    access_policy:
+      logical_contract: privacy_request_receipt_access_policy
+      schema_version: privacy-request-receipt-access-policy-v1
+      exact_payload_keys: [tokenTtlSeconds, readOnlySessionTtlSeconds, cookieProfileId, cookieName, cookiePath, allowedOperations]
+      selection: createPrivacyRequest and exchangePrivacyRequestReceiptToken each resolve exactly one current, approved, effective and unexpired version before any write
+      versioning: no seed, default or fallback; future approved immutable versions may change TTL values while earlier token/session receipts remain pinned to their selected policy identity/version/digest
+      physical_binding_status: FINAL
+      physical_binding:
+        relation: ops.privacy_request_access_policies_v1
+        primary_key: [policy_id, revision]
+        receipt_binding_key: [policy_id, revision, policy_digest, binding_digest]
+        version_column: revision
+        lifecycle_state_column: state
+        approved_state: APPROVED
+        policy_version_column: policy_version
+        policy_digest_column: policy_digest
+        binding_digest_column: binding_digest
+        authority_column: authority
+        test_only_authority: TEST_ONLY
+        effective_at_column: effective_at
+        review_expires_at_column: review_expires_at
+        selector: ops.current_privacy_request_access_policy_v1(timestamptz)
+        production_preflight: ops.preflight_privacy_request_access_policy_v1(timestamptz)
+      failure: zero, duplicate, expired or unapproved maps to request-id-only DEPENDENCY_UNAVAILABLE 503 and zero writes; CAPABILITY_UNCONFIGURED and INTERNAL_ERROR detail are forbidden substitutions
+      separation: this access policy is never the PRIVACY_RESPONSE_CALENDAR authority and cannot provide statutory due dates, business calendars, extension limits or refusal-notice deadlines
+    invariants:
+      - PENDING_VERIFICATION requires identityVerifiedAt and dueAt both null; VERIFIED requires both nonnull and bound to one immutable policy/calendar digest pair.
+      - Caller-supplied calendar, policy, digest, identityVerifiedAt, dueAt and noticeDueAt values never become authority.
+      - 'createPrivacyRequest accepts exact closed PrivacyRequestScopeV1 only; the PostgreSQL owner computes scopeCanonical=canonical JSON(scope), scopeSha256=SHA256(scopeCanonical), and subjectScopeDigest=SHA256(canonical JSON({schemaVersion:"privacy-subject-scope-v1",subjectProofHash,scopeSha256})).'
+      - subjectProofHash, scopeSha256 and subjectScopeDigest are DB-derived and caller-forbidden; public/event scopeDigest equals scopeSha256, while subjectScopeDigest remains the internal subject-plus-scope binding.
+      - Raw scope is validation-only and cannot enter persistence, audit, outbox, events, receipts, errors or observability; encrypted scope and the two DB-derived digests are the durable forms.
+      - COMPLETE is owned only by retention-worker after authoritative execution receipts; transitionRetentionRequest cannot select it.
+      - Public status exposes exactly one reachable closed next action: pending identity VERIFY_IDENTITY; RECEIVED plus VERIFIED AWAIT_REVIEW; REVIEW AWAIT_DECISION; APPROVED AWAIT_EXECUTION; REJECTED REVIEW_REFUSAL_NOTICE; COMPLETED COMPLETE. No NONE or unsupported submission/contact action exists.
+      - COMPLETED and REJECTED public status fails closed without its exact immutable decision chain; detailed reason, notice and appeal wording remains authoritative only in encrypted notice delivery.
   legal_hold_coverage:
     states: [ACTIVE_COVERAGE, PARTIALLY_RELEASED, FULLY_RELEASED]
     terminal: [FULLY_RELEASED]
     edges:
-      - {operation: placeLegalHold, from: NONE, to: ACTIVE_COVERAGE, selector: closed-LegalHoldTargetBindingV1-case-or-noncase, guard: exact-concrete-target-version-digest-anchor-authority-scope-conflict-approval-and-step-up, event: legal_hold.placed.v1, effect_owner: control-api.placeLegalHold, atomic_transition_group: gurine.command.placeLegalHold.v2}
+      - {operation: placeLegalHold, from: NONE, to: ACTIVE_COVERAGE, selector: closed-thirteen-kind-LegalHoldTargetBindingV1-case-or-noncase, guard: exact-concrete-target-version-digest-anchor-authority-scope-conflict-approval-and-step-up, event: legal_hold.placed.v2, effect_owner: control-api.placeLegalHold, atomic_transition_group: gurine.command.placeLegalHold.v2}
       - {operation: releaseLegalHold, from: ACTIVE_COVERAGE|PARTIALLY_RELEASED, to: PARTIALLY_RELEASED|FULLY_RELEASED, guard: append-only-nonoverlapping-subset-and-independent-releaser, event: legal.hold_released.v1}
       - {actor: expiry-review-worker, from: ACTIVE_COVERAGE|PARTIALLY_RELEASED, to: ACTIVE_COVERAGE|PARTIALLY_RELEASED, selector: destination-equals-locked-source-state, guard: review-due, event: legal.hold_review_due.v1}
     coverage_formula: active coverage is original scope-atom x affected-ID cells minus union of valid release cells; effects of multiple holds are union
-    invariants: [Expiry never releases, update/delete of hold or release rows is forbidden]
+    invariants:
+      - Expiry never releases, and update/delete of hold or release rows is forbidden.
+      - CORRECTION coverage binds an immutable correction snapshot, SUBSCRIPTION coverage binds an immutable versioned subscription snapshot, and COMMUNICATION_ENDPOINT binds intake.communication_endpoints(id, version, endpoint_digest) exactly.
+      - AUDIT_SUBJECT_RECORD has no source relation and never enters ACTIVE_COVERAGE; placeLegalHold rejects that discriminator with LEGAL_HOLD_TARGET_UNSUPPORTED and zero writes until a versioned immutable source relation, canonical digest, owner lock and anchor foreign key are authorized.
   dataset_snapshot:
     states: [BUILDING, READY, FAILED]
     terminal: [READY, FAILED]
@@ -341,7 +467,7 @@ machines:
     edges:
       - {actor: derived-session-broker, from: NONE, to: ACTIVE, selector: kind-APPEAL_CREATE-or-APPEAL_STATUS-or-COMMUNICATION_PROFILE, guard: exact-eligible-parent-kind-issuer-scope-lineage-version-expiry-issuance-digest-and-token-hash, event: NONE, receipt: DerivedSessionIssuanceReceiptV1, audit: DERIVED_SESSION_ISSUED}
       - {operation: createResponseAppeal, from: ACTIVE, to: CONSUMED, selector: kind-APPEAL_CREATE, guard: appeal-created-and-APPEAL_STATUS-child-issued-in-same-atomic-group, event: response.appeal_created.v1, atomic_transition_group: gurine.command.createResponseAppeal.v1}
-      - {operation: exchangePrivacyRequestReceiptToken, from: NONE, to: ACTIVE, selector: kind-PRIVACY_REQUEST_RECEIPT, guard: fresh-one-time-token-browser-proof-and-request-binding, event: NONE, receipt: PrivacyRequestSessionReceiptV1, audit: PRIVACY_REQUEST_SESSION_ISSUED}
+      - {operation: exchangePrivacyRequestReceiptToken, from: NONE, to: ACTIVE, selector: kind-PRIVACY_REQUEST_RECEIPT, guard: request-bound-BFF-service-assertion-plus-fresh-one-time-body-token-and-hash-bound-BFF-next-session-header-plus-exact-one-current-approved-effective-unexpired-access-policy-with-no-prior-scoped-session, event: NONE, receipt: PrivacyRequestSessionReceiptV1, audit: PRIVACY_REQUEST_SESSION_ISSUED}
       - {actor: derived-session-rotation, from: ACTIVE, to: REVOKED, selector: APPEAL_STATUS-reentry-or-COMMUNICATION_PROFILE-success, guard: replacement-child-created-under-identical-scope-and-higher-rotation-sequence-in-one-transaction, event: NONE, receipt: DerivedSessionRotationReceiptV1, audit: DERIVED_SESSION_ROTATED}
       - {actor: session-expiry-worker, from: ACTIVE, to: EXPIRED, guard: expires-at-elapsed, event: NONE, receipt: DerivedSessionExpiryReceiptV1, audit: DERIVED_SESSION_EXPIRED}
       - {actor: session-revoker, from: ACTIVE, to: REVOKED, guard: parent-subject-request-policy-or-abuse-revocation, event: NONE, receipt: DerivedSessionRevocationReceiptV1, audit: DERIVED_SESSION_REVOKED}
@@ -350,17 +476,20 @@ machines:
       - APPEAL_CREATE is one-shot, 900 seconds, RESPONSE_SUBMISSION-scoped and authorizes only createResponseAppeal; success consumes it and issues one 1800-second read-only APPEAL_STATUS child scoped to the new appeal.
       - APPEAL_STATUS authorizes only getResponseAppeal. Re-entry re-establishes the RESPONSE_RECEIPT composite, revokes only the prior status child for that appeal and inserts a replacement.
       - COMMUNICATION_PROFILE is 1800 seconds, COMMUNICATION_SUBJECT-scoped and authorizes only endpoint link, verify and unlink; every success rotates under the identical subject/origin binding.
+      - PRIVACY_REQUEST_RECEIPT expiry, cookie profile and sole getPrivacyRequest allowlist come only from the exact selected privacy access policy version; no hard-coded TTL, seed or fallback exists.
       - Finalized exact command replay is checked before ACTIVE-state validation and returns stored bytes after consumption/rotation with zero second mutation; changed request is IDEMPOTENCY_CONFLICT.
       - Session tokens are 32-byte base64url BFF-only values, SHA-256-only at rest, sealed in host-only HttpOnly SameSite=Lax path cookies and absent from URL, DOM, storage, audit, outbox, events, receipts and observability.
   one_time_receipt_token:
     states: [FRESH, CONSUMED, EXPIRED, REVOKED]
     terminal: [CONSUMED, EXPIRED, REVOKED]
     edges:
-      - {operation: createPrivacyRequest, from: NONE, to: FRESH, guard: privacy-request-created-and-token-HMAC-persisted-before-one-time-plaintext-return, event: privacy.request_created.v1}
-      - {operation: exchangePrivacyRequestReceiptToken, from: FRESH, to: CONSUMED, guard: token-HMAC-match-fresh-browser-proof-and-session-created-atomically, event: identity.session_created.v1}
+      - {operation: createPrivacyRequest, from: NONE, to: FRESH, guard: pending-verification-privacy-request-created-and-token-HMAC-plus-selected-access-policy-version-digest-and-tokenTtlSeconds-persisted-before-one-time-plaintext-return, event: privacy.request_created.v2}
+      - {operation: exchangePrivacyRequestReceiptToken, from: FRESH, to: CONSUMED, guard: token-HMAC-match-plus-request-bound-BFF-service-assertion-and-hash-bound-next-session-header-with-session-created-atomically, event: identity.session_created.v1}
       - {actor: token-expiry-worker, from: FRESH, to: EXPIRED, guard: expires-at-elapsed, event: NONE, receipt: OneTimeReceiptTokenExpiryReceiptV1, audit: ONE_TIME_RECEIPT_TOKEN_EXPIRED}
       - {actor: token-revoker, from: FRESH, to: REVOKED, guard: request-withdrawn-abuse-or-policy-revocation, event: NONE, receipt: OneTimeReceiptTokenRevocationReceiptV1, audit: ONE_TIME_RECEIPT_TOKEN_REVOKED}
-    invariants: [Exactly one consume winner, plaintext is never persisted, replay returns TOKEN_REPLAYED without creating a session]
+    invariants:
+      - Exactly one consume winner, plaintext is never persisted, replay returns TOKEN_REPLAYED without creating a session.
+      - Token expiry is derived only from tokenTtlSeconds in the exact selected current approved effective unexpired privacy access policy; policy failure is request-id-only DEPENDENCY_UNAVAILABLE with zero token/session writes.
   response_delivery_clock:
     states: [EVIDENCE_PENDING, STARTED, EXTENDED, EXPIRED, CLOSED]
     terminal: [EXPIRED, CLOSED]
@@ -381,7 +510,11 @@ machines:
       - {actor: schedule-activation-worker, from: FUTURE, to: CURRENT, guard: effective-at-reached-and-no-conflicting-current-revision, event: retention.schedule_revised.v1}
       - {actor: action-execution-worker, private_command: private.CreateRecordClassScheduleRevision, from: CURRENT|FUTURE, to: SUPERSEDED, guard: same-transaction-newer-approved-revision-effective, event: retention.schedule_revised.v1, effect_owner: action-execution-worker.record-class-schedule-executor, atomic_transition_group: gurine.private.CreateRecordClassScheduleRevision.v1}
       - {actor: schedule-review-worker, from: CURRENT, to: REVIEW_EXPIRED, guard: review-expires-at-elapsed-without-new-approved-revision, event: retention.schedule_revised.v1}
-    invariants: [Expired review fails closed for purge, holds always pause destructive actions, schedule rows are append-only revisions]
+    invariants:
+      - Expired review fails closed for purge.
+      - Holds always pause destructive actions.
+      - Schedule rows are append-only revisions.
+      - PRESERVE_* schedule revisions are indefinite, use NOT_DESTRUCTIVE hold behavior and use NOT_APPLICABLE restore suppression; every non-preservation revision has finite durations and uses REAPPLY_BEFORE_ACCESS.
   restoration_suppression:
     states: [ACTIVE, EXPIRED, SUPERSEDED]
     terminal: [EXPIRED, SUPERSEDED]
@@ -617,6 +750,12 @@ operation_dispositions:
   closeIncidentPostmortem: [incident]
   transitionResponseAppeal: [response_appeal]
   decideResponseExtension: [response_extension, response_delivery_clock]
+  verifyResponseOrganizationIdentity: [response_organization_identity]
+  classifyEntityPersonhood: [entity_personhood_classification]
+  attestEntityMaterialUseClosure: [entity_material_use]
+  attestOrganizationOfficialChannel: [organization_official_channel]
+  revokeOrganizationOfficialChannel: [organization_official_channel]
+  createPrivacyCorrectionPlan: [privacy_correction_plan]
   transitionRetentionRequest: [privacy_request]
   requestCommunicationEndpointLink: [communication_endpoint, scoped_session.COMMUNICATION_PROFILE_ROTATION]
   verifyCommunicationEndpointLink: [communication_endpoint, scoped_session.COMMUNICATION_PROFILE_ROTATION]
@@ -646,6 +785,7 @@ base_operation_lifecycle_bindings:
     saveResponseRequestDraft: [response_request]
     verifyResponseAccess: [response_request]
     submitResponse: [response_request]
+    approveResponseExcerpt: [response_excerpt_approval]
     createCorrection: [correction]
     updateCorrectionDraft: [correction]
     assignCorrection: [correction]
@@ -676,6 +816,8 @@ private_application_lifecycle_bindings:
     private.ApplyCommercialControl: [commercial_control_projection.APPLY]
     private.ExecuteProviderControl: [action_execution.PROVIDER_CONTROL]
     private.MaterializePaidEvidencePacket: [paid_evidence_packet.AWAITING_TERMINAL_BINDING]
+    ops.execute_due_r6d_entity_retention_job_v1: [entity_retention_execution.QUEUED_TO_COMPLETED]
+    ops.execute_privacy_response_party_name_correction_job_v1: [privacy_request.APPROVED_TO_COMPLETED]
 
 private_control_lifecycle_bindings:
   source: specs/product/owner-addendum-2026-07-14.yaml#private_control_service_operations
@@ -726,4 +868,6 @@ immutable_fact_lifecycles:
   commercial.invoice_reconciled.v1: immutable provider reconciliation fact and line-set digest
   commercial.revenue_fact_recorded.v1: immutable recognition fact linked to contract and invoice
   governance.funding_snapshot_created.v1: immutable signed funding snapshot batch
+  response.organization_identity_verified.v1: immutable exact response version, content, consent, organization, official-channel and step-up verification fact; raw proof remains in its authorized ledger
+  response.excerpt_approved.v2: immutable approval fact bound to the exact response version, excerpt digest, publication form and nullable-by-ANONYMOUS identity receipt
   commercial.sku_readiness_evaluated.v1: immutable evaluation and item-set digest; a new run creates a new evaluation

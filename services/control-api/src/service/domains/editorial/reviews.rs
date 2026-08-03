@@ -215,118 +215,285 @@ pub(super) async fn persist_review_snapshot(
 }
 
 pub(super) async fn arm_approveresponseexcerpt(
-    _operation: &str,
+    operation: &str,
     payload: &Map<String, Value>,
     _id: Uuid,
     actor: Uuid,
     _session_id: Uuid,
     _field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    let response = uuid_value(payload, &["responseId"]).ok_or(ServiceError::InvalidRequest)?;
-    let requested = string_value(payload, "excerptHash")
-        .filter(|value| is_sha256(value))
+) -> Result<OwnerCommandReceipt, ServiceError> {
+    let response_id = uuid_value(payload, &["responseId"])
+        .filter(|value| !value.is_nil())
         .ok_or(ServiceError::InvalidRequest)?;
-    let excerpt: Option<String> = sqlx::query_scalar!(
-        "SELECT public_excerpt FROM editorial.responses WHERE id=$1",
-        response
+    let request = response_excerpt_approval_request(payload, actor)?;
+    let result = sqlx::query_scalar!(
+        "SELECT editorial.approve_response_excerpt_guarded_v2($1)",
+        request,
     )
-    .fetch_optional(&mut **tx)
+    .fetch_one(&mut **tx)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
-    let excerpt = excerpt.ok_or(ServiceError::InvalidRequest)?;
-    if sha256(excerpt.as_bytes()) != requested {
-        return Err(ServiceError::InvalidRequest);
+    .ok_or_else(unexpected_null)?;
+    owner_result_has_exact_keys(
+        &result,
+        &[
+            "approvalId",
+            "responseId",
+            "responseVersion",
+            "receiptDigest",
+            "auditEventId",
+            "approvedAt",
+            "outboxEventIds",
+            "replayed",
+        ],
+    )?;
+    let object = result.as_object().ok_or(ServiceError::Persistence)?;
+    required_owner_uuid(object, "approvalId")?;
+    if required_owner_uuid(object, "responseId")? != response_id {
+        return Err(ServiceError::Persistence);
     }
-    sqlx::query!(
-        "UPDATE editorial.responses SET public_excerpt_sha256=$2,excerpt_approved_by=$3, \
-         excerpt_approved_at=clock_timestamp(),editorial_status= \
-         CASE WHEN editorial_status='PENDING' THEN 'ACCEPTED' ELSE editorial_status END \
-         WHERE id=$1",
-        response,
-        requested,
-        actor,
+    parse_owner_command_receipt(
+        operation,
+        &result,
+        response_id,
+        "responseVersion",
+        "approvedAt",
+        &[],
     )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-
-    Ok(())
 }
 
 pub(super) async fn arm_submitreview(
-    _operation: &str,
+    operation: &str,
     payload: &Map<String, Value>,
     _id: Uuid,
     actor: Uuid,
     _session_id: Uuid,
     _field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<OwnerCommandReceipt, ServiceError> {
     let snapshot =
         uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?;
-    let decision = match string_value(payload, "decision") {
-        Some("approve") | Some("APPROVE") => "APPROVE",
-        Some("reject") | Some("REJECT") => "REJECT",
-        Some("changes_required") | Some("CHANGES_REQUIRED") => "CHANGES_REQUIRED",
-        _ => return Err(ServiceError::InvalidRequest),
-    };
-    let row = sqlx::query!(
-        "SELECT a.id,s.created_by snapshot_created_by \
-         FROM editorial.review_assignments a \
-         JOIN editorial.review_snapshots s ON s.id=$1 AND s.case_id=a.case_id \
-         WHERE a.reviewer_id=$2 AND a.status IN ('ASSIGNED','IN_PROGRESS') \
-           AND (a.review_snapshot_id IS NULL OR a.review_snapshot_id=$1) \
-         ORDER BY a.created_at DESC LIMIT 1 FOR UPDATE OF a",
+    let snapshot_created_by = sqlx::query_scalar!(
+        "SELECT created_by FROM editorial.review_snapshots WHERE id=$1",
         snapshot,
-        actor,
     )
     .fetch_optional(&mut **tx)
     .await
     .map_err(db)?
     .ok_or(ServiceError::NotFound)?;
-    let creator = row.snapshot_created_by;
-    if creator == actor {
+    if snapshot_created_by == actor {
         return Err(ServiceError::InvalidRequest);
     }
-    sqlx::query!(
-        "INSERT INTO editorial.review_decisions(review_snapshot_id,reviewer_id,decision, \
-         reason,criteria,reviewer_independence,reauth_context_hash) \
-         VALUES($1,$2,$3::editorial.review_decision,$4,$5,$6,$7)",
+    reviews_named_person::record_review_stage(
+        operation,
+        payload,
         snapshot,
+        snapshot_created_by,
         actor,
-        decision as _,
-        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
-        payload
-            .get("criteria")
-            .cloned()
-            .ok_or(ServiceError::InvalidRequest)?,
-        json!({"snapshotCreatedBy":creator,"reviewer":actor,"independent":true}),
-        sha256(format!("review:{snapshot}:{actor}").as_bytes()),
+        tx,
     )
-    .execute(&mut **tx)
     .await
-    .map_err(db)?;
-    let assignment = row.id;
-    sqlx::query!(
-        "UPDATE editorial.review_assignments SET status='COMPLETED',completed_at=clock_timestamp(), \
-         version=version+1 WHERE id=$1",
-        assignment,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-    sqlx::query!(
-        "UPDATE ops.tasks SET status='DONE',completed_at=clock_timestamp() \
-         WHERE task_type='REVIEW' AND object_id IN ($1,(SELECT case_id FROM editorial.review_snapshots WHERE id=$1)) \
-           AND assignee_user_id=$2 AND status<>'DONE'",
-        snapshot,
-        actor,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-
-    Ok(())
 }
+
+pub(super) async fn arm_verifyresponseorganizationidentity(
+    operation: &str,
+    payload: &Map<String, Value>,
+    _id: Uuid,
+    actor: Uuid,
+    _session_id: Uuid,
+    _field_keys: &EnvelopeKeyRing,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<OwnerCommandReceipt, ServiceError> {
+    let response_id = uuid_value(payload, &["responseId"])
+        .filter(|value| !value.is_nil())
+        .ok_or(ServiceError::InvalidRequest)?;
+    let request = response_organization_identity_request(payload)?;
+    let request_id = internal_uuid(payload, "_requestId")?;
+    let idempotency_key_sha256 = internal_sha256(payload, "_idempotencyKeySha256")?;
+    let request_sha256 = internal_sha256(payload, "_requestSha256")?;
+    let result = sqlx::query_scalar!(
+        "SELECT editorial.verify_response_organization_identity_v1($1,$2,$3,$4,$5)",
+        request,
+        actor,
+        request_id,
+        idempotency_key_sha256,
+        request_sha256,
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
+    validate_response_identity_owner_result(operation, &result, response_id)
+}
+
+fn response_organization_identity_request(
+    payload: &Map<String, Value>,
+) -> Result<Value, ServiceError> {
+    let response_id = uuid_value(payload, &["responseId"])
+        .filter(|value| !value.is_nil())
+        .ok_or(ServiceError::InvalidRequest)?;
+    let organization_id = uuid_value(payload, &["organizationId"])
+        .filter(|value| !value.is_nil())
+        .ok_or(ServiceError::InvalidRequest)?;
+    let publication_form = match string_value(payload, "publicationForm") {
+        Some(value @ ("FULL" | "REDACTED")) => value,
+        _ => return Err(ServiceError::InvalidRequest),
+    };
+    let verification_method = match string_value(payload, "verificationMethod") {
+        Some(value @ ("OFFICIAL_DOMAIN_EMAIL" | "OFFICIAL_DOCUMENT")) => value,
+        _ => return Err(ServiceError::InvalidRequest),
+    };
+    let official_channel_assertion_id = uuid_value(payload, &["officialChannelSourceId"])
+        .filter(|value| !value.is_nil())
+        .ok_or(ServiceError::InvalidRequest)?;
+    let reason = string_value(payload, "reason")
+        .filter(|value| value.trim() == *value && (1..=4000).contains(&value.chars().count()))
+        .ok_or(ServiceError::InvalidRequest)?;
+    let expected_version = payload
+        .get("expectedVersion")
+        .and_then(Value::as_i64)
+        .filter(|value| *value >= 1)
+        .ok_or(ServiceError::InvalidRequest)?;
+    let actor_assertion_jti = internal_uuid(payload, "_actorAssertionJti")?;
+    let assurance_level = string_value(payload, "_actorAssuranceLevel")
+        .filter(|value| *value == "STEP_UP")
+        .ok_or(ServiceError::PreconditionFailed)?;
+    let action_digest = internal_sha256(payload, "_actorActionDigest")?;
+    let effective_capability =
+        internal_capability(payload, "_actorEffectiveCapability", "responses.review")?;
+    let step_up_authorization_id = internal_uuid(payload, "_actorStepUpAuthorizationId")?;
+    let actor_idempotency_key_sha256 = internal_sha256(payload, "_actorIdempotencyKeySha256")?;
+    let actor_request_key_sha256 = internal_sha256(payload, "_actorRequestKeySha256")?;
+    Ok(json!({
+        "responseId":response_id,
+        "organizationId":organization_id,
+        "publicationForm":publication_form,
+        "verificationMethod":verification_method,
+        "officialChannelSourceId":official_channel_assertion_id,
+        "reason":reason,
+        "expectedVersion":expected_version,
+        "_actorAssertionJti":actor_assertion_jti,
+        "_actorAssuranceLevel":assurance_level,
+        "_actorEffectiveCapability":effective_capability,
+        "_actorActionDigest":action_digest,
+        "_actorStepUpAuthorizationId":step_up_authorization_id,
+        "_actorIdempotencyKeySha256":actor_idempotency_key_sha256,
+        "_actorRequestKeySha256":actor_request_key_sha256,
+    }))
+}
+
+fn internal_uuid(payload: &Map<String, Value>, key: &str) -> Result<Uuid, ServiceError> {
+    payload
+        .get(key)
+        .and_then(Value::as_str)
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .filter(|value| !value.is_nil())
+        .ok_or(ServiceError::Persistence)
+}
+
+fn internal_sha256<'a>(
+    payload: &'a Map<String, Value>,
+    key: &str,
+) -> Result<&'a str, ServiceError> {
+    string_value(payload, key)
+        .filter(|value| is_sha256(value))
+        .ok_or(ServiceError::Persistence)
+}
+
+fn internal_capability<'a>(
+    payload: &'a Map<String, Value>,
+    key: &str,
+    expected: &str,
+) -> Result<&'a str, ServiceError> {
+    string_value(payload, key)
+        .filter(|value| *value == expected)
+        .ok_or(ServiceError::Persistence)
+}
+
+fn validate_response_identity_owner_result(
+    operation: &str,
+    result: &Value,
+    response_id: Uuid,
+) -> Result<OwnerCommandReceipt, ServiceError> {
+    owner_result_has_exact_keys(
+        result,
+        &[
+            "assertionId",
+            "assertionVersion",
+            "responseVersion",
+            "receiptDigest",
+            "auditEventId",
+            "verifiedAt",
+            "outboxEventIds",
+            "replayed",
+        ],
+    )?;
+    let object = result.as_object().ok_or(ServiceError::Persistence)?;
+    required_owner_uuid(object, "assertionId")?;
+    if object.get("assertionVersion").and_then(Value::as_i64) != Some(1) {
+        return Err(ServiceError::Persistence);
+    }
+    parse_owner_command_receipt(
+        operation,
+        result,
+        response_id,
+        "responseVersion",
+        "verifiedAt",
+        &[("assertionId", "identityAssertionId")],
+    )
+}
+
+fn response_excerpt_approval_request(
+    payload: &Map<String, Value>,
+    actor: Uuid,
+) -> Result<Value, ServiceError> {
+    let response_id = uuid_value(payload, &["responseId"])
+        .filter(|value| !value.is_nil())
+        .ok_or(ServiceError::InvalidRequest)?;
+    let excerpt_hash = string_value(payload, "excerptHash")
+        .filter(|value| is_sha256(value))
+        .ok_or(ServiceError::InvalidRequest)?;
+    let publication_form = match string_value(payload, "publicationForm") {
+        Some(value @ ("ANONYMOUS" | "FULL" | "REDACTED")) => value,
+        _ => return Err(ServiceError::InvalidRequest),
+    };
+    let reason = string_value(payload, "reason")
+        .filter(|value| value.trim() == *value && (1..=4000).contains(&value.chars().count()))
+        .ok_or(ServiceError::InvalidRequest)?;
+    let expected_version = payload
+        .get("expectedVersion")
+        .and_then(Value::as_i64)
+        .filter(|value| *value >= 1)
+        .ok_or(ServiceError::InvalidRequest)?;
+    let actor_assertion_jti = internal_uuid(payload, "_actorAssertionJti")?;
+    let assurance_level = match string_value(payload, "_actorAssuranceLevel") {
+        Some(value @ ("ACTIVE_SESSION" | "STEP_UP")) => value,
+        _ => return Err(ServiceError::PreconditionFailed),
+    };
+    let actor_request_key_sha256 = internal_sha256(payload, "_actorRequestKeySha256")?;
+    let effective_capability =
+        internal_capability(payload, "_actorEffectiveCapability", "responses.review")?;
+    let request_id = internal_uuid(payload, "_requestId")?;
+    let idempotency_key_sha256 = internal_sha256(payload, "_idempotencyKeySha256")?;
+    let request_sha256 = internal_sha256(payload, "_requestSha256")?;
+    Ok(json!({
+        "responseId":response_id,
+        "excerptHash":excerpt_hash,
+        "publicationForm":publication_form,
+        "reason":reason,
+        "expectedVersion":expected_version,
+        "_actorId":actor,
+        "_actorAssertionJti":actor_assertion_jti,
+        "_actorAssuranceLevel":assurance_level,
+        "_actorEffectiveCapability":effective_capability,
+        "_actorRequestKeySha256":actor_request_key_sha256,
+        "_requestId":request_id,
+        "_idempotencyKeySha256":idempotency_key_sha256,
+        "_requestSha256":request_sha256,
+    }))
+}
+
+#[cfg(test)]
+#[path = "reviews_response_identity_tests.rs"]
+mod r6d_response_identity_tests;

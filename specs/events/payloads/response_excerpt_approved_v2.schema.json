@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/response.excerpt_approved.v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "responseId",
+    "responseVersion",
+    "excerptSha256",
+    "publicationForm",
+    "identityReceiptDigest",
+    "approvalReceiptDigest",
+    "approvedAt"
+  ],
+  "properties": {
+    "responseId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "responseVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "excerptSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "publicationForm": {
+      "type": "string",
+      "enum": ["ANONYMOUS", "FULL", "REDACTED"]
+    },
+    "identityReceiptDigest": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "approvalReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "approvedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "publicationForm": {
+            "const": "ANONYMOUS"
+          }
+        },
+        "required": ["publicationForm"]
+      },
+      "then": {
+        "properties": {
+          "identityReceiptDigest": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "identityReceiptDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  ]
+}

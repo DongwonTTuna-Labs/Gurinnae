@@ -2,7 +2,6 @@ export type PublicCaseLeadViewModel = Readonly<{
   slug: string;
   title: string;
   publicState:
-    | "NEVER_PUBLISHED"
     | "PUBLISHED_ANOMALY"
     | "PUBLISHED_EXPLAINED"
     | "OFFICIALLY_CONFIRMED"
@@ -35,6 +34,7 @@ export type PublicEvidenceViewModel = Readonly<{
 export type PublicSeoViewModel = Readonly<{
   title: string;
   description: string;
+  openGraphDescription: string;
   canonicalUrl: string;
   robots: string;
 }>;

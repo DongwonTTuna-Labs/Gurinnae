@@ -107,6 +107,12 @@ INSERT INTO editorial.review_decisions(review_snapshot_id,reviewer_id,decision,r
 VALUES('04935ea9-f702-552c-aedc-425382a2d2b3','a2583e82-06ed-558f-86e7-8ed3b439637c','APPROVE','Historical independent approval fixture','{}','{"independent":true}',repeat('a',64))
 ON CONFLICT DO NOTHING;
 
+-- TEST_FIXTURE_ONLY: these two immutable rows model publication history that
+-- predates the R6d owner receipts and hard guards.  Limit replica mode to the
+-- exact staged-legacy pair; every post-R6d publication assertion below runs
+-- again with production triggers enabled.
+SET LOCAL session_replication_role='replica';
+
 INSERT INTO editorial.publication_previews(case_id,review_snapshot_id,locale,preview_payload,preview_sha256,expires_at,created_by)
 VALUES('148b09d5-aa28-5351-b471-9ef333a3e410','04935ea9-f702-552c-aedc-425382a2d2b3','fixture-history','{}','44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a',clock_timestamp()+interval '10 years','11111111-1111-4111-8111-111111111111')
 ON CONFLICT DO NOTHING;
@@ -114,6 +120,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO editorial.publication_revisions(id,case_id,revision,state,review_snapshot_id,public_payload,public_payload_sha256,preview_sha256,published_by)
 VALUES('02568a6a-27f5-5ede-b5d0-21107e22a755','148b09d5-aa28-5351-b471-9ef333a3e410',1,'PUBLISHED_ANOMALY','04935ea9-f702-552c-aedc-425382a2d2b3','{}','44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a','44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a','11111111-1111-4111-8111-111111111111')
 ON CONFLICT DO NOTHING;
+
+SET LOCAL session_replication_role='origin';
 
 INSERT INTO core.rule_versions(id,rule_id,version,name,description,configuration,code_digest,status,created_by,row_version)
 VALUES('b821788c-164c-5da0-8571-74b7ef417538','control-fixture-rule','1.0.0','Control fixture rule','Canonical integration rule','{}',repeat('4',64),'DRAFT','11111111-1111-4111-8111-111111111111',1)

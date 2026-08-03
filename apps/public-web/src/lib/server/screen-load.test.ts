@@ -1,5 +1,3 @@
-import type { ScreenViewModel } from "@gurine/ui";
-import type { RequestEvent } from "@sveltejs/kit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen as agencyScreen } from "../../routes/agencies/[agencySlug]/screen";
 import { screen as caseDetailScreen } from "../../routes/cases/[caseSlug]/screen";
@@ -10,6 +8,10 @@ import { screen as homeScreen } from "../../routes/screen";
 import { screen as searchScreen } from "../../routes/search/screen";
 import { screen as subscribeScreen } from "../../routes/subscribe/screen";
 import { screen as supplierScreen } from "../../routes/suppliers/[supplierSlug]/screen";
+import {
+  PUBLIC_EMPTY_RESULT_NOTICE,
+  PUBLIC_OPERATIONAL_INTERPRETATION_NOTICE,
+} from "./public-presentation-schemas";
 import { requestLocale } from "./screen-helpers";
 import {
   INVALID_REQUIRED_SEARCH_CONDITIONS_MESSAGE,
@@ -17,6 +19,12 @@ import {
   publicInitialLoadPlan,
   publicScreenDestinations,
 } from "./screen-load";
+import {
+  emptyPage,
+  requestEvent,
+  sourceResponse,
+  sourceScreen,
+} from "./screen-load-test-fixtures";
 
 const invokePublicOperation = vi.hoisted(() => vi.fn());
 const privateEnv = vi.hoisted(() => ({
@@ -27,75 +35,10 @@ const privateEnv = vi.hoisted(() => ({
 vi.mock("@gurine/api-client-public", () => ({ invokePublicOperation }));
 vi.mock("$env/dynamic/private", () => ({ env: privateEnv }));
 
-function requestEvent(
-  path: string,
-  options: {
-    headers?: HeadersInit;
-    params?: Record<string, string>;
-  } = {},
-): RequestEvent {
-  const url = new URL(path, "http://public-web.test");
-  return {
-    cookies: { get: () => undefined },
-    fetch: globalThis.fetch,
-    params: options.params ?? {},
-    request: new Request(url, {
-      ...(options.headers ? { headers: options.headers } : {}),
-    }),
-    url,
-  } as unknown as RequestEvent;
-}
-
-function emptyPage() {
-  return {
-    data: {
-      appliedFilters: {},
-      asOf: "2026-07-30T00:00:00Z",
-      items: [],
-    },
-    error: undefined,
-    response: new Response(null, { status: 200 }),
-  };
-}
-
 beforeEach(() => {
   invokePublicOperation.mockReset();
   invokePublicOperation.mockResolvedValue(emptyPage());
 });
-
-const sourceScreen: ScreenViewModel = {
-  id: "PUB-017",
-  title: "데이터 출처 상세",
-  route: "/sources/{sourceId}",
-  archetype: "ENTITY_DETAIL",
-  sections: [],
-  actions: [
-    {
-      id: "view-official",
-      label: "공식 출처 열기",
-      interaction_kind: "EXTERNAL_LINK",
-      local_only: true,
-    },
-    {
-      id: "view-related-rules",
-      label: "관련 규칙",
-      interaction_kind: "NAVIGATION",
-      local_only: true,
-    },
-  ],
-  states: [],
-  dataOperations: [],
-};
-
-function sourceResponse(officialUrl: unknown): Record<string, unknown> {
-  return {
-    getSource: {
-      data: { officialUrl, rawDtoField: "must-not-leak" },
-      links: [{ href: "must-not-leak" }],
-      rawDtoField: "must-not-leak",
-    },
-  };
-}
 
 describe("PUB-017 official source destination", () => {
   it.each([
@@ -161,7 +104,6 @@ describe("PUB-004 correction destination", () => {
     expect(destinations).not.toHaveProperty("request-correction");
   });
 });
-
 describe("contextual subscription destinations", () => {
   it("binds the cursor-free public case filter snapshot", () => {
     const params = new URLSearchParams({
@@ -249,6 +191,17 @@ describe("public initial loads", () => {
       homeScreen.dataOperations.map(({ operation_id }) => operation_id),
     ).toEqual(["listPublicCases", "listCorrections", "listSourceStatus"]);
 
+    invokePublicOperation.mockImplementation(
+      ({ operationId }: { operationId: string }) =>
+        Promise.resolve(
+          operationId === "listSourceStatus"
+            ? emptyPage(PUBLIC_OPERATIONAL_INTERPRETATION_NOTICE, "/sources")
+            : emptyPage(
+                PUBLIC_EMPTY_RESULT_NOTICE,
+                operationId === "listCorrections" ? "/corrections" : "/cases",
+              ),
+        ),
+    );
     const { runtime } = await loadScreen(requestEvent("/"), homeScreen);
 
     expect(invokePublicOperation).toHaveBeenCalledTimes(3);
@@ -318,9 +271,97 @@ describe("public initial loads", () => {
     );
 
     expect(runtime.state).toBe("error");
-    expect(runtime.publicLedger).toBeUndefined();
+    expect(runtime.publicLedger?.rows).toEqual([]);
+    expect(runtime.publicLedger?.collectionNotices[0]?.text).toBe(
+      PUBLIC_EMPTY_RESULT_NOTICE,
+    );
     expect(runtime.errors).toContain(
       "공개 목록 응답 형식이 올바르지 않습니다.",
+    );
+  });
+
+  it("removes public rows when SEO omits their status-adjacent notice", async () => {
+    const nonConclusion =
+      "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.";
+    invokePublicOperation.mockResolvedValueOnce({
+      ...emptyPage(),
+      data: {
+        appliedFilters: {},
+        asOf: "2026-07-30T00:00:00Z",
+        items: [
+          {
+            slug: "case-1",
+            title: "공개 사건",
+            publicState: "PUBLISHED_ANOMALY",
+            summary: "공개 사건 요약",
+            revision: 1,
+            updatedAt: "2026-07-30T00:00:00Z",
+            href: "/cases/case-1",
+            nonConclusion,
+          },
+        ],
+        seo: {
+          title: "사례 대장 · 구린네",
+          description: "고지가 빠진 설명",
+          openGraphDescription: "고지가 빠진 설명",
+          canonicalUrl: "/cases",
+          robots: "index,follow",
+        },
+      },
+    });
+
+    const { runtime } = await loadScreen(
+      requestEvent("/cases"),
+      caseLedgerScreen,
+    );
+
+    expect(runtime.state).toBe("error");
+    expect(runtime.publicLedger?.rows).toEqual([]);
+    expect(runtime.publicLedger?.collectionNotices[0]?.text).toBe(
+      PUBLIC_EMPTY_RESULT_NOTICE,
+    );
+    expect(runtime.publicSeo?.description).toBe(PUBLIC_EMPTY_RESULT_NOTICE);
+    expect(JSON.stringify(runtime.projection)).not.toContain("공개 사건");
+  });
+
+  it("suppresses every secondary projection when a detail primary is absent", async () => {
+    invokePublicOperation.mockImplementation(
+      ({ operationId }: { operationId: string }) => {
+        if (operationId === "getAgency")
+          return Promise.resolve({
+            data: undefined,
+            error: { title: "기관 기준 응답 없음" },
+            response: new Response(null, { status: 503 }),
+          });
+        return Promise.resolve({
+          data: {
+            items: [
+              {
+                contractNumber: "SENSITIVE-001",
+                title: "노출 금지 계약",
+                href: "/contracts/sensitive-1",
+              },
+            ],
+          },
+          error: undefined,
+          response: new Response(null, { status: 200 }),
+        });
+      },
+    );
+
+    const { runtime } = await loadScreen(
+      requestEvent("/agencies/00000000-0000-4000-8000-000000000001", {
+        params: { agencySlug: "00000000-0000-4000-8000-000000000001" },
+      }),
+      agencyScreen,
+    );
+
+    expect(runtime.state).toBe("error");
+    expect(runtime.navigationOptions).toBeUndefined();
+    expect(JSON.stringify(runtime.projection)).not.toContain("노출 금지 계약");
+    expect(JSON.stringify(runtime.destinations)).not.toContain("SENSITIVE-001");
+    expect(runtime.publicSeo?.description).toBe(
+      PUBLIC_OPERATIONAL_INTERPRETATION_NOTICE,
     );
   });
 });
@@ -342,7 +383,6 @@ describe("public form presentation inputs", () => {
       ),
     ).toBe("ko-KR");
   });
-
   it("supplies a readonly locale from Accept-Language to PUB-029", async () => {
     const { runtime } = await loadScreen(
       requestEvent("/subscribe", {
@@ -357,8 +397,8 @@ describe("public form presentation inputs", () => {
       ),
     ).toMatchObject({ value: "ko-KR", readonly: true });
   });
-
   it("reduces a nonempty generated dataset response to dataset cards", async () => {
+    const redistributionNotice = "이상 징후 기록이며 위법·부패의 확정이 아님";
     invokePublicOperation.mockResolvedValueOnce({
       data: {
         items: [
@@ -380,10 +420,18 @@ describe("public form presentation inputs", () => {
             license: "공개 이용",
             updatedAt: "2026-07-30T00:00:00Z",
             downloadUrl: "/downloads/public-cases",
+            redistributionNotice,
           },
         ],
         appliedFilters: {},
         asOf: "2026-07-30T00:00:00Z",
+        seo: {
+          title: "공개 데이터 · 구린네",
+          description: `공개 데이터 · ${redistributionNotice}`,
+          openGraphDescription: `공개 데이터 · ${redistributionNotice}`,
+          canonicalUrl: "/data",
+          robots: "index,follow",
+        },
       },
       error: undefined,
       response: new Response(null, { status: 200 }),
@@ -399,8 +447,10 @@ describe("public form presentation inputs", () => {
         format: "CSV, JSONL",
         license: "공개 이용",
         updatedAt: "2026-07-30T00:00:00Z",
+        redistributionNotice,
       },
     ]);
+    expect(runtime.publicSeo?.description).toContain(redistributionNotice);
     expect(runtime.data).toEqual({});
   });
 });

@@ -444,7 +444,8 @@
           },
           "candidateRevision": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "minimum": 1
           },
           "candidateDigest": {
             "type": "string",
@@ -491,7 +492,8 @@
           },
           "evidenceVersion": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "minimum": 1
           },
           "evidenceDigest": {
             "type": "string",
@@ -507,7 +509,8 @@
           },
           "sourceAssetRevision": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "minimum": 1
           },
           "locatorDigest": {
             "type": "string",
@@ -541,7 +544,9 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SupplierPartyRefV1"
-            }
+            },
+            "minItems": 1,
+            "maxItems": 1000
           },
           "expectedCandidateSetDigest": {
             "type": "string",
@@ -561,20 +566,30 @@
           "fromCanonicalSupplierIds": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 0,
+            "maxItems": 1000,
+            "uniqueItems": true
           },
           "toCanonicalSupplierIds": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 0,
+            "maxItems": 1000,
+            "uniqueItems": true
           },
           "evidenceLocators": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/EvidenceLocatorRefV1"
-            }
+            },
+            "minItems": 1,
+            "maxItems": 1000
           },
           "expectedEvidenceLocatorSetDigest": {
             "type": "string",
@@ -617,7 +632,9 @@
             ]
           },
           "reason": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
           }
         },
         "required": [
@@ -646,7 +663,8 @@
           },
           "decisionSequence": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "minimum": 1
           },
           "action": {
             "type": "string",
@@ -684,8 +702,11 @@
           "emittedEventIds": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 10
           },
           "acceptedAt": {
             "type": "string",
@@ -733,7 +754,8 @@
             "anyOf": [
               {
                 "type": "integer",
-                "format": "int64"
+                "format": "int64",
+                "minimum": 1
               },
               {
                 "type": "null"
@@ -823,7 +845,9 @@
           "managementRole": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
               },
               {
                 "type": "null"
@@ -865,14 +889,18 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/EvidenceLocatorRefV1"
-            }
+            },
+            "minItems": 1,
+            "maxItems": 1000
           },
           "expectedEvidenceLocatorSetDigest": {
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
           },
           "reason": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
           }
         },
         "required": [
@@ -899,7 +927,8 @@
           },
           "assertionRevision": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "minimum": 1
           },
           "assertionDigest": {
             "type": "string",
@@ -948,8 +977,11 @@
           "emittedEventIds": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 10
           },
           "acceptedAt": {
             "type": "string",
@@ -979,7 +1011,8 @@
           },
           "expectedAssertionRevision": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "minimum": 1
           },
           "expectedAssertionDigest": {
             "type": "string",
@@ -1001,8 +1034,12 @@
           "counterAssertionIds": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 0,
+            "maxItems": 1000,
+            "uniqueItems": true
           },
           "reasonCode": {
             "type": "string",
@@ -1015,7 +1052,9 @@
             ]
           },
           "reason": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
           }
         },
         "required": [

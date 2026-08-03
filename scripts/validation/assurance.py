@@ -44,6 +44,19 @@ def validate(root:Path,result:Validation)->None:
   if possible:
    result.require(op['step_up_policy']['owner']=='PRIVATE_IDENTITY_API' and op['step_up_policy']['control_api_receives_proof'] is False,f'{oid}: step-up ownership differs')
   else: result.require('step_up_policy' not in op,f'{oid}: non-step-up command retains step_up_policy')
+ submit_review_policy={
+  'mode':'CONDITIONAL',
+  'default':'ACTIVE_SESSION',
+  'conditions':[
+   {'when':{'field':'decision','operator':'EQUALS','value':'approve'},'required_level':'STEP_UP'},
+   {'when':{'field':'decision','operator':'IN','values':['reject','changes_required']},'required_level':'ACTIVE_SESSION'},
+  ],
+  'step_up_possible':True,
+ }
+ result.require(
+  op_by['submitReview']['assurance_policy']==submit_review_policy,
+  'submitReview assurance must remain decision-owned: APPROVE is STEP_UP and REJECT/CHANGES_REQUIRED are ACTIVE_SESSION independently of namedIndividualOverride',
+ )
  for screen in screens:
   for action in screen.get('actions',[]):
    action_count+=1; kind=action.get('interaction_kind'); result.require(kind in INTERACTIONS,f"{screen['id']}:{action['id']}: unknown interaction kind {kind}")

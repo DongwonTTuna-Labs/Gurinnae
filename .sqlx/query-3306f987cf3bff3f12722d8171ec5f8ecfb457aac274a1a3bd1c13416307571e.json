@@ -1,0 +1,129 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT x.id,x.source_revision,x.target_revision,x.summary,x.reason,x.published_at,c.slug,c.public_state,r.payload FROM public.corrections x JOIN public.cases c ON c.id=x.case_id JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2::date IS NULL OR x.published_at::date >= $2) AND ($3::date IS NULL OR x.published_at::date <= $3) ORDER BY CASE WHEN $4='published_desc' THEN x.published_at END DESC,CASE WHEN $4='title_asc' THEN x.summary END ASC,x.id LIMIT $5 OFFSET $6",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "source_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "source_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "target_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "target_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "corrections",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "public_state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "public_state"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "payload"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Date",
+        "Date",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3306f987cf3bff3f12722d8171ec5f8ecfb457aac274a1a3bd1c13416307571e"
+}

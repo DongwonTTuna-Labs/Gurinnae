@@ -1,9 +1,17 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+#[path = "audit_retention_legal_hold.rs"]
+mod legal_hold;
+#[path = "audit_retention_privacy_correction.rs"]
+mod privacy_correction;
+#[path = "audit_retention_privacy_query.rs"]
+mod privacy_query;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
     CreateAuditExport,
+    CreatePrivacyCorrectionPlan,
     PlaceLegalHold,
     ReleaseLegalHold,
     TransitionRetentionRequest,
@@ -24,6 +32,12 @@ pub(super) const OPERATIONS: &[(&str, Handler)] = &[
     (
         "createAuditExport",
         Handler::Command(CommandHandler::AuditRetention(Command::CreateAuditExport)),
+    ),
+    (
+        "createPrivacyCorrectionPlan",
+        Handler::Command(CommandHandler::AuditRetention(
+            Command::CreatePrivacyCorrectionPlan,
+        )),
     ),
     (
         "getAuditExport",
@@ -75,11 +89,113 @@ pub(super) const OPERATIONS: &[(&str, Handler)] = &[
 
 pub(super) const fn command_kind(command: Command) -> CommandKind {
     match command {
-        Command::ReleaseLegalHold | Command::TransitionRetentionRequest => CommandKind::Addendum,
+        Command::CreatePrivacyCorrectionPlan
+        | Command::ReleaseLegalHold
+        | Command::TransitionRetentionRequest => CommandKind::Addendum,
         Command::CreateAuditExport | Command::PlaceLegalHold | Command::VerifyAuditIntegrity => {
             CommandKind::Base
         }
     }
+}
+
+pub(in crate::service) fn validate_transition_request(
+    payload: &Map<String, Value>,
+) -> Result<(), ServiceError> {
+    const COMMON_FIELDS: &[&str] = &[
+        "retentionRequestId",
+        "expectedDecisionVersion",
+        "transition",
+        "reasonCode",
+        "reason",
+    ];
+    let retention_request_id = payload
+        .get("retentionRequestId")
+        .and_then(Value::as_str)
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .filter(|value| !value.is_nil())
+        .ok_or(ServiceError::InvalidRequest)?;
+    let _ = retention_request_id;
+    payload
+        .get("expectedDecisionVersion")
+        .and_then(Value::as_i64)
+        .filter(|value| *value >= 0)
+        .ok_or(ServiceError::InvalidRequest)?;
+    bounded_text(payload, "reasonCode", 100)?;
+    bounded_text(payload, "reason", 10_000)?;
+
+    let variant_fields: &[&str] =
+        match string_value(payload, "transition").ok_or(ServiceError::InvalidRequest)? {
+            "VERIFY_IDENTITY" => {
+                payload
+                    .get("identityProofReceiptId")
+                    .and_then(Value::as_str)
+                    .and_then(|value| Uuid::parse_str(value).ok())
+                    .filter(|value| !value.is_nil())
+                    .ok_or(ServiceError::InvalidRequest)?;
+                &["identityProofReceiptId"]
+            }
+            "START_REVIEW" | "APPROVE" => &[],
+            "EXTEND" => {
+                bounded_text(payload, "extensionReasonCode", 100)?;
+                bounded_text(payload, "extensionReason", 4_000)?;
+                payload
+                    .get("extensionBusinessDays")
+                    .and_then(Value::as_u64)
+                    .filter(|value| (1..=i32::MAX as u64).contains(value))
+                    .ok_or(ServiceError::InvalidRequest)?;
+                &[
+                    "extensionReasonCode",
+                    "extensionReason",
+                    "extensionBusinessDays",
+                ]
+            }
+            "REJECT" => {
+                bounded_text(payload, "rejectionReasonCode", 100)?;
+                bounded_text(payload, "rejectionReason", 4_000)?;
+                bounded_text(payload, "appealInstructions", 4_000)?;
+                &[
+                    "rejectionReasonCode",
+                    "rejectionReason",
+                    "appealInstructions",
+                ]
+            }
+            _ => return Err(ServiceError::InvalidRequest),
+        };
+
+    if payload.keys().any(|key| {
+        !COMMON_FIELDS.contains(&key.as_str()) && !variant_fields.contains(&key.as_str())
+    }) || COMMON_FIELDS
+        .iter()
+        .any(|field| !payload.contains_key(*field))
+        || variant_fields
+            .iter()
+            .any(|field| !payload.contains_key(*field))
+    {
+        return Err(ServiceError::InvalidRequest);
+    }
+    Ok(())
+}
+
+pub(in crate::service) fn validate_correction_plan_request(
+    payload: &Map<String, Value>,
+) -> Result<(), ServiceError> {
+    privacy_correction::validate(payload)
+}
+
+fn bounded_text(
+    payload: &Map<String, Value>,
+    field: &str,
+    maximum_chars: usize,
+) -> Result<(), ServiceError> {
+    payload
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|value| {
+            let count = value.chars().count();
+            value.trim() == *value && (1..=maximum_chars).contains(&count)
+        })
+        .map(|_| ())
+        .ok_or(ServiceError::InvalidRequest)
 }
 
 pub(super) async fn apply(
@@ -88,14 +204,20 @@ pub(super) async fn apply(
     id: Uuid,
     actor: Uuid,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<CommandEffect, ServiceError> {
     match command {
-        Command::CreateAuditExport => create_audit_export(payload, id, actor, tx).await,
-        Command::PlaceLegalHold => place_legal_hold(payload, id, actor, tx).await,
-        Command::VerifyAuditIntegrity => verify_audit_integrity(payload, id, actor, tx).await,
-        Command::ReleaseLegalHold | Command::TransitionRetentionRequest => {
-            Err(ServiceError::InvalidRequest)
-        }
+        Command::CreateAuditExport => create_audit_export(payload, id, actor, tx)
+            .await
+            .map(|()| CommandEffect::none()),
+        Command::PlaceLegalHold => legal_hold::place(payload, actor, tx)
+            .await
+            .map(CommandEffect::owner_created),
+        Command::VerifyAuditIntegrity => verify_audit_integrity(payload, id, actor, tx)
+            .await
+            .map(|()| CommandEffect::none()),
+        Command::CreatePrivacyCorrectionPlan
+        | Command::ReleaseLegalHold
+        | Command::TransitionRetentionRequest => Err(ServiceError::InvalidRequest),
     }
 }
 
@@ -108,13 +230,12 @@ pub(super) async fn query(
 ) -> Result<Value, ServiceError> {
     match query {
         Query::GetAuditExport => get_audit_export(parameters, pool).await,
-        Query::GetRetentionRequest => get_retention_request(parameters, pool).await,
+        Query::GetRetentionRequest => privacy_query::get(parameters, pool).await,
         Query::ListCaseAuditEvents | Query::SearchAuditEvents => {
             audit_query(pool, parameters).await
         }
-        Query::ListRecordClassSchedules | Query::ListRetentionRequests => {
-            retention_queue_query(operation.id, parameters, pool).await
-        }
+        Query::ListRetentionRequests => privacy_query::list(parameters, pool).await,
+        Query::ListRecordClassSchedules => record_class_schedule_query(operation.id, pool).await,
     }
 }
 
@@ -196,68 +317,6 @@ async fn create_audit_export(
     Ok(())
 }
 
-async fn place_legal_hold(
-    payload: &Map<String, Value>,
-    id: Uuid,
-    actor: Uuid,
-    tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    // Match the research-fetch owner preflight lock. A legal hold placement
-    // therefore cannot commit between rights admission and artifact record.
-    let held_object = uuid_value(payload, &["objectId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query!(
-        "SELECT pg_advisory_xact_lock(hashtextextended($1, 13))",
-        held_object.to_string(),
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-    if let Some(case_id) = uuid_value(payload, &["caseId"]) {
-        sqlx::query!(
-            "SELECT pg_advisory_xact_lock(hashtextextended($1, 13))",
-            case_id.to_string(),
-        )
-        .execute(&mut **tx)
-        .await
-        .map_err(db)?;
-    }
-    // Fetch admission locks the exact affected-id atoms as text.  Acquire
-    // those same locks before inserting the hold so placement cannot commit
-    // between the admission check and the immutable fetch record.
-    sqlx::query!(
-        "SELECT pg_advisory_xact_lock(hashtextextended(value, 13)) FROM jsonb_array_elements_text(COALESCE($1::jsonb, '[]'::jsonb)) ORDER BY value",
-        payload
-            .get("affectedIds")
-            .cloned()
-            .unwrap_or_else(|| json!([])),
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-    sqlx::query!(
-        "INSERT INTO editorial.legal_holds(id,case_id,review_snapshot_id,object_type,object_id,scope,affected_ids,reason,authority_reference,expires_at,placed_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
-        id,
-        uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?,
-        uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?,
-        string_value(payload, "objectType").ok_or(ServiceError::InvalidRequest)?,
-        held_object,
-        string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?,
-        payload
-            .get("affectedIds")
-            .cloned()
-            .unwrap_or_else(|| json!([])),
-        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
-        string_value(payload, "authorityReference").ok_or(ServiceError::InvalidRequest)?,
-        timestamp_value(payload, "expiresAt")?,
-        actor,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-
-    Ok(())
-}
-
 async fn get_audit_export(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
@@ -284,68 +343,28 @@ async fn get_audit_export(
     })
 }
 
-async fn get_retention_request(
-    parameters: &BTreeMap<String, String>,
+async fn record_class_schedule_query(
+    operation: &str,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let id = parameters
-        .get("retentionRequestId")
-        .or_else(|| parameters.get("id"))
-        .and_then(|value| Uuid::parse_str(value).ok())
-        .ok_or(ServiceError::InvalidRequest)?;
-    let value: Option<Value> = sqlx::query_scalar!("SELECT ops.read_retention_request_v1($1)", id)
-        .fetch_optional(pool)
+    if operation != "listRecordClassSchedules" {
+        return Err(ServiceError::Persistence);
+    }
+    let items = sqlx::query_scalar!("SELECT ops.read_record_class_schedule_queue_v1()")
+        .fetch_one(pool)
         .await
         .map_err(db)?
-        .flatten();
-    let Some(value) = value else {
-        return Err(ServiceError::NotFound);
-    };
-    Ok(value)
-}
-
-async fn retention_queue_query(
-    operation: &str,
-    _parameters: &BTreeMap<String, String>,
-    pool: &PgPool,
-) -> Result<Value, ServiceError> {
-    let items: Value = match operation {
-        "listRetentionRequests" => sqlx::query_scalar!("SELECT ops.read_retention_queue_v1()")
-            .fetch_one(pool)
-            .await
-            .map_err(db)?
-            .ok_or_else(|| {
-                db(sqlx::Error::Decode(Box::new(
-                    sqlx::error::UnexpectedNullError,
-                )))
-            })?,
-        "listRecordClassSchedules" => {
-            sqlx::query_scalar!("SELECT ops.read_record_class_schedule_queue_v1()")
-                .fetch_one(pool)
-                .await
-                .map_err(db)?
-                .ok_or_else(|| {
-                    db(sqlx::Error::Decode(Box::new(
-                        sqlx::error::UnexpectedNullError,
-                    )))
-                })?
-        }
-        _ => return Err(ServiceError::Persistence),
-    };
-    let items = match operation {
-        "listRetentionRequests" => normalize_retention_queue_items(items),
-        "listRecordClassSchedules" => normalize_record_class_schedule_items(items),
-        _ => items,
-    };
-    queue_page(operation, items)
+        .ok_or_else(|| {
+            db(sqlx::Error::Decode(Box::new(
+                sqlx::error::UnexpectedNullError,
+            )))
+        })?;
+    queue_page(operation, normalize_record_class_schedule_items(items))
 }
 
 fn queue_page(operation: &str, items: Value) -> Result<Value, ServiceError> {
     let as_of = format_time(OffsetDateTime::now_utc())?;
     Ok(match operation {
-        "listRetentionRequests" => {
-            json!({"items":items,"appliedFilters":{"requestType":[],"state":[],"dueBefore":null,"legalHoldBlocked":null,"sort":"DUE_ASC"},"asOf":as_of,"nextCursor":null,"totalApproximate":null,"operationId":operation,"links":[]})
-        }
         "listRecordClassSchedules" => {
             json!({"items":items,"appliedRecordClasses":[],"appliedStates":[],"asOf":as_of,"nextCursor":null,"operationId":operation,"links":[]})
         }
@@ -353,29 +372,6 @@ fn queue_page(operation: &str, items: Value) -> Result<Value, ServiceError> {
             json!({"items":items,"appliedFilters":{},"asOf":as_of,"nextCursor":null,"totalApproximate":null,"operationId":operation,"links":[]})
         }
     })
-}
-
-fn normalize_retention_queue_items(value: Value) -> Value {
-    let Some(rows) = value.as_array() else {
-        return json!([]);
-    };
-    Value::Array(rows.iter().filter_map(|row| {
-        Some(json!({
-            "retentionRequestId": row.get("retention_request_id")?.clone(),
-            "requestType": row.get("request_type")?.clone(),
-            "decisionVersion": row.get("decision_version").cloned().unwrap_or_else(|| json!(1)),
-            "state": row.get("state").cloned().unwrap_or_else(|| json!("REVIEW")),
-            "jurisdiction": row.get("jurisdiction").cloned().unwrap_or_else(|| json!("UNKNOWN")),
-            "scopeDigest": row.get("scope_digest").cloned().unwrap_or_else(|| json!("0000000000000000000000000000000000000000000000000000000000000000")),
-            "legalHoldBlocked": row.get("legal_hold_blocked").cloned().unwrap_or(json!(false)),
-            // The immutable decision table has no separate due_at column;
-            // expose the decision timestamp as the queue's deterministic
-            // due-at witness rather than emitting a schema-invalid null.
-            "dueAt": row.get("due_at").cloned().or_else(|| row.get("decided_at").cloned()).unwrap_or(Value::Null),
-            "createdAt": row.get("created_at").cloned().unwrap_or(row.get("decided_at").cloned().unwrap_or(Value::Null)),
-            "updatedAt": row.get("decided_at").cloned().unwrap_or(Value::Null)
-        }))
-    }).collect())
 }
 
 fn normalize_record_class_schedule_items(value: Value) -> Value {
@@ -396,4 +392,92 @@ fn normalize_record_class_schedule_items(value: Value) -> Value {
             "scheduleDigest": row.get("schedule_digest").cloned().unwrap_or_else(|| json!("0000000000000000000000000000000000000000000000000000000000000000"))
         }))
     }).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn common(transition: &str) -> Map<String, Value> {
+        json!({
+            "retentionRequestId": "00000000-0000-4000-8000-000000000001",
+            "expectedDecisionVersion": 0,
+            "transition": transition,
+            "reasonCode": "OPERATOR_REVIEW",
+            "reason": "검증된 운영 사유"
+        })
+        .as_object()
+        .cloned()
+        .unwrap_or_default()
+    }
+
+    #[test]
+    fn transition_variants_keep_exact_discriminated_shapes() {
+        let mut verify = common("VERIFY_IDENTITY");
+        verify.insert(
+            "identityProofReceiptId".to_owned(),
+            json!("00000000-0000-4000-8000-000000000002"),
+        );
+        assert!(validate_transition_request(&verify).is_ok());
+
+        let mut extend = common("EXTEND");
+        extend.insert("extensionReasonCode".to_owned(), json!("LARGE_SCOPE"));
+        extend.insert("extensionReason".to_owned(), json!("자료 범위 확인 필요"));
+        extend.insert("extensionBusinessDays".to_owned(), json!(10));
+        assert!(validate_transition_request(&extend).is_ok());
+
+        let mut reject = common("REJECT");
+        reject.insert("rejectionReasonCode".to_owned(), json!("PROOF_INVALID"));
+        reject.insert("rejectionReason".to_owned(), json!("제출 증빙 불일치"));
+        reject.insert(
+            "appealInstructions".to_owned(),
+            json!("새 증빙과 함께 이의 신청"),
+        );
+        assert!(validate_transition_request(&reject).is_ok());
+
+        assert!(validate_transition_request(&common("START_REVIEW")).is_ok());
+        assert!(validate_transition_request(&common("APPROVE")).is_ok());
+    }
+
+    #[test]
+    fn variant_fields_cannot_cross_or_exceed_authorized_limits() {
+        let mut verify = common("VERIFY_IDENTITY");
+        verify.insert(
+            "identityProofReceiptId".to_owned(),
+            json!("00000000-0000-4000-8000-000000000002"),
+        );
+        verify.insert("extensionBusinessDays".to_owned(), json!(10));
+        assert!(matches!(
+            validate_transition_request(&verify),
+            Err(ServiceError::InvalidRequest)
+        ));
+
+        let mut extend = common("EXTEND");
+        extend.insert("extensionReasonCode".to_owned(), json!("LARGE_SCOPE"));
+        extend.insert("extensionReason".to_owned(), json!("자료 범위 확인 필요"));
+        extend.insert("extensionBusinessDays".to_owned(), json!(11));
+        assert!(validate_transition_request(&extend).is_ok());
+        extend.insert(
+            "extensionBusinessDays".to_owned(),
+            json!(i64::from(i32::MAX) + 1),
+        );
+        assert!(matches!(
+            validate_transition_request(&extend),
+            Err(ServiceError::InvalidRequest)
+        ));
+
+        let mut reject = common("REJECT");
+        reject.insert("rejectionReasonCode".to_owned(), json!("PROOF_INVALID"));
+        reject.insert("rejectionReason".to_owned(), json!("가".repeat(4_001)));
+        reject.insert("appealInstructions".to_owned(), json!("이의 신청 안내"));
+        assert!(matches!(
+            validate_transition_request(&reject),
+            Err(ServiceError::InvalidRequest)
+        ));
+
+        assert!(matches!(
+            validate_transition_request(&common("COMPLETE")),
+            Err(ServiceError::InvalidRequest)
+        ));
+    }
 }

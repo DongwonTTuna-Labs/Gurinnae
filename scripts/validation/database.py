@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from pathlib import Path
 
@@ -9,15 +8,36 @@ from pglast import parse_sql
 
 from verify_migrations import EXPECTED_ADDITIVE_MIGRATIONS
 
+from .database_additive_inventory import (
+    _extract_additive_inventory,
+    _validate_r6d_inventory,
+)
+from .database_event_inventory import _event_registry_inventory
+from .database_payload_inventory import (
+    _resolve_local_schema_refs,
+    _validate_event_payload_inventory,
+)
 from .loaders import load_json, load_yaml
 from .models import Validation
 
-TABLE_RE = re.compile(r'CREATE TABLE\s+([a-z_]+)\.([a-z_]+)\s*\(', re.I)
-DROP_TABLE_RE = re.compile(r'DROP TABLE(?: IF EXISTS)?\s+([a-z_]+)\.([a-z_]+)', re.I)
+
+TABLE_RE = re.compile(
+    r'CREATE TABLE\s+([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)\s*\(', re.I
+)
+DROP_TABLE_RE = re.compile(
+    r'DROP TABLE(?: IF EXISTS)?\s+([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)',
+    re.I,
+)
 DROP_FUNC_RE = re.compile(r'DROP FUNCTION(?: IF EXISTS)?\s+([a-z_]+)\.([a-z_][a-z0-9_]*)\s*\(', re.I)
 FUNC_RE = re.compile(r'CREATE(?: OR REPLACE)? FUNCTION\s+([a-z_]+)\.([a-z_][a-z0-9_]*)\s*\(', re.I)
-POLICY_RE = re.compile(r'CREATE POLICY\s+([a-zA-Z0-9_]+)\s+ON\s+([a-z_]+)\.([a-z_]+)', re.I)
-TRIGGER_RE = re.compile(r'CREATE TRIGGER\s+([a-zA-Z0-9_]+).*?ON\s+([a-z_]+)\.([a-z_]+)', re.I | re.S)
+POLICY_RE = re.compile(
+    r'CREATE POLICY\s+([a-zA-Z0-9_]+)\s+ON\s+([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)',
+    re.I,
+)
+TRIGGER_RE = re.compile(
+    r'CREATE TRIGGER\s+([a-zA-Z0-9_]+).*?ON\s+([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)',
+    re.I | re.S,
+)
 FUNCTION_DEFINITION_RE = re.compile(
     r'CREATE(?: OR REPLACE)? FUNCTION\s+([a-z_]+\.[a-z_]+)\s*\(.*?\)\s*RETURNS\b.*?\$\$.*?\$\$;',
     re.I | re.S,
@@ -55,6 +75,7 @@ def validate(root: Path, result: Validation) -> None:
     }
     runtime_catalog = load_yaml(root / 'specs/database/runtime-security-tests.yaml')
     runtime_evidence = load_json(root / 'verification/postgres-runtime-baseline.json')
+    _validate_r6d_inventory(root, result)
 
     migrations = sorted((root / 'specs/database/migrations').glob('*.sql'))
     for migration in migrations:

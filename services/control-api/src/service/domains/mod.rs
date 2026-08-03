@@ -81,7 +81,7 @@ pub(super) async fn apply_command(
     session_id: Uuid,
     field_keys: &EnvelopeKeyRing,
     transaction: &mut Transaction<'_, Postgres>,
-) -> Result<Map<String, Value>, ServiceError> {
+) -> Result<CommandEffect, ServiceError> {
     match handler {
         CommandHandler::Agents(command) => {
             let result = agents::apply(
@@ -107,7 +107,8 @@ pub(super) async fn apply_command(
             claims_evidence::apply(command, payload, id, actor, field_keys, transaction).await,
         ),
         CommandHandler::Editorial(command) => {
-            let result = editorial::apply(
+            let owner_creates_aggregate = editorial::owner_creates_aggregate(command);
+            editorial::apply(
                 command,
                 operation,
                 payload,
@@ -117,8 +118,8 @@ pub(super) async fn apply_command(
                 field_keys,
                 transaction,
             )
-            .await;
-            no_command_effect(result)
+            .await
+            .map(|receipt| editorial_command_effect(owner_creates_aggregate, receipt))
         }
         CommandHandler::Rules(command) => no_command_effect(
             rules::apply(command, operation, payload, id, actor, transaction).await,
@@ -127,7 +128,9 @@ pub(super) async fn apply_command(
             sources::apply(command, operation, payload, id, actor, transaction).await,
         ),
         CommandHandler::Operations(command) => {
-            operations::apply(command, operation, payload, id, actor, transaction).await
+            operations::apply(command, operation, payload, id, actor, transaction)
+                .await
+                .map(CommandEffect::fields)
         }
         CommandHandler::IdentityGovernance(command) => {
             let result = identity_governance::apply(
@@ -142,9 +145,9 @@ pub(super) async fn apply_command(
             .await;
             no_command_effect(result)
         }
-        CommandHandler::AuditRetention(command) => no_command_effect(
-            audit_retention::apply(command, payload, id, actor, transaction).await,
-        ),
+        CommandHandler::AuditRetention(command) => {
+            audit_retention::apply(command, payload, id, actor, transaction).await
+        }
         CommandHandler::ResilienceCost(command) => no_command_effect(
             resilience_cost::apply(command, payload, id, actor, transaction).await,
         ),
@@ -154,9 +157,22 @@ pub(super) async fn apply_command(
     }
 }
 
-fn no_command_effect(result: Result<(), ServiceError>) -> Result<Map<String, Value>, ServiceError> {
+fn editorial_command_effect(
+    owner_creates_aggregate: bool,
+    receipt: Option<OwnerCommandReceipt>,
+) -> CommandEffect {
+    receipt.map_or_else(CommandEffect::none, |receipt| {
+        if owner_creates_aggregate {
+            CommandEffect::owner_created(receipt)
+        } else {
+            CommandEffect::owner(receipt)
+        }
+    })
+}
+
+fn no_command_effect(result: Result<(), ServiceError>) -> Result<CommandEffect, ServiceError> {
     result?;
-    Ok(Map::new())
+    Ok(CommandEffect::none())
 }
 
 pub(super) async fn query(

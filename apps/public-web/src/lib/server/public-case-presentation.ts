@@ -19,7 +19,6 @@ const dateTime = v.pipe(
   v.check((value) => !Number.isNaN(Date.parse(value))),
 );
 const publicState = v.picklist([
-  "NEVER_PUBLISHED",
   "PUBLISHED_ANOMALY",
   "PUBLISHED_EXPLAINED",
   "OFFICIALLY_CONFIRMED",
@@ -67,6 +66,7 @@ const publicEvidence = v.strictObject({
 const seo = v.strictObject({
   title: nonEmptyText,
   description: nonEmptyText,
+  openGraphDescription: nonEmptyText,
   canonicalUrl: nonEmptyText,
   robots: nonEmptyText,
   structuredDataType: v.optional(v.nullable(text)),
@@ -167,9 +167,12 @@ function seoViewModel(
   metadata: PublicCaseResponse["seo"],
   requestUrl: URL,
 ): PublicSeoViewModel {
+  if (metadata.description !== metadata.openGraphDescription)
+    throw new Error("PUBLIC_CASE_OPEN_GRAPH_DESCRIPTION_MISMATCH");
   return {
     title: metadata.title,
     description: metadata.description,
+    openGraphDescription: metadata.openGraphDescription,
     canonicalUrl: sameOriginCanonical(metadata.canonicalUrl, requestUrl),
     robots: robotsValue(metadata.robots),
   };

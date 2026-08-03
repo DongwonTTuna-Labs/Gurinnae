@@ -49,7 +49,6 @@ function combinedApprovalQueue(proposals: ProviderControlProposal[]) {
       sort: "DUE_ASC",
     },
     asOf: new Date().toISOString(),
-    nextCursor: "",
     totalApproximate: existing.totalApproximate + provider.totalApproximate,
   };
 }

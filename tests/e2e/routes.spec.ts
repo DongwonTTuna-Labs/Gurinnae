@@ -212,6 +212,15 @@ test("home renders recent public records and a copy-complete mission", async ({
   await expect(recent.locator("tbody tr")).toHaveCount(8);
   await expect(recent.locator("tbody tr").first()).toContainText("계약");
   await expect(recent.locator('[data-action-id="open-case"]')).toHaveCount(0);
+  await expect(
+    recent.locator(
+      '.public-section-status-notice > .public-status-notice[data-notice-kind="NON_CONCLUSION"]',
+    ),
+  ).toHaveCount(0);
+  await expect(recent.locator("tbody .public-status-notice")).toHaveCount(0);
+  await expect(page.locator(".home-safety")).toHaveText(
+    "자동 부패 판정기가 아닙니다 — 가격 차이나 반복 계약은 조사 신호일 뿐 위법·비리를 의미하지 않습니다.",
+  );
 
   const corrections = page.locator(
     'section[data-testid="pub_001__section__corrections"]',
@@ -223,6 +232,17 @@ test("home renders recent public records and a copy-complete mission", async ({
     "종료일을 원문 계약서 기준으로 바로잡았습니다.",
   );
   await expect(corrections).toContainText("2026.07.29");
+  await expect(
+    corrections.locator(
+      '.public-section-status-notice > .public-status-notice[data-notice-kind="NON_CONCLUSION"]',
+    ),
+  ).toContainText("이상 징후 기록이며 위법·부패의 확정이 아님");
+  await expect(corrections.locator("li .public-status-notice")).toHaveCount(0);
+  await expect(
+    page.locator(
+      'main#main-content .public-status-notice[data-notice-kind="NON_CONCLUSION"]',
+    ),
+  ).toHaveCount(1);
   await expect(corrections.locator('[data-testid="empty-state"]')).toHaveCount(
     0,
   );

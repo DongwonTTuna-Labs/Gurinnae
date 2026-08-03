@@ -385,3 +385,1053 @@ BEGIN
   END;
 END
 $$;
+
+-- R6d publication hardening is exercised in a rollback-only transaction so
+-- these owner/guard probes cannot perturb the canonical Control flow counts
+-- asserted above.  The prerequisite retention authority is installed by
+-- r6d-approved-policy-authority.sql through the established action graph.
+BEGIN;
+
+CREATE OR REPLACE FUNCTION pg_temp.r6d_control_publication_sha256(
+  p_value text
+) RETURNS char(64)
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+SET search_path=pg_catalog,extensions,pg_temp
+AS $$
+  SELECT encode(
+    extensions.digest(convert_to(p_value,'UTF8'),'sha256'),'hex'
+  )
+$$;
+GRANT EXECUTE ON FUNCTION pg_temp.r6d_control_publication_sha256(text)
+  TO gurine_control_api;
+
+CREATE OR REPLACE FUNCTION pg_temp.r6d_control_registered_person_set_sha256()
+RETURNS char(64)
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path=pg_catalog,core,ops,extensions,pg_temp
+AS $$
+  SELECT encode(extensions.digest(ops.canonical_jsonb_v1(
+    COALESCE(jsonb_agg(entry ORDER BY canonical),'[]'::jsonb)
+  ),'sha256'),'hex')
+  FROM (
+    SELECT jsonb_build_object(
+      'contextId',person.context_id,
+      'personNameDigest',btrim(person.person_name_digest),
+      'personNodeId',person.person_node_id,
+      'topologyDigest',btrim(person.topology_digest)
+    ) AS entry,
+    ops.canonical_jsonb_v1(jsonb_build_object(
+      'contextId',person.context_id,
+      'personNameDigest',btrim(person.person_name_digest),
+      'personNodeId',person.person_node_id,
+      'topologyDigest',btrim(person.topology_digest)
+    )) AS canonical
+    FROM core.list_publication_person_names_v1() AS person
+  ) AS registered
+$$;
+
+-- Counts alone miss in-place state/version mutations.  This digest covers
+-- every durable relation reachable from the retired publication dispatchers
+-- and from the guarded publication owners used below.
+CREATE OR REPLACE FUNCTION pg_temp.r6d_control_publication_state_sha256()
+RETURNS char(64)
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path=pg_catalog,editorial,ops,extensions,pg_temp
+AS $$
+  SELECT encode(extensions.digest(ops.canonical_jsonb_v1(
+    jsonb_build_object(
+      'cases',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.cases AS row_value),
+      'snapshots',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.review_snapshots AS row_value),
+      'assignments',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.review_assignments AS row_value),
+      'decisions',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.review_decisions AS row_value),
+      'corrections',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.corrections AS row_value),
+      'previews',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.publication_previews AS row_value),
+      'revisions',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.publication_revisions AS row_value),
+      'assessments',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.named_person_publication_assessments AS row_value),
+      'findings',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.named_person_publication_findings AS row_value),
+      'overrides',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.named_person_legal_overrides AS row_value),
+      'reviewReceipts',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.named_person_review_stage_receipts_v1 AS row_value),
+      'previewReceipts',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.publication_preview_owner_receipts_v2 AS row_value),
+      'revisionReceipts',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.publication_revision_owner_receipts_v2 AS row_value),
+      'tasks',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM ops.tasks AS row_value),
+      'idempotency',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM ops.idempotency_keys AS row_value),
+      'audit',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM ops.audit_events AS row_value),
+      'outbox',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM ops.outbox AS row_value)
+    )
+  ),'sha256'),'hex')
+$$;
+
+DO $r6d_publication_preflight$
+DECLARE
+  v_schedule_count bigint;
+BEGIN
+  IF current_database() NOT IN (
+    'gurine_control_test','gurine_submission_test','gurine_event_consumers'
+  ) THEN
+    RAISE EXCEPTION 'r6d_control_publication_probe_database_forbidden'
+      USING ERRCODE='55000';
+  END IF;
+  IF to_regprocedure('editorial.preview_publication_guarded_v2(jsonb)')
+       IS NULL
+     OR to_regprocedure(
+       'editorial.record_named_person_review_stage_v1(jsonb)'
+     ) IS NULL
+     OR to_regprocedure(
+       'editorial.record_named_person_legal_override_v1(jsonb)'
+     ) IS NULL
+     OR to_regprocedure('editorial.publish_guarded_revision_v2(jsonb)')
+       IS NULL THEN
+    RAISE EXCEPTION 'r6d_control_publication_owner_missing'
+      USING ERRCODE='55000';
+  END IF;
+  SELECT count(*) INTO v_schedule_count
+  FROM ops.record_class_schedules AS schedule
+  JOIN ops.r6d_record_class_catalog AS catalog
+    ON catalog.record_class=schedule.record_class
+  WHERE schedule.record_class='NAMED_PERSON_PUBLICATION_GOVERNANCE'
+    AND schedule.effective_at<=clock_timestamp()
+    AND schedule.review_expires_at>clock_timestamp()
+    AND schedule.terminal_action=catalog.required_terminal_action;
+  IF v_schedule_count<>1 THEN
+    RAISE EXCEPTION
+      'r6d_control_publication_schedule_count %, expected 1',
+      v_schedule_count USING ERRCODE='55000';
+  END IF;
+END
+$r6d_publication_preflight$;
+
+-- Transaction-local principals model request-bound authenticated sessions and
+-- already-issued Step-up assertions.  They are authority inputs, never owner
+-- output receipts.
+INSERT INTO ops.users(id,oidc_subject,email,display_name,status)
+VALUES
+  ('d6e00000-0000-4000-8000-000000000001','r6d-control-publisher',
+   'r6d-control-publisher@example.invalid','R6d control publisher','ACTIVE'),
+  ('d6e00000-0000-4000-8000-000000000002','r6d-control-editor',
+   'r6d-control-editor@example.invalid','R6d control editor','ACTIVE'),
+  ('d6e00000-0000-4000-8000-000000000003','r6d-control-legal',
+   'r6d-control-legal@example.invalid','R6d control legal','ACTIVE');
+
+INSERT INTO ops.user_roles(id,user_id,role_id,granted_by,reason,granted_at)
+SELECT fixture.id,fixture.user_id,role.id,
+  'd6e00000-0000-4000-8000-000000000001'::uuid,
+  'R6d publication runtime assertion',clock_timestamp()
+FROM (VALUES
+  ('d6e00000-0000-4000-8000-000000000011'::uuid,
+   'd6e00000-0000-4000-8000-000000000001'::uuid,'PUBLISHER'),
+  ('d6e00000-0000-4000-8000-000000000012'::uuid,
+   'd6e00000-0000-4000-8000-000000000002'::uuid,'EDITOR'),
+  ('d6e00000-0000-4000-8000-000000000013'::uuid,
+   'd6e00000-0000-4000-8000-000000000003'::uuid,'LEGAL_REVIEWER')
+) AS fixture(id,user_id,role_code)
+JOIN ops.roles AS role ON role.code=fixture.role_code;
+
+INSERT INTO ops.sessions(
+  id,user_id,session_token_hash,auth_time,step_up_at,expires_at,csrf_token_hash
+)
+VALUES
+  ('d6e00000-0000-4000-8000-000000000021',
+   'd6e00000-0000-4000-8000-000000000001',
+   pg_temp.r6d_control_publication_sha256('publisher-session'),
+   clock_timestamp()-interval '1 minute',clock_timestamp(),
+   clock_timestamp()+interval '30 minutes',repeat('a',64)),
+  ('d6e00000-0000-4000-8000-000000000022',
+   'd6e00000-0000-4000-8000-000000000002',
+   pg_temp.r6d_control_publication_sha256('editor-session'),
+   clock_timestamp()-interval '1 minute',clock_timestamp(),
+   clock_timestamp()+interval '30 minutes',repeat('b',64)),
+  ('d6e00000-0000-4000-8000-000000000023',
+   'd6e00000-0000-4000-8000-000000000003',
+   pg_temp.r6d_control_publication_sha256('legal-session'),
+   clock_timestamp()-interval '1 minute',clock_timestamp(),
+   clock_timestamp()+interval '30 minutes',repeat('c',64));
+
+INSERT INTO editorial.cases(
+  id,public_slug,title,investigation_state,publication_state,
+  legal_review_required,version
+)
+VALUES(
+  'd6e00000-0000-4000-8000-000000000101','r6d-control-publication',
+  'R6d control publication','READY_TO_PUBLISH','NEVER_PUBLISHED',true,1
+);
+
+INSERT INTO editorial.review_snapshots(
+  id,case_id,case_version,snapshot_sha256,snapshot_payload,
+  automated_gate_results,unresolved_blockers,created_by
+)
+VALUES(
+  'd6e00000-0000-4000-8000-000000000102',
+  'd6e00000-0000-4000-8000-000000000101',1,repeat('a',64),
+  '{"fixture":"R6D_CONTROL_PUBLICATION"}',
+  '{"namedPersonGate":"PENDING"}','[]',
+  'd6e00000-0000-4000-8000-000000000001'
+);
+
+UPDATE editorial.cases
+SET current_review_snapshot_id='d6e00000-0000-4000-8000-000000000102'
+WHERE id='d6e00000-0000-4000-8000-000000000101';
+
+INSERT INTO editorial.review_assignments(
+  id,case_id,review_snapshot_id,reviewer_id,status,assigned_by,
+  assigned_at,started_at,due_at,version
+)
+VALUES
+  ('d6e00000-0000-4000-8000-000000000111',
+   'd6e00000-0000-4000-8000-000000000101',
+   'd6e00000-0000-4000-8000-000000000102',
+   'd6e00000-0000-4000-8000-000000000002','IN_PROGRESS',
+   'd6e00000-0000-4000-8000-000000000001',clock_timestamp(),
+   clock_timestamp(),clock_timestamp()+interval '1 hour',1),
+  ('d6e00000-0000-4000-8000-000000000112',
+   'd6e00000-0000-4000-8000-000000000101',
+   'd6e00000-0000-4000-8000-000000000102',
+   'd6e00000-0000-4000-8000-000000000003','IN_PROGRESS',
+   'd6e00000-0000-4000-8000-000000000001',clock_timestamp(),
+   clock_timestamp(),clock_timestamp()+interval '1 hour',1);
+
+INSERT INTO ops.step_up_authorizations(
+  id,session_id,action_digest,idempotency_key_sha256,
+  authorization_token_hash,expires_at,assertion_issue_count,last_issued_at
+)
+VALUES
+  ('d6e00000-0000-4000-8000-000000000121',
+   'd6e00000-0000-4000-8000-000000000022',repeat('1',64),repeat('2',64),
+   pg_temp.r6d_control_publication_sha256('editor-step-up-token'),
+   transaction_timestamp()+interval '4 minutes',1,
+   transaction_timestamp()-interval '1 second'),
+  ('d6e00000-0000-4000-8000-000000000122',
+   'd6e00000-0000-4000-8000-000000000023',repeat('3',64),repeat('4',64),
+   pg_temp.r6d_control_publication_sha256('legal-step-up-token'),
+   transaction_timestamp()+interval '4 minutes',1,
+   transaction_timestamp()-interval '1 second'),
+  ('d6e00000-0000-4000-8000-000000000123',
+   'd6e00000-0000-4000-8000-000000000021',repeat('c',64),repeat('b',64),
+   pg_temp.r6d_control_publication_sha256('publish-step-up-token'),
+   transaction_timestamp()+interval '4 minutes',1,
+   transaction_timestamp()-interval '1 second');
+
+DO $r6d_publication_owner_flow$
+DECLARE
+  v_payload jsonb:=jsonb_build_object(
+    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
+    'publicationState','PUBLISHED_ANOMALY',
+    'title','R6d 자연인 검토 표면',
+    'summary','대표 가나다라는 자연인 실명 검토 표면',
+    'nonConclusion','이 기록은 위법 또는 부패의 확정이 아닙니다.',
+    'claims',jsonb_build_array(jsonb_build_object(
+      'id','d6e00000-0000-4000-8000-000000000201',
+      'text','계약 자료 비교','limitations',jsonb_build_array('초기 자료'),
+      'evidenceIds',jsonb_build_array(
+        'd6e00000-0000-4000-8000-000000000202'
+      ),'responseIds','[]'::jsonb
+    )),
+    'evidence',jsonb_build_array(jsonb_build_object(
+      'id','d6e00000-0000-4000-8000-000000000202',
+      'title','공식 계약서','publicExcerpt','계약 범위 확인'
+    )),'responses','[]'::jsonb
+  );
+  v_scan jsonb;
+  v_preview_request jsonb;
+  v_preview_result jsonb;
+  v_replay jsonb;
+  v_editorial_request jsonb;
+  v_editorial_result jsonb;
+  v_override jsonb;
+  v_override_request jsonb;
+  v_override_result jsonb;
+  v_legal_request jsonb;
+  v_legal_result jsonb;
+  v_publish_request jsonb;
+  v_publish_result jsonb;
+  v_state_before char(64);
+  v_outbox_before bigint;
+  v_source_sha char(64):=
+    pg_temp.r6d_control_publication_sha256('official-source');
+  v_locator constant text:='https://example.invalid/official-disposition';
+BEGIN
+  SELECT jsonb_build_object(
+    'rulesetVersion',policy_payload->>'scannerRulesetVersion',
+    'rulesetSha256',policy_payload->>'scannerRulesetSha256',
+    'publicTextSha256',btrim(
+      editorial.r6d_public_text_sha256_v1(v_payload)
+    ),
+    'registeredNameSetSha256',
+      btrim(pg_temp.r6d_control_registered_person_set_sha256()),
+    'findings',jsonb_build_array(jsonb_build_object(
+      'ordinal',0,'detectorKind','TITLE_ADJACENT_KOREAN_NAME',
+      'jsonPointer','/summary','startUtf16',3,'endUtf16',7,
+      'matchedTextSha256',encode(extensions.digest(convert_to(
+        editorial.r6d_utf16_slice_v1(
+          editorial.r6d_json_pointer_text_v1(v_payload,'/summary'),3,7
+        ),'UTF8'
+      ),'sha256'),'hex'),
+      'personNodeId',NULL,'topologyDigest',NULL,
+      'contextId',NULL,'personNameDigest',NULL
+    ))
+  ) INTO STRICT v_scan
+  FROM editorial.named_person_publication_policies
+  WHERE policy_version='r6d-named-person-publication-v1' AND active;
+
+  v_preview_request:=jsonb_build_object(
+    'previewId','d6e00000-0000-4000-8000-000000000103',
+    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
+    'expectedVersion',1,'publicationState','PUBLISHED_ANOMALY',
+    'locale','ko-KR','publicPayload',v_payload,
+    'publicPayloadSha256',encode(extensions.digest(
+      ops.canonical_jsonb_v1(v_payload),'sha256'),'hex'),
+    'scan',v_scan,'legalOverride',NULL,
+    '_actorId','d6e00000-0000-4000-8000-000000000001',
+    '_actorAssertionJti','d6e00000-0000-4000-8000-000000000131',
+    '_actorAssuranceLevel','ACTIVE_SESSION',
+    '_actorEffectiveCapability','publication.preview',
+    '_actorActionDigest',repeat('9',64),
+    '_actorStepUpAuthorizationId',NULL,
+    '_actorIdempotencyKeySha256',repeat('a',64),
+    '_actorRequestKeySha256',repeat('a',64),
+    '_requestId','d6e00000-0000-4000-8000-000000000132',
+    '_idempotencyKeySha256',repeat('a',64),
+    '_requestSha256',repeat('b',64)
+  );
+  v_state_before:=pg_temp.r6d_control_publication_state_sha256();
+  BEGIN
+    PERFORM editorial.preview_publication_guarded_v2(
+      v_preview_request||jsonb_build_object(
+        'scan',jsonb_set(
+          v_scan,'{findings,0,jsonPointer}',to_jsonb('/title'::text)
+        )
+      )
+    );
+    RAISE EXCEPTION 'r6d_named_person_finding_location_tamper_accepted';
+  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+  END;
+  BEGIN
+    PERFORM editorial.preview_publication_guarded_v2(
+      v_preview_request||jsonb_build_object(
+        'scan',jsonb_set(
+          v_scan,'{findings,0,detectorKind}',
+          to_jsonb('REGISTERED_PERSON_EXACT'::text)
+        )
+      )
+    );
+    RAISE EXCEPTION 'r6d_named_person_finding_basis_tamper_accepted';
+  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+  END;
+  BEGIN
+    PERFORM editorial.preview_publication_guarded_v2(
+      v_preview_request||jsonb_build_object(
+        'scan',jsonb_set(
+          v_scan,'{rulesetVersion}',to_jsonb('unknown-ruleset'::text)
+        )
+      )
+    );
+    RAISE EXCEPTION 'r6d_named_person_ruleset_tamper_accepted';
+  EXCEPTION WHEN SQLSTATE '23514' THEN NULL;
+  END;
+  IF pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_named_person_scan_tamper_not_zero_write';
+  END IF;
+  SELECT count(*) INTO v_outbox_before FROM ops.outbox;
+  v_preview_result:=editorial.preview_publication_guarded_v2(
+    v_preview_request
+  );
+  IF v_preview_result->>'status'<>'BLOCKED'
+     OR v_preview_result->>'legalReviewRequired'<>'true'
+     OR v_preview_result->'outboxEventIds'<>'[]'::jsonb
+     OR (SELECT count(*) FROM ops.outbox)<>v_outbox_before
+     OR NOT EXISTS(
+       SELECT 1
+       FROM editorial.named_person_publication_assessments AS assessment
+       WHERE assessment.assessment_id=
+         (v_preview_result->>'assessmentId')::uuid
+         AND assessment.outcome='BLOCKED' AND assessment.finding_count=1
+     )
+     OR NOT EXISTS(
+       SELECT 1
+       FROM editorial.publication_preview_owner_receipts_v2 AS receipt
+       WHERE receipt.preview_id=(v_preview_result->>'previewId')::uuid
+         AND btrim(receipt.receipt_digest)=
+           v_preview_result->>'receiptDigest'
+         AND receipt.receipt_digest=encode(
+           extensions.digest(receipt.receipt_canonical,'sha256'),'hex'
+         )
+     ) THEN
+    RAISE EXCEPTION 'r6d_named_person_preview_hard_block_invalid';
+  END IF;
+  v_state_before:=pg_temp.r6d_control_publication_state_sha256();
+  v_replay:=editorial.preview_publication_guarded_v2(v_preview_request);
+  IF v_replay->>'replayed'<>'true'
+     OR v_replay->>'receiptDigest'<>v_preview_result->>'receiptDigest'
+     OR pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_preview_exact_replay_not_zero_write';
+  END IF;
+  BEGIN
+    PERFORM editorial.preview_publication_guarded_v2(
+      v_preview_request||jsonb_build_object('_requestSha256',repeat('c',64))
+    );
+    RAISE EXCEPTION 'r6d_preview_divergent_replay_accepted';
+  EXCEPTION WHEN SQLSTATE '40001' THEN NULL;
+  END;
+  IF pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_preview_divergent_replay_not_zero_write';
+  END IF;
+
+  v_editorial_request:=jsonb_build_object(
+    'decisionId','d6e00000-0000-4000-8000-000000000141',
+    'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
+    'stage','EDITORIAL','decision','APPROVE','reason','fixture approve',
+    'criteria','{}'::jsonb,
+    'reviewerIndependence',jsonb_build_object(
+      'independent',true,
+      'snapshotCreatedBy','d6e00000-0000-4000-8000-000000000001',
+      'reviewer','d6e00000-0000-4000-8000-000000000002'
+    ),
+    'reauthContextHash',repeat('5',64),
+    'referencedEditorialDecisionId',NULL,
+    '_actorId','d6e00000-0000-4000-8000-000000000002',
+    '_actorAssertionJti','d6e00000-0000-4000-8000-000000000142',
+    '_actorAssuranceLevel','STEP_UP',
+    '_actorEffectiveCapability','review.editorial',
+    '_actorActionDigest',repeat('1',64),
+    '_actorStepUpAuthorizationId','d6e00000-0000-4000-8000-000000000121',
+    '_actorIdempotencyKeySha256',repeat('2',64),
+    '_actorRequestKeySha256',repeat('2',64),
+    '_requestId','d6e00000-0000-4000-8000-000000000143',
+    '_idempotencyKeySha256',repeat('2',64),
+    '_requestSha256',repeat('6',64)
+  );
+  v_editorial_result:=editorial.record_named_person_review_stage_v1(
+    v_editorial_request
+  );
+  IF v_editorial_result->>'replayed'<>'false'
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.named_person_review_stage_receipts_v1
+       WHERE decision_id='d6e00000-0000-4000-8000-000000000141'
+         AND review_stage='EDITORIAL' AND decision='APPROVE'
+         AND assurance_level='STEP_UP'
+         AND effective_capability='review.editorial'
+     ) THEN
+    RAISE EXCEPTION 'r6d_editorial_stage_owner_invalid';
+  END IF;
+
+  v_override:=jsonb_build_object(
+    'receiptVersion','named-individual-legal-override-v1',
+    'publicTextSha256',v_scan->>'publicTextSha256',
+    'rulesetVersion',v_scan->>'rulesetVersion',
+    'reasonCode','OFFICIAL_DISPOSITION_QUOTE',
+    'officialSourceLocator',v_locator,
+    'officialSourceSha256',btrim(v_source_sha),
+    'legalReviewerId','d6e00000-0000-4000-8000-000000000003',
+    'receiptSha256',editorial.named_person_legal_override_digest_v1(
+      v_scan->>'publicTextSha256',v_scan->>'rulesetVersion',
+      'OFFICIAL_DISPOSITION_QUOTE',v_locator,btrim(v_source_sha),
+      'd6e00000-0000-4000-8000-000000000003'
+    ),
+    'editorialReviewDecisionId',
+      'd6e00000-0000-4000-8000-000000000141'
+  );
+  v_override_request:=jsonb_build_object(
+    'assessmentId',v_preview_result->>'assessmentId',
+    'legalOverride',v_override,
+    '_actorId','d6e00000-0000-4000-8000-000000000003',
+    '_actorAssertionJti','d6e00000-0000-4000-8000-000000000145',
+    '_actorAssuranceLevel','STEP_UP',
+    '_actorEffectiveCapability','review.legal',
+    '_actorActionDigest',repeat('3',64),
+    '_actorStepUpAuthorizationId','d6e00000-0000-4000-8000-000000000122',
+    '_actorIdempotencyKeySha256',repeat('4',64),
+    '_actorRequestKeySha256',repeat('4',64),
+    '_requestId','d6e00000-0000-4000-8000-000000000146',
+    '_idempotencyKeySha256',repeat('4',64),
+    '_requestSha256',repeat('8',64)
+  );
+  v_override_result:=editorial.record_named_person_legal_override_v1(
+    v_override_request
+  );
+  IF v_override_result->>'replayed'<>'false'
+     OR v_override_result->>'overrideId' IS NULL
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.named_person_legal_overrides AS legal_override
+       WHERE legal_override.override_id=
+         (v_override_result->>'overrideId')::uuid
+         AND legal_override.receipt_digest=
+           (v_override_result->>'overrideReceiptDigest')::char(64)
+         AND legal_override.override_digest=encode(
+           extensions.digest(legal_override.override_canonical,'sha256'),'hex'
+         )
+     ) THEN
+    RAISE EXCEPTION 'r6d_exact_legal_override_invalid';
+  END IF;
+  v_state_before:=pg_temp.r6d_control_publication_state_sha256();
+  v_replay:=editorial.record_named_person_legal_override_v1(
+    v_override_request
+  );
+  IF v_replay->>'replayed'<>'true'
+     OR v_replay->>'overrideReceiptDigest'<>
+       v_override_result->>'overrideReceiptDigest'
+     OR pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_override_exact_replay_not_zero_write';
+  END IF;
+  BEGIN
+    PERFORM editorial.record_named_person_legal_override_v1(
+      v_override_request||jsonb_build_object(
+        '_requestSha256',repeat('9',64)
+      )
+    );
+    RAISE EXCEPTION 'r6d_override_divergent_replay_accepted';
+  EXCEPTION WHEN SQLSTATE '40001' THEN NULL;
+  END;
+  IF pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_override_divergent_replay_not_zero_write';
+  END IF;
+
+  v_legal_request:=jsonb_build_object(
+    'decisionId','d6e00000-0000-4000-8000-000000000147',
+    'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
+    'stage','LEGAL','decision','APPROVE','reason','fixture legal approve',
+    'criteria',jsonb_build_object('namedIndividualOverride',
+      jsonb_build_object(
+        'publicTextSha256',v_override->>'publicTextSha256',
+        'reasonCode',v_override->>'reasonCode',
+        'officialSourceLocator',v_override->>'officialSourceLocator',
+        'officialSourceSha256',v_override->>'officialSourceSha256',
+        'editorialReviewDecisionId',v_override->>'editorialReviewDecisionId'
+      )),
+    'reviewerIndependence',jsonb_build_object(
+      'independent',true,
+      'snapshotCreatedBy','d6e00000-0000-4000-8000-000000000001',
+      'reviewer','d6e00000-0000-4000-8000-000000000003'
+    ),
+    'reauthContextHash',repeat('e',64),
+    'referencedEditorialDecisionId',
+      'd6e00000-0000-4000-8000-000000000141',
+    '_actorId','d6e00000-0000-4000-8000-000000000003',
+    '_actorAssertionJti','d6e00000-0000-4000-8000-000000000145',
+    '_actorAssuranceLevel','STEP_UP',
+    '_actorEffectiveCapability','review.legal',
+    '_actorActionDigest',repeat('3',64),
+    '_actorStepUpAuthorizationId','d6e00000-0000-4000-8000-000000000122',
+    '_actorIdempotencyKeySha256',repeat('4',64),
+    '_actorRequestKeySha256',repeat('4',64),
+    '_requestId','d6e00000-0000-4000-8000-000000000146',
+    '_idempotencyKeySha256',repeat('4',64),
+    '_requestSha256',repeat('8',64)
+  );
+  v_legal_result:=editorial.record_named_person_review_stage_v1(
+    v_legal_request
+  );
+  IF v_legal_result->>'replayed'<>'false'
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.named_person_review_stage_receipts_v1
+       WHERE decision_id='d6e00000-0000-4000-8000-000000000147'
+         AND review_stage='LEGAL' AND decision='APPROVE'
+         AND referenced_editorial_decision_id=
+           'd6e00000-0000-4000-8000-000000000141'
+         AND named_person_override_id=
+           (v_override_result->>'overrideId')::uuid
+     ) THEN
+    RAISE EXCEPTION 'r6d_legal_stage_owner_invalid';
+  END IF;
+
+  v_publish_request:=jsonb_build_object(
+    'mode','PUBLISH',
+    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
+    'expectedVersion',1,
+    'previewHash',v_preview_result->>'previewSha256',
+    'reason','R6d guarded publication runtime assertion',
+    'publicPayloadSha256',v_preview_result->>'previewSha256',
+    'scan',v_scan,
+    '_actorId','d6e00000-0000-4000-8000-000000000001',
+    '_actorAssertionJti','d6e00000-0000-4000-8000-000000000161',
+    '_actorAssuranceLevel','STEP_UP',
+    '_actorEffectiveCapability','publication.publish',
+    '_actorActionDigest',repeat('c',64),
+    '_actorStepUpAuthorizationId','d6e00000-0000-4000-8000-000000000123',
+    '_actorIdempotencyKeySha256',repeat('b',64),
+    '_actorRequestKeySha256',repeat('b',64),
+    '_requestId','d6e00000-0000-4000-8000-000000000162',
+    '_idempotencyKeySha256',repeat('b',64),
+    '_requestSha256',
+      pg_temp.r6d_control_publication_sha256('publish-request')
+  );
+  v_publish_result:=editorial.publish_guarded_revision_v2(
+    v_publish_request
+  );
+  IF v_publish_result->>'replayed'<>'false'
+     OR v_publish_result->>'publicationState'<>'PUBLISHED_ANOMALY'
+     OR jsonb_array_length(v_publish_result->'outboxEventIds')<>3
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.cases
+       WHERE id='d6e00000-0000-4000-8000-000000000101'
+         AND version=2 AND publication_state='PUBLISHED_ANOMALY'
+         AND current_publication_revision=1
+     )
+     OR NOT EXISTS(
+       SELECT 1
+       FROM editorial.publication_revision_owner_receipts_v2 AS receipt
+       WHERE receipt.receipt_digest=
+         (v_publish_result->>'receiptDigest')::char(64)
+         AND receipt.mode='PUBLISH'
+         AND receipt.receipt_digest=encode(
+           extensions.digest(receipt.receipt_canonical,'sha256'),'hex'
+         )
+     ) THEN
+    RAISE EXCEPTION 'r6d_named_person_override_publish_invalid';
+  END IF;
+  v_state_before:=pg_temp.r6d_control_publication_state_sha256();
+  v_replay:=editorial.publish_guarded_revision_v2(v_publish_request);
+  IF v_replay->>'replayed'<>'true'
+     OR v_replay->>'receiptDigest'<>v_publish_result->>'receiptDigest'
+     OR v_replay->'outboxEventIds'<>v_publish_result->'outboxEventIds'
+     OR pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_publish_exact_replay_not_zero_write';
+  END IF;
+  BEGIN
+    PERFORM editorial.publish_guarded_revision_v2(
+      v_publish_request||jsonb_build_object(
+        '_requestSha256',
+          pg_temp.r6d_control_publication_sha256('publish-divergent')
+      )
+    );
+    RAISE EXCEPTION 'r6d_publish_divergent_replay_accepted';
+  EXCEPTION WHEN SQLSTATE '40001' THEN NULL;
+  END;
+  IF pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_publish_divergent_replay_not_zero_write';
+  END IF;
+END
+$r6d_publication_owner_flow$;
+
+-- A correction cannot reach its terminal publication fields without the exact
+-- CORRECTION owner receipt.  This is a direct database-guard probe, not a
+-- synthetic receipt seed.
+INSERT INTO editorial.corrections(
+  id,case_id,source_revision,summary,reason,affected_claim_ids,status,
+  assigned_user_id,version,created_by,replacement_content,priority
+)
+VALUES(
+  'd6e00000-0000-4000-8000-000000000401',
+  'd6e00000-0000-4000-8000-000000000101',1,
+  'R6d guarded correction','승인 전 정정',
+  jsonb_build_array('d6e00000-0000-4000-8000-000000000201'),'REVIEW',
+  'd6e00000-0000-4000-8000-000000000002',1,
+  'd6e00000-0000-4000-8000-000000000001',
+  jsonb_build_object(
+    'summary','정정된 계약 자료',
+    'claimReplacements',jsonb_build_array(jsonb_build_object(
+      'claimId','d6e00000-0000-4000-8000-000000000201',
+      'replacementText','정정된 계약 범위',
+      'evidenceIds',jsonb_build_array(
+        'd6e00000-0000-4000-8000-000000000202'
+      ),'responseIds','[]'::jsonb,
+      'limitations',jsonb_build_array('정정 공개 범위')
+    )),
+    'limitations',jsonb_build_array('정정 공개 범위'),
+    'publicEvidenceIds',jsonb_build_array(
+      'd6e00000-0000-4000-8000-000000000202'
+    ),
+    'effectiveReason','공식 자료 대조 결과'
+  ),'NORMAL'
+);
+
+DO $r6d_correction_guard$
+DECLARE
+  v_before editorial.corrections%ROWTYPE;
+  v_state_before char(64);
+BEGIN
+  SELECT * INTO STRICT v_before FROM editorial.corrections
+  WHERE id='d6e00000-0000-4000-8000-000000000401';
+  v_state_before:=pg_temp.r6d_control_publication_state_sha256();
+  BEGIN
+    UPDATE editorial.corrections
+    SET status='PUBLISHED',resolution='RESOLVED',target_revision=2,
+        resolution_reason='unauthorized correction publication',
+        resolved_at=clock_timestamp(),version=version+1
+    WHERE id=v_before.id;
+    RAISE EXCEPTION 'r6d_correction_publication_guard_bypassed';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+  END;
+  IF (SELECT to_jsonb(current_row) FROM editorial.corrections AS current_row
+      WHERE current_row.id=v_before.id) IS DISTINCT FROM to_jsonb(v_before)
+     OR pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
+    RAISE EXCEPTION 'r6d_correction_publication_guard_not_zero_write';
+  END IF;
+END
+$r6d_correction_guard$;
+
+-- A successful correction must create its own CORRECTION assessment over the
+-- rebuilt public bytes.  PREVIEW/PUBLISH authority is never reusable here.
+INSERT INTO editorial.review_snapshots(
+  id,case_id,case_version,snapshot_sha256,snapshot_payload,
+  automated_gate_results,unresolved_blockers,created_by
+)
+VALUES(
+  'd6e00000-0000-4000-8000-000000000402',
+  'd6e00000-0000-4000-8000-000000000101',2,repeat('d',64),
+  '{"fixture":"R6D_CONTROL_CORRECTION"}',
+  '{"namedPersonGate":"PENDING"}','[]',
+  'd6e00000-0000-4000-8000-000000000001'
+);
+UPDATE editorial.cases
+SET current_review_snapshot_id='d6e00000-0000-4000-8000-000000000402'
+WHERE id='d6e00000-0000-4000-8000-000000000101' AND version=2;
+INSERT INTO editorial.review_assignments(
+  id,case_id,review_snapshot_id,reviewer_id,status,assigned_by,
+  assigned_at,started_at,due_at,version
+)
+VALUES(
+  'd6e00000-0000-4000-8000-000000000403',
+  'd6e00000-0000-4000-8000-000000000101',
+  'd6e00000-0000-4000-8000-000000000402',
+  'd6e00000-0000-4000-8000-000000000002','IN_PROGRESS',
+  'd6e00000-0000-4000-8000-000000000001',clock_timestamp(),
+  clock_timestamp(),clock_timestamp()+interval '1 hour',1
+);
+INSERT INTO ops.step_up_authorizations(
+  id,session_id,action_digest,idempotency_key_sha256,
+  authorization_token_hash,expires_at,assertion_issue_count,last_issued_at
+)
+VALUES(
+  'd6e00000-0000-4000-8000-000000000404',
+  'd6e00000-0000-4000-8000-000000000022',repeat('6',64),repeat('7',64),
+  pg_temp.r6d_control_publication_sha256('correction-review-step-up'),
+  transaction_timestamp()+interval '4 minutes',1,
+  transaction_timestamp()-interval '1 second'
+);
+
+DO $r6d_correction_distinct_assessment$
+DECLARE
+  v_review_result jsonb;
+  v_corrected_payload jsonb;
+  v_scan jsonb;
+  v_request jsonb;
+  v_result jsonb;
+  v_publish_assessment uuid;
+BEGIN
+  v_review_result:=editorial.record_named_person_review_stage_v1(
+    jsonb_build_object(
+      'decisionId','d6e00000-0000-4000-8000-000000000405',
+      'reviewSnapshotId','d6e00000-0000-4000-8000-000000000402',
+      'stage','EDITORIAL','decision','APPROVE',
+      'reason','fixture correction approve','criteria','{}'::jsonb,
+      'reviewerIndependence',jsonb_build_object(
+        'independent',true,
+        'snapshotCreatedBy','d6e00000-0000-4000-8000-000000000001',
+        'reviewer','d6e00000-0000-4000-8000-000000000002'
+      ),
+      'reauthContextHash',repeat('f',64),
+      'referencedEditorialDecisionId',NULL,
+      '_actorId','d6e00000-0000-4000-8000-000000000002',
+      '_actorAssertionJti','d6e00000-0000-4000-8000-000000000406',
+      '_actorAssuranceLevel','STEP_UP',
+      '_actorEffectiveCapability','review.editorial',
+      '_actorActionDigest',repeat('6',64),
+      '_actorStepUpAuthorizationId','d6e00000-0000-4000-8000-000000000404',
+      '_actorIdempotencyKeySha256',repeat('7',64),
+      '_actorRequestKeySha256',repeat('7',64),
+      '_requestId','d6e00000-0000-4000-8000-000000000407',
+      '_idempotencyKeySha256',repeat('7',64),
+      '_requestSha256',repeat('8',64)
+    )
+  );
+  IF v_review_result->>'replayed'<>'false' THEN
+    RAISE EXCEPTION 'r6d_correction_editorial_stage_invalid';
+  END IF;
+  v_corrected_payload:=editorial.build_corrected_publication_payload_v2(
+    'd6e00000-0000-4000-8000-000000000401',1,'정정 승인'
+  );
+  SELECT jsonb_build_object(
+    'rulesetVersion',policy_payload->>'scannerRulesetVersion',
+    'rulesetSha256',policy_payload->>'scannerRulesetSha256',
+    'publicTextSha256',btrim(
+      editorial.r6d_public_text_sha256_v1(v_corrected_payload)
+    ),
+    'registeredNameSetSha256',
+      btrim(pg_temp.r6d_control_registered_person_set_sha256()),
+    'findings','[]'::jsonb
+  ) INTO STRICT v_scan
+  FROM editorial.named_person_publication_policies
+  WHERE policy_version='r6d-named-person-publication-v1' AND active;
+  v_request:=jsonb_build_object(
+    'mode','CORRECTION',
+    'correctionId','d6e00000-0000-4000-8000-000000000401',
+    'resolution','RESOLVED','reason','정정 승인','expectedVersion',1,
+    'publicPayloadSha256',encode(extensions.digest(
+      ops.canonical_jsonb_v1(v_corrected_payload),'sha256'),'hex'),
+    'scan',v_scan,
+    '_actorId','d6e00000-0000-4000-8000-000000000001',
+    '_actorAssertionJti','d6e00000-0000-4000-8000-000000000408',
+    '_actorAssuranceLevel','RECENT_SESSION',
+    '_actorEffectiveCapability','publication.correct',
+    '_actorActionDigest',repeat('9',64),
+    '_actorStepUpAuthorizationId',NULL,
+    '_actorIdempotencyKeySha256',repeat('e',64),
+    '_actorRequestKeySha256',repeat('e',64),
+    '_requestId','d6e00000-0000-4000-8000-000000000409',
+    '_idempotencyKeySha256',repeat('e',64),
+    '_requestSha256',
+      pg_temp.r6d_control_publication_sha256('correction-request')
+  );
+  SELECT assessment_id INTO STRICT v_publish_assessment
+  FROM editorial.publication_revision_owner_receipts_v2
+  WHERE mode='PUBLISH'
+    AND case_id='d6e00000-0000-4000-8000-000000000101';
+  v_result:=editorial.publish_guarded_revision_v2(v_request);
+  IF v_result->>'publicationState'<>'CORRECTED'
+     OR jsonb_array_length(v_result->'outboxEventIds')<>4
+     OR (v_result->>'assessmentId')::uuid=v_publish_assessment
+     OR NOT EXISTS(
+       SELECT 1
+       FROM editorial.named_person_publication_assessments AS assessment
+       WHERE assessment.assessment_id=(v_result->>'assessmentId')::uuid
+         AND assessment.guard_context='CORRECTION'
+         AND assessment.outcome='PASS' AND assessment.finding_count=0
+         AND assessment.public_text_sha256=(v_scan->>'publicTextSha256')::char(64)
+         AND NOT EXISTS(
+           SELECT 1
+           FROM editorial.named_person_publication_assessments AS earlier
+           WHERE earlier.case_id=assessment.case_id
+             AND earlier.guard_context IN ('PREVIEW','PUBLISH')
+             AND earlier.public_text_sha256=assessment.public_text_sha256
+         )
+     )
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.publication_revision_owner_receipts_v2
+       WHERE mode='CORRECTION'
+         AND correction_id='d6e00000-0000-4000-8000-000000000401'
+         AND assessment_id=(v_result->>'assessmentId')::uuid
+         AND review_snapshot_id='d6e00000-0000-4000-8000-000000000402'
+         AND source_review_snapshot_id='d6e00000-0000-4000-8000-000000000102'
+     )
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.corrections
+       WHERE id='d6e00000-0000-4000-8000-000000000401'
+         AND status='PUBLISHED' AND resolution='RESOLVED'
+         AND target_revision=2 AND version=2
+     )
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.cases
+       WHERE id='d6e00000-0000-4000-8000-000000000101'
+         AND publication_state='CORRECTED'
+         AND current_publication_revision=2 AND version=3
+     ) THEN
+    RAISE EXCEPTION 'r6d_correction_distinct_assessment_invalid';
+  END IF;
+END
+$r6d_correction_distinct_assessment$;
+
+CREATE TEMP TABLE r6d_control_publication_probe_state(
+  key text PRIMARY KEY,
+  value text NOT NULL
+) ON COMMIT DROP;
+GRANT SELECT ON r6d_control_publication_probe_state TO gurine_control_api;
+INSERT INTO r6d_control_publication_probe_state(key,value)
+VALUES(
+  'legacy-before',btrim(pg_temp.r6d_control_publication_state_sha256())
+);
+
+-- Exercise the public OID retained by the pre-R6d dispatcher.  Every retired
+-- publication operation must reject before any legacy DML.
+SET LOCAL ROLE gurine_control_api;
+DO $r6d_legacy_publication_side_doors$
+DECLARE
+  v_operation text;
+  v_message text;
+BEGIN
+  FOREACH v_operation IN ARRAY ARRAY['submitReview','publishCase'] LOOP
+    v_message:='r6d_publication_owner_required:'||v_operation;
+    BEGIN
+      PERFORM * FROM ops.apply_control_addendum_command(
+        v_operation,'{}'::jsonb,
+        'd6e00000-0000-4000-8000-000000000001',
+        'd6e00000-0000-4000-8000-000000000021',gen_random_uuid(),
+        pg_temp.r6d_control_publication_sha256('legacy-key:'||v_operation),
+        pg_temp.r6d_control_publication_sha256(
+          'legacy-request:'||v_operation
+        )
+      );
+      RAISE EXCEPTION 'r6d_legacy_side_door_accepted:%',v_operation;
+    EXCEPTION WHEN insufficient_privilege THEN
+      IF SQLERRM IS DISTINCT FROM v_message THEN RAISE; END IF;
+    END;
+  END LOOP;
+  FOREACH v_operation IN ARRAY ARRAY[
+    'createCorrectionCase','publishCorrection'
+  ] LOOP
+    v_message:='r6d_correction_publication_owner_required:'||v_operation;
+    BEGIN
+      PERFORM ops.apply_correction_publication_command_v1(
+        v_operation,'{}'::jsonb,
+        'd6e00000-0000-4000-8000-000000000001',
+        'd6e00000-0000-4000-8000-000000000021',gen_random_uuid(),
+        pg_temp.r6d_control_publication_sha256(
+          'legacy-correction-key:'||v_operation
+        ),
+        pg_temp.r6d_control_publication_sha256(
+          'legacy-correction-request:'||v_operation
+        )
+      );
+      RAISE EXCEPTION 'r6d_legacy_correction_side_door_accepted:%',v_operation;
+    EXCEPTION WHEN insufficient_privilege THEN
+      IF SQLERRM IS DISTINCT FROM v_message THEN RAISE; END IF;
+    END;
+  END LOOP;
+END
+$r6d_legacy_publication_side_doors$;
+RESET ROLE;
+
+DO $r6d_legacy_publication_zero_write$
+BEGIN
+  IF (SELECT value FROM r6d_control_publication_probe_state
+      WHERE key='legacy-before') IS DISTINCT FROM
+       btrim(pg_temp.r6d_control_publication_state_sha256()) THEN
+    RAISE EXCEPTION 'r6d_legacy_publication_side_door_not_zero_write';
+  END IF;
+END
+$r6d_legacy_publication_zero_write$;
+
+DO $r6d_publication_acl$
+DECLARE
+  v_relation text;
+  v_privilege text;
+BEGIN
+  FOREACH v_relation IN ARRAY ARRAY[
+    'editorial.review_decisions',
+    'editorial.named_person_publication_assessments',
+    'editorial.named_person_publication_findings',
+    'editorial.named_person_legal_overrides',
+    'editorial.named_person_review_stage_receipts_v1',
+    'editorial.publication_preview_owner_receipts_v2',
+    'editorial.publication_revision_owner_receipts_v2',
+    'editorial.publication_previews',
+    'editorial.publication_revisions'
+  ] LOOP
+    FOREACH v_privilege IN ARRAY ARRAY[
+      'INSERT','UPDATE','DELETE','TRUNCATE'
+    ] LOOP
+      IF has_table_privilege(
+           'gurine_control_api',v_relation,v_privilege
+         ) THEN
+        RAISE EXCEPTION 'r6d_publication_acl_open:%:%',
+          v_relation,v_privilege;
+      END IF;
+    END LOOP;
+  END LOOP;
+  IF NOT has_function_privilege(
+       'gurine_control_api',
+       'editorial.preview_publication_guarded_v2(jsonb)','EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'gurine_control_api',
+       'editorial.record_named_person_review_stage_v1(jsonb)','EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'gurine_control_api',
+       'editorial.record_named_person_legal_override_v1(jsonb)','EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'gurine_control_api',
+       'editorial.publish_guarded_revision_v2(jsonb)','EXECUTE'
+     ) THEN
+    RAISE EXCEPTION 'r6d_publication_owner_execute_acl_missing';
+  END IF;
+  IF has_function_privilege(
+       'gurine_control_api',
+       'ops.apply_signal_publication_command_legacy_v1(text,jsonb,uuid,uuid,uuid,character,character)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'gurine_control_api',
+       'ops.apply_correction_publication_command_legacy_v1(text,jsonb,uuid,uuid,uuid,character,character)',
+       'EXECUTE'
+     ) THEN
+    RAISE EXCEPTION 'r6d_retired_publication_owner_execute_acl_open';
+  END IF;
+  IF (SELECT array_agg(trigger.tgname ORDER BY trigger.tgname)
+      FROM pg_trigger AS trigger
+      WHERE trigger.tgrelid IN (
+        'editorial.publication_previews'::regclass,
+        'editorial.publication_revisions'::regclass,
+        'editorial.cases'::regclass,
+        'editorial.corrections'::regclass
+      )
+        AND NOT trigger.tgisinternal
+        AND trigger.tgname LIKE '%r6d%guard') IS DISTINCT FROM
+       ARRAY[
+         'cases_r6d_publication_guard',
+         'corrections_r6d_publication_guard',
+         'publication_previews_r6d_guard',
+         'publication_revisions_r6d_guard'
+       ]::name[] THEN
+    RAISE EXCEPTION 'r6d_publication_guard_trigger_inventory_drift';
+  END IF;
+END
+$r6d_publication_acl$;
+
+-- Permission introspection above is backed by real API-role DML attempts on
+-- the four immutable archive/receipt boundaries.
+SET LOCAL ROLE gurine_control_api;
+DO $r6d_publication_direct_dml$
+DECLARE
+  v_relation text;
+BEGIN
+  FOREACH v_relation IN ARRAY ARRAY[
+    'editorial.named_person_legal_overrides',
+    'editorial.named_person_review_stage_receipts_v1',
+    'editorial.publication_preview_owner_receipts_v2',
+    'editorial.publication_revision_owner_receipts_v2'
+  ] LOOP
+    BEGIN
+      EXECUTE format('INSERT INTO %s DEFAULT VALUES',v_relation);
+      RAISE EXCEPTION 'r6d_publication_direct_insert_accepted:%',v_relation;
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+  END LOOP;
+END
+$r6d_publication_direct_dml$;
+RESET ROLE;
+
+SET CONSTRAINTS ALL IMMEDIATE;
+DO $$
+BEGIN
+  RAISE NOTICE
+    'R6D_CONTROL_PUBLICATION: PASS scan-tamper+named-block+override+replay+side-door+distinct-correction+ACL';
+END
+$$;
+ROLLBACK;

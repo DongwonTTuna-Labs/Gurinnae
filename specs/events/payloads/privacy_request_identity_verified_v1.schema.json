@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/privacy.request_identity_verified.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "retentionRequestId",
+    "requestType",
+    "priorIdentityState",
+    "identityState",
+    "identityProofReceiptDigest",
+    "identityVerifiedAt",
+    "responsePolicyVersion",
+    "responsePolicyDigest",
+    "calendarVersionId",
+    "calendarDigest",
+    "dueAt",
+    "verificationReceiptDigest"
+  ],
+  "properties": {
+    "retentionRequestId": { "type": "string", "format": "uuid" },
+    "requestType": {
+      "type": "string",
+      "enum": ["ACCESS", "CORRECTION", "DELETION", "RESTRICTION"]
+    },
+    "priorIdentityState": { "type": "string", "const": "PENDING_VERIFICATION" },
+    "identityState": { "type": "string", "const": "VERIFIED" },
+    "identityProofReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "identityVerifiedAt": { "type": "string", "format": "date-time" },
+    "responsePolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "responsePolicyDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "calendarVersionId": { "type": "string", "format": "uuid" },
+    "calendarDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "dueAt": { "type": "string", "format": "date-time" },
+    "verificationReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

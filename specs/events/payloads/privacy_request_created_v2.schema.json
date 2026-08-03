@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/privacy.request_created.v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "retentionRequestId",
+    "requestType",
+    "subjectProofHash",
+    "jurisdiction",
+    "scopeDigest",
+    "identityState",
+    "identityVerifiedAt",
+    "dueAt",
+    "receiptDigest",
+    "commandReceiptDigest"
+  ],
+  "properties": {
+    "retentionRequestId": { "type": "string", "format": "uuid" },
+    "requestType": {
+      "type": "string",
+      "enum": ["ACCESS", "CORRECTION", "DELETION", "RESTRICTION"]
+    },
+    "subjectProofHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "jurisdiction": { "type": "string", "minLength": 1, "maxLength": 10000 },
+    "scopeDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "identityState": { "type": "string", "const": "PENDING_VERIFICATION" },
+    "identityVerifiedAt": { "type": "null" },
+    "dueAt": { "type": "null" },
+    "receiptDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "commandReceiptDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

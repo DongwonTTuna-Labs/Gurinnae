@@ -15,6 +15,11 @@ const ACTION_EXECUTION_COMPLETED_CONSUMERS: &[(&str, &str)] = &[
     ("workflow-worker", "workflow-worker"),
 ];
 const ANALYSIS_WORKER_CONSUMERS: &[(&str, &str)] = &[("analysis-worker", "analysis-worker")];
+const RETENTION_WORKER_CONSUMERS: &[(&str, &str)] = &[("retention-worker", "workflow-worker")];
+const RESPONSE_MATERIALIZED_CONSUMERS: &[(&str, &str)] = &[
+    ("submission-projector", "projection-worker"),
+    ("audit-indexer", "projection-worker"),
+];
 
 fn dataset_snapshot_consumers(
     payload: &Value,
@@ -39,6 +44,31 @@ fn dataset_snapshot_consumers(
     }
 }
 
+fn privacy_request_decision_consumers(
+    payload: &Value,
+) -> Result<&'static [(&'static str, &'static str)], &'static str> {
+    match payload.get("transition").and_then(Value::as_str) {
+        Some("APPROVE") => Ok(RETENTION_WORKER_CONSUMERS),
+        Some("START_REVIEW" | "REJECT") => Ok(&[]),
+        _ => Err(
+            "privacy.request_decision_recorded.v1 payload requires START_REVIEW, APPROVE, or REJECT transition",
+        ),
+    }
+}
+
+fn action_execution_authorization_consumers(
+    payload: &Value,
+) -> Result<&'static [(&'static str, &'static str)], &'static str> {
+    let action_kind = payload
+        .get("actionKind")
+        .and_then(Value::as_str)
+        .ok_or("action.execution_authorized.v1 payload requires a string actionKind")?;
+    match action_kind {
+        "PROVIDER_CONTROL" => Ok(PROVIDER_CONTROL_CONSUMERS),
+        _ => Ok(ACTION_EXECUTION_CONSUMERS),
+    }
+}
+
 pub(crate) fn consumers_for(
     event_type: &str,
     payload: &Value,
@@ -51,10 +81,14 @@ pub(crate) fn consumers_for(
         "source.document_stored.v1" => &[("document-extractor", "document-extractor")],
         "source.document_parsed.v1" => &[("ingest-worker", "ingest-worker")],
         "dataset.snapshot_created.v1" => return dataset_snapshot_consumers(payload),
+        "privacy.request_decision_recorded.v1" => {
+            return privacy_request_decision_consumers(payload);
+        }
         "projection.publication_access_changed.v1"
         | "projection.publication_revision_created.v1" => {
             &[("projection-worker", "projection-worker")]
         }
+        "entity.retention_anonymized.v1" => &[("public-projection-worker", "projection-worker")],
         "action.execution_completed.v1" => ACTION_EXECUTION_COMPLETED_CONSUMERS,
         "agent.run_completed.v1"
         | "attachment.correction_scan_requested.v1"
@@ -62,18 +96,14 @@ pub(crate) fn consumers_for(
         | "audit.export_requested.v1"
         | "detection.signal_created.v1"
         | "export.dataset_requested.v1"
-        | "source.schema_drift_detected.v1"
-        | "workflow.response_submitted.v1" => &[("workflow-worker", "workflow-worker")],
+        | "source.schema_drift_detected.v1" => &[("workflow-worker", "workflow-worker")],
+        "response.submitted.v2" => &[("audit-indexer", "projection-worker")],
+        "editorial.response_materialized.v2" => RESPONSE_MATERIALIZED_CONSUMERS,
+        "workflow.response_submitted.v2" => {
+            &[("response-submission-materializer", "workflow-worker")]
+        }
         "action.execution_authorized.v1" => {
-            let action_kind = payload
-                .get("actionKind")
-                .and_then(Value::as_str)
-                .ok_or("action.execution_authorized.v1 payload requires a string actionKind")?;
-            if action_kind == "PROVIDER_CONTROL" {
-                PROVIDER_CONTROL_CONSUMERS
-            } else {
-                ACTION_EXECUTION_CONSUMERS
-            }
+            return action_execution_authorization_consumers(payload);
         }
         "attachment.scan_completed.v1"
         | "intake.contact_received.v1"
@@ -82,10 +112,16 @@ pub(crate) fn consumers_for(
         | "notification.publication_created.v1"
         | "notification.response_extension_requested.v1"
         | "notification.response_request_delivery_requested.v1"
-        | "notification.response_submitted.v1"
         | "notification.subscription_verification_requested.v1"
         | "notification.user_invitation_requested.v1"
         | "projection.publication_applied.v1" => &[("notification-worker", "notification-worker")],
+        "notification.response_submitted.v2" => &[("notification-worker", "notification-worker")],
+        "privacy.request_created.v2"
+        | "privacy.request_identity_verified.v1"
+        | "privacy.request_extension_notified.v1"
+        | "privacy.request_refusal_notified.v1" => {
+            &[("notification-worker", "notification-worker")]
+        }
         "communication.intent_created.v1" => &[
             ("notification-worker", "notification-worker"),
             ("audit-indexer", "projection-worker"),
@@ -200,6 +236,97 @@ mod tests {
             consumers_for("agent.run_completed.v1", &serde_json::json!({})),
             Ok(&[("workflow-worker", "workflow-worker")][..])
         );
+    }
+
+    #[test]
+    fn response_submission_v2_events_route_to_their_declared_consumers_only() {
+        let empty_payload = serde_json::json!({});
+        assert_eq!(
+            consumers_for("response.submitted.v2", &empty_payload),
+            Ok(&[("audit-indexer", "projection-worker")][..])
+        );
+        assert_eq!(
+            consumers_for("notification.response_submitted.v2", &empty_payload),
+            Ok(&[("notification-worker", "notification-worker")][..])
+        );
+        assert_eq!(
+            consumers_for("workflow.response_submitted.v2", &empty_payload),
+            Ok(&[("response-submission-materializer", "workflow-worker")][..])
+        );
+        for retired in [
+            "response.submitted.v1",
+            "notification.response_submitted.v1",
+            "workflow.response_submitted.v1",
+        ] {
+            assert_eq!(consumers_for(retired, &empty_payload), Ok(&[][..]));
+        }
+    }
+
+    #[test]
+    fn response_materialized_v2_routes_to_both_declared_projection_consumers() {
+        let empty_payload = serde_json::json!({});
+        assert_eq!(
+            consumers_for("editorial.response_materialized.v2", &empty_payload),
+            Ok(RESPONSE_MATERIALIZED_CONSUMERS)
+        );
+        assert_eq!(
+            consumers_for("editorial.response_materialized.v1", &empty_payload),
+            Ok(&[][..])
+        );
+    }
+
+    #[test]
+    fn privacy_request_notice_events_route_only_to_notification_worker() {
+        let empty_payload = serde_json::json!({});
+        for event_type in [
+            "privacy.request_created.v2",
+            "privacy.request_identity_verified.v1",
+            "privacy.request_extension_notified.v1",
+            "privacy.request_refusal_notified.v1",
+        ] {
+            assert_eq!(
+                consumers_for(event_type, &empty_payload),
+                Ok(&[("notification-worker", "notification-worker")][..])
+            );
+        }
+    }
+
+    #[test]
+    fn entity_retention_anonymization_routes_only_to_public_projection() {
+        assert_eq!(
+            consumers_for("entity.retention_anonymized.v1", &serde_json::json!({})),
+            Ok(&[("public-projection-worker", "projection-worker")][..])
+        );
+    }
+
+    #[test]
+    fn only_approved_privacy_decisions_route_to_retention_worker() {
+        assert_eq!(
+            consumers_for(
+                "privacy.request_decision_recorded.v1",
+                &serde_json::json!({"transition":"APPROVE"}),
+            ),
+            Ok(RETENTION_WORKER_CONSUMERS)
+        );
+        for transition in ["START_REVIEW", "REJECT"] {
+            assert_eq!(
+                consumers_for(
+                    "privacy.request_decision_recorded.v1",
+                    &serde_json::json!({"transition":transition}),
+                ),
+                Ok(&[][..])
+            );
+        }
+        for payload in [
+            serde_json::json!({}),
+            serde_json::json!({"transition":"COMPLETE"}),
+            serde_json::json!({"transition":7}),
+        ] {
+            assert!(
+                consumers_for("privacy.request_decision_recorded.v1", &payload).is_err(),
+                "invalid transition must fail closed: {payload}"
+            );
+        }
     }
 
     #[test]

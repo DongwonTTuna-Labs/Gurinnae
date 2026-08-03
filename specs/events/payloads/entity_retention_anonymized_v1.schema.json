@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/entity.retention_anonymized.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entityKind",
+    "entityId",
+    "executionReceiptId",
+    "executionReceiptDigest",
+    "masterRowCount",
+    "identifierRowCount",
+    "aliasRowCount",
+    "anonymizedAt"
+  ],
+  "properties": {
+    "entityKind": { "type": "string", "enum": ["AGENCY", "SUPPLIER"] },
+    "entityId": { "type": "string", "format": "uuid" },
+    "executionReceiptId": { "type": "string", "format": "uuid" },
+    "executionReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "masterRowCount": { "type": "integer", "minimum": 1 },
+    "identifierRowCount": { "type": "integer", "minimum": 0 },
+    "aliasRowCount": { "type": "integer", "minimum": 0 },
+    "anonymizedAt": { "type": "string", "format": "date-time" }
+  }
+}

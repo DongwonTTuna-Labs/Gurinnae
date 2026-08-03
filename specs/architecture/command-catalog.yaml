@@ -1426,8 +1426,10 @@ commands:
   - CorrectionRepository::resolve
   domain_events:
   - correction.resolved.v1
+  - publication.revision_created.v1
   integration_events:
   - notification.correction_resolved.v1
+  - projection.publication_revision_created.v1
   audit_action: command.resolveCorrectionRequest
   concurrency:
     mode: OPTIMISTIC
@@ -1828,7 +1830,15 @@ commands:
   method: POST
   aggregate: reviewSnapshot
   authorization:
-    capability: decision-dependent
+    capability: payload-dependent
+    capability_policy:
+      selector: criteria.namedIndividualOverride
+      absent: review.editorial
+      present: review.legal
+      resolution: exactly-one
+      any_of_forbidden: true
+      mismatch_error: CAPABILITY_DENIED
+      assurance_composition: independent-from-decision-based-assurance
     step_up_required: true
   repository_methods:
   - ReviewRepository::submit_decision

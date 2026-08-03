@@ -308,5 +308,31 @@
     "updated_at": {
       "$ref": "common.schema.json#/$defs/timestamp"
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "legal_risk_flags": {
+            "contains": {
+              "const": "NAMED_INDIVIDUAL"
+            }
+          }
+        },
+        "required": ["legal_risk_flags"]
+      },
+      "then": {
+        "properties": {
+          "review_requirements": {
+            "properties": {
+              "legal_required": {
+                "const": true
+              }
+            },
+            "required": ["legal_required"]
+          }
+        }
+      }
+    }
+  ]
 }

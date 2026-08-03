@@ -1763,6 +1763,7 @@ dependencies = [
  "gurine-domain",
  "gurine-observability",
  "gurine-persistence-postgres",
+ "gurine-publication-policy",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -1824,6 +1825,8 @@ version = "0.1.0"
 dependencies = [
  "rust_decimal",
  "serde",
+ "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.18",
  "time",
  "uuid",
@@ -2053,6 +2056,7 @@ dependencies = [
 name = "gurine-persistence-postgres"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "gurine-agent-orchestration",
  "gurine-application",
  "gurine-auth",
@@ -2120,6 +2124,7 @@ dependencies = [
  "sha2 0.10.9",
  "thiserror 2.0.18",
  "time",
+ "unicode-normalization",
  "uuid",
 ]
 
@@ -2168,6 +2173,7 @@ dependencies = [
  "gurine-api-contracts",
  "gurine-application",
  "gurine-auth",
+ "gurine-domain",
  "gurine-object-store",
  "gurine-observability",
  "gurine-persistence-postgres",
@@ -2210,6 +2216,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]

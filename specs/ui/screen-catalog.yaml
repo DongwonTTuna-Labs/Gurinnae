@@ -891,7 +891,7 @@ screens:
     method: GET
     path: /v1/cases/{caseSlug}/reproducibility/download
     request_schema: downloadCaseReproducibilityQuery
-    response_schema: BinaryDownload
+    response_schema: CaseReproducibilityDownload
   state_profile: public-data
   special_states:
   - restricted-input
@@ -1560,7 +1560,7 @@ screens:
     method: GET
     path: /v1/contracts/download
     request_schema: downloadContractsQuery
-    response_schema: BinaryDownload
+    response_schema: PublicContractsDownload
   state_profile: public-data
   special_states:
   - filtered-empty

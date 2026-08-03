@@ -93,22 +93,21 @@ let {
 
     .evidence-landing-layout[data-screen="PUB-004"]
       :global(.projection-record) {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
     }
 
     .evidence-landing-layout[data-screen="PUB-004"]
       :global(.projection-record > div) {
       grid-template-columns: max-content minmax(0, 1fr);
-      flex: 1 1 8rem;
       gap: 0.375rem;
       padding: 0.25rem 0.375rem;
     }
 
     .evidence-landing-layout[data-screen="PUB-004"]
       :global(.projection-record > div:has(> dd > .projection-record)) {
+      grid-column: 1 / -1;
       grid-template-columns: minmax(5rem, 15%) minmax(0, 1fr);
-      flex-basis: 100%;
     }
 
     .evidence-landing-layout[data-screen="PUB-004"]

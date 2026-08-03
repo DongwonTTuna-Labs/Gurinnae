@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use actix_web::HttpRequest;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
@@ -96,18 +96,6 @@ fn dispatch_content(operation: &str) -> Result<Option<Value>, ServiceError> {
             "규칙 버전, 입력 digest, 포함·제외 cohort와 계산 한계를 함께 공개합니다.",
             &["결정적 계산", "재현 payload", "사람의 최종 판단"],
         ),
-        "getPrivacyPolicy" => content(
-            "privacy",
-            "개인정보 처리방침",
-            "제출 경로의 개인정보는 필드 단위 암호화하고 목적 달성 후 보존 정책에 따라 삭제합니다.",
-            &["최소 수집", "접근 통제", "보존 및 삭제"],
-        ),
-        "getTerms" => content(
-            "terms",
-            "이용약관",
-            "공개 자료는 출처, 시점, 한계와 함께 사용해야 하며 단독 범죄 판단 근거가 아닙니다.",
-            &["책임 있는 재사용", "자동화 요청 제한", "변경 이력"],
-        ),
         _ => return Ok(None),
     };
     Ok(Some(body))
@@ -150,7 +138,9 @@ async fn dispatch_query(
         | "searchPublicRecords"
         | "downloadPublicSearchRecords"
         | "getPublicSystemStatus"
-        | "listTransparencyReports" => dispatch_public(operation, request, state, query).await,
+        | "listTransparencyReports"
+        | "getPrivacyPolicy"
+        | "getTerms" => dispatch_public(operation, request, state, query).await,
         _ => Err(ServiceError::InvalidRequest),
     }
 }
@@ -268,6 +258,8 @@ async fn dispatch_public(
         "downloadPublicSearchRecords" => download_public_search_records(&state.pool, query).await,
         "getPublicSystemStatus" => system_status(&state.pool).await,
         "listTransparencyReports" => list_reports(&state.pool, query).await,
+        "getPrivacyPolicy" => legal_content(&state.pool, LegalDocumentKind::Privacy).await,
+        "getTerms" => legal_content(&state.pool, LegalDocumentKind::Terms).await,
         _ => Err(ServiceError::InvalidRequest),
     }
 }
@@ -472,100 +464,12 @@ fn content(id: &str, title: &str, summary: &str, sections: &[&str]) -> Value {
     })
 }
 
-struct ContractSummaryRow {
-    id: Uuid,
-    contract_number: Option<String>,
-    title: String,
-    agency_id: Option<Uuid>,
-    supplier_id: Option<Uuid>,
-    status: String,
-    signed_at: Option<Date>,
-    amount: Option<Value>,
-    agency_name: Option<String>,
-    supplier_name: Option<String>,
-}
-
-fn contract_summary(row: ContractSummaryRow) -> Result<Value, ServiceError> {
-    let ContractSummaryRow {
-        id,
-        contract_number,
-        title,
-        agency_id,
-        supplier_id,
-        status,
-        signed_at,
-        amount,
-        agency_name,
-        supplier_name,
-    } = row;
-    let mut value = json!({
-        "id": id,
-        "contractNumber": contract_number.unwrap_or_default(),
-        "title": title,
-        "agency": entity_ref(agency_id, agency_name, "AGENCY"),
-        "status": status,
-        "href": format!("/contracts/{id}"),
-    });
-    if let Some(supplier) = supplier_id {
-        value["supplier"] = entity_ref(Some(supplier), supplier_name, "SUPPLIER");
-    }
-    if let Some(date) = signed_at {
-        value["signedAt"] = Value::String(date.to_string());
-    }
-    if let Some(amount) = amount {
-        value["amount"] = amount;
-    }
-    Ok(value)
-}
-
-struct RuleRow {
-    rule_id: String,
-    name: String,
-    active_version: String,
-    public_description: String,
-    requirements: Value,
-    exclusions: Value,
-    limitations: Value,
-    updated_at: OffsetDateTime,
-}
-
-struct SourceRow {
-    source_id: String,
-    display_name: String,
-    status: String,
-    last_success_at: Option<OffsetDateTime>,
-    lag_seconds: Option<i64>,
-    affected_scope: Value,
-    public_message: Option<String>,
-    updated_at: OffsetDateTime,
-}
-
-struct SourceDetailRow {
-    display_name: String,
-    status: String,
-    updated_at: OffsetDateTime,
-    official_url: Option<String>,
-}
-
-fn entity_ref(id: Option<Uuid>, name: Option<String>, kind: &str) -> Value {
-    match id {
-        Some(id) => json!({
-            "id": id,
-            "name": name.unwrap_or_else(|| "공개 식별자 미상".to_owned()),
-            "entityType": kind,
-            "href": if kind == "AGENCY" { format!("/agencies/{id}") } else { format!("/suppliers/{id}") },
-        }),
-        None => json!({
-            "id": "unresolved",
-            "name": name.unwrap_or_else(|| "미확인".to_owned()),
-            "entityType": kind,
-            "href": "",
-        }),
-    }
-}
-
+include!("public_rows.rs");
+include!("page_notice_seo.rs");
 include!("entities.rs");
 include!("cases.rs");
 include!("public_funding.rs");
+include!("legal_content.rs");
 include!("public_tail.rs");
+include!("public_search.rs");
 include!("exports.rs");

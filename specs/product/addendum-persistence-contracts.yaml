@@ -3,11 +3,11 @@ specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 counts:
   base_tables: 107
-  additive_tables: 149
-  final_active_tables: 256
-  migrations: 35
+  additive_tables: 195
+  final_active_tables: 302
+  migrations: 38
 rules:
-- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0037, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0040, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
 - Runtime roles never own schema objects and receive only declared table/view/function grants.
 - Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
 - Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
@@ -178,6 +178,55 @@ migration_ownership:
   - ops.hypothesis_recursion_transitions
   - ops.hypothesis_recursion_receipts
   - ops.hypothesis_recursion_budget_ledger
+  0038_r6d_legal_hardening.sql:
+  - ops.r6d_record_class_catalog
+  - core.relationship_graph_person_nodes_v3
+  - core.relationship_graph_person_context_v3
+  - core.relationship_graph_person_erasure_receipts_v3
+  - editorial.named_person_publication_policies
+  - editorial.named_person_publication_assessments
+  - editorial.named_person_publication_findings
+  - editorial.named_person_legal_overrides
+  - ops.entity_retention_snapshots_v1
+  - ops.legal_hold_placement_receipts_v2
+  - editorial.response_submission_origin_receipts_v2
+  - editorial.organization_official_channel_assertions_v1
+  - editorial.organization_official_channel_revocation_receipts_v1
+  - editorial.response_organization_identity_assertions_v1
+  - editorial.response_publication_identity_receipts_v1
+  - intake.response_submission_receipts_v3
+  - editorial.response_excerpt_approval_receipts_v2
+  - ops.privacy_response_calendar_policies_v1
+  - ops.privacy_requests_v2
+  - ops.privacy_request_receipt_tokens_v2
+  - ops.privacy_request_identity_receipts_v2
+  - ops.privacy_request_extension_receipts_v2
+  - ops.privacy_request_refusal_receipts_v2
+  - ops.privacy_request_notice_receipts_v2
+  - ops.privacy_request_transition_receipts_v2
+  - editorial.named_person_review_stage_receipts_v1
+  - editorial.publication_preview_owner_receipts_v2
+  - editorial.publication_revision_owner_receipts_v2
+  - ops.r6d_person_retention_execution_receipts_v1
+  - ops.privacy_request_access_policies_v1
+  - ops.privacy_request_sealed_content_v2
+  - ops.privacy_request_sealed_content_erasure_receipts_v1
+  0039_r6d_authority_closure.sql:
+  - ops.r6d_entity_personhood_classification_receipts_v1
+  - ops.r6d_entity_material_use_closure_receipts_v1
+  - ops.r6d_entity_retention_execution_receipts_v1
+  - editorial.organization_official_channel_authority_receipts_v1
+  - ops.privacy_identity_proof_authority_receipts_v1
+  - ops.privacy_request_scope_inventories_v1
+  - ops.privacy_request_scope_inventory_items_v1
+  - ops.privacy_identity_proof_consumption_receipts_v1
+  - ops.privacy_correction_plans_v1
+  0040_r6d_privacy_authority_closure.sql:
+  - ops.privacy_correction_snapshots_v1
+  - ops.privacy_subscription_snapshots_v1
+  - ops.privacy_response_party_name_correction_plan_bindings_v1
+  - ops.privacy_response_party_name_correction_approval_bindings_v1
+  - ops.privacy_response_party_name_correction_completion_receipts_v1
 canonical_existing_relations:
 - ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
 - ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.
@@ -313,8 +362,14 @@ operation_transactions:
   getResponseAppealWorkspace: typed_query
   transitionResponseAppeal: serializable_decision
   decideResponseExtension: serializable_decision
+  classifyEntityPersonhood: serializable_decision
+  attestEntityMaterialUseClosure: serializable_decision
+  attestOrganizationOfficialChannel: serializable_decision
+  revokeOrganizationOfficialChannel: serializable_decision
+  verifyResponseOrganizationIdentity: serializable_decision
   listRetentionRequests: typed_query
   getRetentionRequest: typed_query
+  createPrivacyCorrectionPlan: serializable_decision
   transitionRetentionRequest: serializable_decision
   listRecordClassSchedules: typed_query
   requestCommunicationEndpointLink: serializable_decision
@@ -436,6 +491,7 @@ exact_persistence_registry:
       statements:
       - AUTHORIZE closed actor/session and object scope [exactly-one decision]
       - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - RESOLVE exact V2 queue projection and cursor authority [exactly-one contract; unavailable or ambiguous authority is DEPENDENCY_UNAVAILABLE with zero rows synthesized]
       - SELECT typed projection/join [declared cardinality]
       - MAP stored rows to closed response without synthesized values [declared cardinality]
       cardinality: 0..limit
@@ -664,23 +720,25 @@ exact_persistence_registry:
         assurance: ACTIVE_SESSION
         predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
       relations:
-      - ops.retention_requests
-      - ops.retention_request_decisions
+      - ops.privacy_requests_v2
+      - ops.privacy_request_transition_receipts_v2
       - ops.legal_hold_target_anchors
       - editorial.legal_holds
       - editorial.legal_hold_releases
       statements:
       - AUTHORIZE closed actor/session and object scope [exactly-one decision]
       - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - RESOLVE exact V2 queue projection and cursor authority [exactly-one contract; unavailable or ambiguous authority is DEPENDENCY_UNAVAILABLE with zero rows synthesized]
       - SELECT typed projection/join [declared cardinality]
       - MAP stored rows to closed response without synthesized values [declared cardinality]
       cardinality: 0..limit with derived hold flag
-      ordering: due_at ASC,id ASC or created_at DESC,id DESC; authenticated cursor binds filters/sort/asOf where paged
+      ordering: due_at ASC NULLS LAST,id ASC or created_at DESC,id DESC; authenticated cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
       errors:
       - INVALID_PARAMETER
       - INVALID_CURSOR
       - CAPABILITY_DENIED
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
     getRetentionRequest:
       operation_kind: QUERY
@@ -694,26 +752,51 @@ exact_persistence_registry:
         assurance: ACTIVE_SESSION
         predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
       relations:
-      - ops.retention_requests
-      - ops.retention_request_decisions
+      - ops.privacy_requests_v2
+      - ops.privacy_request_identity_receipts_v2
+      - ops.privacy_identity_proof_authority_receipts_v1
+      - ops.privacy_request_scope_inventories_v1
+      - ops.privacy_request_scope_inventory_items_v1
+      - ops.privacy_request_extension_receipts_v2
+      - ops.privacy_request_refusal_receipts_v2
+      - ops.privacy_request_notice_receipts_v2
+      - ops.privacy_request_transition_receipts_v2
+      - ops.privacy_response_calendar_policies_v1
+      - ops.business_calendar_versions
       - ops.retention_execution_receipts
       - ops.legal_hold_target_anchors
       - editorial.legal_holds
       - editorial.legal_hold_releases
       - ops.record_class_schedules
+      - intake.response_submission_receipts_v3
+      - intake.response_submissions
+      - editorial.response_submission_origin_receipts_v2
+      - editorial.responses
+      procedure: ops.read_privacy_retention_request_workspace_v2
       statements:
       - AUTHORIZE closed actor/session and object scope [exactly-one decision]
       - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - RESOLVE exact V2 workspace and immutable receipt-graph authority [exactly-one contract; unavailable or ambiguous authority is DEPENDENCY_UNAVAILABLE and historical V1 JSON is not a fallback]
+      - RESOLVE conditional RESPONSE partyName ACCESS projection [zero-or-one] :: ACCESS and CORRECTION over the exact scope item use ops.read_privacy_response_party_name_access_v1 and return the same 17-key authority projection; raw partyName is capability-gated to this internal query only
+      - RESOLVE completion tuple [all-or-none] :: completionReceiptId, completionReceiptDigest, completedResponseVersion and completedValueDigest are nonnull only for a completed exact RESPONSE /partyName correction and match the current projection version/value digest
       - SELECT typed projection/join [declared cardinality]
       - MAP stored rows to closed response without synthesized values [declared cardinality]
       cardinality: exactly-one authorized workspace or RESOURCE_NOT_FOUND
-      ordering: decision_version ASC; retention receipt completed_at DESC,execution_generation DESC,id DESC; hold/release sequence ASC; authenticated
+      ordering: decision_version ASC; notice/extension sequence ASC; legacy retention receipt completed_at DESC,execution_generation DESC,id DESC; hold/release sequence ASC; authenticated
         cursor binds filters/sort/asOf where paged
       writes: zero including idempotency, audit and outbox
+      response_contract:
+        schema: RetentionRequestWorkspaceV1
+        exact_key_count: 20
+        exact_keys: [request, identityVerificationReceiptId, identityVerificationReceiptDigest, policyVersion, policyDigest, calendarVersionId, calendarDigest, inventorySnapshotDigest, holdCoverageDigest, activeHoldIds, affectedRecordClasses, locationReceipts, decisionReceipts, completionReceiptId, completionReceiptDigest, completedResponseVersion, completedValueDigest, accessProjection, asOf, links]
+        access_projection_schema: PrivacyResponsePartyNameAccessProjectionV1
+        access_projection_exact_key_count: 17
+        public_status_exposure: forbidden
       errors:
       - INVALID_PARAMETER
       - CAPABILITY_DENIED
       - RESOURCE_NOT_FOUND
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
     listRecordClassSchedules:
       operation_kind: QUERY
@@ -754,15 +837,22 @@ exact_persistence_registry:
         predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
       relations:
       - intake.submission_sessions
-      - ops.retention_requests
-      - ops.retention_request_decisions
+      - ops.privacy_requests_v2
+      - ops.privacy_request_identity_receipts_v2
+      - ops.privacy_request_extension_receipts_v2
+      - ops.privacy_request_refusal_receipts_v2
+      - ops.privacy_request_notice_receipts_v2
+      - ops.privacy_request_transition_receipts_v2
+      procedure: ops.get_privacy_request_v2
+      response_schema: PrivacyRequestPublicStatusV2
       statements:
       - AUTHORIZE closed actor/session and object scope [exactly-one decision]
-      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
-      - SELECT typed projection/join [declared cardinality]
-      - MAP stored rows to closed response without synthesized values [declared cardinality]
-      cardinality: exactly-one PRIVACY_REQUEST_RECEIPT-scoped request or non-enumerating RESOURCE_NOT_FOUND
-      ordering: decision_version ASC; authenticated cursor binds filters/sort/asOf where paged
+      - INVOKE ops.get_privacy_request_v2 [exactly-one result] :: lock-free request-scoped projection from immutable V2 request, transition, identity, extension, refusal and notice receipts
+      - VALIDATE receipt pairs and terminal closure [exactly-one pass] :: IDs and digests are paired, notice arrays are order/cardinality equal, and terminal states have their required receipts
+      - DERIVE closed nextActionCodes [exactly-one item] :: PENDING_VERIFICATION=VERIFY_IDENTITY; RECEIVED+VERIFIED=AWAIT_REVIEW; REVIEW=AWAIT_DECISION; APPROVED=AWAIT_EXECUTION; REJECTED=REVIEW_REFUSAL_NOTICE; COMPLETED=COMPLETE
+      - MAP PrivacyRequestPublicStatusV2 [exactly-one result] :: reason code and immutable receipt references only; no raw decision, notice, appeal, identity or contact text
+      cardinality: exactly-one closed PrivacyRequestPublicStatusV2 selected only by an ACTIVE PRIVACY_REQUEST_RECEIPT session or non-enumerating RESOURCE_NOT_FOUND; one-time receipt tokens and other session kinds are rejected; missing terminal receipt closure fails closed
+      ordering: notice_sequence ASC and decision_version ASC
       writes: zero including idempotency, audit and outbox
       errors:
       - SCOPED_SESSION_REQUIRED
@@ -1682,32 +1772,339 @@ exact_persistence_registry:
       - IDEMPOTENCY_CONFLICT
       - INTERNAL_ERROR
       repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    classifyEntityPersonhood:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.classifyEntityPersonhood
+      procedure: ops.classify_r6d_entity_personhood_v1
+      service_transaction_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.control-owner-managed-single-procedure-v1
+      owner_input:
+        public_fields: [entityKind, entityId, classification, evidenceSourceLocator, expectedEntityUpdatedAt, reason]
+        server_derived_payload_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+        scalar_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+        exact_payload_key_count: 14
+        digest_rule: _actorAssertionRequestSha256 exact-compares ops.assertion_replay_guard.request_digest and is distinct from semanticRequestSha256
+      owner_relations: [ops.r6d_entity_personhood_classification_receipts_v1, ops.audit_events, ops.outbox]
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - core.agencies(id)|core.suppliers(id)
+      - ops.step_up_authorizations(id)
+      - ops.sessions(id)
+      - ops.r6d_entity_personhood_classification_receipts_v1(entity_kind,entity_id,classified_at)
+      statements:
+      - INVOKE ops.classify_r6d_entity_personhood_v1 [exactly-one result] :: six-argument owner with closed public payload and server-bound actor/session/request/idempotency values
+      - VALIDATE current entity and human evidence [exactly-one-pass] :: expected updated timestamp and public locator; independence is human-versus-automation, with no second per-command maker-reviewer actor
+      - INSERT ops.r6d_entity_personhood_classification_receipts_v1 [exactly-one] :: immutable classification and evidence locator digest
+      - INSERT audit/outbox/idempotency finalization [exactly-one each] :: redacted receipt-derived bytes
+      effect_owner: control-api.classifyEntityPersonhood
+      atomic_transition_group: gurine.command.classifyEntityPersonhood.v1
+      state_disposition: entity_personhood_classification.NONE->NATURAL_PERSON|NOT_NATURAL_PERSON_APPEND_ONLY
+      receipt: {schema: ClassifyEntityPersonhoodReceiptV1, new_success: exactly-one, exact_replay: zero-new-rows}
+      outbox: {events: [entity.personhood_classified.v1], cardinality: {entity.personhood_classified.v1: exactly-one}}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+    attestEntityMaterialUseClosure:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.attestEntityMaterialUseClosure
+      procedure: ops.attest_r6d_entity_material_use_closure_v1
+      service_transaction_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.control-owner-managed-single-procedure-v1
+      owner_input:
+        public_fields: [entityKind, entityId, personhoodReceiptId, expectedEntityUpdatedAt, reason]
+        server_derived_payload_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+        scalar_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+        exact_payload_key_count: 13
+        digest_rule: _actorAssertionRequestSha256 exact-compares ops.assertion_replay_guard.request_digest and is distinct from semanticRequestSha256
+      owner_relations: [ops.r6d_entity_personhood_classification_receipts_v1, ops.r6d_entity_material_use_closure_receipts_v1, ops.entity_retention_snapshots_v1, ops.legal_hold_placement_receipts_v2, ops.audit_events, ops.outbox]
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - core.agencies(id)|core.suppliers(id)
+      - ops.r6d_entity_personhood_classification_receipts_v1(receipt_id)
+      - contract and public-revision material-use graph in canonical order
+      - ops.entity_retention_snapshots_v1(entity_kind,entity_id)
+      - ops.legal_hold_placement_receipts_v2(affected_ids)
+      - ops.r6d_entity_material_use_closure_receipts_v1(entity_kind,entity_id,closure_at)
+      - ops.step_up_authorizations(id)
+      - ops.sessions(id)
+      statements:
+      - INVOKE ops.attest_r6d_entity_material_use_closure_v1 [exactly-one result] :: six-argument owner with closed public payload and server-bound actor/session/request/idempotency values
+      - VALIDATE current NATURAL_PERSON receipt [exactly-one] :: same entity and no inferred legacy substitute
+      - VALIDATE closure actor independence [exactly-one-pass] :: p_actor_id must differ from referenced classification receipt actor_id at the database owner; equality raises SQLSTATE 55000 r6d_entity_closure_actor_not_independent and maps to PRECONDITION_FAILED with zero writes
+      - CALCULATE closure graph [complete canonical set] :: every final contract endAt passed Asia/Seoul end-of-day and every naming publication revision superseded or retracted
+      - VALIDATE legal-hold coverage [complete canonical set] :: zero active holds; missing coverage fails closed
+      - INSERT ops.r6d_entity_material_use_closure_receipts_v1 [exactly-one] :: immutable closure and coverage bindings
+      - INSERT audit/outbox/idempotency finalization [exactly-one each] :: redacted receipt-derived bytes
+      effect_owner: control-api.attestEntityMaterialUseClosure
+      atomic_transition_group: gurine.command.attestEntityMaterialUseClosure.v1
+      state_disposition: entity_material_use.OPEN->CLOSED_APPEND_ONLY
+      receipt: {schema: AttestEntityMaterialUseClosureReceiptV1, new_success: exactly-one, exact_replay: zero-new-rows}
+      outbox: {events: [entity.material_use_closed.v1], cardinality: {entity.material_use_closed.v1: exactly-one}}
+      rejection_cardinality: {same_classifier_actor: {closure_receipt: zero, audit: zero, outbox: zero, entity_pointer_update: zero}}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, LEGAL_HOLD_ACTIVE, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+    attestOrganizationOfficialChannel:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.attestOrganizationOfficialChannel
+      procedure: editorial.attest_organization_official_channel_v1
+      service_transaction_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.control-owner-managed-single-procedure-v1
+      owner_input:
+        public_fields: [organizationKind, organizationId, verificationMethod, sourceId, expiresAt, reason, expectedAuthorityVersion]
+        server_derived_payload_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+        scalar_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+        exact_payload_key_count: 15
+        digest_rule: _actorAssertionRequestSha256 exact-compares ops.assertion_replay_guard.request_digest and is distinct from semanticRequestSha256
+      owner_relations:
+      - editorial.organization_official_channel_authority_receipts_v1
+      - editorial.organization_official_channel_assertions_v1
+      - ops.audit_events
+      - ops.outbox
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash) FOR UPDATE
+      - ops.assertion_replay_guard(assertion_type=ACTOR,jti) plain SELECT validation; no row lock
+      - editorial.organization_official_channel_authority_receipts_v1(idempotency_key_sha256) FOR SHARE and replay-only exact registry assertion FOR SHARE
+      - ops.step_up_authorizations(id) FOR UPDATE; ops.sessions and ops.users plain currentness reads
+      - editorial.organization_official_channel_assertions_v1 rows linked to sourceId ordered by assertion_id FOR SHARE
+      - advisory official-channel-source:verificationMethod:sourceId
+      - core.agencies(id,active)|core.suppliers(id) FOR SHARE
+      - 'EMAIL: verification -> subject -> endpoint -> latest link -> response request -> sent receipt FOR SHARE | DOCUMENT: evidence -> source document FOR SHARE'
+      - ops.audit_events chain head and appended row
+      - ops.outbox appended row
+      - authority receipt insert with binding-trigger revalidation
+      - registry assertion insert with authority/source/audit/outbox binding-trigger revalidation
+      statements:
+      - INVOKE editorial.attest_organization_official_channel_v1 [exactly-one result] :: six-argument owner with closed public payload and request-bound actor/session/idempotency bindings
+      - VALIDATE actor assertion then replay [exactly-one current assertion and zero-or-one exact authority/assertion pair] :: signed request digest is distinct from semantic request digest; exact completed replay requires status 201, ops.idempotency_keys.resource_type=organization_official_channel and resource_id=assertionId, then returns before STEP_UP/source locks
+      - VALIDATE STEP_UP/session then current source [exactly-one] :: source-linked registry rows are locked before the resolver advisory lock; exact EMAIL_LINK verified endpoint/domain control or VERIFIED/PUBLIC document/representation/current locator
+      - VALIDATE independent reviewer [exactly-one-pass] :: sources and represented subject cannot self-attest
+      - INSERT audit then outbox then authority receipt then registry assertion [exactly-one each] :: assertion carries authority receipt ID+digest composite FK and expiry; insert triggers revalidate every source and evidence binding
+      - SERVICE FINALIZE idempotency response [exactly-one] :: after exact owner result parse and before commit; owner does not update the row
+      effect_owner: control-api.attestOrganizationOfficialChannel
+      atomic_transition_group: gurine.command.attestOrganizationOfficialChannel.v1
+      state_disposition: organization_official_channel.NONE->ACTIVE_APPEND_ONLY
+      receipt: {schema: AttestOrganizationOfficialChannelReceiptV1, new_success: exactly-one, exact_replay: zero-new-rows}
+      audit: {relation: ops.audit_events, action: organization.official_channel.attest, new_success_rows: 1, exact_replay_rows: 0}
+      outbox: {events: [organization.official_channel_attested.v1], cardinality: {organization.official_channel_attested.v1: exactly-one}}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+    revokeOrganizationOfficialChannel:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.revokeOrganizationOfficialChannel
+      procedure: editorial.revoke_organization_official_channel_v1
+      service_transaction_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.control-owner-managed-single-procedure-v1
+      owner_input:
+        public_fields: [assertionId, reasonCode, reason]
+        server_derived_payload_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+        scalar_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+        exact_payload_key_count: 11
+        digest_rule: _actorAssertionRequestSha256 exact-compares ops.assertion_replay_guard.request_digest and is distinct from semanticRequestSha256
+      owner_relations:
+      - editorial.organization_official_channel_authority_receipts_v1
+      - editorial.organization_official_channel_assertions_v1
+      - editorial.organization_official_channel_revocation_receipts_v1
+      - ops.audit_events
+      - ops.outbox
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash) FOR UPDATE
+      - ops.assertion_replay_guard(assertion_type=ACTOR,jti) plain SELECT validation; no row lock
+      - editorial.organization_official_channel_revocation_receipts_v1(idempotency_key_sha256) FOR SHARE on replay check
+      - ops.step_up_authorizations(id) FOR UPDATE; ops.sessions and ops.users plain currentness reads
+      - editorial.organization_official_channel_assertions_v1(assertion_id) FOR UPDATE
+      - editorial.organization_official_channel_authority_receipts_v1(authority_receipt_id,authority_receipt_digest) FOR SHARE
+      - ops.audit_events chain head and appended row
+      - ops.outbox appended row
+      - revocation receipt insert with assertion/authority/STEP_UP/audit/outbox binding-trigger revalidation
+      statements:
+      - INVOKE editorial.revoke_organization_official_channel_v1 [exactly-one result] :: six-argument owner with closed public payload and request-bound actor/session/idempotency bindings
+      - VALIDATE actor assertion then replay [exactly-one current assertion and zero-or-one prior revocation] :: exact completed replay requires status 200, ops.idempotency_keys.resource_type=organization_official_channel and resource_id=assertionId; aggregateId remains assertionId while revocationId is response-only; it returns before STEP_UP/assertion locks
+      - VALIDATE STEP_UP/session then current assertion and exact authority composite [exactly-one] :: assertion is locked before authority validation and no prior revocation exists
+      - INSERT audit then outbox then editorial.organization_official_channel_revocation_receipts_v1 [exactly-one each] :: append-only reason digest and actor binding; trigger revalidates assertion, authority, STEP_UP, audit and outbox
+      - SERVICE FINALIZE idempotency response [exactly-one] :: after exact owner result parse and before commit; owner does not update the row
+      effect_owner: control-api.revokeOrganizationOfficialChannel
+      atomic_transition_group: gurine.command.revokeOrganizationOfficialChannel.v1
+      state_disposition: organization_official_channel.ACTIVE->REVOKED_APPEND_ONLY
+      receipt: {schema: RevokeOrganizationOfficialChannelReceiptV1, new_success: exactly-one, exact_replay: zero-new-rows}
+      audit: {relation: ops.audit_events, action: organization.official_channel.revoke, new_success_rows: 1, exact_replay_rows: 0}
+      outbox: {events: [organization.official_channel_revoked.v1], cardinality: {organization.official_channel_revoked.v1: exactly-one}}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+    verifyResponseOrganizationIdentity:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.verifyResponseOrganizationIdentity
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      procedure: editorial.verify_response_organization_identity_v1
+      owner_input:
+        public_fields: [responseId, organizationId, publicationForm, verificationMethod, officialChannelSourceId, reason, expectedVersion]
+        server_derived_fields: [_actorAssertionJti, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+        exact_key_count: 14
+        rule: control-api merges the seven authenticated request-bound values after public schema validation; caller-supplied internal keys are rejected and never enter OpenAPI
+        official_channel_source_semantics: officialChannelSourceId selects the current immutable official-channel authority assertion and never directly selects a communication endpoint verification or document evidence row
+      official_channel_currentness_guard:
+        registry: resolve exactly one active, unexpired and unrevoked immutable authority assertion; missing or empty registry, absent assertion or failed currentness validation writes zero rows and has no fallback
+        OFFICIAL_DOMAIN_EMAIL: revalidate the assertion's exact EMAIL domain-control receipt and its underlying endpoint, domain-control and response-request binding in the owner transaction
+        OFFICIAL_DOCUMENT: revalidate the assertion's exact DOCUMENT official-representation binding receipt and its underlying document, representation binding and source locator in the owner transaction
+        forbidden: [raw endpoint verification ID as officialChannelSourceId, raw document evidence ID as officialChannelSourceId, OTP-only authority]
+        nested_lock_contract:
+          pre_r6d39: registry assertion FOR UPDATE, then EMAIL one joined verification/endpoint/subject/latest-link/sent set FOR SHARE without a promised planner-level per-relation order or DOCUMENT evidence then source document FOR SHARE
+          authority_wrapper: registry assertion FOR SHARE, exact authority receipt composite FOR SHARE, same resolver advisory/organization/source order as attestation, then authority audit and outbox rows FOR SHARE
+      lock_order:
+      - editorial.response_organization_identity_assertions_v1(idempotency_key_sha256)
+      - editorial.responses(id,version)
+      - editorial.response_requests(id)
+      - core.agencies(id)|core.suppliers(id)
+      - ops.step_up_authorizations(id)
+      - ops.sessions(id)
+      - editorial.organization_official_channel_assertions_v1(assertion_id) FOR UPDATE in pre-r6d39 validator
+      - 'pre-r6d39 EMAIL joined verification/endpoint/subject/latest-link/sent set FOR SHARE | DOCUMENT evidence then source_document FOR SHARE'
+      - editorial.organization_official_channel_assertions_v1(assertion_id) FOR SHARE in authority wrapper
+      - editorial.organization_official_channel_authority_receipts_v1(authority_receipt_id,authority_receipt_digest) FOR SHARE
+      - 'authority-wrapper resolver advisory lock -> organization row -> EMAIL verification/subject/endpoint/latest-link/response-request/sent-receipt or DOCUMENT evidence/source-document, all FOR SHARE'
+      - ops.audit_events(authority.audit_event_id) FOR SHARE
+      - ops.outbox(authority.outbox_event_id) FOR SHARE
+      statement_count: 13
+      relations:
+      - editorial.response_organization_identity_assertions_v1
+      - editorial.responses
+      - editorial.response_requests
+      - core.agencies
+      - core.suppliers
+      - ops.step_up_authorizations
+      - ops.sessions
+      - editorial.response_request_sent_receipts
+      - intake.communication_endpoint_verifications
+      - intake.communication_endpoints
+      - intake.communication_subjects
+      - editorial.evidence
+      - editorial.response_publication_identity_receipts_v1
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.verifyResponseOrganizationIdentity
+      atomic_transition_group: gurine.command.verifyResponseOrganizationIdentity.v1
+      state_disposition: response_organization_identity.UNVERIFIED->SECOND_FACTOR_VERIFIED_APPEND_ONLY
+      idempotency:
+        relation: editorial.response_organization_identity_assertions_v1
+        key: idempotency_key_sha256
+        request_binding: request_digest
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      cardinality: {assertion: exactly-one new success, publication_identity_receipt: exactly-one new success, response_update: exactly-one new success, audit: exactly-one new success, outbox: exactly-one new success, exact_replay: zero writes}
+      audit: {relation: ops.audit_events, action: response.organization_identity.verify, new_success_rows: 1, exact_replay_rows: 0}
+      outbox:
+        events: [response.organization_identity_verified.v1]
+        cardinality: {response.organization_identity_verified.v1: exactly-one}
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: VerifyResponseOrganizationIdentityReceiptV1
+        owner_relations: [editorial.response_organization_identity_assertions_v1, editorial.response_publication_identity_receipts_v1]
+        owner_result_fields: [assertionId, assertionVersion, responseVersion, receiptDigest, auditEventId, verifiedAt, outboxEventIds, replayed]
+        transport_rule: project the resource-schemas custom envelope without replacing it with CommandReceiptV1 or exposing internal actor fields
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: require one closed owner JSON result with valid UUIDs, positive assertion and response versions, SHA-256 receipt, RFC3339 verifiedAt and boolean replayed; null or partial proof is persistence failure, never synthetic success
+    createPrivacyCorrectionPlan:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.createPrivacyCorrectionPlan
+      procedure: ops.create_privacy_correction_plan_v1
+      service_transaction_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.control-owner-managed-single-procedure-v1
+      owner_input:
+        public_request_fields: [retentionRequestId, expectedDecisionVersion, targetObjectType, targetObjectId, fieldPath, currentValueDigest, requestedValue, evidenceIds, reason]
+        owner_forwarded_public_fields: [retentionRequestId, expectedDecisionVersion, targetObjectType, targetObjectId, fieldPath, currentValueDigest, evidenceIds, reason]
+        service_generated_fields: [_correctionPlanId]
+        service_sealed_fields: [requestedValueCiphertextBase64, requestedValueSha256]
+        server_derived_actor_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+        scalar_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+        exact_payload_key_count: 19
+        aad_segments: [ops.privacy_correction_plans_v1, requested_value_ciphertext, _correctionPlanId canonical UUID text, privacy-correction-requested-value, '1']
+        rules: _correctionPlanId is a random server-only UUID; the service computes requestedValueSha256, encrypts and clears plaintext before the owner call; PostgreSQL derives the AAD digest and ciphertext SHA-256 independently but stores requestedValueSha256 without claiming plaintext recomputation; _requestedValueAadDigest and every other owner field are forbidden caller input
+        digest_rule: _actorAssertionRequestSha256 exact-compares ops.assertion_replay_guard.request_digest and is distinct from semanticRequestSha256 and requestedValueSha256
+      authorized_target_field_allowlist: [{targetObjectType: RESPONSE, fieldPath: /partyName}]
+      active_relations: [ops.privacy_requests_v2, ops.privacy_request_scope_inventories_v1, ops.privacy_request_scope_inventory_items_v1, ops.privacy_request_identity_receipts_v2, ops.privacy_identity_proof_authority_receipts_v1, intake.response_submission_receipts_v3, intake.response_submissions, editorial.response_submission_origin_receipts_v2, editorial.responses, editorial.evidence, ops.privacy_correction_plans_v1, ops.privacy_response_party_name_correction_plan_bindings_v1, ops.audit_events]
+      active_lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.privacy_requests_v2(id)
+      - ops.privacy_request_scope_inventories_v1(privacy_request_id,inventory_version)
+      - ops.privacy_request_scope_inventory_items_v1(inventory_id,object_kind,object_id)
+      - ops.privacy_request_identity_receipts_v2(identity_receipt_id)
+      - ops.privacy_identity_proof_authority_receipts_v1(identity_proof_receipt_id)
+      - intake.response_submission_receipts_v3(receipt_id)
+      - intake.response_submissions(id)
+      - editorial.response_submission_origin_receipts_v2(receipt_id)
+      - editorial.responses(id)
+      - editorial.evidence(id)
+      - ops.privacy_correction_plans_v1(privacy_request_id,plan_version)
+      - ops.privacy_response_party_name_correction_plan_bindings_v1(correction_plan_id)
+      - ops.step_up_authorizations(id)
+      - ops.sessions(id)
+      active_statements:
+      - VALIDATE closed public shape and target-kind plus JSON Pointer syntax [exactly-one-pass] :: malformed input remains INVALID_PARAMETER
+      - VALIDATE exact target-field lookup [exactly-one] :: only RESPONSE plus /partyName proceeds; every other pair returns PRIVACY_CORRECTION_TARGET_UNSUPPORTED with zero writes before encryption idempotency claim or owner invocation; the database backstop raises exact SQLSTATE 0A000 and message PRIVACY_CORRECTION_TARGET_UNSUPPORTED
+      - INVOKE ops.create_privacy_correction_plan_v1 [exactly-one result] :: closed public payload plus server-sealed requested value and request-bound actor/session/idempotency values
+      - VALIDATE request and scope [exactly-one] :: CORRECTION in REVIEW at expectedDecisionVersion and target is one normalized seven-kind scope member
+      - READ ops.read_privacy_response_party_name_access_v1 [exactly-one] :: exact RESPONSE_RECEIPT, submission receipt, immutable origin receipt and editorial response chain; missing or ambiguous authority is DEPENDENCY_UNAVAILABLE
+      - VALIDATE current digest/evidence [exactly-one-pass] :: same subject-bound ACCESS projection computes currentValueDigest and caller value must match; stale request, response, receipt or projection authority is RETENTION_VERSION_CONFLICT
+      - INSERT ops.privacy_correction_plans_v1 [exactly-one] :: immutable sealed generic plan whose HUMAN_REVIEWER_ASSERTION field remains subordinate provenance
+      - INSERT ops.privacy_response_party_name_correction_plan_bindings_v1 [exactly-one] :: immutable final RESPONSE_PARTY_NAME_ACCESS_PROJECTION_V1 authority and complete receipt-chain/version/digest binding
+      - ASSERT target mutation count [exactly-zero] :: producer-only contract
+      - INSERT audit/idempotency finalization [exactly-one each] :: no outbox event
+      effect_owner: control-api.createPrivacyCorrectionPlan
+      atomic_transition_group: gurine.command.createPrivacyCorrectionPlan.v1
+      state_disposition: privacy_correction_plan.NONE->RECORDED_APPEND_ONLY; target unchanged
+      physical_availability:
+        producer: IMPLEMENTED_EXACT_ONE_CELL for RESPONSE `/partyName`; every other pair remains typed zero-write unsupported
+        approve_apply: human APPROVE revalidates the final plan binding and zero active holds, then appends one immutable approval binding and one dedicated job without applying the target
+        complete_apply: only the current fenced ops.execute_privacy_response_party_name_correction_job_v1 owner may update the response and append completion/audit/event receipts
+      receipt: {schema: PrivacyCorrectionPlanReceiptV1, active_new_success: exactly-one, exact_replay: zero-new-rows}
+      audit: {relation: ops.audit_events, action: privacy.correction_plan.create, active_new_success_rows: 1, exact_replay_rows: 0}
+      outbox: {events: [], cardinality: exactly-zero}
+      errors: [INVALID_PARAMETER, IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, PRIVACY_CORRECTION_TARGET_UNSUPPORTED, RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, RESOURCE_NOT_FOUND, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
     transitionRetentionRequest:
       semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.transitionRetentionRequest
       operation_kind: COMMAND
       isolation: SERIALIZABLE
+      service_transaction_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.control-owner-managed-single-procedure-v1
+      owner_input:
+        server_derived_actor_fields: [_actorAssertionJti, _actorAssertionRequestSha256, _actorAssuranceLevel, _actorEffectiveCapability, _actorActionDigest, _actorStepUpAuthorizationId, _actorIdempotencyKeySha256, _actorRequestKeySha256]
+        scalar_arguments: [actorId, sessionId, requestId, idempotencyKeySha256, semanticRequestSha256]
+        digest_rule: _actorAssertionRequestSha256 exact-compares ops.assertion_replay_guard.request_digest and is distinct from semanticRequestSha256 and every sealed-plaintext digest
+        public_rule: every actor, generated, sealed and scalar owner field is forbidden caller input; exact payload count is the closed transition-variant count
       lock_order:
       - ops.idempotency_keys(scope,key_hash)
-      - ops.retention_requests(id)
-      - ops.retention_request_decisions(retention_request_id,decision_version)
+      - ops.privacy_requests_v2(id)
+      - ops.privacy_request_transition_receipts_v2(privacy_request_id,decision_version)
+      - ops.privacy_request_identity_receipts_v2(identity_proof_receipt_id)
+      - ops.privacy_response_calendar_policies_v1(policy_id,version)
+      - ops.business_calendar_versions(id)
       - ops.legal_hold_target_anchors(target_kind,target_id,target_version)
       - editorial.legal_holds(id)
       - editorial.legal_hold_releases(hold_id,release_sequence)
-      - ops.retention_execution_receipts(retention_request_id,completed_at DESC,execution_generation DESC,id DESC)
-      statement_count: 13
+      - ops.privacy_request_extension_receipts_v2(privacy_request_id,extension_sequence)
+      - ops.privacy_request_refusal_receipts_v2(privacy_request_id,decision_version)
+      - ops.privacy_request_notice_receipts_v2(privacy_request_id,notice_sequence)
+      statement_count: derived len(command-semantics transaction.statements)
       relations:
       - ops.idempotency_keys
-      - ops.retention_requests
-      - ops.retention_request_decisions
+      - ops.privacy_requests_v2
+      - ops.privacy_request_identity_receipts_v2
+      - ops.privacy_request_extension_receipts_v2
+      - ops.privacy_request_refusal_receipts_v2
+      - ops.privacy_request_notice_receipts_v2
+      - ops.privacy_request_transition_receipts_v2
+      - ops.privacy_correction_plans_v1
+      - ops.privacy_response_party_name_correction_plan_bindings_v1
+      - ops.privacy_response_party_name_correction_approval_bindings_v1
+      - ops.jobs
+      - ops.privacy_response_calendar_policies_v1
+      - ops.business_calendar_versions
       - ops.legal_hold_target_anchors
       - editorial.legal_holds
       - editorial.legal_hold_releases
-      - ops.retention_execution_receipts
       - ops.audit_events
       - ops.outbox
+      procedure: ops.transition_privacy_request_v2
+      request_schema: TransitionRetentionRequestRequestV2
       effect_owner: control-api.transitionRetentionRequest
-      atomic_transition_group: gurine.command.transitionRetentionRequest.v1
-      state_disposition: privacy_request declared edge
+      atomic_transition_group: gurine.command.transitionRetentionRequest.v2
+      state_disposition: closed VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND edge; COMPLETE remains retention-worker-owned
+      physical_availability:
+        START_REVIEW: implemented owner edge for an already VERIFIED request carrying exact policy/calendar bindings
+        VERIFY_IDENTITY:
+          RESPONSE_RECEIPT: IMPLEMENTED with an immutable same-subject exact-scope authority receipt, one-time proof consumption receipt and the V3 verification owner
+          VERIFIED_ENDPOINT: OPEN_FAIL_CLOSED because the endpoint proof has no canonical verifier/runtime producer; no synthetic ACTIVE endpoint or privacy authority receipt is permitted
+        APPROVE:
+          RESPONSE_PARTY_NAME_CORRECTION: IMPLEMENTED only with exactly one current plan plus immutable final ACCESS binding, current response/version/digest/receipt chain, complete OBJECT_SET inventory and zero active holds; creates one existing decision event and one dedicated job in the same transaction
+          OTHER_REQUEST_TYPES_OR_TARGETS: OPEN_FAIL_CLOSED until a typed execution owner is authorized
+        EXTEND: contract complete but reachable only after authoritative VERIFY_IDENTITY and an approved response policy/calendar
+        REJECT: contract complete but reachable only after authoritative VERIFY_IDENTITY and an approved response policy/calendar
+        COMPLETE: outside this command; RESPONSE `/partyName` correction is implemented only by the fenced workflow owner and every other request type or target remains OPEN_FAIL_CLOSED
+        unavailable_result: DEPENDENCY_UNAVAILABLE with zero writes; legacy V1 privacy decision/execution paths are historical read-only and forbidden as fallback
       idempotency:
         relation: ops.idempotency_keys
         contract: external-command-idempotency-v1
@@ -1720,22 +2117,40 @@ exact_persistence_registry:
         action: command.transitionRetentionRequest
       outbox:
         events:
+        - privacy.request_identity_verified.v1
         - privacy.request_decision_recorded.v1
+        - privacy.request_extension_notified.v1
+        - privacy.request_refusal_notified.v1
         cardinality:
-          privacy.request_decision_recorded.v1: exactly-one
+          privacy.request_identity_verified.v1: exactly-one iff transition=VERIFY_IDENTITY; otherwise zero
+          privacy.request_decision_recorded.v1: exactly-one iff transition=START_REVIEW|APPROVE|REJECT; otherwise zero
+          privacy.request_extension_notified.v1: exactly-one iff transition=EXTEND; otherwise zero
+          privacy.request_refusal_notified.v1: exactly-one iff transition=REJECT; otherwise zero
         payload_source: specs/product/addendum-event-contracts.yaml
+      dedicated_job:
+        relation: ops.jobs
+        job_type: PRIVACY_RESPONSE_PARTY_NAME_CORRECTION
+        queue: workflow-worker
+        cardinality: exactly-one new row iff transition=APPROVE for the authorized RESPONSE /partyName correction; zero exact replay
+        payload_schema: privacy-response-party-name-correction-job.v1
+        payload_key_count: 24
+        target_mutation: zero
       receipt:
-        schema: RetentionRequestDecisionReceiptV1
+        schema: RetentionRequestDecisionReceiptV2
         contract: external-command-receipt-v1
       errors:
+      - INVALID_PARAMETER
+      - IDENTITY_PROOF_INVALID
+      - PRIVACY_SCOPE_INVALID
       - RETENTION_VERSION_CONFLICT
       - RETENTION_STATE_INVALID
+      - BUSINESS_CALENDAR_STALE
       - LEGAL_HOLD_ACTIVE
-      - RETENTION_COMPLETION_INCOMPLETE
       - STEP_UP_REQUIRED
       - IDEMPOTENCY_CONFLICT
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
-      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+      repository_result: ops.transition_privacy_request_v2 is the sole dispatcher for physically available edges; the authorized CORRECTION APPROVE branch delegates to ops.approve_privacy_response_party_name_correction_v1 and returns the unchanged RetentionRequestDecisionReceiptV2 shape after appending one existing decision event, one immutable approval binding and one dedicated job. Every OPEN_FAIL_CLOSED edge returns DEPENDENCY_UNAVAILABLE with zero writes, never accepts raw proof, caller clock authority or a hard-coded supervisor-decision-v1/ten-day substitute, and never calls the historical V1 decision/execution path.
     requestCommunicationEndpointLink:
       semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.requestCommunicationEndpointLink
       operation_kind: COMMAND
@@ -1901,22 +2316,42 @@ exact_persistence_registry:
       isolation: SERIALIZABLE
       lock_order:
       - ops.idempotency_keys(scope,key_hash)
-      - ops.retention_requests(subject_scope_digest,created_at,id)
-      statement_count: 8
+      - ops.privacy_requests_v2(subject_scope_digest,created_at,id)
+      - ops.privacy_request_receipt_tokens_v2(token_hmac)
+      statement_count: derived len(command-semantics transaction.statements)
       relations:
       - ops.idempotency_keys
-      - ops.retention_requests
-      - intake.privacy_request_receipt_tokens
+      - ops.privacy_requests_v2
+      - ops.privacy_request_receipt_tokens_v2
       - ops.audit_events
       - ops.outbox
+      procedure: ops.create_privacy_request_v2
       effect_owner: submission-api.createPrivacyRequest
-      atomic_transition_group: gurine.command.createPrivacyRequest.v1
-      state_disposition: privacy_request.NONE->RECEIVED
+      atomic_transition_group: gurine.command.createPrivacyRequest.v2
+      state_disposition: privacy_request.NONE->RECEIVED with identity_state=PENDING_VERIFICATION and null identity_verified_at/due_at
+      access_policy:
+        logical_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.privacy_request_receipt_access_policy
+        schema_version: privacy-request-receipt-access-policy-v1
+        physical_binding_status: FINAL
+        physical_binding: {relation: ops.privacy_request_access_policies_v1, primary_key: [policy_id, revision], receipt_binding_key: [policy_id, revision, policy_digest, binding_digest], version_column: revision, lifecycle_state_column: state, approved_state: APPROVED, policy_version_column: policy_version, policy_digest_column: policy_digest, binding_digest_column: binding_digest, authority_column: authority, test_only_authority: TEST_ONLY, effective_at_column: effective_at, review_expires_at_column: review_expires_at, selector: ops.current_privacy_request_access_policy_v1(timestamptz), production_preflight: ops.preflight_privacy_request_access_policy_v1(timestamptz)}
+        selection: exactly one current, approved, effective and unexpired version before every write; no seed, default or fallback
+        separation: never read or derive TTLs from the privacy response calendar or business-calendar relations
+        zero_write_failure: DEPENDENCY_UNAVAILABLE 503 with request-id-only exposure for zero, duplicate, expired or unapproved rows
+        forbidden_public_detail: [CAPABILITY_UNCONFIGURED, INTERNAL_ERROR_DETAIL, policy_row_count, policy_identity, SQL_detail]
+      scope_digest_contract:
+        owner_input: exact closed PrivacyRequestScopeV1 JSON plus encrypted scope; caller-authored scopeDigest, scopeSha256, subjectProofHash and subjectScopeDigest scalars are forbidden
+        scopeCanonical: canonical JSON(exact closed PrivacyRequestScopeV1)
+        scopeSha256: SHA256(scopeCanonical)
+        subjectScopeDigest: 'SHA256(canonical JSON({schemaVersion: "privacy-subject-scope-v1", subjectProofHash: DB-derived subject proof hash, scopeSha256: DB-derived scopeSha256}))'
+        external_alias: PrivacyRequestSummaryV1.scopeDigest and privacy.request_created.v2.scopeDigest equal scopeSha256; subjectScopeDigest is the internal dedupe/subject binding and is not interchangeable
+        durability: raw scope is validation-only and forbidden from relation, idempotency response, audit, outbox, event, receipt, error, log, trace, metric and analytics bytes; encrypted scope plus DB-derived scopeSha256/subjectScopeDigest only
       idempotency:
         relation: ops.idempotency_keys
         contract: external-command-idempotency-v1
         exact_replay_writes: 0
         changed_replay: IDEMPOTENCY_CONFLICT
+        response_storage_exception: secret-bearing-command-receipt-v2 stores only the canonical secretless PrivacyRequestReceiptV1 template plus safe status/media/header bytes, resource identity and digests; raw receiptToken is forbidden
+        exact_replay_response: submission-api re-derives the identical BASE64URL_NO_PAD HMAC-SHA256 receiptToken from privacy-receipt-v2, createPrivacyRequest, idempotencyKeyHash and requestHash, then deterministically fills the stored template for byte-identical response bytes
       audit:
         relation: ops.audit_events
         new_success_rows: 1
@@ -1924,13 +2359,14 @@ exact_persistence_registry:
         action: command.createPrivacyRequest
       outbox:
         events:
-        - privacy.request_created.v1
+        - privacy.request_created.v2
         cardinality:
-          privacy.request_created.v1: exactly-one
+          privacy.request_created.v2: exactly-one
         payload_source: specs/product/addendum-event-contracts.yaml
       receipt:
         schema: PrivacyRequestReceiptV1
-        contract: external-command-receipt-v1
+        contract: secret-bearing-command-receipt-v2
+        durable_secret: forbidden
       errors:
       - INVALID_PARAMETER
       - IDENTITY_PROOF_INVALID
@@ -1938,28 +2374,40 @@ exact_persistence_registry:
       - ABUSE_PROOF_INVALID
       - RATE_LIMITED
       - IDEMPOTENCY_CONFLICT
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
-      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+      repository_result: ops.create_privacy_request_v2 itself canonicalizes the exact closed scope, derives scopeSha256 and subjectScopeDigest, and persists encrypted scope plus those digests, the access-policy-bound one-time token verifier HMAC/digest and secretless response template only; submission-api derives the raw token deterministically on new success and exact replay, raw scope/identity proof/token bytes are never stored, and no create path may set VERIFIED, identityVerifiedAt, dueAt or response-calendar authority
     exchangePrivacyRequestReceiptToken:
       semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.exchangePrivacyRequestReceiptToken
       operation_kind: COMMAND
       isolation: SERIALIZABLE
       lock_order:
       - ops.idempotency_keys(scope,key_hash)
-      - intake.privacy_request_receipt_tokens(token_hmac)
-      - ops.retention_requests(id)
+      - ops.privacy_request_receipt_tokens_v2(token_hmac)
+      - ops.privacy_requests_v2(id)
       - intake.submission_sessions(id)
-      statement_count: 8
+      statement_count: derived len(command-semantics transaction.statements)
       relations:
       - ops.idempotency_keys
-      - intake.privacy_request_receipt_tokens
-      - ops.retention_requests
+      - ops.privacy_request_receipt_tokens_v2
+      - ops.privacy_requests_v2
       - intake.submission_sessions
       - ops.audit_events
       - ops.outbox
+      procedure: ops.exchange_privacy_request_receipt_token_v2
+      authorization: request-bound BFF service assertion plus one-time body token plus hash-bound X-Gurine-Next-Submission-Session; prior scoped session and BrowserProofV1 are forbidden
       effect_owner: submission-api.exchangePrivacyRequestReceiptToken
-      atomic_transition_group: gurine.command.exchangePrivacyRequestReceiptToken.v1
+      atomic_transition_group: gurine.command.exchangePrivacyRequestReceiptToken.v2
       state_disposition: NON_DOMAIN_STATE_MUTATION token.FRESH->CONSUMED plus session.NONE->ACTIVE
+      access_policy:
+        logical_contract: specs/product/addendum-command-semantics.yaml#shared_contracts.privacy_request_receipt_access_policy
+        schema_version: privacy-request-receipt-access-policy-v1
+        physical_binding_status: FINAL
+        physical_binding: {relation: ops.privacy_request_access_policies_v1, primary_key: [policy_id, revision], receipt_binding_key: [policy_id, revision, policy_digest, binding_digest], version_column: revision, lifecycle_state_column: state, approved_state: APPROVED, policy_version_column: policy_version, policy_digest_column: policy_digest, binding_digest_column: binding_digest, authority_column: authority, test_only_authority: TEST_ONLY, effective_at_column: effective_at, review_expires_at_column: review_expires_at, selector: ops.current_privacy_request_access_policy_v1(timestamptz), production_preflight: ops.preflight_privacy_request_access_policy_v1(timestamptz)}
+        selection: exactly one current, approved, effective and unexpired version before every write; readOnlySessionTtlSeconds, cookie profile and allowedOperations come only from its closed payload
+        separation: never read or derive TTLs from the privacy response calendar or business-calendar relations
+        zero_write_failure: DEPENDENCY_UNAVAILABLE 503 with request-id-only exposure for zero, duplicate, expired or unapproved rows; token remains FRESH
+        forbidden_public_detail: [CAPABILITY_UNCONFIGURED, INTERNAL_ERROR_DETAIL, policy_row_count, policy_identity, SQL_detail]
       idempotency:
         relation: ops.idempotency_keys
         contract: external-command-idempotency-v1
@@ -1979,14 +2427,16 @@ exact_persistence_registry:
       receipt:
         schema: PrivacyRequestSessionReceiptV1
         contract: external-command-receipt-v1
+        cookie_name: gurine_privacy_request_receipt_session
+        secrecy: raw body token and next-session header are absent from the stored/returned receipt; only the next-session SHA-256 is persisted and the BFF seals its retained raw token only after successful exchange
       errors:
       - TOKEN_INVALID
       - TOKEN_EXPIRED
       - TOKEN_REPLAYED
-      - ABUSE_PROOF_INVALID
       - RATE_LIMITED
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
-      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+      repository_result: ops.exchange_privacy_request_receipt_token_v2 consumes exactly one fresh token and inserts one access-policy-bound request-scoped PRIVACY_REQUEST_RECEIPT session whose expiry and sole allowed operation come from the selected current approved version; getPrivacyRequest is the only subsequent session consumer
     declareConflict:
       semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.declareConflict
       operation_kind: COMMAND
@@ -2898,7 +3348,13 @@ exact_persistence_registry:
     private.ApplyKillSwitchCommand: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ApplyKillSwitchCommand']", contract: private_action_executor_persistence_contract, target_relations: [ops.kill_switches], procedure: ops.apply_approved_kill_switch_command_v1, receipt: KillSwitchExecutionReceiptV1}
     private.RecordCommunicationAuthorizationDecision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.RecordCommunicationAuthorizationDecision']", contract: private_action_executor_persistence_contract, target_relations: [intake.communication_authorization_events], procedure: intake.record_approved_communication_authorization_v1, receipt: CommunicationAuthorizationDecisionReceiptV1}
     private.ReviseAssetRightsDecision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ReviseAssetRightsDecision']", contract: private_action_executor_persistence_contract, target_relations: [raw.asset_rights_decisions], procedure: raw.revise_approved_asset_rights_decision_v1, receipt: AssetRightsDecisionReceiptV1}
-    private.CreateRecordClassScheduleRevision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateRecordClassScheduleRevision']", contract: private_action_executor_persistence_contract, target_relations: [ops.record_class_schedules], procedure: ops.create_approved_record_class_schedule_revision_v1, receipt: RecordClassScheduleReceiptV1}
+    private.CreateRecordClassScheduleRevision:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateRecordClassScheduleRevision']"
+      contract: private_action_executor_persistence_contract
+      target_relations: [ops.record_class_schedules]
+      procedure: ops.create_approved_record_class_schedule_revision_v1
+      write_guard: both the immutable RETENTION_SCHEDULE approval detail and appended schedule row enforce the exact 0038 trigger and terminal-action sets; PRESERVE_* is indefinite, NOT_DESTRUCTIVE and NOT_APPLICABLE for restore suppression, while non-preservation is finite and REAPPLY_BEFORE_ACCESS
+      receipt: RecordClassScheduleReceiptV1
     private.PublishFundingDisclosureRevision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.PublishFundingDisclosureRevision']", contract: private_action_executor_persistence_contract, target_relations: [editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries], procedure: editorial.publish_approved_funding_disclosure_revision_v1, receipt: FundingDisclosureExecutionReceiptV1}
     private.DecideCapabilityActivation: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.DecideCapabilityActivation']", contract: private_action_executor_persistence_contract, target_relations: [ops.capability_activation_decisions, ops.capability_activation_evidence], procedure: ops.decide_approved_capability_activation_v1, receipt: CapabilityActivationDecisionReceiptV1}
     private.CreateBusinessCalendarVersion: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateBusinessCalendarVersion']", contract: private_action_executor_persistence_contract, target_relations: [ops.business_calendar_versions], procedure: ops.create_approved_business_calendar_version_v1, receipt: BusinessCalendarVersionReceiptV1}
@@ -2917,6 +3373,130 @@ exact_persistence_registry:
       receipt: ProviderControlExecutionReceiptV1
       exact_replay_writes: 0
     private.MaterializePaidEvidencePacket: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.MaterializePaidEvidencePacket']", isolation: SERIALIZABLE, authorization: workflow-worker service identity plus claimed ops.inbox event and exact qualification contract subject plus ten typed immutable member candidate keys, target_relations: [ops.paid_evidence_packets, ops.paid_evidence_packet_members], procedure: ops.materialize_paid_evidence_packet_subject_v1, digest_rule: PostgreSQL resolves the ten source candidate keys and recomputes packetSubjectDigest before comparing expectedPacketSubjectDigest, receipt: PaidEvidencePacketMaterializationReceiptV1, exact_replay_writes: 0, outbox: [product.paid_evidence_packet_subject_persisted.v1]}
+    ops.execute_due_r6d_entity_retention_job_v1:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['ops.execute_due_r6d_entity_retention_job_v1']"
+      isolation: READ_COMMITTED
+      transaction_boundary: one SQLx auto-commit SELECT of the SECURITY DEFINER owner; the pool and function perform no isolation override
+      caller: workflow-worker.entity-retention-executor
+      authorization: EXECUTE is revoked from PUBLIC and granted to gurine_workflow_worker only; the locked ops.jobs row must be one current RUNNING workflow-worker R6D_ENTITY_RETENTION claim with exact nonexpired lease token and positive fencing token
+      procedure: ops.execute_due_r6d_entity_retention_job_v1(uuid,uuid,bigint)
+      owner_arguments: [claimed jobId, claimed leaseToken, claimed fencingToken]
+      request: {schema: R6dEntityRetentionJobV1, source: exact fifteen-key locked ops.jobs.payload, extra_fields: forbidden}
+      result: {schema: R6dEntityRetentionExecutionResultV1, source: exact fifteen-key owner return envelope validated again by workflow-worker, plaintext: forbidden}
+      authority_read_relations:
+        - ops.jobs
+        - ops.r6d_entity_retention_execution_receipts_v1
+        - core.agencies
+        - core.suppliers
+        - ops.r6d_entity_personhood_classification_receipts_v1
+        - ops.r6d_entity_material_use_closure_receipts_v1
+        - core.contracts
+        - core.procurement_contract_revisions
+        - core.procurement_contract_supplier_revisions
+        - editorial.publication_revisions
+        - ops.record_class_schedules
+        - ops.r6d_record_class_catalog
+        - ops.execution_receipts
+        - ops.action_decisions
+        - core.agency_identifiers
+        - core.supplier_identifiers
+        - core.entity_aliases
+      nested_authority: ops.r6d_entity_material_use_state_v1 invokes ops.r6d_entity_legal_hold_coverage_v1 and its immutable placement, anchor, entity-retention snapshot and cell-release proof graph at the same database time
+      write_relations: [ops.audit_events, ops.outbox, ops.r6d_entity_retention_execution_receipts_v1, core.agencies, core.suppliers, public.agencies, public.suppliers, core.agency_identifiers, core.supplier_identifiers, core.entity_aliases]
+      lock_order:
+        - ops.jobs(id) FOR UPDATE
+        - ops.r6d_entity_retention_execution_receipts_v1(job_id) FOR SHARE
+        - entity-key pg_advisory_xact_lock
+        - core.agencies(id) or core.suppliers(id) FOR UPDATE
+        - ops.r6d_entity_personhood_classification_receipts_v1(receipt_id) FOR SHARE
+        - ops.r6d_entity_material_use_closure_receipts_v1(receipt_id) FOR SHARE
+        - complete material-use SHARE table locks and entity legal-hold authority reads
+        - ops.record_class_schedules(id,revision) and ops.r6d_record_class_catalog(record_class) FOR SHARE
+        - current identifier and alias preimage sets
+        - ops.audit_events chain head then ops.outbox then immutable execution receipt then plaintext-bearing projections
+      exact_persistence:
+        - Validate the locked job payload has exactly fifteen keys and recompute requestDigest, idempotencyDigest, payload digest and dedupe key before any effect.
+        - Resolve a same-job execution receipt before mutable subject validation; exact binding returns the stored result with replayed true and zero writes, while any changed binding raises SQLSTATE 40001.
+        - Revalidate the current natural-person master and child digest preimages, personhood and closure composite foreign keys, closed material-use sets, zero legal-hold cells, approved current ANONYMIZE schedule and due time.
+        - Append audit, enqueue entity.retention_anonymized.v1, insert the twenty-nine-key canonical immutable receipt, erase only authorized plaintext fields, and require exact master, identifier and alias affected-row counts in the same transaction.
+      cardinality: {fresh_receipt: exactly-one, fresh_audit: exactly-one, fresh_outbox: exactly-one, master_update: exactly-one, public_projection_update: zero-or-one, identifier_updates: exactly-prevalidated-count, alias_updates: exactly-prevalidated-count, physical_backup_disposal: zero, exact_replay_writes: zero, owner_job_status_update: zero}
+      receipt: {schema: EntityRetentionExecutionReceiptV1, relation: ops.r6d_entity_retention_execution_receipts_v1, payload_field_count: 29, canonical_digest_column: execution_receipt_digest, immutability_trigger: r6d_entity_retention_execution_receipts_immutable_guard}
+      outbox: [entity.retention_anonymized.v1]
+      audit_action: r6d.entity_retention.anonymize
+      worker_error_mapping: {'22023': R6D_ENTITY_RETENTION_OWNER_REJECTED, '40001': R6D_ENTITY_RETENTION_OWNER_CONFLICT, '55000': R6D_ENTITY_RETENTION_OWNER_NOT_READY, other_database_error: R6D_ENTITY_RETENTION_OWNER_UNAVAILABLE}
+      completion_boundary: the existing Worker.complete transaction changes ops.jobs RUNNING to SUCCEEDED only after this owner result passes the Rust fifteen-key binding validator; it is not part of the anonymization owner transaction
+    ops.execute_privacy_response_party_name_correction_job_v1:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['ops.execute_privacy_response_party_name_correction_job_v1']"
+      isolation: READ_COMMITTED
+      transaction_boundary: the read-only loader and mutating apply are separate SQLx auto-commit SELECTs with decryption between them; apply rechecks the same job fence and its SECURITY DEFINER function owns the complete effect transaction
+      caller: workflow-worker.response-party-name-correction-executor
+      authorization: EXECUTE is revoked from PUBLIC and granted to gurine_workflow_worker only; loader and apply require the exact current RUNNING workflow-worker PRIVACY_RESPONSE_PARTY_NAME_CORRECTION job with nonexpired lease token and positive fencing token
+      procedures:
+        delegation_ack: ops.ack_privacy_response_party_name_correction_delegation_v1(uuid,uuid,bigint,char(64),uuid,uuid,bigint)
+        load: ops.load_privacy_response_party_name_correction_job_v1(uuid,uuid,bigint)
+        apply: ops.execute_privacy_response_party_name_correction_job_v1(uuid,uuid,bigint,text,char(64))
+      owner_arguments:
+        delegation_ack: [sourceEventId, privacyRequestId, decisionVersion, transitionReceiptDigest, eventDeliveryJobId, eventDeliveryLeaseToken, eventDeliveryFencingToken]
+        load: [claimed jobId, claimed leaseToken, claimed fencingToken]
+        apply: [claimed jobId, claimed leaseToken, claimed fencingToken, zeroized-memory partyName view, partyNameDigest]
+      request: {schema: PrivacyResponsePartyNameCorrectionJobV1, source: exact twenty-four-key locked ops.jobs.payload, extra_fields: forbidden}
+      loader_result:
+        schema_version: privacy-response-party-name-correction-job-load.v1
+        exact_keys: [schemaVersion, jobId, correctionPlanId, privacyRequestId, responseId, expectedResponseVersion, expectedCurrentValueDigest, requestedValueCiphertextBase64, requestedValueSha256, requestedValueAadDigest, requestedValueCiphertextDigest, encryptionKeyId, planDigest, approvalTransitionReceiptId, approvalTransitionReceiptDigest, jobPayloadDigest]
+        secret_boundary: requestedValueCiphertextBase64 and encryptionKeyId are returned only to the authorized worker and are forbidden from every durable result, audit, outbox, log, trace, metric and error
+      delegation_ack:
+        result_schema_version: privacy-response-party-name-correction-delegation.v1
+        exact_result_keys: [schemaVersion, eventId, privacyRequestId, decisionVersion, transitionReceiptDigest, jobId, jobPayloadDigest, delegated]
+        persistence_effect: zero writes; it SHARE-locks and exact-compares the current EVENT_DELIVERY fence, pending retention-worker inbox row, source APPROVE outbox envelope, transition receipt, approval binding and pre-created child job
+        failure_mapping: {'22023': terminal delegation rejected, '23514': terminal delegation binding invalid, '40001': retryable fence unavailable, '55000': retryable owner unavailable}
+      result: {schema: PrivacyResponsePartyNameCorrectionCompletionV1, source: exact fourteen-key apply return envelope validated again by workflow-worker, plaintext: forbidden}
+      authority_read_relations:
+        - ops.jobs
+        - ops.inbox
+        - ops.privacy_response_party_name_correction_approval_bindings_v1
+        - ops.privacy_correction_plans_v1
+        - ops.privacy_response_party_name_correction_plan_bindings_v1
+        - ops.privacy_request_transition_receipts_v2
+        - ops.privacy_response_party_name_correction_completion_receipts_v1
+        - ops.privacy_requests_v2
+        - ops.privacy_request_scope_inventories_v1
+        - ops.privacy_request_scope_inventory_items_v1
+        - ops.privacy_identity_proof_authority_receipts_v1
+        - intake.response_submission_receipts_v3
+        - intake.response_submissions
+        - editorial.response_submission_origin_receipts_v2
+        - editorial.responses
+        - ops.legal_hold_target_anchors
+        - ops.legal_hold_placement_receipts_v2
+        - editorial.legal_holds
+        - editorial.legal_hold_releases
+        - ops.outbox
+      write_relations: [editorial.responses, ops.privacy_requests_v2, ops.audit_events, ops.outbox, ops.privacy_response_party_name_correction_completion_receipts_v1]
+      lock_order:
+        - ops.jobs(id) FOR UPDATE in apply; FOR SHARE in loader and delegated ACK
+        - immutable approval binding, plan and final plan-authority binding FOR SHARE
+        - ops.privacy_requests_v2(id) FOR UPDATE then editorial.responses(id) FOR UPDATE
+        - ops.privacy_response_party_name_correction_completion_receipts_v1(job_id) FOR SHARE
+        - ops.legal_hold_target_anchors and ops.legal_hold_placement_receipts_v2 SHARE table locks, then exact ACCESS and hold proof relations
+        - ops.audit_events chain head then ops.outbox then guarded response/request mutations then immutable completion receipt
+      exact_persistence:
+        - Delegated ACK reads and exact-compares the pending source event/inbox/delivery fence plus immutable approval and child-job graph and creates no job, inbox, audit or outbox row.
+        - Loader validates exactly twenty-four payload keys and recomputes the canonical job payload digest, plan envelope/AAD/ciphertext digests, final ACCESS binding, receipt graph, current response/version/value, request state and hold coverage before returning exactly sixteen keys.
+        - Worker canonical-decodes and authenticates the sealed envelope, exact-compares key ID, AAD, ciphertext and plaintext digests, keeps plaintext in zeroized memory only, and calls apply with the digest as comparison input.
+        - Apply serializes on the job, reruns loader authority, locks request/response, and returns an exact prior completion only after the current response and request equal its immutable receipt; changed replay fails with zero writes.
+        - Fresh apply rechecks the ACCESS projection and legal-hold graph under SHARE locks, verifies the lease again, appends one redacted audit and nine-key event, updates response party_name/version and request state/decision_version exactly once, then inserts one canonical twenty-two-key completion receipt in the same transaction.
+      cardinality: {fresh_completion_receipt: exactly-one, fresh_response_update: exactly-one, fresh_privacy_request_update: exactly-one, fresh_audit: exactly-one, fresh_outbox: exactly-one, exact_replay_writes: zero, owner_job_status_update: zero, delegated_ack_writes: zero}
+      receipt:
+        schema: PrivacyResponsePartyNameCorrectionCompletionReceiptV1
+        relation: ops.privacy_response_party_name_correction_completion_receipts_v1
+        exact_payload_keys: [schemaVersion, completionReceiptId, jobId, jobPayloadDigest, privacyRequestId, approvalDecisionVersion, completionDecisionVersion, correctionPlanId, planVersion, planDigest, approvalBindingId, approvalBindingDigest, responseId, priorResponseVersion, responseVersion, priorPartyNameDigest, partyNameDigest, holdCoverageDigest, approvalTransitionReceiptId, approvalTransitionReceiptDigest, auditEventId, completedAt]
+        canonical_digest_column: receipt_digest
+        immutability_trigger: privacy_response_party_name_completion_receipts_v1_immutable
+      outbox: [privacy.response_party_name_corrected.v1]
+      audit_action: privacy.response_party_name.correction.complete
+      audit_request_id: jobId
+      worker_error_mapping: {'22023': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_OWNER_REJECTED, '0A000': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_UNSUPPORTED, '40001': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_CONFLICT, '55000': PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_NOT_READY, PVT09: PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_BLOCKED, other_database_error: PRIVACY_RESPONSE_PARTY_NAME_CORRECTION_OWNER_UNAVAILABLE}
+      completion_boundary: the existing Worker.complete transaction changes ops.jobs RUNNING to SUCCEEDED only after the fourteen-key result passes Rust binding validation; it is separate from the response/request mutation transaction
   base_operation_atomic_extension_persistence:
     submitResponse:
       semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.submitResponse
@@ -2926,6 +3506,27 @@ exact_persistence_registry:
       atomic_transition_group: gurine.command.submitResponse.v2
       relations: [intake.submission_sessions, intake.response_drafts, editorial.response_requests, intake.response_submissions, ops.audit_events, ops.outbox]
       cardinality: {submission: exactly-one, draft_terminalization: exactly-one, request_terminalization: exactly-one, session_revocation: exactly-one, audit: exactly-one, outbox: exactly-three, receipt: exactly-one, exact_replay: zero writes}
+    approveResponseExcerpt:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.approveResponseExcerpt
+      existing_source: specs/api/operation-persistence.yaml#operations[operation_id=approveResponseExcerpt]
+      required_replacement: replace the direct response update with editorial.approve_response_excerpt_guarded_v2 and its immutable receipt-first replay boundary
+      effect_owner: control-api.approveResponseExcerpt
+      procedure: editorial.approve_response_excerpt_guarded_v2
+      atomic_transition_group: gurine.command.approveResponseExcerpt.v2
+      event_override: response.excerpt_approved.v2 replaces historical runtime production of response.excerpt_approved.v1 without deleting the v1 schema evidence
+      owner_input:
+        public_fields: [responseId, excerptHash, publicationForm, reason, expectedVersion]
+        server_derived_fields: [_actorId, _actorAssertionJti, _actorAssuranceLevel, _actorRequestKeySha256, _requestId, _idempotencyKeySha256, _requestSha256]
+        exact_key_count: 12
+        caller_selected_assertion: forbidden
+      relations: [editorial.response_excerpt_approval_receipts_v2, editorial.responses, editorial.response_publication_identity_receipts_v1, ops.users, ops.audit_events, ops.outbox]
+      lock_order: [editorial.response_excerpt_approval_receipts_v2(idempotency_key_sha256), editorial.responses(id,version), editorial.response_publication_identity_receipts_v1(response_id,response_version)]
+      branch_guards:
+        ANONYMOUS: persisted body consent and identityDisplay=ANONYMOUS; identity receipt cardinality zero
+        FULL_OR_REDACTED: exactly one active SECOND_FACTOR_VERIFIED receipt matches response ID/version, response content digest, publication consent digest, organization ID, publication form and response assertion pointer; OTP_ONLY and UNVERIFIED are rejected
+      cardinality: {approval_receipt: exactly-one new success, response_update: exactly-one new success, identity_receipt: exactly-one for FULL_or_REDACTED and zero for ANONYMOUS, audit: exactly-one new success, outbox: exactly-one new success, exact_replay: zero writes}
+      outbox: {events: [response.excerpt_approved.v2], cardinality: {response.excerpt_approved.v2: exactly-one}}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
     resolveCorrectionRequest:
       semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.resolveCorrectionRequest
       existing_source: specs/api/operation-persistence.yaml#operations[operation_id=resolveCorrectionRequest]
@@ -2933,7 +3534,10 @@ exact_persistence_registry:
       effect_owner: control-api.resolveCorrectionRequest
       atomic_transition_group: gurine.command.resolveCorrectionRequest.publish.v1
       relations: [ops.idempotency_keys, editorial.corrections, editorial.cases, editorial.publication_previews, editorial.publication_gate_decisions, editorial.publication_revisions, ops.tasks, ops.audit_events, ops.outbox]
-      cardinality: {correction: exactly-one, gate: exactly-one, revision: exactly-one, case: exactly-one, task: zero-or-one, audit: exactly-one, outbox: exactly-three, receipt: exactly-one}
+      cardinality: {correction: exactly-one, gate: exactly-one, revision: exactly-one, case: exactly-one, task: zero-or-one, audit: exactly-one, outbox: exactly-four, receipt: exactly-one}
+      outbox:
+        events: [correction.resolved.v1, notification.correction_resolved.v1, publication.revision_created.v1, projection.publication_revision_created.v1]
+        cardinality: {correction.resolved.v1: exactly-one, notification.correction_resolved.v1: exactly-one, publication.revision_created.v1: exactly-one, projection.publication_revision_created.v1: exactly-one}
     placeTemporaryRestriction:
       semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.placeTemporaryRestriction
       existing_source: specs/api/operation-persistence.yaml#operations[operation_id=placeTemporaryRestriction]
@@ -2953,10 +3557,11 @@ exact_persistence_registry:
     placeLegalHold:
       semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.placeLegalHold
       existing_source: specs/api/operation-persistence.yaml#operations[operation_id=placeLegalHold]
-      required_replacement: replace case-shaped conditional update with editorial.place_legal_hold closed target-union procedure; case mutation is conditional only for case-governed variants
+      required_replacement: replace case-shaped conditional update with the thirteen-kind ops.place_legal_hold_v2 closed target-union procedure; case mutation is conditional only for case-governed variants and AUDIT_SUBJECT_RECORD is a typed zero-write unsupported result rather than a target branch
+      transport_to_owner_normalization: public expiresAt remains optional nullable for backward compatibility; omission is converted to explicit JSON null before the request digest and exact internal owner payload are produced
       effect_owner: control-api.placeLegalHold
       atomic_transition_group: gurine.command.placeLegalHold.v2
-      relations: [ops.idempotency_keys, target-specific concrete relation, editorial.cases, editorial.review_snapshots, editorial.conflict_snapshots, ops.legal_hold_target_anchors, editorial.legal_holds, ops.audit_events, ops.outbox]
+      relations: [ops.idempotency_keys, target-specific concrete relation, ops.privacy_correction_snapshots_v1, ops.privacy_subscription_snapshots_v1, intake.communication_endpoints, editorial.cases, editorial.review_snapshots, editorial.conflict_snapshots, ops.legal_hold_target_anchors, editorial.legal_holds, ops.audit_events, ops.outbox]
       cardinality: {target: exactly-one, anchor: exactly-one logical, hold: exactly-one new success, audit: exactly-one, outbox: exactly-one, receipt: exactly-one, exact_replay: zero writes}
   set_equality_assertions:
   - query persistence equals all additive QUERY IDs derived from addendum-operation-contracts
@@ -2969,16 +3574,106 @@ exact_persistence_registry:
     from command semantics
 cross_file_physical_dependencies:
   required_relations_not_yet_in_migration_ownership:
-  - intake.privacy_request_receipt_tokens
   - intake.communication_endpoint_versions
   - ops.communication_provider_config_versions
   satisfied_derived_session_contract: specs/submission/addendum-derived-session-boundary.yaml plus the 0027 intake.submission_sessions additive
     columns persist APPEAL_CREATE, APPEAL_STATUS and COMMUNICATION_PROFILE scope, lineage, version, SHA-256 token, issuance, rotation, expiry
     and revocation without widening RESPONSE_RECEIPT.
-  remaining_required_session_contract: PRIVACY_REQUEST_RECEIPT still requires an exact persistence relation/procedure or an authority decision
-    to use a closed intake.submission_sessions extension; it is not covered by the appeal/profile overlay.
-  failure_mode: fail validation and migration generation until every relation, column, key, grant, retention and repository contract exists; no
-    JSONB fallback or RESPONSE_RECEIPT mutation reuse
+  satisfied_privacy_request_storage_contract: migration 0038 owns ops.privacy_requests_v2, its immutable receipt relations, the concrete ops.privacy_request_access_policies_v1 binding and the ops.create_privacy_request_v2, ops.exchange_privacy_request_receipt_token_v2 and ops.get_privacy_request_v2 routines; PRIVACY_REQUEST_RECEIPT uses the closed intake.submission_sessions extension without widening any prior kind.
+  privacy_access_policy_physical_binding:
+    status: FINAL
+    relation: ops.privacy_request_access_policies_v1
+    primary_key: [policy_id, revision]
+    receipt_binding_key: [policy_id, revision, policy_digest, binding_digest]
+    version_column: revision
+    lifecycle_state_column: state
+    approved_state: APPROVED
+    policy_version_column: policy_version
+    authority_column: authority
+    test_only_authority: TEST_ONLY
+    selector: ops.current_privacy_request_access_policy_v1(timestamptz)
+    production_preflight: ops.preflight_privacy_request_access_policy_v1(timestamptz)
+    production_seed: FORBIDDEN
+    fixture_authority: TEST_ONLY
+    production_rule: runtime service identities cannot select TEST_ONLY and deployment preflight rejects it; zero, duplicate, expired or unapproved rows remain request-id-only DEPENDENCY_UNAVAILABLE with zero writes
+  open_privacy_transition_authorities:
+    status: IMPLEMENTED_WITH_EXPLICIT_FAIL_CLOSED_BRANCHES
+    successful_edges:
+      START_REVIEW: IMPLEMENTED
+      VERIFY_IDENTITY:
+        RESPONSE_RECEIPT: IMPLEMENTED
+      APPROVE:
+        CORRECTION_RESPONSE_PARTY_NAME:
+          status: IMPLEMENTED_JOB_ONLY_0040
+          selector: requestType CORRECTION plus exact targetObjectType RESPONSE and fieldPath /partyName
+          authority: the current immutable plan binding, ACCESS-identical projection digest, approval transition receipt and zero-active-hold proof are revalidated before exactly one dedicated PRIVACY_RESPONSE_PARTY_NAME_CORRECTION job is created
+          effect_boundary: APPROVE emits only the existing privacy.request_decision_recorded.v1 decision event and the dedicated job; it cannot mutate the response value or synthesize completion authority
+      COMPLETE:
+        CORRECTION_RESPONSE_PARTY_NAME:
+          status: IMPLEMENTED_PRIVATE_FENCED_OWNER_0040
+          owner: ops.execute_privacy_response_party_name_correction_job_v1
+          authority: only the current claimed workflow-worker job lease and fencing token may consume the exact plan, approval, ACCESS projection, response-version, value-digest, receipt-chain and legal-hold graph
+          effect_boundary: one response version increment, privacy request completion, immutable completion receipt, redacted audit and privacy.response_party_name_corrected.v1 event are atomic; plaintext, ciphertext, keys and job payload are forbidden from result and observability surfaces
+    blocked_edges:
+      VERIFY_IDENTITY:
+        VERIFIED_ENDPOINT: OPEN_FAIL_CLOSED because no canonical endpoint verifier/runtime producer can create the source receipt; the RESPONSE_RECEIPT proof path is implemented and does not widen this unavailable branch
+      APPROVE: every request type or target other than CORRECTION plus exact RESPONSE /partyName remains OPEN_FAIL_CLOSED with zero job, decision, audit, outbox or target writes; no generic inventory or target fallback is authority
+      COMPLETE: every request type or target other than CORRECTION plus exact RESPONSE /partyName remains OPEN_FAIL_CLOSED because no per-branch private fenced owner and immutable completion receipt graph exists; legacy V1 decision/execution paths are historical read-only
+    dependent_edges: {EXTEND: requires a prior successful VERIFY_IDENTITY and an approved response policy/calendar, REJECT: requires a prior successful VERIFY_IDENTITY and an approved response policy/calendar}
+    forbidden_completion_claim: unsupported APPROVE/COMPLETE branches remain physically unsatisfied, and even the supported CORRECTION RESPONSE /partyName branch cannot claim completion without the exact immutable plan binding, approval binding, dedicated job fence, ACCESS receipt chain and completion receipt/audit/event graph
+  privacy_scope_legal_hold_mapping:
+    required_object_kinds: [RESPONSE, CORRECTION, SUBSCRIPTION, COMMUNICATION_ENDPOINT, PUBLICATION, EVIDENCE, AUDIT_SUBJECT_RECORD]
+    set_equality: mappings keys equal required_object_kinds; no aggregate-level or generic fallback counts as a concrete object mapping
+    mappings:
+      RESPONSE:
+        status: IMPLEMENTED
+        target_kind: RESPONSE
+        source: editorial.responses(id,version,response_content_sha256)
+        anchor: ops.legal_hold_target_anchors(response_id)
+        owner_branch: ops.place_legal_hold_v2 RESPONSE
+      CORRECTION:
+        status: IMPLEMENTED_0040
+        target_kind: CORRECTION
+        source: ops.privacy_correction_snapshots_v1(snapshot_id,correction_id,snapshot_version,snapshot_digest)
+        anchor: ops.legal_hold_target_anchors(correction_snapshot_id,correction_id,target_version,correction_snapshot_digest)
+        owner_branch: ops.place_legal_hold_v2 CORRECTION
+        binding: targetId equals snapshot_id, targetVersion equals snapshot_version, targetDigest equals snapshot_digest and correctionId equals correction_id
+      SUBSCRIPTION:
+        status: IMPLEMENTED_0040
+        target_kind: SUBSCRIPTION
+        source: ops.privacy_subscription_snapshots_v1(snapshot_id,subscription_id,snapshot_version,snapshot_digest)
+        anchor: ops.legal_hold_target_anchors(subscription_snapshot_id,subscription_id,target_version,subscription_snapshot_digest)
+        owner_branch: ops.place_legal_hold_v2 SUBSCRIPTION
+        binding: targetId equals snapshot_id, targetVersion equals snapshot_version, targetDigest equals snapshot_digest and subscriptionId equals subscription_id
+      COMMUNICATION_ENDPOINT:
+        status: IMPLEMENTED_0040
+        target_kind: COMMUNICATION_ENDPOINT
+        source: intake.communication_endpoints(id,version,endpoint_digest)
+        anchor: ops.legal_hold_target_anchors(communication_endpoint_id,communication_endpoint_version,communication_endpoint_digest)
+        owner_branch: ops.place_legal_hold_v2 COMMUNICATION_ENDPOINT
+        binding: targetId equals id, targetVersion equals version and targetDigest equals endpoint_digest; endpointSnapshotDigest substitution is forbidden
+      PUBLICATION:
+        status: IMPLEMENTED
+        target_kind: PUBLICATION
+        source: editorial.publication_revisions(id,revision,public_payload_sha256)
+        anchor: ops.legal_hold_target_anchors(publication_revision_id)
+        owner_branch: ops.place_legal_hold_v2 PUBLICATION
+      EVIDENCE:
+        status: IMPLEMENTED
+        target_kind: EVIDENCE
+        source: editorial.evidence(id,version,content_sha256)
+        anchor: ops.legal_hold_target_anchors(evidence_id)
+        owner_branch: ops.place_legal_hold_v2 EVIDENCE
+      AUDIT_SUBJECT_RECORD:
+        status: EXPLICITLY_UNSUPPORTED
+        error: LEGAL_HOLD_TARGET_UNSUPPORTED
+        http_status: 422
+        reason: no authoritative source relation exists, so a target version, canonical digest, lock or foreign-key anchor cannot be validated
+        unlock_condition: authorize a versioned immutable audit-subject source relation, canonical digest preimage, owner lock, anchor columns and foreign key, placement/release validation and event payload branch
+    generic_fallback: FORBIDDEN
+    aggregate_substitution: PRIVACY_REQUEST and COMMUNICATION_SUBJECT anchors do not prove hold coverage for any unmapped inventory member
+    enforcement: an inventory containing AUDIT_SUBJECT_RECORD cannot pass APPROVE or retention-worker COMPLETE; placeLegalHold returns LEGAL_HOLD_TARGET_UNSUPPORTED and every boundary produces zero target writes
+  failure_mode: fail validation and migration generation until every supported relation, column, key, grant, retention and repository contract exists; AUDIT_SUBJECT_RECORD remains an explicit unsupported error until its unlock condition is met, with no JSONB fallback or RESPONSE_RECEIPT mutation reuse
   retention_location_shape:
     current_physical_source: ops.retention_execution_receipts.location_counts as sqlx::types::Json<RetentionLocationCountV1Array>
     lock_identity:
@@ -3095,6 +3790,11 @@ derived_session_persistence_overlay:
       path: /communication-profile
       kinds:
       - COMMUNICATION_PROFILE
+    privacy_request_receipt:
+      name: gurine_privacy_request_receipt_session
+      path: /privacy
+      kinds:
+      - PRIVACY_REQUEST_RECEIPT
     defaults:
       host_only: true
       httpOnly: true
@@ -3102,3 +3802,37 @@ derived_session_persistence_overlay:
       secure_in_production: true
   redaction: X-Gurine-Next-Submission-Session and all raw/hashed session credentials are absent from domain events, audit details, errors, logs,
     traces, metrics, analytics, URLs and browser storage.
+r6d_backup_disposal_due_inventory_contract:
+  authority: supervisor D1; the database owns only deterministic due inventory and the existing infra/scripts backup and restore operator remains the external physical-disposal owner
+  relations:
+    source: ops.r6d_entity_retention_execution_receipts_v1
+    due_inventory: ops.r6d_backup_disposal_due_inventory_v1
+  list_due:
+    procedure: ops.list_due_r6d_backup_disposals_v1(integer)
+    input: integer limit in 1..1000
+    selection: terminal ANONYMIZE execution receipt whose backup_disposal_due_at is at or before the database evaluatedAt; no disposal-completion relation or exclusion exists in this wave
+    order: [backup_disposal_due_at ASC, execution_receipt_id ASC]
+    result:
+      schema: R6dBackupDisposalDueListV1
+      exact_top_level_keys: [evaluatedAt, dueCount, items]
+      exact_item_keys: [executionReceiptId, executionReceiptDigest, entityKind, entityId, anonymizedAt, backupDisposalDueAt, scheduleId, scheduleDigest]
+      due_count: exact returned item-array length
+    repeatability: because no disposal-completion authority is stored in the database, the same due source receipt remains eligible on later calls; the result means due candidate, not confirmed outstanding backup artifact
+  privileges:
+    owner: gurine_migrator
+    mutation: none; PUBLIC and every gurine runtime role have no disposal writer, and no new role or capability is introduced
+    read: PUBLIC is revoked and only gurine_auditor may execute the bounded list owner; no application runtime role receives access
+  external_operator_procedure:
+    - Export the deterministic due candidate list without treating it as proof of an extant backup artifact.
+    - Resolve the affected backup artifacts under the existing infra/scripts backup and restore operating boundary.
+    - Perform physical disposal manually after the one-year due time; this wave adds no scheduler or automatic deletion.
+    - Stop without a completion claim whenever artifact coverage, legal-hold absence, or independent absence verification cannot be established under the operator procedure.
+  operator_owned_deferral:
+    status: OPERATOR_OWNED_DEFERRED
+    input_contract: specs/legal/operator-owned-launch-inputs.yaml#BACKUP_PHYSICAL_DISPOSAL_RECEIPT_AUTHORITY
+    required_input: [external append-only receipt storage and access controls, authenticated producer and independent verifier, backup-artifact identity and N-to-M cardinality, allowed disposal methods and method-specific success evidence, authoritative absence-verification scope and evidence, exact immutable receipt ABI and digest or signature preimage]
+    system_receipt_producer: none
+    system_completion_claim: forbidden
+    completed_item_exclusion: none
+    forbidden_until_supplied: [database disposal receipt relation, database record owner, writer grant, new role, new capability, invented backupSetDigest, invented operatorReferenceDigest, invented disposalMethodCode enum]
+  deployment: no operating schedule, policy seed, automatic disposal or database completion attestation is introduced in this wave

@@ -12,6 +12,7 @@
     "case_id",
     "slug",
     "display_status",
+    "non_conclusion",
     "content_hash",
     "title",
     "summary",
@@ -58,8 +59,14 @@
         "PUBLISHED_EXPLAINED",
         "OFFICIALLY_CONFIRMED",
         "CORRECTED",
-        "RETRACTED"
+        "RETRACTED",
+        "TEMPORARILY_RESTRICTED"
       ]
+    },
+    "non_conclusion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
     },
     "content_hash": {
       "$ref": "common.schema.json#/$defs/sha256"
@@ -322,10 +329,101 @@
       "type": "string",
       "format": "date-time"
     },
+    "official_confirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "institution",
+        "document_type",
+        "document_date",
+        "confirmed_scope",
+        "source_locator",
+        "source_digest"
+      ],
+      "properties": {
+        "institution": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "document_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "document_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "confirmed_scope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "source_locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "source_digest": {
+          "$ref": "common.schema.json#/$defs/sha256"
+        }
+      }
+    },
+    "correction_notice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applied_at", "reason", "impact_summary", "revision"],
+      "properties": {
+        "applied_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "impact_summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "correction_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effective_reason", "limitations"],
+      "properties": {
+        "effective_reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      }
+    },
     "review_summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["editor_approval_count", "legal_reviewed", "policy_version"],
+      "required": [
+        "editor_approval_count",
+        "legal_reviewed",
+        "legal_review_receipt_sha256",
+        "policy_version"
+      ],
       "properties": {
         "editor_approval_count": {
           "type": "integer",
@@ -334,6 +432,12 @@
         "legal_reviewed": {
           "type": "boolean"
         },
+        "legal_review_receipt_sha256": {
+          "oneOf": [
+            { "$ref": "common.schema.json#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
         "policy_version": {
           "type": "string",
           "minLength": 1,
@@ -341,5 +445,143 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "display_status": { "const": "PUBLISHED_ANOMALY" }
+        },
+        "required": ["display_status"]
+      },
+      "then": {
+        "properties": {
+          "non_conclusion": {
+            "const": "공개자료 비교에서 설명이 필요한 차이가 확인됐습니다. 현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "display_status": { "const": "PUBLISHED_EXPLAINED" }
+        },
+        "required": ["display_status"]
+      },
+      "then": {
+        "properties": {
+          "non_conclusion": {
+            "const": "처음 탐지된 차이는 추가 자료에서 확인된 구성·서비스·조건의 차이로 설명됩니다. 탐지와 검증 과정을 함께 공개합니다."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "display_status": { "const": "RETRACTED" }
+        },
+        "required": ["display_status"]
+      },
+      "then": {
+        "properties": {
+          "non_conclusion": {
+            "const": "핵심 근거의 오류로 이 게시물을 철회했습니다. 원래 주장은 더 이상 유효하지 않습니다. 오류 원인과 후속 조치를 공개합니다."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "display_status": { "const": "TEMPORARILY_RESTRICTED" }
+        },
+        "required": ["display_status"]
+      },
+      "then": {
+        "properties": {
+          "non_conclusion": {
+            "const": "법적 사유, 권리 보호 또는 안전을 위해 공개를 일시 제한했습니다. 이 제한은 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "display_status": {
+            "const": "OFFICIALLY_CONFIRMED"
+          }
+        },
+        "required": ["display_status"]
+      },
+      "then": {
+        "required": ["official_confirmation"]
+      },
+      "else": {
+        "not": {
+          "required": ["official_confirmation"]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "display_status": {
+            "const": "CORRECTED"
+          }
+        },
+        "required": ["display_status"]
+      },
+      "then": {
+        "required": ["correction_notice", "correction_details"]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["correction_notice"] },
+            { "required": ["correction_details"] }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "review_summary": {
+            "properties": {
+              "legal_reviewed": {
+                "const": true
+              }
+            },
+            "required": ["legal_reviewed"]
+          }
+        },
+        "required": ["review_summary"]
+      },
+      "then": {
+        "properties": {
+          "review_summary": {
+            "properties": {
+              "legal_review_receipt_sha256": {
+                "$ref": "common.schema.json#/$defs/sha256"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "review_summary": {
+            "properties": {
+              "legal_review_receipt_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

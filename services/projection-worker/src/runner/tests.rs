@@ -1,5 +1,6 @@
+use super::addendum_projection_contract::event_is_accepted as addendum_event_is_accepted;
 use super::agency_projection::agency_id_from_payload;
-use super::{Failure, addendum_event_is_accepted, sha256, verified_revision_payload};
+use super::{Failure, sha256, verified_revision_payload};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -12,6 +13,50 @@ fn action_execution_authorization_is_accepted_by_audit_indexer() {
     assert!(!addendum_event_is_accepted(
         "cost-projector",
         "action.execution_authorized.v1"
+    ));
+}
+
+#[test]
+fn response_submission_v2_is_accepted_only_as_the_audit_fact() {
+    assert!(addendum_event_is_accepted(
+        "audit-indexer",
+        "response.submitted.v2"
+    ));
+    for consumer in ["cost-projector", "submission-projector"] {
+        assert!(!addendum_event_is_accepted(
+            consumer,
+            "response.submitted.v2"
+        ));
+    }
+    for retired_or_side_effect_event in [
+        "response.submitted.v1",
+        "notification.response_submitted.v2",
+        "workflow.response_submitted.v2",
+    ] {
+        assert!(!addendum_event_is_accepted(
+            "audit-indexer",
+            retired_or_side_effect_event
+        ));
+    }
+}
+
+#[test]
+fn response_materialized_v2_is_accepted_by_its_two_projection_consumers() {
+    for consumer in ["submission-projector", "audit-indexer"] {
+        assert!(addendum_event_is_accepted(
+            consumer,
+            "editorial.response_materialized.v2"
+        ));
+    }
+    for consumer in ["cost-projector", "projection-worker"] {
+        assert!(!addendum_event_is_accepted(
+            consumer,
+            "editorial.response_materialized.v2"
+        ));
+    }
+    assert!(!addendum_event_is_accepted(
+        "submission-projector",
+        "editorial.response_materialized.v1"
     ));
 }
 

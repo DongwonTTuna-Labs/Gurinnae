@@ -127,6 +127,10 @@ pub fn verify_claims(
         || claims.body_sha256 != hashes.body_sha256
         || claims.content_type != hashes.content_type
         || claims.idempotency_key_sha256 != hashes.idempotency_key_sha256
+        // Actor assertions have no submission-session continuation claim.
+        // Rejecting the header here prevents a caller from adding an unsigned
+        // opaque token to a Control API request.
+        || hashes.next_submission_session_sha256.is_some()
         || claims.operation_id != expectation.operation
         || claims.required_capability != expectation.capability
         || claims.assurance_level != expectation.assurance

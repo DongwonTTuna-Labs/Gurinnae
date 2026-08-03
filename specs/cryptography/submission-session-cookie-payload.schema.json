@@ -28,7 +28,11 @@
         "SUBSCRIPTION_PENDING",
         "SUBSCRIPTION_MANAGEMENT",
         "RESPONSE_RECEIPT",
-        "CORRECTION_RECEIPT"
+        "CORRECTION_RECEIPT",
+        "APPEAL_CREATE",
+        "APPEAL_STATUS",
+        "COMMUNICATION_PROFILE",
+        "PRIVACY_REQUEST_RECEIPT"
       ]
     },
     "opaqueSessionToken": {

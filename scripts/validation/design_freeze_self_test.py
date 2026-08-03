@@ -41,6 +41,7 @@ from .design_freeze_reviews import (
     load_required_review_roles,
     validate_reviews,
 )
+from .design_freeze_registry_self_test import registry_fixtures
 
 
 def _valid_authority_payload() -> dict[str, object]:
@@ -85,22 +86,6 @@ def _valid_authority_payload() -> dict[str, object]:
 def _authority_stats(payload: dict[str, object]) -> dict[str, object] | None:
     stats = payload.get("stats")
     return stats if isinstance(stats, dict) else None
-
-def _duplicate_fixture() -> bool:
-    checks = Checks()
-    checks.unique(["A", "A"], "bad-fixture")
-    return any(problem.code == "duplicate_id" for problem in checks.problems)
-
-def _set_fixture() -> bool:
-    checks = Checks()
-    checks.equal({"A"}, {"B"}, "bad-fixture", "left", "right")
-    return any(problem.code == "set_equality" for problem in checks.problems)
-
-def _count_fixture() -> bool:
-    checks = Checks()
-    checks.count(77, {str(index) for index in range(80)}, "bad-fixture")
-    return any(problem.code == "declared_count" for problem in checks.problems)
-
 
 def _zero_relation_migration_fixture() -> bool:
     with tempfile.TemporaryDirectory(prefix="gurinnae-zero-relation-") as directory:
@@ -372,9 +357,7 @@ def _stale_review_fixture() -> bool:
 def self_test() -> tuple[bool, list[dict[str, object]]]:
     results: list[dict[str, object]] = []
     fixtures: tuple[tuple[str, Callable[[], bool]], ...] = (
-        ("duplicate-id.yaml", _duplicate_fixture),
-        ("set-drift.yaml", _set_fixture),
-        ("magic-count.yaml", _count_fixture),
+        *registry_fixtures(),
         ("zero-relation-migration.yaml", _zero_relation_migration_fixture),
         ("open-blocker.yaml", _status_blocker_fixture),
         ("ai-semantic-schema.json", _ai_semantic_fixture),

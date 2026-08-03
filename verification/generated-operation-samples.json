@@ -10,7 +10,14 @@
         "agencyType": [],
         "jurisdiction": ""
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "getAgency": {
@@ -75,6 +82,14 @@
       "freshness": {
         "asOf": "2026-07-12T00:00:00Z",
         "status": "CURRENT"
+      },
+      "interpretationNotice": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
       }
     }
   },
@@ -85,7 +100,14 @@
     "body": {
       "items": [],
       "appliedFilters": {},
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "listAgencyContracts": {
@@ -95,7 +117,14 @@
     "body": {
       "items": [],
       "appliedFilters": {},
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "listPublicCases": {
@@ -117,7 +146,14 @@
         "hasCorrection": false,
         "sort": "updated_desc"
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "downloadPublicCases": {
@@ -128,6 +164,9 @@
       "id": "public-cases-a95cbf94fea10d08",
       "status": "READY",
       "version": 1,
+      "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+      "nonConclusionNotices": [],
+      "interpretationNotice": null,
       "filename": "public-cases.jsonl",
       "mediaType": "application/x-ndjson; charset=utf-8",
       "byteLength": 75,
@@ -149,7 +188,7 @@
     "body": {
       "slug": "",
       "title": "",
-      "publicState": "",
+      "publicState": "PUBLISHED_ANOMALY",
       "revision": 0,
       "publishedAt": "2026-07-12T00:00:00Z",
       "updatedAt": "2026-07-12T00:00:00Z",
@@ -178,6 +217,7 @@
       "seo": {
         "title": "",
         "description": "",
+        "openGraphDescription": "",
         "canonicalUrl": "",
         "robots": ""
       }
@@ -225,7 +265,15 @@
         "formula": "",
         "roundingPolicy": ""
       },
-      "limitations": []
+      "limitations": [],
+      "nonConclusion": "",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "downloadCaseReproducibility": {
@@ -233,9 +281,21 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "id": "",
-      "status": "",
-      "version": 0
+      "id": "case-test-case-reproducibility-e29870585c26a607",
+      "status": "READY",
+      "version": 1,
+      "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+      "filename": "case-test-case-reproducibility.json",
+      "mediaType": "application/json; charset=utf-8",
+      "byteLength": 262,
+      "contentSha256": "e29870585c26a607893ea06d81cdfc8a0a17652b6fe8a1c4c04470525a9559e4",
+      "contentBase64": "eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIiwibm9uQ29uY2x1c2lvbiI6IuqzteqwnOyekOujjCDruYTqtZDsl5DshJwg7ISk66qF7J20IO2VhOyalO2VnCDssKjsnbTqsIAg7ZmV7J2465CQ7Iq164uI64ukLiDtmITsnqwg7J6Q66OM66eM7Jy866GcIOychOuyleyEseydtOuCmCDrtoDtjKgg7Jes67aA66W8IO2MkOuLqO2VoCDsiJgg7JeG7Iq164uI64ukLiIsImRhdGEiOnt9fQ==",
+      "format": "JSON",
+      "rowCount": 1,
+      "appliedFilters": {
+        "caseSlug": "test-case"
+      },
+      "generatedAt": "2026-07-12T00:00:00Z"
     }
   },
   "listCaseRevisions": {
@@ -245,7 +305,14 @@
     "body": {
       "items": [],
       "appliedFilters": {},
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "getPublicCaseRevision": {
@@ -262,10 +329,11 @@
         "case": {
           "slug": "",
           "title": "",
-          "publicState": "NEVER_PUBLISHED",
+          "publicState": "PUBLISHED_ANOMALY",
           "summary": "",
           "revision": 0,
           "updatedAt": "2026-07-12T00:00:00Z",
+          "nonConclusion": "",
           "href": ""
         },
         "agencyName": "",
@@ -290,7 +358,14 @@
         },
         "limitations": []
       },
-      "diffFromPrevious": []
+      "diffFromPrevious": [],
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "getAboutContent": {
@@ -473,11 +548,22 @@
       },
       "status": "",
       "data": {
-        "version": "",
-        "title": "",
-        "updatedAt": "2026-07-12T00:00:00Z",
+        "status": "PUBLISHED",
         "sections": [],
-        "sourceLinks": []
+        "retentionSchedules": [
+          {
+            "recordClass": "AGENCY_MASTER",
+            "purpose": "TEST_ONLY generated response fixture",
+            "lawfulBasis": "TEST_ONLY generated response fixture",
+            "triggerKind": "CREATED_AT",
+            "activeDurationSeconds": 0,
+            "backupDurationSeconds": 0,
+            "terminalAction": "DELETE",
+            "effectiveAt": "2026-07-12T00:00:00Z",
+            "reviewExpiresAt": "2026-07-13T00:00:00Z",
+            "scheduleDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
       },
       "links": []
     }
@@ -494,11 +580,22 @@
       },
       "status": "",
       "data": {
-        "version": "",
-        "title": "",
-        "updatedAt": "2026-07-12T00:00:00Z",
+        "status": "PUBLISHED",
         "sections": [],
-        "sourceLinks": []
+        "retentionSchedules": [
+          {
+            "recordClass": "x",
+            "purpose": "x",
+            "lawfulBasis": "x",
+            "triggerKind": "CREATED_AT",
+            "activeDurationSeconds": 0,
+            "backupDurationSeconds": 0,
+            "terminalAction": "DELETE",
+            "effectiveAt": "2026-07-12T00:00:00Z",
+            "reviewExpiresAt": "2026-07-12T00:00:00Z",
+            "scheduleDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
       },
       "links": []
     }
@@ -520,7 +617,14 @@
         "amountMin": "0",
         "amountMax": "0"
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "downloadContracts": {
@@ -529,8 +633,30 @@
     "mediaType": "application/json",
     "body": {
       "id": "",
-      "status": "",
-      "version": 0
+      "status": "READY",
+      "version": 1,
+      "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+      "nonConclusionNotices": [],
+      "interpretationNotice": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.",
+      "filename": "x",
+      "mediaType": "",
+      "byteLength": 0,
+      "contentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "contentBase64": "",
+      "format": "CSV",
+      "rowCount": 0,
+      "appliedFilters": {
+        "q": "",
+        "agencyId": "00000000-0000-4000-8000-000000000001",
+        "supplierId": "00000000-0000-4000-8000-000000000001",
+        "contractStatus": [],
+        "procurementMethod": [],
+        "signedFrom": "2026-07-12",
+        "signedTo": "2026-07-12",
+        "amountMin": "0",
+        "amountMax": "0"
+      },
+      "generatedAt": "2026-07-12T00:00:00Z"
     }
   },
   "getContract": {
@@ -553,7 +679,15 @@
       "changes": [],
       "sourceDocuments": [],
       "normalizationWarnings": [],
-      "relatedCases": []
+      "relatedCases": [],
+      "interpretationNotice": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "listContractChanges": {
@@ -577,7 +711,14 @@
         "publishedFrom": "2026-07-12",
         "publishedTo": "2026-07-12"
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "getCorrection": {
@@ -597,8 +738,17 @@
         "sourceRevision": 0,
         "summary": "",
         "reason": "",
+        "publicState": "PUBLISHED_ANOMALY",
+        "nonConclusion": "",
         "publishedAt": "2026-07-12T00:00:00Z",
         "affectedClaims": []
+      },
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
       },
       "links": []
     }
@@ -650,7 +800,8 @@
           },
           "license": "CC-BY-4.0",
           "updatedAt": "2026-07-12T00:00:00Z",
-          "downloadUrl": null
+          "downloadUrl": null,
+          "redistributionNotice": "이상 징후 기록이며 위법·부패의 확정이 아님"
         },
         {
           "id": "public-contracts",
@@ -671,7 +822,8 @@
           },
           "license": "CC-BY-4.0",
           "updatedAt": "2026-07-12T00:00:00Z",
-          "downloadUrl": null
+          "downloadUrl": null,
+          "redistributionNotice": "이상 징후 기록이며 위법·부패의 확정이 아님"
         },
         {
           "id": "published-corrections",
@@ -692,13 +844,21 @@
           },
           "license": "CC-BY-4.0",
           "updatedAt": "2026-07-12T00:00:00Z",
-          "downloadUrl": null
+          "downloadUrl": null,
+          "redistributionNotice": "이상 징후 기록이며 위법·부패의 확정이 아님"
         }
       ],
       "appliedFilters": {
         "format": []
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "공개 데이터",
+        "description": "공개 데이터 · 이상 징후 기록이며 위법·부패의 확정이 아님",
+        "openGraphDescription": "공개 데이터 · 이상 징후 기록이며 위법·부패의 확정이 아님",
+        "canonicalUrl": "/data",
+        "robots": "index,follow"
+      }
     }
   },
   "downloadPublicOpenApi": {
@@ -708,7 +868,27 @@
     "body": {
       "id": "",
       "status": "",
-      "version": 0
+      "version": 0,
+      "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+      "filename": "",
+      "mediaType": "",
+      "byteLength": 0,
+      "contentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "contentBase64": "",
+      "format": "",
+      "rowCount": 0,
+      "appliedFilters": {
+        "q": "",
+        "agencyId": "00000000-0000-4000-8000-000000000001",
+        "supplierId": "00000000-0000-4000-8000-000000000001",
+        "contractStatus": [],
+        "procurementMethod": [],
+        "signedFrom": "2026-07-12",
+        "signedTo": "2026-07-12",
+        "amountMin": "0",
+        "amountMax": "0"
+      },
+      "generatedAt": "2026-07-12T00:00:00Z"
     }
   },
   "listRules": {
@@ -755,7 +935,14 @@
     "body": {
       "items": [],
       "appliedFilters": {},
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "searchPublicRecords": {
@@ -775,7 +962,14 @@
         "dateTo": "2026-07-12",
         "sort": "relevance"
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "downloadPublicSearchRecords": {
@@ -786,6 +980,9 @@
       "id": "public-search-records-a95cbf94fea10d08",
       "status": "READY",
       "version": 1,
+      "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+      "nonConclusionNotices": [],
+      "interpretationNotice": null,
       "filename": "public-search-records.jsonl",
       "mediaType": "application/x-ndjson; charset=utf-8",
       "byteLength": 75,
@@ -811,7 +1008,14 @@
       "appliedFilters": {
         "status": []
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "getSource": {
@@ -848,9 +1052,17 @@
           "asOf": "2026-07-12T00:00:00Z",
           "status": "CURRENT"
         },
-        "knownIssues": []
+        "knownIssues": [],
+        "interpretationNotice": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
       },
-      "links": []
+      "links": [],
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "listSuppliers": {
@@ -864,7 +1076,14 @@
         "businessStatus": [],
         "identityStatus": []
       },
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "getSupplier": {
@@ -925,6 +1144,14 @@
       "freshness": {
         "asOf": "2026-07-12T00:00:00Z",
         "status": "CURRENT"
+      },
+      "interpretationNotice": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
       }
     }
   },
@@ -935,7 +1162,14 @@
     "body": {
       "items": [],
       "appliedFilters": {},
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "listSupplierContracts": {
@@ -945,7 +1179,14 @@
     "body": {
       "items": [],
       "appliedFilters": {},
-      "asOf": "2026-07-12T00:00:00Z"
+      "asOf": "2026-07-12T00:00:00Z",
+      "seo": {
+        "title": "",
+        "description": "",
+        "openGraphDescription": "",
+        "canonicalUrl": "",
+        "robots": ""
+      }
     }
   },
   "getPublicSystemStatus": {
@@ -977,7 +1218,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createContactRequest",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1006,7 +1247,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createCorrectionRequestDraft",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1056,7 +1297,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createCorrectionAttachment",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1068,7 +1309,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "deleteCorrectionAttachment",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1080,7 +1321,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "finalizeCorrectionAttachment",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1108,7 +1349,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createCorrectionRequest",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1127,7 +1368,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createDatasetExport",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1204,7 +1445,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createResponseAttachmentUpload",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1216,7 +1457,7 @@
     "status": 204,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "deleteResponseAttachment",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1228,7 +1469,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "finalizeResponseAttachment",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1267,7 +1508,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "saveResponseDraft",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1305,7 +1546,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "requestResponseExtension",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1317,7 +1558,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "submitResponse",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1429,7 +1670,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createSubscription",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1467,7 +1708,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "updateSubscription",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1479,7 +1720,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "unsubscribe",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1492,15 +1733,15 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "createResponseAppeal",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
@@ -1529,10 +1770,10 @@
       "submittedAt": "2026-07-12T00:00:00Z",
       "updatedAt": "2026-07-12T00:00:00Z",
       "dueAt": "2026-07-12T00:00:00Z",
-      "decisionReason": "",
+      "decisionReason": "x",
       "nextActions": [],
       "links": [],
-      "operationId": ""
+      "operationId": "getResponseAppeal"
     }
   },
   "requestCommunicationEndpointLink": {
@@ -1541,25 +1782,25 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "requestCommunicationEndpointLink",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "endpoint": {
         "endpointId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "channel": "EMAIL",
-        "maskedDestination": "",
+        "maskedDestination": "x",
         "state": "PENDING_VERIFICATION",
-        "locale": "",
+        "locale": "xx",
         "verifiedAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
       },
@@ -1574,29 +1815,29 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "verifyCommunicationEndpointLink",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "endpoint": {
         "endpointId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "channel": "EMAIL",
-        "maskedDestination": "",
+        "maskedDestination": "x",
         "state": "PENDING_VERIFICATION",
-        "locale": "",
+        "locale": "xx",
         "verifiedAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
       },
-      "profileVersion": 0,
+      "profileVersion": 1,
       "authorizationEventId": "00000000-0000-4000-8000-000000000001"
     }
   },
@@ -1606,29 +1847,29 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "unlinkCommunicationEndpoint",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "endpoint": {
         "endpointId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "channel": "EMAIL",
-        "maskedDestination": "",
+        "maskedDestination": "x",
         "state": "PENDING_VERIFICATION",
-        "locale": "",
+        "locale": "xx",
         "verifiedAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
       },
-      "profileVersion": 0,
+      "profileVersion": 1,
       "optOutReceiptId": "00000000-0000-4000-8000-000000000001"
     }
   },
@@ -1638,15 +1879,15 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "createPrivacyRequest",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
@@ -1654,13 +1895,15 @@
         "privacyRequestId": "00000000-0000-4000-8000-000000000001",
         "requestType": "ACCESS",
         "state": "RECEIVED",
-        "jurisdiction": "",
+        "jurisdiction": "xx",
         "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "identityState": "PENDING_VERIFICATION",
+        "identityVerifiedAt": "2026-07-12T00:00:00Z",
         "dueAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
       },
-      "receiptToken": ""
+      "receiptToken": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     }
   },
   "exchangePrivacyRequestReceiptToken": {
@@ -1672,7 +1915,7 @@
       "sessionId": "00000000-0000-4000-8000-000000000001",
       "state": "ACTIVE",
       "expiresAt": "2026-07-12T00:00:00Z",
-      "cookieName": "",
+      "cookieName": "gurine_privacy_request_receipt_session",
       "tokenConsumedAt": "2026-07-12T00:00:00Z"
     }
   },
@@ -1685,18 +1928,25 @@
         "privacyRequestId": "00000000-0000-4000-8000-000000000001",
         "requestType": "ACCESS",
         "state": "RECEIVED",
-        "jurisdiction": "",
+        "jurisdiction": "xx",
         "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "identityState": "PENDING_VERIFICATION",
+        "identityVerifiedAt": "2026-07-12T00:00:00Z",
         "dueAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
       },
-      "decisionReason": "",
-      "completionSummary": "",
-      "nextActions": [],
+      "decisionReasonCode": "x",
+      "decisionReceiptId": "00000000-0000-4000-8000-000000000001",
+      "decisionReceiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "refusalNoticeReceiptId": "00000000-0000-4000-8000-000000000001",
+      "refusalNoticeReceiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "noticeReceiptIds": [],
+      "noticeReceiptSha256s": [],
+      "nextActionCodes": ["VERIFY_IDENTITY"],
       "asOf": "2026-07-12T00:00:00Z",
       "links": [],
-      "operationId": ""
+      "operationId": "getPrivacyRequest"
     }
   },
   "acceptAgentSuggestion": {
@@ -1704,7 +1954,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "acceptAgentSuggestion",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1716,7 +1966,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "acknowledgeSourceIncident",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1728,7 +1978,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "activateKillSwitch",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1740,7 +1990,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "activateRuleVersion",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1752,7 +2002,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "addClaim",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1764,7 +2014,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "addEvidence",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1776,7 +2026,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "approveResponseExcerpt",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1788,7 +2038,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "approveSchemaMapping",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1800,7 +2050,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "assignCase",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1812,7 +2062,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "assignCorrection",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1824,7 +2074,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "assignReview",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1836,7 +2086,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "assignSignal",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1848,7 +2098,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "cancelJob",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1860,7 +2110,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createAccessRequest",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1885,7 +2135,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createCorrection",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1897,7 +2147,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createEvidenceRedaction",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1909,7 +2159,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createHypothesis",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1921,7 +2171,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createResponseRequest",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1933,7 +2183,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createRetractionDraft",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1945,7 +2195,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createReviewSnapshot",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1957,7 +2207,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "createRuleVersionDraft",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1969,7 +2219,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "deactivateKillSwitch",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -1992,7 +2242,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "disableUser",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2004,7 +2254,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "extendKillSwitch",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2016,7 +2266,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "grantRole",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2028,7 +2278,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "inviteUser",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2040,7 +2290,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "linkEvidence",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2052,7 +2302,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "linkSignalToCase",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2064,7 +2314,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "markNotificationRead",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2076,7 +2326,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "pauseBackfill",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2088,7 +2338,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "pauseJobQueue",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2100,7 +2350,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "pauseSource",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2127,7 +2377,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "placeTemporaryRestriction",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2139,7 +2389,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "previewPublication",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2151,7 +2401,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "proposeRoleDefinitionChange",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2163,7 +2413,7 @@
     "status": 201,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "publishCase",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2175,7 +2425,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "quarantineJob",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2187,7 +2437,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "reassignTask",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2199,7 +2449,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "rejectAgentSuggestion",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2211,7 +2461,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "rejectSchemaMapping",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2223,7 +2473,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "resolveCorrectionRequest",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2235,7 +2485,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "retryJob",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2247,7 +2497,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "retryJobs",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2259,7 +2509,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "retrySourceRun",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2271,7 +2521,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "revokeOwnSession",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2283,7 +2533,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "revokeRole",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2295,7 +2545,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "revokeUserSessions",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2307,7 +2557,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "rollbackRuleVersion",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2319,7 +2569,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "runRuleEvaluation",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2331,7 +2581,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "saveResponseRequestDraft",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2343,7 +2593,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "scheduleRuleActivation",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2366,7 +2616,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "startAccessReview",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2378,7 +2628,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "startAgentRun",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2390,7 +2640,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "startBackfill",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2402,7 +2652,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "startRuleShadow",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2414,7 +2664,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "startSourceRun",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2426,7 +2676,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "submitReview",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2449,7 +2699,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "transitionCase",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2461,7 +2711,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "triageCorrection",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2473,7 +2723,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "triageSignal",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2485,7 +2735,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "unlinkSignalFromCase",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2497,7 +2747,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "updateBudgetLimit",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2509,7 +2759,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "updateClaim",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2521,7 +2771,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "updateCorrectionDraft",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2533,7 +2783,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "updateEvidence",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2545,7 +2795,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "updateHypothesis",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2568,7 +2818,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "validateClaims",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2580,7 +2830,7 @@
     "status": 202,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "verifyAuditIntegrity",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2592,7 +2842,7 @@
     "status": 200,
     "mediaType": "application/json",
     "body": {
-      "operationId": "",
+      "operationId": "verifyEvidence",
       "requestId": "00000000-0000-4000-8000-000000000001",
       "status": "accepted",
       "acceptedAt": "2026-07-12T00:00:00Z",
@@ -2725,7 +2975,7 @@
         "updatedAt": "2026-07-12T00:00:00Z"
       },
       "links": [],
-      "operationId": ""
+      "operationId": "getBudgetOverview"
     }
   },
   "getCaseWorkspaceOverview": {
@@ -3063,7 +3313,9 @@
       },
       "validation": [],
       "renderedRoutes": [],
-      "expiresAt": "2026-07-12T00:00:00Z"
+      "expiresAt": "2026-07-12T00:00:00Z",
+      "gateState": "PASS",
+      "legalReviewRequired": false
     }
   },
   "getPublicationReceipt": {
@@ -3806,9 +4058,7 @@
         "sort": "DUE_ASC"
       },
       "asOf": "2026-07-12T00:00:00Z",
-      "nextCursor": "",
-      "totalApproximate": 0,
-      "operationId": "",
+      "operationId": "listActionApprovalQueue",
       "links": []
     }
   },
@@ -3818,39 +4068,39 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "createActionProposal",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "proposal": {
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "actionKind": "HYPOTHESIS",
         "state": "DRAFT",
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "creator": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "lastEditor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z",
@@ -3865,25 +4115,25 @@
     "body": {
       "proposal": {
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "actionKind": "HYPOTHESIS",
         "state": "DRAFT",
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "creator": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "lastEditor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z",
@@ -3892,23 +4142,23 @@
       "origin": {
         "kind": "HUMAN",
         "actorId": "00000000-0000-4000-8000-000000000001",
-        "screenId": "",
-        "reason": ""
+        "screenId": "x",
+        "reason": "x"
       },
       "payload": {
         "schemaVersion": "action-payload.v1",
         "kind": "HYPOTHESIS",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "rationale": {
-          "summary": "",
+          "summary": "x",
           "evidenceSegmentIds": [],
           "unknowns": [],
           "alternativesConsidered": [],
-          "riskNote": ""
+          "riskNote": "x"
         },
         "effect": {
           "effectClass": "INTERNAL_MATERIALIZATION",
@@ -3922,42 +4172,42 @@
           },
           "externalSideEffect": false,
           "reversible": false,
-          "expectedOutcome": ""
+          "expectedOutcome": "x"
         },
         "caseId": "00000000-0000-4000-8000-000000000001",
-        "expectedCaseVersion": 0,
-        "statement": "",
+        "expectedCaseVersion": 1,
+        "statement": "x",
         "unknowns": [],
-        "evidenceSegmentIds": []
+        "evidenceSegmentIds": ["00000000-0000-4000-8000-000000000001"]
       },
       "rationale": {
-        "summary": "",
+        "summary": "x",
         "evidenceSegmentIds": [],
         "unknowns": [],
         "alternativesConsidered": [],
-        "riskNote": ""
+        "riskNote": "x"
       },
       "latestPreview": {
         "previewId": "00000000-0000-4000-8000-000000000001",
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "proposalVersion": 0,
+        "proposalVersion": 1,
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalBinding": {
           "schemaVersion": "approval-binding.v1",
           "proposalId": "00000000-0000-4000-8000-000000000001",
-          "proposalVersion": 0,
+          "proposalVersion": 1,
           "actionKind": "HYPOTHESIS",
           "originDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "rationaleDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "targetType": "CASE",
-          "targetId": "",
-          "targetVersion": 0,
+          "targetId": "x",
+          "targetVersion": 1,
           "targetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "objectScopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-          "operationId": "",
-          "requiredCapability": "",
+          "operationId": "getActionProposal",
+          "requiredCapability": "x",
           "targetRequestDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "previewId": "00000000-0000-4000-8000-000000000001",
           "approvalSubjectDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -3977,7 +4227,7 @@
           "actionDetail": {
             "kind": "HYPOTHESIS",
             "caseId": "00000000-0000-4000-8000-000000000001",
-            "expectedCaseVersion": 0,
+            "expectedCaseVersion": 1,
             "statementDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "evidenceSegmentSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "unknownSetDigest": "0000000000000000000000000000000000000000000000000000000000000000"
@@ -3986,73 +4236,73 @@
         },
         "approvalSubject": {
           "summary": {
-            "plainLanguageChange": "",
-            "objectLabel": "",
-            "currentState": "",
-            "expectedState": "",
-            "whyNow": "",
+            "plainLanguageChange": "x",
+            "objectLabel": "x",
+            "currentState": "x",
+            "expectedState": "x",
+            "whyNow": "x",
             "freshness": "CURRENT",
-            "materialConsequence": ""
+            "materialConsequence": "x"
           },
           "evidence": {
             "supporting": [],
             "contrary": [],
             "unknowns": [],
-            "investigationSummary": "",
+            "investigationSummary": "x",
             "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "contraryEvidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "uncertaintySetDigest": "0000000000000000000000000000000000000000000000000000000000000000"
           },
           "effect": {
-            "before": "",
-            "after": "",
-            "durableSuccessDefinition": "",
-            "partialOrAmbiguousMeaning": "",
+            "before": "x",
+            "after": "x",
+            "durableSuccessDefinition": "x",
+            "partialOrAmbiguousMeaning": "x",
             "reversible": false,
-            "rollbackOrCompensation": "",
+            "rollbackOrCompensation": "x",
             "expectedEffectDigest": "0000000000000000000000000000000000000000000000000000000000000000"
           },
           "destination": {
             "kind": "INTERNAL_OBJECT",
-            "objectLabel": "",
-            "owningTeam": ""
+            "objectLabel": "x",
+            "owningTeam": "x"
           },
           "exactContent": {
             "kind": "NOT_APPLICABLE",
-            "reason": ""
+            "reason": "x"
           },
           "governance": {
             "riskClass": "LOW",
-            "riskSummary": "",
+            "riskSummary": "x",
             "policyStatus": "PASS",
-            "policySummary": "",
+            "policySummary": "x",
             "conflictStatus": "CLEAR",
             "rightsStatus": "NOT_APPLICABLE",
             "consentAndSuppressionStatus": "NOT_APPLICABLE",
             "cost": {
               "kind": "NO_PAID_EFFECT",
-              "explanation": ""
+              "explanation": "x"
             },
-            "expirySummary": "",
+            "expirySummary": "x",
             "governanceDigest": "0000000000000000000000000000000000000000000000000000000000000000"
           },
           "decisionHelp": {
-            "question": "",
-            "approveLabel": "",
-            "approveConsequence": "",
-            "rejectLabel": "",
-            "rejectConsequence": "",
-            "changesRequiredConsequence": "",
-            "recuseConsequence": "",
+            "question": "x",
+            "approveLabel": "x",
+            "approveConsequence": "x",
+            "rejectLabel": "x",
+            "rejectConsequence": "x",
+            "changesRequiredConsequence": "x",
+            "recuseConsequence": "x",
             "requiredAssurance": "ACTIVE_SESSION",
-            "requiredQuorum": [],
+            "requiredQuorum": ["x"],
             "defaultDecision": "NONE"
           },
           "details": {
             "kind": "HYPOTHESIS",
-            "caseLabel": "",
-            "hypothesis": "",
-            "strongestEvidence": "",
+            "caseLabel": "x",
+            "hypothesis": "x",
+            "strongestEvidence": "x",
             "materialUnknowns": []
           }
         },
@@ -4067,7 +4317,6 @@
         "order": "slot-ordinal-asc-generation-asc-assignment-id-asc",
         "asOf": "2026-07-12T00:00:00Z",
         "pageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "nextCursor": "",
         "complete": false
       },
       "decisionHistory": {
@@ -4075,12 +4324,11 @@
         "order": "decided-at-asc-decision-id-asc",
         "asOf": "2026-07-12T00:00:00Z",
         "pageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "nextCursor": "",
         "complete": false
       },
       "quorum": {
         "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "requiredSlots": [],
+        "requiredSlots": ["x"],
         "satisfiedSlots": [],
         "blockingSlots": [],
         "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4088,8 +4336,8 @@
       },
       "executionAuthorization": {
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "actionKind": "HYPOTHESIS",
         "state": "QUEUED",
         "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4098,7 +4346,7 @@
       },
       "asOf": "2026-07-12T00:00:00Z",
       "links": [],
-      "operationId": ""
+      "operationId": "getActionProposal"
     }
   },
   "updateActionDraft": {
@@ -4107,39 +4355,39 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "updateActionDraft",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "proposal": {
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "actionKind": "HYPOTHESIS",
         "state": "DRAFT",
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "creator": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "lastEditor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z",
@@ -4153,39 +4401,39 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "previewActionDraft",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "preview": {
         "previewId": "00000000-0000-4000-8000-000000000001",
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "proposalVersion": 0,
+        "proposalVersion": 1,
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalBinding": {
           "schemaVersion": "approval-binding.v1",
           "proposalId": "00000000-0000-4000-8000-000000000001",
-          "proposalVersion": 0,
+          "proposalVersion": 1,
           "actionKind": "HYPOTHESIS",
           "originDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "rationaleDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "targetType": "CASE",
-          "targetId": "",
-          "targetVersion": 0,
+          "targetId": "x",
+          "targetVersion": 1,
           "targetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "objectScopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-          "operationId": "",
-          "requiredCapability": "",
+          "operationId": "previewActionDraft",
+          "requiredCapability": "x",
           "targetRequestDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "previewId": "00000000-0000-4000-8000-000000000001",
           "approvalSubjectDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4205,7 +4453,7 @@
           "actionDetail": {
             "kind": "HYPOTHESIS",
             "caseId": "00000000-0000-4000-8000-000000000001",
-            "expectedCaseVersion": 0,
+            "expectedCaseVersion": 1,
             "statementDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "evidenceSegmentSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "unknownSetDigest": "0000000000000000000000000000000000000000000000000000000000000000"
@@ -4214,73 +4462,73 @@
         },
         "approvalSubject": {
           "summary": {
-            "plainLanguageChange": "",
-            "objectLabel": "",
-            "currentState": "",
-            "expectedState": "",
-            "whyNow": "",
+            "plainLanguageChange": "x",
+            "objectLabel": "x",
+            "currentState": "x",
+            "expectedState": "x",
+            "whyNow": "x",
             "freshness": "CURRENT",
-            "materialConsequence": ""
+            "materialConsequence": "x"
           },
           "evidence": {
             "supporting": [],
             "contrary": [],
             "unknowns": [],
-            "investigationSummary": "",
+            "investigationSummary": "x",
             "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "contraryEvidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
             "uncertaintySetDigest": "0000000000000000000000000000000000000000000000000000000000000000"
           },
           "effect": {
-            "before": "",
-            "after": "",
-            "durableSuccessDefinition": "",
-            "partialOrAmbiguousMeaning": "",
+            "before": "x",
+            "after": "x",
+            "durableSuccessDefinition": "x",
+            "partialOrAmbiguousMeaning": "x",
             "reversible": false,
-            "rollbackOrCompensation": "",
+            "rollbackOrCompensation": "x",
             "expectedEffectDigest": "0000000000000000000000000000000000000000000000000000000000000000"
           },
           "destination": {
             "kind": "INTERNAL_OBJECT",
-            "objectLabel": "",
-            "owningTeam": ""
+            "objectLabel": "x",
+            "owningTeam": "x"
           },
           "exactContent": {
             "kind": "NOT_APPLICABLE",
-            "reason": ""
+            "reason": "x"
           },
           "governance": {
             "riskClass": "LOW",
-            "riskSummary": "",
+            "riskSummary": "x",
             "policyStatus": "PASS",
-            "policySummary": "",
+            "policySummary": "x",
             "conflictStatus": "CLEAR",
             "rightsStatus": "NOT_APPLICABLE",
             "consentAndSuppressionStatus": "NOT_APPLICABLE",
             "cost": {
               "kind": "NO_PAID_EFFECT",
-              "explanation": ""
+              "explanation": "x"
             },
-            "expirySummary": "",
+            "expirySummary": "x",
             "governanceDigest": "0000000000000000000000000000000000000000000000000000000000000000"
           },
           "decisionHelp": {
-            "question": "",
-            "approveLabel": "",
-            "approveConsequence": "",
-            "rejectLabel": "",
-            "rejectConsequence": "",
-            "changesRequiredConsequence": "",
-            "recuseConsequence": "",
+            "question": "x",
+            "approveLabel": "x",
+            "approveConsequence": "x",
+            "rejectLabel": "x",
+            "rejectConsequence": "x",
+            "changesRequiredConsequence": "x",
+            "recuseConsequence": "x",
             "requiredAssurance": "ACTIVE_SESSION",
-            "requiredQuorum": [],
+            "requiredQuorum": ["x"],
             "defaultDecision": "NONE"
           },
           "details": {
             "kind": "HYPOTHESIS",
-            "caseLabel": "",
-            "hypothesis": "",
-            "strongestEvidence": "",
+            "caseLabel": "x",
+            "hypothesis": "x",
+            "strongestEvidence": "x",
             "materialUnknowns": []
           }
         },
@@ -4298,48 +4546,64 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "submitActionForReview",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "proposal": {
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "actionKind": "HYPOTHESIS",
         "state": "DRAFT",
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "creator": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "lastEditor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z",
         "expiresAt": "2026-07-12T00:00:00Z"
       },
-      "assignments": [],
+      "assignments": [
+        {
+          "assignmentId": "00000000-0000-4000-8000-000000000001",
+          "version": 1,
+          "assignmentGeneration": 1,
+          "slotKind": "x",
+          "requiredCapability": "x",
+          "reviewer": {
+            "actorType": "HUMAN",
+            "actorId": "00000000-0000-4000-8000-000000000001",
+            "displayName": "x"
+          },
+          "state": "ASSIGNED",
+          "dueAt": "2026-07-12T00:00:00Z",
+          "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
       "quorum": {
         "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "requiredSlots": [],
+        "requiredSlots": ["x"],
         "satisfiedSlots": [],
         "blockingSlots": [],
         "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4353,30 +4617,30 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "claimActionReview",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "proposalId": "00000000-0000-4000-8000-000000000001",
-      "proposalVersion": 0,
+      "proposalVersion": 1,
       "assignment": {
         "assignmentId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
-        "assignmentGeneration": 0,
-        "slotKind": "",
-        "requiredCapability": "",
+        "version": 1,
+        "assignmentGeneration": 1,
+        "slotKind": "x",
+        "requiredCapability": "x",
         "reviewer": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "state": "ASSIGNED",
         "dueAt": "2026-07-12T00:00:00Z",
@@ -4390,39 +4654,39 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "submitActionDecision",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "proposal": {
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "actionKind": "HYPOTHESIS",
         "state": "DRAFT",
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "creator": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "lastEditor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z",
@@ -4432,25 +4696,25 @@
         "recordKind": "DECISION",
         "decisionId": "00000000-0000-4000-8000-000000000001",
         "assignmentId": "00000000-0000-4000-8000-000000000001",
-        "assignmentGeneration": 0,
+        "assignmentGeneration": 1,
         "decisionKind": "APPROVE",
         "actor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
-        "slotKind": "",
-        "capability": "",
+        "slotKind": "x",
+        "capability": "x",
         "assurance": "ACTIVE_SESSION",
-        "reasonCode": "",
-        "reason": "",
+        "reasonCode": "x",
+        "reason": "x",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "decidedAt": "2026-07-12T00:00:00Z"
       },
       "quorum": {
         "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "requiredSlots": [],
+        "requiredSlots": ["x"],
         "satisfiedSlots": [],
         "blockingSlots": [],
         "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4458,8 +4722,8 @@
       },
       "executionAuthorization": {
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "actionKind": "HYPOTHESIS",
         "state": "QUEUED",
         "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4475,8 +4739,8 @@
     "body": {
       "authorization": {
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "actionKind": "HYPOTHESIS",
         "state": "QUEUED",
         "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4486,10 +4750,12 @@
       "binding": {
         "schemaVersion": "execution-binding.v1",
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
+        "generation": 1,
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "countedDecisionReceiptDigests": [],
-        "executorId": "",
+        "countedDecisionReceiptDigests": [
+          "0000000000000000000000000000000000000000000000000000000000000000"
+        ],
+        "executorId": "x",
         "targetRequestSha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "providerIdempotencyKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "budgetReservationDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4497,12 +4763,25 @@
         "expiresAt": "2026-07-12T00:00:00Z"
       },
       "attempts": [],
-      "receipts": [],
+      "receipts": [
+        {
+          "receiptId": "00000000-0000-4000-8000-000000000001",
+          "sequence": 1,
+          "executionId": "00000000-0000-4000-8000-000000000001",
+          "generation": 1,
+          "stateVersion": 1,
+          "state": "QUEUED",
+          "providerEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "reconciliationEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "recordedAt": "2026-07-12T00:00:00Z",
+          "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
       "terminal": false,
       "reconciliationRequired": false,
       "asOf": "2026-07-12T00:00:00Z",
       "links": [],
-      "operationId": ""
+      "operationId": "getActionExecutionReceipt"
     }
   },
   "cancelActionExecution": {
@@ -4511,22 +4790,22 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "cancelActionExecution",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "authorization": {
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "actionKind": "HYPOTHESIS",
         "state": "QUEUED",
         "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4535,10 +4814,10 @@
       },
       "latestReceipt": {
         "receiptId": "00000000-0000-4000-8000-000000000001",
-        "sequence": 0,
+        "sequence": 1,
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "state": "QUEUED",
         "providerEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "reconciliationEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4553,22 +4832,22 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "retryActionExecution",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "authorization": {
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "actionKind": "HYPOTHESIS",
         "state": "QUEUED",
         "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4577,10 +4856,10 @@
       },
       "latestReceipt": {
         "receiptId": "00000000-0000-4000-8000-000000000001",
-        "sequence": 0,
+        "sequence": 1,
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "state": "QUEUED",
         "providerEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "reconciliationEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4595,15 +4874,15 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "releaseLegalHold",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
@@ -4628,12 +4907,12 @@
     "body": {
       "delivery": {
         "deliveryId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "intentId": "00000000-0000-4000-8000-000000000001",
         "deliveryKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "channel": "EMAIL",
         "endpointId": "00000000-0000-4000-8000-000000000001",
-        "endpointVersion": 0,
+        "endpointVersion": 1,
         "state": "QUEUED",
         "renderingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "authorizationSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4643,12 +4922,27 @@
         "updatedAt": "2026-07-12T00:00:00Z"
       },
       "attempts": [],
-      "receipts": [],
+      "receipts": [
+        {
+          "receiptId": "00000000-0000-4000-8000-000000000001",
+          "sequence": 1,
+          "deliveryId": "00000000-0000-4000-8000-000000000001",
+          "deliveryVersion": 1,
+          "attemptId": "00000000-0000-4000-8000-000000000001",
+          "evidenceKind": "PROVIDER_ACKNOWLEDGEMENT",
+          "providerEventIdentityHmac": "0000000000000000000000000000000000000000000000000000000000000000",
+          "priorState": "QUEUED",
+          "state": "QUEUED",
+          "providerEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "observedAt": "2026-07-12T00:00:00Z",
+          "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
       "latestProviderEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "reconciliationRequired": false,
       "asOf": "2026-07-12T00:00:00Z",
       "links": [],
-      "operationId": ""
+      "operationId": "getCommunicationDeliveryReceipt"
     }
   },
   "reconcileCommunicationDelivery": {
@@ -4657,26 +4951,26 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "reconcileCommunicationDelivery",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "delivery": {
         "deliveryId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "intentId": "00000000-0000-4000-8000-000000000001",
         "deliveryKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "channel": "EMAIL",
         "endpointId": "00000000-0000-4000-8000-000000000001",
-        "endpointVersion": 0,
+        "endpointVersion": 1,
         "state": "QUEUED",
         "renderingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "authorizationSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4695,26 +4989,26 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "cancelCommunicationDelivery",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "delivery": {
         "deliveryId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "intentId": "00000000-0000-4000-8000-000000000001",
         "deliveryKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "channel": "EMAIL",
         "endpointId": "00000000-0000-4000-8000-000000000001",
-        "endpointVersion": 0,
+        "endpointVersion": 1,
         "state": "QUEUED",
         "renderingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "authorizationSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -4734,27 +5028,42 @@
     "body": {
       "incident": {
         "incidentId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "DETECTED",
         "severity": "SEV0",
-        "affectedCapabilities": [],
+        "affectedCapabilities": [{}],
         "ownerUserId": "00000000-0000-4000-8000-000000000001",
         "commanderUserId": "00000000-0000-4000-8000-000000000001",
-        "impact": "",
+        "impact": "x",
         "nextUpdateAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
       },
       "evidence": [],
       "containmentActions": [],
-      "recoveryPlan": "",
-      "rollbackPlan": "",
-      "rootCause": "",
+      "recoveryPlan": "x",
+      "rollbackPlan": "x",
+      "rootCause": "x",
       "actionItems": [],
-      "timeline": [],
+      "timeline": [
+        {
+          "eventId": "00000000-0000-4000-8000-000000000001",
+          "priorState": "DETECTED",
+          "state": "DETECTED",
+          "reasonCode": "x",
+          "actor": {
+            "actorType": "HUMAN",
+            "actorId": "00000000-0000-4000-8000-000000000001",
+            "displayName": "x"
+          },
+          "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "occurredAt": "2026-07-12T00:00:00Z",
+          "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
       "asOf": "2026-07-12T00:00:00Z",
       "links": [],
-      "operationId": ""
+      "operationId": "getIncident"
     }
   },
   "triageIncident": {
@@ -4763,27 +5072,27 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "triageIncident",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "incident": {
         "incidentId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "DETECTED",
         "severity": "SEV0",
-        "affectedCapabilities": [],
+        "affectedCapabilities": [{}],
         "ownerUserId": "00000000-0000-4000-8000-000000000001",
         "commanderUserId": "00000000-0000-4000-8000-000000000001",
-        "impact": "",
+        "impact": "x",
         "nextUpdateAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
@@ -4792,11 +5101,11 @@
         "eventId": "00000000-0000-4000-8000-000000000001",
         "priorState": "DETECTED",
         "state": "DETECTED",
-        "reasonCode": "",
+        "reasonCode": "x",
         "actor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "occurredAt": "2026-07-12T00:00:00Z",
@@ -4810,27 +5119,27 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "containIncident",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "incident": {
         "incidentId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "DETECTED",
         "severity": "SEV0",
-        "affectedCapabilities": [],
+        "affectedCapabilities": [{}],
         "ownerUserId": "00000000-0000-4000-8000-000000000001",
         "commanderUserId": "00000000-0000-4000-8000-000000000001",
-        "impact": "",
+        "impact": "x",
         "nextUpdateAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
@@ -4839,11 +5148,11 @@
         "eventId": "00000000-0000-4000-8000-000000000001",
         "priorState": "DETECTED",
         "state": "DETECTED",
-        "reasonCode": "",
+        "reasonCode": "x",
         "actor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "occurredAt": "2026-07-12T00:00:00Z",
@@ -4857,27 +5166,27 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "startIncidentRecovery",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "incident": {
         "incidentId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "DETECTED",
         "severity": "SEV0",
-        "affectedCapabilities": [],
+        "affectedCapabilities": [{}],
         "ownerUserId": "00000000-0000-4000-8000-000000000001",
         "commanderUserId": "00000000-0000-4000-8000-000000000001",
-        "impact": "",
+        "impact": "x",
         "nextUpdateAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
@@ -4886,11 +5195,11 @@
         "eventId": "00000000-0000-4000-8000-000000000001",
         "priorState": "DETECTED",
         "state": "DETECTED",
-        "reasonCode": "",
+        "reasonCode": "x",
         "actor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "occurredAt": "2026-07-12T00:00:00Z",
@@ -4904,27 +5213,27 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "resolveIncident",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "incident": {
         "incidentId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "DETECTED",
         "severity": "SEV0",
-        "affectedCapabilities": [],
+        "affectedCapabilities": [{}],
         "ownerUserId": "00000000-0000-4000-8000-000000000001",
         "commanderUserId": "00000000-0000-4000-8000-000000000001",
-        "impact": "",
+        "impact": "x",
         "nextUpdateAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
@@ -4933,11 +5242,11 @@
         "eventId": "00000000-0000-4000-8000-000000000001",
         "priorState": "DETECTED",
         "state": "DETECTED",
-        "reasonCode": "",
+        "reasonCode": "x",
         "actor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "occurredAt": "2026-07-12T00:00:00Z",
@@ -4951,27 +5260,27 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "closeIncidentPostmortem",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "incident": {
         "incidentId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "DETECTED",
         "severity": "SEV0",
-        "affectedCapabilities": [],
+        "affectedCapabilities": [{}],
         "ownerUserId": "00000000-0000-4000-8000-000000000001",
         "commanderUserId": "00000000-0000-4000-8000-000000000001",
-        "impact": "",
+        "impact": "x",
         "nextUpdateAt": "2026-07-12T00:00:00Z",
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
@@ -4980,11 +5289,11 @@
         "eventId": "00000000-0000-4000-8000-000000000001",
         "priorState": "DETECTED",
         "state": "DETECTED",
-        "reasonCode": "",
+        "reasonCode": "x",
         "actor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "occurredAt": "2026-07-12T00:00:00Z",
@@ -5005,9 +5314,7 @@
         "sort": "DUE_ASC"
       },
       "asOf": "2026-07-12T00:00:00Z",
-      "nextCursor": "",
-      "totalApproximate": 0,
-      "operationId": "",
+      "operationId": "listResponseAppeals",
       "links": []
     }
   },
@@ -5028,9 +5335,9 @@
         "updatedAt": "2026-07-12T00:00:00Z",
         "dueAt": "2026-07-12T00:00:00Z"
       },
-      "statement": "",
+      "statement": "x",
       "supportingAttachmentIds": [],
-      "responseRequestVersion": 0,
+      "responseRequestVersion": 1,
       "priorDecisionId": "00000000-0000-4000-8000-000000000001",
       "priorReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "deliveryEvidenceReceiptIds": [],
@@ -5040,7 +5347,7 @@
       "decisionReceipts": [],
       "asOf": "2026-07-12T00:00:00Z",
       "links": [],
-      "operationId": ""
+      "operationId": "getResponseAppealWorkspace"
     }
   },
   "transitionResponseAppeal": {
@@ -5049,15 +5356,15 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "transitionResponseAppeal",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
@@ -5076,11 +5383,11 @@
       "transition": "START_REVIEW",
       "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "task": {
-        "title": "",
-        "description": "",
+        "title": "x",
+        "description": "x",
         "assigneeUserId": "00000000-0000-4000-8000-000000000001",
         "dueAt": "2026-07-12T00:00:00Z",
-        "requestedEvidenceKinds": []
+        "requestedEvidenceKinds": ["DELIVERY"]
       }
     }
   },
@@ -5090,22 +5397,22 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "decideResponseExtension",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "extension": {
         "extensionRequestId": "00000000-0000-4000-8000-000000000001",
         "responseRequestId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "SUBMITTED",
         "priorDueAt": "2026-07-12T00:00:00Z",
         "newDueAt": "2026-07-12T00:00:00Z",
@@ -5132,9 +5439,7 @@
         "sort": "DUE_ASC"
       },
       "asOf": "2026-07-12T00:00:00Z",
-      "nextCursor": "",
-      "totalApproximate": 0,
-      "operationId": "",
+      "operationId": "listRetentionRequests",
       "links": []
     }
   },
@@ -5148,14 +5453,21 @@
         "requestType": "ACCESS",
         "decisionVersion": 0,
         "state": "RECEIVED",
-        "jurisdiction": "",
+        "jurisdiction": "xx",
         "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "legalHoldBlocked": false,
+        "identityState": "PENDING_VERIFICATION",
+        "identityVerifiedAt": "2026-07-12T00:00:00Z",
         "dueAt": "2026-07-12T00:00:00Z",
+        "legalHoldBlocked": false,
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z"
       },
       "identityVerificationReceiptId": "00000000-0000-4000-8000-000000000001",
+      "identityVerificationReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "policyVersion": "",
+      "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "calendarVersionId": "00000000-0000-4000-8000-000000000001",
+      "calendarDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "inventorySnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "holdCoverageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "activeHoldIds": [],
@@ -5163,9 +5475,31 @@
       "locationReceipts": [],
       "decisionReceipts": [],
       "completionReceiptId": "00000000-0000-4000-8000-000000000001",
+      "completionReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "completedResponseVersion": 1,
+      "completedValueDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "accessProjection": {
+        "schemaVersion": "privacy-response-party-name-access.v1",
+        "retentionRequestId": "00000000-0000-4000-8000-000000000001",
+        "targetObjectType": "RESPONSE",
+        "targetObjectId": "00000000-0000-4000-8000-000000000001",
+        "fieldPath": "/partyName",
+        "partyName": "",
+        "currentValueDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "projectionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "responseVersion": 1,
+        "privacyIdentityProofReceiptId": "00000000-0000-4000-8000-000000000001",
+        "privacyIdentityProofReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "responseSubmissionReceiptId": "00000000-0000-4000-8000-000000000001",
+        "responseSubmissionReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "responseOriginReceiptId": "00000000-0000-4000-8000-000000000001",
+        "responseOriginReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "sourceResponseRequestId": "00000000-0000-4000-8000-000000000001",
+        "asOf": "2026-07-12T00:00:00Z"
+      },
       "asOf": "2026-07-12T00:00:00Z",
       "links": [],
-      "operationId": ""
+      "operationId": "getRetentionRequest"
     }
   },
   "transitionRetentionRequest": {
@@ -5174,34 +5508,42 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "transitionRetentionRequest",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
-      "request": {
-        "retentionRequestId": "00000000-0000-4000-8000-000000000001",
-        "requestType": "ACCESS",
-        "decisionVersion": 0,
-        "state": "RECEIVED",
-        "jurisdiction": "",
-        "scopeDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "legalHoldBlocked": false,
-        "dueAt": "2026-07-12T00:00:00Z",
-        "createdAt": "2026-07-12T00:00:00Z",
-        "updatedAt": "2026-07-12T00:00:00Z"
-      },
-      "inventorySnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-      "holdCoverageDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-      "completionReceiptId": "00000000-0000-4000-8000-000000000001",
-      "locationReceipts": []
+      "retentionRequestId": "00000000-0000-4000-8000-000000000001",
+      "decisionVersion": 1,
+      "requestType": "ACCESS",
+      "state": "RECEIVED",
+      "transition": "VERIFY_IDENTITY",
+      "transitionReceiptId": "00000000-0000-4000-8000-000000000001",
+      "transitionReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "identityVerifiedAt": "2026-07-12T00:00:00Z",
+      "dueAt": "2026-07-12T00:00:00Z",
+      "policyVersion": "",
+      "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "calendarVersionId": "00000000-0000-4000-8000-000000000001",
+      "calendarDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "identityReceiptId": "00000000-0000-4000-8000-000000000001",
+      "identityReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "extensionReceiptId": "00000000-0000-4000-8000-000000000001",
+      "extensionReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "refusalReceiptId": "00000000-0000-4000-8000-000000000001",
+      "refusalReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "noticeReceiptId": "00000000-0000-4000-8000-000000000001",
+      "noticeReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "appealInstructionsDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "updatedAt": "2026-07-12T00:00:00Z",
+      "replayed": false
     }
   },
   "listRecordClassSchedules": {
@@ -5213,8 +5555,7 @@
       "appliedRecordClasses": [],
       "appliedStates": [],
       "asOf": "2026-07-12T00:00:00Z",
-      "nextCursor": "",
-      "operationId": "",
+      "operationId": "listRecordClassSchedules",
       "links": []
     }
   },
@@ -5224,15 +5565,15 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "declareConflict",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
@@ -5241,8 +5582,8 @@
         "subjectActorId": "00000000-0000-4000-8000-000000000001",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "targetVersion": 0,
+          "targetId": "x",
+          "targetVersion": 1,
           "targetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "caseId": "00000000-0000-4000-8000-000000000001"
         },
@@ -5252,7 +5593,7 @@
         "temporalState": "CURRENT",
         "sourceClass": "SELF_DECLARED",
         "nonwaivable": false,
-        "declarationSequence": 0,
+        "declarationSequence": 1,
         "supersedesDeclarationId": "00000000-0000-4000-8000-000000000001",
         "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -5271,15 +5612,15 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "withdrawConflict",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
@@ -5288,8 +5629,8 @@
         "subjectActorId": "00000000-0000-4000-8000-000000000001",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "targetVersion": 0,
+          "targetId": "x",
+          "targetVersion": 1,
           "targetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
           "caseId": "00000000-0000-4000-8000-000000000001"
         },
@@ -5299,7 +5640,7 @@
         "temporalState": "CURRENT",
         "sourceClass": "SELF_DECLARED",
         "nonwaivable": false,
-        "declarationSequence": 0,
+        "declarationSequence": 1,
         "supersedesDeclarationId": "00000000-0000-4000-8000-000000000001",
         "evidenceSetDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "policyDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -5318,39 +5659,39 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "withdrawActionProposal",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "proposal": {
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "actionKind": "HYPOTHESIS",
         "state": "DRAFT",
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "creator": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "lastEditor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z",
@@ -5364,39 +5705,39 @@
     "mediaType": "application/json",
     "body": {
       "command": {
-        "operationId": "",
+        "operationId": "withdrawActionDecision",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
       "proposal": {
         "proposalId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "actionKind": "HYPOTHESIS",
         "state": "DRAFT",
         "contentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target": {
           "targetType": "CASE",
-          "targetId": "",
-          "expectedVersion": 0
+          "targetId": "x",
+          "expectedVersion": 1
         },
         "creator": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "lastEditor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
         "createdAt": "2026-07-12T00:00:00Z",
         "updatedAt": "2026-07-12T00:00:00Z",
@@ -5406,25 +5747,25 @@
         "recordKind": "DECISION",
         "decisionId": "00000000-0000-4000-8000-000000000001",
         "assignmentId": "00000000-0000-4000-8000-000000000001",
-        "assignmentGeneration": 0,
+        "assignmentGeneration": 1,
         "decisionKind": "APPROVE",
         "actor": {
           "actorType": "HUMAN",
           "actorId": "00000000-0000-4000-8000-000000000001",
-          "displayName": ""
+          "displayName": "x"
         },
-        "slotKind": "",
-        "capability": "",
+        "slotKind": "x",
+        "capability": "x",
         "assurance": "ACTIVE_SESSION",
-        "reasonCode": "",
-        "reason": "",
+        "reasonCode": "x",
+        "reason": "x",
         "approvalDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "decidedAt": "2026-07-12T00:00:00Z"
       },
       "quorum": {
         "planDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "requiredSlots": [],
+        "requiredSlots": ["x"],
         "satisfiedSlots": [],
         "blockingSlots": [],
         "conflictSnapshotDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -5432,8 +5773,8 @@
       },
       "executionAuthorization": {
         "executionId": "00000000-0000-4000-8000-000000000001",
-        "generation": 0,
-        "stateVersion": 0,
+        "generation": 1,
+        "stateVersion": 1,
         "actionKind": "HYPOTHESIS",
         "state": "QUEUED",
         "executionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -5450,19 +5791,26 @@
       "schemaVersion": "promote-research-artifact.receipt.v1",
       "promotionId": "00000000-0000-4000-8000-000000000001",
       "caseId": "00000000-0000-4000-8000-000000000001",
-      "caseVersion": 0,
+      "caseVersion": 1,
       "agentRunId": "00000000-0000-4000-8000-000000000001",
       "researchArtifactId": "00000000-0000-4000-8000-000000000001",
       "researchArtifactSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "sourceDocumentId": "00000000-0000-4000-8000-000000000001",
       "sourceAssetId": "00000000-0000-4000-8000-000000000001",
-      "sourceAssetRevision": 0,
+      "sourceAssetRevision": 1,
       "sourceContentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "evidenceSegmentBindings": [],
-      "selectedSegmentCount": 0,
+      "evidenceSegmentBindings": [
+        {
+          "ordinal": 0,
+          "evidenceSegmentId": "00000000-0000-4000-8000-000000000001",
+          "locatorSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "selectedContentSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "selectedSegmentCount": 1,
       "selectedSegmentSetSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "evidenceId": "00000000-0000-4000-8000-000000000001",
-      "evidenceVersion": 0,
+      "evidenceVersion": 1,
       "evidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "rightsDecisionId": "00000000-0000-4000-8000-000000000001",
       "rightsDecisionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -5472,7 +5820,24 @@
       "idempotencyKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "promotedAt": "2026-07-12T00:00:00Z",
       "receiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "links": []
+      "links": [
+        {
+          "rel": "",
+          "href": ""
+        },
+        {
+          "rel": "",
+          "href": ""
+        },
+        {
+          "rel": "",
+          "href": ""
+        },
+        {
+          "rel": "",
+          "href": ""
+        }
+      ]
     }
   },
   "cancelAgentRun": {
@@ -5483,7 +5848,7 @@
       "schemaVersion": "agent-run-control-receipt.v2",
       "receiptId": "00000000-0000-4000-8000-000000000001",
       "runId": "00000000-0000-4000-8000-000000000001",
-      "aggregateVersion": 0,
+      "aggregateVersion": 1,
       "priorStatus": "QUEUED",
       "priorControlState": "NONE",
       "nextStatus": "QUEUED",
@@ -5504,7 +5869,7 @@
       "priorReceiptSha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "commandBinding": {
         "operationId": "cancelAgentRun",
-        "expectedRunVersion": 0,
+        "expectedRunVersion": 1,
         "idempotencyKeySha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "requestSha256": "0000000000000000000000000000000000000000000000000000000000000000"
       },
@@ -5520,15 +5885,15 @@
     "body": {
       "schemaVersion": "journey-handoff-decision-receipt.v1",
       "command": {
-        "operationId": "",
+        "operationId": "decideJourneyHandoff",
         "requestId": "00000000-0000-4000-8000-000000000001",
         "status": "ACCEPTED",
         "aggregateId": "00000000-0000-4000-8000-000000000001",
-        "aggregateVersion": 0,
+        "aggregateVersion": 1,
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "acceptedAt": "2026-07-12T00:00:00Z",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
-        "emittedEventIds": [],
+        "emittedEventIds": ["00000000-0000-4000-8000-000000000001"],
         "idempotencyReplay": false,
         "links": []
       },
@@ -5536,11 +5901,11 @@
         "receiptId": "00000000-0000-4000-8000-000000000001",
         "receiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "journeyInstanceId": "00000000-0000-4000-8000-000000000001",
-        "journeyInstanceVersion": 0,
+        "journeyInstanceVersion": 1,
         "handoffId": "00000000-0000-4000-8000-000000000001",
-        "handoffVersion": 0,
+        "handoffVersion": 1,
         "handoffKind": "HS-01-RESPONSE_REQUEST_DELIVERY",
-        "generation": 0,
+        "generation": 1,
         "decision": "ACKNOWLEDGE",
         "resultingHandoffState": "ACKNOWLEDGED",
         "resultingJourneyState": "ACTIVE",
@@ -5551,26 +5916,26 @@
       },
       "replacement": {
         "handoffId": "00000000-0000-4000-8000-000000000001",
-        "handoffVersion": "1",
-        "generation": 0,
+        "handoffVersion": 1,
+        "generation": 1,
         "bindingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "requestReceiptId": "00000000-0000-4000-8000-000000000001",
         "requestReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "auditEventId": "00000000-0000-4000-8000-000000000001",
         "outboxEventId": "00000000-0000-4000-8000-000000000001",
-        "journeyInstanceVersion": 0,
-        "receiverFunction": "",
+        "journeyInstanceVersion": 1,
+        "receiverFunction": "x",
         "hardExpiryAt": "2026-07-12T00:00:00Z",
         "resultingDueAt": "2026-07-12T00:00:00Z"
       },
       "finalParent": {
         "journeyInstanceId": "00000000-0000-4000-8000-000000000001",
-        "version": 0,
+        "version": 1,
         "state": "ACTIVE",
         "currentOwnerBindingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "nextOwnerBindingDigest": "0000000000000000000000000000000000000000000000000000000000000000",
         "activeHandoffId": "00000000-0000-4000-8000-000000000001",
-        "activeHandoffGeneration": 0,
+        "activeHandoffGeneration": 1,
         "activeHandoffState": "PENDING_ACK",
         "escalationState": "NOT_DUE",
         "dueAt": "2026-07-12T00:00:00Z",
@@ -5579,6 +5944,120 @@
       },
       "effectDigest": "0000000000000000000000000000000000000000000000000000000000000000",
       "decidedAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "verifyResponseOrganizationIdentity": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "verifyResponseOrganizationIdentity",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "identityAssertionId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "classifyEntityPersonhood": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "classifyEntityPersonhood",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "aggregateId": "00000000-0000-4000-8000-000000000001",
+      "aggregateVersion": 1,
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "receiptToken": "0000000000000000000000000000000000000000000000000000000000000000",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "receiptId": "00000000-0000-4000-8000-000000000001",
+      "entityKind": "AGENCY",
+      "entityId": "00000000-0000-4000-8000-000000000001",
+      "classification": "NATURAL_PERSON"
+    }
+  },
+  "attestEntityMaterialUseClosure": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "attestEntityMaterialUseClosure",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "aggregateId": "00000000-0000-4000-8000-000000000001",
+      "aggregateVersion": 1,
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "receiptToken": "0000000000000000000000000000000000000000000000000000000000000000",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "closureReceiptId": "00000000-0000-4000-8000-000000000001",
+      "entityKind": "AGENCY",
+      "entityId": "00000000-0000-4000-8000-000000000001",
+      "personhoodReceiptId": "00000000-0000-4000-8000-000000000001",
+      "closureAt": "2026-07-12T00:00:00Z",
+      "lastContractEndAt": "2026-07-12T00:00:00Z",
+      "linkedPublicationRevisionCount": 0
+    }
+  },
+  "attestOrganizationOfficialChannel": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "attestOrganizationOfficialChannel",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "aggregateId": "00000000-0000-4000-8000-000000000001",
+      "aggregateVersion": 1,
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "receiptToken": "0000000000000000000000000000000000000000000000000000000000000000",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "assertionId": "00000000-0000-4000-8000-000000000001",
+      "authorityReceiptId": "00000000-0000-4000-8000-000000000001",
+      "authorityReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "registryReceiptDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expiresAt": "2026-07-12T00:00:00Z"
+    }
+  },
+  "revokeOrganizationOfficialChannel": {
+    "api": "control-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "revokeOrganizationOfficialChannel",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "aggregateId": "00000000-0000-4000-8000-000000000001",
+      "aggregateVersion": 1,
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "receiptToken": "0000000000000000000000000000000000000000000000000000000000000000",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "revocationId": "00000000-0000-4000-8000-000000000001",
+      "assertionId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "createPrivacyCorrectionPlan": {
+    "api": "control-api",
+    "status": 201,
+    "mediaType": "application/json",
+    "body": {
+      "operationId": "createPrivacyCorrectionPlan",
+      "requestId": "00000000-0000-4000-8000-000000000001",
+      "status": "accepted",
+      "aggregateId": "00000000-0000-4000-8000-000000000001",
+      "aggregateVersion": 1,
+      "auditEventId": "00000000-0000-4000-8000-000000000001",
+      "receiptToken": "0000000000000000000000000000000000000000000000000000000000000000",
+      "acceptedAt": "2026-07-12T00:00:00Z",
+      "links": [],
+      "correctionPlanId": "00000000-0000-4000-8000-000000000001",
+      "retentionRequestId": "00000000-0000-4000-8000-000000000001",
+      "planVersion": 1
     }
   },
   "completeOidcCallback": {

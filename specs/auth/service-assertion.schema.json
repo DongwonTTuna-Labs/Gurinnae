@@ -49,6 +49,10 @@
       "type": "string",
       "enum": ["POST"]
     },
+    "nextSubmissionSessionSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
     "path": {
       "type": "string",
       "pattern": "^/internal/v1/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+$"

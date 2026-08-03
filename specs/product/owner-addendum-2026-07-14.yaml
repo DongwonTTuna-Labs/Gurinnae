@@ -231,6 +231,36 @@ operation_counts:
     path: /v1/internal/commands/decide-response-extension
     kind: COMMAND
     owner: response-policy
+  - operation_id: classifyEntityPersonhood
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/classify-entity-personhood
+    kind: COMMAND
+    owner: privacy-retention
+  - operation_id: attestEntityMaterialUseClosure
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-entity-material-use-closure
+    kind: COMMAND
+    owner: privacy-retention
+  - operation_id: attestOrganizationOfficialChannel
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-organization-official-channel
+    kind: COMMAND
+    owner: response-rights
+  - operation_id: revokeOrganizationOfficialChannel
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/revoke-organization-official-channel
+    kind: COMMAND
+    owner: response-rights
+  - operation_id: verifyResponseOrganizationIdentity
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/verify-response-organization-identity
+    kind: COMMAND
+    owner: response-rights
   - operation_id: listRetentionRequests
     api: control-api
     method: GET
@@ -242,6 +272,12 @@ operation_counts:
     method: GET
     path: /v1/internal/queries/get-retention-request
     kind: QUERY
+    owner: privacy-retention
+  - operation_id: createPrivacyCorrectionPlan
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/create-privacy-correction-plan
+    kind: COMMAND
     owner: privacy-retention
   - operation_id: transitionRetentionRequest
     api: control-api
@@ -378,11 +414,11 @@ decision_variants:
 
 database_delta:
   base_migrations: 24
-  additive_migrations: 11
-  final_migrations: 35
+  additive_migrations: 14
+  final_migrations: 38
   base_active_tables: 107
-  additive_table_count: 149
-  final_active_tables: 256
+  additive_table_count: 195
+  final_active_tables: 302
   migrations:
     - 0025_evidence_snapshots_and_search.sql
     - 0026_agent_action_approval.sql
@@ -395,7 +431,15 @@ database_delta:
     - 0035_r6b_agent_runtime_activation.sql
     - 0036_r6b_pipeline_activation.sql
     - 0037_r6c_conflict_investigation.sql
+    - 0038_r6d_legal_hardening.sql
+    - 0039_r6d_authority_closure.sql
+    - 0040_r6d_privacy_authority_closure.sql
   additive_tables:
+    - ops.privacy_correction_snapshots_v1
+    - ops.privacy_subscription_snapshots_v1
+    - ops.privacy_response_party_name_correction_plan_bindings_v1
+    - ops.privacy_response_party_name_correction_approval_bindings_v1
+    - ops.privacy_response_party_name_correction_completion_receipts_v1
     - raw.evidence_segments
     - raw.research_artifacts
     - raw.asset_rights_decisions
@@ -545,6 +589,47 @@ database_delta:
     - ops.hypothesis_recursion_transitions
     - ops.hypothesis_recursion_receipts
     - ops.hypothesis_recursion_budget_ledger
+    - ops.r6d_record_class_catalog
+    - core.relationship_graph_person_nodes_v3
+    - core.relationship_graph_person_context_v3
+    - core.relationship_graph_person_erasure_receipts_v3
+    - editorial.named_person_publication_policies
+    - editorial.named_person_publication_assessments
+    - editorial.named_person_publication_findings
+    - editorial.named_person_legal_overrides
+    - ops.entity_retention_snapshots_v1
+    - ops.legal_hold_placement_receipts_v2
+    - editorial.response_submission_origin_receipts_v2
+    - editorial.organization_official_channel_assertions_v1
+    - editorial.organization_official_channel_revocation_receipts_v1
+    - editorial.response_organization_identity_assertions_v1
+    - editorial.response_publication_identity_receipts_v1
+    - intake.response_submission_receipts_v3
+    - editorial.response_excerpt_approval_receipts_v2
+    - ops.privacy_response_calendar_policies_v1
+    - ops.privacy_requests_v2
+    - ops.privacy_request_receipt_tokens_v2
+    - ops.privacy_request_identity_receipts_v2
+    - ops.privacy_request_extension_receipts_v2
+    - ops.privacy_request_refusal_receipts_v2
+    - ops.privacy_request_notice_receipts_v2
+    - ops.privacy_request_transition_receipts_v2
+    - editorial.named_person_review_stage_receipts_v1
+    - editorial.publication_preview_owner_receipts_v2
+    - editorial.publication_revision_owner_receipts_v2
+    - ops.r6d_person_retention_execution_receipts_v1
+    - ops.privacy_request_access_policies_v1
+    - ops.privacy_request_sealed_content_v2
+    - ops.privacy_request_sealed_content_erasure_receipts_v1
+    - ops.r6d_entity_personhood_classification_receipts_v1
+    - ops.r6d_entity_material_use_closure_receipts_v1
+    - ops.r6d_entity_retention_execution_receipts_v1
+    - editorial.organization_official_channel_authority_receipts_v1
+    - ops.privacy_identity_proof_authority_receipts_v1
+    - ops.privacy_request_scope_inventories_v1
+    - ops.privacy_request_scope_inventory_items_v1
+    - ops.privacy_identity_proof_consumption_receipts_v1
+    - ops.privacy_correction_plans_v1
   renamed_tables:
     - from: ops.email_deliveries
       to: ops.outbound_deliveries
@@ -592,7 +677,12 @@ event_delta:
     - response.appeal_decision_recorded.v1
     - governance.business_calendar_revised.v1
     - privacy.request_created.v1
+    - privacy.request_created.v2
+    - privacy.request_identity_verified.v1
+    - privacy.request_extension_notified.v1
+    - privacy.request_refusal_notified.v1
     - privacy.request_decision_recorded.v1
+    - privacy.response_party_name_corrected.v1
     - retention.schedule_revised.v1
     - retention.execution_completed.v1
     - retention.restoration_suppression_created.v1
@@ -637,6 +727,9 @@ event_delta:
     - notification.response_submitted.v2
     - workflow.response_submitted.v2
     - editorial.response_materialized.v1
+    - editorial.response_materialized.v2
+    - response.organization_identity_verified.v1
+    - response.excerpt_approved.v2
     - journey.instance_started.v1
     - journey.handoff_requested.v1
     - journey.handoff_decided.v1
@@ -646,6 +739,11 @@ event_delta:
     - supplier.identity_resolution_recorded.v1
     - supplier.relationship_assertion_created.v1
     - supplier.relationship_assertion_decided.v1
+    - entity.personhood_classified.v1
+    - entity.material_use_closed.v1
+    - entity.retention_anonymized.v1
+    - organization.official_channel_attested.v1
+    - organization.official_channel_revoked.v1
 
 authorization_delta:
   count_rule: base is derived from roles-and-permissions; additive is len(capabilities); final is their disjoint-union cardinality
@@ -715,6 +813,8 @@ private_application_commands:
     - {operation_id: private.ApplyCommercialControl, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.commercial-control-executor, kind: COMMAND}
     - {operation_id: private.ExecuteProviderControl, transport: PRIVATE_APPLICATION_COMMAND, owner: analysis-worker.provider-control-executor, kind: COMMAND}
     - {operation_id: private.MaterializePaidEvidencePacket, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.paid-evidence-packet-materializer, kind: COMMAND}
+    - {operation_id: ops.execute_due_r6d_entity_retention_job_v1, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.entity-retention-executor, kind: COMMAND}
+    - {operation_id: ops.execute_privacy_response_party_name_correction_job_v1, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.response-party-name-correction-executor, kind: COMMAND}
   rule: These commands have no HTTP route. They are invoked only by an authenticated inbox delivery or an immutable ExecutionAuthorization and are set-equal to addendum-command-semantics.private_application_commands.
 
 base_operation_atomic_extensions:
@@ -724,7 +824,8 @@ base_operation_atomic_extensions:
     resolveCorrectionRequest: correction REVIEW to PUBLISHED and publication current state to CORRECTED commit in one SERIALIZABLE group
     placeTemporaryRestriction: one access decision, preserved prior public state, audit, domain event, projection outbox and receipt commit atomically
     publishCase: a TEMPORARILY_RESTRICTED restoration branch performs a fresh full publication gate and appends a new immutable revision
-    placeLegalHold: the request uses the closed target union and exact ops.legal_hold_target_anchors binding for case and non-case targets
+    placeLegalHold: the request uses the closed thirteen-kind target union and exact ops.legal_hold_target_anchors binding for case and non-case targets; CORRECTION and SUBSCRIPTION use immutable snapshots, COMMUNICATION_ENDPOINT uses the existing id/version/endpoint_digest tuple, and AUDIT_SUBJECT_RECORD is rejected as LEGAL_HOLD_TARGET_UNSUPPORTED until a source relation exists; public expiresAt stays optional nullable and omission is normalized to explicit JSON null before owner-payload and idempotency-digest derivation
+    approveResponseExcerpt: replace the shallow direct update and historical response.excerpt_approved.v1 producer with the guarded v2 owner and effective response.excerpt_approved.v2 event; FULL or REDACTED consumes only the exact active SECOND_FACTOR_VERIFIED official-channel identity receipt bound to the current response version, content, consent, organization and publication form, while ANONYMOUS requires anonymous consent and no identity receipt
   rule: These are additive semantic extensions of existing operation IDs, never new aliases or parallel effect owners.
 
 provider_contracts:

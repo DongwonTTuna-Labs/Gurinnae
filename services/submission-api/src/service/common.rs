@@ -1,7 +1,7 @@
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use gurine_auth::{
     assertion::canonical::{canonical_json, sha256_hex},
-    envelope::{decrypt, encrypt},
+    envelope::decrypt,
 };
 use hmac::{Hmac, Mac};
 use serde_json::Value;
@@ -12,7 +12,9 @@ use zeroize::Zeroize;
 
 use super::{RequestContext, ServiceError};
 
-const FIELD_PREFIX: &str = "gurine-fe-v1";
+pub use super::privacy_crypto::{EncryptedFieldMaterial, encrypt_field_material};
+
+pub(super) const FIELD_PREFIX: &str = "gurine-fe-v1";
 pub const RESPONSE_OTP_DERIVATION_VERSION: &str = "response-access-otp-v2";
 pub const RESPONSE_OTP_KEY_VERSION: &str = "response-portal-submission-hmac-v1";
 pub const RESPONSE_OTP_PREVIOUS_KEY_VERSION: &str = "response-portal-submission-hmac-v0";
@@ -167,15 +169,8 @@ pub fn encrypt_field(
     logical_type: &str,
     plaintext: &[u8],
 ) -> Result<Vec<u8>, ServiceError> {
-    let record_id = record_id.to_string();
-    encrypt(
-        FIELD_PREFIX,
-        &context.state.field_keys.current,
-        &[table, column, &record_id, logical_type, "1"],
-        plaintext,
-    )
-    .map(String::into_bytes)
-    .map_err(|_| ServiceError::Cryptography)
+    encrypt_field_material(context, table, column, record_id, logical_type, plaintext)
+        .map(|material| material.ciphertext)
 }
 
 pub fn decrypt_field(
@@ -306,6 +301,27 @@ pub async fn require_abuse_proof(
         .get("abuseProof")
         .filter(|field| field.is_object())
         .ok_or(ServiceError::AbuseProofInvalid)?;
+    verify_abuse_proof(context, proof, expected_action, "issuedAt").await
+}
+
+/// Validates the closed addendum proof shape. Addendum requests use the
+/// `issuedAtEpochSeconds` field; the older submission routes retain
+/// `issuedAt`. Keeping the field choice explicit prevents accepting a proof
+/// under a different wire contract.
+pub async fn require_abuse_proof_v1(
+    context: &RequestContext<'_>,
+    proof: &Value,
+    expected_action: &str,
+) -> Result<(), ServiceError> {
+    verify_abuse_proof(context, proof, expected_action, "issuedAtEpochSeconds").await
+}
+
+async fn verify_abuse_proof(
+    context: &RequestContext<'_>,
+    proof: &Value,
+    expected_action: &str,
+    issued_at_field: &str,
+) -> Result<(), ServiceError> {
     let provider = string(proof, "provider")?;
     let token = string(proof, "token")?;
     let action = string(proof, "action")?;
@@ -313,7 +329,7 @@ pub async fn require_abuse_proof(
         return Err(ServiceError::AbuseProofInvalid);
     }
     match provider {
-        "SYNTHETIC_TEST" => verify_synthetic(context, proof, token, action),
+        "SYNTHETIC_TEST" => verify_synthetic(context, proof, token, action, issued_at_field),
         "TURNSTILE" => {
             verify_remote(
                 context,
@@ -343,12 +359,13 @@ fn verify_synthetic(
     proof: &Value,
     token: &str,
     action: &str,
+    issued_at_field: &str,
 ) -> Result<(), ServiceError> {
     if context.state.environment == "production" {
         return Err(ServiceError::AbuseProofInvalid);
     }
     let issued_at = proof
-        .get("issuedAt")
+        .get(issued_at_field)
         .and_then(Value::as_i64)
         .ok_or(ServiceError::AbuseProofInvalid)?;
     let now = OffsetDateTime::now_utc().unix_timestamp();

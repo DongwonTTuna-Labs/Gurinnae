@@ -6,6 +6,7 @@ export const submissionSessionKinds = [
   "SUBSCRIPTION_MANAGEMENT",
   "RESPONSE_RECEIPT",
   "CORRECTION_RECEIPT",
+  "PRIVACY_REQUEST_RECEIPT",
 ] as const;
 
 export type SubmissionSessionKind = (typeof submissionSessionKinds)[number];
@@ -45,6 +46,11 @@ const specs: readonly SubmissionCookieSpec[] = [
     name: "gurine_correction_receipt_session",
     path: "/correction-request/receipt",
     kinds: ["CORRECTION_RECEIPT"],
+  },
+  {
+    name: "gurine_privacy_request_receipt_session",
+    path: "/privacy",
+    kinds: ["PRIVACY_REQUEST_RECEIPT"],
   },
   {
     name: "gurine_response_session",

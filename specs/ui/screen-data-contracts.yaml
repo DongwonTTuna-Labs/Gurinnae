@@ -7096,6 +7096,7 @@ operations:
   path: /v1/cases/{caseSlug}/reproducibility/download
   purpose:
   - 재현 파일
+  - JSON·CSV 파일 본문에 재배포 고지와 상태별 비확정 문구를 함께 보존
   consumers:
   - PUB-006
   auth: anonymous
@@ -7110,7 +7111,7 @@ operations:
     required: true
     in: query
   request_schema: downloadCaseReproducibilityQuery
-  response_schema: BinaryDownload
+  response_schema: CaseReproducibilityDownload
   idempotency: not-applicable
   optimistic_concurrency: not-applicable
   audit: read-access-log
@@ -7125,8 +7126,44 @@ operations:
   nonblocking_consumers:
   - PUB-006
   response_fields:
-  - name: binary
-    type: binary
+  - name: id
+    type: string
+    required: true
+  - name: status
+    type: enum:READY
+    required: true
+  - name: version
+    type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: filename
+    type: string
+    required: true
+  - name: mediaType
+    type: string
+    required: true
+  - name: byteLength
+    type: integer
+    required: true
+  - name: contentSha256
+    type: sha256
+    required: true
+  - name: contentBase64
+    type: string
+    required: true
+  - name: format
+    type: enum:JSON,CSV
+    required: true
+  - name: rowCount
+    type: integer(1..1)
+    required: true
+  - name: appliedFilters
+    type: CaseReproducibilityDownloadAppliedFilters
+    required: true
+  - name: generatedAt
+    type: date-time
     required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
@@ -7180,6 +7217,7 @@ operations:
   path: /v1/contracts/download
   purpose:
   - 필터 결과 export
+  - 계약 행과 envelope에 운영 상태 interpretationNotice를 보존하는 공개 재배포 산출물
   consumers:
   - PUB-011
   auth: anonymous
@@ -7206,13 +7244,14 @@ operations:
     required: false
     in: query
   request_schema: downloadContractsQuery
-  response_schema: BinaryDownload
+  response_schema: PublicContractsDownload
   idempotency: not-applicable
   optimistic_concurrency: not-applicable
   audit: read-access-log
   rate_limit: public-read
   errors:
   - '400'
+  - '422'
   - '429'
   - '500'
   - '503'
@@ -7220,8 +7259,50 @@ operations:
   nonblocking_consumers:
   - PUB-011
   response_fields:
-  - name: binary
-    type: binary
+  - name: id
+    type: string
+    required: true
+  - name: status
+    type: enum:READY
+    required: true
+  - name: version
+    type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: nonConclusionNotices
+    type: array:string
+    required: true
+  - name: interpretationNotice
+    type: string
+    required: true
+  - name: filename
+    type: string
+    required: true
+  - name: mediaType
+    type: string
+    required: true
+  - name: byteLength
+    type: integer
+    required: true
+  - name: contentSha256
+    type: sha256
+    required: true
+  - name: contentBase64
+    type: string
+    required: true
+  - name: format
+    type: enum:CSV,JSONL
+    required: true
+  - name: rowCount
+    type: integer(0..5000)
+    required: true
+  - name: appliedFilters
+    type: ContractsAppliedFilters
+    required: true
+  - name: generatedAt
+    type: date-time
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -7235,17 +7316,21 @@ operations:
   - RATE_LIMITED
   authorization_errors: []
   concurrency_errors: []
-  domain_errors: []
+  domain_errors:
+  - PRECONDITION_FAILED
   provider_errors:
   - STORAGE_FAILURE
   error_codes:
   - INVALID_PARAMETER
   - RATE_LIMITED
+  - PRECONDITION_FAILED
   - STORAGE_FAILURE
   - INTERNAL_ERROR
   http_error_mapping:
     '400':
     - INVALID_PARAMETER
+    '422':
+    - PRECONDITION_FAILED
     '429':
     - RATE_LIMITED
     '500':
@@ -7272,6 +7357,7 @@ operations:
   purpose:
   - 현재 사건 필터 결과를 CSV 또는 JSONL로 내려받기
   - 최대 5,000행과 재배포 비확정 고지를 함께 제공
+  - 행 순서 stable-dedup nonConclusionNotices와 nullable interpretationNotice를 envelope에 제공
   consumers:
   - PUB-003
   auth: anonymous
@@ -7348,6 +7434,15 @@ operations:
     required: true
   - name: version
     type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: nonConclusionNotices
+    type: array:string
+    required: true
+  - name: interpretationNotice
+    type: nullable-string
     required: true
   - name: filename
     type: string
@@ -7491,6 +7586,7 @@ operations:
   purpose:
   - 현재 검색 필터 결과를 CSV 또는 JSONL로 내려받기
   - 최대 5,000행과 재배포 비확정 고지를 함께 제공
+  - 비확정·운영 상태 고지를 서로 다른 envelope 필드로 제공
   consumers:
   - PUB-002
   auth: anonymous
@@ -7559,6 +7655,15 @@ operations:
     required: true
   - name: version
     type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: nonConclusionNotices
+    type: array:string
+    required: true
+  - name: interpretationNotice
+    type: nullable-string
     required: true
   - name: filename
     type: string
@@ -9413,11 +9518,17 @@ operations:
   - name: recentContracts
     type: array:ContractSummary
     required: true
+  - name: interpretationNotice
+    type: string
+    required: true
   - name: identityWarnings
     type: array:string
     required: true
   - name: freshness
     type: FreshnessModel
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -9932,6 +10043,12 @@ operations:
   - name: limitations
     type: array:string
     required: true
+  - name: nonConclusion
+    type: string
+    required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/get_case_reproducibility.rs
@@ -10269,6 +10386,12 @@ operations:
   - name: relatedCases
     type: array:CaseCard
     required: true
+  - name: interpretationNotice
+    type: string
+    required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
     application: crates/application/src/queries/get_contract.rs
@@ -10369,6 +10492,9 @@ operations:
     required: true
   - name: links
     type: array:Link
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/corrections.rs
@@ -12676,6 +12802,9 @@ operations:
   - name: summary
     type: string
     required: true
+  - name: nonConclusion
+    type: string
+    required: true
   - name: confirmedFacts
     type: array:FactItem
     required: true
@@ -12814,6 +12943,9 @@ operations:
     required: true
   - name: diffFromPrevious
     type: array:RevisionDiff
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
@@ -15101,6 +15233,9 @@ operations:
   - name: links
     type: array:Link
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/sources.rs
     application: crates/application/src/queries/get_source.rs
@@ -15476,11 +15611,17 @@ operations:
   - name: recentContracts
     type: array:ContractSummary
     required: true
+  - name: interpretationNotice
+    type: string
+    required: true
   - name: identityWarnings
     type: array:string
     required: true
   - name: freshness
     type: FreshnessModel
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -15545,6 +15686,7 @@ operations:
   - '404'
   - '429'
   - '500'
+  - '503'
   blocking_consumers: []
   nonblocking_consumers:
   - PUB-032
@@ -15589,10 +15731,12 @@ operations:
   concurrency_errors: []
   domain_errors:
   - RESOURCE_NOT_FOUND
-  provider_errors: []
+  provider_errors:
+  - STORAGE_FAILURE
   error_codes:
   - RATE_LIMITED
   - RESOURCE_NOT_FOUND
+  - STORAGE_FAILURE
   - INTERNAL_ERROR
   http_error_mapping:
     '404':
@@ -15601,6 +15745,8 @@ operations:
     - RATE_LIMITED
     '500':
     - INTERNAL_ERROR
+    '503':
+    - STORAGE_FAILURE
   internal_errors:
   - INTERNAL_ERROR
   operation_kind: QUERY
@@ -16544,6 +16690,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
     application: crates/application/src/queries/list_agencies.rs
@@ -16641,6 +16790,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
@@ -16743,6 +16895,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -17768,6 +17923,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/list_case_revisions.rs
@@ -18269,6 +18427,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
     application: crates/application/src/queries/list_contracts.rs
@@ -18513,6 +18674,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/corrections.rs
@@ -19689,6 +19853,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/list_public_cases.rs
@@ -19785,6 +19952,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -20248,6 +20418,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
@@ -20833,6 +21006,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/sources.rs
     application: crates/application/src/queries/list_source_status.rs
@@ -20941,6 +21117,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/list_supplier_cases.rs
@@ -21042,6 +21221,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -21151,6 +21333,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -22314,37 +22499,29 @@ operations:
   method: POST
   path: /v1/internal/commands/place-legal-hold
   purpose:
-  - place a retention, disclosure or deletion legal hold on an exact reviewed case object
+  - place a retention, disclosure or deletion legal hold on one exact typed target anchor
   consumers:
   - REV-002
   auth: actor-assertion-and-capability
   capability: review.legal
   request_fields:
-  - name: caseId
-    type: uuid
+  - name: target
+    type: LegalHoldTargetBindingV1
     required: true
     in: body
-  - name: reviewSnapshotId
-    type: uuid
-    required: true
-    in: body
-  - name: objectType
-    type: enum:CASE,PUBLICATION,EVIDENCE,RESPONSE
-    required: true
-    in: body
-  - name: objectId
-    type: uuid
-    required: true
-    in: body
-  - name: scope
-    type: enum:RETENTION,DISCLOSURE,DELETION,ALL
+  - name: scopeAtoms
+    type: array:enum:RETENTION,DELETION,DISCLOSURE
     required: true
     in: body
   - name: affectedIds
     type: array:uuid
-    required: false
+    required: true
     in: body
   - name: authorityReference
+    type: string
+    required: true
+    in: body
+  - name: reasonCode
     type: string
     required: true
     in: body
@@ -22353,17 +22530,13 @@ operations:
     required: true
     in: body
   - name: expiresAt
-    type: date-time
+    type: nullable:date-time
     required: false
-    in: body
-  - name: expectedCaseVersion
-    type: integer
-    required: true
     in: body
   request_schema: placeLegalHoldRequest
   response_schema: placeLegalHoldReceipt
   idempotency: required
-  optimistic_concurrency: required
+  optimistic_concurrency: target-binding-procedure-owned
   audit: required
   rate_limit: internal-user
   errors:
@@ -27042,6 +27215,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs

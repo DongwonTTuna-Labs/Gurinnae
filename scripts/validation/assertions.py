@@ -75,4 +75,31 @@ def validate(root:Path,result:Validation)->None:
   expected=case.get('expectedError') or case.get('expectedErrorOnAttempt',{}).get(str(case.get('attempts',2)))
   result.require(actual==expected,f'{cid}: public assertion error {actual} != fixture {expected} (internal {internal})'); executed+=1
  actor_required={'operationId','requiredCapability','idempotencyKeySha256','stepUpAuthorizationId','actionDigest'}; result.require(actor_required<=set(aa['required']),'Actor Assertion request/action binding claims incomplete')
+ capability_resolution=contract.get('operation_capability_resolution',{}).get('submitReview',{})
+ expected_resolution={
+  'selector':'criteria.namedIndividualOverride',
+  'absent_capability':'review.editorial',
+  'present_capability':'review.legal',
+  'mismatch_error':'CAPABILITY_DENIED',
+ }
+ result.require(
+  all(capability_resolution.get(key)==value for key,value in expected_resolution.items()),
+  'submitReview assertion capability selector must resolve exactly one body-bound editorial/legal branch',
+ )
+ operation_by={
+  row['operation_id']:row
+  for row in load_yaml(root/'specs/api/operation-contracts.yaml')['operations']
+ }
+ submit_policy=operation_by['submitReview'].get('capability_policy',{})
+ result.require(
+  submit_policy.get('default')=='review.editorial'
+  and submit_policy.get('conditions')==[
+   {'when':{'field':'criteria.namedIndividualOverride','operator':'ABSENT'},'required_capability':'review.editorial'},
+   {'when':{'field':'criteria.namedIndividualOverride','operator':'PRESENT'},'required_capability':'review.legal'},
+  ]
+  and submit_policy.get('resolution')=='EXACTLY_ONE'
+  and submit_policy.get('any_of_forbidden') is True
+  and submit_policy.get('mismatch_error')=='CAPABILITY_DENIED',
+  'submitReview operation capability policy differs from the body-bound assertion selector',
+ )
  result.stats.update({'assertion_protocols':2,'assertion_positive_vectors':2,'assertion_negative_vectors_executed':executed})

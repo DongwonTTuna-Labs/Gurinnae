@@ -6,6 +6,7 @@ export * from "./local-actions";
 export * from "./projection-value";
 export * from "./public-action-placement";
 export * from "./public-case-presentation";
+export * from "./public-corrections";
 export type {
   CorrectionRequestFormContract,
   DatasetExportFormat,
@@ -24,8 +25,10 @@ export {
   requestedChangesText,
 } from "./public-form-presentation";
 export * from "./public-ledger";
+export * from "./public-status-notice";
 export * from "./related-public-cases";
 export * from "./relay-model-catalog";
+export * from "./retention-schedule";
 export * from "./row-selection-navigation";
 export * from "./screen-archetype";
 export * from "./screen-chrome";
@@ -199,13 +202,40 @@ export type ScreenRuntime = {
   publicCaseLead?: import("./public-case-presentation").PublicCaseLeadViewModel;
   /** Closed PUB-004 evidence metadata without protected evidence fields. */
   publicEvidence?: readonly import("./public-case-presentation").PublicEvidenceViewModel[];
-  /** Same-origin PUB-004 metadata validated at the public server boundary. */
+  /** Closed legal context kept adjacent to an applicable public status. */
+  publicStatusContext?: import("./public-status-notice").PublicDetailStatusContext;
+  /** Same-origin public metadata validated at the public server boundary. */
   publicSeo?: import("./public-case-presentation").PublicSeoViewModel;
+  /** Closed /privacy status projection; receipt identifiers and digests remain server-only. */
+  privacyRequestStatus?:
+    | Readonly<{
+        loadState: "UNAVAILABLE";
+      }>
+    | Readonly<{
+        loadState: "READY";
+        requestType: "ACCESS" | "CORRECTION" | "DELETION" | "RESTRICTION";
+        state: "RECEIVED" | "REVIEW" | "APPROVED" | "REJECTED" | "COMPLETED";
+        identityState: "PENDING_VERIFICATION" | "VERIFIED";
+        identityVerifiedAt: string | null;
+        dueAt: string | null;
+        updatedAt: string;
+        nextActionCode:
+          | "VERIFY_IDENTITY"
+          | "AWAIT_REVIEW"
+          | "AWAIT_DECISION"
+          | "AWAIT_EXECUTION"
+          | "REVIEW_REFUSAL_NOTICE"
+          | "COMPLETE";
+        asOf: string;
+      }>;
   /** Server-owned navigation destinations. Raw DTO traversal is forbidden. */
   destinations?: Readonly<Record<string, string>>;
   /** Server-prepared, action-scoped binary exports; raw DTOs never reach download code. */
   downloads?: Readonly<
-    Record<string, { binary: string; mime: string; extension: "json" | "csv" }>
+    Record<
+      string,
+      { binary: string; mime: string; extension: "json" | "csv" | "jsonl" }
+    >
   >;
   /** Narrow, server-owned form context for progressive response editing. */
   formData?: {
@@ -232,6 +262,8 @@ export type ScreenRuntimeProjectionSection = {
   blocked: boolean;
   /** Optional server-owned analysis metadata retained for accessible CAS renderers. */
   analysis?: import("./screen-projection-specialized-types").AnalysisProjection;
+  /** Approved, display-only legal-document retention rows; raw schedule digests stay server-side. */
+  retentionSchedules?: readonly import("./retention-schedule").ApprovedRetentionScheduleRow[];
 };
 
 export type ScreenRuntimeProjection = {

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/privacy.response_party_name_corrected.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "privacyRequestId",
+    "correctionPlanId",
+    "responseId",
+    "responseVersion",
+    "partyNameDigest",
+    "completionReceiptId",
+    "completionReceiptDigest",
+    "auditEventId",
+    "completedAt"
+  ],
+  "properties": {
+    "privacyRequestId": { "type": "string", "format": "uuid" },
+    "correctionPlanId": { "type": "string", "format": "uuid" },
+    "responseId": { "type": "string", "format": "uuid" },
+    "responseVersion": { "type": "integer", "minimum": 1 },
+    "partyNameDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "completionReceiptId": { "type": "string", "format": "uuid" },
+    "completionReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "auditEventId": { "type": "string", "format": "uuid" },
+    "completedAt": { "type": "string", "format": "date-time" }
+  }
+}

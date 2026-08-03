@@ -103,7 +103,7 @@ export const screen = {
       method: "GET",
       path: "/v1/cases/{caseSlug}/reproducibility/download",
       blocking: false,
-      response_schema: "BinaryDownload",
+      response_schema: "CaseReproducibilityDownload",
     },
   ],
 } as const satisfies ScreenViewModel;

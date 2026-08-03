@@ -16,6 +16,12 @@ import {
 import BotChallenge from "./BotChallenge.svelte";
 import RowSelectionNavigation from "./RowSelectionNavigation.svelte";
 import StructuredJsonField from "./StructuredJsonField.svelte";
+import {
+  downloadHref,
+  downloadName,
+  runLocalCommand,
+  supportsLocalCommand,
+} from "./screen-action-behavior";
 
 type ActionContext = "page" | "header" | "section";
 let {
@@ -95,13 +101,6 @@ function appendChallengeProof(actionId: string, event: FormDataEvent) {
   const proof = challengeProof[actionId];
   if (proof) event.formData.append("abuseProof", proof);
 }
-const supportsLocalCommand = (action: ScreenViewModel["actions"][number]) => {
-  if (action.id.startsWith("copy-")) return true;
-  if (["clear", "retry", "discard-change", "discard-local"].includes(action.id))
-    return true;
-  if (action.id === "open-evidence") return hrefFor(action) !== undefined;
-  return false;
-};
 const visibleActions = $derived(
   screen.actions
     .filter((action) => requestedActionIds?.has(action.id) ?? true)
@@ -150,68 +149,11 @@ const visibleActions = $derived(
         operationId(action) ||
         interactionKind(action) === "DOWNLOAD" ||
         (interactionKind(action) === "COMMAND" &&
-          supportsLocalCommand(action)) ||
+          supportsLocalCommand(screen, runtime, action)) ||
         optionsFor(action.id).length > 0 ||
         hrefFor(action) !== undefined,
     ),
 );
-function runLocalCommand(action: ScreenViewModel["actions"][number]) {
-  if (typeof window === "undefined") return;
-  if (action.id.startsWith("copy-")) {
-    const evidence = runtime.projection
-      ? Object.values(runtime.projection.sections)
-          .flatMap((section) => Object.entries(section.fields))
-          .filter(([, field]) => field.known && field.value !== null)
-          .map(
-            ([name, field]) =>
-              `${projectionScalarText(name, field.value) ?? "구조화 자료"} (${field.source})`,
-          )
-          .join("\n")
-      : "확인 가능한 근거가 없습니다.";
-    void navigator.clipboard.writeText(
-      `${screen.title}\n${window.location.href}\n\n근거·식별자\n${evidence}`,
-    );
-    return;
-  }
-  if (action.id === "clear") {
-    window.location.assign(runtime.pathname ?? screen.route);
-    return;
-  }
-  if (action.id === "retry") {
-    window.location.reload();
-    return;
-  }
-  if (action.id === "discard-change") {
-    window.location.reload();
-    return;
-  }
-  if (action.id === "discard-local") {
-    const prefix = `gurine:${screen.id}:`;
-    for (const storage of [window.sessionStorage, window.localStorage]) {
-      for (let index = storage.length - 1; index >= 0; index -= 1) {
-        const key = storage.key(index);
-        if (key?.startsWith(prefix)) storage.removeItem(key);
-      }
-    }
-    window.location.assign("/auth/sign-in");
-    return;
-  }
-  if (action.id === "open-evidence") {
-    const destination = hrefFor(action);
-    if (destination) window.location.assign(destination);
-  }
-}
-function downloadHref(
-  action: ScreenViewModel["actions"][number],
-): string | undefined {
-  if (screen.id === "PUB-021" && action.id === "download-openapi") {
-    return "/api/openapi.json";
-  }
-  const encoded = runtime.downloads?.[action.id];
-  return encoded
-    ? `data:${encoded.mime};base64,${encoded.binary}`
-    : hrefFor(action);
-}
 </script>
 {#if visibleActions.length > 0 || attachmentUpload || attachmentRemoval}
   <svelte:element
@@ -299,12 +241,12 @@ function downloadHref(
               {/each}
               <button class={actionButtonClass(action.id)} type="submit" disabled={Boolean(challengeField(action.id)) && !challengeReady[action.id]}>{action.label}</button>
             </form>
-          {:else if interactionKind(action) === "DOWNLOAD" && downloadHref(action)}
-            <a id={`action-${action.id}`} class="secondary-button local-action" href={downloadHref(action)} download={downloadHref(action)?.startsWith("data:") ? `${screen.id.toLowerCase()}-${action.id}` : undefined} data-action-id={action.id}>{action.label}</a>
+          {:else if interactionKind(action) === "DOWNLOAD" && downloadHref(screen, runtime, action)}
+            <a id={`action-${action.id}`} class="secondary-button local-action" href={downloadHref(screen, runtime, action)} download={downloadName(screen, runtime, action)} data-action-id={action.id}>{action.label}</a>
           {:else if interactionKind(action) === "DOWNLOAD"}
             <div class="download-unavailable" role="status" data-action-id={action.id}><span>{action.label}</span><small>현재 다운로드를 준비할 수 없습니다. 잠시 후 화면을 새로고침해 다시 시도하세요.</small></div>
           {:else if interactionKind(action) === "COMMAND"}
-            <button id={`action-${action.id}`} class="secondary-button local-action" type="button" onclick={() => runLocalCommand(action)} data-action-id={action.id}>{action.label}</button>
+            <button id={`action-${action.id}`} class="secondary-button local-action" type="button" onclick={() => runLocalCommand(screen, runtime, action)} data-action-id={action.id}>{action.label}</button>
           {:else if optionsFor(action.id).length > 0}
             <RowSelectionNavigation actionId={action.id} actionLabel={action.label} options={optionsFor(action.id)} buttonClass={actionButtonClass(action.id)} external={interactionKind(action) === "EXTERNAL_LINK"} />
           {:else if hrefFor(action)}

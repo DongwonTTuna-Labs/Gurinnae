@@ -49,6 +49,10 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
         process_publication_created(state, &job, &event).await?;
         return Ok(true);
     }
+    if is_privacy_notification_event(&event.event_type) {
+        process_privacy_notification_claim(state, &job, &event).await?;
+        return Ok(true);
+    }
     if let Some(processed) = process_communication_event(state, &job, &event).await? {
         return Ok(processed);
     }

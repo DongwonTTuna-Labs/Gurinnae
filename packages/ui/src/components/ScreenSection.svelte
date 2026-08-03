@@ -17,6 +17,7 @@ import FileUploadQueue from "./sections/FileUploadQueue.svelte";
 import GateChecklist from "./sections/GateChecklist.svelte";
 import GuidedFormSection from "./sections/GuidedFormSection.svelte";
 import KnownUnknownResponse from "./sections/KnownUnknownResponse.svelte";
+import LegalContentSection from "./sections/LegalContentSection.svelte";
 import LongFormArticle from "./sections/LongFormArticle.svelte";
 import MetricWithContext from "./sections/MetricWithContext.svelte";
 import NotificationBanner from "./sections/NotificationBanner.svelte";
@@ -24,6 +25,7 @@ import OmnichannelApprovalPanel from "./sections/OmnichannelApprovalPanel.svelte
 import OperationsStatusPanel from "./sections/OperationsStatusPanel.svelte";
 import PageHeader from "./sections/PageHeader.svelte";
 import PublicCorrectionRequestForm from "./sections/PublicCorrectionRequestForm.svelte";
+import PublicCorrections from "./sections/PublicCorrections.svelte";
 import PublicDatasetExportForm from "./sections/PublicDatasetExportForm.svelte";
 import PublicLedger from "./sections/PublicLedger.svelte";
 import PublicSubscriptionForm from "./sections/PublicSubscriptionForm.svelte";
@@ -50,7 +52,10 @@ const publicLedgerSections: Readonly<Record<string, string>> = {
   "PUB-007": "results",
   "PUB-009": "results",
   "PUB-011": "results",
+  "PUB-015": "sources",
+  "PUB-016": "list",
   "PUB-018": "records",
+  "PUB-034": "impact",
 };
 const publicLedgerSection = $derived(
   publicLedgerSections[props.screen.id] === props.section.id,
@@ -66,7 +71,9 @@ const actionLabel = (actionId: string, fallback: string) =>
 {#if (props.screen.id === "CAS-010" || (props.screen.id === "CAS-011" && props.section.id !== "decisions"))}<AgentAnalysisProjection {...props} />
 {:else if contract.journey === "J-03" && (props.screen.id === "RSP-005" || props.screen.id === "RSP-006") }<ResponseJourneySection {...props} />
 {:else if publicLedgerSection}<PublicLedger {...props} />
-{:else if props.screen.id === "PUB-012" && props.section.id === "related"}<RelatedPublicCases {...props} />
+{:else if props.screen.id === "PUB-001" && props.section.id === "corrections"}<PublicCorrections {...props} />
+{:else if ((props.screen.id === "PUB-008" || props.screen.id === "PUB-010") && props.section.id === "cases") || (props.screen.id === "PUB-012" && props.section.id === "related")}<RelatedPublicCases {...props} />
+{:else if props.screen.id === "PUB-031" || props.screen.id === "PUB-032"}<LegalContentSection {...props} />
 {:else if props.screen.id === "PUB-029" && props.section.id === "email"}<PublicSubscriptionForm {...props} />
 {:else if props.screen.id === "PUB-020" && props.section.id === "datasets"}
   <SectionHeading section={props.section} kicker="데이터 내려받기" />

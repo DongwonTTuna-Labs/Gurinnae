@@ -15,7 +15,10 @@ const ENVELOPE_KEYS = [
   "format",
   "generatedAt",
   "id",
+  "interpretationNotice",
   "mediaType",
+  "nonConclusionNotices",
+  "notice",
   "rowCount",
   "status",
   "version",
@@ -38,6 +41,7 @@ async function get(path: string) {
 
 function decodedContent(envelope: JsonObject) {
   expect(Object.keys(envelope).sort()).toEqual(ENVELOPE_KEYS);
+  expect(envelope.notice).toBe(NOTICE);
   const base64 = String(envelope.contentBase64);
   const bytes = Buffer.from(base64, "base64");
   expect(bytes.toString("base64")).toBe(base64);
@@ -118,7 +122,11 @@ describe("public export mock reads", () => {
       publicationState: [],
       sort: "relevance",
     });
-    expect(search.rowCount).toBe(10);
+    expect(search.rowCount).toBe(11);
+
+    const contracts = await get("/v1/contracts/download?format=JSONL");
+    expect(contracts.appliedFilters).toEqual({});
+    expect(contracts.rowCount).toBe(8);
   });
 
   it("returns actual CSV and JSONL case bytes with an exact normalized filter echo", async () => {
@@ -135,6 +143,10 @@ describe("public export mock reads", () => {
           : "application/x-ndjson; charset=utf-8",
       );
       expect(envelope.generatedAt).toBe("2026-07-29T09:00:00Z");
+      expect(envelope.nonConclusionNotices).toEqual([
+        expect.stringContaining("판단"),
+      ]);
+      expect(envelope.interpretationNotice).toBeNull();
       expect(envelope.appliedFilters).toEqual({
         publicationState: ["PUBLISHED_ANOMALY"],
         sort: "title_asc",
@@ -154,10 +166,11 @@ describe("public export mock reads", () => {
           slug: "civic-building-hvac-review",
           responseStatus: "RECEIVED",
           correctionStatus: null,
+          nonConclusion: expect.stringContaining("판단"),
         });
       else
         expect(rows[0]).toBe(
-          "slug,title,publicState,summary,revision,updatedAt,responseStatus,correctionStatus,href",
+          "slug,title,publicState,summary,revision,updatedAt,responseStatus,correctionStatus,nonConclusion,href",
         );
     }
   });
@@ -192,6 +205,8 @@ describe("public export mock reads", () => {
         dateFrom: "2026-07-01",
         dateTo: "2026-07-30",
       });
+      expect(envelope.nonConclusionNotices).toEqual([]);
+      expect(envelope.interpretationNotice).toBeNull();
       const rows = verifyNoticeAndRows(envelope, decodedContent(envelope));
       if (format === "JSONL")
         expect(rows.map((row) => record(row).resultType).sort()).toEqual([
@@ -200,9 +215,56 @@ describe("public export mock reads", () => {
         ]);
       else
         expect(rows[0]).toBe(
-          "resultType,id,title,subtitle,status,summary,updatedAt,href",
+          "resultType,id,title,subtitle,status,summary,nonConclusion,interpretationNotice,updatedAt,href",
         );
     }
+  });
+
+  it("returns contract bytes for the selected agency and date filters", async () => {
+    const agencyId = "11000000-0000-4000-8000-000000000001";
+    const envelope = await get(
+      `/v1/contracts/download?format=JSONL&agencyId=${agencyId}&signedFrom=2026-01-01&signedTo=2026-01-31`,
+    );
+    expect(envelope.appliedFilters).toEqual({
+      agencyId,
+      signedFrom: "2026-01-01",
+      signedTo: "2026-01-31",
+    });
+    expect(envelope.rowCount).toBe(1);
+    expect(envelope.nonConclusionNotices).toEqual([]);
+    expect(envelope.interpretationNotice).toContain("판단");
+    const rows = verifyNoticeAndRows(envelope, decodedContent(envelope));
+    expect(record(rows[0])).toMatchObject({
+      contractNumber: "가상-2026-환경-017",
+      agencyName: "누리샘시 생활환경국(가상)",
+      interpretationNotice: expect.stringContaining("판단"),
+    });
+
+    const csvEnvelope = await get(
+      `/v1/contracts/download?format=CSV&agencyId=${agencyId}&signedFrom=2026-01-01&signedTo=2026-01-31`,
+    );
+    const csvRows = verifyNoticeAndRows(
+      csvEnvelope,
+      decodedContent(csvEnvelope),
+    );
+    expect(csvRows[0]).toBe(
+      "id,contractNumber,title,agencyName,supplierName,status,signedAt,amount,currency,interpretationNotice",
+    );
+  });
+
+  it("keeps the SOURCE interpretation notice in public search downloads", async () => {
+    const envelope = await get(
+      "/v1/search/download?format=JSONL&q=%EA%B3%84%EC%95%BD&types=SOURCE",
+    );
+    const rows = verifyNoticeAndRows(envelope, decodedContent(envelope));
+    expect(rows).toHaveLength(1);
+    expect(envelope.nonConclusionNotices).toEqual([]);
+    expect(envelope.interpretationNotice).toContain("판단");
+    expect(record(rows[0])).toMatchObject({
+      resultType: "SOURCE",
+      interpretationNotice: expect.stringContaining("판단"),
+      nonConclusion: null,
+    });
   });
 
   it("publishes explicit test-only region codes and applies them to list filters", async () => {

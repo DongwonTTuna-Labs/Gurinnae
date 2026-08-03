@@ -43,6 +43,7 @@ screens:
       sources:
       - CorrectionsPage.appliedFilters.publicationState
       - CorrectionsPage.asOf
+      - CorrectionsPage.items[].publicState
       - PublicCasesPage.appliedFilters.publicationState
       - PublicCasesPage.asOf
       - PublicCasesPage.items[].correctionStatus
@@ -52,15 +53,22 @@ screens:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
       - SourceStatusPage.items[].displayName
-      - SourceStatusPage.items[].lagSeconds
     matters_now:
       section: mission
       answer_pattern: 먼저 답할 질문은 ‘구린네는 무엇을 하는가?’이며, 서비스 정의와 한계에서 이상 징후와 위법·비리 확정의 구분 원칙.
       sources:
       - CorrectionsPage.items[].reason
       - CorrectionsPage.items[].summary
+      - CorrectionsPage.seo.description
+      - CorrectionsPage.seo.openGraphDescription
+      - CorrectionsPage.seo.title
       - PublicCasesPage.items[].summary
       - PublicCasesPage.items[].title
+      - PublicCasesPage.seo.description
+      - PublicCasesPage.seo.openGraphDescription
+      - PublicCasesPage.seo.title
+      - SourceStatusPage.seo.description
+      - SourceStatusPage.seo.openGraphDescription
     evidence:
       section: coverage
       answer_pattern: 데이터 범위와 최신성의 포함 source와 지연을 요약한다.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -69,13 +77,14 @@ screens:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
       - SourceStatusPage.items[].displayName
+      - SourceStatusPage.items[].interpretationNotice
       - SourceStatusPage.items[].lagSeconds
       - SourceStatusPage.items[].lastSuccessAt
       - SourceStatusPage.items[].publicMessage
       - SourceStatusPage.items[].sourceId
       - SourceStatusPage.items[].status
       - SourceStatusPage.nextCursor
-      - SourceStatusPage.totalApproximate
+      - SourceStatusPage.seo.canonicalUrl
     unknown_or_disputed:
       section: coverage
       answer_pattern: 데이터 범위와 최신성에서 포함 source와 지연을 요약한다. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -136,20 +145,20 @@ screens:
     - CorrectionsPage.appliedFilters.publishedTo
     - CorrectionsPage.items[].href
     - CorrectionsPage.items[].id
+    - CorrectionsPage.items[].nonConclusion
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].publishedAt
     - CorrectionsPage.items[].reason
     - CorrectionsPage.items[].sourceRevision
     - CorrectionsPage.items[].summary
     - CorrectionsPage.items[].targetRevision
-    - PublicCasesPage.appliedFilters.agencyId
-    - PublicCasesPage.appliedFilters.hasCorrection
     implementation_source_digest: 54a8e7a28807ebce0cc798aea299addf80c42c1fdb701c20ee56b4aaab883edb
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/+page.server.ts
     - apps/public-web/src/routes/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: d7a0c52eeee39688baba1411e8075905cde8dbf9d7eb4b9fb8787dde1f075b54
+    source_fields_digest: ba60eb4f64638b008d7162a66b7088e09028fee47be3aaf5794b89dcdc354169
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -168,6 +177,7 @@ screens:
     typed_slice: pub_001.recent
     source_fields:
     - CorrectionsPage.appliedFilters.publicationState
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].sourceRevision
     - CorrectionsPage.items[].targetRevision
     - PublicCasesPage.appliedFilters.publicationState
@@ -178,14 +188,13 @@ screens:
     - PublicCasesPage.items[].updatedAt
     - SourceStatusPage.appliedFilters.status
     - SourceStatusPage.asOf
-    - SourceStatusPage.items[].displayName
     implementation_source_digest: 54a8e7a28807ebce0cc798aea299addf80c42c1fdb701c20ee56b4aaab883edb
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/+page.server.ts
     - apps/public-web/src/routes/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: cfe4c59055afe8537f4392d5cf432d5f5f6b50adcf73d77d73deb82eb1bb20b9
+    source_fields_digest: c432d2317fe396634ad85babf1112bb58b83ab1d7d1aa84f443520541f8db64c
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -209,19 +218,19 @@ screens:
     - CorrectionsPage.asOf
     - CorrectionsPage.items[].href
     - CorrectionsPage.items[].id
+    - CorrectionsPage.items[].nonConclusion
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].publishedAt
     - CorrectionsPage.items[].reason
     - CorrectionsPage.items[].sourceRevision
     - CorrectionsPage.items[].summary
-    - CorrectionsPage.items[].targetRevision
-    - CorrectionsPage.nextCursor
     implementation_source_digest: 54a8e7a28807ebce0cc798aea299addf80c42c1fdb701c20ee56b4aaab883edb
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/+page.server.ts
     - apps/public-web/src/routes/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: dec856a7d3e16e42c117671eaad02e81fb1420c757d49b6edebd22bcf4525673
+    source_fields_digest: d897d75a4f61be988553cb8a9adabbfe294d1f34d8b799f14aa3f368f3a46555
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -241,17 +250,17 @@ screens:
     source_fields:
     - CorrectionsPage.items[].href
     - CorrectionsPage.items[].id
+    - CorrectionsPage.items[].nonConclusion
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].publishedAt
     - CorrectionsPage.items[].reason
-    - CorrectionsPage.items[].sourceRevision
-    - CorrectionsPage.items[].summary
     implementation_source_digest: 54a8e7a28807ebce0cc798aea299addf80c42c1fdb701c20ee56b4aaab883edb
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/+page.server.ts
     - apps/public-web/src/routes/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: f71a0ec1fae0f7e90700bfee13794fdc5494bc93045354ce54b6c79258701330
+    source_fields_digest: 703ffc24ad91d5ee42003a8d306f5b52a1867e06d404155f96e82be184058988
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -270,18 +279,18 @@ screens:
     typed_slice: pub_001.method
     source_fields:
     - CorrectionsPage.items[].id
+    - CorrectionsPage.items[].nonConclusion
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].publishedAt
     - CorrectionsPage.items[].reason
     - CorrectionsPage.items[].sourceRevision
-    - CorrectionsPage.items[].summary
-    - CorrectionsPage.items[].targetRevision
     implementation_source_digest: 54a8e7a28807ebce0cc798aea299addf80c42c1fdb701c20ee56b4aaab883edb
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/+page.server.ts
     - apps/public-web/src/routes/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 88053959f7a9a93dd6076f2338a07e3c0eb9aec859fc0d5a2ea5b6ed42cec85f
+    source_fields_digest: 93418e34ccbb930915616b5ce0ae5b07686a6fda795993748e86828c3e9b5710
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -950,6 +959,9 @@ screens:
       - PublicCasesDownload.rowCount
       - PublicCasesPage.items[].summary
       - PublicCasesPage.items[].title
+      - PublicCasesPage.seo.description
+      - PublicCasesPage.seo.openGraphDescription
+      - PublicCasesPage.seo.title
     evidence:
       section: scope
       answer_pattern: 목록 범위의 공개 확정 개정본 한정 사례 범위.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -1942,16 +1954,19 @@ screens:
       - PublicCaseRevisionResponse.content.case.responseStatus
       - PublicCaseRevisionResponse.content.case.updatedAt
       - PublicCaseRevisionResponse.content.confirmedFacts[].statement
+      - PublicCaseRevisionResponse.content.corrections[].publicState
       - PublicCaseRevisionResponse.content.counterEvidence[].verificationStatus
       - PublicCaseRevisionResponse.content.criticalUnknowns[].status
       - PublicCaseRevisionResponse.content.freshness.asOf
       - PublicCaseRevisionResponse.content.freshness.expectedFrequencySeconds
-      - PublicCaseRevisionResponse.content.freshness.lagSeconds
     matters_now:
       section: revision-banner
       answer_pattern: 먼저 답할 질문은 ‘이 revision은 언제 공개됐는가?’이며, 개정본 안내에서 지정 개정본의 기준 시점과 최신본 연결.
       sources:
       - CaseRevisionsPage.items[].summary
+      - CaseRevisionsPage.seo.description
+      - CaseRevisionsPage.seo.openGraphDescription
+      - CaseRevisionsPage.seo.title
       - PublicCaseRevisionResponse.content.case.summary
       - PublicCaseRevisionResponse.content.case.title
       - PublicCaseRevisionResponse.content.corrections[].reason
@@ -1960,9 +1975,6 @@ screens:
       - PublicCaseRevisionResponse.content.counterEvidence[].href
       - PublicCaseRevisionResponse.content.counterEvidence[].id
       - PublicCaseRevisionResponse.content.counterEvidence[].supports
-      - PublicCaseRevisionResponse.content.counterEvidence[].title
-      - PublicCaseRevisionResponse.content.counterEvidence[].verificationStatus
-      - PublicCaseRevisionResponse.content.evidence[].documentTitle
     evidence:
       section: snapshot
       answer_pattern: 불변 공개 내용의 해당 시점의 claim·evidence·response.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를
@@ -1988,6 +2000,7 @@ screens:
       - PublicCaseRevisionResponse.content.amount
       - PublicCaseRevisionResponse.content.case.correctionStatus
       - PublicCaseRevisionResponse.content.case.href
+      - PublicCaseRevisionResponse.content.case.nonConclusion
       - PublicCaseRevisionResponse.content.case.publicState
       - PublicCaseRevisionResponse.content.case.responseStatus
       - PublicCaseRevisionResponse.content.case.revision
@@ -1995,7 +2008,6 @@ screens:
       - PublicCaseRevisionResponse.content.case.summary
       - PublicCaseRevisionResponse.content.case.title
       - PublicCaseRevisionResponse.content.case.updatedAt
-      - PublicCaseRevisionResponse.content.claims[].claimType
     next_action:
       section: revision-banner
       answer_pattern: '최신 개정본 보기: 사건 상세로 이동해 사건의 현재 상태·확인 사실·중요한 미확인·당사자 소명·근거를 책임 있게 이해한다.'
@@ -2017,22 +2029,22 @@ screens:
     - CaseRevisionsPage.appliedFilters
     - CaseRevisionsPage.asOf
     - CaseRevisionsPage.items[].href
+    - CaseRevisionsPage.items[].nonConclusion
     - CaseRevisionsPage.items[].publishedAt
     - CaseRevisionsPage.items[].revision
     - CaseRevisionsPage.items[].state
     - CaseRevisionsPage.items[].summary
     - CaseRevisionsPage.nextCursor
-    - CaseRevisionsPage.totalApproximate
-    - PublicCaseRevisionResponse.content.agencyName
-    - PublicCaseRevisionResponse.content.amount
-    - PublicCaseRevisionResponse.content.case.correctionStatus
+    - CaseRevisionsPage.seo.canonicalUrl
+    - CaseRevisionsPage.seo.description
+    - CaseRevisionsPage.seo.openGraphDescription
     implementation_source_digest: 5d832f7fc6c5e14aede5976dfa39ddf1b0aa8d8e1132b3736ace7fc055dcec72
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e085e4be0d20a2bd038581a508b3458be3166c82e9c77228c3a33fb4a8bfe967
+    source_fields_digest: 33365b23e1b51282b633ce42fdbe29f56aef18643ffbbd93fcf7e370674b4236
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -2054,6 +2066,7 @@ screens:
     - PublicCaseRevisionResponse.content.amount
     - PublicCaseRevisionResponse.content.case.correctionStatus
     - PublicCaseRevisionResponse.content.case.href
+    - PublicCaseRevisionResponse.content.case.nonConclusion
     - PublicCaseRevisionResponse.content.case.publicState
     - PublicCaseRevisionResponse.content.case.responseStatus
     - PublicCaseRevisionResponse.content.case.revision
@@ -2061,14 +2074,13 @@ screens:
     - PublicCaseRevisionResponse.content.case.summary
     - PublicCaseRevisionResponse.content.case.title
     - PublicCaseRevisionResponse.content.case.updatedAt
-    - PublicCaseRevisionResponse.content.claims[].claimType
     implementation_source_digest: 5d832f7fc6c5e14aede5976dfa39ddf1b0aa8d8e1132b3736ace7fc055dcec72
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 448f129a9ee7197ada6b535da64bc70dbb09326a345611a9cad6d6fecfe2c426
+    source_fields_digest: e407ba458744f518627b1be29a13c3de50a0e83420dcb0584b74ff75190ccbd7
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -2089,22 +2101,22 @@ screens:
     - CaseRevisionsPage.appliedFilters
     - CaseRevisionsPage.asOf
     - CaseRevisionsPage.items[].href
+    - CaseRevisionsPage.items[].nonConclusion
     - CaseRevisionsPage.items[].publishedAt
     - CaseRevisionsPage.items[].revision
     - CaseRevisionsPage.items[].state
     - CaseRevisionsPage.items[].summary
     - CaseRevisionsPage.nextCursor
-    - CaseRevisionsPage.totalApproximate
-    - PublicCaseRevisionResponse.content.agencyName
-    - PublicCaseRevisionResponse.content.amount
-    - PublicCaseRevisionResponse.content.case.correctionStatus
+    - CaseRevisionsPage.seo.canonicalUrl
+    - CaseRevisionsPage.seo.description
+    - CaseRevisionsPage.seo.openGraphDescription
     implementation_source_digest: 5d832f7fc6c5e14aede5976dfa39ddf1b0aa8d8e1132b3736ace7fc055dcec72
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e085e4be0d20a2bd038581a508b3458be3166c82e9c77228c3a33fb4a8bfe967
+    source_fields_digest: 33365b23e1b51282b633ce42fdbe29f56aef18643ffbbd93fcf7e370674b4236
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -2125,22 +2137,22 @@ screens:
     - CaseRevisionsPage.appliedFilters
     - CaseRevisionsPage.asOf
     - CaseRevisionsPage.items[].href
+    - CaseRevisionsPage.items[].nonConclusion
     - CaseRevisionsPage.items[].publishedAt
     - CaseRevisionsPage.items[].revision
     - CaseRevisionsPage.items[].state
     - CaseRevisionsPage.items[].summary
     - CaseRevisionsPage.nextCursor
-    - CaseRevisionsPage.totalApproximate
-    - PublicCaseRevisionResponse.content.agencyName
-    - PublicCaseRevisionResponse.content.amount
-    - PublicCaseRevisionResponse.content.case.correctionStatus
+    - CaseRevisionsPage.seo.canonicalUrl
+    - CaseRevisionsPage.seo.description
+    - CaseRevisionsPage.seo.openGraphDescription
     implementation_source_digest: 5d832f7fc6c5e14aede5976dfa39ddf1b0aa8d8e1132b3736ace7fc055dcec72
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/revisions/[revision]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e085e4be0d20a2bd038581a508b3458be3166c82e9c77228c3a33fb4a8bfe967
+    source_fields_digest: 33365b23e1b51282b633ce42fdbe29f56aef18643ffbbd93fcf7e370674b4236
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -2374,14 +2386,14 @@ screens:
       section: summary
       answer_pattern: 계산 재현의 재현 요약에서 적용 규칙·개정본·계산 결과 요약. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
-      - BinaryDownload.status
-      - BinaryDownload.version
+      - CaseReproducibilityDownload.status
+      - CaseReproducibilityDownload.version
       - CaseReproducibilityResponse.ruleVersion
     matters_now:
       section: summary
       answer_pattern: 먼저 답할 질문은 ‘어떤 규칙과 버전을 사용했는가?’이며, 재현 요약에서 적용 규칙·개정본·계산 결과 요약.
       sources:
-      - BinaryDownload.rowCount
+      - CaseReproducibilityDownload.rowCount
       - CaseReproducibilityResponse.excludedCohort[].exclusionReason
       - CaseReproducibilityResponse.excludedCohort[].record.bundleSummary
       - CaseReproducibilityResponse.excludedCohort[].record.includeReason
@@ -2389,8 +2401,10 @@ screens:
       - CaseReproducibilityResponse.includedCohort[].includeReason
       - CaseReproducibilityResponse.result.excludedCount
       - CaseReproducibilityResponse.result.includedCount
+      - CaseReproducibilityResponse.seo.description
+      - CaseReproducibilityResponse.seo.openGraphDescription
+      - CaseReproducibilityResponse.seo.title
       - CaseReproducibilityResponse.target.bundleSummary
-      - CaseReproducibilityResponse.target.includeReason
     evidence:
       section: cohort
       answer_pattern: 비교군의 포함·제외와 reason.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -2427,7 +2441,12 @@ screens:
       section: summary
       answer_pattern: 'JSON 다운로드: 현재 revision에 고정된 파일을 생성해 파일명, 형식, 크기와 checksum을 확인한 뒤 다운로드한다.'
       sources:
-      - BinaryDownload.receiptSha256
+      - CaseReproducibilityDownload.appliedFilters.caseSlug
+      - CaseReproducibilityDownload.byteLength
+      - CaseReproducibilityDownload.contentBase64
+      - CaseReproducibilityDownload.contentSha256
+      - CaseReproducibilityDownload.filename
+      - CaseReproducibilityDownload.format
   section_mapping:
   - order: 1
     id: summary
@@ -2467,19 +2486,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_006.inputs
     source_fields:
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
+    - CaseReproducibilityDownload.byteLength
+    - CaseReproducibilityDownload.contentBase64
+    - CaseReproducibilityDownload.contentSha256
+    - CaseReproducibilityDownload.filename
+    - CaseReproducibilityDownload.format
+    - CaseReproducibilityDownload.generatedAt
     implementation_source_digest: c0e3f97f7d6b9916ce918646e00e7d4ca3b8b501e9d528a8f9851ae0d95f1e4a
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
+    source_fields_digest: 69c28edfb6c99ec5e2a8de6dcd098c25e2752519eb138183240b3cd16ec79d1a
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -2559,25 +2578,25 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_006.download
     source_fields:
-    - BinaryDownload.binary
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
-    - BinaryDownload.receiptSha256
-    - BinaryDownload.rowCount
+    - CaseReproducibilityDownload.appliedFilters.caseSlug
+    - CaseReproducibilityDownload.byteLength
+    - CaseReproducibilityDownload.contentBase64
+    - CaseReproducibilityDownload.contentSha256
+    - CaseReproducibilityDownload.filename
+    - CaseReproducibilityDownload.format
+    - CaseReproducibilityDownload.generatedAt
+    - CaseReproducibilityDownload.id
+    - CaseReproducibilityDownload.mediaType
+    - CaseReproducibilityDownload.notice
+    - CaseReproducibilityDownload.rowCount
+    - CaseReproducibilityDownload.status
     implementation_source_digest: c0e3f97f7d6b9916ce918646e00e7d4ca3b8b501e9d528a8f9851ae0d95f1e4a
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4e4a38c322ff73347490579ae16853876e40f5203725c405f80d7bdc748d5427
+    source_fields_digest: 31d69e7f2a61fc54490e298c9eefb7bfaae715285936c373431c8daeae1b4cfb
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -2617,7 +2636,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-006: 4046a72763288c0f3983b2ead5e49809eae2529f36ed4ce5d4b4b03107582555
+    specs/ui/screen-catalog.yaml#screens/PUB-006: 905d1f7c9f0e8ffac072976608b773bd93745ce15c3f3a1713ca8b848efac95c
   implementation_source_digest: c0e3f97f7d6b9916ce918646e00e7d4ca3b8b501e9d528a8f9851ae0d95f1e4a
   authored_section_ids:
   - summary
@@ -2776,7 +2795,7 @@ screens:
     kind: QUERY
     blocking: false
     request_schema: downloadCaseReproducibilityQuery
-    response_schema: BinaryDownload
+    response_schema: CaseReproducibilityDownload
     section_bindings: []
   critical_task_ids:
   - public-case
@@ -2821,6 +2840,9 @@ screens:
       - AgenciesPage.items[].caseCounts.resolution
       - AgenciesPage.items[].caseCounts.total
       - AgenciesPage.items[].coverage.recordCount
+      - AgenciesPage.seo.description
+      - AgenciesPage.seo.openGraphDescription
+      - AgenciesPage.seo.title
     evidence:
       section: search
       answer_pattern: 기관 검색의 공식·과거 기관명과 기관 유형·관할 파셋.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -3136,16 +3158,16 @@ screens:
       sources:
       - AgencyCasesPage.items[].summary
       - AgencyCasesPage.items[].title
+      - AgencyCasesPage.seo.description
+      - AgencyCasesPage.seo.openGraphDescription
+      - AgencyCasesPage.seo.title
       - AgencyContractsPage.items[].title
+      - AgencyContractsPage.seo.description
+      - AgencyContractsPage.seo.openGraphDescription
+      - AgencyContractsPage.seo.title
       - AgencyResponse.caseCountsByState.investigation.awaitingResponse
       - AgencyResponse.caseCountsByState.investigation.closed
       - AgencyResponse.caseCountsByState.investigation.editorialReview
-      - AgencyResponse.caseCountsByState.investigation.investigating
-      - AgencyResponse.caseCountsByState.investigation.legalReview
-      - AgencyResponse.caseCountsByState.investigation.readyToPublish
-      - AgencyResponse.caseCountsByState.investigation.signalDetected
-      - AgencyResponse.caseCountsByState.investigation.triage
-      - AgencyResponse.caseCountsByState.publication.corrected
     evidence:
       section: coverage
       answer_pattern: 수집 범위의 source·기간·누락.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -3296,18 +3318,18 @@ screens:
     - AgencyContractsPage.items[].contractNumber
     - AgencyContractsPage.items[].href
     - AgencyContractsPage.items[].id
+    - AgencyContractsPage.items[].interpretationNotice
     - AgencyContractsPage.items[].signedAt
     - AgencyContractsPage.items[].status
     - AgencyContractsPage.items[].supplier
     - AgencyContractsPage.items[].title
-    - AgencyContractsPage.nextCursor
     implementation_source_digest: dd563b5734588bc1d9fb64b84ce342f13cb782a11ce9c84f796a110774e4f8d1
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/agencies/[agencySlug]/+page.server.ts
     - apps/public-web/src/routes/agencies/[agencySlug]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 06dc2071828be2a02294524eb3791ba026b4a59ecee77f4fc0d3424c6ac8bbb2
+    source_fields_digest: 10263736335b6f008457eaf3057a0b60456fe2a331d4ed36b15475d45e5aaa18
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -3329,6 +3351,7 @@ screens:
     - AgencyCasesPage.asOf
     - AgencyCasesPage.items[].correctionStatus
     - AgencyCasesPage.items[].href
+    - AgencyCasesPage.items[].nonConclusion
     - AgencyCasesPage.items[].publicState
     - AgencyCasesPage.items[].responseStatus
     - AgencyCasesPage.items[].revision
@@ -3336,14 +3359,13 @@ screens:
     - AgencyCasesPage.items[].summary
     - AgencyCasesPage.items[].title
     - AgencyCasesPage.items[].updatedAt
-    - AgencyCasesPage.nextCursor
     implementation_source_digest: dd563b5734588bc1d9fb64b84ce342f13cb782a11ce9c84f796a110774e4f8d1
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/agencies/[agencySlug]/+page.server.ts
     - apps/public-web/src/routes/agencies/[agencySlug]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: bd0e76397e3b2948e92c606fa7b8a185afeb92c7c19ba0bd64a47aa1db819453
+    source_fields_digest: 6fc369194ed599979b2871651f95b87aedc5fecb9a0739e65cbf27f6cf2df724
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -3387,19 +3409,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_008.methods
     source_fields:
+    - AgencyCasesPage.items[].responseStatus
     - AgencyCasesPage.items[].revision
     - AgencyCasesPage.items[].slug
     - AgencyCasesPage.items[].summary
     - AgencyCasesPage.items[].title
     - AgencyCasesPage.items[].updatedAt
-    - AgencyCasesPage.nextCursor
     implementation_source_digest: dd563b5734588bc1d9fb64b84ce342f13cb782a11ce9c84f796a110774e4f8d1
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/agencies/[agencySlug]/+page.server.ts
     - apps/public-web/src/routes/agencies/[agencySlug]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 78410c21647a330a5f5703274f7fe4f5ce6e73c2077ac11ce0a6ddcba847bfe4
+    source_fields_digest: 052bcd922a0a9ace8709cdebd8895c122922bd1e2a8711964877f07ad299ceff
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -3675,6 +3697,9 @@ screens:
       - SuppliersPage.items[].caseCounts.resolution
       - SuppliersPage.items[].caseCounts.total
       - SuppliersPage.items[].coverage.recordCount
+      - SuppliersPage.seo.description
+      - SuppliersPage.seo.openGraphDescription
+      - SuppliersPage.seo.title
     evidence:
       section: search
       answer_pattern: 업체 검색의 공식·과거 업체명과 영업·식별 상태 파셋.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -3991,16 +4016,16 @@ screens:
       sources:
       - SupplierCasesPage.items[].summary
       - SupplierCasesPage.items[].title
+      - SupplierCasesPage.seo.description
+      - SupplierCasesPage.seo.openGraphDescription
+      - SupplierCasesPage.seo.title
       - SupplierContractsPage.items[].title
+      - SupplierContractsPage.seo.description
+      - SupplierContractsPage.seo.openGraphDescription
+      - SupplierContractsPage.seo.title
       - SupplierResponse.caseCountsByState.investigation.awaitingResponse
       - SupplierResponse.caseCountsByState.investigation.closed
       - SupplierResponse.caseCountsByState.investigation.editorialReview
-      - SupplierResponse.caseCountsByState.investigation.investigating
-      - SupplierResponse.caseCountsByState.investigation.legalReview
-      - SupplierResponse.caseCountsByState.investigation.readyToPublish
-      - SupplierResponse.caseCountsByState.investigation.signalDetected
-      - SupplierResponse.caseCountsByState.investigation.triage
-      - SupplierResponse.caseCountsByState.publication.corrected
     evidence:
       section: coverage
       answer_pattern: 수집 범위의 source·기간.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -4155,18 +4180,18 @@ screens:
     - SupplierContractsPage.items[].contractNumber
     - SupplierContractsPage.items[].href
     - SupplierContractsPage.items[].id
+    - SupplierContractsPage.items[].interpretationNotice
     - SupplierContractsPage.items[].signedAt
     - SupplierContractsPage.items[].status
     - SupplierContractsPage.items[].supplier
     - SupplierContractsPage.items[].title
-    - SupplierContractsPage.nextCursor
     implementation_source_digest: 36ecf4a688d204314222146f1c9f714dd0337e4d287d9d928f5297772463c170
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/suppliers/[supplierSlug]/+page.server.ts
     - apps/public-web/src/routes/suppliers/[supplierSlug]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 1e2f3d2d851ec3bd93b26d8285ccdfe157585c7352fa146a0ce21b2bdcfb1cd0
+    source_fields_digest: 18e43c249dc436c7b43ff80c7d22521c0bac861b51ad7c48b8ff56c6f1e8844b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4188,6 +4213,7 @@ screens:
     - SupplierCasesPage.asOf
     - SupplierCasesPage.items[].correctionStatus
     - SupplierCasesPage.items[].href
+    - SupplierCasesPage.items[].nonConclusion
     - SupplierCasesPage.items[].publicState
     - SupplierCasesPage.items[].responseStatus
     - SupplierCasesPage.items[].revision
@@ -4195,14 +4221,13 @@ screens:
     - SupplierCasesPage.items[].summary
     - SupplierCasesPage.items[].title
     - SupplierCasesPage.items[].updatedAt
-    - SupplierCasesPage.nextCursor
     implementation_source_digest: 36ecf4a688d204314222146f1c9f714dd0337e4d287d9d928f5297772463c170
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/suppliers/[supplierSlug]/+page.server.ts
     - apps/public-web/src/routes/suppliers/[supplierSlug]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: d37d02f51b50603d135f020feb3ae12ee19df75663df78ff91e50dc86714ab1c
+    source_fields_digest: 45b27f3b0cb4b4af13e29a2a72154ff49d12706c6fd7e6d4bfaf45b84b4a2561
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4527,42 +4552,45 @@ screens:
       section: scope
       answer_pattern: 계약의 계약 관측 범위에서 사건 공개 여부와 무관한 계약 관측 범위. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
-      - BinaryDownload.status
-      - BinaryDownload.version
       - ContractsPage.appliedFilters.contractStatus
       - ContractsPage.asOf
       - ContractsPage.items[].status
+      - PublicContractsDownload.appliedFilters.contractStatus
+      - PublicContractsDownload.status
+      - PublicContractsDownload.version
     matters_now:
       section: scope
       answer_pattern: 먼저 답할 질문은 ‘특정 계약이 수집됐는가?’이며, 계약 관측 범위에서 사건 공개 여부와 무관한 계약 관측 범위.
       sources:
-      - BinaryDownload.rowCount
       - ContractsPage.items[].title
+      - ContractsPage.seo.description
+      - ContractsPage.seo.openGraphDescription
+      - ContractsPage.seo.title
+      - PublicContractsDownload.rowCount
     evidence:
       section: limitations
       answer_pattern: 비교 한계의 금액·단위 정렬 주의.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - BinaryDownload.binary
-      - BinaryDownload.byteLength
-      - BinaryDownload.contentBase64
-      - BinaryDownload.contentSha256
-      - BinaryDownload.filename
-      - BinaryDownload.format
+      - ContractsPage.appliedFilters.agencyId
+      - ContractsPage.appliedFilters.amountMax
+      - ContractsPage.appliedFilters.amountMin
+      - ContractsPage.appliedFilters.contractStatus
+      - ContractsPage.appliedFilters.procurementMethod
+      - ContractsPage.appliedFilters.q
     unknown_or_disputed:
       section: scope
       answer_pattern: 계약 관측 범위에서 사건 공개 여부와 무관한 계약 관측 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
-      - BinaryDownload.binary
-      - BinaryDownload.byteLength
-      - BinaryDownload.contentBase64
-      - BinaryDownload.contentSha256
-      - BinaryDownload.filename
-      - BinaryDownload.format
+      - ContractsPage.appliedFilters.agencyId
+      - ContractsPage.appliedFilters.amountMax
+      - ContractsPage.appliedFilters.amountMin
+      - ContractsPage.appliedFilters.contractStatus
+      - ContractsPage.appliedFilters.procurementMethod
+      - ContractsPage.appliedFilters.q
     next_action:
       section: scope
       answer_pattern: '계약 보기: 계약 상세로 이동해 공개 계약의 원문·정규화 필드·변경·관련 사건을 확인한다.'
       sources:
-      - BinaryDownload.receiptSha256
       - ContractsPage.nextCursor
   section_mapping:
   - order: 1
@@ -4576,19 +4604,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_011.scope
     source_fields:
-    - BinaryDownload.binary
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
+    - ContractsPage.appliedFilters.agencyId
+    - ContractsPage.appliedFilters.amountMax
+    - ContractsPage.appliedFilters.amountMin
+    - ContractsPage.appliedFilters.contractStatus
+    - ContractsPage.appliedFilters.procurementMethod
+    - ContractsPage.appliedFilters.q
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
+    source_fields_digest: daa4535a56ae334a9877e72bc56bb1c4fa6c8bcc3bbce5c699bf9f18aeb700c8
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4606,7 +4634,6 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_011.filters
     source_fields:
-    - BinaryDownload.rowCount
     - ContractsPage.appliedFilters.agencyId
     - ContractsPage.appliedFilters.amountMax
     - ContractsPage.appliedFilters.amountMin
@@ -4618,13 +4645,14 @@ screens:
     - ContractsPage.appliedFilters.supplierId
     - ContractsPage.items[].agency
     - ContractsPage.items[].amount
+    - ContractsPage.items[].contractNumber
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: c0b3d8a33915ab6c087a5dad8ee626791ef56697124269346a45dc1aa1eab404
+    source_fields_digest: 335e75cfad82b0c4fb3ce0225cc89fc5fed9d7591d9211b75e93b51c69030ea3
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4642,9 +4670,6 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_011.results
     source_fields:
-    - BinaryDownload.id
-    - BinaryDownload.rowCount
-    - BinaryDownload.status
     - ContractsPage.appliedFilters.agencyId
     - ContractsPage.appliedFilters.contractStatus
     - ContractsPage.appliedFilters.supplierId
@@ -4653,14 +4678,17 @@ screens:
     - ContractsPage.items[].contractNumber
     - ContractsPage.items[].href
     - ContractsPage.items[].id
+    - ContractsPage.items[].interpretationNotice
     - ContractsPage.items[].signedAt
+    - ContractsPage.items[].status
+    - ContractsPage.items[].supplier
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: fdcaa4ff9fdd17ecc0c6c8706493ff716d964cb49a46ccf015e07428c8f685da
+    source_fields_digest: 8abd9b254f7ff433ec19870891502528afe9a42a80f16d1993708d2674259efe
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4678,19 +4706,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_011.limitations
     source_fields:
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
+    - ContractsPage.appliedFilters.contractStatus
+    - ContractsPage.appliedFilters.procurementMethod
+    - ContractsPage.appliedFilters.q
+    - ContractsPage.appliedFilters.signedFrom
+    - ContractsPage.appliedFilters.signedTo
+    - ContractsPage.appliedFilters.supplierId
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
+    source_fields_digest: 3eb37b44e04dd53508a01c9ff9cc60556816d70bd28783c43428b5788bfbfa1b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4705,7 +4733,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-011.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-011
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-011: 535459f3681c8a45f3ebac7701a34bb403b17e1d2abaa1fe58f822cd9145e931
+    specs/ui/screen-catalog.yaml#screens/PUB-011: bcfd3bc6d594847d56fe1552eee2d87b6f3145b4316bab0b3970d497e8b32386
   implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
   authored_section_ids:
   - scope
@@ -4866,7 +4894,7 @@ screens:
     kind: QUERY
     blocking: false
     request_schema: downloadContractsQuery
-    response_schema: BinaryDownload
+    response_schema: PublicContractsDownload
     section_bindings: []
   critical_task_ids: []
   authority_manifest_test_ids:
@@ -4930,6 +4958,9 @@ screens:
       - ContractResponse.originalAmount.title
       - ContractResponse.relatedCases[].summary
       - ContractResponse.relatedCases[].title
+      - ContractResponse.seo.description
+      - ContractResponse.seo.openGraphDescription
+      - ContractResponse.seo.title
       - ContractResponse.title
     evidence:
       section: identity
@@ -5830,6 +5861,9 @@ screens:
       sources:
       - RuleCasesPage.items[].summary
       - RuleCasesPage.items[].title
+      - RuleCasesPage.seo.description
+      - RuleCasesPage.seo.openGraphDescription
+      - RuleCasesPage.seo.title
       - RuleResponse.data.description
       - RuleResponse.id.title
       - RuleResponse.summary
@@ -5842,8 +5876,8 @@ screens:
       - RuleCasesPage.asOf
       - RuleCasesPage.items[].correctionStatus
       - RuleCasesPage.items[].href
+      - RuleCasesPage.items[].nonConclusion
       - RuleCasesPage.items[].publicState
-      - RuleCasesPage.items[].responseStatus
     unknown_or_disputed:
       section: blockers
       answer_pattern: 차단 조건에서 unit·VAT·bundle 등. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -5881,15 +5915,15 @@ screens:
     - RuleCasesPage.asOf
     - RuleCasesPage.items[].correctionStatus
     - RuleCasesPage.items[].href
+    - RuleCasesPage.items[].nonConclusion
     - RuleCasesPage.items[].publicState
-    - RuleCasesPage.items[].responseStatus
     implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.server.ts
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 89beddcbccb68574df062360f227891d0bb27bb320fdb118f474e9752b2fb3b3
+    source_fields_digest: ffc75ae919f5d63e1b35bd037065831c4d87d438287ea3fc5d5418dfaa74f60e
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -5910,16 +5944,16 @@ screens:
     - RuleCasesPage.asOf
     - RuleCasesPage.items[].correctionStatus
     - RuleCasesPage.items[].href
+    - RuleCasesPage.items[].nonConclusion
     - RuleCasesPage.items[].publicState
     - RuleCasesPage.items[].responseStatus
-    - RuleCasesPage.items[].revision
     implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.server.ts
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: a328a01476e685607c468b66b2bad6504b3b04242d0940456aae7863f4a0c498
+    source_fields_digest: 53bbb06f9df7cb04c1fc2f379bb840913d8fa62c76a605b3b508dbe6b59781fd
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -5939,17 +5973,17 @@ screens:
     source_fields:
     - RuleCasesPage.items[].correctionStatus
     - RuleCasesPage.items[].href
+    - RuleCasesPage.items[].nonConclusion
     - RuleCasesPage.items[].publicState
     - RuleCasesPage.items[].responseStatus
     - RuleCasesPage.items[].revision
-    - RuleCasesPage.items[].slug
     implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.server.ts
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 74569c401c99b485a56725477b66862afc38b619e92ab4cac8cee7f38dc00341
+    source_fields_digest: 8c45d291260035c8985bc65b7aadb600e3ab6d4ccb5e55d16eea74732d9a2c3d
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -5968,18 +6002,18 @@ screens:
     typed_slice: pub_014.blockers
     source_fields:
     - RuleCasesPage.items[].href
+    - RuleCasesPage.items[].nonConclusion
     - RuleCasesPage.items[].publicState
     - RuleCasesPage.items[].responseStatus
     - RuleCasesPage.items[].revision
     - RuleCasesPage.items[].slug
-    - RuleCasesPage.items[].summary
     implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.server.ts
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: ef6a2e47b3014077cb9e1cdd011aaced52e1e30a4dbd263da831dd7f158f37cb
+    source_fields_digest: 9026abb684c614a03f043f4a7a166be842be8bf893da912ccb9a059936f25f6b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -5997,19 +6031,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_014.false_positive
     source_fields:
+    - RuleCasesPage.items[].nonConclusion
     - RuleCasesPage.items[].publicState
     - RuleCasesPage.items[].responseStatus
     - RuleCasesPage.items[].revision
     - RuleCasesPage.items[].slug
     - RuleCasesPage.items[].summary
-    - RuleCasesPage.items[].title
     implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.server.ts
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: d84e629f43414fa877d0238b58f2841a6b73326523245131c08849357b9b07a8
+    source_fields_digest: 26156c3a7b0917347cc2ba397266f3d83e799e8aa5a15944849ab57cc9f2807f
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6029,6 +6063,7 @@ screens:
     source_fields:
     - RuleCasesPage.items[].correctionStatus
     - RuleCasesPage.items[].href
+    - RuleCasesPage.items[].nonConclusion
     - RuleCasesPage.items[].publicState
     - RuleCasesPage.items[].responseStatus
     - RuleCasesPage.items[].revision
@@ -6036,16 +6071,15 @@ screens:
     - RuleCasesPage.items[].summary
     - RuleCasesPage.items[].title
     - RuleCasesPage.items[].updatedAt
+    - RuleCasesPage.seo.title
     - RuleResponse.data.ruleId
-    - RuleResponse.id.id
-    - RuleResponse.id.status
     implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.server.ts
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: a08c5ec485d23833ae9436a37478d0917f7e0a191a7a3bfa65a723f94f82a8d0
+    source_fields_digest: e16f89a3bd4a7898ece358546e4f432debd781626bec073a0749713679fd9a7e
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6063,19 +6097,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_014.versions
     source_fields:
+    - RuleCasesPage.items[].responseStatus
     - RuleCasesPage.items[].revision
     - RuleCasesPage.items[].slug
     - RuleCasesPage.items[].summary
     - RuleCasesPage.items[].title
     - RuleCasesPage.items[].updatedAt
-    - RuleCasesPage.nextCursor
     implementation_source_digest: c3a4525ae1dcb77f09a447252b136345fb2ae1862f2deac84e4c4b4664e37bec
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.server.ts
     - apps/public-web/src/routes/methodology/rules/[ruleId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 8274fb5bb2bf13e81c69e3afd6054f4162958bf008037dcd41bc7f433574cf56
+    source_fields_digest: 7a849c4b7f28b3c540dbd7b47a9164bcc7f353e7ec5162f82d658cb20ae71370
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6297,6 +6331,7 @@ screens:
       - CoverageResponse.sources[].knownGaps[].impact
       - CoverageResponse.sources[].knownGaps[].reason
       - CoverageResponse.sources[].recordCount
+      - SourceStatusPage.seo.description
     evidence:
       section: sources
       answer_pattern: 출처별 범위의 기간·기관·갱신.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -6391,16 +6426,16 @@ screens:
     - CoverageResponse.sources[].freshness.lagSeconds
     - CoverageResponse.sources[].freshness.lastSuccessfulFetchAt
     - CoverageResponse.sources[].freshness.status
+    - CoverageResponse.sources[].interpretationNotice
     - CoverageResponse.sources[].knownGaps[].from
     - CoverageResponse.sources[].knownGaps[].id
-    - CoverageResponse.sources[].knownGaps[].impact
     implementation_source_digest: 63f5ba90498bc6ae24592bc387644bb3fdf927facdcc8c9f1c993ee7bfac7328
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/coverage/+page.server.ts
     - apps/public-web/src/routes/coverage/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 3f7ea0edd3e73ed66ed85548bfcb5c9831381d6b317dd9285cc5d3d8d818a7b6
+    source_fields_digest: e9779847ea36ece3e8762937254b337c8a22ba1e7574a776677fb9e66dfd0277
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6684,23 +6719,22 @@ screens:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
       - SourceStatusPage.items[].displayName
+      - SourceStatusPage.items[].interpretationNotice
       - SourceStatusPage.items[].lagSeconds
       - SourceStatusPage.items[].lastSuccessAt
       - SourceStatusPage.items[].publicMessage
       - SourceStatusPage.items[].sourceId
       - SourceStatusPage.items[].status
       - SourceStatusPage.nextCursor
-      - SourceStatusPage.totalApproximate
+      - SourceStatusPage.seo.canonicalUrl
+      - SourceStatusPage.seo.description
     matters_now:
       section: status
       answer_pattern: 먼저 답할 질문은 ‘어떤 기관의 어떤 데이터를 쓰는가?’이며, 출처 상태 요약에서 공식 데이터 출처별 정상·지연·장애 상태.
       sources:
-      - SourceStatusPage.appliedFilters.status
-      - SourceStatusPage.asOf
-      - SourceStatusPage.items[].displayName
-      - SourceStatusPage.items[].lagSeconds
-      - SourceStatusPage.items[].lastSuccessAt
-      - SourceStatusPage.items[].publicMessage
+      - SourceStatusPage.seo.description
+      - SourceStatusPage.seo.openGraphDescription
+      - SourceStatusPage.seo.title
     evidence:
       section: status
       answer_pattern: 출처 상태 요약의 공식 데이터 출처별 정상·지연·장애 상태.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -6708,13 +6742,15 @@ screens:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
       - SourceStatusPage.items[].displayName
+      - SourceStatusPage.items[].interpretationNotice
       - SourceStatusPage.items[].lagSeconds
       - SourceStatusPage.items[].lastSuccessAt
       - SourceStatusPage.items[].publicMessage
       - SourceStatusPage.items[].sourceId
       - SourceStatusPage.items[].status
       - SourceStatusPage.nextCursor
-      - SourceStatusPage.totalApproximate
+      - SourceStatusPage.seo.canonicalUrl
+      - SourceStatusPage.seo.description
     unknown_or_disputed:
       section: list
       answer_pattern: 출처 목록에서 owner·type·coverage·last sync. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -6722,9 +6758,9 @@ screens:
       - SourceStatusPage.appliedFilters.status
       - SourceStatusPage.asOf
       - SourceStatusPage.items[].displayName
+      - SourceStatusPage.items[].interpretationNotice
       - SourceStatusPage.items[].lagSeconds
       - SourceStatusPage.items[].lastSuccessAt
-      - SourceStatusPage.items[].publicMessage
     next_action:
       section: status
       answer_pattern: '출처 상세: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.'
@@ -6745,20 +6781,22 @@ screens:
     - SourceStatusPage.appliedFilters.status
     - SourceStatusPage.asOf
     - SourceStatusPage.items[].displayName
+    - SourceStatusPage.items[].interpretationNotice
     - SourceStatusPage.items[].lagSeconds
     - SourceStatusPage.items[].lastSuccessAt
     - SourceStatusPage.items[].publicMessage
     - SourceStatusPage.items[].sourceId
     - SourceStatusPage.items[].status
     - SourceStatusPage.nextCursor
-    - SourceStatusPage.totalApproximate
+    - SourceStatusPage.seo.canonicalUrl
+    - SourceStatusPage.seo.description
     implementation_source_digest: 043bfde8fd8d08aab5cad09efe9ba24223ac78c5aa6084efc6a95767fcf21a34
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/sources/+page.server.ts
     - apps/public-web/src/routes/sources/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 107d0070fd5fcadb2c439054a4e487fb8fa5e4e136149df5397093eb6822e739
+    source_fields_digest: 5768ce4feba89347c373800babd035f160fe9e9519a5b3e785ae28c450d66838
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6778,17 +6816,17 @@ screens:
     source_fields:
     - SourceStatusPage.asOf
     - SourceStatusPage.items[].displayName
+    - SourceStatusPage.items[].interpretationNotice
     - SourceStatusPage.items[].lagSeconds
     - SourceStatusPage.items[].lastSuccessAt
     - SourceStatusPage.items[].publicMessage
-    - SourceStatusPage.items[].sourceId
     implementation_source_digest: 043bfde8fd8d08aab5cad09efe9ba24223ac78c5aa6084efc6a95767fcf21a34
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/sources/+page.server.ts
     - apps/public-web/src/routes/sources/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: fdcc2b023ec8578a122adac895bd4adb4c1a9e36a767048959efeb9e8913654e
+    source_fields_digest: ec9691c23143e6309f3f77a323bf671e1ec098b43a70d6589d74b09fd69fedfa
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6807,18 +6845,18 @@ screens:
     typed_slice: pub_016.quality
     source_fields:
     - SourceStatusPage.items[].displayName
+    - SourceStatusPage.items[].interpretationNotice
     - SourceStatusPage.items[].lagSeconds
     - SourceStatusPage.items[].lastSuccessAt
     - SourceStatusPage.items[].publicMessage
     - SourceStatusPage.items[].sourceId
-    - SourceStatusPage.items[].status
     implementation_source_digest: 043bfde8fd8d08aab5cad09efe9ba24223ac78c5aa6084efc6a95767fcf21a34
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/sources/+page.server.ts
     - apps/public-web/src/routes/sources/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 459dd7272278cf5650a224578b803abc52c4d8db38eab13eebf5e50a781f9b87
+    source_fields_digest: 4593e2704f8bdc57b0a10308649ec17b356a442081412cbd5229e01841162292
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6836,19 +6874,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_016.terms
     source_fields:
+    - SourceStatusPage.items[].interpretationNotice
     - SourceStatusPage.items[].lagSeconds
     - SourceStatusPage.items[].lastSuccessAt
     - SourceStatusPage.items[].publicMessage
     - SourceStatusPage.items[].sourceId
     - SourceStatusPage.items[].status
-    - SourceStatusPage.nextCursor
     implementation_source_digest: 043bfde8fd8d08aab5cad09efe9ba24223ac78c5aa6084efc6a95767fcf21a34
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/sources/+page.server.ts
     - apps/public-web/src/routes/sources/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 94ff6ddf7883d314e8939408ed3612e688e4647312427d5611fd328266e9be9c
+    source_fields_digest: 3980dcf8264c7ab96c217a9e7ff3e23063e2152cf6047d69f2f5d340f9ab20c5
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -7035,6 +7073,9 @@ screens:
       sources:
       - SourceResponse.data.coverage.recordCount
       - SourceResponse.id.title
+      - SourceResponse.seo.description
+      - SourceResponse.seo.openGraphDescription
+      - SourceResponse.seo.title
       - SourceResponse.summary
       - SourceResponse.title
     evidence:
@@ -7474,12 +7515,16 @@ screens:
       sources:
       - CorrectionsPage.appliedFilters.publicationState
       - CorrectionsPage.asOf
+      - CorrectionsPage.items[].publicState
     matters_now:
       section: principle
       answer_pattern: 먼저 답할 질문은 ‘최근 무엇이 바뀌었는가?’이며, 정정 정책에서 공개 기록의 정정·철회·변경 공개 원칙.
       sources:
       - CorrectionsPage.items[].reason
       - CorrectionsPage.items[].summary
+      - CorrectionsPage.seo.description
+      - CorrectionsPage.seo.openGraphDescription
+      - CorrectionsPage.seo.title
     evidence:
       section: records
       answer_pattern: 정정 목록의 대상·변경 요약·이유·공개일을 포함한 정정 대장.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -7547,6 +7592,8 @@ screens:
     - CorrectionsPage.appliedFilters.publishedTo
     - CorrectionsPage.items[].href
     - CorrectionsPage.items[].id
+    - CorrectionsPage.items[].nonConclusion
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].publishedAt
     - CorrectionsPage.items[].reason
     - CorrectionsPage.items[].sourceRevision
@@ -7558,7 +7605,7 @@ screens:
     - apps/public-web/src/routes/corrections/+page.server.ts
     - apps/public-web/src/routes/corrections/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: dd64b91383bed49d972848ab6a6a6e5cef1ffdbe715ea8764b4f808c55fbc219
+    source_fields_digest: ba60eb4f64638b008d7162a66b7088e09028fee47be3aaf5794b89dcdc354169
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -7578,18 +7625,21 @@ screens:
     source_fields:
     - CorrectionsPage.items[].href
     - CorrectionsPage.items[].id
+    - CorrectionsPage.items[].nonConclusion
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].publishedAt
     - CorrectionsPage.items[].reason
     - CorrectionsPage.items[].sourceRevision
     - CorrectionsPage.items[].summary
     - CorrectionsPage.items[].targetRevision
+    - CorrectionsPage.seo.title
     implementation_source_digest: c1ff93f1002a31b247a19a96b6e701316a825b28b5fa3ddf1f08394aee93ac97
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/corrections/+page.server.ts
     - apps/public-web/src/routes/corrections/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e7c0b1f7388f7b3e9d74051cee7adb4dec1d057cb8dd89653fd76ea6529d2976
+    source_fields_digest: 1b6482ada75c3d64bffa6c57f4fc0750a63e1f3cb217ce2c4e8350ddc10e7c1c
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -7610,16 +7660,16 @@ screens:
     - CorrectionsPage.asOf
     - CorrectionsPage.items[].href
     - CorrectionsPage.items[].id
+    - CorrectionsPage.items[].nonConclusion
+    - CorrectionsPage.items[].publicState
     - CorrectionsPage.items[].publishedAt
-    - CorrectionsPage.items[].reason
-    - CorrectionsPage.items[].sourceRevision
     implementation_source_digest: c1ff93f1002a31b247a19a96b6e701316a825b28b5fa3ddf1f08394aee93ac97
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/corrections/+page.server.ts
     - apps/public-web/src/routes/corrections/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 86948e49c94fed106aad68f172e36d9292cb863f03265df299914d5cf3e68553
+    source_fields_digest: a6ac0229861bff760f77ab743705d6291a495713cd39e835c3b18f8e387ec6f5
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -7837,6 +7887,7 @@ screens:
       section: status
       answer_pattern: 정정 상세의 정정 유형·시각에서 정정·철회 유형과 적용 시각. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
+      - CorrectionResponse.data.publicState
       - CorrectionResponse.id.status
       - CorrectionResponse.id.updatedAt
       - CorrectionResponse.id.version
@@ -7850,6 +7901,9 @@ screens:
       - CorrectionResponse.data.reason
       - CorrectionResponse.data.summary
       - CorrectionResponse.id.title
+      - CorrectionResponse.seo.description
+      - CorrectionResponse.seo.openGraphDescription
+      - CorrectionResponse.seo.title
       - CorrectionResponse.summary
       - CorrectionResponse.title
     evidence:
@@ -7866,14 +7920,14 @@ screens:
       - CorrectionResponse.data.affectedClaims
       - CorrectionResponse.data.caseSlug
       - CorrectionResponse.data.id
+      - CorrectionResponse.data.nonConclusion
+      - CorrectionResponse.data.publicState
       - CorrectionResponse.data.publishedAt
       - CorrectionResponse.data.reason
       - CorrectionResponse.data.sourceRevision
       - CorrectionResponse.data.summary
       - CorrectionResponse.data.targetRevision
       - CorrectionResponse.id.id
-      - CorrectionResponse.id.status
-      - CorrectionResponse.id.title
     next_action:
       section: status
       answer_pattern: '대상 사건 보기: 사건 상세로 이동해 사건의 현재 상태·확인 사실·중요한 미확인·당사자 소명·근거를 책임 있게 이해한다.'
@@ -7882,8 +7936,8 @@ screens:
       - CorrectionResponse.data.affectedClaims
       - CorrectionResponse.data.caseSlug
       - CorrectionResponse.data.id
-      - CorrectionResponse.data.publishedAt
-      - CorrectionResponse.data.reason
+      - CorrectionResponse.data.nonConclusion
+      - CorrectionResponse.data.publicState
   section_mapping:
   - order: 1
     id: status
@@ -7896,6 +7950,7 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_019.status
     source_fields:
+    - CorrectionResponse.data.publicState
     - CorrectionResponse.data.sourceRevision
     - CorrectionResponse.data.targetRevision
     - CorrectionResponse.id.status
@@ -7910,7 +7965,7 @@ screens:
     - apps/public-web/src/routes/corrections/[correctionId]/+page.server.ts
     - apps/public-web/src/routes/corrections/[correctionId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 7e7e9eace97731ef6c4f3c8b0f7d949e1fe6f07a78049016e40c93bfb525da0a
+    source_fields_digest: d24b76db0492e0e7e8adf5db9b4d8e829e20b7c0fb5798c2d4df88ef9a1318fc
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -7928,6 +7983,7 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_019.target
     source_fields:
+    - CorrectionResponse.data.publicState
     - CorrectionResponse.data.sourceRevision
     - CorrectionResponse.data.targetRevision
     - CorrectionResponse.id.status
@@ -7942,7 +7998,7 @@ screens:
     - apps/public-web/src/routes/corrections/[correctionId]/+page.server.ts
     - apps/public-web/src/routes/corrections/[correctionId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 7e7e9eace97731ef6c4f3c8b0f7d949e1fe6f07a78049016e40c93bfb525da0a
+    source_fields_digest: d24b76db0492e0e7e8adf5db9b4d8e829e20b7c0fb5798c2d4df88ef9a1318fc
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -7962,17 +8018,17 @@ screens:
     source_fields:
     - CorrectionResponse.data.caseSlug
     - CorrectionResponse.data.id
+    - CorrectionResponse.data.nonConclusion
+    - CorrectionResponse.data.publicState
     - CorrectionResponse.data.publishedAt
     - CorrectionResponse.data.reason
-    - CorrectionResponse.data.sourceRevision
-    - CorrectionResponse.data.summary
     implementation_source_digest: a997599a0134f45fe5c6d70820545324317e7f8b4c428a6bd9c736c341a60bdf
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/corrections/[correctionId]/+page.server.ts
     - apps/public-web/src/routes/corrections/[correctionId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: ccd8c8f060aaaf86c6fc78149537f7ee50057dc8eb3a2d1de00ce7d5622024fb
+    source_fields_digest: 830499b8f7f42de9f97113a3e60f3a5897cb915b829381b495ac37367c1ca556
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8016,19 +8072,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_019.impact
     source_fields:
+    - CorrectionResponse.data.nonConclusion
+    - CorrectionResponse.data.publicState
     - CorrectionResponse.data.publishedAt
     - CorrectionResponse.data.reason
     - CorrectionResponse.data.sourceRevision
     - CorrectionResponse.data.summary
-    - CorrectionResponse.data.targetRevision
-    - CorrectionResponse.id.id
     implementation_source_digest: a997599a0134f45fe5c6d70820545324317e7f8b4c428a6bd9c736c341a60bdf
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/corrections/[correctionId]/+page.server.ts
     - apps/public-web/src/routes/corrections/[correctionId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 2023f23dc73393f69520aaef42443160666a269d7704bbbb1ae0c85717a4a526
+    source_fields_digest: 8570f190bc9daa5591282de520aca164cabc982586fb83f252818ee3f9e36d5a
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8283,6 +8339,9 @@ screens:
       - PublicDatasetsPage.items[].coverage.recordCount
       - PublicDatasetsPage.items[].description
       - PublicDatasetsPage.items[].title
+      - PublicDatasetsPage.seo.description
+      - PublicDatasetsPage.seo.openGraphDescription
+      - PublicDatasetsPage.seo.title
     evidence:
       section: license
       answer_pattern: 이용 조건의 source별 제한.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
@@ -8699,6 +8758,7 @@ screens:
       section: getting-started
       answer_pattern: 공개 API 문서의 시작에서 공개 자료 조회 주소·접근 조건·호출 한도. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
+      - BinaryDownload.appliedFilters.contractStatus
       - BinaryDownload.status
       - BinaryDownload.version
       - PublicApiDocumentationResponse.data.sections[].updatedAt
@@ -8760,19 +8820,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.getting_started
     source_fields:
-    - BinaryDownload.binary
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
+    - BinaryDownload.appliedFilters.agencyId
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
+    source_fields_digest: c12dfcaf9dbcbceee0c89ff1a087fc3e8fc502542c11966628c043c3710b7f24
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8790,19 +8850,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.resources
     source_fields:
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
+    source_fields_digest: acf71e1fc417cb93f2aa976d59b8e62463e28f42c608d32bd21eb49454b0ad00
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8820,19 +8880,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.pagination
     source_fields:
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: b3f7621e9bf854600e9e739ccbb803f096b4bf099048c2502a6939385098a19b
+    source_fields_digest: 7d1fd9f7d313f239191f84c728c6bfd0da3e49226cd1058bba4a349b32a2d8c9
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8851,19 +8911,19 @@ screens:
       reason: API 오류 계약은 내부 AI 제안이 아니라 versioned Problem Details 설명이다.
     typed_slice: pub_021.errors
     source_fields:
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
+    source_fields_digest: f999cc8746af0708562d2dcb33d2d3d63ca6d4f8221de7cae04f1a91eab76060
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8881,19 +8941,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.versioning
     source_fields:
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
+    - BinaryDownload.binary
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
+    source_fields_digest: 7b1629f0788de36086d7cd73964999118d1bedb63c70c0537dc467abfdf1c373
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8911,25 +8971,25 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.download
     source_fields:
+    - BinaryDownload.appliedFilters.agencyId
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
     - BinaryDownload.binary
     - BinaryDownload.byteLength
     - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
-    - BinaryDownload.receiptSha256
-    - BinaryDownload.rowCount
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4e4a38c322ff73347490579ae16853876e40f5203725c405f80d7bdc748d5427
+    source_fields_digest: df48a983e1cbf361153c21660d62d7b61a4ec1c9ec56dbd78fa5c62ce02615d0
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -12782,8 +12842,7 @@ screens:
       answer_pattern: 개인정보 처리방침의 처리자에서 개인정보 처리 주체와 연락처. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - PrivacyPolicyResponse.data.sections[].updatedAt
-      - PrivacyPolicyResponse.data.updatedAt
-      - PrivacyPolicyResponse.data.version
+      - PrivacyPolicyResponse.data.status
       - PrivacyPolicyResponse.id.status
       - PrivacyPolicyResponse.id.updatedAt
       - PrivacyPolicyResponse.id.version
@@ -12794,7 +12853,6 @@ screens:
       section: controller
       answer_pattern: 먼저 답할 질문은 ‘어떤 정보가 수집되는가?’이며, 처리자에서 개인정보 처리 주체와 연락처.
       sources:
-      - PrivacyPolicyResponse.data.title
       - PrivacyPolicyResponse.id.title
       - PrivacyPolicyResponse.summary
       - PrivacyPolicyResponse.title
@@ -12802,35 +12860,28 @@ screens:
       section: purposes
       answer_pattern: 목적·법적 근거의 명확한 매핑.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - PrivacyPolicyResponse.data.sourceLinks[].href
-      - PrivacyPolicyResponse.data.sourceLinks[].label
-      - PrivacyPolicyResponse.data.sourceLinks[].rel
+      - PrivacyPolicyResponse.data.retentionSchedules[].recordClass
     unknown_or_disputed:
       section: controller
       answer_pattern: 처리자에서 개인정보 처리 주체와 연락처. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - PrivacyPolicyResponse.createdAt
+      - PrivacyPolicyResponse.data.retentionSchedules[].activeDurationSeconds
+      - PrivacyPolicyResponse.data.retentionSchedules[].backupDurationSeconds
+      - PrivacyPolicyResponse.data.retentionSchedules[].effectiveAt
+      - PrivacyPolicyResponse.data.retentionSchedules[].lawfulBasis
+      - PrivacyPolicyResponse.data.retentionSchedules[].purpose
+      - PrivacyPolicyResponse.data.retentionSchedules[].recordClass
+      - PrivacyPolicyResponse.data.retentionSchedules[].reviewExpiresAt
+      - PrivacyPolicyResponse.data.retentionSchedules[].scheduleDigest
+      - PrivacyPolicyResponse.data.retentionSchedules[].terminalAction
+      - PrivacyPolicyResponse.data.retentionSchedules[].triggerKind
       - PrivacyPolicyResponse.data.sections[].body
-      - PrivacyPolicyResponse.data.sections[].heading
-      - PrivacyPolicyResponse.data.sections[].id
-      - PrivacyPolicyResponse.data.sections[].links[]
-      - PrivacyPolicyResponse.data.sections[].updatedAt
-      - PrivacyPolicyResponse.data.sourceLinks[].href
-      - PrivacyPolicyResponse.data.sourceLinks[].label
-      - PrivacyPolicyResponse.data.sourceLinks[].rel
-      - PrivacyPolicyResponse.data.title
-      - PrivacyPolicyResponse.data.updatedAt
-      - PrivacyPolicyResponse.data.version
     next_action:
       section: controller
       answer_pattern: '개인정보 문의: 문의로 이동해 문의 유형에 맞는 안전한 채널을 찾고 최소 정보로 연락한다.'
       sources:
-      - PrivacyPolicyResponse.createdAt
-      - PrivacyPolicyResponse.data.sections[].body
-      - PrivacyPolicyResponse.data.sections[].heading
-      - PrivacyPolicyResponse.data.sections[].id
-      - PrivacyPolicyResponse.data.sections[].links[]
-      - PrivacyPolicyResponse.data.sections[].updatedAt
+      - PrivacyPolicyResponse.data.retentionSchedules[].terminalAction
   section_mapping:
   - order: 1
     id: controller
@@ -12844,18 +12895,18 @@ screens:
     typed_slice: pub_031.controller
     source_fields:
     - PrivacyPolicyResponse.createdAt
-    - PrivacyPolicyResponse.data.sections[].body
-    - PrivacyPolicyResponse.data.sections[].heading
-    - PrivacyPolicyResponse.data.sections[].id
-    - PrivacyPolicyResponse.data.sections[].links[]
-    - PrivacyPolicyResponse.data.sections[].updatedAt
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    - PrivacyPolicyResponse.data.retentionSchedules[].activeDurationSeconds
+    - PrivacyPolicyResponse.data.retentionSchedules[].backupDurationSeconds
+    - PrivacyPolicyResponse.data.retentionSchedules[].effectiveAt
+    - PrivacyPolicyResponse.data.retentionSchedules[].lawfulBasis
+    - PrivacyPolicyResponse.data.retentionSchedules[].purpose
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 311bc45db3213533a0e66dc529bc66ea2c60bf3a897e147f97b8467b03301689
+    source_fields_digest: d60b3daa878ec2e49a8035da5aca3db131f6a921ff5b6fdb22344a5af41360f2
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -12873,19 +12924,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_031.categories
     source_fields:
-    - PrivacyPolicyResponse.data.sections[].body
-    - PrivacyPolicyResponse.data.sections[].heading
-    - PrivacyPolicyResponse.data.sections[].id
-    - PrivacyPolicyResponse.data.sections[].links[]
-    - PrivacyPolicyResponse.data.sections[].updatedAt
-    - PrivacyPolicyResponse.data.sourceLinks[].href
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    - PrivacyPolicyResponse.data.retentionSchedules[].activeDurationSeconds
+    - PrivacyPolicyResponse.data.retentionSchedules[].backupDurationSeconds
+    - PrivacyPolicyResponse.data.retentionSchedules[].effectiveAt
+    - PrivacyPolicyResponse.data.retentionSchedules[].lawfulBasis
+    - PrivacyPolicyResponse.data.retentionSchedules[].purpose
+    - PrivacyPolicyResponse.data.retentionSchedules[].recordClass
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: ba465dc2db8fbbea7d8b5a281b2718ca917fec153912b6ae90f11e42972d6613
+    source_fields_digest: acb43d25c5f3b3b231a807b54ecf4133aa7a74db48a76eb37ca7d1dd08ef9c59
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -12903,16 +12954,14 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_031.purposes
     source_fields:
-    - PrivacyPolicyResponse.data.sourceLinks[].href
-    - PrivacyPolicyResponse.data.sourceLinks[].label
-    - PrivacyPolicyResponse.data.sourceLinks[].rel
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    - PrivacyPolicyResponse.data.retentionSchedules[].scheduleDigest
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 47fcfeeecb727720b7ebe9f8279a70322c37f4432647539f56b42fd892d22c2b
+    source_fields_digest: 9feee540067d2a87d16e2a71629a97871c10b5af4b3e4c36c382b1e58304f36c
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -12930,19 +12979,23 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_031.retention
     source_fields:
-    - PrivacyPolicyResponse.data.sections[].id
-    - PrivacyPolicyResponse.data.sections[].links[]
-    - PrivacyPolicyResponse.data.sections[].updatedAt
-    - PrivacyPolicyResponse.data.sourceLinks[].href
-    - PrivacyPolicyResponse.data.sourceLinks[].label
-    - PrivacyPolicyResponse.data.sourceLinks[].rel
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    - PrivacyPolicyResponse.data.retentionSchedules[].activeDurationSeconds
+    - PrivacyPolicyResponse.data.retentionSchedules[].backupDurationSeconds
+    - PrivacyPolicyResponse.data.retentionSchedules[].effectiveAt
+    - PrivacyPolicyResponse.data.retentionSchedules[].lawfulBasis
+    - PrivacyPolicyResponse.data.retentionSchedules[].purpose
+    - PrivacyPolicyResponse.data.retentionSchedules[].recordClass
+    - PrivacyPolicyResponse.data.retentionSchedules[].reviewExpiresAt
+    - PrivacyPolicyResponse.data.retentionSchedules[].scheduleDigest
+    - PrivacyPolicyResponse.data.retentionSchedules[].terminalAction
+    - PrivacyPolicyResponse.data.retentionSchedules[].triggerKind
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: a1e3cf5db28b681c4d1ad935fd6594a6b42e8ffc5327d907b8d25949f6738992
+    source_fields_digest: 987be7844be69fac1e3c7c7924f9e3cf5fb3ca046c45e9be3bf7a69a3b412905
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -12960,19 +13013,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_031.processors
     source_fields:
-    - PrivacyPolicyResponse.data.sections[].links[]
-    - PrivacyPolicyResponse.data.sections[].updatedAt
-    - PrivacyPolicyResponse.data.sourceLinks[].href
-    - PrivacyPolicyResponse.data.sourceLinks[].label
-    - PrivacyPolicyResponse.data.sourceLinks[].rel
-    - PrivacyPolicyResponse.data.title
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    - PrivacyPolicyResponse.data.retentionSchedules[].lawfulBasis
+    - PrivacyPolicyResponse.data.retentionSchedules[].purpose
+    - PrivacyPolicyResponse.data.retentionSchedules[].recordClass
+    - PrivacyPolicyResponse.data.retentionSchedules[].reviewExpiresAt
+    - PrivacyPolicyResponse.data.retentionSchedules[].scheduleDigest
+    - PrivacyPolicyResponse.data.retentionSchedules[].terminalAction
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: cbfb1ab112240b86bf3dcc12a78d52b1edd27be8822c4a28f255c583ca27e446
+    source_fields_digest: 51bd96090286c420ce0689367f905302f2d6b6962b4f546f6e95fec834f1841b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -12990,19 +13043,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_031.rights
     source_fields:
-    - PrivacyPolicyResponse.data.sections[].updatedAt
-    - PrivacyPolicyResponse.data.sourceLinks[].href
-    - PrivacyPolicyResponse.data.sourceLinks[].label
-    - PrivacyPolicyResponse.data.sourceLinks[].rel
-    - PrivacyPolicyResponse.data.title
-    - PrivacyPolicyResponse.data.updatedAt
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    - PrivacyPolicyResponse.data.retentionSchedules[].purpose
+    - PrivacyPolicyResponse.data.retentionSchedules[].recordClass
+    - PrivacyPolicyResponse.data.retentionSchedules[].reviewExpiresAt
+    - PrivacyPolicyResponse.data.retentionSchedules[].scheduleDigest
+    - PrivacyPolicyResponse.data.retentionSchedules[].terminalAction
+    - PrivacyPolicyResponse.data.retentionSchedules[].triggerKind
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 5ae01703c2d536e85d1776fa6887099991a163d7d998e116c63178694a2074f7
+    source_fields_digest: ee929bd33d271c3cc392c7def4a0ed962c26a83525abd785cd123279ad5b1f91
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -13023,19 +13076,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_031.security
     source_fields:
-    - PrivacyPolicyResponse.data.sourceLinks[].href
-    - PrivacyPolicyResponse.data.sourceLinks[].label
-    - PrivacyPolicyResponse.data.sourceLinks[].rel
-    - PrivacyPolicyResponse.data.title
-    - PrivacyPolicyResponse.data.updatedAt
-    - PrivacyPolicyResponse.data.version
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    - PrivacyPolicyResponse.data.retentionSchedules[].recordClass
+    - PrivacyPolicyResponse.data.retentionSchedules[].reviewExpiresAt
+    - PrivacyPolicyResponse.data.retentionSchedules[].scheduleDigest
+    - PrivacyPolicyResponse.data.retentionSchedules[].terminalAction
+    - PrivacyPolicyResponse.data.retentionSchedules[].triggerKind
+    - PrivacyPolicyResponse.data.sections[].body
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: bc14fda9d6f5d63115520c57817a03e5872d5bbba0dc2f2aaa8a91ab5b7771fb
+    source_fields_digest: 2d26d8daa2d7d6ece9ad179845e8d91fa5b1fe0e62a234cf6b71b3286f26c3f7
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -13055,16 +13108,15 @@ screens:
     source_fields:
     - PrivacyPolicyResponse.createdAt
     - PrivacyPolicyResponse.data.sections[].updatedAt
-    - PrivacyPolicyResponse.data.updatedAt
     - PrivacyPolicyResponse.id.updatedAt
     - PrivacyPolicyResponse.updatedAt
-    implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+    implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/privacy/+page.server.ts
     - apps/public-web/src/routes/privacy/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e16322fb9abab6465d9cf14867c7254ea440d32004d39a1d31c6b0bb901b41f4
+    source_fields_digest: 26e35eee5ed8aa12aab962bf8ac1c9745f661a0ad155377badcb72db3bea5a37
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -13080,7 +13132,7 @@ screens:
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-031
   authority_source_sha256:
     specs/ui/screen-catalog.yaml#screens/PUB-031: 88ed864211759b72fcc195a1cd465ec653a592c8df8635ec3e20d7f60bb4e21d
-  implementation_source_digest: 8d776d9672cb85b1e31fa04a7c07cca1c39b83f60eea95f66f7c15d7d097644e
+  implementation_source_digest: d5ac72e5edadf8d6cb625fcd03c81486c4b08549d49d7ae09c8d473936a6c44c
   authored_section_ids:
   - controller
   - categories
@@ -13113,7 +13165,7 @@ screens:
     - history
   implementation_source_sha256:
     apps/public-web/src/routes/+error.svelte: dfd8e4a5aed27c59e2c4acbcd39065107e0e6ddfaf8705efc827ea08fa9451e1
-    apps/public-web/src/routes/privacy/+page.server.ts: 036d89a46869114d454434b2ab5c692bbe4228b1dff97802b9c30838e55bac4f
+    apps/public-web/src/routes/privacy/+page.server.ts: 83c67a4f8608950446f3337502fe8606e1f4d1a81054f987f6fca719a5a376d2
     apps/public-web/src/routes/privacy/+page.svelte: d6ed657bb802bf0ec178f63c1d38696e77e90e6bf47e673596426be64e742d9a
     packages/ui/src/view-models/generated.ts: e3ac510f50cd39c115353b69b0a948c20300dd3e1dcf0bce6487a4b15cb8b14b
   state_profile:
@@ -13277,10 +13329,11 @@ screens:
     request_contract:
       required:
       - token
-      - proof
       fields:
         token: secret-string[32..4096]
-        proof: BrowserProofV1
+      headers:
+        X-Gurine-Service-Assertion: request-bound-service-assertion
+        X-Gurine-Next-Submission-Session: secret-string[43]
     response_schema: PrivacyRequestSessionReceiptV1
     section_bindings:
     - rights
@@ -13293,7 +13346,7 @@ screens:
     blocking: true
     request_contract:
       required: []
-    response_schema: PrivacyRequestPublicStatusV1
+    response_schema: PrivacyRequestPublicStatusV2
     section_bindings:
     - rights
   critical_task_ids: []
@@ -13328,8 +13381,7 @@ screens:
       answer_pattern: 이용약관의 콘텐츠에서 attribution·revision. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - TermsResponse.data.sections[].updatedAt
-      - TermsResponse.data.updatedAt
-      - TermsResponse.data.version
+      - TermsResponse.data.status
       - TermsResponse.id.status
       - TermsResponse.id.updatedAt
       - TermsResponse.id.version
@@ -13340,7 +13392,6 @@ screens:
       section: service
       answer_pattern: 먼저 답할 질문은 ‘자료를 어떻게 사용할 수 있는가?’이며, 서비스 조건에서 서비스 제공 범위와 이용 조건.
       sources:
-      - TermsResponse.data.title
       - TermsResponse.id.title
       - TermsResponse.summary
       - TermsResponse.title
@@ -13348,9 +13399,12 @@ screens:
       section: service
       answer_pattern: 서비스 조건의 서비스 제공 범위와 이용 조건.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - TermsResponse.data.sourceLinks[].href
-      - TermsResponse.data.sourceLinks[].label
-      - TermsResponse.data.sourceLinks[].rel
+      - TermsResponse.createdAt
+      - TermsResponse.data.sections[].body
+      - TermsResponse.data.sections[].heading
+      - TermsResponse.data.sections[].id
+      - TermsResponse.data.sections[].links[]
+      - TermsResponse.data.sections[].updatedAt
     unknown_or_disputed:
       section: service
       answer_pattern: 서비스 조건에서 서비스 제공 범위와 이용 조건. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -13361,12 +13415,12 @@ screens:
       - TermsResponse.data.sections[].id
       - TermsResponse.data.sections[].links[]
       - TermsResponse.data.sections[].updatedAt
-      - TermsResponse.data.sourceLinks[].href
-      - TermsResponse.data.sourceLinks[].label
-      - TermsResponse.data.sourceLinks[].rel
-      - TermsResponse.data.title
-      - TermsResponse.data.updatedAt
-      - TermsResponse.data.version
+      - TermsResponse.data.status
+      - TermsResponse.id.id
+      - TermsResponse.id.status
+      - TermsResponse.id.title
+      - TermsResponse.id.updatedAt
+      - TermsResponse.id.version
     next_action:
       section: service
       answer_pattern: '데이터 안내: 데이터·다운로드로 이동해 공개 데이터셋, schema, license, snapshot과 사용 한계를 확인하고 내려받는다.'
@@ -13421,8 +13475,7 @@ screens:
     typed_slice: pub_032.content
     source_fields:
     - TermsResponse.data.sections[].updatedAt
-    - TermsResponse.data.updatedAt
-    - TermsResponse.data.version
+    - TermsResponse.data.status
     - TermsResponse.id.status
     - TermsResponse.id.updatedAt
     - TermsResponse.id.version
@@ -13435,7 +13488,7 @@ screens:
     - apps/public-web/src/routes/terms/+page.server.ts
     - apps/public-web/src/routes/terms/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 5e731f4d14f3a88ed88d3d988adbe938b5d3004f7c7b247f2fef0417235619fe
+    source_fields_digest: 67d0e79b0ae270da6eaaacdfe14bfae4c32f51a250661fed818d39370adfc2d9
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -13458,19 +13511,14 @@ screens:
     - TermsResponse.data.sections[].id
     - TermsResponse.data.sections[].links[]
     - TermsResponse.data.sections[].updatedAt
-    - TermsResponse.data.sourceLinks[].href
-    - TermsResponse.data.sourceLinks[].label
-    - TermsResponse.data.sourceLinks[].rel
-    - TermsResponse.data.title
-    - TermsResponse.data.updatedAt
-    - TermsResponse.data.version
+    - TermsResponse.data.status
     implementation_source_digest: 3c9b0d126cf023dc87ea3b09eb96110bf4d4cf995e1f95ac568a5702a31b8044
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/terms/+page.server.ts
     - apps/public-web/src/routes/terms/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 5970cfa1bbe1b36198d22d5728926a3b8cb016f3400ac88dc06435ce05209284
+    source_fields_digest: e6d00623933c4a94b521bcddb085497d575ae537589d9c547a1fa6ca8d3d8b7d
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -13491,16 +13539,16 @@ screens:
     - TermsResponse.data.sections[].id
     - TermsResponse.data.sections[].links[]
     - TermsResponse.data.sections[].updatedAt
-    - TermsResponse.data.sourceLinks[].href
-    - TermsResponse.data.sourceLinks[].label
-    - TermsResponse.data.sourceLinks[].rel
+    - TermsResponse.data.status
+    - TermsResponse.id.id
+    - TermsResponse.id.status
     implementation_source_digest: 3c9b0d126cf023dc87ea3b09eb96110bf4d4cf995e1f95ac568a5702a31b8044
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/terms/+page.server.ts
     - apps/public-web/src/routes/terms/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 855c8b5279ff4473c6fce5f21dfe3ff1bd744ef7da2ccc4fe5052fe2a6eb3f97
+    source_fields_digest: 3e0cd1aaae5f9f25093a9060c78cb4b789203f467b5558f4568d9651ca3706f4
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -13521,17 +13569,17 @@ screens:
     source_fields:
     - TermsResponse.data.sections[].links[]
     - TermsResponse.data.sections[].updatedAt
-    - TermsResponse.data.sourceLinks[].href
-    - TermsResponse.data.sourceLinks[].label
-    - TermsResponse.data.sourceLinks[].rel
-    - TermsResponse.data.title
+    - TermsResponse.data.status
+    - TermsResponse.id.id
+    - TermsResponse.id.status
+    - TermsResponse.id.title
     implementation_source_digest: 3c9b0d126cf023dc87ea3b09eb96110bf4d4cf995e1f95ac568a5702a31b8044
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/terms/+page.server.ts
     - apps/public-web/src/routes/terms/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 68128f4777f7a962a61aba7925eb2af01fcc198b399bf2fa2f17ff7380554e45
+    source_fields_digest: 5088567ede1e8f1c8b55d417d3d610d8a5190db9e0e289edd8ff10d1ac23e8fb
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -13550,18 +13598,18 @@ screens:
     typed_slice: pub_032.changes
     source_fields:
     - TermsResponse.data.sections[].updatedAt
-    - TermsResponse.data.sourceLinks[].href
-    - TermsResponse.data.sourceLinks[].label
-    - TermsResponse.data.sourceLinks[].rel
-    - TermsResponse.data.title
-    - TermsResponse.data.updatedAt
+    - TermsResponse.data.status
+    - TermsResponse.id.id
+    - TermsResponse.id.status
+    - TermsResponse.id.title
+    - TermsResponse.id.updatedAt
     implementation_source_digest: 3c9b0d126cf023dc87ea3b09eb96110bf4d4cf995e1f95ac568a5702a31b8044
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/terms/+page.server.ts
     - apps/public-web/src/routes/terms/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 2b8ecffaba9ccf28dddd2df2c355ff1339a5007a4d3336b4ff10c326fc1d19af
+    source_fields_digest: e0a27191e0bf510b73400fa1c4008e8f70d83b2419d8e3daeb01311317f16bc8
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -14160,6 +14208,7 @@ screens:
       - PublicSystemStatusResponse.asOf
       - PublicSystemStatusResponse.publicMessage
       - PublicSystemStatusResponse.sourceStatus[].displayName
+      - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
       - PublicSystemStatusResponse.sourceStatus[].lagSeconds
       - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
       - PublicSystemStatusResponse.sourceStatus[].publicMessage
@@ -14174,13 +14223,14 @@ screens:
       - PublicSystemStatusResponse.asOf
       - PublicSystemStatusResponse.publicMessage
       - PublicSystemStatusResponse.sourceStatus[].displayName
+      - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
       - PublicSystemStatusResponse.sourceStatus[].lagSeconds
-      - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
     evidence:
       section: reference
       answer_pattern: 참조의 trace ID.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - PublicSystemStatusResponse.sourceStatus[].displayName
+      - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
       - PublicSystemStatusResponse.sourceStatus[].lagSeconds
       - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
       - PublicSystemStatusResponse.sourceStatus[].publicMessage
@@ -14194,6 +14244,7 @@ screens:
       - PublicSystemStatusResponse.asOf
       - PublicSystemStatusResponse.publicMessage
       - PublicSystemStatusResponse.sourceStatus[].displayName
+      - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
       - PublicSystemStatusResponse.sourceStatus[].lagSeconds
       - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
       - PublicSystemStatusResponse.sourceStatus[].publicMessage
@@ -14208,8 +14259,8 @@ screens:
       - PublicSystemStatusResponse.asOf
       - PublicSystemStatusResponse.publicMessage
       - PublicSystemStatusResponse.sourceStatus[].displayName
+      - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
       - PublicSystemStatusResponse.sourceStatus[].lagSeconds
-      - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
   section_mapping:
   - order: 1
     id: message
@@ -14251,16 +14302,16 @@ screens:
     - PublicSystemStatusResponse.asOf
     - PublicSystemStatusResponse.publicMessage
     - PublicSystemStatusResponse.sourceStatus[].displayName
+    - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
     - PublicSystemStatusResponse.sourceStatus[].lagSeconds
     - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
-    - PublicSystemStatusResponse.sourceStatus[].publicMessage
     implementation_source_digest: 15eec57ee4a0e149f4f1f9949f6c2b892fab4d36b6980ccbf07689ee90a00e1d
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/[systemPath]/+page.server.ts
     - apps/public-web/src/routes/[systemPath]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: faf8a37ea7e0b3d114107492733267224e24965708478b3e28d15d94afeff14e
+    source_fields_digest: 5a51b4f1a58d2824e441dfd9b68db35695ede7f7063574558c02b6c58ba39d0a
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -14282,6 +14333,7 @@ screens:
     - PublicSystemStatusResponse.asOf
     - PublicSystemStatusResponse.publicMessage
     - PublicSystemStatusResponse.sourceStatus[].displayName
+    - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
     - PublicSystemStatusResponse.sourceStatus[].lagSeconds
     - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
     - PublicSystemStatusResponse.sourceStatus[].publicMessage
@@ -14294,7 +14346,7 @@ screens:
     - apps/public-web/src/routes/[systemPath]/+page.server.ts
     - apps/public-web/src/routes/[systemPath]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: cc8ca0bc9f6f68df1dab86de9d0c6727b18c577aee36519965d625dda05bcc8c
+    source_fields_digest: a5ea6353fc7036031a3d8e87e871565cf3deace54eae35c25147805d38c42a4d
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -14313,18 +14365,18 @@ screens:
     typed_slice: pub_034.reference
     source_fields:
     - PublicSystemStatusResponse.sourceStatus[].displayName
+    - PublicSystemStatusResponse.sourceStatus[].interpretationNotice
     - PublicSystemStatusResponse.sourceStatus[].lagSeconds
     - PublicSystemStatusResponse.sourceStatus[].lastSuccessAt
     - PublicSystemStatusResponse.sourceStatus[].publicMessage
     - PublicSystemStatusResponse.sourceStatus[].sourceId
-    - PublicSystemStatusResponse.sourceStatus[].status
     implementation_source_digest: 15eec57ee4a0e149f4f1f9949f6c2b892fab4d36b6980ccbf07689ee90a00e1d
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/[systemPath]/+page.server.ts
     - apps/public-web/src/routes/[systemPath]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 811de60d57ed094658e2c437e8d9bbfeaa3d310c2b10db81dd3c99b17830926e
+    source_fields_digest: 1d7b02aa49ecbf83613350843df50c56f4c4f3b7a8ed50f6db72e7b13e324362
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -14952,6 +15004,7 @@ screens:
       section: public-use
       answer_pattern: 요청 내용의 공개 범위에서 동의 선택 설명. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
+      - BinaryDownload.appliedFilters.contractStatus
       - BinaryDownload.status
       - BinaryDownload.version
       - ResponseRequestResponse.dueAt
@@ -14968,12 +15021,12 @@ screens:
       section: references
       answer_pattern: 관련 자료의 공개 claim/evidence만.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - BinaryDownload.binary
-      - BinaryDownload.byteLength
-      - BinaryDownload.contentBase64
-      - BinaryDownload.contentSha256
-      - BinaryDownload.filename
-      - BinaryDownload.format
+      - BinaryDownload.appliedFilters.agencyId
+      - BinaryDownload.appliedFilters.amountMax
+      - BinaryDownload.appliedFilters.amountMin
+      - BinaryDownload.appliedFilters.contractStatus
+      - BinaryDownload.appliedFilters.procurementMethod
+      - BinaryDownload.appliedFilters.q
     unknown_or_disputed:
       section: public-use
       answer_pattern: 공개 범위에서 동의 선택 설명. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -15040,19 +15093,19 @@ screens:
       reason: response party에는 허용된 공개 claim/evidence 링크만 읽기 전용으로 제공한다.
     typed_slice: rsp_002.references
     source_fields:
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
     implementation_source_digest: d4b0034aaaca3b2aaabb0a5768691afc128dbc84021b2c7ed016e5a01bf2091c
     source_paths:
     - apps/response-portal/src/routes/+error.svelte
     - apps/response-portal/src/routes/respond/overview/+page.server.ts
     - apps/response-portal/src/routes/respond/overview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
+    source_fields_digest: acf71e1fc417cb93f2aa976d59b8e62463e28f42c608d32bd21eb49454b0ad00
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -15070,19 +15123,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: rsp_002.deadline
     source_fields:
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
     implementation_source_digest: d4b0034aaaca3b2aaabb0a5768691afc128dbc84021b2c7ed016e5a01bf2091c
     source_paths:
     - apps/response-portal/src/routes/+error.svelte
     - apps/response-portal/src/routes/respond/overview/+page.server.ts
     - apps/response-portal/src/routes/respond/overview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: b3f7621e9bf854600e9e739ccbb803f096b4bf099048c2502a6939385098a19b
+    source_fields_digest: 7d1fd9f7d313f239191f84c728c6bfd0da3e49226cd1058bba4a349b32a2d8c9
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -15101,6 +15154,7 @@ screens:
       reason: 공개 동의 범위와 선택 결과를 privacy notice로 설명한다.
     typed_slice: rsp_002.public_use
     source_fields:
+    - BinaryDownload.appliedFilters.contractStatus
     - BinaryDownload.status
     - ResponseRequestResponse.publicationScope.attachments
     - ResponseRequestResponse.publicationScope.body
@@ -15114,7 +15168,7 @@ screens:
     - apps/response-portal/src/routes/respond/overview/+page.server.ts
     - apps/response-portal/src/routes/respond/overview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 593a29f46b011954a30dc955b551b1443dc6a11f2f41d49a5b5a5f6a97d09c5f
+    source_fields_digest: 1e8a7a4344de6ee9fb043e50d3788791d88676a0c70b81888b09f0eb0bcc4de8
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -15132,19 +15186,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: rsp_002.support
     source_fields:
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
+    - BinaryDownload.binary
     implementation_source_digest: d4b0034aaaca3b2aaabb0a5768691afc128dbc84021b2c7ed016e5a01bf2091c
     source_paths:
     - apps/response-portal/src/routes/+error.svelte
     - apps/response-portal/src/routes/respond/overview/+page.server.ts
     - apps/response-portal/src/routes/respond/overview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
+    source_fields_digest: 7b1629f0788de36086d7cd73964999118d1bedb63c70c0537dc467abfdf1c373
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -18828,6 +18882,7 @@ screens:
         상태를 함께 연다.
       sources:
       - InternalDashboardResponse.sourceHealth[].displayName
+      - InternalDashboardResponse.sourceHealth[].interpretationNotice
       - InternalDashboardResponse.sourceHealth[].lagSeconds
       - InternalDashboardResponse.sourceHealth[].lastSuccessAt
       - InternalDashboardResponse.sourceHealth[].publicMessage
@@ -19410,7 +19465,9 @@ screens:
     - getActionExecutionReceipt
     - getActionProposal
     additive_command_operations:
+    - attestEntityMaterialUseClosure
     - claimActionReview
+    - classifyEntityPersonhood
     - decideJourneyHandoff
     - decideSupplierRelationshipAssertion
     - recordSupplierIdentityResolution
@@ -19643,6 +19700,29 @@ screens:
     response_schema: ActionProposalDetailV1
     section_bindings: []
   - source: owner-addendum
+    operation_id: attestEntityMaterialUseClosure
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-entity-material-use-closure
+    kind: COMMAND
+    blocking: false
+    request_contract:
+      required:
+      - entityKind
+      - entityId
+      - personhoodReceiptId
+      - expectedEntityUpdatedAt
+      - reason
+      fields:
+        entityKind: enum<AGENCY|SUPPLIER>
+        entityId: uuid
+        personhoodReceiptId: uuid
+        expectedEntityUpdatedAt: datetime
+        reason: string[1..4000]
+    response_schema: AttestEntityMaterialUseClosureReceiptV1
+    section_bindings:
+    - handoff
+  - source: owner-addendum
     operation_id: claimActionReview
     api: control-api
     method: POST
@@ -19663,6 +19743,31 @@ screens:
         expectedAssignmentVersion: int64>=1
         expectedApprovalDigest: sha256
     response_schema: ActionReviewClaimedReceiptV1
+    section_bindings:
+    - handoff
+  - source: owner-addendum
+    operation_id: classifyEntityPersonhood
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/classify-entity-personhood
+    kind: COMMAND
+    blocking: false
+    request_contract:
+      required:
+      - entityKind
+      - entityId
+      - classification
+      - evidenceSourceLocator
+      - expectedEntityUpdatedAt
+      - reason
+      fields:
+        entityKind: enum<AGENCY|SUPPLIER>
+        entityId: uuid
+        classification: enum<NATURAL_PERSON|NOT_NATURAL_PERSON>
+        evidenceSourceLocator: uri-reference[1..2000]
+        expectedEntityUpdatedAt: datetime
+        reason: string[1..4000]
+    response_schema: ClassifyEntityPersonhoodReceiptV1
     section_bindings:
     - handoff
   - source: owner-addendum
@@ -24896,7 +25001,10 @@ screens:
     landmark: region
     test_id: cas_008__section__verification
     additive_query_operations: []
-    additive_command_operations: []
+    additive_command_operations:
+    - attestOrganizationOfficialChannel
+    - revokeOrganizationOfficialChannel
+    - verifyResponseOrganizationIdentity
   - order: 4
     id: public-copy
     surface: internal
@@ -25161,6 +25269,36 @@ screens:
     response_schema: approveResponseExcerptReceipt
     section_bindings: []
   - source: owner-addendum
+    operation_id: attestOrganizationOfficialChannel
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-organization-official-channel
+    kind: COMMAND
+    blocking: false
+    request_contract:
+      required:
+      - organizationKind
+      - organizationId
+      - verificationMethod
+      - sourceId
+      - expiresAt
+      - reason
+      - expectedAuthorityVersion
+      fields:
+        organizationKind: enum<AGENCY|SUPPLIER>
+        organizationId: uuid
+        verificationMethod: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+        sourceId: uuid
+        expiresAt: datetime
+        reason: string[1..4000]
+        expectedAuthorityVersion: const<1>
+      field_descriptions:
+        sourceId: OFFICIAL_DOMAIN_EMAIL selects one current communication_endpoint_verifications.id; OFFICIAL_DOCUMENT
+          selects one current editorial.evidence.id. The caller never supplies an authority receipt ID or digest.
+    response_schema: AttestOrganizationOfficialChannelReceiptV1
+    section_bindings:
+    - verification
+  - source: owner-addendum
     operation_id: cancelCommunicationDelivery
     api: control-api
     method: POST
@@ -25249,6 +25387,58 @@ screens:
     response_schema: CommunicationDeliveryMutationReceiptV1
     section_bindings:
     - timeline
+  - source: owner-addendum
+    operation_id: revokeOrganizationOfficialChannel
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/revoke-organization-official-channel
+    kind: COMMAND
+    blocking: false
+    request_contract:
+      required:
+      - assertionId
+      - reasonCode
+      - reason
+      fields:
+        assertionId: uuid
+        reasonCode: string[1..100]
+        reason: string[1..4000]
+    response_schema: RevokeOrganizationOfficialChannelReceiptV1
+    section_bindings:
+    - verification
+  - source: owner-addendum
+    operation_id: verifyResponseOrganizationIdentity
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/verify-response-organization-identity
+    kind: COMMAND
+    blocking: false
+    request_contract:
+      description: Verifies a response organization against one current immutable official-channel authority assertion.
+        The owner revalidates assertion state and the exact underlying authority proof in the transaction; missing
+        authority fails closed.
+      required:
+      - responseId
+      - organizationId
+      - publicationForm
+      - verificationMethod
+      - officialChannelSourceId
+      - reason
+      - expectedVersion
+      fields:
+        responseId: uuid
+        organizationId: uuid
+        publicationForm: enum<FULL|REDACTED>
+        verificationMethod: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+        officialChannelSourceId: uuid
+        reason: string[1..4000]
+        expectedVersion: int64>=1
+      field_descriptions:
+        officialChannelSourceId: Identifier of the current immutable official-channel authority assertion. It is
+          never a raw communication endpoint verification ID or official document evidence ID.
+    response_schema: VerifyResponseOrganizationIdentityReceiptV1
+    section_bindings:
+    - verification
   critical_task_ids: []
   authority_manifest_test_ids:
   - cas_008__section__requests
@@ -27695,18 +27885,18 @@ screens:
       section: watermark
       answer_pattern: 공개 미리보기의 미리보기 상태에서 초안·미리보기 무결성 식별값. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
+      - PublicationPreviewResponse.gateState
       - PublicationPreviewResponse.publicPayload.case.correctionStatus
       - PublicationPreviewResponse.publicPayload.case.publicState
       - PublicationPreviewResponse.publicPayload.case.responseStatus
       - PublicationPreviewResponse.publicPayload.case.updatedAt
       - PublicationPreviewResponse.publicPayload.confirmedFacts[].statement
+      - PublicationPreviewResponse.publicPayload.corrections[].publicState
       - PublicationPreviewResponse.publicPayload.counterEvidence[].verificationStatus
       - PublicationPreviewResponse.publicPayload.criticalUnknowns[].status
       - PublicationPreviewResponse.publicPayload.freshness.asOf
       - PublicationPreviewResponse.publicPayload.freshness.expectedFrequencySeconds
       - PublicationPreviewResponse.publicPayload.freshness.lagSeconds
-      - PublicationPreviewResponse.publicPayload.freshness.lastSuccessfulFetchAt
-      - PublicationPreviewResponse.publicPayload.freshness.status
     matters_now:
       section: watermark
       answer_pattern: 먼저 답할 질문은 ‘공개될 정확한 내용과 상태는 무엇인가?’이며, 미리보기 상태에서 초안·미리보기 무결성 식별값.
@@ -27746,16 +27936,16 @@ screens:
       sources:
       - PublicationPreviewResponse.caseId
       - PublicationPreviewResponse.expiresAt
+      - PublicationPreviewResponse.gateState
+      - PublicationPreviewResponse.legalReviewRequired
       - PublicationPreviewResponse.previewHash
       - PublicationPreviewResponse.publicPayload.agencyName
       - PublicationPreviewResponse.publicPayload.amount
       - PublicationPreviewResponse.publicPayload.case.correctionStatus
       - PublicationPreviewResponse.publicPayload.case.href
+      - PublicationPreviewResponse.publicPayload.case.nonConclusion
       - PublicationPreviewResponse.publicPayload.case.publicState
       - PublicationPreviewResponse.publicPayload.case.responseStatus
-      - PublicationPreviewResponse.publicPayload.case.revision
-      - PublicationPreviewResponse.publicPayload.case.slug
-      - PublicationPreviewResponse.publicPayload.case.summary
     next_action:
       section: watermark
       answer_pattern: '미리보기 재생성: server-side preview 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
@@ -27784,25 +27974,25 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: cas_014.watermark
     source_fields:
+    - PublicationPreviewResponse.gateState
     - PublicationPreviewResponse.publicPayload.case.correctionStatus
     - PublicationPreviewResponse.publicPayload.case.publicState
     - PublicationPreviewResponse.publicPayload.case.responseStatus
     - PublicationPreviewResponse.publicPayload.case.revision
     - PublicationPreviewResponse.publicPayload.case.updatedAt
     - PublicationPreviewResponse.publicPayload.confirmedFacts[].statement
+    - PublicationPreviewResponse.publicPayload.corrections[].publicState
     - PublicationPreviewResponse.publicPayload.corrections[].sourceRevision
     - PublicationPreviewResponse.publicPayload.corrections[].targetRevision
     - PublicationPreviewResponse.publicPayload.counterEvidence[].verificationStatus
     - PublicationPreviewResponse.publicPayload.criticalUnknowns[].status
-    - PublicationPreviewResponse.publicPayload.freshness.asOf
-    - PublicationPreviewResponse.publicPayload.freshness.expectedFrequencySeconds
     implementation_source_digest: 6b40fce1be3a7fc2e882b888131a0360a476bf414363b0933d63b493fe1ae222
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/cases/[caseId]/preview/+page.server.ts
     - apps/review-console/src/routes/internal/cases/[caseId]/preview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: f6ffcd0dddbade016b76b80f94b0851fb257629514e1220d0dc0b25e39d194a1
+    source_fields_digest: e91618a64be7ec9a17e984a7720bd9dddcf087be3f08f1283822678715b4ab29
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -27881,19 +28071,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: cas_014.variants
     source_fields:
+    - PublicationPreviewResponse.legalReviewRequired
+    - PublicationPreviewResponse.previewHash
     - PublicationPreviewResponse.publicPayload.agencyName
     - PublicationPreviewResponse.publicPayload.amount
     - PublicationPreviewResponse.publicPayload.case.correctionStatus
     - PublicationPreviewResponse.publicPayload.case.href
-    - PublicationPreviewResponse.publicPayload.case.publicState
-    - PublicationPreviewResponse.publicPayload.case.responseStatus
     implementation_source_digest: 6b40fce1be3a7fc2e882b888131a0360a476bf414363b0933d63b493fe1ae222
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/cases/[caseId]/preview/+page.server.ts
     - apps/review-console/src/routes/internal/cases/[caseId]/preview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: f1809cf038ca91ac7f1427fc70c6351fdaa10499e0a4bca6de405090696a17b9
+    source_fields_digest: 5b50bc0f884c961bab343bc1b3ffe1866e3999a7ea3159c4aab9a9d166d3b792
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -27911,19 +28101,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: cas_014.diff
     source_fields:
+    - PublicationPreviewResponse.previewHash
+    - PublicationPreviewResponse.publicPayload.agencyName
     - PublicationPreviewResponse.publicPayload.amount
     - PublicationPreviewResponse.publicPayload.case.correctionStatus
     - PublicationPreviewResponse.publicPayload.case.href
-    - PublicationPreviewResponse.publicPayload.case.publicState
-    - PublicationPreviewResponse.publicPayload.case.responseStatus
-    - PublicationPreviewResponse.publicPayload.case.revision
+    - PublicationPreviewResponse.publicPayload.case.nonConclusion
     implementation_source_digest: 6b40fce1be3a7fc2e882b888131a0360a476bf414363b0933d63b493fe1ae222
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/cases/[caseId]/preview/+page.server.ts
     - apps/review-console/src/routes/internal/cases/[caseId]/preview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 2ef2270c9d6438529389b7777d85079e1df626518155bb5b6f2b881944b4b501
+    source_fields_digest: 936c516668341d1ba13ef9ecd3af9187e4fc97dd87599412f26bec05ffd95d04
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -29803,7 +29993,7 @@ screens:
     assurance_level: STEP_UP
     step_up_required: true
     confirmation_required: true
-    consequence: place a retention, disclosure or deletion legal hold on an exact reviewed case object 요청을 제출하고
+    consequence: place a retention, disclosure or deletion legal hold on one exact typed target anchor 요청을 제출하고
       저장된 결과 상태와 영수증을 확인한다.
     test_id: rev_002__action__legal_hold
   navigation_actions: []
@@ -30684,6 +30874,7 @@ screens:
     - listResponseAppeals
     - listRetentionRequests
     additive_command_operations:
+    - createPrivacyCorrectionPlan
     - transitionResponseAppeal
     - transitionRetentionRequest
   - order: 4
@@ -30895,6 +31086,37 @@ screens:
     response_schema: triageCorrectionReceipt
     section_bindings: []
   - source: owner-addendum
+    operation_id: createPrivacyCorrectionPlan
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/create-privacy-correction-plan
+    kind: COMMAND
+    blocking: false
+    request_contract:
+      required:
+      - retentionRequestId
+      - expectedDecisionVersion
+      - targetObjectType
+      - targetObjectId
+      - fieldPath
+      - currentValueDigest
+      - requestedValue
+      - evidenceIds
+      - reason
+      fields:
+        retentionRequestId: uuid
+        expectedDecisionVersion: int64>=0
+        targetObjectType: enum<RESPONSE|CORRECTION|SUBSCRIPTION|COMMUNICATION_ENDPOINT|PUBLICATION|EVIDENCE|AUDIT_SUBJECT_RECORD>
+        targetObjectId: uuid
+        fieldPath: json-pointer[1..1000]
+        currentValueDigest: sha256
+        requestedValue: secret-nonempty-string
+        evidenceIds: unique-array<uuid>[1..100]
+        reason: nonempty_string
+    response_schema: PrivacyCorrectionPlanReceiptV1
+    section_bindings:
+    - requests
+  - source: owner-addendum
     operation_id: getResponseAppealWorkspace
     api: control-api
     method: GET
@@ -31004,19 +31226,20 @@ screens:
       - transition
       - reasonCode
       - reason
-      - inventorySnapshotDigest
-      - holdCoverageDigest
-      - completionReceiptId
       fields:
         retentionRequestId: uuid
         expectedDecisionVersion: int64>=0
-        transition: START_REVIEW|APPROVE|REJECT|COMPLETE
+        transition: VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND
         reasonCode: string[1..100]
         reason: string[1..10000]
-        inventorySnapshotDigest: sha256
-        holdCoverageDigest: sha256
-        completionReceiptId: nullable-uuid
-    response_schema: RetentionRequestDecisionReceiptV1
+        identityProofReceiptId: uuid
+        extensionReasonCode: string[1..100]
+        extensionReason: string[1..4000]
+        extensionBusinessDays: int32[1..max]
+        rejectionReasonCode: string[1..100]
+        rejectionReason: string[1..4000]
+        appealInstructions: string[1..4000]
+    response_schema: RetentionRequestDecisionReceiptV2
     section_bindings:
     - requests
   critical_task_ids: []
@@ -32947,6 +33170,7 @@ screens:
       section: identity
       answer_pattern: 출처 실행 상세의 실행 식별 정보에서 trigger·version·time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
+      - BinaryDownload.appliedFilters.contractStatus
       - BinaryDownload.status
       - BinaryDownload.version
       - SourceRunResponse.data.status
@@ -33022,19 +33246,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.identity
     source_fields:
-    - BinaryDownload.binary
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
+    - BinaryDownload.appliedFilters.agencyId
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
+    source_fields_digest: c12dfcaf9dbcbceee0c89ff1a087fc3e8fc502542c11966628c043c3710b7f24
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33052,19 +33276,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.scope
     source_fields:
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
+    source_fields_digest: acf71e1fc417cb93f2aa976d59b8e62463e28f42c608d32bd21eb49454b0ad00
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33082,19 +33306,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.counts
     source_fields:
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: b3f7621e9bf854600e9e739ccbb803f096b4bf099048c2502a6939385098a19b
+    source_fields_digest: 7d1fd9f7d313f239191f84c728c6bfd0da3e49226cd1058bba4a349b32a2d8c9
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33112,19 +33336,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.errors
     source_fields:
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
+    source_fields_digest: f999cc8746af0708562d2dcb33d2d3d63ca6d4f8221de7cae04f1a91eab76060
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33142,19 +33366,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.artifacts
     source_fields:
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
+    - BinaryDownload.binary
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
+    source_fields_digest: 7b1629f0788de36086d7cd73964999118d1bedb63c70c0537dc467abfdf1c373
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33172,19 +33396,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.impact
     source_fields:
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
-    - BinaryDownload.receiptSha256
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 98441c0bf10fdbb4b8038ac9e74982cb95dbaea4c5342d6eae4e84fd3d1114bd
+    source_fields_digest: e3b612ee874a475bd84a1133f6ba7651ef99d347bc0daadf47c5169f7977aa08
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33202,19 +33426,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.actions
     source_fields:
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
-    - BinaryDownload.receiptSha256
-    - BinaryDownload.rowCount
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 067a966f878277af3a24a8b2a5f853e1801c3a8a93dd6b94c7c5b7985011b059
+    source_fields_digest: 738e784248d9c1a478bcc2f1bb3d1f0f540507b0bd9b5a2449ae911bdf29d1f8
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -36447,6 +36671,7 @@ screens:
       answer_pattern: 진행 중 장애의 영향·owner·started.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
       - OperationsOverviewResponse.sources[].displayName
+      - OperationsOverviewResponse.sources[].interpretationNotice
       - OperationsOverviewResponse.sources[].lagSeconds
       - OperationsOverviewResponse.sources[].lastSuccessAt
       - OperationsOverviewResponse.sources[].publicMessage
@@ -38128,6 +38353,7 @@ screens:
       section: envelope
       answer_pattern: 비용·예산의 예산 범위에서 daily/monthly. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
+      - BinaryDownload.appliedFilters.contractStatus
       - BinaryDownload.status
       - BinaryDownload.version
       - BudgetOverviewResponse.data.providers[].lastTestStatus
@@ -38139,7 +38365,6 @@ screens:
       - BudgetOverviewResponse.updatedAt
       - BudgetOverviewResponse.version
       - updateBudgetLimitReceipt.aggregateVersion
-      - updateBudgetLimitReceipt.status
     matters_now:
       section: envelope
       answer_pattern: 먼저 답할 질문은 ‘현재 spend와 forecast는 얼마인가?’이며, 예산 범위에서 daily/monthly.
@@ -38160,12 +38385,12 @@ screens:
       section: envelope
       answer_pattern: 예산 범위의 daily/monthly.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - BinaryDownload.binary
-      - BinaryDownload.byteLength
-      - BinaryDownload.contentBase64
-      - BinaryDownload.contentSha256
-      - BinaryDownload.filename
-      - BinaryDownload.format
+      - BinaryDownload.appliedFilters.agencyId
+      - BinaryDownload.appliedFilters.amountMax
+      - BinaryDownload.appliedFilters.amountMin
+      - BinaryDownload.appliedFilters.contractStatus
+      - BinaryDownload.appliedFilters.procurementMethod
+      - BinaryDownload.appliedFilters.q
     unknown_or_disputed:
       section: envelope
       answer_pattern: 예산 범위에서 daily/monthly. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -38210,12 +38435,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.envelope
     source_fields:
-    - BinaryDownload.binary
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
+    - BinaryDownload.appliedFilters.agencyId
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38223,7 +38448,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
+    source_fields_digest: c12dfcaf9dbcbceee0c89ff1a087fc3e8fc502542c11966628c043c3710b7f24
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38241,12 +38466,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.spend
     source_fields:
-    - BinaryDownload.byteLength
-    - BinaryDownload.contentBase64
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
+    - BinaryDownload.appliedFilters.amountMax
+    - BinaryDownload.appliedFilters.amountMin
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38254,7 +38479,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
+    source_fields_digest: acf71e1fc417cb93f2aa976d59b8e62463e28f42c608d32bd21eb49454b0ad00
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38299,12 +38524,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.limits
     source_fields:
-    - BinaryDownload.contentSha256
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
+    - BinaryDownload.appliedFilters.contractStatus
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38312,7 +38537,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
+    source_fields_digest: f999cc8746af0708562d2dcb33d2d3d63ca6d4f8221de7cae04f1a91eab76060
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38330,12 +38555,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.alerts
     source_fields:
-    - BinaryDownload.filename
-    - BinaryDownload.format
-    - BinaryDownload.from
-    - BinaryDownload.groupBy
-    - BinaryDownload.id
-    - BinaryDownload.mediaType
+    - BinaryDownload.appliedFilters.procurementMethod
+    - BinaryDownload.appliedFilters.q
+    - BinaryDownload.appliedFilters.signedFrom
+    - BinaryDownload.appliedFilters.signedTo
+    - BinaryDownload.appliedFilters.supplierId
+    - BinaryDownload.binary
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38343,7 +38568,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
+    source_fields_digest: 7b1629f0788de36086d7cd73964999118d1bedb63c70c0537dc467abfdf1c373
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region

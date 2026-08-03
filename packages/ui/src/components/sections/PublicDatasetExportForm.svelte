@@ -85,6 +85,7 @@ function appendChallengeProof(event: FormDataEvent) {
             <span class="dataset-meta">
               제공 형식 {card.format} · {card.license} · {projectionScalarText("updatedAt", card.updatedAt) ?? card.updatedAt}
             </span>
+            <span class="dataset-notice">{card.redistributionNotice}</span>
           </label>
         {/each}
       </div>
@@ -185,7 +186,7 @@ function appendChallengeProof(event: FormDataEvent) {
     background: var(--paper-100);
   }
   .dataset-option input {
-    grid-row: 1 / 4;
+    grid-row: 1 / 5;
     margin: 0.15rem 0 0;
   }
   .dataset-title {
@@ -194,7 +195,8 @@ function appendChallengeProof(event: FormDataEvent) {
     font-weight: 700;
   }
   .dataset-description,
-  .dataset-meta {
+  .dataset-meta,
+  .dataset-notice {
     color: var(--ink-700);
     font-size: 0.75rem;
     line-height: 1.45;

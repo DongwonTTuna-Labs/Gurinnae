@@ -155,7 +155,6 @@ pub struct CreatePrivacyRequestRequestV1 {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct ExchangePrivacyRequestReceiptTokenRequestV1 {
     pub token: String,
-    pub proof: Value,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -194,9 +193,15 @@ pub fn request_schema(id: &str) -> Option<&'static str> {
         "getResponseAppealWorkspace" => "GetResponseAppealWorkspaceRequestV1",
         "transitionResponseAppeal" => "TransitionResponseAppealRequestV1",
         "decideResponseExtension" => "DecideResponseExtensionRequestV1",
+        "verifyResponseOrganizationIdentity" => "VerifyResponseOrganizationIdentityRequestV1",
+        "attestOrganizationOfficialChannel" => "AttestOrganizationOfficialChannelRequestV1",
+        "classifyEntityPersonhood" => "ClassifyEntityPersonhoodRequestV1",
+        "attestEntityMaterialUseClosure" => "AttestEntityMaterialUseClosureRequestV1",
+        "revokeOrganizationOfficialChannel" => "RevokeOrganizationOfficialChannelRequestV1",
         "listRetentionRequests" => "ListRetentionRequestsRequestV1",
         "getRetentionRequest" => "GetRetentionRequestRequestV1",
-        "transitionRetentionRequest" => "TransitionRetentionRequestRequestV1",
+        "createPrivacyCorrectionPlan" => "CreatePrivacyCorrectionPlanRequestV1",
+        "transitionRetentionRequest" => "TransitionRetentionRequestRequestV2",
         "listRecordClassSchedules" => "ListRecordClassSchedulesRequestV1",
         "requestCommunicationEndpointLink" => "RequestCommunicationEndpointLinkRequestV1",
         "verifyCommunicationEndpointLink" => "VerifyCommunicationEndpointLinkRequestV1",
@@ -245,9 +250,15 @@ pub fn response_schema(id: &str) -> Option<&'static str> {
         "getResponseAppealWorkspace" => "ResponseAppealWorkspaceV1",
         "transitionResponseAppeal" => "ResponseAppealDecisionReceiptV1",
         "decideResponseExtension" => "ResponseExtensionDecisionReceiptV1",
+        "verifyResponseOrganizationIdentity" => "VerifyResponseOrganizationIdentityReceiptV1",
+        "attestOrganizationOfficialChannel" => "AttestOrganizationOfficialChannelReceiptV1",
+        "classifyEntityPersonhood" => "ClassifyEntityPersonhoodReceiptV1",
+        "attestEntityMaterialUseClosure" => "AttestEntityMaterialUseClosureReceiptV1",
+        "revokeOrganizationOfficialChannel" => "RevokeOrganizationOfficialChannelReceiptV1",
         "listRetentionRequests" => "RetentionRequestQueuePageV1",
         "getRetentionRequest" => "RetentionRequestWorkspaceV1",
-        "transitionRetentionRequest" => "RetentionRequestDecisionReceiptV1",
+        "createPrivacyCorrectionPlan" => "PrivacyCorrectionPlanReceiptV1",
+        "transitionRetentionRequest" => "RetentionRequestDecisionReceiptV2",
         "listRecordClassSchedules" => "RecordClassSchedulePageV1",
         "requestCommunicationEndpointLink" => "CommunicationEndpointLinkRequestedReceiptV1",
         "verifyCommunicationEndpointLink" => "CommunicationEndpointVerifiedReceiptV1",
@@ -280,6 +291,18 @@ pub fn persistence_owner(id: &str) -> Option<&'static str> {
         id if id.contains("Incident") => "ops.incident_events",
         id if id.contains("Appeal") => "intake.appeals",
         id if id.contains("ResponseExtension") => "editorial.response_extension_decisions",
+        "verifyResponseOrganizationIdentity" => {
+            "editorial.response_organization_identity_assertions_v1"
+        }
+        "attestOrganizationOfficialChannel" => {
+            "editorial.organization_official_channel_authority_receipts_v1"
+        }
+        "classifyEntityPersonhood" => "ops.r6d_entity_personhood_classification_receipts_v1",
+        "attestEntityMaterialUseClosure" => "ops.r6d_entity_material_use_closure_receipts_v1",
+        "revokeOrganizationOfficialChannel" => {
+            "editorial.organization_official_channel_revocation_receipts_v1"
+        }
+        "createPrivacyCorrectionPlan" => "ops.privacy_correction_plans_v1",
         id if id.contains("Retention") || id == "releaseLegalHold" => {
             "ops.retention_request_decisions"
         }
@@ -356,7 +379,13 @@ const CONTROL_REQUIRED_FIELDS: &[(&str, &[&str])] = &[
     ("closeIncidentPostmortem", &["incidentId", "expectedVersion", "rootCause", "contributingFactors", "actionItems", "postmortemDigest", "reviewerUserId", "evidenceRefs", "reasonCode", "reason"]),
     ("transitionResponseAppeal", &["appealId", "expectedDecisionSequence", "transition", "reasonCode", "reason", "evidenceReceiptIds", "task"]),
     ("decideResponseExtension", &["extensionRequestId", "expectedVersion", "decision", "reasonCode", "reason", "calendarVersionId", "newDueAt"]),
-    ("transitionRetentionRequest", &["retentionRequestId", "expectedDecisionVersion", "transition", "reasonCode", "reason", "inventorySnapshotDigest", "holdCoverageDigest", "completionReceiptId"]),
+    ("verifyResponseOrganizationIdentity", &["responseId", "organizationId", "publicationForm", "verificationMethod", "officialChannelSourceId", "reason", "expectedVersion"]),
+    ("attestOrganizationOfficialChannel", &["organizationKind", "organizationId", "verificationMethod", "sourceId", "expiresAt", "reason", "expectedAuthorityVersion"]),
+    ("classifyEntityPersonhood", &["entityKind", "entityId", "classification", "evidenceSourceLocator", "expectedEntityUpdatedAt", "reason"]),
+    ("attestEntityMaterialUseClosure", &["entityKind", "entityId", "personhoodReceiptId", "expectedEntityUpdatedAt", "reason"]),
+    ("revokeOrganizationOfficialChannel", &["assertionId", "reasonCode", "reason"]),
+    ("createPrivacyCorrectionPlan", &["retentionRequestId", "expectedDecisionVersion", "targetObjectType", "targetObjectId", "fieldPath", "currentValueDigest", "requestedValue", "evidenceIds", "reason"]),
+    ("transitionRetentionRequest", &["retentionRequestId", "expectedDecisionVersion", "transition", "reasonCode", "reason"]),
     ("declareConflict", &["subjectActorId", "target", "conflictType", "relationState", "materiality", "temporalState", "sourceClass", "evidenceRefs", "expectedPriorSequence", "policyDigest", "reason", "effectiveAt", "expiresAt"]),
     ("withdrawConflict", &["declarationId", "expectedDeclarationSequence", "expectedDeclarationDigest", "expectedPolicyDigest", "reasonCode", "reason", "effectiveAt", "expiresAt"]),
     ("withdrawActionProposal", &["proposalId", "expectedProposalVersion", "expectedStateVersion", "expectedContentDigest", "reasonCode", "reason"]),
@@ -374,6 +403,16 @@ const PROVIDER_CONTROL_OPERATION_IDS: &[&str] = &[
     "setModelAutoUpgrade",
 ];
 
+const RETENTION_TRANSITION_VARIANT_FIELDS: &[&str] = &[
+    "identityProofReceiptId",
+    "extensionReasonCode",
+    "extensionReason",
+    "extensionBusinessDays",
+    "rejectionReasonCode",
+    "rejectionReason",
+    "appealInstructions",
+];
+
 pub fn validate_control_command(id: &str, payload: &Map<String, Value>) -> bool {
     let Some((_, required)) = CONTROL_REQUIRED_FIELDS
         .iter()
@@ -382,9 +421,12 @@ pub fn validate_control_command(id: &str, payload: &Map<String, Value>) -> bool 
         return false;
     };
     let provider_operation_allowed = id == "submitActionDecision";
+    let retention_variant_fields_allowed = id == "transitionRetentionRequest";
     let fields_closed = payload.keys().all(|field| {
         required.contains(&field.as_str())
             || (provider_operation_allowed && field == "providerOperationId")
+            || (retention_variant_fields_allowed
+                && RETENTION_TRANSITION_VARIANT_FIELDS.contains(&field.as_str()))
     });
     required.iter().all(|field| payload.contains_key(*field))
         && fields_closed
@@ -421,57 +463,4 @@ pub const PRIVATE_CONTROL_OPERATIONS: &[OperationSpec] = &[operation!(
 )];
 
 #[cfg(test)]
-mod tests {
-    use super::validate_control_command;
-    use serde_json::{Map, Value, json};
-
-    fn decision_payload(action_kind: &str) -> Map<String, Value> {
-        json!({
-            "proposalId": "00000000-0000-4000-8000-000000000001",
-            "actionKind": action_kind,
-            "assignmentId": "00000000-0000-4000-8000-000000000002",
-            "expectedProposalVersion": 1,
-            "expectedAssignmentVersion": 1,
-            "expectedApprovalDigest": "0".repeat(64),
-            "decision": {"kind": "APPROVE"}
-        })
-        .as_object()
-        .cloned()
-        .unwrap_or_default()
-    }
-
-    #[test]
-    fn provider_decision_requires_one_closed_operation_discriminator() {
-        let mut valid = decision_payload("PROVIDER_CONTROL");
-        valid.insert(
-            "providerOperationId".into(),
-            Value::String("upgradeProviderModel".into()),
-        );
-        assert!(validate_control_command("submitActionDecision", &valid));
-
-        let missing = decision_payload("PROVIDER_CONTROL");
-        assert!(!validate_control_command("submitActionDecision", &missing));
-
-        valid.insert(
-            "providerOperationId".into(),
-            Value::String("unknownProviderEffect".into()),
-        );
-        assert!(!validate_control_command("submitActionDecision", &valid));
-    }
-
-    #[test]
-    fn non_provider_decision_forbids_provider_discriminator_and_extra_fields() {
-        let mut valid = decision_payload("TASK");
-        assert!(validate_control_command("submitActionDecision", &valid));
-
-        valid.insert(
-            "providerOperationId".into(),
-            Value::String("testProviderConnection".into()),
-        );
-        assert!(!validate_control_command("submitActionDecision", &valid));
-
-        valid.remove("providerOperationId");
-        valid.insert("undocumented".into(), Value::Bool(true));
-        assert!(!validate_control_command("submitActionDecision", &valid));
-    }
-}
+mod tests;

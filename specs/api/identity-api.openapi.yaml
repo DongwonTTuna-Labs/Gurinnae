@@ -288,6 +288,7 @@ components:
         candidateRevision:
           type: integer
           format: int64
+          minimum: 1
         candidateDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -321,6 +322,7 @@ components:
         evidenceVersion:
           type: integer
           format: int64
+          minimum: 1
         evidenceDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -333,6 +335,7 @@ components:
         sourceAssetRevision:
           type: integer
           format: int64
+          minimum: 1
         locatorDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -359,6 +362,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SupplierPartyRefV1'
+          minItems: 1
+          maxItems: 1000
         expectedCandidateSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -371,14 +376,24 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          minItems: 0
+          maxItems: 1000
+          uniqueItems: true
         toCanonicalSupplierIds:
           type: array
           items:
             type: string
+            format: uuid
+          minItems: 0
+          maxItems: 1000
+          uniqueItems: true
         evidenceLocators:
           type: array
           items:
             $ref: '#/components/schemas/EvidenceLocatorRefV1'
+          minItems: 1
+          maxItems: 1000
         expectedEvidenceLocatorSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -405,6 +420,8 @@ components:
           - INSUFFICIENT_EVIDENCE
         reason:
           type: string
+          minLength: 1
+          maxLength: 10000
       required:
       - action
       - candidateRefs
@@ -429,6 +446,7 @@ components:
         decisionSequence:
           type: integer
           format: int64
+          minimum: 1
         action:
           type: string
           enum:
@@ -458,6 +476,9 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          minItems: 1
+          maxItems: 10
         acceptedAt:
           type: string
           format: date-time
@@ -492,6 +513,7 @@ components:
           anyOf:
           - type: integer
             format: int64
+            minimum: 1
           - type: 'null'
         supplierCandidateDigest:
           anyOf:
@@ -548,6 +570,8 @@ components:
         managementRole:
           anyOf:
           - type: string
+            minLength: 1
+            maxLength: 500
           - type: 'null'
         validFrom:
           anyOf:
@@ -570,11 +594,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EvidenceLocatorRefV1'
+          minItems: 1
+          maxItems: 1000
         expectedEvidenceLocatorSetDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
         reason:
           type: string
+          minLength: 1
+          maxLength: 10000
       required:
       - relationshipKind
       - subject
@@ -597,6 +625,7 @@ components:
         assertionRevision:
           type: integer
           format: int64
+          minimum: 1
         assertionDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -628,6 +657,9 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          minItems: 1
+          maxItems: 10
         acceptedAt:
           type: string
           format: date-time
@@ -652,6 +684,7 @@ components:
         expectedAssertionRevision:
           type: integer
           format: int64
+          minimum: 1
         expectedAssertionDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -669,6 +702,10 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          minItems: 0
+          maxItems: 1000
+          uniqueItems: true
         reasonCode:
           type: string
           enum:
@@ -679,6 +716,8 @@ components:
           - ASSERTION_SUPERSEDED
         reason:
           type: string
+          minLength: 1
+          maxLength: 10000
       required:
       - assertionId
       - expectedAssertionRevision

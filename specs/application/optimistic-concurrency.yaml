@@ -1,7 +1,7 @@
 schema_version: 1
 specification_version: 13.0.0
 status: FINAL
-contract_count: 66
+contract_count: 65
 contracts:
 - operation_id: acceptAgentSuggestion
   mode: OPTIMISTIC
@@ -830,31 +830,6 @@ contracts:
   - version
   mutation_columns:
   - source_id
-  - version
-- operation_id: placeLegalHold
-  mode: OPTIMISTIC
-  version_field: expectedCaseVersion
-  guard_relation: editorial.cases
-  guard_identity_predicate: id = :caseId
-  guard_version_predicate: version = :expectedCaseVersion
-  guard_lock: conditional UPDATE obtains row lock
-  mutation_relation: editorial.cases
-  mutation_identity_predicate: id = :caseId
-  success_effect: insert one scoped legal hold and increment case version exactly once
-  zero_rows_resolution:
-    probe: read case by id without version predicate
-    missing_error: RESOURCE_NOT_FOUND
-    existing_error: VERSION_CONFLICT
-  version_mutation: version = version + 1
-  request_placeholders:
-  - caseId
-  - expectedCaseVersion
-  context_placeholders: []
-  guard_columns:
-  - id
-  - version
-  mutation_columns:
-  - id
   - version
 - operation_id: placeTemporaryRestriction
   mode: OPTIMISTIC

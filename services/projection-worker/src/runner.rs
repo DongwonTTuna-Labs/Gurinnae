@@ -1,16 +1,18 @@
+use crate::config::Config;
+use agency_projection::{agency_id_from_payload, upsert_public_agency};
 use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
+use response_submission_audit::handle_response_submitted_v2;
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
-
-use crate::config::Config;
-use agency_projection::{agency_id_from_payload, upsert_public_agency};
-
+mod addendum_projection_contract;
 mod agency_projection;
-
+mod entity_retention_anonymization;
+mod response_materialized_projection;
+mod response_submission_audit;
 #[derive(Debug, Error)]
 pub enum WorkerError {
     #[error("projection worker initialization failed")]
@@ -18,12 +20,11 @@ pub enum WorkerError {
     #[error("projection worker job operation failed")]
     Job(#[source] JobError),
 }
-
+#[derive(Debug)]
 enum Failure {
     Terminal(&'static str, String),
     Retryable(&'static str, String),
 }
-
 pub async fn run(config: Config) -> Result<(), WorkerError> {
     let pool = connect(&PoolConfig {
         database_url: config.database_url.clone(),
@@ -57,7 +58,6 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
         }
     }
 }
-
 async fn process_one(pool: &PgPool, worker: &Worker) -> Result<bool, WorkerError> {
     let Some(job) = worker.claim(pool).await.map_err(WorkerError::Job)? else {
         return Ok(false);
@@ -82,7 +82,6 @@ async fn process_one(pool: &PgPool, worker: &Worker) -> Result<bool, WorkerError
     }
     Ok(true)
 }
-
 async fn handle(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
     if job.job_type != "EVENT_DELIVERY" {
         return Err(Failure::Terminal(
@@ -91,6 +90,14 @@ async fn handle(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
         ));
     }
     let event_id = parse_uuid(&job.payload, "/eventId")?;
+    if entity_retention_anonymization::claims(pool, event_id, &job.payload).await? {
+        return entity_retention_anonymization::handle_entity_retention_anonymized_v1(
+            pool,
+            event_id,
+            &job.payload,
+        )
+        .await;
+    }
     let consumer_id = job
         .payload
         .get("consumerId")
@@ -127,7 +134,6 @@ async fn handle(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
         )),
     }
 }
-
 async fn reconcile_addendum_projection(
     pool: &PgPool,
     job: &ClaimedJob,
@@ -139,37 +145,31 @@ async fn reconcile_addendum_projection(
         .get("eventType")
         .and_then(Value::as_str)
         .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "eventType is missing".to_owned()))?;
-    if !addendum_event_is_accepted(consumer_id, event_type) {
+    if !addendum_projection_contract::event_is_accepted(consumer_id, event_type) {
         return Err(Failure::Terminal(
             "CONSUMER_EVENT_BINDING_INVALID",
             format!("{consumer_id}:{event_type}"),
         ));
     }
     verify_addendum_event_envelope(pool, job, event_id, event_type).await?;
+    if consumer_id == "audit-indexer" && event_type == "response.submitted.v2" {
+        return handle_response_submitted_v2(pool, event_id, &job.payload).await;
+    }
+    if event_type == "editorial.response_materialized.v2" {
+        return response_materialized_projection::handle_response_materialized_v2(
+            pool,
+            event_id,
+            consumer_id,
+            &job.payload,
+        )
+        .await;
+    }
     if consumer_id == "cost-projector" {
         verify_cost_receipt(pool, job).await?;
     }
     mark_addendum_inbox_processed(pool, consumer_id, event_id).await?;
     Ok(json!({"consumerId":consumer_id,"eventId":event_id,"eventType":event_type}))
 }
-
-fn addendum_event_is_accepted(consumer_id: &str, event_type: &str) -> bool {
-    match consumer_id {
-        "audit-indexer" => matches!(
-            event_type,
-            "communication.intent_created.v1"
-                | "communication.delivery_requested.v1"
-                | "communication.delivery_receipt_recorded.v1"
-                | "communication.authorization_changed.v1"
-                | "communication.subscription_update_requested.v1"
-                | "action.execution_authorized.v1"
-        ),
-        "cost-projector" => event_type == "communication.delivery_receipt_recorded.v1",
-        "submission-projector" => event_type == "communication.authorization_changed.v1",
-        _ => false,
-    }
-}
-
 async fn verify_addendum_event_envelope(
     pool: &PgPool,
     job: &ClaimedJob,
@@ -212,7 +212,6 @@ async fn verify_addendum_event_envelope(
     }
     Ok(())
 }
-
 async fn verify_cost_receipt(pool: &PgPool, job: &ClaimedJob) -> Result<(), Failure> {
     let receipt_id = parse_uuid(&job.payload, "/payload/deliveryReceiptId")?;
     let receipt_digest = job

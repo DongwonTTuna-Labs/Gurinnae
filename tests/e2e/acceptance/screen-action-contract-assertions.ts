@@ -303,10 +303,19 @@ export function assertActionGuards(): void {
     0,
   );
   assertUnique(capabilities, "capability registry unique");
-  expect(commands, "command semantics").toHaveLength(142);
+  expect(commands, "command semantics").toHaveLength(148);
   assertUnique(
     commands.map((command) => command.operationId),
     "command semantics operation ids unique",
+  );
+  expect(
+    commands.map((command) => command.operationId).sort(),
+    "command operation contracts ↔ command semantics ids",
+  ).toEqual(
+    [...operations.values()]
+      .filter((operation) => operation.kind === "COMMAND")
+      .map((operation) => operation.operationId)
+      .sort(),
   );
   const effectiveActions = actionEntries.map(({ screenId, action }) => {
     const entry = proposalEntries.get(`${screenId}.${action.id}`);

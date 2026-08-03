@@ -11,6 +11,7 @@ export type PublicDatasetRecord = Readonly<{
   format: string;
   license: string;
   updatedAt: string;
+  redistributionNotice: string;
 }>;
 
 export type PublicDatasetCard = Readonly<{
@@ -20,6 +21,7 @@ export type PublicDatasetCard = Readonly<{
   format: string;
   license: string;
   updatedAt: string;
+  redistributionNotice: string;
 }>;
 
 export type DatasetExportFormContract = Readonly<{
@@ -83,6 +85,10 @@ export function publicDatasetCards(
       format: requiredText(record.format, `${id} 제공 형식`),
       license: requiredText(record.license, `${id} 이용 조건`),
       updatedAt: requiredText(record.updatedAt, `${id} 갱신 시각`),
+      redistributionNotice: requiredText(
+        record.redistributionNotice,
+        `${id} 재배포 고지`,
+      ),
     };
   });
 }

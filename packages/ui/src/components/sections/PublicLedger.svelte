@@ -6,6 +6,7 @@ import {
   publicLedgerForSection,
   publicLedgerRenderState,
 } from "../../public-ledger";
+import PublicSectionStatusNotice from "../PublicSectionStatusNotice.svelte";
 import SectionHeading from "./SectionHeading.svelte";
 
 type PublicLedgerProps = Omit<ScreenSectionProps, "runtime"> & {
@@ -20,6 +21,12 @@ const ledger = $derived(
 );
 const renderState = $derived(publicLedgerRenderState(runtime.state, ledger));
 const actionRowIndex = $derived(publicLedgerActionRowIndex(ledger));
+// PUB-001 already carries the same non-conclusion meaning in its fixed header.
+// Keep the machine-readable collection notice, but do not render a third
+// human-facing repetition beside the corrections section notice.
+const showCollectionNotices = $derived(
+  !(screen.id === "PUB-001" && section.id === "recent"),
+);
 let copiedIdentifier = $state<string | null>(null);
 let copyFailed = $state(false);
 
@@ -44,6 +51,11 @@ async function copyIdentifier(value: string): Promise<void> {
   data-projection-state={renderState.projectionState}
   aria-busy={renderState.projectionState === "LOADING"}
 >
+  {#if ledger && showCollectionNotices}
+    {#each ledger.collectionNotices as notice}
+      <PublicSectionStatusNotice {notice} />
+    {/each}
+  {/if}
   {#if !renderState.showRows}
     <p
       class:conflict={renderState.alert}
@@ -241,6 +253,10 @@ async function copyIdentifier(value: string): Promise<void> {
     display: inline-flex;
     gap: 0.375rem;
     align-items: center;
+  }
+
+  .status :global(.public-status-notice) {
+    max-width: 22rem;
   }
 
   .status-dot {

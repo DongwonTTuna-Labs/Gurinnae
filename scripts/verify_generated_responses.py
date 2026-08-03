@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 from jsonschema import Draft202012Validator, RefResolver
 
@@ -19,6 +23,42 @@ SPECS = {
     "identity-provider": "specs/generated/identity-provider.openapi.json",
     "identity-service-internal": "specs/generated/identity-service-internal.openapi.json",
 }
+PUBLIC_REDISTRIBUTION_NOTICE = "이상 징후 기록이며 위법·부패의 확정이 아님"
+PUBLISHED_ANOMALY_NOTICE = (
+    "공개자료 비교에서 설명이 필요한 차이가 확인됐습니다. "
+    "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다."
+)
+
+
+def validate_reproducibility_download_sample(body: Any) -> list[str]:
+    if not isinstance(body, dict):
+        return ["downloadCaseReproducibility: sample body is not an object"]
+    errors: list[str] = []
+    if body.get("notice") != PUBLIC_REDISTRIBUTION_NOTICE:
+        errors.append("downloadCaseReproducibility: envelope notice changed")
+    if body.get("format") != "JSON":
+        errors.append("downloadCaseReproducibility: closed sample format must be JSON")
+    encoded = body.get("contentBase64")
+    try:
+        artifact = base64.b64decode(encoded, validate=True) if isinstance(encoded, str) else b""
+    except (binascii.Error, ValueError):
+        return [*errors, "downloadCaseReproducibility: contentBase64 is invalid"]
+    if body.get("byteLength") != len(artifact):
+        errors.append("downloadCaseReproducibility: byteLength does not match artifact")
+    if body.get("contentSha256") != hashlib.sha256(artifact).hexdigest():
+        errors.append("downloadCaseReproducibility: contentSha256 does not match artifact")
+    try:
+        payload = json.loads(artifact)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return [*errors, "downloadCaseReproducibility: artifact is not JSON"]
+    if not isinstance(payload, dict) or set(payload) != {"notice", "nonConclusion", "data"}:
+        errors.append("downloadCaseReproducibility: artifact envelope is not closed")
+    elif (
+        payload.get("notice") != PUBLIC_REDISTRIBUTION_NOTICE
+        or payload.get("nonConclusion") != PUBLISHED_ANOMALY_NOTICE
+    ):
+        errors.append("downloadCaseReproducibility: in-body legal notices changed")
+    return errors
 
 
 def main() -> int:
@@ -90,6 +130,8 @@ def main() -> int:
                     location = "/".join(str(segment) for segment in error.absolute_path) or "<root>"
                     errors.append(f"{api}:{operation_id}:{location}: {error.message}")
                     break
+                if operation_id == "downloadCaseReproducibility":
+                    errors.extend(validate_reproducibility_download_sample(sample.get("body")))
                 if expected_media_type == "application/problem+json":
                     body = sample.get("body")
                     if not isinstance(body, dict) or body.get("status") != status:

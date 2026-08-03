@@ -10,7 +10,10 @@ fn query_addendum_response(operation: &str, data: &Value) -> Result<Value, Servi
     let response = match operation {
         "getIncident" => incident_detail(data)?,
         "getResponseAppealWorkspace" => appeal_workspace(data)?,
-        "getRetentionRequest" => retention_workspace(data)?,
+        // The V2 privacy safe-reader already returns the closed workspace.
+        // Re-projecting it through the retired retention decision shape would
+        // synthesize authority fields and discard immutable V2 receipts.
+        "getRetentionRequest" => data.clone(),
         _ => data.clone(),
     };
     Ok(response)
@@ -75,6 +78,12 @@ fn command_addendum_response(
         | "closeIncidentPostmortem" => incident_command_response(data, command)?,
         "transitionResponseAppeal" => appeal_command_response(data, command)?,
         "decideResponseExtension" => extension_command_response(data, command)?,
+        "createPrivacyCorrectionPlan"
+        | "verifyResponseOrganizationIdentity"
+        | "attestOrganizationOfficialChannel"
+        | "classifyEntityPersonhood"
+        | "attestEntityMaterialUseClosure"
+        | "revokeOrganizationOfficialChannel" => direct_receipt_response(operation, data)?,
         "transitionRetentionRequest" => retention_command_response(data, command)?,
         "releaseLegalHold" => legal_hold_command_response(data, command)?,
         "declareConflict" | "withdrawConflict" => conflict_command_response(data, command)?,
@@ -82,42 +91,131 @@ fn command_addendum_response(
         // command metadata is not part of PromoteResearchArtifactReceiptV1.
         // The compatibility owner row may expose the receipt under `promotion`
         // and attach command fields, so project only the generated schema.
-        "promoteResearchArtifactToEvidence" => {
-            let mut receipt = data.get("promotion").cloned().unwrap_or_else(|| data.clone());
-            if let Some(object) = receipt.as_object_mut() {
-                const ALLOWED: &[&str] = &[
-                    "schemaVersion", "promotionId", "caseId", "caseVersion", "agentRunId",
-                    "researchArtifactId", "researchArtifactSha256", "sourceDocumentId",
-                    "sourceAssetId", "sourceAssetRevision", "sourceContentSha256",
-                    "evidenceSegmentBindings", "selectedSegmentCount", "selectedSegmentSetSha256",
-                    "evidenceId", "evidenceVersion", "evidenceDigest", "rightsDecisionId",
-                    "rightsDecisionDigest", "reviewerUserId", "auditEventId", "outboxEventId",
-                    "idempotencyKeySha256", "promotedAt", "receiptSha256", "links",
-                ];
-                object.retain(|key, _| ALLOWED.contains(&key.as_str()));
-            }
-            receipt
-        }
-        "cancelAgentRun" => {
-            let mut receipt = data.get("run").cloned().unwrap_or_else(|| data.clone());
-            if let Some(object) = receipt.as_object_mut() {
-                const ALLOWED: &[&str] = &[
-                    "schemaVersion", "receiptId", "runId", "aggregateVersion", "priorStatus",
-                    "priorControlState", "nextStatus", "nextControlState", "affectedProviderTurnId",
-                    "affectedToolCallId", "reconciliationEvidenceId", "reconciliationEvidenceSha256",
-                    "proofKind", "proofSha256", "budgetDisposition", "budgetResolutionSetSha256",
-                    "actorKind", "actorId", "reasonCode", "reasonSha256", "priorReceiptId",
-                    "priorReceiptSha256", "commandBinding", "auditEventId", "occurredAt",
-                    "receiptSha256",
-                ];
-                object.retain(|key, _| ALLOWED.contains(&key.as_str()));
-            }
-            receipt
-        }
+        "promoteResearchArtifactToEvidence" => promotion_receipt_response(data),
+        "cancelAgentRun" => agent_run_control_receipt_response(data),
         "decideJourneyHandoff" => handoff_command_response(data, command)?,
         _ => return Err(ServiceError::InvalidRequest),
     };
     Ok(response)
+}
+
+fn direct_receipt_response(operation: &str, data: &Value) -> Result<Value, ServiceError> {
+    let operation_fields: &[&str] = match operation {
+        "createPrivacyCorrectionPlan" => &["correctionPlanId", "retentionRequestId", "planVersion"],
+        "verifyResponseOrganizationIdentity" => &["identityAssertionId"],
+        "attestOrganizationOfficialChannel" => &[
+            "assertionId",
+            "authorityReceiptId",
+            "authorityReceiptDigest",
+            "registryReceiptDigest",
+            "expiresAt",
+        ],
+        "classifyEntityPersonhood" => &["receiptId", "entityKind", "entityId", "classification"],
+        "attestEntityMaterialUseClosure" => &[
+            "closureReceiptId",
+            "entityKind",
+            "entityId",
+            "personhoodReceiptId",
+            "closureAt",
+            "lastContractEndAt",
+            "linkedPublicationRevisionCount",
+        ],
+        "revokeOrganizationOfficialChannel" => &["revocationId", "assertionId"],
+        _ => return Err(ServiceError::InvalidRequest),
+    };
+    let mut response = Map::from_iter([
+        ("operationId".to_owned(), json!(operation)),
+        ("requestId".to_owned(), required(data, "requestId")?),
+        ("status".to_owned(), required(data, "status")?),
+        ("aggregateId".to_owned(), required(data, "aggregateId")?),
+        (
+            "aggregateVersion".to_owned(),
+            required(data, "aggregateVersion")?,
+        ),
+        ("auditEventId".to_owned(), required(data, "auditEventId")?),
+        ("receiptToken".to_owned(), required(data, "receiptToken")?),
+        ("acceptedAt".to_owned(), required(data, "acceptedAt")?),
+        ("links".to_owned(), required(data, "links")?),
+    ]);
+    for field in operation_fields {
+        response.insert((*field).to_owned(), required(data, field)?);
+    }
+    Ok(Value::Object(response))
+}
+
+fn promotion_receipt_response(data: &Value) -> Value {
+    const ALLOWED: &[&str] = &[
+        "schemaVersion",
+        "promotionId",
+        "caseId",
+        "caseVersion",
+        "agentRunId",
+        "researchArtifactId",
+        "researchArtifactSha256",
+        "sourceDocumentId",
+        "sourceAssetId",
+        "sourceAssetRevision",
+        "sourceContentSha256",
+        "evidenceSegmentBindings",
+        "selectedSegmentCount",
+        "selectedSegmentSetSha256",
+        "evidenceId",
+        "evidenceVersion",
+        "evidenceDigest",
+        "rightsDecisionId",
+        "rightsDecisionDigest",
+        "reviewerUserId",
+        "auditEventId",
+        "outboxEventId",
+        "idempotencyKeySha256",
+        "promotedAt",
+        "receiptSha256",
+        "links",
+    ];
+    closed_receipt_projection(data, "promotion", ALLOWED)
+}
+
+fn agent_run_control_receipt_response(data: &Value) -> Value {
+    const ALLOWED: &[&str] = &[
+        "schemaVersion",
+        "receiptId",
+        "runId",
+        "aggregateVersion",
+        "priorStatus",
+        "priorControlState",
+        "nextStatus",
+        "nextControlState",
+        "affectedProviderTurnId",
+        "affectedToolCallId",
+        "reconciliationEvidenceId",
+        "reconciliationEvidenceSha256",
+        "proofKind",
+        "proofSha256",
+        "budgetDisposition",
+        "budgetResolutionSetSha256",
+        "actorKind",
+        "actorId",
+        "reasonCode",
+        "reasonSha256",
+        "priorReceiptId",
+        "priorReceiptSha256",
+        "commandBinding",
+        "auditEventId",
+        "occurredAt",
+        "receiptSha256",
+    ];
+    closed_receipt_projection(data, "run", ALLOWED)
+}
+
+fn closed_receipt_projection(data: &Value, nested_field: &str, allowed: &[&str]) -> Value {
+    let mut receipt = data
+        .get(nested_field)
+        .cloned()
+        .unwrap_or_else(|| data.clone());
+    if let Some(object) = receipt.as_object_mut() {
+        object.retain(|key, _| allowed.contains(&key.as_str()));
+    }
+    receipt
 }
 
 fn action_command_response(
@@ -239,30 +337,6 @@ fn extension_command_response(data: &Value, command: Value) -> Result<Value, Ser
         "priorDueAt": required(data, "priorDueAt")?,
         "newDueAt": data.get("newDueAt").cloned().unwrap_or(Value::Null),
         "calendarDigest": required(data, "calendarDigest")?
-    }))
-}
-
-fn retention_command_response(data: &Value, command: Value) -> Result<Value, ServiceError> {
-    let raw = data.get("request").ok_or(ServiceError::Persistence)?;
-    let request = json!({
-        "retentionRequestId": raw.get("retentionRequestId").or_else(|| raw.get("id")).cloned().ok_or(ServiceError::Persistence)?,
-        "requestType": required(raw, "requestType")?,
-        "decisionVersion": required(raw, "decisionVersion")?,
-        "state": raw.get("state").or_else(|| raw.get("status")).cloned().ok_or(ServiceError::Persistence)?,
-        "jurisdiction": raw.get("jurisdiction").cloned().unwrap_or_else(|| json!("UNKNOWN")),
-        "scopeDigest": required(raw, "scopeDigest")?,
-        "legalHoldBlocked": raw.get("legalHoldBlocked").cloned().unwrap_or(Value::Bool(false)),
-        "dueAt": required(raw, "dueAt")?,
-        "createdAt": required(raw, "createdAt")?,
-        "updatedAt": required(raw, "updatedAt")?
-    });
-    Ok(json!({
-        "command": command,
-        "request": request,
-        "inventorySnapshotDigest": required(data, "inventorySnapshotDigest")?,
-        "holdCoverageDigest": required(data, "holdCoverageDigest")?,
-        "completionReceiptId": data.get("completionReceiptId").cloned().unwrap_or(Value::Null),
-        "locationReceipts": data.get("locationReceipts").cloned().unwrap_or_else(|| json!([]))
     }))
 }
 

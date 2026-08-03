@@ -250,14 +250,21 @@ async fn load_legacy_entities(
         for row in aliases {
             let id = row.entity_id;
             if let Some(entity) = entities.get_mut(&id) {
-                entity.identifiers.push(EntityIdentifier {
-                    kind: EntityIdentifierKind::VerifiedAlias,
-                    value: row.alias,
-                });
+                append_visible_legacy_alias(entity, row.alias);
             }
         }
     }
     Ok(entities.into_values().collect())
+}
+
+fn append_visible_legacy_alias(entity: &mut EntityRecord, alias: Option<String>) {
+    let Some(alias) = alias.filter(|value| !value.trim().is_empty()) else {
+        return;
+    };
+    entity.identifiers.push(EntityIdentifier {
+        kind: EntityIdentifierKind::VerifiedAlias,
+        value: alias,
+    });
 }
 
 async fn load_v2_snapshot_entities(
@@ -508,4 +515,42 @@ async fn evidence_records(
         })
     })
     .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn legacy_entity() -> EntityRecord {
+        EntityRecord {
+            entity_id: uuid::Uuid::nil(),
+            canonical_name: "opaque-entity".to_owned(),
+            identifiers: vec![EntityIdentifier {
+                kind: EntityIdentifierKind::CanonicalName,
+                value: "opaque-entity".to_owned(),
+            }],
+        }
+    }
+
+    #[test]
+    fn anonymized_or_empty_legacy_alias_is_suppressed_without_placeholder() {
+        for alias in [None, Some("   ".to_owned())] {
+            let mut entity = legacy_entity();
+            append_visible_legacy_alias(&mut entity, alias);
+            assert_eq!(entity.identifiers.len(), 1);
+            assert_eq!(entity.identifiers[0].value, "opaque-entity");
+        }
+    }
+
+    #[test]
+    fn visible_legacy_alias_is_preserved_exactly() {
+        let mut entity = legacy_entity();
+        append_visible_legacy_alias(&mut entity, Some("검증된 별칭".to_owned()));
+        assert_eq!(entity.identifiers.len(), 2);
+        assert_eq!(
+            entity.identifiers[1].kind,
+            EntityIdentifierKind::VerifiedAlias
+        );
+        assert_eq!(entity.identifiers[1].value, "검증된 별칭");
+    }
 }

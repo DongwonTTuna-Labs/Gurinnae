@@ -1,0 +1,51 @@
+{
+  "fixtureAuthority": "TEST_ONLY",
+  "privacy": {
+    "status": "DRAFT_UNPUBLISHED_LAUNCH_BLOCKED",
+    "sections": [
+      {
+        "id": "controller",
+        "heading": "처리자",
+        "body": "TEST_ONLY fixture-operator-entity fixture-privacy-controller fixture-privacy-office fixture-privacy-contact"
+      },
+      { "id": "categories", "heading": "정보 범주", "body": "TEST_ONLY 초안" },
+      {
+        "id": "purposes",
+        "heading": "목적·법적 근거",
+        "body": "TEST_ONLY 초안"
+      },
+      { "id": "retention", "heading": "보존", "body": "TEST_ONLY 초안" },
+      {
+        "id": "processors",
+        "heading": "처리위탁·국외",
+        "body": "TEST_ONLY 초안"
+      },
+      { "id": "rights", "heading": "권리", "body": "TEST_ONLY 초안" },
+      { "id": "security", "heading": "보호", "body": "TEST_ONLY 초안" },
+      { "id": "history", "heading": "변경 이력", "body": "TEST_ONLY 초안" }
+    ]
+  },
+  "terms": {
+    "status": "DRAFT_UNPUBLISHED_LAUNCH_BLOCKED",
+    "sections": [
+      {
+        "id": "service",
+        "heading": "서비스 조건",
+        "body": "TEST_ONLY fixture-operator-entity"
+      },
+      { "id": "content", "heading": "콘텐츠", "body": "TEST_ONLY 초안" },
+      {
+        "id": "data",
+        "heading": "데이터·공개 인터페이스",
+        "body": "TEST_ONLY 재배포물에 원 자료의 공개·검토·정정 상태를 유지해야 합니다. 재배포물에 \"이상 징후 기록이며 위법·부패의 확정이 아님\" 고지를 유지해야 합니다. 정정·철회가 게시되면 재배포물에도 해당 표시를 반영하거나 최신 revision으로 연결해야 합니다."
+      },
+      { "id": "prohibited", "heading": "금지", "body": "TEST_ONLY 초안" },
+      { "id": "liability", "heading": "책임·한계", "body": "TEST_ONLY 초안" },
+      {
+        "id": "changes",
+        "heading": "변경",
+        "body": "TEST_ONLY fixture-privacy-contact"
+      }
+    ]
+  }
+}

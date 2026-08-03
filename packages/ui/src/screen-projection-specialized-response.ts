@@ -1,5 +1,6 @@
 import { explicitKoreanContextLabel, fieldLabel } from "./field-labels";
 import type { ProjectionField } from "./screen-projection";
+import { legalDocumentFields } from "./screen-projection-legal";
 import type { SpecializedProjection } from "./screen-projection-specialized-types";
 import { toRsp003ViewModel } from "./view-models/rsp-003";
 import { toRsp005ViewModel } from "./view-models/rsp-005";
@@ -15,6 +16,8 @@ export function responseSpecializedFields(
   sectionId: string,
   data: Record<string, unknown>,
 ): SpecializedProjection | null {
+  const legalProjection = legalDocumentFields(screenId, sectionId, data);
+  if (legalProjection) return legalProjection;
   if (screenId === "PUB-023") {
     // FundingContentResponse owns its public sections under data.sections;
     // never assume a flattened top-level DTO. This closed mapper keeps the

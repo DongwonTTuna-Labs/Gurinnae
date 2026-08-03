@@ -1,0 +1,1837 @@
+schema_version: 1
+proposal_version: 2026-08-01.0038-r6d-legal-hardening.v2
+status: REVIEW_REQUIRED
+scope:
+  migration: 0038_r6d_legal_hardening.sql
+  migration_sha256: 59d12f0e4df3dcc41d43f2e70dd1be5a5eaf10e21b31f6c0ff41d45b247211e8
+  exact_relations: [ops.r6d_record_class_catalog, core.relationship_graph_person_nodes_v3, core.relationship_graph_person_context_v3,
+    core.relationship_graph_person_erasure_receipts_v3, editorial.named_person_publication_policies, editorial.named_person_publication_assessments,
+    editorial.named_person_publication_findings, editorial.named_person_legal_overrides, ops.entity_retention_snapshots_v1,
+    ops.legal_hold_placement_receipts_v2, editorial.response_submission_origin_receipts_v2, editorial.organization_official_channel_assertions_v1,
+    editorial.organization_official_channel_revocation_receipts_v1, editorial.response_organization_identity_assertions_v1,
+    editorial.response_publication_identity_receipts_v1, intake.response_submission_receipts_v3, editorial.response_excerpt_approval_receipts_v2,
+    ops.privacy_response_calendar_policies_v1, ops.privacy_requests_v2, ops.privacy_request_receipt_tokens_v2, ops.privacy_request_identity_receipts_v2,
+    ops.privacy_request_extension_receipts_v2, ops.privacy_request_refusal_receipts_v2, ops.privacy_request_notice_receipts_v2,
+    ops.privacy_request_transition_receipts_v2, editorial.named_person_review_stage_receipts_v1, editorial.publication_preview_owner_receipts_v2,
+    editorial.publication_revision_owner_receipts_v2, ops.r6d_person_retention_execution_receipts_v1, ops.privacy_request_access_policies_v1,
+    ops.privacy_request_sealed_content_v2, ops.privacy_request_sealed_content_erasure_receipts_v1]
+  exact_new_relation_count: 32
+  relation_delta: 32
+  altered_relations: [ops.action_approval_retention_schedule_details, ops.record_class_schedules, core.agencies, core.suppliers,
+    core.agency_identifiers, core.supplier_identifiers, core.entity_aliases, core.relationship_graph_endpoints_v2, ops.legal_hold_target_anchors,
+    editorial.legal_holds, intake.response_submissions, editorial.responses, intake.submission_sessions, intake.communication_endpoints,
+    ops.event_types, editorial.publication_previews, editorial.publication_revisions, editorial.corrections, editorial.cases,
+    editorial.conflict_snapshots, editorial.legal_hold_releases]
+  compatibility_views: [public.approved_record_class_schedules]
+  purpose: R6d legal hardening for named-person publication guards, official-channel response identity, publication ownership
+    receipts, retention and legal holds, and the persisted privacy-rights lifecycle including sealed-content erasure boundaries
+  relation_count_rule: only CREATE TABLE statements count; the public compatibility view and every ALTER, routine, trigger,
+    index, ACL, and event-registry statement add zero relkind-r relations
+authority_and_compatibility: {historical_migration_rule: migrations 0001 through 0037 remain byte-preserved; all physical
+    changes are forward-only in 0038, transaction_rule: one outer BEGIN is the first statement and terminal COMMIT is the
+    last statement, schedule_seed_rule: 'only the static record-class catalog is seeded; no approved operating retention schedule,
+    holiday calendar, privacy access policy, or official-channel assertion is invented', static_policy_exception: 'named_person_publication_policies
+    and privacy_response_calendar_policies_v1 are immutable migration-owned authority catalogs; privacy_request_access_policies_v1
+    is immutable and unseeded; runtime assessments, assertions, and receipts carry schedule or authority tuples', legacy_rule: existing
+    rows remain staged legacy where 0038 explicitly preserves nullable retention bindings or retired v2 PERSON plaintext,
+  fail_closed_rule: 'missing or ambiguous approved schedule, stale proof, invalid digest, unauthorized actor, or mismatched
+    receipt produces no protected transition', official_channel_rule: OFFICIAL_DOMAIN_EMAIL requires both a consumed verified
+    endpoint proof and an organization-domain authority receipt; OFFICIAL_DOCUMENT requires the exact source artifact/locator
+    and organization-representation receipt; no runtime writer or seed is inferred by 0038, publication_owner_rule: 'named-person
+    review-stage, preview-owner, and revision-owner receipts are immutable, digest-bound, and schedule-bound; direct preview/revision
+    writes do not bypass their guards', sealed_content_rule: 'privacy sealed content stores ciphertext plus plaintext digest
+    and AAD metadata only; insert binds the exact parent transition and approved CRYPTO_ERASE schedule, while the 0038 erasure
+    owner remains fail-closed at privacy_sealed_content_hold_authority_unavailable'}
+statement_inventory: {create_table_count: 32, create_view_count: 1, owner_routine_count: 86, trigger_count: 76, explicit_index_count: 11,
+  event_registry_upsert_count: 9, object_inventory_sha256: 5a26853818562d699fe50842bb49ff1a70d722fd9b80f0d9b67aed5e9411fa38,
+  object_inventory_preimage: 'SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views, altered_relations,
+    routine signatures, trigger statements, and event_types; canonical per-statement hashes and indexes are inventoried separately'}
+existing_relation_changes:
+- relation: ops.action_approval_retention_schedule_details
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for ops.action_approval_retention_schedule_details
+    in 0038
+  alter_statement_sha256: [5e1f076409ce97d32dc7c4ea0b55fa85d264218f51ffdecdd89038aa7172390e, f2ea14a4019f1a56b78a4cb4340b55f416b173b8e38d7ab7cadd9d5c3d862602]
+- relation: ops.record_class_schedules
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for ops.record_class_schedules in 0038
+  alter_statement_sha256: [12faca1d28ddfd1d2f35e8515091c511c747e6b029b5cecbe6cc15395d35cfbb, 5d0a3fff749aa64406f5eda1efc9714ad61ededf817f67decc62451f1721dfb0]
+- relation: core.agencies
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for core.agencies in 0038
+  alter_statement_sha256: [b5dfdde7abd7453fb797ec4d039f85ee417f82482647d743fc0451cb27e66078, 125f8e81ffa872168b57ba4231b1bce56296b5a3ad3a261d06f960df19b3295c]
+- relation: core.suppliers
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for core.suppliers in 0038
+  alter_statement_sha256: [c366f65542a82c4ee408eb2e29a6f2d05de203b6d056195e89971233532e8537, 5970b89c6452bf47d160713543b6300d9a80846883ce736fb0626be7cd853778]
+- relation: core.agency_identifiers
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for core.agency_identifiers in 0038
+  alter_statement_sha256: [c58fb5d91b543ee02ccbd34219dbadf4ee28ce23747d332e016b8ca7c5e21858, e2cdd56568aa8d959d8842eaa5ed93f90b3d49db6e1b78279013e60b30318e6e]
+- relation: core.supplier_identifiers
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for core.supplier_identifiers in 0038
+  alter_statement_sha256: [304e329a9295aae9724a94de90ef2c066318e84555de3f04ef0ae3a47c3caa16, 856b65eae2d2d82fd560a24684fdef6128fe7710b0d8f78cd586ba16589c84eb]
+- relation: core.entity_aliases
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for core.entity_aliases in 0038
+  alter_statement_sha256: [3c245a5cddae7ac7f179676ce26201aa17a3139719055b658f7d356f2d7367ca, af610a8d7d2ebc660885c11415ff053c892e86b93b07154334b3b057b52608e7]
+- relation: core.relationship_graph_endpoints_v2
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for core.relationship_graph_endpoints_v2 in 0038
+  alter_statement_sha256: []
+- relation: ops.legal_hold_target_anchors
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for ops.legal_hold_target_anchors in 0038
+  alter_statement_sha256: [c0d47bb204f8aaa8402a21a6475dd880ac77ec154ee2d55af2f0e22c4fd252f7, 25f50ff599627d9ccf4de74038671e55ff5213c773bec79f79f7642d95e3e471,
+    f152c1747571745fc8a9ddbe208af989e15b1542ea8bcbbd81889203438836b4]
+- relation: editorial.legal_holds
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.legal_holds in 0038
+  alter_statement_sha256: [43eeaf1f16c404bf58d91cb59598ec0a0ada8acb9d16b2900d4045a7ef0a2f4f, 39cb66c7d9d7ff1fa693abf2eba014ed004cb706c66cfebf3fb204da4ec4ff61]
+- relation: intake.response_submissions
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for intake.response_submissions in 0038
+  alter_statement_sha256: [cd77912b9c62a5e78005380dccef7b266bcaa2a7bf97c68f4a3bfef4d2c0245a, e30b4c975049aa08d19b4a5b81a20d7f5e3823a916fea8d9121cb12e55843911,
+    9628cb1a1c6072bda298b790215fdda99913e9c9b9f985d888f1aa00222bc2fa]
+- relation: editorial.responses
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.responses in 0038
+  alter_statement_sha256: [73b07f5307726102f3700138ebd6e392847f33235e75d8f5423dd751e0f154ee, 9e231a0e5de7dca7d0947990988ec994fd5fc792a8af64437bdc89030186ac23,
+    ab2a93943ee4e61009465af4bb292487adcca8daade32e349f8c3a15a3bc46ad, 4242e6c9f89d94d83d228cdf28a6a71ecd88f8ca4aea5f6f2861028bb77d65a3]
+- relation: intake.submission_sessions
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for intake.submission_sessions in 0038
+  alter_statement_sha256: [c3dacbe0d6fcf4994873f5ea22a9e0bf3f9fc431c7efffbca375beb904c2e61c, 72326707308c3027e1e1d4a7fe50abec795ab55ec3b9d3c15a961bdb4d1fdd7f,
+    1155240e3c317910ae620684a77b4cd3d10331e96bb74cee17726fbe37bbbda4]
+- relation: intake.communication_endpoints
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for intake.communication_endpoints in 0038
+  alter_statement_sha256: [729b32d767c1136f0d0951fc1184d653c616795aafbb9c4546ae4ef0ebbe41dd, dd44113dc48491047014ed8a1c64cb84232ada34c4883d7eb854eb8e0d614578]
+- relation: ops.event_types
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for ops.event_types in 0038
+  alter_statement_sha256: []
+- relation: editorial.publication_previews
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.publication_previews in 0038
+  alter_statement_sha256: [83e055496c5bed95d0968c1cdd348afff233908489b94fbd8166f221400a954e]
+- relation: editorial.publication_revisions
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.publication_revisions in 0038
+  alter_statement_sha256: []
+- relation: editorial.corrections
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.corrections in 0038
+  alter_statement_sha256: []
+- relation: editorial.cases
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.cases in 0038
+  alter_statement_sha256: []
+- relation: editorial.conflict_snapshots
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.conflict_snapshots in 0038
+  alter_statement_sha256: [0421700ec62fd273e1ddec0e3ae018bb7465f4aa7f402401a2982511c0205850, f5ff90738317e1404c6572ccc8555ff9fa423c702820ab6c35f484594e119b5f]
+- relation: editorial.legal_hold_releases
+  authority: exact ALTER, trigger, ACL, or event-registry upsert statements for editorial.legal_hold_releases in 0038
+  alter_statement_sha256: [abca366373012d06e7fba99f8ceda8c28d736b707c85e9ecae5c66f58a3c6ad5]
+compatibility_views:
+  public.approved_record_class_schedules:
+    relation_kind: view
+    security_barrier: true
+    relation_count_delta: 0
+    columns: [record_class, revision, purpose, lawful_basis, trigger_kind, active_duration_seconds, backup_duration_seconds,
+      terminal_action, effective_at, review_expires_at, schedule_digest]
+    access: SELECT only for gurine_public_api; direct ops.record_class_schedules SELECT is revoked
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE VIEW public.approved_record_class_schedules
+    alter_statement_sha256: [78c30ffe63f66f2a00cf07c16ab4c7991ab79a9f09decbee80a20015ecf3e124]
+view_inventory:
+- {relation: public.approved_record_class_schedules, relation_kind: view, relation_count_delta: 0}
+tables:
+  ops.r6d_record_class_catalog:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.r6d_record_class_catalog
+    create_statement_sha256: 59f8ecadb1b178e06c40ccf0268314a875d1fa1a002252f3b63b80bb7e1e3826
+    columns:
+      record_class: {type: text, nullable: false}
+      data_category: {type: text, nullable: false}
+      required_terminal_action: {type: text, nullable: false}
+      pii_write: {type: boolean, nullable: false}
+      required_trigger_kind: {type: text, nullable: true}
+      required_active_duration_seconds: {type: bigint, nullable: true}
+      required_backup_duration_seconds: {type: bigint, nullable: true}
+      required_lawful_basis: {type: text, nullable: true}
+      authority_version: {type: text, nullable: false}
+      description: {type: text, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [record_class]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [408c84668c29f178de6d25f5e97cf5a9abe416a9b0c7460074fa8117a415f203]
+  core.relationship_graph_person_nodes_v3:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE core.relationship_graph_person_nodes_v3
+    create_statement_sha256: 6adf7af9d73df8203133f28312543c1f81bc79a203c72855378e72a2e163ce6d
+    columns:
+      person_node_id: {type: uuid, nullable: false}
+      source_locator: {type: text, nullable: false}
+      source_locator_digest: {type: char(64), nullable: false}
+      identifier_digest: {type: char(64), nullable: false}
+      topology_payload: {type: jsonb, nullable: false}
+      topology_canonical: {type: bytea, nullable: false}
+      topology_digest: {type: char(64), nullable: false}
+      created_actor_type: {type: text, nullable: false}
+      created_actor_id: {type: text, nullable: false}
+      created_by: {type: uuid, nullable: true}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [person_node_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [c2fc5dedcda496a59e9710aa4dfcd511cbfa673bb0a1bb93714f23d8ea75ff61]
+  core.relationship_graph_person_context_v3:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE core.relationship_graph_person_context_v3
+    create_statement_sha256: 29f3d19594b9e9ce19ea3befafe30c985099f0a4945ced6aaf4e239c0fd77f98
+    columns:
+      context_id: {type: uuid, nullable: false}
+      person_node_id: {type: uuid, nullable: false}
+      topology_digest: {type: char(64), nullable: false}
+      contextual_name_ciphertext: {type: bytea, nullable: true}
+      contextual_name_sha256: {type: char(64), nullable: true}
+      contextual_name_aad_digest: {type: char(64), nullable: true}
+      role_title_ciphertext: {type: bytea, nullable: true}
+      role_title_sha256: {type: char(64), nullable: true}
+      role_title_aad_digest: {type: char(64), nullable: true}
+      encryption_key_id: {type: text, nullable: true}
+      person_name_digest: {type: char(64), nullable: false}
+      verification_status: {type: text, nullable: false}
+      public_use_status: {type: text, nullable: false}
+      verified_by: {type: uuid, nullable: true}
+      verified_at: {type: timestamptz, nullable: true}
+      erase_state: {type: text, nullable: false}
+      erased_at: {type: timestamptz, nullable: true}
+      erasure_receipt_digest: {type: char(64), nullable: true}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [context_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [0d874b34f800992ce7689cce0cb30a86dda9c6c015e4bd589103517487a6f980]
+  core.relationship_graph_person_erasure_receipts_v3:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE core.relationship_graph_person_erasure_receipts_v3
+    create_statement_sha256: 765339e1f6c5ab8f2a8503a2beb60f004801d6de971437b236c1c887e33a0043
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      context_id: {type: uuid, nullable: false}
+      person_node_id: {type: uuid, nullable: false}
+      topology_digest: {type: char(64), nullable: false}
+      person_name_digest: {type: char(64), nullable: false}
+      prior_context_digest: {type: char(64), nullable: false}
+      erasure_kind: {type: text, nullable: false}
+      legal_hold_coverage_digest: {type: char(64), nullable: false}
+      actor_type: {type: text, nullable: false}
+      actor_id: {type: text, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      erased_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [a100fa5992e6a624534b25ba2aa708fc392215e7de4b1786392841acd2a6263f, 6a358f3d8d12aecc137c885cc76cba97ba9a7e01ace752f10d93e7736e421189]
+  editorial.named_person_publication_policies:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.named_person_publication_policies
+    create_statement_sha256: dbf25bc6659ea5a6804f059fb03a10117ae5d09484838ea9f2410accb935a641
+    columns:
+      policy_version: {type: text, nullable: false}
+      detector_kinds: {type: 'text[]', nullable: false}
+      override_reason_codes: {type: 'text[]', nullable: false}
+      ambiguous_match_disposition: {type: text, nullable: false}
+      active: {type: boolean, nullable: false}
+      policy_payload: {type: jsonb, nullable: false}
+      policy_canonical: {type: bytea, nullable: false}
+      policy_digest: {type: char(64), nullable: false}
+      effective_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [policy_version]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [f39bb2a59e221b498d5fc6d2c1ad0b62177e30f5948491e3934e5c4e15c97f7b]
+  editorial.named_person_publication_assessments:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.named_person_publication_assessments
+    create_statement_sha256: bffc5abd436c585e9003a42b1103569ab5c5078f35e0dd15aa4b85a2f47f31b9
+    columns:
+      assessment_id: {type: uuid, nullable: false}
+      case_id: {type: uuid, nullable: false}
+      case_version: {type: bigint, nullable: false}
+      review_snapshot_id: {type: uuid, nullable: false}
+      review_snapshot_digest: {type: char(64), nullable: false}
+      publication_state: {type: editorial.publication_state, nullable: false}
+      guard_context: {type: text, nullable: false}
+      public_payload_sha256: {type: char(64), nullable: false}
+      public_text_sha256: {type: char(64), nullable: false}
+      policy_version: {type: text, nullable: false}
+      policy_digest: {type: char(64), nullable: false}
+      ruleset_version: {type: text, nullable: false}
+      ruleset_sha256: {type: char(64), nullable: false}
+      registered_name_set_sha256: {type: char(64), nullable: false}
+      finding_count: {type: integer, nullable: false}
+      finding_set_digest: {type: char(64), nullable: false}
+      outcome: {type: text, nullable: false}
+      evaluated_actor_type: {type: text, nullable: false}
+      evaluated_actor_id: {type: text, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      assessment_payload: {type: jsonb, nullable: false}
+      assessment_canonical: {type: bytea, nullable: false}
+      assessment_digest: {type: char(64), nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      evaluated_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [assessment_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [62fbc27a0eb353791001b056f20d1cd96aee4d53a577ec98538a68574e9d9511, cb6448d46a6f7bd179caa731533381e940caf107f7a277313b490ecf2bbca9c5]
+  editorial.named_person_publication_findings:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.named_person_publication_findings
+    create_statement_sha256: ebc97545ece678713a32cc54a133e9389aceb1401a1716dd26abeba5cf5fceed
+    columns:
+      assessment_id: {type: uuid, nullable: false}
+      ordinal: {type: integer, nullable: false}
+      detector_kind: {type: text, nullable: false}
+      json_pointer: {type: text, nullable: false}
+      start_utf16: {type: integer, nullable: false}
+      end_utf16: {type: integer, nullable: false}
+      matched_text_sha256: {type: char(64), nullable: false}
+      ruleset_version: {type: text, nullable: false}
+      context_id: {type: uuid, nullable: true}
+      person_node_id: {type: uuid, nullable: true}
+      topology_digest: {type: char(64), nullable: true}
+      person_name_digest: {type: char(64), nullable: true}
+      finding_payload: {type: jsonb, nullable: false}
+      finding_canonical: {type: bytea, nullable: false}
+      finding_digest: {type: char(64), nullable: false}
+      finding_identity_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [assessment_id, ordinal]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [0e1af55c42d46f2f2260ace51a43ca0a99866f97d791e6b5c8588456f43b5d1f, 72da6da4aaeb8df9e44d2385027288a236e05840220b0ab0aea15d3803a2b60e]
+  editorial.named_person_legal_overrides:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.named_person_legal_overrides
+    create_statement_sha256: 279a14696010252f217dc359727ba177818ddb4bde53c761c0afe1765a9adea2
+    columns:
+      override_id: {type: uuid, nullable: false}
+      assessment_id: {type: uuid, nullable: false}
+      public_text_sha256: {type: char(64), nullable: false}
+      reason_code: {type: text, nullable: false}
+      ruleset_version: {type: text, nullable: false}
+      official_source_locator: {type: text, nullable: false}
+      official_source_sha256: {type: char(64), nullable: false}
+      publication_author_user_id: {type: uuid, nullable: false}
+      editorial_review_decision_id: {type: uuid, nullable: false}
+      editorial_reviewer_user_id: {type: uuid, nullable: false}
+      legal_reviewer_user_id: {type: uuid, nullable: false}
+      editorial_review_decision_digest: {type: char(64), nullable: false}
+      editorial_review_stage_receipt_id: {type: uuid, nullable: false}
+      editorial_review_stage_receipt_digest: {type: char(64), nullable: false}
+      editorial_reviewer_authority_digest: {type: char(64), nullable: false}
+      legal_reviewer_authority_digest: {type: char(64), nullable: false}
+      step_up_authorization_id: {type: uuid, nullable: false}
+      step_up_receipt_digest: {type: char(64), nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      override_payload: {type: jsonb, nullable: false}
+      override_canonical: {type: bytea, nullable: false}
+      override_digest: {type: char(64), nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      reviewed_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [override_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [ab53d6a26ded1ddd166b865e1b16d762ccc2f1e96ccbb287dc1a763c7acdf9fb, 91b6d72ab7bd6b234f47f7f627028d9214e7ad33d57083b7933de22307012664,
+      7cfb0ca067450af49a0d99691c4a7b13c6233447ef0e991fba51716dbcb8aedd]
+  ops.entity_retention_snapshots_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.entity_retention_snapshots_v1
+    create_statement_sha256: 859707960da440e94bef4e0702b8ce10aa70755be6b168958fb1623da93dd33d
+    columns:
+      snapshot_id: {type: uuid, nullable: false}
+      subject_kind: {type: text, nullable: false}
+      subject_id: {type: uuid, nullable: false}
+      subject_version: {type: bigint, nullable: false}
+      subject_updated_at: {type: timestamptz, nullable: false}
+      entity_state_digest: {type: char(64), nullable: false}
+      hold_coverage_digest: {type: char(64), nullable: false}
+      snapshot_payload: {type: jsonb, nullable: false}
+      snapshot_canonical: {type: bytea, nullable: false}
+      snapshot_digest: {type: char(64), nullable: false}
+      created_actor_type: {type: text, nullable: false}
+      created_actor_id: {type: text, nullable: false}
+      created_by: {type: uuid, nullable: true}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [snapshot_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [0fcc2e15809e8b32c752f3c1942fb3160e7f9e50df619906fb8756c296b33e43]
+  ops.legal_hold_placement_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.legal_hold_placement_receipts_v2
+    create_statement_sha256: b456b117453c01254139e5ed552896f3bd5d15028a261ecb142c2aa2a6d3d907
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      legal_hold_id: {type: uuid, nullable: false}
+      anchor_id: {type: uuid, nullable: false}
+      anchor_digest: {type: char(64), nullable: false}
+      target_kind: {type: text, nullable: false}
+      target_id: {type: uuid, nullable: false}
+      target_version: {type: bigint, nullable: false}
+      target_digest: {type: char(64), nullable: false}
+      actor_id: {type: uuid, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      outbox_event_id: {type: uuid, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      placed_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      target_payload: {type: jsonb, nullable: false}
+      target_canonical: {type: bytea, nullable: false}
+      scope_atoms: {type: 'text[]', nullable: false}
+      scope_atoms_digest: {type: char(64), nullable: false}
+      affected_ids: {type: 'uuid[]', nullable: false}
+      affected_set_digest: {type: char(64), nullable: false}
+      authority_reference_digest: {type: char(64), nullable: false}
+      reason_digest: {type: char(64), nullable: false}
+      audit_receipt_digest: {type: char(64), nullable: false}
+      expires_at: {type: timestamptz, nullable: true}
+      reason_code: {type: text, nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      actor_assertion_request_digest: {type: char(64), nullable: false}
+      step_up_authorization_id: {type: uuid, nullable: false}
+      step_up_authorization_receipt_digest: {type: char(64), nullable: false}
+      step_up_issued_at: {type: timestamptz, nullable: false}
+      step_up_expires_at: {type: timestamptz, nullable: false}
+      action_digest: {type: char(64), nullable: false}
+      conflict_snapshot_id: {type: uuid, nullable: false}
+      conflict_target_id: {type: text, nullable: false}
+      conflict_snapshot_digest: {type: char(64), nullable: false}
+      conflict_receipt_digest: {type: char(64), nullable: false}
+      conflict_evaluation_state: {type: text, nullable: false}
+      conflict_valid_until: {type: timestamptz, nullable: false}
+      placement_approval_receipt_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [d065fb9576ccd4c4d537969eb35daa726dc13a6fff45b774f36c39b2db491401]
+  editorial.response_submission_origin_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.response_submission_origin_receipts_v2
+    create_statement_sha256: b6b4d1c97814ec5a1cb154fe09afbda95994a5aafde0a15d25b758eb1920d2bc
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      source_event_id: {type: uuid, nullable: false}
+      source_event_envelope_digest: {type: char(64), nullable: false}
+      response_submission_id: {type: uuid, nullable: false}
+      response_request_id: {type: uuid, nullable: false}
+      editorial_response_id: {type: uuid, nullable: false}
+      party_type: {type: text, nullable: false}
+      party_entity_id: {type: uuid, nullable: true}
+      response_version: {type: bigint, nullable: false}
+      response_content_sha256: {type: char(64), nullable: false}
+      publication_consent_sha256: {type: char(64), nullable: false}
+      identity_status: {type: text, nullable: false}
+      publication_form: {type: text, nullable: false}
+      submission_receipt_version: {type: bigint, nullable: false}
+      submission_receipt_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      emitted_event_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      owned_intake_receipt_digest: {type: char(64), nullable: false}
+      result_digest: {type: char(64), nullable: false}
+      materialized_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [476ddee79e06b63deab55ece6cb6a43d1b5e160a6e9c03a6c4046821933227bb, 3ee1e0d49763ff6f1d0480c9977b06cfccb36a5eaf8a54fa3c8067f2571dbb6e]
+  editorial.organization_official_channel_assertions_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.organization_official_channel_assertions_v1
+    create_statement_sha256: 6495843881d372eeaeb8fd31cec8563843d84e86a43096b88f19c4bbed18cc1c
+    columns:
+      assertion_id: {type: uuid, nullable: false}
+      assertion_version: {type: bigint, nullable: false}
+      organization_kind: {type: text, nullable: false}
+      organization_id: {type: uuid, nullable: false}
+      agency_id: {type: uuid, nullable: true}
+      supplier_id: {type: uuid, nullable: true}
+      verification_method: {type: text, nullable: false}
+      source_purpose: {type: text, nullable: false}
+      communication_subject_id: {type: uuid, nullable: true}
+      communication_subject_origin_digest: {type: char(64), nullable: true}
+      communication_subject_profile_version: {type: bigint, nullable: true}
+      communication_subject_profile_digest: {type: char(64), nullable: true}
+      communication_endpoint_id: {type: uuid, nullable: true}
+      communication_endpoint_version: {type: bigint, nullable: true}
+      communication_endpoint_digest: {type: char(64), nullable: true}
+      communication_verification_id: {type: uuid, nullable: true}
+      official_document_evidence_id: {type: uuid, nullable: true}
+      official_document_evidence_version: {type: bigint, nullable: true}
+      official_document_content_sha256: {type: char(64), nullable: true}
+      official_document_source_document_id: {type: uuid, nullable: true}
+      official_document_source_document_sha256: {type: char(64), nullable: true}
+      official_document_locator_sha256: {type: char(64), nullable: true}
+      underlying_source_proof_digest: {type: char(64), nullable: false}
+      organization_authority_receipt_kind: {type: text, nullable: false}
+      organization_authority_receipt_digest: {type: char(64), nullable: false}
+      organization_source_binding_payload: {type: jsonb, nullable: false}
+      organization_source_binding_canonical: {type: bytea, nullable: false}
+      organization_source_binding_digest: {type: char(64), nullable: false}
+      independent_verifier_user_id: {type: uuid, nullable: false}
+      verified_at: {type: timestamptz, nullable: false}
+      expires_at: {type: timestamptz, nullable: false}
+      assertion_payload: {type: jsonb, nullable: false}
+      assertion_canonical: {type: bytea, nullable: false}
+      assertion_digest: {type: char(64), nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [assertion_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [baf3d1c96a776288a7da8453f1b696b9b1be22d590812d6ba57e13dfdebe1bbc]
+  editorial.organization_official_channel_revocation_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.organization_official_channel_revocation_receipts_v1
+    create_statement_sha256: 9fc39aad3f8944b955139db62cb02f38d28e6c7983c01e32e252dd94a26ae659
+    columns:
+      revocation_id: {type: uuid, nullable: false}
+      assertion_id: {type: uuid, nullable: false}
+      assertion_digest: {type: char(64), nullable: false}
+      organization_source_binding_digest: {type: char(64), nullable: false}
+      assertion_receipt_digest: {type: char(64), nullable: false}
+      reason_code: {type: text, nullable: false}
+      reason_digest: {type: char(64), nullable: false}
+      revoked_by_user_id: {type: uuid, nullable: false}
+      revoked_at: {type: timestamptz, nullable: false}
+      revocation_payload: {type: jsonb, nullable: false}
+      revocation_canonical: {type: bytea, nullable: false}
+      revocation_receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [revocation_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [e371fdaf7935eb5d5abf777cde0e72fe1e42ac772ca20bfc5cefbccd905b77c3]
+  editorial.response_organization_identity_assertions_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.response_organization_identity_assertions_v1
+    create_statement_sha256: 3842a1161d8b679b74abb4dec967088cde6467f7d3a4bde914e577dbd2908960
+    columns:
+      assertion_id: {type: uuid, nullable: false}
+      response_id: {type: uuid, nullable: false}
+      response_request_id: {type: uuid, nullable: false}
+      response_submission_id: {type: uuid, nullable: false}
+      response_version: {type: bigint, nullable: false}
+      response_content_sha256: {type: char(64), nullable: false}
+      publication_consent_sha256: {type: char(64), nullable: false}
+      organization_kind: {type: text, nullable: false}
+      organization_id: {type: uuid, nullable: false}
+      publication_form: {type: text, nullable: false}
+      identity_status: {type: text, nullable: false}
+      verification_method: {type: text, nullable: false}
+      official_channel_source_id: {type: uuid, nullable: false}
+      communication_subject_id: {type: uuid, nullable: true}
+      communication_endpoint_id: {type: uuid, nullable: true}
+      communication_verification_id: {type: uuid, nullable: true}
+      official_document_evidence_id: {type: uuid, nullable: true}
+      source_verification_receipt_digest: {type: char(64), nullable: false}
+      subject_binding_digest: {type: char(64), nullable: false}
+      evidence_set_digest: {type: char(64), nullable: false}
+      policy_digest: {type: char(64), nullable: false}
+      assertion_version: {type: bigint, nullable: false}
+      reason_digest: {type: char(64), nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      step_up_authorization_id: {type: uuid, nullable: false}
+      step_up_authorization_receipt_digest: {type: char(64), nullable: false}
+      actor_id: {type: uuid, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      audit_receipt_digest: {type: char(64), nullable: false}
+      outbox_event_id: {type: uuid, nullable: false}
+      assertion_payload: {type: jsonb, nullable: false}
+      assertion_canonical: {type: bytea, nullable: false}
+      assertion_digest: {type: char(64), nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      verified_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [assertion_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [b82f1b86de1101b0e62bfdf085a0fae15e126444fb97c3c3164f079ac0e9f934, 64fa13d603f2f1820ab8aac51f417b697a2d6e68a5c494d0aadd09135519b1b1,
+      40f23539d8db6d0180aebe2743ce30f3e16dd502be199f32c02f5f693fc29649]
+  editorial.response_publication_identity_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.response_publication_identity_receipts_v1
+    create_statement_sha256: 7953c4caa22b1538f4746b43b10f5363e00f54a13a9f1520f9108e6750f6c24b
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      assertion_id: {type: uuid, nullable: false}
+      response_id: {type: uuid, nullable: false}
+      response_version: {type: bigint, nullable: false}
+      response_content_sha256: {type: char(64), nullable: false}
+      publication_consent_sha256: {type: char(64), nullable: false}
+      organization_id: {type: uuid, nullable: false}
+      publication_form: {type: text, nullable: false}
+      identity_status: {type: text, nullable: false}
+      assertion_digest: {type: char(64), nullable: false}
+      source_verification_receipt_digest: {type: char(64), nullable: false}
+      active: {type: boolean, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [21974ab1ed8ded1e689fc20c77f7151806f694b692cef10193d8024fe9e8dc9c, 8f83a0b9d77fe76b94178be924ff39722c1e3765566a04ca6ea8879f7e70cdf0]
+  intake.response_submission_receipts_v3:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE intake.response_submission_receipts_v3
+    create_statement_sha256: 8e453271ed3e3a7b24640a1042cb40a31a48a9e407964c3167eebb4c16593e7a
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      response_submission_id: {type: uuid, nullable: false}
+      response_request_id: {type: uuid, nullable: false}
+      response_request_version: {type: bigint, nullable: false}
+      response_request_binding_digest: {type: char(64), nullable: false}
+      draft_version: {type: bigint, nullable: false}
+      submission_sha256: {type: char(64), nullable: false}
+      publication_consent_sha256: {type: char(64), nullable: false}
+      receipt_version: {type: bigint, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      receipt_session_id: {type: uuid, nullable: false}
+      receipt_session_expires_at: {type: timestamptz, nullable: false}
+      domain_event_id: {type: uuid, nullable: false}
+      notification_event_id: {type: uuid, nullable: false}
+      workflow_event_id: {type: uuid, nullable: false}
+      workflow_event_envelope_digest: {type: char(64), nullable: false}
+      actor_type: {type: text, nullable: false}
+      actor_id: {type: text, nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      submitted_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [5388936c171acfe3aa238812fd5fa7f2b71fd26beabe35267995f8b6d8b29bd7, f7e4e56791da019860cf80f4ba64b38190f046dc50aac5b6bd597eb10ae43d7e]
+  editorial.response_excerpt_approval_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.response_excerpt_approval_receipts_v2
+    create_statement_sha256: 71981d29bc4ef2dd27a2d4399b11f038e3a9d35c914777463d618377ad907465
+    columns:
+      approval_id: {type: uuid, nullable: false}
+      response_id: {type: uuid, nullable: false}
+      prior_response_version: {type: bigint, nullable: false}
+      response_version: {type: bigint, nullable: false}
+      response_content_sha256: {type: char(64), nullable: false}
+      publication_consent_sha256: {type: char(64), nullable: false}
+      excerpt_sha256: {type: char(64), nullable: false}
+      publication_form: {type: text, nullable: false}
+      identity_receipt_id: {type: uuid, nullable: true}
+      identity_receipt_digest: {type: char(64), nullable: true}
+      reason_digest: {type: char(64), nullable: false}
+      actor_id: {type: uuid, nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      outbox_event_id: {type: uuid, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      approved_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [approval_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [4cc3eefb2a1e490fa775ad3522750c005d9a14c091c07f07ba6da7e740431518, bd433fc20d1430a247338906da4ecab39b690271ab28e76a14226ea374cbe245]
+  ops.privacy_response_calendar_policies_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_response_calendar_policies_v1
+    create_statement_sha256: 7aa96cf162e82c7a8d5252eb221a1af0cbcf35aafff7797db4a2fd32f038ffaa
+    columns:
+      policy_id: {type: uuid, nullable: false}
+      revision: {type: bigint, nullable: false}
+      policy_version: {type: text, nullable: false}
+      authority_source: {type: text, nullable: false}
+      state: {type: text, nullable: false}
+      timezone: {type: text, nullable: false}
+      access_business_days: {type: integer, nullable: false}
+      correction_business_days: {type: integer, nullable: false}
+      deletion_business_days: {type: integer, nullable: false}
+      restriction_business_days: {type: integer, nullable: false}
+      maximum_extension_business_days: {type: integer, nullable: false}
+      maximum_extension_count: {type: integer, nullable: false}
+      refusal_notice_business_days: {type: integer, nullable: false}
+      calendar_id: {type: uuid, nullable: true}
+      action_proposal_id: {type: uuid, nullable: true}
+      action_proposal_version: {type: bigint, nullable: true}
+      operational_decision_receipt_id: {type: uuid, nullable: true}
+      operational_decision_receipt_digest: {type: char(64), nullable: true}
+      legal_decision_receipt_id: {type: uuid, nullable: true}
+      legal_decision_receipt_digest: {type: char(64), nullable: true}
+      action_execution_receipt_id: {type: uuid, nullable: true}
+      action_execution_receipt_digest: {type: char(64), nullable: true}
+      policy_payload: {type: jsonb, nullable: false}
+      policy_canonical: {type: bytea, nullable: false}
+      policy_digest: {type: char(64), nullable: false}
+      binding_digest: {type: char(64), nullable: false}
+      effective_at: {type: timestamptz, nullable: true}
+      review_expires_at: {type: timestamptz, nullable: true}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [policy_id, revision]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [e0bf53e93af99371bedaedc011150d61cda1358e5912eb378f4bae369d3f9b46]
+  ops.privacy_requests_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_requests_v2
+    create_statement_sha256: 4f438779fcfa2c8cde01cac815732770c3ec6448a35636f997661b85070af664
+    columns:
+      id: {type: uuid, nullable: false}
+      request_type: {type: text, nullable: false}
+      state: {type: text, nullable: false}
+      identity_state: {type: text, nullable: false}
+      jurisdiction: {type: text, nullable: false}
+      subject_proof_hash: {type: char(64), nullable: false}
+      identity_proof_kind: {type: text, nullable: false}
+      identity_proof_ref_id: {type: uuid, nullable: false}
+      identity_proof_binding_digest: {type: char(64), nullable: false}
+      subject_scope_digest: {type: char(64), nullable: false}
+      scope_ciphertext: {type: bytea, nullable: false}
+      scope_sha256: {type: char(64), nullable: false}
+      scope_aad_digest: {type: char(64), nullable: false}
+      statement_ciphertext: {type: bytea, nullable: false}
+      statement_sha256: {type: char(64), nullable: false}
+      statement_aad_digest: {type: char(64), nullable: false}
+      encryption_key_id: {type: text, nullable: false}
+      communication_subject_id: {type: uuid, nullable: false}
+      communication_subject_origin_digest: {type: char(64), nullable: false}
+      communication_endpoint_id: {type: uuid, nullable: false}
+      communication_endpoint_version: {type: bigint, nullable: false}
+      communication_endpoint_digest: {type: char(64), nullable: false}
+      decision_version: {type: bigint, nullable: false}
+      identity_verified_at: {type: timestamptz, nullable: true}
+      due_at: {type: timestamptz, nullable: true}
+      response_policy_id: {type: uuid, nullable: true}
+      response_policy_revision: {type: bigint, nullable: true}
+      response_policy_digest: {type: char(64), nullable: true}
+      calendar_version_id: {type: uuid, nullable: true}
+      calendar_digest: {type: char(64), nullable: true}
+      current_identity_receipt_id: {type: uuid, nullable: true}
+      current_identity_receipt_digest: {type: char(64), nullable: true}
+      current_extension_receipt_id: {type: uuid, nullable: true}
+      current_extension_receipt_digest: {type: char(64), nullable: true}
+      current_refusal_receipt_id: {type: uuid, nullable: true}
+      current_refusal_receipt_digest: {type: char(64), nullable: true}
+      current_notice_receipt_id: {type: uuid, nullable: true}
+      current_notice_receipt_digest: {type: char(64), nullable: true}
+      create_request_id: {type: uuid, nullable: false}
+      create_idempotency_key_sha256: {type: char(64), nullable: false}
+      create_request_sha256: {type: char(64), nullable: false}
+      create_audit_event_id: {type: uuid, nullable: false}
+      create_outbox_event_id: {type: uuid, nullable: false}
+      create_receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      updated_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [f7854429c6018d348a38c15d719a7cf8cbbfad3ba13581ba1410fbfca2133935]
+  ops.privacy_request_receipt_tokens_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_receipt_tokens_v2
+    create_statement_sha256: a3079647314d18e42276e126320d293e63657d46aac1c0f115fad5bf598fd4c7
+    columns:
+      token_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      operation_id: {type: text, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_sha256: {type: char(64), nullable: false}
+      token_hmac: {type: char(64), nullable: false}
+      token_sha256: {type: char(64), nullable: false}
+      token_key_version: {type: text, nullable: false}
+      secretless_response_template: {type: jsonb, nullable: false}
+      secretless_response_digest: {type: char(64), nullable: false}
+      expires_at: {type: timestamptz, nullable: false}
+      consumed_at: {type: timestamptz, nullable: true}
+      session_id: {type: uuid, nullable: true}
+      session_token_sha256: {type: char(64), nullable: true}
+      exchange_receipt_digest: {type: char(64), nullable: true}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      access_policy_id: {type: uuid, nullable: false}
+      access_policy_revision: {type: bigint, nullable: false}
+      access_policy_digest: {type: char(64), nullable: false}
+      access_policy_binding_digest: {type: char(64), nullable: false}
+      exchange_audit_event_id: {type: uuid, nullable: true}
+      exchange_outbox_event_id: {type: uuid, nullable: true}
+    primary_key:
+      columns: [token_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [378f08d280541cf9f6ea4a999fbb4ab26c8f9467b636897e58d6e05d089197aa, 8ec1fb66ab51137f445e7cdaaa9470abe072cbf3f1e7f59741da29efb2b88494]
+  ops.privacy_request_identity_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_identity_receipts_v2
+    create_statement_sha256: e5ccc0996f71426ad6b03aaabd07adf616942e31feed9416bb8a4035f87853e2
+    columns:
+      identity_receipt_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      decision_version: {type: bigint, nullable: false}
+      identity_proof_receipt_id: {type: uuid, nullable: false}
+      identity_proof_receipt_digest: {type: char(64), nullable: false}
+      prior_identity_state: {type: text, nullable: false}
+      identity_state: {type: text, nullable: false}
+      identity_verified_at: {type: timestamptz, nullable: false}
+      due_at: {type: timestamptz, nullable: false}
+      response_policy_id: {type: uuid, nullable: false}
+      response_policy_revision: {type: bigint, nullable: false}
+      response_policy_version: {type: text, nullable: false}
+      response_policy_digest: {type: char(64), nullable: false}
+      calendar_version_id: {type: uuid, nullable: false}
+      calendar_digest: {type: char(64), nullable: false}
+      notice_receipt_id: {type: uuid, nullable: true}
+      notice_receipt_digest: {type: char(64), nullable: true}
+      event_receipt_id: {type: uuid, nullable: true}
+      event_receipt_digest: {type: char(64), nullable: true}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      verified_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [identity_receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [743e402f27264173f28ae91eede7e17aff1a2ea1ad55e0bf2bdd6190cb09c862, 812cec54c59d36993031486c02fc9ba870de3a32a0a09926206db17647f37cf2,
+      b85ea03fb7e2be2f7f6ee740e859045e1a53ca14f068c3f68869c097c6b64955]
+  ops.privacy_request_extension_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_extension_receipts_v2
+    create_statement_sha256: 6bbe4f3cffe97ed0013f9c1b06e9be7fdff5a6858c3be9a62b58a1db804ea418
+    columns:
+      extension_receipt_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      decision_version: {type: bigint, nullable: false}
+      extension_sequence: {type: integer, nullable: false}
+      prior_due_at: {type: timestamptz, nullable: false}
+      due_at: {type: timestamptz, nullable: false}
+      extension_business_days: {type: integer, nullable: false}
+      extension_reason_code: {type: text, nullable: false}
+      extension_reason_sha256: {type: char(64), nullable: false}
+      response_policy_id: {type: uuid, nullable: false}
+      response_policy_revision: {type: bigint, nullable: false}
+      response_policy_digest: {type: char(64), nullable: false}
+      calendar_version_id: {type: uuid, nullable: false}
+      calendar_digest: {type: char(64), nullable: false}
+      notice_receipt_id: {type: uuid, nullable: true}
+      notice_receipt_digest: {type: char(64), nullable: true}
+      event_receipt_id: {type: uuid, nullable: true}
+      event_receipt_digest: {type: char(64), nullable: true}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      extended_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [extension_receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [536c15ed75619ba096f1124a64000bd8d4671a49789393ae0f53ac426fe7d89e, 3e254dbc18b62b4f74c05d24ce24b60a1df7f09042bbf39b4132ab97ad041d51,
+      40ff24a37d15ba20d2fde80c7ef55055af5fd1d0cf324533686c52020aea90a2]
+  ops.privacy_request_refusal_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_refusal_receipts_v2
+    create_statement_sha256: af6ac150760ca92a9cfb223c97ad4877c557b516be821cbb0a334164fa5c90fb
+    columns:
+      refusal_receipt_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      decision_version: {type: bigint, nullable: false}
+      rejection_reason_code: {type: text, nullable: false}
+      rejection_reason_sha256: {type: char(64), nullable: false}
+      appeal_instructions_sha256: {type: char(64), nullable: false}
+      decision_digest: {type: char(64), nullable: false}
+      response_policy_id: {type: uuid, nullable: false}
+      response_policy_revision: {type: bigint, nullable: false}
+      response_policy_digest: {type: char(64), nullable: false}
+      calendar_version_id: {type: uuid, nullable: false}
+      calendar_digest: {type: char(64), nullable: false}
+      decision_at: {type: timestamptz, nullable: false}
+      notice_due_at: {type: timestamptz, nullable: false}
+      notice_receipt_id: {type: uuid, nullable: true}
+      notice_receipt_digest: {type: char(64), nullable: true}
+      event_receipt_id: {type: uuid, nullable: true}
+      event_receipt_digest: {type: char(64), nullable: true}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+    primary_key:
+      columns: [refusal_receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [f9b60d929f582eea70a09fdfd617541939eefdc8ad9364707ea15fb7a66e64f1, 7af4faf986c6a0ae09b0bb14e6b9bec41166e8eb52d3d7819a9d2bd967fb7f66,
+      80cdfed342a0c1c5d64387c9f60eb04c0fabd9d29b2a69277fc5bbd16e806e74]
+  ops.privacy_request_notice_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_notice_receipts_v2
+    create_statement_sha256: 6662e6d827c6475cee088232c7f12c266da5a1c871cf426b493f6c673ad9112d
+    columns:
+      notice_receipt_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      notice_sequence: {type: bigint, nullable: false}
+      notice_kind: {type: text, nullable: false}
+      transition_receipt_id: {type: uuid, nullable: false}
+      endpoint_id: {type: uuid, nullable: false}
+      endpoint_version: {type: bigint, nullable: false}
+      endpoint_digest: {type: char(64), nullable: false}
+      endpoint_aad_digest: {type: char(64), nullable: false}
+      encryption_key_id: {type: text, nullable: false}
+      notice_sha256: {type: char(64), nullable: false}
+      notice_aad_digest: {type: char(64), nullable: false}
+      notice_template_payload: {type: jsonb, nullable: false}
+      notice_template_digest: {type: char(64), nullable: false}
+      branch_receipt_id: {type: uuid, nullable: true}
+      branch_receipt_digest: {type: char(64), nullable: true}
+      event_receipt_id: {type: uuid, nullable: true}
+      event_receipt_digest: {type: char(64), nullable: true}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [notice_receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [aed77f8fbf92d0927a6cdfd0cbe119ffb5ad79b2b1ef5770997e5749066f2c24, 59ce8d8803a3d8e21a94bddafe97716abd669ea551712d6aa07d425f2c8b0bbf,
+      047b353c3fd523b2876d0ccd99af1b364f20d34a312a7345c6fb497096050376]
+  ops.privacy_request_transition_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_transition_receipts_v2
+    create_statement_sha256: 3d20502efc87e6641df60c0df69e0e7d7be1f727d26b63484470a735e3e1ca30
+    columns:
+      transition_receipt_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      decision_version: {type: bigint, nullable: false}
+      transition: {type: text, nullable: false}
+      prior_state: {type: text, nullable: false}
+      state: {type: text, nullable: false}
+      reason_code: {type: text, nullable: false}
+      reason_sha256: {type: char(64), nullable: false}
+      reason_aad_digest: {type: char(64), nullable: false}
+      extension_reason_code: {type: text, nullable: true}
+      extension_reason_sha256: {type: char(64), nullable: true}
+      extension_reason_aad_digest: {type: char(64), nullable: true}
+      rejection_reason_code: {type: text, nullable: true}
+      rejection_reason_sha256: {type: char(64), nullable: true}
+      rejection_reason_aad_digest: {type: char(64), nullable: true}
+      appeal_instructions_sha256: {type: char(64), nullable: true}
+      appeal_instructions_aad_digest: {type: char(64), nullable: true}
+      encryption_key_id: {type: text, nullable: false}
+      actor_id: {type: uuid, nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      actor_action_digest: {type: char(64), nullable: false}
+      step_up_authorization_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_sha256: {type: char(64), nullable: false}
+      identity_receipt_id: {type: uuid, nullable: true}
+      identity_receipt_digest: {type: char(64), nullable: true}
+      extension_receipt_id: {type: uuid, nullable: true}
+      extension_receipt_digest: {type: char(64), nullable: true}
+      refusal_receipt_id: {type: uuid, nullable: true}
+      refusal_receipt_digest: {type: char(64), nullable: true}
+      notice_receipt_id: {type: uuid, nullable: true}
+      notice_receipt_digest: {type: char(64), nullable: true}
+      event_receipt_id: {type: uuid, nullable: true}
+      event_receipt_digest: {type: char(64), nullable: true}
+      audit_event_id: {type: uuid, nullable: false}
+      outbox_event_ids: {type: 'uuid[]', nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      decided_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [transition_receipt_id]
+    unique_constraints:
+      - {columns: [transition_receipt_id, privacy_request_id]}
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [b0c20d72453e711233a417ee8013a3d4ab6f36df3cbe674b623dfec6b321cb7e, 86fcc3448e2e3a5060dd73f309c6638c893583079c7bfded06f369c6a13e426a,
+      2796cae9be32ab6d889febd552c7587913187d7be2b6f47c0d34c84092518d6c]
+  editorial.named_person_review_stage_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.named_person_review_stage_receipts_v1
+    create_statement_sha256: 063131aae95520d4fcaeea1c679242152fe5c1e1059895b7be49169da409c0ed
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      decision_id: {type: uuid, nullable: false}
+      review_snapshot_id: {type: uuid, nullable: false}
+      case_id: {type: uuid, nullable: false}
+      case_version: {type: bigint, nullable: false}
+      review_assignment_id: {type: uuid, nullable: false}
+      review_assignment_version_before: {type: bigint, nullable: false}
+      review_assignment_version_after: {type: bigint, nullable: false}
+      review_task_id: {type: uuid, nullable: true}
+      review_task_version_before: {type: bigint, nullable: true}
+      review_task_version_after: {type: bigint, nullable: true}
+      review_stage: {type: text, nullable: false}
+      decision: {type: text, nullable: false}
+      reviewer_user_id: {type: uuid, nullable: false}
+      reviewer_authority_digest: {type: char(64), nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      actor_action_digest: {type: char(64), nullable: false}
+      assurance_level: {type: text, nullable: false}
+      effective_capability: {type: text, nullable: false}
+      step_up_authorization_id: {type: uuid, nullable: true}
+      step_up_receipt_digest: {type: char(64), nullable: true}
+      decision_digest: {type: char(64), nullable: false}
+      referenced_editorial_decision_id: {type: uuid, nullable: true}
+      referenced_editorial_stage_receipt_id: {type: uuid, nullable: true}
+      referenced_editorial_stage_receipt_digest: {type: char(64), nullable: true}
+      named_person_override_id: {type: uuid, nullable: true}
+      named_person_override_digest: {type: char(64), nullable: true}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      outbox_event_id: {type: uuid, nullable: false}
+      outbox_event_type: {type: text, nullable: false}
+      outbox_event_digest: {type: char(64), nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [ed22164de473d8a31f641ac617e53b6141e151e51a3ce626924114b0722f4304]
+  editorial.publication_preview_owner_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.publication_preview_owner_receipts_v2
+    create_statement_sha256: 182ac429844d381cc4fa23f7adcef5fffa93bd534dc0bf4ce05f660e535d6f02
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      preview_id: {type: uuid, nullable: false}
+      case_id: {type: uuid, nullable: false}
+      case_version: {type: bigint, nullable: false}
+      review_snapshot_id: {type: uuid, nullable: false}
+      assessment_id: {type: uuid, nullable: false}
+      assessment_digest: {type: char(64), nullable: false}
+      assessment_receipt_digest: {type: char(64), nullable: false}
+      public_payload_sha256: {type: char(64), nullable: false}
+      publication_state: {type: editorial.publication_state, nullable: false}
+      public_text_sha256: {type: char(64), nullable: false}
+      registered_name_set_sha256: {type: char(64), nullable: false}
+      locale: {type: text, nullable: false}
+      legal_review_required: {type: boolean, nullable: false}
+      status: {type: text, nullable: false}
+      actor_id: {type: uuid, nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      actor_action_digest: {type: char(64), nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      expires_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [2aac0f7b46a1a6d0ca4b7e07d8a52e3afd178476a2b87cf0804e4ec82dc295be]
+  editorial.publication_revision_owner_receipts_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE editorial.publication_revision_owner_receipts_v2
+    create_statement_sha256: 0756331fd56ab1c5bddf6b05178e9e938a89bc3019762b0897cd7b157ad17d20
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      mode: {type: text, nullable: false}
+      case_id: {type: uuid, nullable: false}
+      prior_case_version: {type: bigint, nullable: false}
+      case_version: {type: bigint, nullable: false}
+      review_snapshot_id: {type: uuid, nullable: false}
+      source_review_snapshot_id: {type: uuid, nullable: true}
+      revision_id: {type: uuid, nullable: false}
+      revision: {type: integer, nullable: false}
+      publication_state: {type: editorial.publication_state, nullable: false}
+      assessment_id: {type: uuid, nullable: false}
+      assessment_digest: {type: char(64), nullable: false}
+      preview_sha256: {type: char(64), nullable: true}
+      public_payload_sha256: {type: char(64), nullable: false}
+      correction_id: {type: uuid, nullable: true}
+      prior_correction_version: {type: bigint, nullable: true}
+      correction_version: {type: bigint, nullable: true}
+      actor_id: {type: uuid, nullable: false}
+      actor_assertion_jti: {type: uuid, nullable: false}
+      actor_action_digest: {type: char(64), nullable: false}
+      step_up_authorization_id: {type: uuid, nullable: true}
+      editorial_review_stage_receipt_id: {type: uuid, nullable: false}
+      editorial_review_stage_receipt_digest: {type: char(64), nullable: false}
+      revision_reason_sha256: {type: char(64), nullable: false}
+      command_reason_sha256: {type: char(64), nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      outbox_event_ids: {type: 'uuid[]', nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      published_at: {type: timestamptz, nullable: false}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [79e66a410cd42c1d99ff69302b6e7de2de0fd7eeb47cbeb2f758034ca92a7fd1]
+  ops.r6d_person_retention_execution_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.r6d_person_retention_execution_receipts_v1
+    create_statement_sha256: 6ee24de3fbed2fe3aa0e504172f17563b291b5b8771ba53ab100332be349908c
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      job_id: {type: uuid, nullable: false}
+      job_fencing_token: {type: bigint, nullable: false}
+      job_lease_token_sha256: {type: char(64), nullable: false}
+      job_payload_digest: {type: char(64), nullable: false}
+      context_id: {type: uuid, nullable: false}
+      person_node_id: {type: uuid, nullable: false}
+      topology_digest: {type: char(64), nullable: false}
+      person_name_digest: {type: char(64), nullable: false}
+      context_state_digest: {type: char(64), nullable: false}
+      schedule_id: {type: uuid, nullable: false}
+      record_class: {type: text, nullable: false}
+      schedule_revision: {type: bigint, nullable: false}
+      schedule_digest: {type: char(64), nullable: false}
+      trigger_kind: {type: text, nullable: false}
+      trigger_at: {type: timestamptz, nullable: false}
+      due_at: {type: timestamptz, nullable: false}
+      erasure_receipt_id: {type: uuid, nullable: false}
+      erasure_receipt_digest: {type: char(64), nullable: false}
+      erasure_audit_event_id: {type: uuid, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      governance_retention_schedule_id: {type: uuid, nullable: false}
+      governance_retention_record_class: {type: text, nullable: false}
+      governance_retention_schedule_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      completed_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [447c4f90bd775a8004c86a88cda993dc08498d28f4f02302ee6e80b28fc0ec2a]
+  ops.privacy_request_access_policies_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_access_policies_v1
+    create_statement_sha256: 2803120574e3dac8c318a24c7675da6c4e226eb97743293c1b245e597dd330ca
+    columns:
+      policy_id: {type: uuid, nullable: false}
+      revision: {type: bigint, nullable: false}
+      state: {type: text, nullable: false}
+      authority: {type: text, nullable: false}
+      policy_version: {type: text, nullable: false}
+      allowed_operation: {type: text, nullable: false}
+      bff_issuer: {type: text, nullable: false}
+      cookie_profile_id: {type: text, nullable: false}
+      cookie_name: {type: text, nullable: false}
+      cookie_path: {type: text, nullable: false}
+      same_site: {type: text, nullable: false}
+      secure: {type: boolean, nullable: false}
+      http_only: {type: boolean, nullable: false}
+      token_ttl_seconds: {type: bigint, nullable: false}
+      read_only_session_ttl_seconds: {type: bigint, nullable: false}
+      policy_payload: {type: jsonb, nullable: false}
+      policy_canonical: {type: bytea, nullable: false}
+      policy_digest: {type: char(64), nullable: false}
+      binding_digest: {type: char(64), nullable: false}
+      effective_at: {type: timestamptz, nullable: false}
+      review_expires_at: {type: timestamptz, nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [policy_id, revision]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: immutable unseeded access-policy authority carries no runtime schedule tuple or user data; zero
+        or non-approved current rows fail closed}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [a41f33e9c7ccecc058a8532da377eea44e2998159dcaac2928c008fb330b7f40]
+  ops.privacy_request_sealed_content_v2:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_sealed_content_v2
+    create_statement_sha256: f63fbe94f2e41b871005c812cf9aa06b28bbba7bf5f2475708c9b0789a613ce4
+    columns:
+      privacy_request_id: {type: uuid, nullable: false}
+      transition_receipt_id: {type: uuid, nullable: false}
+      field_kind: {type: text, nullable: false}
+      schema_version: {type: smallint, nullable: false}
+      sealed_ciphertext: {type: bytea, nullable: true}
+      sealed_sha256: {type: char(64), nullable: false}
+      sealed_aad_digest: {type: char(64), nullable: false}
+      encryption_key_id: {type: text, nullable: false}
+      content_state: {type: text, nullable: false}
+      expires_at: {type: timestamptz, nullable: false}
+      erasure_receipt_id: {type: uuid, nullable: true}
+      erasure_receipt_digest: {type: char(64), nullable: true}
+      retention_schedule_id: {type: uuid, nullable: false}
+      retention_record_class: {type: text, nullable: false}
+      retention_schedule_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+      erased_at: {type: timestamptz, nullable: true}
+    primary_key:
+      columns: [transition_receipt_id, field_kind]
+    grants: {authority: 'no direct runtime SELECT or DML; SECURITY DEFINER owners enforce active, expiry, parent, schedule,
+        and erasure boundaries'}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [e43d709262146af2a591cd03de85adc83d0ee3fe4945c192fee393b77bf13a7c, 1bf10b65eee1e1a58534b9d4d0c315b389dfd19b7283d3cca54263033bd086c4]
+  ops.privacy_request_sealed_content_erasure_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0038_r6d_legal_hardening.sql#CREATE TABLE ops.privacy_request_sealed_content_erasure_receipts_v1
+    create_statement_sha256: 1c9afb30e40c19e78d7ef9e84e7426f88c8ef82e23017bfd484f9a7fbdaa4ea4
+    columns:
+      erasure_receipt_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      transition_receipt_id: {type: uuid, nullable: false}
+      field_kind: {type: text, nullable: false}
+      prior_content_state: {type: text, nullable: false}
+      content_schema_version: {type: smallint, nullable: false}
+      prior_sealed_sha256: {type: char(64), nullable: false}
+      prior_sealed_aad_digest: {type: char(64), nullable: false}
+      prior_encryption_key_id: {type: text, nullable: false}
+      prior_content_binding_digest: {type: char(64), nullable: false}
+      content_retention_schedule_id: {type: uuid, nullable: false}
+      content_retention_record_class: {type: text, nullable: false}
+      content_retention_schedule_digest: {type: char(64), nullable: false}
+      content_created_at: {type: timestamptz, nullable: false}
+      content_expires_at: {type: timestamptz, nullable: false}
+      authorization_evidence_digest: {type: char(64), nullable: false}
+      active_legal_hold_count: {type: bigint, nullable: false}
+      legal_hold_coverage_digest: {type: char(64), nullable: false}
+      actor_type: {type: text, nullable: false}
+      actor_id: {type: text, nullable: false}
+      request_id: {type: uuid, nullable: false}
+      idempotency_key_sha256: {type: char(64), nullable: false}
+      request_digest: {type: char(64), nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      erased_at: {type: timestamptz, nullable: false}
+    primary_key:
+      columns: [erasure_receipt_id]
+    grants: {authority: exact REVOKE and GRANT statements in 0038; no implicit runtime DML}
+    rls: {enabled: false, forced: false, reason: internal fixed-path relation closed by exact ACL and owner routines}
+    retention: {authority: 'exact schedule tuple, immutable ancestry, or parent binding in 0038; no absent binding is inferred'}
+    repository_roundtrip: {authority: 'fixed owner routine, digest, foreign-key, and immutable receipt path in 0038'}
+    alter_statement_sha256: [7c903e297e99af222095872d9ac1978628e102362f402d6ebf0dc1f01920a721]
+alter_statement_inventory:
+  ops.action_approval_retention_schedule_details: [5e1f076409ce97d32dc7c4ea0b55fa85d264218f51ffdecdd89038aa7172390e, f2ea14a4019f1a56b78a4cb4340b55f416b173b8e38d7ab7cadd9d5c3d862602]
+  ops.record_class_schedules: [12faca1d28ddfd1d2f35e8515091c511c747e6b029b5cecbe6cc15395d35cfbb, 5d0a3fff749aa64406f5eda1efc9714ad61ededf817f67decc62451f1721dfb0]
+  ops.r6d_record_class_catalog: [408c84668c29f178de6d25f5e97cf5a9abe416a9b0c7460074fa8117a415f203]
+  core.agencies: [b5dfdde7abd7453fb797ec4d039f85ee417f82482647d743fc0451cb27e66078, 125f8e81ffa872168b57ba4231b1bce56296b5a3ad3a261d06f960df19b3295c]
+  core.suppliers: [c366f65542a82c4ee408eb2e29a6f2d05de203b6d056195e89971233532e8537, 5970b89c6452bf47d160713543b6300d9a80846883ce736fb0626be7cd853778]
+  core.agency_identifiers: [c58fb5d91b543ee02ccbd34219dbadf4ee28ce23747d332e016b8ca7c5e21858, e2cdd56568aa8d959d8842eaa5ed93f90b3d49db6e1b78279013e60b30318e6e]
+  core.supplier_identifiers: [304e329a9295aae9724a94de90ef2c066318e84555de3f04ef0ae3a47c3caa16, 856b65eae2d2d82fd560a24684fdef6128fe7710b0d8f78cd586ba16589c84eb]
+  core.entity_aliases: [3c245a5cddae7ac7f179676ce26201aa17a3139719055b658f7d356f2d7367ca, af610a8d7d2ebc660885c11415ff053c892e86b93b07154334b3b057b52608e7]
+  core.relationship_graph_person_nodes_v3: [c2fc5dedcda496a59e9710aa4dfcd511cbfa673bb0a1bb93714f23d8ea75ff61]
+  core.relationship_graph_person_context_v3: [0d874b34f800992ce7689cce0cb30a86dda9c6c015e4bd589103517487a6f980]
+  core.relationship_graph_person_erasure_receipts_v3: [a100fa5992e6a624534b25ba2aa708fc392215e7de4b1786392841acd2a6263f, 6a358f3d8d12aecc137c885cc76cba97ba9a7e01ace752f10d93e7736e421189]
+  editorial.named_person_publication_policies: [f39bb2a59e221b498d5fc6d2c1ad0b62177e30f5948491e3934e5c4e15c97f7b]
+  editorial.named_person_publication_assessments: [62fbc27a0eb353791001b056f20d1cd96aee4d53a577ec98538a68574e9d9511, cb6448d46a6f7bd179caa731533381e940caf107f7a277313b490ecf2bbca9c5]
+  editorial.named_person_publication_findings: [0e1af55c42d46f2f2260ace51a43ca0a99866f97d791e6b5c8588456f43b5d1f, 72da6da4aaeb8df9e44d2385027288a236e05840220b0ab0aea15d3803a2b60e]
+  editorial.named_person_legal_overrides: [ab53d6a26ded1ddd166b865e1b16d762ccc2f1e96ccbb287dc1a763c7acdf9fb, 91b6d72ab7bd6b234f47f7f627028d9214e7ad33d57083b7933de22307012664,
+    7cfb0ca067450af49a0d99691c4a7b13c6233447ef0e991fba51716dbcb8aedd]
+  ops.entity_retention_snapshots_v1: [0fcc2e15809e8b32c752f3c1942fb3160e7f9e50df619906fb8756c296b33e43]
+  ops.legal_hold_target_anchors: [c0d47bb204f8aaa8402a21a6475dd880ac77ec154ee2d55af2f0e22c4fd252f7, 25f50ff599627d9ccf4de74038671e55ff5213c773bec79f79f7642d95e3e471,
+    f152c1747571745fc8a9ddbe208af989e15b1542ea8bcbbd81889203438836b4]
+  editorial.legal_holds: [43eeaf1f16c404bf58d91cb59598ec0a0ada8acb9d16b2900d4045a7ef0a2f4f, 39cb66c7d9d7ff1fa693abf2eba014ed004cb706c66cfebf3fb204da4ec4ff61]
+  ops.legal_hold_placement_receipts_v2: [d065fb9576ccd4c4d537969eb35daa726dc13a6fff45b774f36c39b2db491401]
+  intake.response_submissions: [cd77912b9c62a5e78005380dccef7b266bcaa2a7bf97c68f4a3bfef4d2c0245a, e30b4c975049aa08d19b4a5b81a20d7f5e3823a916fea8d9121cb12e55843911,
+    9628cb1a1c6072bda298b790215fdda99913e9c9b9f985d888f1aa00222bc2fa]
+  editorial.responses: [73b07f5307726102f3700138ebd6e392847f33235e75d8f5423dd751e0f154ee, 9e231a0e5de7dca7d0947990988ec994fd5fc792a8af64437bdc89030186ac23,
+    ab2a93943ee4e61009465af4bb292487adcca8daade32e349f8c3a15a3bc46ad, 4242e6c9f89d94d83d228cdf28a6a71ecd88f8ca4aea5f6f2861028bb77d65a3]
+  editorial.response_submission_origin_receipts_v2: [476ddee79e06b63deab55ece6cb6a43d1b5e160a6e9c03a6c4046821933227bb, 3ee1e0d49763ff6f1d0480c9977b06cfccb36a5eaf8a54fa3c8067f2571dbb6e]
+  editorial.organization_official_channel_assertions_v1: [baf3d1c96a776288a7da8453f1b696b9b1be22d590812d6ba57e13dfdebe1bbc]
+  editorial.organization_official_channel_revocation_receipts_v1: [e371fdaf7935eb5d5abf777cde0e72fe1e42ac772ca20bfc5cefbccd905b77c3]
+  editorial.response_organization_identity_assertions_v1: [b82f1b86de1101b0e62bfdf085a0fae15e126444fb97c3c3164f079ac0e9f934,
+    64fa13d603f2f1820ab8aac51f417b697a2d6e68a5c494d0aadd09135519b1b1, 40f23539d8db6d0180aebe2743ce30f3e16dd502be199f32c02f5f693fc29649]
+  editorial.response_publication_identity_receipts_v1: [21974ab1ed8ded1e689fc20c77f7151806f694b692cef10193d8024fe9e8dc9c,
+    8f83a0b9d77fe76b94178be924ff39722c1e3765566a04ca6ea8879f7e70cdf0]
+  intake.response_submission_receipts_v3: [5388936c171acfe3aa238812fd5fa7f2b71fd26beabe35267995f8b6d8b29bd7, f7e4e56791da019860cf80f4ba64b38190f046dc50aac5b6bd597eb10ae43d7e]
+  editorial.response_excerpt_approval_receipts_v2: [4cc3eefb2a1e490fa775ad3522750c005d9a14c091c07f07ba6da7e740431518, bd433fc20d1430a247338906da4ecab39b690271ab28e76a14226ea374cbe245]
+  intake.submission_sessions: [c3dacbe0d6fcf4994873f5ea22a9e0bf3f9fc431c7efffbca375beb904c2e61c, 72326707308c3027e1e1d4a7fe50abec795ab55ec3b9d3c15a961bdb4d1fdd7f,
+    1155240e3c317910ae620684a77b4cd3d10331e96bb74cee17726fbe37bbbda4]
+  intake.communication_endpoints: [729b32d767c1136f0d0951fc1184d653c616795aafbb9c4546ae4ef0ebbe41dd, dd44113dc48491047014ed8a1c64cb84232ada34c4883d7eb854eb8e0d614578]
+  ops.privacy_response_calendar_policies_v1: [e0bf53e93af99371bedaedc011150d61cda1358e5912eb378f4bae369d3f9b46]
+  ops.privacy_requests_v2: [f7854429c6018d348a38c15d719a7cf8cbbfad3ba13581ba1410fbfca2133935]
+  ops.privacy_request_receipt_tokens_v2: [378f08d280541cf9f6ea4a999fbb4ab26c8f9467b636897e58d6e05d089197aa, 8ec1fb66ab51137f445e7cdaaa9470abe072cbf3f1e7f59741da29efb2b88494]
+  ops.privacy_request_identity_receipts_v2: [743e402f27264173f28ae91eede7e17aff1a2ea1ad55e0bf2bdd6190cb09c862, 812cec54c59d36993031486c02fc9ba870de3a32a0a09926206db17647f37cf2,
+    b85ea03fb7e2be2f7f6ee740e859045e1a53ca14f068c3f68869c097c6b64955]
+  ops.privacy_request_extension_receipts_v2: [536c15ed75619ba096f1124a64000bd8d4671a49789393ae0f53ac426fe7d89e, 3e254dbc18b62b4f74c05d24ce24b60a1df7f09042bbf39b4132ab97ad041d51,
+    40ff24a37d15ba20d2fde80c7ef55055af5fd1d0cf324533686c52020aea90a2]
+  ops.privacy_request_refusal_receipts_v2: [f9b60d929f582eea70a09fdfd617541939eefdc8ad9364707ea15fb7a66e64f1, 7af4faf986c6a0ae09b0bb14e6b9bec41166e8eb52d3d7819a9d2bd967fb7f66,
+    80cdfed342a0c1c5d64387c9f60eb04c0fabd9d29b2a69277fc5bbd16e806e74]
+  ops.privacy_request_notice_receipts_v2: [aed77f8fbf92d0927a6cdfd0cbe119ffb5ad79b2b1ef5770997e5749066f2c24, 59ce8d8803a3d8e21a94bddafe97716abd669ea551712d6aa07d425f2c8b0bbf,
+    047b353c3fd523b2876d0ccd99af1b364f20d34a312a7345c6fb497096050376]
+  ops.privacy_request_transition_receipts_v2: [b0c20d72453e711233a417ee8013a3d4ab6f36df3cbe674b623dfec6b321cb7e, 86fcc3448e2e3a5060dd73f309c6638c893583079c7bfded06f369c6a13e426a,
+    2796cae9be32ab6d889febd552c7587913187d7be2b6f47c0d34c84092518d6c]
+  public.approved_record_class_schedules: [78c30ffe63f66f2a00cf07c16ab4c7991ab79a9f09decbee80a20015ecf3e124]
+  editorial.named_person_review_stage_receipts_v1: [ed22164de473d8a31f641ac617e53b6141e151e51a3ce626924114b0722f4304]
+  editorial.publication_previews: [83e055496c5bed95d0968c1cdd348afff233908489b94fbd8166f221400a954e]
+  editorial.publication_preview_owner_receipts_v2: [2aac0f7b46a1a6d0ca4b7e07d8a52e3afd178476a2b87cf0804e4ec82dc295be]
+  editorial.publication_revision_owner_receipts_v2: [79e66a410cd42c1d99ff69302b6e7de2de0fd7eeb47cbeb2f758034ca92a7fd1]
+  editorial.conflict_snapshots: [0421700ec62fd273e1ddec0e3ae018bb7465f4aa7f402401a2982511c0205850, f5ff90738317e1404c6572ccc8555ff9fa423c702820ab6c35f484594e119b5f]
+  editorial.legal_hold_releases: [abca366373012d06e7fba99f8ceda8c28d736b707c85e9ecae5c66f58a3c6ad5]
+  ops.r6d_person_retention_execution_receipts_v1: [447c4f90bd775a8004c86a88cda993dc08498d28f4f02302ee6e80b28fc0ec2a]
+  ops.privacy_request_access_policies_v1: [a41f33e9c7ccecc058a8532da377eea44e2998159dcaac2928c008fb330b7f40]
+  ops.privacy_request_sealed_content_v2: [e43d709262146af2a591cd03de85adc83d0ee3fe4945c192fee393b77bf13a7c, 1bf10b65eee1e1a58534b9d4d0c315b389dfd19b7283d3cca54263033bd086c4]
+  ops.privacy_request_sealed_content_erasure_receipts_v1: [7c903e297e99af222095872d9ac1978628e102362f402d6ebf0dc1f01920a721]
+owner_routines:
+- {signature: ops.r6d_lower_sha256(p_value text) RETURNS boolean, canonical_ddl_sha256: bd66eb0569cc07d87f0d7253b9809e0e9d723aa3f87f2ed94489a9cda4307c51}
+- {signature: ops.bind_r6d_identity_schedule_v1() RETURNS trigger, canonical_ddl_sha256: fa1f544ed0172f0afcc9a4c9ca75cb7b0509bb3a1c83eb0c2ac82f04068aa0e0}
+- {signature: core.reject_new_v2_person_plaintext_v1() RETURNS trigger, canonical_ddl_sha256: fdc72675b1f7fad308e5a925faad8cc7c712c26937da8f684c81873c2ea05178}
+- {signature: core.guard_person_context_v3_update() RETURNS trigger, canonical_ddl_sha256: 1212904aa0b2ceb621e6cb9a75173187be7a6b542233a65f118c7c1ec4133fd2}
+- {signature: 'core.list_publication_person_names_v1() RETURNS TABLE (person_node_id uuid, topology_digest char(64), context_id
+    uuid, contextual_name_ciphertext bytea, contextual_name_sha256 char(64), contextual_name_aad_digest char(64), role_title_ciphertext
+    bytea, role_title_sha256 char(64), role_title_aad_digest char(64), encryption_key_id text, person_name_digest char(64))',
+  canonical_ddl_sha256: 78c6a28f3f63c3ead51802b571f80269426c6d02b49b921156b7063dc315900e}
+- {signature: 'editorial.named_person_finding_identity_digest_v1(p_ordinal integer, p_detector_kind text, p_json_pointer text,
+    p_start_utf16 integer, p_end_utf16 integer, p_matched_text_sha256 text, p_ruleset_version text, p_context_id uuid, p_person_node_id
+    uuid, p_topology_digest text, p_person_name_digest text) RETURNS char(64)', canonical_ddl_sha256: 4865ae2483420ff06e97664fd84b4049486c2055f7c47bcf5c79070941c6e936}
+- {signature: editorial.official_confirmation_valid_v1(p_value jsonb) RETURNS boolean, canonical_ddl_sha256: e3216620ff41e0669d763873b7c10da75fca5b4f635dd53fb6682fece1707126}
+- {signature: editorial.correction_notice_valid_v1(p_value jsonb) RETURNS boolean, canonical_ddl_sha256: a270d5a668004af2e7c10c751bb87f2f5f2d85f5aafe51213ff34ac0fa2e3a02}
+- {signature: ops.lock_research_hold_domain_v1() RETURNS trigger, canonical_ddl_sha256: 97a7935092e1bc747175b301b9e608da43063d4714bf17c2ce765f27f97bf592}
+- {signature: ops.r6d_outbox_envelope_digest_v1(p_event_id uuid) RETURNS char(64), canonical_ddl_sha256: de38f673fd3e73bfe3e2e494e320e5907b5787bb37525d460aa57b86e4b1e40f}
+- {signature: editorial.guard_response_submission_owned_intake_v2() RETURNS trigger, canonical_ddl_sha256: 281757eb97033b28599ceb002dca53edcf9e57e4fe951e8a243d71af92734336}
+- {signature: editorial.guard_response_identity_update_v1() RETURNS trigger, canonical_ddl_sha256: ff21645c2d402b3c205fc16e2e2569f86bef287a5bceb33be1fe4c6dd57c579e}
+- {signature: 'editorial.materialize_response_submission_v2(p_intake_receipt editorial.response_submission_intake_materialize_v1,
+    p_actor_id uuid, p_idempotency_key char(64), p_request_digest char(64)) RETURNS editorial.response_submission_intake_materialize_receipt_v2',
+  canonical_ddl_sha256: 76c21602219173dbad2878fb5e338c731decfc264e04b9fc2c85eaaf40389867}
+- {signature: editorial.materialize_response_submission_intake_v1(p_input editorial.response_submission_intake_materialize_v1)
+    RETURNS editorial.response_submission_intake_materialize_receipt_v1, canonical_ddl_sha256: 955dc9a373455bccd74ac9e125e2926cc2a6f0a6a90688caf1417ddf6bcb926c}
+- {signature: intake.r6d_publication_consent_valid_v1(p_value jsonb) RETURNS boolean, canonical_ddl_sha256: b55c437a65b2bb7bda0c30c8d384a1aa2a2303e6e17544b04ccf129ec2d4bb8b}
+- {signature: 'intake.submit_response_session_v3(p_session_token_hash char(64), p_bff_issuer text, p_expected_version bigint,
+    p_attestation boolean, p_submission_sha256 char(64), p_answers_encrypted bytea, p_publication_consent jsonb, p_submission_id
+    uuid, p_receipt_token_hash char(64), p_receipt_session_token_hash char(64), p_receipt_session_expires_at timestamptz,
+    p_idempotency_key_sha256 char(64), p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: 7ed8c5016752773428d2255377c697e65eb68dde93b1afb64a600823e06a0a6f}
+- {signature: editorial.guard_response_excerpt_approval_v2() RETURNS trigger, canonical_ddl_sha256: 71fda31cf9027e0d2cd15d60d2b82a2b5a66b62cca781b058b40a1367ab0a5ff}
+- {signature: editorial.approve_response_excerpt_guarded_v2(p_request jsonb) RETURNS jsonb, canonical_ddl_sha256: 579d0b2c706bc71922383c9a6a9f0166aebe2597e60dda4eadbeb3be904ccff8}
+- {signature: 'intake.verify_response_submission_notification_v2(p_event_id uuid, p_payload jsonb) RETURNS jsonb', canonical_ddl_sha256: 6987e83b807512286ae43d8800928c4063e29dd34bffab5d937c8284510687d3}
+- {signature: 'editorial.require_current_official_channel_v1(p_assertion_id uuid, p_organization_kind text, p_organization_id
+    uuid, p_response_request_id uuid, p_case_id uuid, p_identity_actor_id uuid, p_evaluated_at timestamptz) RETURNS jsonb',
+  canonical_ddl_sha256: 9ef084d40be4e6ab584da66c0664aaec9c22bfb0ffa15cd9265beed9a71e5d37}
+- {signature: 'editorial.verify_response_organization_identity_v1(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key
+    char(64), p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: a1bac53cee5ff7fa8a1ce586565b110de2bfbc719c4dff04710b184e0f8e1da0}
+- {signature: editorial.guard_response_excerpt_identity_source_v2() RETURNS trigger, canonical_ddl_sha256: 6baa8a5a7f9dda272aebc9f8fb3c66cd82747e2ca5297f444f0ede13eee932ea}
+- {signature: 'editorial.named_person_legal_override_digest_v1(p_public_text_sha256 text, p_ruleset_version text, p_reason_code
+    text, p_official_source_locator text, p_official_source_sha256 text, p_legal_reviewer_id text) RETURNS char(64)', canonical_ddl_sha256: ee89be2230b43dd5dd3b56547766c60c2f002ea39593038eaa663bcb874e7711}
+- {signature: 'ops.r6d_user_capability_authority_digest_v1(p_user_id uuid, p_required_role text, p_required_capability text)
+    RETURNS char(64)', canonical_ddl_sha256: 592a1df76441bdf26db9279c32234527c38b371303307a5a08d7a5c2e95367ff}
+- {signature: editorial.review_decision_digest_v1(p_decision_id uuid) RETURNS char(64), canonical_ddl_sha256: 0f046554e6d74a3b6ebd9bab3fc75786a00eb7ef3e35597b76391349743669c3}
+- {signature: editorial.record_named_person_review_stage_v1(p_request jsonb) RETURNS jsonb, canonical_ddl_sha256: cdb5cfad3c21e9d5ab189ae51a7aced4fd18c3792d39e34f758d0484733cfabc}
+- {signature: editorial.record_named_person_legal_override_v1(p_request jsonb) RETURNS jsonb, canonical_ddl_sha256: 98bd92a7c63ea6657a892caa79e265aa76726ba7673b595333deac3cfe5bf2b6}
+- {signature: editorial.r6d_public_text_node_preimage_v1(p_node jsonb) RETURNS bytea, canonical_ddl_sha256: c0586cb50e42cd2f5c641d8e96bc895078dea02493adba7aae5af5bf444caead}
+- {signature: editorial.r6d_public_data_node_v1(p_value jsonb) RETURNS jsonb, canonical_ddl_sha256: e2c4990037ca97969109dee77807f86fca4454c9758432afbf1b37c6f8f616b9}
+- {signature: editorial.r6d_text_array_node_v1(p_values jsonb) RETURNS jsonb, canonical_ddl_sha256: 585631ff5d142240593918fb05fe5c0c61ba4546cadcebcef295e16c34b20d1d}
+- {signature: editorial.r6d_current_public_text_tail_v1(p_payload jsonb) RETURNS jsonb, canonical_ddl_sha256: 2ac46f2a92f35bac62517b7a10ea3f9ccfe3f313e442be337a54ed61e55c83af}
+- {signature: editorial.r6d_archive_public_text_tail_v1(p_payload jsonb) RETURNS jsonb, canonical_ddl_sha256: 9f1b1e01aedb60844d883184fcdd2b6c61faaedec89519a93d123eb71f724a12}
+- {signature: editorial.r6d_public_text_tree_v1(p_payload jsonb) RETURNS jsonb, canonical_ddl_sha256: 97312eac1b74df2cca58f46a461c49295cb36e48345a27a8a2a6137d00ac287c}
+- {signature: editorial.r6d_public_text_sha256_v1(p_payload jsonb) RETURNS char(64), canonical_ddl_sha256: b1528af69b268fb18577c4021ccfb98db51aa8129fba9f6739f1937048d8f54d}
+- {signature: 'editorial.r6d_json_pointer_text_v1(p_document jsonb, p_pointer text) RETURNS text', canonical_ddl_sha256: a10bc55a70958978630c4b3122e1073b2f2c37bb917af900c1298d4a86966475}
+- {signature: 'editorial.r6d_utf16_slice_v1(p_text text, p_start_utf16 integer, p_end_utf16 integer) RETURNS text', canonical_ddl_sha256: 68cf05d73bab324127cce752e59f67d875f52400a0374a8e161108b8462c58df}
+- {signature: editorial.record_named_person_publication_assessment_v1(p_request jsonb) RETURNS jsonb, canonical_ddl_sha256: 0ec620987bb5db58be738a12fb8412819b84cecdee032cfa412fb9f7ff355aff}
+- {signature: 'editorial.assert_r6d_publication_guard_v2(p_case_id uuid, p_review_snapshot_id uuid, p_publication_state editorial.publication_state,
+    p_public_payload jsonb, p_public_payload_sha256 char(64), p_guard_context text) RETURNS uuid', canonical_ddl_sha256: 596ef4a048ab5bf6c461f311c279e92362f5a124987a7ff3ea96c15f37231749}
+- {signature: editorial.enforce_r6d_publication_preview_guard_v2() RETURNS trigger, canonical_ddl_sha256: 3ca437d6820d9b36fe8416cf1201590a3329783cea8afdd412f298f06310c69c}
+- {signature: editorial.enforce_r6d_publication_revision_guard_v2() RETURNS trigger, canonical_ddl_sha256: dabea46bf7e566dd0b7dd6d96710ef4a2bc9af50af4f27579760ff4e651f866c}
+- {signature: editorial.preview_publication_guarded_v2(p_request jsonb) RETURNS jsonb, canonical_ddl_sha256: 6ac1df1c61265bb02a632a93bf351ffc93c55c9fe5f1f6913774ba062007aa9c}
+- {signature: 'editorial.build_corrected_publication_payload_v2(p_correction_id uuid, p_expected_version bigint, p_reason
+    text) RETURNS jsonb', canonical_ddl_sha256: 3366b398ea9afa9f23da542a5e0f62433e7258c5838ea22e3b3d6b6a88b3c9ff}
+- {signature: 'ops.r6d_uuid_array_sorted_unique_v1(p_values uuid[]) RETURNS boolean', canonical_ddl_sha256: 3d8320fd5485a8f9301b50249abd40ccc1dd2ec2774418dabca3b6c4a80298c7}
+- {signature: editorial.guard_r6d_correction_publication_v2() RETURNS trigger, canonical_ddl_sha256: e1c646f41a6c0131fdf1cbb0386c6ed5592e92a5ea2188d0ae1019adfa586e20}
+- {signature: editorial.guard_r6d_case_publication_v2() RETURNS trigger, canonical_ddl_sha256: 15d97e3c46d583847c3c84cdd46008923f346b207486ac16ce894bdde83cad54}
+- {signature: editorial.publish_guarded_revision_v2(p_request jsonb) RETURNS jsonb, canonical_ddl_sha256: c8365b6b0bb46344916266a621705f5ad508349880a3201eb4e8ccb72ae96413}
+- {signature: 'ops.apply_signal_publication_command_v1(p_operation_id text, p_payload jsonb, p_actor_id uuid, p_session_id
+    uuid, p_request_id uuid, p_idempotency_key_hash char(64), p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: 1aa1ca0e2e5eb21e40cc7c50c9076384bea852ef5543acf00a75b1759f6511c2}
+- {signature: 'ops.apply_correction_publication_command_v1(p_operation_id text, p_payload jsonb, p_actor_id uuid, p_session_id
+    uuid, p_request_id uuid, p_idempotency_key_hash char(64), p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: 42a5708ec68c3243e4cd3b231b032beae0971f94ea74781ebc7e1161f02dbb21}
+- {signature: 'ops.place_legal_hold_v2(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key char(64), p_request_digest
+    char(64)) RETURNS jsonb', canonical_ddl_sha256: 28be4caf18ff2f827b877e30c826a0c1e4626b8eaf64adc96a73abd642505584}
+- {signature: ops.bind_legal_hold_release_schedule_v2() RETURNS trigger, canonical_ddl_sha256: fc1a286ba9c7b87ef2ec6ceac64771d09a4d0226098ca866211df3acce4332bf}
+- {signature: 'ops.r6d_legal_hold_coverage_digest_v2(p_hold_id uuid, p_placement_receipt_digest char(64), p_release_sequence
+    bigint, p_active_cells jsonb) RETURNS char(64)', canonical_ddl_sha256: 39980ba2cf49ecf6416fa382e17c1f8888bb76132a983b1f40324c269338c3fb}
+- {signature: ops.guard_legal_hold_release_v2_insert() RETURNS trigger, canonical_ddl_sha256: 3d2f5ac69599c0c16b47d37efe1d952c5705edd17e0fde34ec94ffe4845420de}
+- {signature: 'ops.r6d_legal_hold_release_state_v2(p_hold_id uuid, p_at_time timestamptz) RETURNS jsonb', canonical_ddl_sha256: f568e879554107c78b9653e6b2546fe245855af406df013805100992d70d585a}
+- {signature: 'ops.release_legal_hold_v2(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key char(64),
+    p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: 1b5f165026b0f347950bc33dff926cf25c5bc88ff5d94c310a1d4f7de48939f5}
+- {signature: 'ops.release_legal_hold_v1(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key char(64),
+    p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: 011bc780346e6d530d522ae98e10c1498d66db83030493726cacc0616e365d5a}
+- {signature: 'ops.r6d_legal_hold_cell_resolution_v1(p_hold_id uuid, p_at_time timestamptz) RETURNS jsonb', canonical_ddl_sha256: bcf2396572a3b1e68c4f5f09e5ca03a21e85212621b1163d29d1995a8fa92c9b}
+- {signature: 'ops.r6d_person_legal_hold_coverage_v1(p_record_class text, p_relation_name regclass, p_row_id uuid, p_at_time
+    timestamptz) RETURNS jsonb', canonical_ddl_sha256: b440c36bd657eae6828e8a00c6567b1117fc22551edcee0c0b3e906669a7a569}
+- {signature: 'ops.record_has_active_legal_hold(retention_record_class text, relation_name regclass, row_id uuid, at_time
+    timestamptz) RETURNS boolean', canonical_ddl_sha256: 52bc09f4aed7c0fd991f20cdcee62125bd3bbdd399181fee04ee4644dbd3a011}
+- {signature: 'ops.r6d_entity_legal_hold_coverage_v1(p_subject_kind text, p_subject_id uuid, p_at_time timestamptz) RETURNS
+    jsonb', canonical_ddl_sha256: a47eaaf2d27f38521b89975f5d1be835337fd9c75f7bfb150e92842e1377a014}
+- {signature: 'ops.r6d_privacy_request_legal_hold_coverage_v1(p_privacy_request_id uuid, p_at_time timestamptz) RETURNS jsonb',
+  canonical_ddl_sha256: 0803d23b5111ab92e81b83bf3ffc3622bfde5b588060bb176211568f5d21f8ec}
+- {signature: 'ops.create_entity_retention_snapshot_v1(p_subject_kind text, p_subject_id uuid, p_actor_id uuid, p_request_id
+    uuid, p_idempotency_key char(64), p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: 23c2cb6dc8996384cfec5edeef009057bcf6c3679bc18376005d2f12329b645b}
+- {signature: 'core.anonymize_relationship_graph_person_context_v3(p_context_id uuid, p_actor_type text, p_actor_id text,
+    p_request_id uuid, p_idempotency_key char(64), p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: 7168848a2e73517ec963e175a5d5d12ca7440a4c4c46e19e030d5a44e53ce3ff}
+- {signature: ops.enqueue_due_r6d_person_retention_jobs_v1(p_limit integer) RETURNS jsonb, canonical_ddl_sha256: 5de77d5be54425f23db2875305beb7238fee56f06d90c4b291c49b265746c27e}
+- {signature: 'ops.execute_due_r6d_person_retention_job_v1(p_job_id uuid, p_lease_token uuid, p_fencing_token bigint) RETURNS
+    jsonb', canonical_ddl_sha256: cf942282f7ef8d633822776d86f75c4037cfb404b6260e2d466f7bad59e7ddba}
+- {signature: ops.current_privacy_request_access_policy_v1(p_now timestamptz) RETURNS ops.privacy_request_access_policies_v1,
+  canonical_ddl_sha256: 2645f065ef50e253e015075139ba7287b42df524fa2af0e2189a781d6aaf52f5}
+- {signature: ops.preflight_privacy_request_access_policy_v1(p_at timestamptz) RETURNS jsonb, canonical_ddl_sha256: 84d082f41847d62d4b0bcc77c89e67f486d18963750386472f72a695e18f1a15}
+- {signature: 'ops.r6d_field_envelope_v1_is_valid(p_ciphertext bytea, p_encryption_key_id text) RETURNS boolean', canonical_ddl_sha256: 352f8d0d6df6a54fe7db57942d094ab2939428962d2613c5c2b7f8773da0eab7}
+- {signature: 'ops.r6d_nul5_sha256_v1(p_one text, p_two text, p_three text, p_four text, p_five text) RETURNS char(64)', canonical_ddl_sha256: e003ff762c7bf90efe6345367e050546566553d546264e0c1ae3e3e689a06ad6}
+- {signature: ops.guard_privacy_requests_v2_mutation() RETURNS trigger, canonical_ddl_sha256: 81b5d4ccf454d719ff367bfc837bd3ed75348a02ad6ea1d2f38ff801ef690d0e}
+- {signature: ops.guard_privacy_receipt_token_v2_mutation() RETURNS trigger, canonical_ddl_sha256: 1a09aa54383ce6421fe91d0d17858a6905b8082e2d2ecc8681443880327d8759}
+- {signature: 'ops.create_privacy_request_v2(p_payload jsonb, p_request_id uuid, p_idempotency_key_sha256 char(64), p_request_sha256
+    char(64)) RETURNS jsonb', canonical_ddl_sha256: 6b13acbcd286dee8ecdb5a409ad6632fcce5564f362966129a8a041f18900e54}
+- {signature: 'ops.exchange_privacy_request_receipt_token_v2(p_token_hmac char(64), p_next_session_sha256 char(64), p_bff_issuer
+    text, p_request_id uuid, p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb', canonical_ddl_sha256: 9ae73d7c42ddeed8d05b3c0d22db485e1a6ff2a3503e529745a809fd09288c3c}
+- {signature: 'ops.get_privacy_request_v2(p_session_sha256 char(64), p_bff_issuer text) RETURNS jsonb', canonical_ddl_sha256: 85469e27b829bf15e9097af0eeb3c87f3b3535a7bdd2b955733a1994df691f73}
+- {signature: ops.bind_privacy_request_sealed_content_v2() RETURNS trigger, canonical_ddl_sha256: a68747bba87f373e1c65c32c3e6974585cff90426bd3eeb0a9e0a44c5c9fcdab}
+- {signature: ops.guard_privacy_request_sealed_content_v2_update() RETURNS trigger, canonical_ddl_sha256: 15e0bf997bfb2ed247ab5c56eac89ed74f459a2cf6e5e709682dc0ed1968ba92}
+- {signature: 'ops.erase_privacy_request_sealed_content_v1(p_privacy_request_id uuid, p_transition_receipt_id uuid, p_field_kind
+    text, p_actor_service_id text, p_request_id uuid, p_idempotency_key_sha256 char(64), p_request_digest char(64)) RETURNS
+    jsonb', canonical_ddl_sha256: c7fb9c351f7e3c611a90650dd9e675c27fc2a66312a082324280d45d1a4217b0}
+- {signature: 'ops.transition_retention_request_v1(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key
+    char(64), p_request_digest char(64)) RETURNS jsonb', canonical_ddl_sha256: eaa281a18a009535fa38547f5e617e25c1d3864dff450149211ff6d7097ff052}
+- {signature: 'ops.add_privacy_business_days_v1(p_start_at timestamptz, p_business_days integer, p_calendar_version_id uuid,
+    p_calendar_digest char(64)) RETURNS timestamptz', canonical_ddl_sha256: b20bf217406cc8ed909ff1e9cbec900858181d2e8b5c4a6645b88a09ddf6d947}
+- {signature: 'ops.transition_privacy_request_v2(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid, p_idempotency_key_sha256
+    char(64), p_request_sha256 char(64)) RETURNS jsonb', canonical_ddl_sha256: 59f0a71fc4a5b3517492ed2e5e39e3981278082c6138ea619e1f9efe80fcd8e7}
+- {signature: 'ops.apply_control_addendum_command(p_operation_id text, p_payload jsonb, p_actor_id uuid, p_session_id uuid,
+    p_request_id uuid, p_idempotency_key_hash char(64), p_request_digest char(64)) RETURNS TABLE (aggregate_id uuid, aggregate_version
+    bigint, status text, accepted_at timestamptz, response_body jsonb, receipt_digest char(64), audit_event_id uuid, outbox_event_id
+    uuid)', canonical_ddl_sha256: 528133deda7e9b9d80fe3f3a7c87a6b3800b9a7c91d2143fe072ce32641ef626}
+- {signature: 'ops.privacy_response_policy_calendar_authority_v1_is_valid(p_policy_id uuid, p_revision bigint) RETURNS boolean',
+  canonical_ddl_sha256: 4b123b40b78c8e17c9c913c107e9336dadb4ae8b6fc6b7d290adf34aee75bc78}
+- {signature: ops.current_privacy_response_policy_calendar_v1(p_at timestamptz) RETURNS jsonb, canonical_ddl_sha256: 92feb9a12cb5c03ac00b3f4e7ec1e26d66742aa488ccb8c468f3fa50b8bb8391}
+- {signature: ops.guard_privacy_response_policy_calendar_authority_v1() RETURNS trigger, canonical_ddl_sha256: 8729cd15cd758f2d6f1788774b1c513cd8038907542c54d1e74a80cc806b8613}
+- {signature: ops.read_privacy_request_notification_delivery_v1(p_event_id uuid) RETURNS jsonb, canonical_ddl_sha256: b34c239f830f74bdb285e91f7c77e71fd40df03f9e83d32144dc6e5a23b70c7d}
+- {signature: ops.read_privacy_retention_request_workspace_v2(p_request_id uuid) RETURNS jsonb, canonical_ddl_sha256: d3829cfa0bb741a4b0fb48dacd07204ae121a0e872f9705027408263cca56116}
+- {signature: ops.read_privacy_retention_request_queue_v2(p_filters jsonb) RETURNS jsonb, canonical_ddl_sha256: 2b0abe73daa4d3791564d13eabc0b3a255c76620ca86447a251c17e181f6dfc0}
+trigger_inventory:
+- {statement: CREATE TRIGGER r6d_record_class_catalog_immutable_guard BEFORE DELETE OR UPDATE ON ops.r6d_record_class_catalog
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 4a0afd3751f4541dfcb22482839883f535cecdbad630c2f4d884a48a9e2b8afc}
+- {statement: 'CREATE TRIGGER agencies_r6d_retention_bind BEFORE INSERT OR UPDATE OF canonical_name, jurisdiction, parent_agency_id
+    ON core.agencies FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1()', canonical_ddl_sha256: f05fc1058ef56e4fb1e7b1878e621919f7052953a81f5bfde331afc81c2f39d9}
+- {statement: 'CREATE TRIGGER suppliers_r6d_retention_bind BEFORE INSERT OR UPDATE OF canonical_name, business_status ON core.suppliers
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1()', canonical_ddl_sha256: 6bab6c4a736c56378fa3684d791cf7eaa8277b0a857f9447b476937d2a308006}
+- {statement: 'CREATE TRIGGER agency_identifiers_r6d_retention_bind BEFORE INSERT OR UPDATE OF scheme, value ON core.agency_identifiers
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1()', canonical_ddl_sha256: d32c1708f5ce8bf4dc39de3fdc74943c0caedd2de92a55cf2d291db6d2dfc0ea}
+- {statement: 'CREATE TRIGGER supplier_identifiers_r6d_retention_bind BEFORE INSERT OR UPDATE OF scheme, value_hash, display_value
+    ON core.supplier_identifiers FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1()', canonical_ddl_sha256: edfdda74939050453490fc076971b7fd502e0dd691646a5ae6ca3f93899fb567}
+- {statement: 'CREATE TRIGGER entity_aliases_r6d_retention_bind BEFORE INSERT OR UPDATE OF alias, normalized_alias ON core.entity_aliases
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1()', canonical_ddl_sha256: 353242da0bd0428ea297ad7da0fe691f627b339b5951b6fe61a308ad88f05433}
+- {statement: CREATE TRIGGER relationship_graph_endpoints_v2_person_retired_guard BEFORE INSERT ON core.relationship_graph_endpoints_v2
+    FOR EACH ROW EXECUTE PROCEDURE core.reject_new_v2_person_plaintext_v1(), canonical_ddl_sha256: 7f61c81148b5e9093bbf1519bc6cb4fce8a93b5357dedd5aada4e3e92bd6ba0a}
+- {statement: CREATE TRIGGER relationship_graph_person_nodes_v3_retention_bind BEFORE INSERT ON core.relationship_graph_person_nodes_v3
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 8d3ca41bcfb75933c9f31c6be06a48f4fdbcd66b65f30c1a1b8d7cf198a44c6a}
+- {statement: CREATE TRIGGER relationship_graph_person_nodes_v3_immutable_guard BEFORE DELETE OR UPDATE ON core.relationship_graph_person_nodes_v3
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 5f499c2c364da8926f94e13f5c8832a834006d8700ef361768e2774131f176c2}
+- {statement: CREATE TRIGGER relationship_graph_person_context_v3_retention_bind BEFORE INSERT ON core.relationship_graph_person_context_v3
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 027f438f44e7121c594622f43139dec1b6c3bb0396a19801858d938c4841807e}
+- {statement: CREATE TRIGGER relationship_graph_person_erasure_receipts_v3_immutable_guard BEFORE DELETE OR UPDATE ON core.relationship_graph_person_erasure_receipts_v3
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 7a8b66e223fa1f64cbca63d0769d8dadcd04f0fe67b63e7a7048ddd152ed435d}
+- {statement: CREATE TRIGGER relationship_graph_person_context_v3_update_guard BEFORE DELETE OR UPDATE ON core.relationship_graph_person_context_v3
+    FOR EACH ROW EXECUTE PROCEDURE core.guard_person_context_v3_update(), canonical_ddl_sha256: 7aad2d5007972214a3a4aeb724fee86a4139c16fb5957f5502ff1c7f84e09502}
+- {statement: CREATE TRIGGER named_person_publication_policies_immutable_guard BEFORE DELETE OR UPDATE ON editorial.named_person_publication_policies
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 803b38489224fe655f5da7dd585596adca88a5d967bcbaf84f7f9dd629e083c7}
+- {statement: CREATE TRIGGER named_person_publication_assessments_immutable_guard BEFORE DELETE OR UPDATE ON editorial.named_person_publication_assessments
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 7d14d7f963554e8e8ef65184a609cdf819e44970d84ccc839419e8e86dd499bd}
+- {statement: CREATE TRIGGER named_person_publication_findings_immutable_guard BEFORE DELETE OR UPDATE ON editorial.named_person_publication_findings
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: c6f7571c142ee0131d7e82638007b7ab9841cdfbe7c60dbb74eb9d4ceb898b6b}
+- {statement: CREATE TRIGGER named_person_legal_overrides_immutable_guard BEFORE DELETE OR UPDATE ON editorial.named_person_legal_overrides
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: fb2ccaa953730449510a75678db2f6d03de73d4dc52dc5f74d9fbef14092e9e6}
+- {statement: CREATE TRIGGER entity_retention_snapshots_v1_retention_bind BEFORE INSERT ON ops.entity_retention_snapshots_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: ed88e580eedee13d7486478d3b8311a045bfe462846521688fa259f3cbf687fe}
+- {statement: CREATE TRIGGER entity_retention_snapshots_v1_immutable_guard BEFORE DELETE OR UPDATE ON ops.entity_retention_snapshots_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 584f4d56d4ba16e10b4a701dce15097b31dcab3dd8b47a0047961818534599b8}
+- {statement: CREATE TRIGGER legal_hold_placement_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON ops.legal_hold_placement_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: d259edd6b857f487bb4b790b98d5f88c313e05cb08df7a994ea02c5095509b5c}
+- {statement: CREATE TRIGGER response_submission_origin_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON editorial.response_submission_origin_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: ac43da0118b6ccaba0a1962fe8558d122e6693faf9a83e771beba4901548ce0e}
+- {statement: CREATE TRIGGER organization_official_channel_assertions_v1_immutable_guard BEFORE DELETE OR UPDATE ON editorial.organization_official_channel_assertions_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: a4e8df385851b25ed7ce071e5240ef3daab0c1e1b20557f77043d4c0b1ef0ad0}
+- {statement: CREATE TRIGGER organization_official_channel_assertions_v1_retention_bind BEFORE INSERT ON editorial.organization_official_channel_assertions_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: f5a6f38f0a90e7712933724993c10fe731fe68c2dce4f004d22fb76322296ac7}
+- {statement: CREATE TRIGGER organization_official_channel_revocations_v1_immutable_guard BEFORE DELETE OR UPDATE ON editorial.organization_official_channel_revocation_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 6ab943e46925c0a9edda6bf41e36fad64c42a3d6c28dc2740cf7843a218315a4}
+- {statement: CREATE TRIGGER organization_official_channel_revocations_v1_retention_bind BEFORE INSERT ON editorial.organization_official_channel_revocation_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 8dbb5fe358a2f2865b6c1143eb52b031b1ed52df8c4831e32120224f7b554676}
+- {statement: CREATE TRIGGER response_org_identity_assertions_v1_immutable_guard BEFORE DELETE OR UPDATE ON editorial.response_organization_identity_assertions_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 11e4c37bd5a3c1cd3307ca6a179f60dad9df149ec997168cdc1765afa7db4be1}
+- {statement: CREATE TRIGGER response_publication_identity_receipts_v1_immutable_guard BEFORE DELETE OR UPDATE ON editorial.response_publication_identity_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: c862805369e560a8fd7e377ffd45a169e830da7628438d725dc1eaac6c42258f}
+- {statement: 'CREATE TRIGGER response_submissions_owned_intake_v2_guard BEFORE UPDATE OF editorial_response_id, owned_intake_event_id,
+    owned_intake_event_envelope_digest, owned_intake_receipt_digest ON intake.response_submissions FOR EACH ROW EXECUTE PROCEDURE
+    editorial.guard_response_submission_owned_intake_v2()', canonical_ddl_sha256: 5f2936e6de8e3769b7f430c755e84fa32ce8aa8d4df878551c3df98e14785eed}
+- {statement: 'CREATE TRIGGER editorial_responses_identity_update_guard BEFORE UPDATE OF organization_identity_status, publication_form,
+    organization_identity_assertion_id ON editorial.responses FOR EACH ROW EXECUTE PROCEDURE editorial.guard_response_identity_update_v1()',
+  canonical_ddl_sha256: 224d6794287d301f5d4c0e5d8ce859d01c1131e60362925ba320aedc2e595a4d}
+- {statement: CREATE TRIGGER response_submission_receipts_v3_immutable_guard BEFORE DELETE OR UPDATE ON intake.response_submission_receipts_v3
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: f16935180684cadc040c7dcd1386b2b38b7b400c648f002595a103247063d007}
+- {statement: CREATE TRIGGER response_excerpt_approval_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON editorial.response_excerpt_approval_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 96932d6c70375cdf47813aee5cf3ca0fac0777d33fe9c217545f6bdb6ee8aac4}
+- {statement: 'CREATE TRIGGER editorial_responses_excerpt_approval_v2_guard BEFORE UPDATE OF public_excerpt, public_excerpt_sha256,
+    excerpt_approved_by, excerpt_approved_at, editorial_status ON editorial.responses FOR EACH ROW EXECUTE PROCEDURE editorial.guard_response_excerpt_approval_v2()',
+  canonical_ddl_sha256: 23d12c752a2ac7718d32b358698ea36440fb112ff473a68c5de1115fe428a2e7}
+- {statement: CREATE TRIGGER privacy_response_calendar_policies_v1_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_response_calendar_policies_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: dfae8fda915d1244165c07b26b277e67cd75f4dc855eb85a0701503f8dd94c6d}
+- {statement: 'CREATE TRIGGER privacy_requests_v2_retention_bind BEFORE INSERT OR UPDATE OF scope_ciphertext, statement_ciphertext,
+    communication_endpoint_id ON ops.privacy_requests_v2 FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1()',
+  canonical_ddl_sha256: 5ee0b8f12a76b3ace45a73b665943a5e856c6cb45a45c4f4ab26216c1066e394}
+- {statement: CREATE TRIGGER privacy_request_receipt_tokens_v2_retention_bind BEFORE INSERT ON ops.privacy_request_receipt_tokens_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 8a67fcfd859a031c2f20e9a201aea92ef7e10d9b850a88f496e2e7eacc66350e}
+- {statement: CREATE TRIGGER privacy_request_identity_receipts_v2_retention_bind BEFORE INSERT ON ops.privacy_request_identity_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 8fc7636d9b6f0fa95a8d0694294d92ebafcadd67b4812f5e5e3febea85051dcd}
+- {statement: CREATE TRIGGER privacy_request_extension_receipts_v2_retention_bind BEFORE INSERT ON ops.privacy_request_extension_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 6b71d3f8943ccb0da85697e4ab05ca2ac92928937540f21c97b716ad51802a61}
+- {statement: CREATE TRIGGER privacy_request_refusal_receipts_v2_retention_bind BEFORE INSERT ON ops.privacy_request_refusal_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 6b1555a8875fd62fc36c1eaf4649518de955938a37f996eb42143e9e417b3c59}
+- {statement: CREATE TRIGGER privacy_request_notice_receipts_v2_retention_bind BEFORE INSERT ON ops.privacy_request_notice_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 91938b4d1c110c82490bf36643018092ee225778ff886195e2af6a90da6db86c}
+- {statement: CREATE TRIGGER privacy_request_transition_receipts_v2_retention_bind BEFORE INSERT ON ops.privacy_request_transition_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 0624938de0a37113df7aea6f85e54bfb864ba2250cd4cb2878997017f071c52e}
+- {statement: CREATE TRIGGER privacy_request_identity_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_identity_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 24410f45d8c0460da956e7a1710f19cfe464322240c0eba1e0b280d8de1c3dfe}
+- {statement: CREATE TRIGGER privacy_request_extension_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_extension_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: a8a80cb2b425a1134aa97bdb21648d97a8f4196a7dd9234331d526ff613bca96}
+- {statement: CREATE TRIGGER privacy_request_refusal_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_refusal_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 27b1738a416d0a45fc07acb4b8b0fa9392a07c0b1a34a217226cb4e49ad158c1}
+- {statement: CREATE TRIGGER privacy_request_notice_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_notice_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: cef079fcf0f2d7f3bc37aa761171d41571290dd2d5a0f7b9288ac902f26925b5}
+- {statement: CREATE TRIGGER privacy_request_transition_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_transition_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: fcd2892b52be2148594b1f55649ac86f56d4233cf30f4729ef8a1efbc98a70c7}
+- {statement: CREATE TRIGGER person_erasure_v3_retention_bind BEFORE INSERT ON core.relationship_graph_person_erasure_receipts_v3
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 7ab3c4ebc1f180b4880cb8e0d3e2534e699539625ec20181804fab1a78eb92f9}
+- {statement: CREATE TRIGGER np_assess_retention_bind BEFORE INSERT ON editorial.named_person_publication_assessments FOR
+    EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: bea6d6040e629a3cf73acd84f4a998d6fb53217404dcb2c199ecdd144afbc376}
+- {statement: CREATE TRIGGER np_findings_retention_bind BEFORE INSERT ON editorial.named_person_publication_findings FOR EACH
+    ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 15a00aa339368264d82ac35120bdd357af0c818becf3b045940b7a33b4d637dd}
+- {statement: CREATE TRIGGER np_override_retention_bind BEFORE INSERT ON editorial.named_person_legal_overrides FOR EACH ROW
+    EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: c003c2c3c874ad03da9e8f7598adf7185c50833189ccd1a2b6eaa99018451863}
+- {statement: CREATE TRIGGER legal_hold_v2_retention_bind BEFORE INSERT ON ops.legal_hold_placement_receipts_v2 FOR EACH ROW
+    EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: d268fc92b206293d075233c2c395e32ea5717860665064befcc17624230c67c1}
+- {statement: CREATE TRIGGER response_origin_v2_retention_bind BEFORE INSERT ON editorial.response_submission_origin_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 69093a90a6cd8237e66fa3922be8032e35fa6fc1489e2eb395d0cc8a2ec0ad1b}
+- {statement: CREATE TRIGGER response_assertion_v1_retention_bind BEFORE INSERT ON editorial.response_organization_identity_assertions_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 305fd3bf76920ab205825dfbfd906c96a586b386c7be036e32138d47529da2b2}
+- {statement: CREATE TRIGGER response_identity_v1_retention_bind BEFORE INSERT ON editorial.response_publication_identity_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: c1bb99b97805a5fdc4f2be75758ea5086657c54bc950de48bab8ed82eaa03965}
+- {statement: CREATE TRIGGER response_submission_v3_retention_bind BEFORE INSERT ON intake.response_submission_receipts_v3
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 0c95dfbd13195abed77255eecea4c0df715af983de8de6d5e032e27c488b6049}
+- {statement: CREATE TRIGGER response_excerpt_v2_retention_bind BEFORE INSERT ON editorial.response_excerpt_approval_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: a82f2adbdd61c3ef0a1709cfe2d3b459ad4fb7f5a08eb4fa1b7fc9c6fa1c5b85}
+- {statement: CREATE TRIGGER response_excerpt_identity_source_v2_guard BEFORE INSERT ON editorial.response_excerpt_approval_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE editorial.guard_response_excerpt_identity_source_v2(), canonical_ddl_sha256: a946002cb9ac001158593303ecdd96cd79c2b6bd86ba85299f42b70c1e5b48ba}
+- {statement: CREATE TRIGGER named_person_review_stage_receipts_v1_immutable_guard BEFORE DELETE OR UPDATE ON editorial.named_person_review_stage_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: a6ded36e33bfaa5cf555ba363b861fac93d9ffe2d8887a66bf7b08e6da619d89}
+- {statement: CREATE TRIGGER named_person_review_stage_receipts_v1_retention_bind BEFORE INSERT ON editorial.named_person_review_stage_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 0d2eae1520482b0970c2db4295477cd0a53acc6b149a6705ee6ccdb10137f353}
+- {statement: CREATE TRIGGER publication_previews_r6d_guard BEFORE INSERT ON editorial.publication_previews FOR EACH ROW EXECUTE
+    PROCEDURE editorial.enforce_r6d_publication_preview_guard_v2(), canonical_ddl_sha256: c3211432f298d58bf5de8d8460b9cd5c37a40cbc0598cc7d13cc7383c24abe30}
+- {statement: CREATE TRIGGER publication_revisions_r6d_guard BEFORE INSERT ON editorial.publication_revisions FOR EACH ROW
+    EXECUTE PROCEDURE editorial.enforce_r6d_publication_revision_guard_v2(), canonical_ddl_sha256: 98e504c9948bfa7db3016f3fece7ef5d10660f8ea8a35716b62d79ada4d870f1}
+- {statement: CREATE TRIGGER publication_revisions_immutable BEFORE DELETE OR UPDATE ON editorial.publication_revisions FOR
+    EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 81d173930a11144046b707f1c602158ac16c4cf324f98b385f8a1737d8edd91f}
+- {statement: CREATE TRIGGER publication_preview_owner_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON editorial.publication_preview_owner_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: cb3177b30c5f249916732742f8ccdedc6d3baaee546c739401a8c0c41763c017}
+- {statement: CREATE TRIGGER publication_preview_owner_receipts_v2_retention_bind BEFORE INSERT ON editorial.publication_preview_owner_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: e3ea08f866cc39e144256be2939bf53d8fd8dd95b3862f10d32fb51246f09e8f}
+- {statement: CREATE TRIGGER publication_revision_owner_receipts_v2_immutable_guard BEFORE DELETE OR UPDATE ON editorial.publication_revision_owner_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 23e7004e96ce1beacea8fdc74f306c3f33d4bc7a3422483f1147dcc7bda75d75}
+- {statement: CREATE TRIGGER publication_revision_owner_receipts_v2_retention_bind BEFORE INSERT ON editorial.publication_revision_owner_receipts_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_r6d_identity_schedule_v1(), canonical_ddl_sha256: 34aba45d765c0acd9eb0d2cc5e21a607a67ba0c36603b3cabe001b751dad7f9a}
+- {statement: CREATE TRIGGER corrections_r6d_publication_guard BEFORE UPDATE ON editorial.corrections FOR EACH ROW EXECUTE
+    PROCEDURE editorial.guard_r6d_correction_publication_v2(), canonical_ddl_sha256: a406f0d3ee657af3216c111716bdca6b2cb51ef4ef6fab6d9b484eb1878e3eb6}
+- {statement: CREATE TRIGGER cases_r6d_publication_guard BEFORE UPDATE ON editorial.cases FOR EACH ROW EXECUTE PROCEDURE editorial.guard_r6d_case_publication_v2(),
+  canonical_ddl_sha256: b6ee3ad1498ba62d718968bb4258266a4a7863947345c86fccd9fbfbd4f43b1d}
+- {statement: CREATE TRIGGER legal_hold_release_v2_retention_bind BEFORE INSERT ON editorial.legal_hold_releases FOR EACH
+    ROW EXECUTE PROCEDURE ops.bind_legal_hold_release_schedule_v2(), canonical_ddl_sha256: 5cc48ceaef45c9eff1330f9050ca146aa91a33cdd165dea8090681edba5d38d2}
+- {statement: CREATE TRIGGER legal_hold_release_v2_guard BEFORE INSERT ON editorial.legal_hold_releases FOR EACH ROW EXECUTE
+    PROCEDURE ops.guard_legal_hold_release_v2_insert(), canonical_ddl_sha256: ce2ec9be0a2b854f6a11b5263202b3e1acb06a31bdd3b4af4650096d21f67638}
+- {statement: CREATE TRIGGER r6d_person_retention_execution_receipts_immutable_guard BEFORE DELETE OR UPDATE ON ops.r6d_person_retention_execution_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 04ed36141b44ab36629d989ac4da71538b4f759ff29659b49ef185d5436bafaa}
+- {statement: CREATE TRIGGER privacy_request_access_policies_v1_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_access_policies_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: bf886c3f784dbe1c25977eaa1e01c9f69607a1794ed8ea7705f14b193e0641ff}
+- {statement: CREATE TRIGGER privacy_requests_v2_owner_mutation_guard BEFORE DELETE OR UPDATE ON ops.privacy_requests_v2 FOR
+    EACH ROW EXECUTE PROCEDURE ops.guard_privacy_requests_v2_mutation(), canonical_ddl_sha256: c2ead4b156ea33413e162e39e9c234c23ed44ad1c14ea2ce1a336d16d032b8fc}
+- {statement: CREATE TRIGGER privacy_request_receipt_tokens_v2_owner_mutation_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_receipt_tokens_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.guard_privacy_receipt_token_v2_mutation(), canonical_ddl_sha256: 61b5690159b5a299874c85b9884dcdd17455d7228a1735ec57894ddc999faa10}
+- {statement: CREATE TRIGGER privacy_request_sealed_content_v2_insert_guard BEFORE INSERT ON ops.privacy_request_sealed_content_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.bind_privacy_request_sealed_content_v2(), canonical_ddl_sha256: 14c16f33b57b56948409d2fb03a7885fc361b51acc74dd89f9279429549dc711}
+- {statement: CREATE TRIGGER privacy_sealed_erasure_receipts_v1_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_sealed_content_erasure_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation(), canonical_ddl_sha256: 239e010eb1a8b8f5521918847a6045f163a609766790b4e5eb6e1105d3890851}
+- {statement: CREATE TRIGGER privacy_request_sealed_content_v2_update_guard BEFORE DELETE OR UPDATE ON ops.privacy_request_sealed_content_v2
+    FOR EACH ROW EXECUTE PROCEDURE ops.guard_privacy_request_sealed_content_v2_update(), canonical_ddl_sha256: 24489618e51ff889de7372b40e75bee1b9a3746047659c337edd8f184e691546}
+- {statement: CREATE CONSTRAINT TRIGGER privacy_response_policy_calendar_authority_guard AFTER INSERT ON ops.privacy_response_calendar_policies_v1
+    DEFERRABLE FOR EACH ROW EXECUTE PROCEDURE ops.guard_privacy_response_policy_calendar_authority_v1(), canonical_ddl_sha256: 8b843528ad141530e633a1e94993a254a0f95a7197d2cf705718d844eca24c3c}
+index_inventory:
+- {statement: 'CREATE INDEX agencies_r6d_retention_idx ON core.agencies (retention_record_class, retention_schedule_id, id)',
+  canonical_ddl_sha256: 7373d16caa39805d6fa221ee81eb899eea0f9229b39e9eb64e5727251461698e}
+- {statement: 'CREATE INDEX suppliers_r6d_retention_idx ON core.suppliers (retention_record_class, retention_schedule_id,
+    id)', canonical_ddl_sha256: 15f14fe23b39b83dd938826d4bf80637853907fa5ce3d6a8da02e17b13c8c732}
+- {statement: 'CREATE INDEX agency_identifiers_r6d_retention_idx ON core.agency_identifiers (retention_record_class, retention_schedule_id,
+    id)', canonical_ddl_sha256: acc066ccd043578bf65fd29c8499aa49a2a718c009d336c6b13b4bb88b80c946}
+- {statement: 'CREATE INDEX supplier_identifiers_r6d_retention_idx ON core.supplier_identifiers (retention_record_class, retention_schedule_id,
+    id)', canonical_ddl_sha256: 91fb3779a702a0ebcc84ae059a5413d276220850c1511500e70bcceef2ddb250}
+- {statement: 'CREATE INDEX entity_aliases_r6d_retention_idx ON core.entity_aliases (retention_record_class, retention_schedule_id,
+    id)', canonical_ddl_sha256: b49b07e674c16435b48b56d256a76d6c67df05b020ec6764aed5a3c262daf9b3}
+- {statement: CREATE UNIQUE INDEX organization_official_channel_email_source_uq ON editorial.organization_official_channel_assertions_v1
+    (communication_verification_id) WHERE communication_verification_id IS NOT NULL, canonical_ddl_sha256: efab1a406486f7ca265d795e7279e20411a9bd3eb72bd874ee8bb1abfb89e0d3}
+- {statement: CREATE UNIQUE INDEX organization_official_channel_document_source_uq ON editorial.organization_official_channel_assertions_v1
+    (official_document_evidence_id) WHERE official_document_evidence_id IS NOT NULL, canonical_ddl_sha256: 83a024d4d8f46310877d8f5b175d927fbc9ef657cc6ff385cac668fa58117960}
+- {statement: 'CREATE INDEX privacy_requests_v2_queue_idx ON ops.privacy_requests_v2 (due_at ASC NULLS LAST, created_at DESC,
+    id)', canonical_ddl_sha256: bbf0ec8cd2c592caf0f4261f613b270a2bdb2b5c6ed28e0fb3cbae1e1d1bb4b2}
+- {statement: 'CREATE INDEX privacy_requests_v2_subject_scope_idx ON ops.privacy_requests_v2 (subject_proof_hash, subject_scope_digest,
+    created_at DESC, id)', canonical_ddl_sha256: 88eae5cb2ad57f7187e122fe86d000884947a4139a20c650b97876368cadce18}
+- {statement: 'CREATE INDEX publication_preview_owner_receipts_v2_assessment_idx ON editorial.publication_preview_owner_receipts_v2
+    (assessment_id, expires_at)', canonical_ddl_sha256: 1475532225416717a75f41c4ead14228aa695d85c9d053510e8f60ad1ff87735}
+- {statement: 'CREATE INDEX privacy_request_sealed_content_v2_expiry_idx ON ops.privacy_request_sealed_content_v2 (expires_at,
+    transition_receipt_id, field_kind) WHERE content_state = ''ACTIVE''', canonical_ddl_sha256: 7393ffa9c54583c4e1e90270d281645b1b19ddca868c56fdf2c53f32c6016aa7}
+event_registry_contract:
+  statement: one seven-row ON CONFLICT upsert, one exact legal_hold.placed.v2 corrective upsert, and one $decision_event_registry$
+    guarded upsert, all in migration statement order
+  exact_upsert_count: 9
+  events_in_order:
+  - {event_type: editorial.response_materialized.v2, category: DOMAIN, schema_version: 2, payload_schema_uri: payloads/editorial_response_materialized_v2.schema.json,
+    payload_schema_path: specs/events/payloads/editorial_response_materialized_v2.schema.json, payload_schema_sha256: c32acd92cdae922449fe22497ad977ec01828bddafecfabd869009098f3399be,
+    embedded_json_equivalent: true}
+  - {event_type: response.excerpt_approved.v2, category: DOMAIN, schema_version: 2, payload_schema_uri: payloads/response_excerpt_approved_v2.schema.json,
+    payload_schema_path: specs/events/payloads/response_excerpt_approved_v2.schema.json, payload_schema_sha256: 46595b8510bacbbd0c4570377c0500577cc52486bf9eb1947814f7a72b506c14,
+    embedded_json_equivalent: true}
+  - {event_type: response.organization_identity_verified.v1, category: DOMAIN, schema_version: 1, payload_schema_uri: payloads/response_organization_identity_verified_v1.schema.json,
+    payload_schema_path: specs/events/payloads/response_organization_identity_verified_v1.schema.json, payload_schema_sha256: ee2eac73e74f09833ee674b1b1ed2dd781e498d90cbaf2bcebef6f15847dab4b,
+    embedded_json_equivalent: true}
+  - {event_type: privacy.request_created.v2, category: DOMAIN, schema_version: 2, payload_schema_uri: payloads/privacy_request_created_v2.schema.json,
+    payload_schema_path: specs/events/payloads/privacy_request_created_v2.schema.json, payload_schema_sha256: 5b8aa9ec1ce5f36eba95a94ef9e3dfe894d8c2ec22ef5ac91ccf4b1a4943b752,
+    embedded_json_equivalent: true}
+  - {event_type: privacy.request_identity_verified.v1, category: DOMAIN, schema_version: 1, payload_schema_uri: payloads/privacy_request_identity_verified_v1.schema.json,
+    payload_schema_path: specs/events/payloads/privacy_request_identity_verified_v1.schema.json, payload_schema_sha256: 4222c27d9078b08ba2cced44647c9c93bc8934af84c3372c442d15773cc3a1e6,
+    embedded_json_equivalent: true}
+  - {event_type: privacy.request_extension_notified.v1, category: DOMAIN, schema_version: 1, payload_schema_uri: payloads/privacy_request_extension_notified_v1.schema.json,
+    payload_schema_path: specs/events/payloads/privacy_request_extension_notified_v1.schema.json, payload_schema_sha256: 508d7290c179bb9df17afd97f0e8d6def6d8a34f171db3e2ab8631fbfe9babb9,
+    embedded_json_equivalent: true}
+  - {event_type: privacy.request_refusal_notified.v1, category: DOMAIN, schema_version: 1, payload_schema_uri: payloads/privacy_request_refusal_notified_v1.schema.json,
+    payload_schema_path: specs/events/payloads/privacy_request_refusal_notified_v1.schema.json, payload_schema_sha256: 7d72d2673a18353c09540f6a9df048ea6f395b8b8d73e8f9895072348463ece0,
+    embedded_json_equivalent: true}
+  - {event_type: legal_hold.placed.v2, category: DOMAIN, schema_version: 2, payload_schema_uri: payloads/legal_hold_placed_v2.schema.json,
+    payload_schema_path: specs/events/payloads/legal_hold_placed_v2.schema.json, payload_schema_sha256: 3161cd3a26604100b9c982fd9232dbda79fe05033a9d60cd0756d83993996a9e,
+    embedded_json_equivalent: true, embedded_payload_schema_canonical_sha256: c6cd2801b71f009253f71bbb6210439cca033f891b6d41ce4bd5cedac9095824,
+    forward_superseded_by: {migration: 0040_r6d_privacy_authority_closure.sql, event_ordinal: 1}}
+  - {event_type: privacy.request_decision_recorded.v1, category: DOMAIN, schema_version: 1, payload_schema_uri: payloads/privacy_request_decision_recorded_v1.schema.json,
+    payload_schema_path: specs/events/payloads/privacy_request_decision_recorded_v1.schema.json, payload_schema_sha256: ea318383c422604d9d15bdbb8add62f960b405dc801d2a1ce11f4ba0fd1311fe,
+    embedded_json_equivalent: true}
+  inherited_emit_dependencies: [response.submitted.v2, notification.response_submitted.v2, workflow.response_submitted.v2]
+  inherited_rule: the three response-submission v2 schemas remain owned by existing 0030 registry rows and are not overwritten
+    in 0038
+retention_binding_inventory:
+  schedule_bound_classes: [AGENCY_MASTER, SUPPLIER_MASTER, AGENCY_IDENTIFIER, SUPPLIER_IDENTIFIER, ENTITY_ALIAS, RELATIONSHIP_PERSON_CONTEXT,
+    RELATIONSHIP_PERSON_TOPOLOGY, PERSON_ERASURE_GOVERNANCE, ENTITY_RETENTION_SNAPSHOT, LEGAL_HOLD_GOVERNANCE, PRIVACY_REQUEST,
+    PRIVACY_REQUEST_TOKEN, PRIVACY_REQUEST_NOTICE, PRIVACY_REQUEST_EXECUTION, NAMED_PERSON_PUBLICATION_GOVERNANCE, RESPONSE_IDENTITY_GOVERNANCE,
+    PRIVACY_REQUEST_SEALED_CONTENT]
+  static_policy_tables_without_runtime_schedule_tuple: [editorial.named_person_publication_policies, ops.privacy_response_calendar_policies_v1,
+    ops.privacy_request_access_policies_v1]
+  exactness_rule: the two migration-owned catalogs and the immutable unseeded privacy access-policy authority contain no user
+    data; every runtime governance, identity, publication-owner, privacy receipt, and sealed-content row uses its exact schedule
+    or parent authority and fails closed when absent
+known_fail_closed_boundaries: {official_channel_population: 0038 creates immutable assertion and revocation relations but
+    seeds no assertion and authorizes no inferred runtime writer, privacy_access_policy: '0038 seeds no policy row and grants
+    no runtime DML; production selection rejects zero, ambiguous, expired, unapproved, or TEST_ONLY authority', sealed_content_erasure: 0038
+    admits no successful erasure until an authoritative privacy-request legal-hold placement/release resolver replaces the
+    explicit hold_authority_unavailable gate}
+verification_obligations: [PostgreSQL parser accepts the complete migration and proves the explicit transaction is closed,
+  the exact 32 CREATE TABLE relations equal scope.exact_relations and the one compatibility view is excluded from relkind-r
+    count, 'all 86 owner routine signatures, 76 trigger statements, 11 explicit indexes, and 21 altered-relation targets reproduce
+    the current pglast inventory', all nine embedded event payload JSON objects are structurally equal to their named event-contract
+    schema files, 'migration_sha256, every canonical statement hash, and object_inventory_sha256 are reproduced from the current
+    SQL bytes']
+OPEN_QUESTIONS: []

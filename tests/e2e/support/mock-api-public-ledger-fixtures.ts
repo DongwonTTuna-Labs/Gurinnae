@@ -1,3 +1,9 @@
+import { publicContractSeeds } from "./mock-api-public-contract-seeds";
+import {
+  OPERATIONAL_INTERPRETATION_NOTICE,
+  publicNonConclusion,
+} from "./mock-api-public-notices";
+
 const FIXTURE_AS_OF = "2026-07-29T09:00:00Z";
 
 function publicUuid(namespace: string, ordinal: number) {
@@ -111,8 +117,12 @@ export const publicAgencyRows = agencySeeds.map(
     name,
     agencyType,
     jurisdiction,
+    sidoCode: "11",
+    sigunguCode: "11680",
+    regionCodeVersion: "행정표준코드-2026.1",
     caseCounts: caseStateCounts(index + 1),
     coverage: coverageModel(index + 1),
+    interpretationNotice: OPERATIONAL_INTERPRETATION_NOTICE,
     href: `/agencies/${slug}`,
   }),
 );
@@ -135,67 +145,9 @@ export const publicSupplierRows = supplierSeeds.map(([slug, name], index) => ({
   caseCounts: caseStateCounts(index + 2),
   coverage: coverageModel(index + 2),
   identityWarnings: [],
+  interpretationNotice: OPERATIONAL_INTERPRETATION_NOTICE,
   href: `/suppliers/${slug}`,
 }));
-
-const contractSeeds = [
-  [
-    "가상-2026-환경-017",
-    "공공청사 냉난방 설비 정기점검 용역",
-    "2026-01-19",
-    "48600000",
-    "ACTIVE",
-  ],
-  [
-    "가상-2026-문화-008",
-    "생활체육관 LED 조명 교체 공사",
-    "2026-02-03",
-    "126750000",
-    "COMPLETED",
-  ],
-  [
-    "가상-2026-교통-021",
-    "마을버스 승강장 안전시설 보강",
-    "2026-02-27",
-    "184320000",
-    "ACTIVE",
-  ],
-  [
-    "가상-2026-복지-014",
-    "복지회관 급식실 환기설비 개선",
-    "2026-03-11",
-    "89500000",
-    "COMPLETED",
-  ],
-  [
-    "가상-2026-정보-032",
-    "공공 와이파이 통합관제 유지보수",
-    "2026-04-02",
-    "72000000",
-    "ACTIVE",
-  ],
-  [
-    "가상-2026-안전-006",
-    "재난문자 발송 플랫폼 운영 지원",
-    "2026-04-24",
-    "58800000",
-    "AWARDED",
-  ],
-  [
-    "가상-2026-공원-025",
-    "도심공원 수목 관리 및 병해충 방제",
-    "2026-05-15",
-    "93500000",
-    "ACTIVE",
-  ],
-  [
-    "가상-2026-보건-019",
-    "보건소 검체 운송 냉장차량 임차",
-    "2026-06-08",
-    "67200000",
-    "AWARDED",
-  ],
-] as const;
 
 function entityReference(
   rows: readonly { id: string; name: string; href: string }[],
@@ -207,7 +159,7 @@ function entityReference(
   return { id: row.id, name: row.name, entityType, href: row.href };
 }
 
-export const publicContractRows = contractSeeds.map(
+export const publicContractRows = publicContractSeeds.map(
   ([contractNumber, title, signedAt, amount, status], index) => ({
     id: publicUuid("33000000", index + 1),
     contractNumber,
@@ -217,9 +169,31 @@ export const publicContractRows = contractSeeds.map(
     status,
     signedAt,
     amount: { amount, currency: "KRW" },
+    interpretationNotice: OPERATIONAL_INTERPRETATION_NOTICE,
     href: `/contracts/${publicUuid("33000000", index + 1)}`,
   }),
 );
+
+const sourceSeeds = [
+  "가온시 열린계약",
+  "한빛도 재정공시",
+  "누리시 조달공개",
+  "마루군 계약현황",
+  "새봄구 재정정보",
+  "해솔시 입찰공고",
+  "다온군 지출공개",
+  "푸른구 계약대장",
+] as const;
+
+export const publicSourceRows = sourceSeeds.map((displayName, index) => ({
+  sourceId: `public-source-${String(index + 1).padStart(2, "0")}`,
+  displayName,
+  status: "CURRENT",
+  lastSuccessAt: FIXTURE_AS_OF,
+  lagSeconds: 0,
+  publicMessage: "정상 수집 중",
+  interpretationNotice: OPERATIONAL_INTERPRETATION_NOTICE,
+}));
 
 const caseSeeds = [
   [
@@ -339,6 +313,7 @@ export const publicCaseRows = caseSeeds.map(
     updatedAt,
     responseStatus,
     correctionStatus,
+    nonConclusion: publicNonConclusion(publicState),
     href: `/cases/${slug}`,
   }),
 );
@@ -409,6 +384,8 @@ export const publicCorrectionRows = correctionSeeds.map(
     targetRevision,
     summary,
     reason,
+    publicState: "CORRECTED",
+    nonConclusion: publicNonConclusion("CORRECTED"),
     publishedAt,
     href: `/corrections/${publicUuid("44000000", index + 1)}`,
   }),
@@ -423,8 +400,22 @@ export const publicSearchRows = [
     status: row.publicState,
     summary: row.summary,
     updatedAt: row.updatedAt,
+    nonConclusion: row.nonConclusion,
+    interpretationNotice: null,
     href: row.href,
   })),
+  {
+    resultType: "SOURCE",
+    id: publicSourceRows[0]?.sourceId ?? "public-source-01",
+    title: publicSourceRows[0]?.displayName ?? "가온시 열린계약",
+    subtitle: "공개 데이터 출처",
+    status: "CURRENT",
+    summary: "공개 계약 자료를 정상 수집 중입니다.",
+    updatedAt: FIXTURE_AS_OF,
+    nonConclusion: null,
+    interpretationNotice: OPERATIONAL_INTERPRETATION_NOTICE,
+    href: `/sources/${publicSourceRows[0]?.sourceId ?? "public-source-01"}`,
+  },
   {
     resultType: "RULE",
     id: "contract-unit-price-comparison",
@@ -434,6 +425,8 @@ export const publicSearchRows = [
     summary:
       "동일 규격 계약의 단가와 포함 범위를 비교해 추가 검토가 필요한 차이를 표시합니다.",
     updatedAt: "2026-07-29T07:50:00Z",
+    nonConclusion: null,
+    interpretationNotice: null,
     href: "/methodology/rules/contract-unit-price-comparison",
   },
   {
@@ -445,6 +438,8 @@ export const publicSearchRows = [
     summary:
       "공개 계약의 기관·업체·계약일·금액과 자료 기준일을 함께 정리한 데이터셋입니다.",
     updatedAt: "2026-07-29T08:30:00Z",
+    nonConclusion: null,
+    interpretationNotice: null,
     href: "/data",
   },
 ];

@@ -147,6 +147,8 @@ for migration in db/migrations/*.sql; do
     < "$migration" >/dev/null
 done
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
+  < db/test-fixtures/r6d-approved-policy-authority.sql >/dev/null
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
   < db/test-fixtures/reference-seed.sql >/dev/null
 
 raw_key="01234567890123456789012345678901"

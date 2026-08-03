@@ -1,0 +1,54 @@
+schema_version: 1
+specification_version: 13.0.0-r6d
+status: USER_INPUT_REQUIRED
+policy_provenance:
+  decision_id: supervisor-decision-v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  external_counsel_approved: false
+rules:
+  - null values must never be replaced with invented names, addresses, contacts, coverage, or approvals
+  - a USER_INPUT_REQUIRED value must never be rendered as configured or approved
+  - external counsel review becomes complete only through a separately supplied review artifact
+inputs:
+  - id: OPERATING_LEGAL_ENTITY
+    owner: USER
+    state: USER_INPUT_REQUIRED
+    required_for_publication: true
+    value: null
+    description_ko: 운영 법인명·등록 정보
+  - id: PRIVACY_CONTROLLER
+    owner: USER
+    state: USER_INPUT_REQUIRED
+    required_for_publication: true
+    value: null
+    description_ko: 개인정보처리자 법적 명칭
+  - id: PRIVACY_OFFICER_OR_CPO
+    owner: USER
+    state: USER_INPUT_REQUIRED
+    required_for_publication: true
+    value: null
+    description_ko: 개인정보 보호책임자 또는 담당 부서
+  - id: PUBLIC_LEGAL_AND_PRIVACY_CONTACT
+    owner: USER
+    state: USER_INPUT_REQUIRED
+    required_for_publication: true
+    value: null
+    description_ko: 공개 문의·권리행사 연락처
+  - id: LIABILITY_AND_CYBER_INSURANCE
+    owner: USER
+    state: USER_INPUT_REQUIRED
+    required_for_publication: false
+    value: null
+    description_ko: 적용 보험의 가입 여부·범위·증권 정보
+  - id: EXTERNAL_KOREAN_COUNSEL_REVIEW
+    owner: USER
+    state: USER_INPUT_REQUIRED
+    required_for_publication: true
+    value: null
+    description_ko: 대한민국 변호사 검토 결과와 유효 범위
+  - id: BACKUP_PHYSICAL_DISPOSAL_RECEIPT_AUTHORITY
+    owner: USER
+    state: USER_INPUT_REQUIRED
+    required_for_publication: false
+    value: null
+    description_ko: 기존 백업 운영자가 확정할 외부 append-only 영수증 저장소·생산자 인증·서명 ABI·artifact 식별 및 N:M 대응·허용 폐기 방법과 증거·독립 부재 확인 범위

@@ -496,14 +496,14 @@ events:
   delivery: IN_PROCESS
   consumers: []
   replay_policy: idempotent-by-event-id
-- event_type: legal_hold.placed.v1
+- event_type: legal_hold.placed.v2
   category: DOMAIN
   producer_operations:
   - placeLegalHold
   producer_services: []
-  schema_version: 1
-  payload_schema: payloads/legal_hold_placed_v1.schema.json
-  delivery: IN_PROCESS
+  schema_version: 2
+  payload_schema: payloads/legal_hold_placed_v2.schema.json
+  delivery: OUTBOX_AT_LEAST_ONCE
   consumers: []
   replay_policy: idempotent-by-event-id
 - event_type: notification.correction_received.v1
@@ -659,6 +659,7 @@ events:
   category: INTEGRATION
   producer_operations:
   - publishCase
+  - resolveCorrectionRequest
   producer_services: []
   schema_version: 1
   payload_schema: payloads/projection_publication_revision_created_v1.schema.json
@@ -699,6 +700,7 @@ events:
   category: DOMAIN
   producer_operations:
   - publishCase
+  - resolveCorrectionRequest
   producer_services: []
   schema_version: 1
   payload_schema: payloads/publication_revision_created_v1.schema.json

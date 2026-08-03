@@ -12,6 +12,12 @@ pub(super) fn validate_command(
     {
         return Err(ServiceError::InvalidRequest);
     }
+    if operation == "transitionRetentionRequest" {
+        domains::audit_retention::validate_transition_request(payload)?;
+    }
+    if operation == "createPrivacyCorrectionPlan" {
+        domains::audit_retention::validate_correction_plan_request(payload)?;
+    }
     gurine_api_contracts::control_api::OPERATIONS
         .iter()
         .chain(gurine_api_contracts::addendum::CONTROL_OPERATIONS.iter())
@@ -86,7 +92,11 @@ pub(super) fn identity_keys(operation: &str) -> &'static [&'static str] {
 }
 
 pub(super) fn resource_type(operation: &str) -> &'static str {
-    if operation.contains("AgentSuggestion") {
+    if operation.contains("EntityPersonhood") || operation.contains("EntityMaterialUseClosure") {
+        "entity_authority"
+    } else if operation.contains("OrganizationOfficialChannel") {
+        "organization_official_channel"
+    } else if operation.contains("AgentSuggestion") {
         "suggestion"
     } else if operation.contains("Audit") {
         "audit"
@@ -102,6 +112,8 @@ pub(super) fn resource_type(operation: &str) -> &'static str {
         "hypothesis"
     } else if operation.contains("KillSwitch") {
         "kill_switch"
+    } else if operation.contains("LegalHold") {
+        "legal_hold"
     } else if operation.contains("Notification") {
         "notification"
     } else if operation.contains("Provider") {
@@ -149,7 +161,10 @@ pub(super) fn creates_resource(operation: &str) -> bool {
         || operation.starts_with("invite")
         || matches!(
             operation,
-            "previewPublication"
+            "attestOrganizationOfficialChannel"
+                | "attestEntityMaterialUseClosure"
+                | "classifyEntityPersonhood"
+                | "previewPublication"
                 | "placeLegalHold"
                 | "placeTemporaryRestriction"
                 | "proposeRoleDefinitionChange"
@@ -159,6 +174,7 @@ pub(super) fn creates_resource(operation: &str) -> bool {
                 | "startSourceRun"
                 | "runRuleEvaluation"
                 | "verifyAuditIntegrity"
+                | "revokeOrganizationOfficialChannel"
         )
 }
 

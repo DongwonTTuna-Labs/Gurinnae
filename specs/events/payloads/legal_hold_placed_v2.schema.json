@@ -1,0 +1,360 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/legal_hold.placed.v2.schema.json",
+  "$comment": "Runtime admission also requires each concrete object ID to equal targetId. Entity variants require targetId=entityRetentionSnapshotId and targetDigest=entityRetentionSnapshotDigest. CORRECTION and SUBSCRIPTION require targetId to equal their immutable snapshot ID and targetDigest to equal their snapshot digest while preserving the explicit object ID. COMMUNICATION_ENDPOINT requires targetId=communicationEndpointId and binds targetVersion/targetDigest to intake.communication_endpoints(version,endpoint_digest). targetAnchorDigest covers the full selected branch. Draft 2020-12 cannot express cross-property equality, so the DB owner guard enforces it before outbox insertion. AUDIT_SUBJECT_RECORD has no event branch because placement is explicitly unsupported.",
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "caseTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "caseId",
+        "reviewSnapshotId",
+        "reviewSnapshotDigest"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "CASE" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "caseId": { "$ref": "#/$defs/uuid" },
+        "reviewSnapshotId": { "$ref": "#/$defs/uuid" },
+        "reviewSnapshotDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "publicationTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "publicationRevisionId"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "PUBLICATION" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "publicationRevisionId": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "evidenceTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "evidenceId"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "EVIDENCE" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "evidenceId": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "responseTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "responseId"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "RESPONSE" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "responseId": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "sourceAssetTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "sourceDocumentId",
+        "sourceAssetId"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "SOURCE_ASSET" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "sourceDocumentId": { "$ref": "#/$defs/uuid" },
+        "sourceAssetId": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "researchArtifactTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "researchArtifactId",
+        "researchAssetId"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "RESEARCH_ARTIFACT" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "researchArtifactId": { "$ref": "#/$defs/uuid" },
+        "researchAssetId": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "privacyRequestTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "privacyRequestId",
+        "privacyRequestType"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "PRIVACY_REQUEST" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "privacyRequestId": { "$ref": "#/$defs/uuid" },
+        "privacyRequestType": {
+          "type": "string",
+          "enum": ["ACCESS", "CORRECTION", "DELETION", "RESTRICTION"]
+        }
+      }
+    },
+    "communicationSubjectTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "communicationSubjectId",
+        "communicationSubjectOriginDigest"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "COMMUNICATION_SUBJECT" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "communicationSubjectId": { "$ref": "#/$defs/uuid" },
+        "communicationSubjectOriginDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "supplierRetentionSnapshotTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "entityKind",
+        "entityRetentionSnapshotId",
+        "entityRetentionSnapshotDigest"
+      ],
+      "properties": {
+        "targetKind": {
+          "type": "string",
+          "const": "SUPPLIER_RETENTION_SNAPSHOT"
+        },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "entityKind": { "type": "string", "const": "SUPPLIER" },
+        "entityRetentionSnapshotId": { "$ref": "#/$defs/uuid" },
+        "entityRetentionSnapshotDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "agencyRetentionSnapshotTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "entityKind",
+        "entityRetentionSnapshotId",
+        "entityRetentionSnapshotDigest"
+      ],
+      "properties": {
+        "targetKind": {
+          "type": "string",
+          "const": "AGENCY_RETENTION_SNAPSHOT"
+        },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "entityKind": { "type": "string", "const": "AGENCY" },
+        "entityRetentionSnapshotId": { "$ref": "#/$defs/uuid" },
+        "entityRetentionSnapshotDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "correctionTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "correctionId",
+        "correctionSnapshotId",
+        "correctionSnapshotDigest"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "CORRECTION" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "correctionId": { "$ref": "#/$defs/uuid" },
+        "correctionSnapshotId": { "$ref": "#/$defs/uuid" },
+        "correctionSnapshotDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "subscriptionTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "subscriptionId",
+        "subscriptionSnapshotId",
+        "subscriptionSnapshotDigest"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "SUBSCRIPTION" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "subscriptionId": { "$ref": "#/$defs/uuid" },
+        "subscriptionSnapshotId": { "$ref": "#/$defs/uuid" },
+        "subscriptionSnapshotDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "communicationEndpointTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetKind",
+        "targetId",
+        "targetVersion",
+        "targetDigest",
+        "targetAnchorDigest",
+        "communicationEndpointId"
+      ],
+      "properties": {
+        "targetKind": { "type": "string", "const": "COMMUNICATION_ENDPOINT" },
+        "targetId": { "$ref": "#/$defs/uuid" },
+        "targetVersion": { "$ref": "#/$defs/version" },
+        "targetDigest": { "$ref": "#/$defs/sha256" },
+        "targetAnchorDigest": { "$ref": "#/$defs/sha256" },
+        "communicationEndpointId": { "$ref": "#/$defs/uuid" }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "legalHoldId",
+    "target",
+    "scopeAtoms",
+    "affectedSetDigest",
+    "authorityReferenceDigest",
+    "placedByActorId",
+    "placedAt",
+    "expiresAt",
+    "auditReceiptDigest",
+    "holdReceiptDigest"
+  ],
+  "properties": {
+    "legalHoldId": { "$ref": "#/$defs/uuid" },
+    "target": {
+      "oneOf": [
+        { "$ref": "#/$defs/caseTarget" },
+        { "$ref": "#/$defs/publicationTarget" },
+        { "$ref": "#/$defs/evidenceTarget" },
+        { "$ref": "#/$defs/responseTarget" },
+        { "$ref": "#/$defs/sourceAssetTarget" },
+        { "$ref": "#/$defs/researchArtifactTarget" },
+        { "$ref": "#/$defs/privacyRequestTarget" },
+        { "$ref": "#/$defs/communicationSubjectTarget" },
+        { "$ref": "#/$defs/supplierRetentionSnapshotTarget" },
+        { "$ref": "#/$defs/agencyRetentionSnapshotTarget" },
+        { "$ref": "#/$defs/correctionTarget" },
+        { "$ref": "#/$defs/subscriptionTarget" },
+        { "$ref": "#/$defs/communicationEndpointTarget" }
+      ]
+    },
+    "scopeAtoms": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["RETENTION", "DELETION", "DISCLOSURE"]
+      }
+    },
+    "affectedSetDigest": { "$ref": "#/$defs/sha256" },
+    "authorityReferenceDigest": { "$ref": "#/$defs/sha256" },
+    "placedByActorId": { "$ref": "#/$defs/uuid" },
+    "placedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": {
+      "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }]
+    },
+    "auditReceiptDigest": { "$ref": "#/$defs/sha256" },
+    "holdReceiptDigest": { "$ref": "#/$defs/sha256" }
+  }
+}

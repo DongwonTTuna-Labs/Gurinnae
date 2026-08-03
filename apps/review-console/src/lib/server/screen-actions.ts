@@ -44,6 +44,7 @@ import {
   stringProperty,
   stringValue,
 } from "./screen-helpers";
+import { submitReviewAuthorization } from "./screen-review-authorization";
 
 import type { ElevatedAuthorization, PendingAction } from "./screen-types";
 
@@ -214,13 +215,12 @@ async function runAction(
       if (typeof value === "string") boundPathParams[name] = value;
     }
     const path = bindPath(indexed.path, boundPathParams);
-    // The OpenAPI operation catalog describes transport capabilities, while
-    // the screen action owns the user-facing assurance requirement.  The
-    // addendum routes intentionally keep STEP_UP on the action metadata, so
-    // do not silently downgrade a decision to an active-session command when
-    // the generated operation has no x-assurance-level extension.
+    // Resolve dynamic authorization before issuing an assertion or step-up.
+    const branchAssurance =
+      submitReviewAuthorization(indexed.operation.operationId, input)
+        ?.assurance ?? providerAssurance;
     const assurance =
-      providerAssurance ??
+      branchAssurance ??
       stringExtension(indexed, "x-assurance-level") ??
       stringProperty(action, "assurance_level") ??
       (action.step_up_required === true ? "STEP_UP" : "ACTIVE_SESSION");
@@ -234,7 +234,7 @@ async function runAction(
         idempotencyKey,
         event.url.pathname,
         boundPathParams,
-        providerAssurance,
+        branchAssurance,
       );
     }
     const queryOperation =
@@ -251,7 +251,7 @@ async function runAction(
           undefined,
           undefined,
           boundPathParams,
-          providerAssurance,
+          branchAssurance,
         )
       : await controlRequest(
           event,
@@ -263,7 +263,7 @@ async function runAction(
           undefined,
           undefined,
           boundPathParams,
-          providerAssurance,
+          branchAssurance,
         );
     if (!result.response.ok)
       return fail(result.response.status, {

@@ -56,6 +56,8 @@ export type ScreenSectionProjection = {
   focusTarget: string;
   /** Optional closed CAS visualization/graph payload for dedicated accessible renderers. */
   analysis?: AnalysisProjection;
+  /** Approved, display-only rows for a legal document's retention-table section. */
+  retentionSchedules?: readonly import("./retention-schedule").ApprovedRetentionScheduleRow[];
 };
 
 export type ScreenProjection = {
@@ -219,6 +221,7 @@ function envelopeFields(
   fields: ProjectionField[];
   blocked: boolean;
   analysis?: import("./screen-projection-specialized-types").AnalysisProjection;
+  retentionSchedules?: readonly import("./retention-schedule").ApprovedRetentionScheduleRow[];
 } {
   const section =
     projection?.screenId === screenId
@@ -250,6 +253,9 @@ function envelopeFields(
     fields,
     blocked: section?.blocked === true,
     ...(section?.analysis ? { analysis: section.analysis } : {}),
+    ...(section?.retentionSchedules
+      ? { retentionSchedules: section.retentionSchedules }
+      : {}),
   };
 }
 
@@ -316,6 +322,7 @@ export function projectFetchedData(
         }
       >;
       analysis?: import("./screen-projection-specialized-types").AnalysisProjection;
+      retentionSchedules?: readonly import("./retention-schedule").ApprovedRetentionScheduleRow[];
     }
   > = {};
   for (const [_fieldName, binding] of Object.entries(bindings)) {
@@ -356,7 +363,10 @@ export function projectFetchedData(
         source: projectedField.source,
       };
     }
+    existing.blocked = specialized.blocked;
     if (specialized.analysis) existing.analysis = specialized.analysis;
+    if (specialized.retentionSchedules)
+      existing.retentionSchedules = specialized.retentionSchedules;
     sections[section.id] = existing;
   }
   return {
@@ -368,6 +378,11 @@ export function projectFetchedData(
           blocked: sections[sectionId]?.blocked ?? section.blocked,
           ...(sections[sectionId]?.analysis
             ? { analysis: sections[sectionId].analysis }
+            : {}),
+          ...(sections[sectionId]?.retentionSchedules
+            ? {
+                retentionSchedules: sections[sectionId].retentionSchedules,
+              }
             : {}),
           fields: Object.fromEntries(
             Object.entries({
@@ -433,6 +448,11 @@ export function projectScreen(
         focusTarget: section.testId,
         ...(projectedEnvelope.analysis
           ? { analysis: projectedEnvelope.analysis }
+          : {}),
+        ...(projectedEnvelope.retentionSchedules
+          ? {
+              retentionSchedules: projectedEnvelope.retentionSchedules,
+            }
           : {}),
       };
       return [section.id, projected] as const;

@@ -74,99 +74,6 @@ fn raw_decision_summaries(value: &Value) -> Result<Value, ServiceError> {
     })).collect()))
 }
 
-fn retention_workspace(data: &Value) -> Result<Value, ServiceError> {
-    let decided_at = data
-        .get("decided_at")
-        .cloned()
-        .ok_or(ServiceError::Persistence)?;
-    let retention_request_id = data
-        .get("retention_request_id")
-        .cloned()
-        .ok_or(ServiceError::Persistence)?;
-    let request_type = data
-        .get("request_type")
-        .cloned()
-        .ok_or(ServiceError::Persistence)?;
-    let state = data
-        .get("state")
-        .cloned()
-        .ok_or(ServiceError::Persistence)?;
-    let inventory_digest = data
-        .get("inventory_snapshot_digest")
-        .cloned()
-        .ok_or(ServiceError::Persistence)?;
-    let hold_digest = data
-        .get("hold_coverage_digest")
-        .cloned()
-        .ok_or(ServiceError::Persistence)?;
-    let receipt_digest = data
-        .get("receipt_digest")
-        .cloned()
-        .ok_or(ServiceError::Persistence)?;
-    let decision = retention_decision(
-        data,
-        &state,
-        &inventory_digest,
-        &hold_digest,
-        &decided_at,
-        &receipt_digest,
-    )?;
-    Ok(json!({
-        "request": {
-            "retentionRequestId": retention_request_id,
-            "requestType": request_type,
-            "decisionVersion": data.get("decision_version").cloned().ok_or(ServiceError::Persistence)?,
-            "state": state,
-            "jurisdiction": "UNKNOWN",
-            "scopeDigest": inventory_digest,
-            "legalHoldBlocked": false,
-            "dueAt": decided_at,
-            "createdAt": decided_at,
-            "updatedAt": decided_at
-        },
-        "identityVerificationReceiptId": data.get("step_up_authorization_id").cloned().ok_or(ServiceError::Persistence)?,
-        "inventorySnapshotDigest": inventory_digest,
-        "holdCoverageDigest": hold_digest,
-        "activeHoldIds": [],
-        "affectedRecordClasses": [],
-        "locationReceipts": [],
-        "decisionReceipts": [decision],
-        "completionReceiptId": Value::Null,
-        "asOf": decided_at,
-        "links": [],
-        "operationId": "getRetentionRequest"
-    }))
-}
-
-fn retention_decision(
-    data: &Value,
-    state: &Value,
-    inventory_digest: &Value,
-    hold_digest: &Value,
-    decided_at: &Value,
-    receipt_digest: &Value,
-) -> Result<Value, ServiceError> {
-    Ok(json!({
-        "decisionId": data.get("id").cloned().ok_or(ServiceError::Persistence)?,
-        "decisionVersion": data.get("decision_version").cloned().ok_or(ServiceError::Persistence)?,
-        "transition": data.get("transition_kind").cloned().ok_or(ServiceError::Persistence)?,
-        "priorState": data.get("prior_state").cloned().ok_or(ServiceError::Persistence)?,
-        "state": state,
-        "actor": {
-            "actorType": "HUMAN",
-            "actorId": data.get("decided_by_user_id").cloned().ok_or(ServiceError::Persistence)?,
-            "displayName": "검토 담당자"
-        },
-        "reasonCode": data.get("reason_code").cloned().ok_or(ServiceError::Persistence)?,
-        "reason": "[REDACTED: encrypted retention decision reason]",
-        "inventorySnapshotDigest": inventory_digest,
-        "holdCoverageDigest": hold_digest,
-        "completionReceiptId": Value::Null,
-        "decidedAt": decided_at,
-        "receiptDigest": receipt_digest
-    }))
-}
-
 fn incident_detail(data: &Value) -> Result<Value, ServiceError> {
     let id = data
         .get("incident_id")
@@ -286,10 +193,7 @@ fn incident_summary(data: &Value) -> Result<Value, ServiceError> {
 }
 
 fn incident_transition(data: &Value) -> Result<Value, ServiceError> {
-    let prior = data
-        .get("prior_state")
-        .cloned()
-        .unwrap_or(Value::Null);
+    let prior = data.get("prior_state").cloned().unwrap_or(Value::Null);
     let actor_type = data
         .get("actor_type")
         .and_then(Value::as_str)

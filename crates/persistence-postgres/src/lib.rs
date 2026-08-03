@@ -11,6 +11,8 @@ pub mod journey_registry;
 pub mod mappers;
 pub mod outbox;
 pub mod pool;
+pub mod privacy;
+mod privacy_payload;
 pub mod procurement;
 pub mod queries;
 pub mod relationship_graph;

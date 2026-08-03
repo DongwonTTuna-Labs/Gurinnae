@@ -60,7 +60,9 @@ export const listPublicCases = <ThrowOnError extends boolean = false>(options?: 
  * 최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고
  * 다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는
  * {"notice":"이상 징후 기록이며 위법·부패의 확정이 아님"}이고 이후 레코드가 데이터다.
- * rowCount는 고지 레코드를 제외한다.
+ * rowCount는 고지 레코드를 제외한다. 응답 envelope의 nonConclusionNotices는 데이터 행의
+ * 비어 있지 않은 nonConclusion을 행 순서대로 중복 제거한 배열이며, interpretationNotice는
+ * 사건 상태 고지와 의미를 섞지 않도록 null이다.
  */
 export const downloadPublicCases = <ThrowOnError extends boolean = false>(options: Options<DownloadPublicCasesData, ThrowOnError>): RequestResult<DownloadPublicCasesResponses, DownloadPublicCasesErrors, ThrowOnError> => (options.client ?? client).get<DownloadPublicCasesResponses, DownloadPublicCasesErrors, ThrowOnError>({ url: '/v1/cases/download', ...options });
 
@@ -81,7 +83,7 @@ export const getCaseReproducibility = <ThrowOnError extends boolean = false>(opt
 /**
  * 재현 파일
  *
- * Final v13 contract. Kind: QUERY. Capability: public.read.
+ * 공개 재배포 산출물입니다. JSON 파일 본문은 재배포 고지와 상태별 비확정 문구를 최상위에 포함하고, CSV 파일 본문은 재배포 고지 한 셀 행과 비확정 문구 열을 보존합니다.
  */
 export const downloadCaseReproducibility = <ThrowOnError extends boolean = false>(options: Options<DownloadCaseReproducibilityData, ThrowOnError>): RequestResult<DownloadCaseReproducibilityResponses, DownloadCaseReproducibilityErrors, ThrowOnError> => (options.client ?? client).get<DownloadCaseReproducibilityResponses, DownloadCaseReproducibilityErrors, ThrowOnError>({ url: '/v1/cases/{caseSlug}/reproducibility/download', ...options });
 
@@ -180,6 +182,10 @@ export const listContracts = <ThrowOnError extends boolean = false>(options?: Op
  * 필터 결과 export
  *
  * Final v13 contract. Kind: QUERY. Capability: public.read.
+ * 최대 5,000행을 CSV 또는 JSONL로 반환한다. 각 데이터 행은 interpretationNotice 열을
+ * 보존하고, 응답 envelope의 nonConclusionNotices는 빈 배열이며 interpretationNotice는
+ * `이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.`이다.
+ * CSV와 JSONL의 첫 레코드는 공개 재배포 고지를 유지하며 rowCount는 그 고지 레코드를 제외한다.
  */
 export const downloadContracts = <ThrowOnError extends boolean = false>(options: Options<DownloadContractsData, ThrowOnError>): RequestResult<DownloadContractsResponses, DownloadContractsErrors, ThrowOnError> => (options.client ?? client).get<DownloadContractsResponses, DownloadContractsErrors, ThrowOnError>({ url: '/v1/contracts/download', ...options });
 
@@ -267,7 +273,9 @@ export const searchPublicRecords = <ThrowOnError extends boolean = false>(option
  * 최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고
  * 다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는
  * {"notice":"이상 징후 기록이며 위법·부패의 확정이 아님"}이고 이후 레코드가 데이터다.
- * rowCount는 고지 레코드를 제외한다.
+ * rowCount는 고지 레코드를 제외한다. 응답 envelope의 nonConclusionNotices는 검색 데이터
+ * 행의 비어 있지 않은 nonConclusion을 행 순서대로 중복 제거하며, interpretationNotice는
+ * 검색 데이터 행에 운영 상태 고지가 하나라도 있을 때 그 정확한 고지를, 없으면 null을 가진다.
  */
 export const downloadPublicSearchRecords = <ThrowOnError extends boolean = false>(options: Options<DownloadPublicSearchRecordsData, ThrowOnError>): RequestResult<DownloadPublicSearchRecordsResponses, DownloadPublicSearchRecordsErrors, ThrowOnError> => (options.client ?? client).get<DownloadPublicSearchRecordsResponses, DownloadPublicSearchRecordsErrors, ThrowOnError>({ url: '/v1/search/download', ...options });
 

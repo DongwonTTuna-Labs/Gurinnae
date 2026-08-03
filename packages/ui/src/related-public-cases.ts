@@ -1,19 +1,32 @@
 import type { ProjectionValue } from "./projection-value";
 import { projectionScalarText } from "./projection-value";
+import {
+  type PublicStatusNotice,
+  publicStatusNotice,
+} from "./public-status-notice";
 import type { RowSelectionNavigationOption } from "./row-selection-navigation";
 import type { ScreenSectionProjection } from "./screen-projection";
 
 export type RelatedPublicCase = Readonly<{
   title: string;
   status: string;
+  notice: PublicStatusNotice;
   href: string;
 }>;
+
+const RELATED_CASE_BINDINGS: Readonly<
+  Record<string, { sectionId: string; fieldName: string }>
+> = {
+  "PUB-008": { sectionId: "cases", fieldName: "recentCases" },
+  "PUB-010": { sectionId: "cases", fieldName: "recentCases" },
+  "PUB-012": { sectionId: "related", fieldName: "relatedCases" },
+};
 
 const publicCasePath = /^\/cases\/[A-Za-z0-9._~-]+\/?$/u;
 const safeCaseSlug = /^[A-Za-z0-9._~-]+$/u;
 
 /**
- * Reduce PUB-012's typed projection to the only public case fields the
+ * Reduce an entity or contract projection to the only public case fields the
  * browser may render. DTO summaries, internal signal counts and unverified
  * destinations deliberately have no path through this boundary.
  */
@@ -21,11 +34,12 @@ export function buildRelatedPublicCases(
   projection: ScreenSectionProjection | undefined,
   verifiedDestinations: readonly RowSelectionNavigationOption[] = [],
 ): readonly RelatedPublicCase[] {
-  if (projection?.screenId !== "PUB-012" || projection.sectionId !== "related")
-    return [];
+  if (!projection) return [];
+  const binding = RELATED_CASE_BINDINGS[projection.screenId];
+  if (!binding || projection.sectionId !== binding.sectionId) return [];
 
   const relatedCases = projection.fields.find(
-    (field) => field.name === "relatedCases" && field.known,
+    (field) => field.name === binding.fieldName && field.known,
   )?.value;
   if (!isList(relatedCases)) return [];
 
@@ -39,7 +53,10 @@ export function buildRelatedPublicCases(
     if (!isRecord(item)) return [];
     const titleValue = recordString(item, "title");
     const statusValue = recordString(item, "publicState");
+    const noticeValue = recordString(item, "nonConclusion");
     if (titleValue === null || statusValue === null) return [];
+    if (noticeValue === null)
+      throw new Error("관련 공개 사건 비확정 고지 계약 누락");
 
     const href = relatedCaseHref({
       slug: recordString(item, "slug"),
@@ -50,7 +67,16 @@ export function buildRelatedPublicCases(
 
     const title = projectionScalarText("title", titleValue);
     const status = projectionScalarText("publicState", statusValue);
-    return title && status ? [{ title, status, href }] : [];
+    return title && status
+      ? [
+          {
+            title,
+            status,
+            notice: publicStatusNotice("NON_CONCLUSION", noticeValue),
+            href,
+          },
+        ]
+      : [];
   });
 }
 

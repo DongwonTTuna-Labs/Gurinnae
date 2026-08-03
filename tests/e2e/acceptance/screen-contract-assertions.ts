@@ -98,7 +98,7 @@ export function assertDataRequirements(): void {
   );
   const apiIndex = apiOperations();
   expect(requirements, "screen data requirements").toHaveLength(225);
-  expect(screenData, "screen-data operation contracts").toHaveLength(264);
+  expect(screenData, "screen-data operation contracts").toHaveLength(270);
   expect(
     screenData.map((operation) => operation.operationId).sort(),
     "operation-contracts ↔ screen-data ids",

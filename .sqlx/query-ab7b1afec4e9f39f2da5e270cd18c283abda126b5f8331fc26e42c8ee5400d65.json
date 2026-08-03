@@ -1,0 +1,87 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT result_type AS \"result_type!\",id AS \"id!\",title AS \"title!\",subtitle,status,summary,updated_at,href AS \"href!\",notice_payload FROM (SELECT 'CASE'::text result_type,c.id::text,c.title,c.slug subtitle,c.public_state status,c.summary,c.updated_at,'/cases/'||c.slug href,r.payload notice_payload FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (c.title ILIKE $1 OR c.summary ILIKE $1) AND (cardinality($2::text[])=0 OR 'CASE'=ANY($2)) AND (cardinality($3::text[])=0 OR c.public_state=ANY($3)) AND ($4::date IS NULL OR c.updated_at::date >= $4) AND ($5::date IS NULL OR c.updated_at::date <= $5) AND ($6::uuid IS NULL OR r.payload->>'agencyId'=$6::text OR COALESCE(r.payload->'agencyIds','[]'::jsonb) ? $6::text) AND (($7::text IS NULL AND $8::text IS NULL) OR EXISTS(SELECT 1 FROM public.agencies a WHERE r.payload->>'agencyId'=a.id::text AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8))) UNION ALL SELECT 'AGENCY',a.id::text,a.name,a.jurisdiction,a.agency_type,NULL,a.updated_at,'/agencies/'||a.id::text,NULL::jsonb FROM public.agencies a WHERE a.name IS NOT NULL AND a.name ILIKE $1 AND (cardinality($2::text[])=0 OR 'AGENCY'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR a.updated_at::date >= $4) AND ($5::date IS NULL OR a.updated_at::date <= $5) AND ($6::uuid IS NULL OR a.id=$6) AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8) UNION ALL SELECT 'SUPPLIER',id::text,name,business_status,business_status,NULL,updated_at,'/suppliers/'||id::text,NULL::jsonb FROM public.suppliers WHERE name IS NOT NULL AND name ILIKE $1 AND (cardinality($2::text[])=0 OR 'SUPPLIER'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL UNION ALL SELECT 'CONTRACT',c.id::text,c.title,c.contract_number,c.status,NULL,c.updated_at,'/contracts/'||c.id::text,NULL::jsonb FROM public.contracts c LEFT JOIN public.agencies a ON a.id=c.agency_id WHERE (c.title ILIKE $1 OR c.contract_number ILIKE $1) AND (cardinality($2::text[])=0 OR 'CONTRACT'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR c.updated_at::date >= $4) AND ($5::date IS NULL OR c.updated_at::date <= $5) AND ($6::uuid IS NULL OR c.agency_id=$6) AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8) UNION ALL SELECT 'RULE',rule_id,name,active_version,'ACTIVE',public_description,updated_at,'/methodology/rules/'||rule_id,NULL::jsonb FROM public.rules WHERE (name ILIKE $1 OR public_description ILIKE $1) AND (cardinality($2::text[])=0 OR 'RULE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL UNION ALL SELECT 'CORRECTION',x.id::text,x.summary,c.slug,c.public_state,x.reason,x.published_at,'/corrections/'||x.id::text,r.payload FROM public.corrections x JOIN public.cases c ON c.id=x.case_id JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (x.summary ILIKE $1 OR x.reason ILIKE $1) AND (cardinality($2::text[])=0 OR 'CORRECTION'=ANY($2)) AND (cardinality($3::text[])=0 OR c.public_state=ANY($3)) AND ($4::date IS NULL OR x.published_at::date >= $4) AND ($5::date IS NULL OR x.published_at::date <= $5) AND ($6::uuid IS NULL OR r.payload->>'agencyId'=$6::text OR COALESCE(r.payload->'agencyIds','[]'::jsonb) ? $6::text) AND (($7::text IS NULL AND $8::text IS NULL) OR EXISTS(SELECT 1 FROM public.agencies a WHERE r.payload->>'agencyId'=a.id::text AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8))) UNION ALL SELECT 'DATASET',id,title,format,'PUBLISHED',description,updated_at,'/data',NULL::jsonb FROM public.datasets WHERE (title ILIKE $1 OR description ILIKE $1) AND (cardinality($2::text[])=0 OR 'DATASET'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL UNION ALL SELECT 'SOURCE',source_id,display_name,status,status,public_message,updated_at,'/sources/'||source_id,NULL::jsonb FROM public.source_status WHERE (display_name ILIKE $1 OR source_id ILIKE $1 OR public_message ILIKE $1) AND (cardinality($2::text[])=0 OR 'SOURCE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL) x ORDER BY CASE WHEN $9='relevance' THEN (title ILIKE $1) END DESC,CASE WHEN $9 IN ('relevance','updated_desc') THEN updated_at END DESC NULLS LAST,CASE WHEN $9='title_asc' THEN title END ASC,id LIMIT 5001",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "result_type!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "id!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "subtitle",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "status",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "href!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "notice_payload",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "TextArray",
+        "Date",
+        "Date",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ab7b1afec4e9f39f2da5e270cd18c283abda126b5f8331fc26e42c8ee5400d65"
+}

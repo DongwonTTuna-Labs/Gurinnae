@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/privacy.request_refusal_notified.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "retentionRequestId",
+    "requestType",
+    "decisionDigest",
+    "reasonDigest",
+    "appealInstructionsDigest",
+    "responsePolicyVersion",
+    "responsePolicyDigest",
+    "calendarVersionId",
+    "calendarDigest",
+    "decisionAt",
+    "noticeDueAt",
+    "notifiedAt",
+    "notificationReceiptDigest"
+  ],
+  "properties": {
+    "retentionRequestId": { "type": "string", "format": "uuid" },
+    "requestType": {
+      "type": "string",
+      "enum": ["ACCESS", "CORRECTION", "DELETION", "RESTRICTION"]
+    },
+    "decisionDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "reasonDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "appealInstructionsDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "responsePolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "responsePolicyDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "calendarVersionId": { "type": "string", "format": "uuid" },
+    "calendarDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "decisionAt": { "type": "string", "format": "date-time" },
+    "noticeDueAt": { "type": "string", "format": "date-time" },
+    "notifiedAt": { "type": "string", "format": "date-time" },
+    "notificationReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

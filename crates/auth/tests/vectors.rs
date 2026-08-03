@@ -78,6 +78,7 @@ fn exact_request_binding_and_single_use_are_enforced() -> Result<(), AssertionEr
         iss: "review-console".to_owned(),
         jti: "11111111-1111-4111-8111-111111111111".to_owned(),
         method: "POST".to_owned(),
+        next_submission_session_sha256: None,
         path: "/internal/v1/sessions/resolve".to_owned(),
         query_sha256: sha256_hex(b""),
         typ: "service".to_owned(),
@@ -96,6 +97,7 @@ fn exact_request_binding_and_single_use_are_enforced() -> Result<(), AssertionEr
         body,
         content_type: Some("application/json; charset=utf-8"),
         idempotency_key: None,
+        next_submission_session: None,
     };
     let guard = MemoryReplayGuard::default();
     let verification = || ServiceVerification {
@@ -110,6 +112,170 @@ fn exact_request_binding_and_single_use_are_enforced() -> Result<(), AssertionEr
     assert!(matches!(
         verify_service(&token, &keys, &request, verification()),
         Err(AssertionError::Replayed)
+    ));
+    Ok(())
+}
+
+#[test]
+fn next_submission_session_is_digest_bound_and_single_use() -> Result<(), AssertionError> {
+    let body = br#"{"receiptToken":"opaque"}"#;
+    let next_session = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    let claims = ServiceClaims {
+        aud: "submission-api".to_owned(),
+        body_sha256: sha256_hex(body),
+        content_type: "application/json".to_owned(),
+        exp: 1_783_814_430,
+        iat: 1_783_814_400,
+        iss: "response-portal".to_owned(),
+        jti: "22222222-2222-4222-8222-222222222222".to_owned(),
+        method: "POST".to_owned(),
+        next_submission_session_sha256: Some(sha256_hex(next_session.as_bytes())),
+        path: "/v1/internal/privacy-requests/exchange".to_owned(),
+        query_sha256: sha256_hex(b""),
+        typ: "service".to_owned(),
+        v: 1,
+    };
+    let key = AssertionKey::new(std::array::from_fn(|index| index as u8));
+    let token = sign_service(&claims, &key)?;
+    assert!(!token.contains(next_session));
+    let keys = KeyRing {
+        current: key,
+        previous: None,
+    };
+    let request = BoundRequest {
+        method: "POST",
+        path: "/v1/internal/privacy-requests/exchange",
+        raw_query: "",
+        body,
+        content_type: Some("application/json"),
+        idempotency_key: None,
+        next_submission_session: Some(next_session),
+    };
+    let guard = MemoryReplayGuard::default();
+    let verification = || ServiceVerification {
+        expectation: ServiceExpectation {
+            issuer: "response-portal",
+            audience: "submission-api",
+            now: 1_783_814_405,
+        },
+        replay_guard: &guard,
+    };
+
+    verify_service(&token, &keys, &request, verification())?;
+    assert!(matches!(
+        verify_service(&token, &keys, &request, verification()),
+        Err(AssertionError::Replayed)
+    ));
+    Ok(())
+}
+
+#[test]
+fn next_submission_session_mismatch_and_unbound_header_are_rejected() -> Result<(), AssertionError>
+{
+    let body = br#"{"receiptToken":"opaque"}"#;
+    let signed_session = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    let other_session = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
+    let claims = ServiceClaims {
+        aud: "submission-api".to_owned(),
+        body_sha256: sha256_hex(body),
+        content_type: "application/json".to_owned(),
+        exp: 1_783_814_430,
+        iat: 1_783_814_400,
+        iss: "response-portal".to_owned(),
+        jti: "33333333-3333-4333-8333-333333333333".to_owned(),
+        method: "POST".to_owned(),
+        next_submission_session_sha256: Some(sha256_hex(signed_session.as_bytes())),
+        path: "/v1/internal/privacy-requests/exchange".to_owned(),
+        query_sha256: sha256_hex(b""),
+        typ: "service".to_owned(),
+        v: 1,
+    };
+    let key = AssertionKey::new(std::array::from_fn(|index| index as u8));
+    let token = sign_service(&claims, &key)?;
+    let keys = KeyRing {
+        current: key,
+        previous: None,
+    };
+    let guard = MemoryReplayGuard::default();
+    let verification = || ServiceVerification {
+        expectation: ServiceExpectation {
+            issuer: "response-portal",
+            audience: "submission-api",
+            now: 1_783_814_405,
+        },
+        replay_guard: &guard,
+    };
+    let request = |next_submission_session| BoundRequest {
+        method: "POST",
+        path: "/v1/internal/privacy-requests/exchange",
+        raw_query: "",
+        body,
+        content_type: Some("application/json"),
+        idempotency_key: None,
+        next_submission_session,
+    };
+
+    assert!(matches!(
+        verify_service(&token, &keys, &request(Some(other_session)), verification()),
+        Err(AssertionError::RequestMismatch)
+    ));
+    assert!(matches!(
+        verify_service(&token, &keys, &request(None), verification()),
+        Err(AssertionError::RequestMismatch)
+    ));
+    Ok(())
+}
+
+#[test]
+fn unsigned_next_submission_session_header_is_rejected() -> Result<(), AssertionError> {
+    let body = br#"{"receiptToken":"opaque"}"#;
+    let claims = ServiceClaims {
+        aud: "submission-api".to_owned(),
+        body_sha256: sha256_hex(body),
+        content_type: "application/json".to_owned(),
+        exp: 1_783_814_430,
+        iat: 1_783_814_400,
+        iss: "response-portal".to_owned(),
+        jti: "44444444-4444-4444-8444-444444444444".to_owned(),
+        method: "POST".to_owned(),
+        next_submission_session_sha256: None,
+        path: "/v1/internal/privacy-requests/exchange".to_owned(),
+        query_sha256: sha256_hex(b""),
+        typ: "service".to_owned(),
+        v: 1,
+    };
+    let key = AssertionKey::new(std::array::from_fn(|index| index as u8));
+    let token = sign_service(&claims, &key)?;
+    let keys = KeyRing {
+        current: key,
+        previous: None,
+    };
+    let guard = MemoryReplayGuard::default();
+    let request = BoundRequest {
+        method: "POST",
+        path: "/v1/internal/privacy-requests/exchange",
+        raw_query: "",
+        body,
+        content_type: Some("application/json"),
+        idempotency_key: None,
+        next_submission_session: Some("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+    };
+
+    assert!(matches!(
+        verify_service(
+            &token,
+            &keys,
+            &request,
+            ServiceVerification {
+                expectation: ServiceExpectation {
+                    issuer: "response-portal",
+                    audience: "submission-api",
+                    now: 1_783_814_405,
+                },
+                replay_guard: &guard,
+            }
+        ),
+        Err(AssertionError::RequestMismatch)
     ));
     Ok(())
 }

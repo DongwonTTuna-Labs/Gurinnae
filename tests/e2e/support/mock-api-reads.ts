@@ -6,10 +6,12 @@ import {
 } from "./mock-api-action-reads";
 import { handleExchange } from "./mock-api-exchange";
 import { mockOperationId } from "./mock-api-openapi";
+import { publicOpenApiMockResponse } from "./mock-api-openapi-document";
 import {
   publicDownloadRead,
   publicReadResponseBody,
 } from "./mock-api-public-export-reads";
+import { publicNonConclusion, publicSeo } from "./mock-api-public-notices";
 import { rowNavigationResponseBody } from "./mock-api-row-navigation";
 import { actionJourneyIds, problem, runtime } from "./mock-api-state";
 import { handleSubmissionRead } from "./mock-api-submission-reads";
@@ -34,15 +36,7 @@ export async function handleReadRoutes(
   if (request.method === "GET") {
     const publicDownload = publicDownloadRead(url);
     if (publicDownload) return publicDownload;
-    if (url.pathname === "/v1/openapi.json") {
-      return Response.json({
-        id: "public-openapi-v1",
-        status: "READY",
-        version: 1,
-        filename: "gurine-public-api.openapi.json",
-        mediaType: "application/json",
-      });
-    }
+    if (url.pathname === "/v1/openapi.json") return publicOpenApiMockResponse();
     // CAS-010/011 use the same typed authority envelopes as production.  Keep
     // these fixtures rich enough to exercise the authenticated
     // API -> projection -> rendered visualization/provenance path; the
@@ -279,15 +273,9 @@ export async function handleReadRoutes(
         asOf: "2026-07-19T00:00:00Z",
       });
     }
-    if (url.pathname === "/v1/contracts/download") {
-      return Response.json({
-        id: "contracts-e2e-export",
-        status: "READY",
-        version: 1,
-      });
-    }
     if (url.pathname === "/v1/cases/synthetic-record") {
       const sample = operationSamples.getPublicCase.body;
+      const nonConclusion = publicNonConclusion("PUBLISHED_ANOMALY");
       return Response.json({
         ...sample,
         slug: "synthetic-record",
@@ -300,7 +288,7 @@ export async function handleReadRoutes(
         agencyName: "가상해안시 도시정책국",
         contractName: "가상 해안도시 통합계약",
         amount: { amount: "1250000000", currency: "KRW" },
-        nonConclusion: "이 기록은 이상 징후이며 위법·부패의 확정이 아닙니다.",
+        nonConclusion,
         confirmedFacts: [
           {
             id: "fact-1",
@@ -426,12 +414,9 @@ export async function handleReadRoutes(
         ],
         freshness: { status: "CURRENT", asOf: "2026-07-13T00:00:00Z" },
         limitations: ["공개자료에 포함된 범위만 검토합니다."],
-        seo: {
-          title: "공개 사례 테스트",
-          description: "테스트",
-          canonicalUrl: "/cases/synthetic-record",
-          robots: "index,follow",
-        },
+        seo: publicSeo("공개 사례 테스트", "/cases/synthetic-record", [
+          nonConclusion,
+        ]),
       });
     }
     if (url.pathname === "/v1/internal/action-proposals") {
