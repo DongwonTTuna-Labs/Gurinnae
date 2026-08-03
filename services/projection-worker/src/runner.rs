@@ -2,7 +2,7 @@ use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, Postgres, Row, Transaction};
+use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -188,15 +188,15 @@ async fn verify_addendum_event_envelope(
         .payload
         .get("payload")
         .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "payload is missing".to_owned()))?;
-    let exact: bool = sqlx::query_scalar(
+    let exact: bool = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.outbox WHERE id=$1 AND event_type=$2 \
-           AND aggregate_id=$3 AND aggregate_version=$4 AND payload=$5)",
+           AND aggregate_id=$3 AND aggregate_version=$4 AND payload=$5) AS \"exact!\"",
+        event_id,
+        event_type,
+        aggregate_id,
+        aggregate_version,
+        payload,
     )
-    .bind(event_id)
-    .bind(event_type)
-    .bind(aggregate_id)
-    .bind(aggregate_version)
-    .bind(payload)
     .fetch_one(pool)
     .await
     .map_err(database)?;
@@ -216,12 +216,12 @@ async fn verify_cost_receipt(pool: &PgPool, job: &ClaimedJob) -> Result<(), Fail
         .pointer("/payload/receiptDigest")
         .and_then(Value::as_str)
         .ok_or_else(|| Failure::Terminal("INVALID_EVENT", "receiptDigest is missing".to_owned()))?;
-    let receipt_exists: bool = sqlx::query_scalar(
+    let receipt_exists: bool = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.outbound_delivery_receipts \
-         WHERE id=$1 AND receipt_digest=$2)",
+         WHERE id=$1 AND receipt_digest=$2) AS \"receipt_exists!\"",
+        receipt_id,
+        receipt_digest,
     )
-    .bind(receipt_id)
-    .bind(receipt_digest)
     .fetch_one(pool)
     .await
     .map_err(database)?;
@@ -239,12 +239,12 @@ async fn mark_addendum_inbox_processed(
     consumer_id: &str,
     event_id: Uuid,
 ) -> Result<(), Failure> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        consumer_id,
+        event_id,
     )
-    .bind(consumer_id)
-    .bind(event_id)
     .execute(pool)
     .await
     .map_err(database)?
@@ -295,11 +295,11 @@ async fn load_revision(
     case_id: Uuid,
     snapshot_id: Uuid,
 ) -> Result<RevisionProjection, Failure> {
-    let row = sqlx::query(
-        "SELECT r.id,r.revision,r.state::text state,r.public_payload,r.public_payload_sha256,          r.preview_sha256,r.published_at,r.supersedes_revision,c.public_slug,c.title,c.summary          FROM editorial.publication_revisions r JOIN editorial.cases c ON c.id=r.case_id          WHERE r.case_id=$1 AND r.review_snapshot_id=$2 ORDER BY r.revision DESC LIMIT 1",
+    let row = sqlx::query!(
+        "SELECT r.id,r.revision,r.state::text AS \"state!\",r.public_payload,r.public_payload_sha256,          r.preview_sha256,r.published_at,r.supersedes_revision,c.public_slug,c.title,c.summary          FROM editorial.publication_revisions r JOIN editorial.cases c ON c.id=r.case_id          WHERE r.case_id=$1 AND r.review_snapshot_id=$2 ORDER BY r.revision DESC LIMIT 1",
+        case_id,
+        snapshot_id,
     )
-    .bind(case_id)
-    .bind(snapshot_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
@@ -309,15 +309,11 @@ async fn load_revision(
             format!("case={case_id} snapshot={snapshot_id}"),
         )
     })?;
-    let payload: Value = row.try_get("public_payload").map_err(database)?;
-    let digest = row
-        .try_get::<String, _>("public_payload_sha256")
-        .map_err(database)?
-        .trim()
-        .to_owned();
+    let payload = row.public_payload;
+    let digest = row.public_payload_sha256.trim().to_owned();
     let canonical = serde_json::to_vec(&payload)
         .map_err(|error| Failure::Terminal("PUBLIC_PAYLOAD_INVALID", error.to_string()))?;
-    let id: Uuid = row.try_get("id").map_err(database)?;
+    let id = row.id;
     if sha256(&canonical) != digest {
         return Err(Failure::Terminal(
             "PUBLIC_PAYLOAD_DIGEST_MISMATCH",
@@ -326,15 +322,15 @@ async fn load_revision(
     }
     Ok(RevisionProjection {
         id,
-        revision: row.try_get("revision").map_err(database)?,
-        state: row.try_get("state").map_err(database)?,
+        revision: row.revision,
+        state: row.state,
         payload: payload.clone(),
         digest,
-        slug: row.try_get("public_slug").map_err(database)?,
-        title: row.try_get("title").map_err(database)?,
-        summary: row.try_get("summary").map_err(database)?,
-        published_at: row.try_get("published_at").map_err(database)?,
-        supersedes: row.try_get("supersedes_revision").map_err(database)?,
+        slug: row.public_slug,
+        title: row.title,
+        summary: row.summary,
+        published_at: row.published_at,
+        supersedes: row.supersedes_revision,
         source_freshness: payload
             .get("sourceFreshness")
             .or_else(|| payload.get("source_freshness"))
@@ -350,26 +346,20 @@ async fn persist_revision(
     revision: &RevisionProjection,
 ) -> Result<(), Failure> {
     let mut tx = pool.begin().await.map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO public.cases(id,slug,title,public_state,latest_revision,summary,          published_at,updated_at,source_freshness)          VALUES($1,$2,$3,$4::editorial.publication_state,$5,$6,$7,clock_timestamp(),$8)          ON CONFLICT(id) DO UPDATE SET slug=EXCLUDED.slug,title=EXCLUDED.title,          public_state=EXCLUDED.public_state,latest_revision=EXCLUDED.latest_revision,          summary=EXCLUDED.summary,published_at=LEAST(public.cases.published_at,EXCLUDED.published_at),          updated_at=clock_timestamp(),source_freshness=EXCLUDED.source_freshness",
-    )
-    .bind(case_id)
-    .bind(
+        case_id,
         revision
             .slug
             .clone()
             .unwrap_or_else(|| format!("case-{case_id}")),
-    )
-    .bind(
         revision
             .payload
             .get("title")
             .and_then(Value::as_str)
             .unwrap_or(&revision.title),
-    )
-    .bind(&revision.state)
-    .bind(revision.revision)
-    .bind(
+        &revision.state as _,
+        revision.revision,
         revision
             .payload
             .get("summary")
@@ -377,34 +367,34 @@ async fn persist_revision(
             .map(str::to_owned)
             .or_else(|| revision.summary.clone())
             .unwrap_or_default(),
+        revision.published_at,
+        &revision.source_freshness,
     )
-    .bind(revision.published_at)
-    .bind(&revision.source_freshness)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO public.case_revisions(case_id,revision,state,payload,payload_sha256,          published_at,supersedes_revision) VALUES($1,$2,$3::editorial.publication_state,$4,$5,$6,$7)          ON CONFLICT(case_id,revision) DO UPDATE SET state=EXCLUDED.state,payload=EXCLUDED.payload,          payload_sha256=EXCLUDED.payload_sha256,published_at=EXCLUDED.published_at,          supersedes_revision=EXCLUDED.supersedes_revision",
+        case_id,
+        revision.revision,
+        &revision.state as _,
+        &revision.payload,
+        &revision.digest,
+        revision.published_at,
+        revision.supersedes,
     )
-    .bind(case_id)
-    .bind(revision.revision)
-    .bind(&revision.state)
-    .bind(&revision.payload)
-    .bind(&revision.digest)
-    .bind(revision.published_at)
-    .bind(revision.supersedes)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "SELECT ops.enqueue_outbox('publication_revision',$1,$2,          'projection.publication_applied.v1',$3,clock_timestamp())",
+        revision.id.to_string(),
+        i64::from(revision.revision),
+        json!({
+            "public_payload_sha256":revision.digest,
+            "publication_revision_id":revision.id
+        }),
     )
-    .bind(revision.id.to_string())
-    .bind(i64::from(revision.revision))
-    .bind(json!({
-        "public_payload_sha256":revision.digest,
-        "publication_revision_id":revision.id
-    }))
     .fetch_one(&mut *tx)
     .await
     .map_err(database)?;
@@ -416,26 +406,26 @@ async fn project_access(
     event_id: Uuid,
     revision_id: Uuid,
 ) -> Result<Value, Failure> {
-    let row = sqlx::query(
-        "SELECT r.case_id,r.revision,r.state::text state,r.public_payload,r.public_payload_sha256, \
-         r.published_at,r.supersedes_revision,d.scope,d.affected_ids,d.expires_at \
+    let row = sqlx::query!(
+        "SELECT r.case_id,r.revision,r.state::text AS \"state!\",r.public_payload,r.public_payload_sha256, \
+         r.published_at,r.supersedes_revision,d.scope AS \"scope?\",d.affected_ids AS \"affected_ids?\",d.expires_at AS \"expires_at?\" \
          FROM editorial.publication_revisions r \
          LEFT JOIN LATERAL (SELECT scope,affected_ids,expires_at \
            FROM editorial.publication_access_decisions d \
            WHERE d.publication_revision_id=r.id AND d.state='ACTIVE' AND d.expires_at>clock_timestamp() \
            ORDER BY d.placed_at DESC LIMIT 1) d ON true WHERE r.id=$1",
+        revision_id,
     )
-    .bind(revision_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("PUBLICATION_REVISION_NOT_FOUND", revision_id.to_string()))?;
-    let case_id: Uuid = row.try_get("case_id").map_err(database)?;
-    let revision: i32 = row.try_get("revision").map_err(database)?;
-    let state: String = row.try_get("state").map_err(database)?;
-    let mut payload: Value = row.try_get("public_payload").map_err(database)?;
-    let scope: Option<String> = row.try_get("scope").map_err(database)?;
-    let affected: Option<Value> = row.try_get("affected_ids").map_err(database)?;
+    let case_id = row.case_id;
+    let revision = row.revision;
+    let state = row.state;
+    let mut payload = row.public_payload;
+    let scope = row.scope;
+    let affected = row.affected_ids;
     let restricted = scope.is_some();
     if let Some(scope) = scope.as_deref() {
         apply_restriction(&mut payload, scope, affected.as_ref());
@@ -444,32 +434,34 @@ async fn project_access(
         &serde_json::to_vec(&payload)
             .map_err(|error| Failure::Terminal("PUBLIC_PAYLOAD_INVALID", error.to_string()))?,
     );
-    let published_at: time::OffsetDateTime = row.try_get("published_at").map_err(database)?;
-    let supersedes: Option<i32> = row.try_get("supersedes_revision").map_err(database)?;
+    let published_at = row.published_at;
+    let supersedes = row.supersedes_revision;
     let mut tx = pool.begin().await.map_err(database)?;
-    sqlx::query("UPDATE public.cases SET public_state=$2,updated_at=clock_timestamp() WHERE id=$1")
-        .bind(case_id)
-        .bind(if restricted {
+    sqlx::query!(
+        "UPDATE public.cases SET public_state=$2,updated_at=clock_timestamp() WHERE id=$1",
+        case_id,
+        if restricted {
             "TEMPORARILY_RESTRICTED"
         } else {
             &state
-        })
-        .execute(&mut *tx)
-        .await
-        .map_err(database)?;
-    sqlx::query(
+        },
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(database)?;
+    sqlx::query!(
         "INSERT INTO public.case_revisions(case_id,revision,state,payload,payload_sha256,published_at, \
          supersedes_revision) VALUES($1,$2,$3::editorial.publication_state,$4,$5,$6,$7) \
          ON CONFLICT(case_id,revision) DO UPDATE SET payload=EXCLUDED.payload, \
          payload_sha256=EXCLUDED.payload_sha256",
+        case_id,
+        revision,
+        &state as _,
+        &payload,
+        &digest,
+        published_at,
+        supersedes,
     )
-    .bind(case_id)
-    .bind(revision)
-    .bind(&state)
-    .bind(&payload)
-    .bind(&digest)
-    .bind(published_at)
-    .bind(supersedes)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
@@ -521,10 +513,10 @@ fn restrict_collection(object: &mut Map<String, Value>, key: &str, affected: Opt
 }
 
 async fn inbox_processed(pool: &PgPool, event_id: Uuid) -> Result<bool, Failure> {
-    sqlx::query_scalar(
-        "SELECT processed_at IS NOT NULL FROM ops.inbox WHERE consumer='projection-worker' AND event_id=$1",
+    sqlx::query_scalar!(
+        "SELECT processed_at IS NOT NULL AS \"processed!\" FROM ops.inbox WHERE consumer='projection-worker' AND event_id=$1",
+        event_id,
     )
-    .bind(event_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
@@ -532,11 +524,11 @@ async fn inbox_processed(pool: &PgPool, event_id: Uuid) -> Result<bool, Failure>
 }
 
 async fn update_inbox(tx: &mut Transaction<'_, Postgres>, event_id: Uuid) -> Result<(), Failure> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer='projection-worker' AND event_id=$1 AND processed_at IS NULL",
+        event_id,
     )
-    .bind(event_id)
     .execute(&mut **tx)
     .await
     .map_err(database)?

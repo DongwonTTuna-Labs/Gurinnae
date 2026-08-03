@@ -81,11 +81,11 @@ async fn load_source_document(pool: &PgPool, job: &ClaimedJob) -> Result<SourceD
                 "source_document_id is missing or invalid".to_owned(),
             )
         })?;
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "SELECT id,content_type,content_sha256,content_size_bytes,object_key,status::text status \
          FROM raw.source_documents WHERE id=$1",
+        source_document_id,
     )
-    .bind(source_document_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
@@ -93,16 +93,12 @@ async fn load_source_document(pool: &PgPool, job: &ClaimedJob) -> Result<SourceD
         Failure::Terminal("SOURCE_DOCUMENT_NOT_FOUND", source_document_id.to_string())
     })?;
     Ok(SourceDocument {
-        id: row.try_get("id").map_err(database)?,
-        content_type: row.try_get("content_type").map_err(database)?,
-        content_sha256: row
-            .try_get::<String, _>("content_sha256")
-            .map_err(database)?
-            .trim()
-            .to_owned(),
-        content_size_bytes: row.try_get("content_size_bytes").map_err(database)?,
-        object_key: row.try_get("object_key").map_err(database)?,
-        status: row.try_get("status").map_err(database)?,
+        id: row.id,
+        content_type: row.content_type,
+        content_sha256: row.content_sha256.trim().to_owned(),
+        content_size_bytes: row.content_size_bytes,
+        object_key: row.object_key,
+        status: required_column(row.status, "\"status\"")?,
     })
 }
 
@@ -219,33 +215,33 @@ async fn persist_success(
         .sum::<usize>();
     let flags = prompt_injection_flags(result);
     let mut tx = pool.begin().await.map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.parser_runs(source_document_id,parser_name,parser_version,status, \
          output_record_count,output_digest,started_at,completed_at) \
          VALUES($1,$2,$3,'SUCCEEDED',$4,$5,clock_timestamp(),clock_timestamp())",
+        document.id,
+        &result.parser_id,
+        &result.parser_version,
+        i32::try_from(count).map_err(|_| {
+            Failure::Terminal(
+                "OUTPUT_LIMIT_EXCEEDED",
+                "record count exceeds i32".to_owned(),
+            )
+        })?,
+        &output_digest,
     )
-    .bind(document.id)
-    .bind(&result.parser_id)
-    .bind(&result.parser_version)
-    .bind(i32::try_from(count).map_err(|_| {
-        Failure::Terminal(
-            "OUTPUT_LIMIT_EXCEEDED",
-            "record count exceeds i32".to_owned(),
-        )
-    })?)
-    .bind(&output_digest)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE raw.source_documents SET status='PARSED',parser_name=$2,parser_version=$3, \
          schema_version='extraction-result-v1',prompt_injection_flags=$4,quarantine_reason=NULL \
          WHERE id=$1 AND status='FETCHED'",
+        document.id,
+        &result.parser_id,
+        &result.parser_version,
+        &flags,
     )
-    .bind(document.id)
-    .bind(&result.parser_id)
-    .bind(&result.parser_version)
-    .bind(&flags)
     .execute(&mut *tx)
     .await
     .map_err(database)?
@@ -256,15 +252,15 @@ async fn persist_success(
             document.id.to_string(),
         ));
     }
-    sqlx::query(
+    sqlx::query!(
         "SELECT ops.enqueue_outbox('source_document',$1,1,'source.document_parsed.v1',$2,clock_timestamp())",
+        document.id.to_string(),
+        json!({
+            "output_digest":output_digest,
+            "parser_version":result.parser_version,
+            "source_document_id":document.id,
+        }),
     )
-    .bind(document.id.to_string())
-    .bind(json!({
-        "output_digest":output_digest,
-        "parser_version":result.parser_version,
-        "source_document_id":document.id,
-    }))
     .fetch_one(&mut *tx)
     .await
     .map_err(database)?;
@@ -312,18 +308,19 @@ async fn ensure_multimodal_parser_active(
     pool: &PgPool,
     result: &crate::multimodal::MultimodalExtractionResult,
 ) -> Result<(), Failure> {
-    let active: bool = sqlx::query_scalar(
+    let active = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM core.parser_versions WHERE parser_name=$1 AND version=$2 \
          AND status='ACTIVE' AND btrim(implementation_digest::text)=$3 \
          AND supported_media_types ? $4)",
+        &result.parser_id,
+        &result.parser_version,
+        PARSER_IMPLEMENTATION_DIGEST,
+        &result.media_type,
     )
-    .bind(&result.parser_id)
-    .bind(&result.parser_version)
-    .bind(PARSER_IMPLEMENTATION_DIGEST)
-    .bind(&result.media_type)
     .fetch_one(pool)
     .await
     .map_err(database)?;
+    let active = required_column(active, "0")?;
     if active {
         Ok(())
     } else {
@@ -394,10 +391,22 @@ async fn insert_multimodal_parser_run(
     count: usize,
     output_digest: &str,
 ) -> Result<(), Failure> {
-    sqlx::query("INSERT INTO core.parser_runs(source_document_id,parser_name,parser_version,status,output_record_count,output_digest,error_code,started_at,completed_at) VALUES($1,$2,$3,$4,$5,$6,$7,clock_timestamp(),clock_timestamp())")
-        .bind(document.id).bind(&result.parser_id).bind(&result.parser_version).bind(parser_status)
-        .bind(i32::try_from(count).map_err(|_| Failure::Terminal("OUTPUT_LIMIT_EXCEEDED", "record count exceeds i32".to_owned()))?)
-        .bind(output_digest).bind(result.rejection_code.as_deref()).execute(tx).await.map_err(database)?;
+    sqlx::query!(
+        "INSERT INTO core.parser_runs(source_document_id,parser_name,parser_version,status,output_record_count,output_digest,error_code,started_at,completed_at) VALUES($1,$2,$3,$4,$5,$6,$7,clock_timestamp(),clock_timestamp())",
+        document.id,
+        &result.parser_id,
+        &result.parser_version,
+        parser_status,
+        i32::try_from(count).map_err(|_| Failure::Terminal(
+            "OUTPUT_LIMIT_EXCEEDED",
+            "record count exceeds i32".to_owned()
+        ))?,
+        output_digest,
+        result.rejection_code.as_deref(),
+    )
+    .execute(tx)
+    .await
+    .map_err(database)?;
     Ok(())
 }
 
@@ -407,8 +416,18 @@ async fn update_multimodal_source(
     result: &crate::multimodal::MultimodalExtractionResult,
     source_status: &str,
 ) -> Result<(), Failure> {
-    let changed = sqlx::query("UPDATE raw.source_documents SET status=$2::core.source_document_status,parser_name=$3,parser_version=$4,schema_version='multimodal-extraction-result.v2',prompt_injection_flags='[]'::jsonb,quarantine_reason=$5 WHERE id=$1 AND status='FETCHED'")
-        .bind(document.id).bind(source_status).bind(&result.parser_id).bind(&result.parser_version).bind(result.rejection_code.as_deref()).execute(tx).await.map_err(database)?.rows_affected();
+    let changed = sqlx::query!(
+        "UPDATE raw.source_documents SET status=$2::core.source_document_status,parser_name=$3,parser_version=$4,schema_version='multimodal-extraction-result.v2',prompt_injection_flags='[]'::jsonb,quarantine_reason=$5 WHERE id=$1 AND status='FETCHED'",
+        document.id,
+        source_status as _,
+        &result.parser_id,
+        &result.parser_version,
+        result.rejection_code.as_deref(),
+    )
+    .execute(tx)
+    .await
+    .map_err(database)?
+    .rows_affected();
     if changed == 1 {
         Ok(())
     } else {
@@ -425,8 +444,14 @@ async fn enqueue_multimodal_event(
     result: &crate::multimodal::MultimodalExtractionResult,
     output_digest: &str,
 ) -> Result<(), Failure> {
-    sqlx::query("SELECT ops.enqueue_outbox('source_document',$1,1,'source.document_parsed.v1',$2,clock_timestamp())")
-        .bind(document.id.to_string()).bind(json!({"output_digest":output_digest,"extraction_digest":result.extraction_sha256,"parser_version":result.parser_version,"source_document_id":document.id})).fetch_one(tx).await.map_err(database)?;
+    sqlx::query!(
+        "SELECT ops.enqueue_outbox('source_document',$1,1,'source.document_parsed.v1',$2,clock_timestamp())",
+        document.id.to_string(),
+        json!({"output_digest":output_digest,"extraction_digest":result.extraction_sha256,"parser_version":result.parser_version,"source_document_id":document.id}),
+    )
+    .fetch_one(tx)
+    .await
+    .map_err(database)?;
     Ok(())
 }
 
@@ -445,28 +470,28 @@ async fn persist_terminal(
         "FAILED"
     };
     let mut tx = pool.begin().await.map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.parser_runs(source_document_id,parser_name,parser_version,status, \
          output_record_count,error_code,started_at,completed_at) \
          VALUES($1,$2,$3,$4,0,$5,clock_timestamp(),clock_timestamp())",
+        document.id,
+        &result.parser_id,
+        &result.parser_version,
+        parser_status,
+        code,
     )
-    .bind(document.id)
-    .bind(&result.parser_id)
-    .bind(&result.parser_version)
-    .bind(parser_status)
-    .bind(code)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE raw.source_documents SET status=$2::core.source_document_status,parser_name=$3, \
          parser_version=$4,quarantine_reason=$5 WHERE id=$1 AND status='FETCHED'",
+        document.id,
+        status as _,
+        &result.parser_id,
+        &result.parser_version,
+        code,
     )
-    .bind(document.id)
-    .bind(status)
-    .bind(&result.parser_id)
-    .bind(&result.parser_version)
-    .bind(code)
     .execute(&mut *tx)
     .await
     .map_err(database)?
@@ -483,19 +508,20 @@ async fn persist_terminal(
 }
 
 async fn ensure_parser_active(pool: &PgPool, result: &ExtractionResult) -> Result<(), Failure> {
-    let active: bool = sqlx::query_scalar(
+    let active = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM core.parser_versions \
          WHERE parser_name=$1 AND version=$2 AND status='ACTIVE' \
            AND btrim(implementation_digest::text)=$3 \
            AND supported_media_types ? $4)",
+        &result.parser_id,
+        &result.parser_version,
+        PARSER_IMPLEMENTATION_DIGEST,
+        &result.media_type,
     )
-    .bind(&result.parser_id)
-    .bind(&result.parser_version)
-    .bind(PARSER_IMPLEMENTATION_DIGEST)
-    .bind(&result.media_type)
     .fetch_one(pool)
     .await
     .map_err(database)?;
+    let active = required_column(active, "0")?;
     if active {
         Ok(())
     } else {

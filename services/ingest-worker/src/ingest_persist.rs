@@ -5,13 +5,13 @@ async fn data_quality_incident(
     operation_id: &str,
     code: &str,
 ) -> Result<(), Failure> {
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.source_incidents(source_id,severity,incident_type,summary,impact,status) \
          VALUES($1,'MINOR',$2,'Structured record missing required canonical field',$3,'OPEN')",
+        source_id,
+        code,
+        json!({"sourceDocumentId":document_id,"operationId":operation_id}),
     )
-    .bind(source_id)
-    .bind(code)
-    .bind(json!({"sourceDocumentId":document_id,"operationId":operation_id}))
     .execute(&mut **tx)
     .await
     .map_err(database)?;
@@ -59,24 +59,24 @@ async fn persist_schema_drift(
     after: &str,
 ) -> Result<(), Failure> {
     let drift_id = Uuid::new_v4();
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.schema_drifts(id,source_id,detected_at,fingerprint_before, \
          fingerprint_after,sample_document_ids,status,impact) \
          VALUES($1,$2,clock_timestamp(),$3,$4,$5,'OPEN','UNKNOWN')",
+        drift_id,
+        source_id,
+        before,
+        after,
+        json!([document_id]),
     )
-    .bind(drift_id)
-    .bind(source_id)
-    .bind(before)
-    .bind(after)
-    .bind(json!([document_id]))
     .execute(&mut **tx)
     .await
     .map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "SELECT ops.enqueue_outbox('schema_drift',$1,1,'source.schema_drift_detected.v1',$2,clock_timestamp())",
+        drift_id.to_string(),
+        json!({"schema_drift_id":drift_id,"source_id":source_id,"fingerprint_before":before,"fingerprint_after":after}),
     )
-    .bind(drift_id.to_string())
-    .bind(json!({"schema_drift_id":drift_id,"source_id":source_id,"fingerprint_before":before,"fingerprint_after":after}))
     .fetch_one(&mut **tx)
     .await
     .map_err(database)?;
@@ -194,22 +194,28 @@ fn shape(value: &Value) -> Value {
 }
 
 async fn inbox_processed(pool: &PgPool, event_id: Uuid) -> Result<bool, Failure> {
-    sqlx::query_scalar(
+    let processed = sqlx::query_scalar!(
         "SELECT processed_at IS NOT NULL FROM ops.inbox WHERE consumer='ingest-worker' AND event_id=$1",
+        event_id,
     )
-    .bind(event_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
-    .ok_or_else(|| Failure::Terminal("INBOX_RECORD_MISSING", event_id.to_string()))
+    .ok_or_else(|| Failure::Terminal("INBOX_RECORD_MISSING", event_id.to_string()))?;
+    processed.ok_or_else(|| {
+        Failure::Retryable(
+            "DATABASE_UNAVAILABLE",
+            "inbox processed predicate unexpectedly null".to_owned(),
+        )
+    })
 }
 
 async fn update_inbox(tx: &mut Transaction<'_, Postgres>, event_id: Uuid) -> Result<(), Failure> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer='ingest-worker' AND event_id=$1 AND processed_at IS NULL",
+        event_id,
     )
-    .bind(event_id)
     .execute(&mut **tx)
     .await
     .map_err(database)?
@@ -268,4 +274,3 @@ fn object_store(error: ObjectStoreError) -> Failure {
         }
     }
 }
-

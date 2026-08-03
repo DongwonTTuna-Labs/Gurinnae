@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT intake.delete_response_attachment_session_v2($1,$2,$3) AS \"value?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b97635ef4ba05bfeeb454f15bd91163342339d31d8ad411c09e478db69e8c589"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE public.cases SET public_state=$2,updated_at=clock_timestamp() WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9889a1f2874d185f726b31b3512b1cd3aecd20a67cd116cd31eaccc9c5e4f2ff"
+}

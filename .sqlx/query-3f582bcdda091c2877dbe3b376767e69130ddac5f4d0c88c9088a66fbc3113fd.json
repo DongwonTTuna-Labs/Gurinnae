@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,email_encrypted,locale FROM intake.subscriptions WHERE status='ACTIVE' AND frequency='IMMEDIATE' ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "intake.subscriptions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "email_encrypted",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "intake.subscriptions",
+            "name": "email_encrypted"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "locale",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "intake.subscriptions",
+            "name": "locale"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3f582bcdda091c2877dbe3b376767e69130ddac5f4d0c88c9088a66fbc3113fd"
+}

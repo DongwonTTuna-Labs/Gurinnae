@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT subscription_id AS \"subscription_id?\" FROM intake.create_subscription_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "subscription_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Bytea",
+        "Jsonb",
+        "Text",
+        "Text",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ebca609fec028251de9157a4813ce7fe40111bd7234d572085fdd9b170ef0cb4"
+}

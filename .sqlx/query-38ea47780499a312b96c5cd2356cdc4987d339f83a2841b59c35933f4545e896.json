@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.queue_approved_communication_rendering_v1($1,$2::char(64),$3::char(64))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "queue_approved_communication_rendering_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "38ea47780499a312b96c5cd2356cdc4987d339f83a2841b59c35933f4545e896"
+}

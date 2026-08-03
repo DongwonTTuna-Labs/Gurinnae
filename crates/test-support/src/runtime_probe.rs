@@ -58,12 +58,12 @@ pub fn live_business_health_probe() -> bool {
                 .connect(&url)
                 .await
                 .ok()?;
-            let value = sqlx::query_scalar::<_, Value>(
+            let value: Value = sqlx::query_scalar!(
                 "SELECT ops.read_business_health_projection_v1(NULL::uuid, NULL::uuid, clock_timestamp())",
             )
             .fetch_one(&pool)
             .await
-            .ok()?;
+            .ok()??;
             pool.close().await;
             Some(business_health_shape_is_closed(&value))
         })
@@ -163,13 +163,16 @@ async fn run_acceptance_probe(url: &str, scenario_id: &str) -> Option<bool> {
 
 async fn probe_attempt(pool: &sqlx::PgPool, scenario_id: &str) -> Result<Value, sqlx::Error> {
     let mut transaction = pool.begin().await?;
-    sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+    sqlx::query!("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
         .execute(&mut *transaction)
         .await?;
-    let value = sqlx::query_scalar::<_, Value>("SELECT ops.acceptance_runtime_probe_v1($1)")
-        .bind(scenario_id)
+    let value = sqlx::query_scalar!("SELECT ops.acceptance_runtime_probe_v1($1)", scenario_id,)
         .fetch_one(&mut *transaction)
-        .await?;
+        .await?
+        .ok_or_else(|| sqlx::Error::ColumnDecode {
+            index: "0".to_owned(),
+            source: Box::new(sqlx::error::UnexpectedNullError),
+        })?;
     transaction.commit().await?;
     Ok(value)
 }

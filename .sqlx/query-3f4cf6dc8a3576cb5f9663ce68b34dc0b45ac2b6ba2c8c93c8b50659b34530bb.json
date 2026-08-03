@@ -1,0 +1,147 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id,c.contract_number,c.title,c.agency_id,c.supplier_id,c.status,c.signed_at,c.amount,a.name agency_name,s.name supplier_name FROM public.contracts c LEFT JOIN public.agencies a ON a.id=c.agency_id LEFT JOIN public.suppliers s ON s.id=c.supplier_id WHERE ($1='' OR c.title ILIKE '%'||$1||'%' OR c.contract_number ILIKE '%'||$1||'%') AND ($2::uuid IS NULL OR c.agency_id=$2) AND ($3::uuid IS NULL OR c.supplier_id=$3) AND (cardinality($4::text[])=0 OR c.status=ANY($4)) AND (cardinality($5::text[])=0 OR COALESCE(c.detail->>'procurementMethod',c.detail->>'contractMethod')=ANY($5)) AND ($6::date IS NULL OR c.signed_at >= $6) AND ($7::date IS NULL OR c.signed_at <= $7) AND ($8::numeric IS NULL OR (c.amount->>'amount')::numeric >= $8) AND ($9::numeric IS NULL OR (c.amount->>'amount')::numeric <= $9) ORDER BY CASE WHEN $10='updated_desc' THEN c.updated_at END DESC,CASE WHEN $10='created_asc' THEN c.signed_at END ASC NULLS LAST,CASE WHEN $10='signed_desc' THEN c.signed_at END DESC NULLS LAST,CASE WHEN $10='amount_desc' THEN (c.amount->>'amount')::numeric END DESC NULLS LAST,CASE WHEN $10='amount_asc' THEN (c.amount->>'amount')::numeric END ASC NULLS LAST,CASE WHEN $10='title_asc' THEN c.title END ASC,c.id LIMIT $11 OFFSET $12",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "contract_number",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "contract_number"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "agency_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "agency_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "supplier_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "supplier_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "signed_at",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "signed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "amount",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "contracts",
+            "name": "amount"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "agency_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "supplier_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Uuid",
+        "TextArray",
+        "TextArray",
+        "Date",
+        "Date",
+        "Numeric",
+        "Numeric",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3f4cf6dc8a3576cb5f9663ce68b34dc0b45ac2b6ba2c8c93c8b50659b34530bb"
+}

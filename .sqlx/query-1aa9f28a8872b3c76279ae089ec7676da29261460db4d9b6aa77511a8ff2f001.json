@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM ops.outbound_delivery_receipts WHERE id=$1 AND delivery_id=$2 AND receipt_sequence=$3 AND receipt_digest=$4 AND resulting_state=$5 AND applied=$6)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Bpchar",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1aa9f28a8872b3c76279ae089ec7676da29261460db4d9b6aa77511a8ff2f001"
+}

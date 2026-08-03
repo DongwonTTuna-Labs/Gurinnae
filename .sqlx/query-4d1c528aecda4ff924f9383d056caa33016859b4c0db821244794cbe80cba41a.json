@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.agent_output_validations(\n          agent_run_id,provider_turn_id,input_snapshot_sha256,provider_output_sha256,\n          validator_version,validator_sha256,output_schema_id,output_schema_version,\n          output_schema_sha256,validation_policy_version,validation_policy_sha256,\n          validation_status,schema_status,citation_status,policy_status,run_terminal_status,\n          output_status,failure_code,failure_details_redacted,validated_outcome,\n          validated_outcome_sha256,citation_count,proposal_count,citation_set_sha256,\n          proposal_set_sha256,validation_sha256)\n         VALUES($1,$2,$3,CAST($4 AS char(64)),'agent-output-validator-v2',CAST($5 AS char(64)),\n          $6,$7,CAST($8 AS char(64)),'agent-output-policy-v2',CAST($9 AS char(64)),\n          'INVALID','FAIL','NOT_RUN','NOT_RUN','FAILED',\n          $10,$11,$12::jsonb,NULL,NULL,0,0,CAST($13 AS char(64)),CAST($13 AS char(64)),CAST($14 AS char(64)))\n         ON CONFLICT(agent_run_id,provider_turn_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Text",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d1c528aecda4ff924f9383d056caa33016859b4c0db821244794cbe80cba41a"
+}

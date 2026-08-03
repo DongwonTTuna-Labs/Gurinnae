@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH failed AS (UPDATE ops.provider_connection_tests SET status='FAILED', redacted_result=$2,completed_at=clock_timestamp() WHERE id=$1 AND status IN ('QUEUED','RUNNING') RETURNING provider_id) UPDATE ops.provider_configs p SET last_connection_test_at=clock_timestamp(), last_connection_test_status='FAILED' FROM failed WHERE p.id=failed.provider_id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4c74893cef867adc329ba51d6ccc18f6029d6e91b1b52b5e583c6c18e2770b8f"
+}

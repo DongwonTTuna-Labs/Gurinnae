@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (raw.insert_source_document_revision($1,$2,$3,$4,$5,clock_timestamp(),$6::timestamptz,$7,$8,$9,$10,$11::core.source_document_status,$12,$13,$14,$15,$16,$17)).id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "Timestamptz",
+        "Text",
+        "Bpchar",
+        "Int8",
+        "Text",
+        {
+          "Custom": {
+            "name": "core.source_document_status",
+            "kind": {
+              "Enum": [
+                "DISCOVERED",
+                "FETCHED",
+                "PARSED",
+                "QUARANTINED",
+                "REJECTED"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ee68fa831e0f3335824224f1348d80b50c16bdfd21c8d254b97c2e75ceba04b0"
+}

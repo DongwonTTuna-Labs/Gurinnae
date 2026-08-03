@@ -1,7 +1,6 @@
 use gurine_auth::assertion::canonical::sha256_hex;
 use gurine_persistence_postgres::outbox::{OutboxEvent, append};
 use serde_json::Value;
-use sqlx::Row;
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
@@ -89,13 +88,23 @@ async fn persist_subscription(
         .begin()
         .await
         .map_err(|_| ServiceError::Persistence)?;
-    let row = sqlx::query("SELECT subscription_id FROM intake.create_subscription_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)")
-        .bind(common::token_hmac(&context.state.token_hmac_key, email)?).bind(email_encrypted).bind(topics).bind(frequency).bind(locale)
-        .bind(common::token_hmac(&context.state.token_hmac_key, verification_token)?).bind(common::token_hmac(&context.state.token_hmac_key, management_token)?)
-        .bind(pending_token_hash).bind(context.issuer).bind(expires_at).fetch_one(&mut *transaction).await.map_err(common::database_error)?;
-    let id: Uuid = row
-        .try_get("subscription_id")
-        .map_err(|_| ServiceError::Persistence)?;
+    let row = sqlx::query!(
+        "SELECT subscription_id AS \"subscription_id?\" FROM intake.create_subscription_session($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+        common::token_hmac(&context.state.token_hmac_key, email)?,
+        email_encrypted,
+        topics,
+        frequency,
+        locale,
+        common::token_hmac(&context.state.token_hmac_key, verification_token)?,
+        common::token_hmac(&context.state.token_hmac_key, management_token)?,
+        pending_token_hash,
+        context.issuer,
+        expires_at
+    )
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(common::database_error)?;
+    let id = row.subscription_id.ok_or(ServiceError::Persistence)?;
     let aggregate_id = id.to_string();
     let occurred_at = OffsetDateTime::now_utc();
     let payload = serde_json::json!({"actor_id":context.issuer,"occurred_at":common::timestamp(occurred_at)?,"operation_id":context.operation,"request_id":context.request_id});
@@ -127,19 +136,17 @@ pub async fn verify(context: &RequestContext<'_>) -> Result<Value, ServiceError>
     }
     let session_token = common::random_token()?;
     let expires_at = OffsetDateTime::now_utc() + Duration::minutes(30);
-    let row = sqlx::query(
-        "SELECT subscription_id,session_id FROM intake.verify_subscription_session($1,$2,$3,$4)",
+    let row = sqlx::query!(
+        "SELECT subscription_id AS \"subscription_id?\", session_id AS \"session_id?\" FROM intake.verify_subscription_session($1,$2,$3,$4)",
+        common::token_hmac(&context.state.token_hmac_key, token)?,
+        sha256_hex(session_token.as_bytes()),
+        context.issuer,
+        expires_at
     )
-    .bind(common::token_hmac(&context.state.token_hmac_key, token)?)
-    .bind(sha256_hex(session_token.as_bytes()))
-    .bind(context.issuer)
-    .bind(expires_at)
     .fetch_one(&context.state.pool)
     .await
     .map_err(common::database_error)?;
-    let id: Uuid = row
-        .try_get("subscription_id")
-        .map_err(|_| ServiceError::Persistence)?;
+    let id = row.subscription_id.ok_or(ServiceError::Persistence)?;
     Ok(serde_json::json!({
         "status":"VERIFIED",
         "subscriptionId":id,
@@ -195,15 +202,18 @@ pub async fn update(context: &RequestContext<'_>) -> Result<Value, ServiceError>
     if topics.is_none() && frequency.is_none() && status.is_none() {
         return Err(ServiceError::InvalidRequest);
     }
-    let id: Uuid = sqlx::query_scalar("SELECT intake.update_subscription_session($1,$2,$3,$4,$5)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .bind(topics)
-        .bind(frequency)
-        .bind(status)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)?;
+    let id: Uuid = sqlx::query_scalar!(
+        "SELECT intake.update_subscription_session($1,$2,$3,$4,$5) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer,
+        topics,
+        frequency,
+        status
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, id, None)
 }
 
@@ -216,22 +226,28 @@ pub async fn unsubscribe(context: &RequestContext<'_>) -> Result<Value, ServiceE
             return Err(ServiceError::InvalidRequest);
         }
     }
-    let id: Uuid = sqlx::query_scalar("SELECT intake.unsubscribe_session($1,$2)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)?;
+    let id: Uuid = sqlx::query_scalar!(
+        "SELECT intake.unsubscribe_session($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, id, None)
 }
 
 async fn private(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    sqlx::query_scalar("SELECT intake.get_subscription_session($1,$2)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)
+    sqlx::query_scalar!(
+        "SELECT intake.get_subscription_session($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)
 }
 
 fn topics_from_create(value: &Value) -> Result<Value, ServiceError> {

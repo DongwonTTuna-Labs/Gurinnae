@@ -1,0 +1,144 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.id,r.revision,r.state::text AS \"state!\",r.public_payload,r.public_payload_sha256,          r.preview_sha256,r.published_at,r.supersedes_revision,c.public_slug,c.title,c.summary          FROM editorial.publication_revisions r JOIN editorial.cases c ON c.id=r.case_id          WHERE r.case_id=$1 AND r.review_snapshot_id=$2 ORDER BY r.revision DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "state!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "public_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "public_payload"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "public_payload_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "public_payload_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "preview_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "preview_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "supersedes_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "supersedes_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "public_slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "public_slug"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "summary"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "b2fc52b0149f75d10efef781d7240ad80075c37299db3c21187f4f5baed93c0b"
+}

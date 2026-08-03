@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.inbox(consumer,event_id,result) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d69f966bffa07c54f8930fa254eca5992287a7d1fe3b2a24f36b75ab50c5c3ad"
+}

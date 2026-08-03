@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.source_runs(id,source_id,mode,status,scheduled_for,schedule_expression) VALUES($1,$2,'INCREMENTAL','QUEUED',$3,$4) ON CONFLICT(source_id,scheduled_for) WHERE scheduled_for IS NOT NULL DO NOTHING RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.source_runs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dd62298f67df6c551599ef8ee274463aafc7b01c1fa95406bf6c99a421a55e8d"
+}

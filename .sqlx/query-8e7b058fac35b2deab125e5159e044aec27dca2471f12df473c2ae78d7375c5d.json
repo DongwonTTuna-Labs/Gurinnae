@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.enqueue_outbox('attachment',$1,1,'attachment.scan_completed.v1',$2,clock_timestamp())",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enqueue_outbox",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8e7b058fac35b2deab125e5159e044aec27dca2471f12df473c2ae78d7375c5d"
+}

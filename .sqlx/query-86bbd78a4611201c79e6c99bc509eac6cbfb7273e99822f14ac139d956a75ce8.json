@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT intake.get_correction_receipt_session($1,$2) AS \"value?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value?",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "86bbd78a4611201c79e6c99bc509eac6cbfb7273e99822f14ac139d956a75ce8"
+}

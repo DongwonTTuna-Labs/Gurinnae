@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT intake.unsubscribe_session($1,$2) AS \"value?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0d3249d752796a3fcc82d25f3a0240079a92854c535cc09512522999f4bca750"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) VALUES('COMMUNICATION_PROVIDER_POLL','notification-worker',$1,$2,8) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "71b34080fe62ad460b7b46d3295a4d3beb3754ceaf35e36f81ee87b4b289fd75"
+}

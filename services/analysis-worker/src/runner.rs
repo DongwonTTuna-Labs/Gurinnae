@@ -18,7 +18,7 @@ use reqwest::Client;
 use rust_decimal::Decimal;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -46,6 +46,10 @@ pub enum WorkerError {
 pub(crate) enum Failure {
     Terminal(&'static str, String),
     Retryable(&'static str, String),
+}
+
+fn required<T>(value: Option<T>) -> Result<T, sqlx::Error> {
+    value.ok_or_else(|| sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError)))
 }
 
 pub async fn run(config: Config) -> Result<(), WorkerError> {
@@ -159,12 +163,12 @@ async fn reconcile_terminal_failure(
                 .and_then(Value::as_str)
                 .and_then(|value| Uuid::parse_str(value).ok())
             {
-                sqlx::query(
+                sqlx::query!(
                     "UPDATE core.rule_evaluations SET status='FAILED',completed_at=clock_timestamp(), \
                      result_payload=$2 WHERE id=$1 AND status IN ('QUEUED','RUNNING')",
+                    id,
+                    json!({"code":code,"redacted":true}),
                 )
-                .bind(id)
-                .bind(json!({"code":code,"redacted":true}))
                 .execute(&mut *tx)
                 .await
                 .map_err(JobError::Database)?;
@@ -177,15 +181,15 @@ async fn reconcile_terminal_failure(
                 .and_then(Value::as_str)
                 .and_then(|value| Uuid::parse_str(value).ok())
             {
-                sqlx::query(
+                sqlx::query!(
                     "WITH failed AS (UPDATE ops.provider_connection_tests SET status='FAILED', \
                        redacted_result=$2,completed_at=clock_timestamp() \
                      WHERE id=$1 AND status IN ('QUEUED','RUNNING') RETURNING provider_id) \
                      UPDATE ops.provider_configs p SET last_connection_test_at=clock_timestamp(), \
                        last_connection_test_status='FAILED' FROM failed WHERE p.id=failed.provider_id",
+                    id,
+                    json!({"code":code,"redacted":true}),
                 )
-                .bind(id)
-                .bind(json!({"code":code,"redacted":true}))
                 .execute(&mut *tx)
                 .await
                 .map_err(JobError::Database)?;
@@ -198,12 +202,12 @@ async fn reconcile_terminal_failure(
                 .and_then(Value::as_str)
                 .and_then(|value| Uuid::parse_str(value).ok())
             {
-                sqlx::query(
+                sqlx::query!(
                     "UPDATE ops.inbox SET processed_at=COALESCE(processed_at,clock_timestamp()), \
                        result=$2 WHERE consumer='analysis-worker' AND event_id=$1",
+                    event_id,
+                    format!("FAILED:{code}"),
                 )
-                .bind(event_id)
-                .bind(format!("FAILED:{code}"))
                 .execute(&mut *tx)
                 .await
                 .map_err(JobError::Database)?;
@@ -230,22 +234,26 @@ async fn reconcile_agent_run(
     if code == "PROVIDER_OUTCOME_UNKNOWN" {
         // A request may have reached the gateway. Keep RUNNING for
         // reconciliation; FAILED here would permit duplicate dispatch.
-        sqlx::query(
-            "SELECT ops.transition_agent_run_worker_v1($1,NULL,NULL,NULL,NULL,$2,NULL,NULL,false)",
+        sqlx::Executor::execute(
+            &mut **tx,
+            sqlx::query_scalar!(
+                "SELECT ops.transition_agent_run_worker_v1($1,NULL,NULL,NULL,NULL,$2,NULL,NULL,false)",
+                id,
+                json!({"status":"RECONCILIATION_REQUIRED","code":code,"redacted":true}),
+            ),
         )
-        .bind(id)
-        .bind(json!({"status":"RECONCILIATION_REQUIRED","code":code,"redacted":true}))
-        .execute(&mut **tx)
         .await
         .map_err(JobError::Database)?;
         return Ok(());
     }
-    sqlx::query(
-        "SELECT ops.transition_agent_run_worker_v1($1,NULL,'FAILED',NULL,NULL,$2,'failure-v1',NULL,true)",
+    sqlx::Executor::execute(
+        &mut **tx,
+        sqlx::query_scalar!(
+            "SELECT ops.transition_agent_run_worker_v1($1,NULL,'FAILED',NULL,NULL,$2,'failure-v1',NULL,true)",
+            id,
+            json!({"code":code,"redacted":true}),
+        ),
     )
-    .bind(id)
-    .bind(json!({"code":code,"redacted":true}))
-    .execute(&mut **tx)
     .await
     .map_err(JobError::Database)?;
     Ok(())

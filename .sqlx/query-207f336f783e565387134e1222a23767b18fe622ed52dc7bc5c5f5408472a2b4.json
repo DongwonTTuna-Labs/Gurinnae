@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM ops.agent_source_uses WHERE agent_run_id=$1 AND use_kind='TOOL_QUERY' AND source_kind='DATASET_MEMBER')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "207f336f783e565387134e1222a23767b18fe622ed52dc7bc5c5f5408472a2b4"
+}

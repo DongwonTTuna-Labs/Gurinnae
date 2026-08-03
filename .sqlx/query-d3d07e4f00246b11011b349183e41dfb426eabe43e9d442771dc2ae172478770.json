@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT submission_id AS \"submission_id?\" FROM intake.submit_response_session_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "submission_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text",
+        "Int8",
+        "Bpchar",
+        "Bytea",
+        "Jsonb",
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d3d07e4f00246b11011b349183e41dfb426eabe43e9d442771dc2ae172478770"
+}

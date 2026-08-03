@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.brave_search_pricing_v1()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "brave_search_pricing_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b7bbb3a34e78ac2a80d4da2d2abbe5dbee0808c198952c57ecc107dffdc316f3"
+}

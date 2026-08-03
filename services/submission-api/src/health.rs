@@ -7,7 +7,7 @@ pub async fn live() -> impl Responder {
 }
 
 pub async fn ready(state: web::Data<AppState>) -> impl Responder {
-    match sqlx::query("SELECT 1").execute(&state.pool).await {
+    match sqlx::Executor::execute(&state.pool, sqlx::query_scalar!("SELECT 1")).await {
         Ok(_) => HttpResponse::Ok().json(serde_json::json!({"status":"ready"})),
         Err(_) => {
             HttpResponse::ServiceUnavailable().json(serde_json::json!({"status":"not-ready"}))

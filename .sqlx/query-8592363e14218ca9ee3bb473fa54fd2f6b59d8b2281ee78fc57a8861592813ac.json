@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.parser_runs(source_document_id,parser_name,parser_version,status, output_record_count,error_code,started_at,completed_at) VALUES($1,$2,$3,$4,0,$5,clock_timestamp(),clock_timestamp())",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8592363e14218ca9ee3bb473fa54fd2f6b59d8b2281ee78fc57a8861592813ac"
+}

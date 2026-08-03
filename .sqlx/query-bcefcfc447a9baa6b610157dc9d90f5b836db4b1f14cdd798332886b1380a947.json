@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT processed_at IS NOT NULL FROM ops.inbox WHERE consumer='ingest-worker' AND event_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "?column?",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "bcefcfc447a9baa6b610157dc9d90f5b836db4b1f14cdd798332886b1380a947"
+}

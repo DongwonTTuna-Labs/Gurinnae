@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE intake.dataset_export_requests SET status='READY',object_key=$2, completed_at=clock_timestamp() WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2aec7296632fde28d15b898240c1312aedfab884f6783268eee39eeba841b9b3"
+}

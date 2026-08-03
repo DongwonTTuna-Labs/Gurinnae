@@ -11,13 +11,15 @@ async fn process_pending_scan(
             .map_err(|_| WorkerError::Database)?;
         return Ok(false);
     };
-    let id: Uuid = row.try_get("id").map_err(|_| WorkerError::Database)?;
-    let locked: bool =
-        sqlx::query_scalar("SELECT pg_try_advisory_xact_lock(hashtextextended($1,0))")
-            .bind(format!("attachment-scan:{id}"))
-            .fetch_one(&mut *transaction)
-            .await
-            .map_err(|_| WorkerError::Database)?;
+    let id = row.id;
+    let locked = sqlx::query_scalar!(
+        "SELECT pg_try_advisory_xact_lock(hashtextextended($1,0))",
+        format!("attachment-scan:{id}"),
+    )
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(|_| WorkerError::Database)?
+    .ok_or(WorkerError::Database)?;
     if !locked {
         transaction
             .rollback()
@@ -25,9 +27,9 @@ async fn process_pending_scan(
             .map_err(|_| WorkerError::Database)?;
         return Ok(false);
     }
-    let key: String = row.try_get("object_key").map_err(|_| WorkerError::Database)?;
-    let size: i64 = row.try_get("size_bytes").map_err(|_| WorkerError::Database)?;
-    let digest: String = row.try_get::<String, _>("sha256").map_err(|_| WorkerError::Database)?;
+    let key = row.object_key;
+    let size = row.size_bytes;
+    let digest = row.sha256.ok_or(WorkerError::Database)?;
     let bytes = get(store, &key, digest.trim())
         .await
         .map_err(|error| match error {
@@ -44,15 +46,16 @@ async fn process_pending_scan(
         Ok(ScanResult::Infected) => "INFECTED",
         Err(_) => return Err(WorkerError::Dependency),
     };
-    let event_id: Uuid = sqlx::query_scalar(
+    let event_id = sqlx::query_scalar!(
         "SELECT ops.enqueue_outbox('attachment',$1,1,'attachment.scan_completed.v1',$2,clock_timestamp())",
+        id.to_string(),
+        json!({"attachment_id":id,"attachment_kind":kind,"scan_status":status,
+            "sha256":digest.trim()}),
     )
-    .bind(id.to_string())
-    .bind(json!({"attachment_id":id,"attachment_kind":kind,"scan_status":status,
-        "sha256":digest.trim()}))
     .fetch_one(&mut *transaction)
     .await
-    .map_err(|_| WorkerError::Database)?;
+    .map_err(|_| WorkerError::Database)?
+    .ok_or(WorkerError::Database)?;
     transaction
         .commit()
         .await
@@ -61,10 +64,17 @@ async fn process_pending_scan(
     Ok(true)
 }
 
+struct PendingAttachmentRow {
+    id: Uuid,
+    object_key: String,
+    size_bytes: i64,
+    sha256: Option<String>,
+}
+
 async fn pending_attachment(
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-) -> Result<Option<(&'static str, sqlx::postgres::PgRow)>, WorkerError> {
-    let correction = sqlx::query("SELECT id,object_key,size_bytes,sha256::text AS sha256 \
+) -> Result<Option<(&'static str, PendingAttachmentRow)>, WorkerError> {
+    let correction = sqlx::query_as!(PendingAttachmentRow, "SELECT id,object_key,size_bytes,sha256::text AS \"sha256?\" \
                  FROM intake.correction_draft_attachments WHERE upload_status='FINALIZED' AND scan_status='PENDING' \
                  ORDER BY created_at,id LIMIT 1")
         .fetch_optional(&mut **transaction)
@@ -73,7 +83,7 @@ async fn pending_attachment(
     if let Some(row) = correction {
         return Ok(Some(("CORRECTION", row)));
     }
-    let response = sqlx::query("SELECT id,object_key,size_bytes,sha256::text AS sha256 \
+    let response = sqlx::query_as!(PendingAttachmentRow, "SELECT id,object_key,size_bytes,sha256::text AS \"sha256?\" \
                  FROM intake.response_attachments WHERE upload_status='FINALIZED' AND scan_status='PENDING' \
                  ORDER BY created_at,id LIMIT 1")
         .fetch_optional(&mut **transaction)

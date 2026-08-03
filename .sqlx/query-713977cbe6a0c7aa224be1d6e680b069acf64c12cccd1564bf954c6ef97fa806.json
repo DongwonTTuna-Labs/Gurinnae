@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.job_attempts(job_id,attempt,worker_id,fencing_token,started_at) VALUES($1,$2,$3,$4,clock_timestamp())",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "713977cbe6a0c7aa224be1d6e680b069acf64c12cccd1564bf954c6ef97fa806"
+}

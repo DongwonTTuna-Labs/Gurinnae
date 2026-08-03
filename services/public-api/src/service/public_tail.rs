@@ -3,22 +3,22 @@ async fn list_reports(pool: &PgPool, query: &Query) -> Result<Value, ServiceErro
     let period_to = optional_date(query, "periodTo")?;
     validate_range(period_from.as_ref(), period_to.as_ref())?;
     let sort = requested_sort(query, &["published_desc", "period_desc"], "published_desc")?;
-    let rows = sqlx::query(
+    let rows = sqlx::query!(
         "SELECT id,period_start,period_end,title,summary,report,published_at FROM public.transparency_reports WHERE ($1::date IS NULL OR period_end >= $1) AND ($2::date IS NULL OR period_start <= $2) ORDER BY CASE WHEN $3='published_desc' THEN published_at END DESC,CASE WHEN $3='period_desc' THEN period_end END DESC,CASE WHEN $3='period_desc' THEN period_start END DESC,id LIMIT $4 OFFSET $5",
+        period_from,
+        period_to,
+        sort,
+        query.limit + 1,
+        query.offset,
     )
-        .bind(period_from)
-        .bind(period_to)
-        .bind(sort)
-        .bind(query.limit + 1)
-        .bind(query.offset)
-        .fetch_all(pool)
-        .await
-        .map_err(db)?;
+    .fetch_all(pool)
+    .await
+    .map_err(db)?;
     let mut items = Vec::new();
     for r in rows {
-        let id: Uuid = r.try_get("id").map_err(db)?;
-        let summary: String = r.try_get("summary").map_err(db)?;
-        let report: serde_json::Value = r.try_get("report").map_err(db)?;
+        let id = r.id;
+        let summary = r.summary;
+        let report = r.report;
         let detail = ["income", "expenses", "donors", "conflicts", "thresholds"]
             .into_iter()
             .filter_map(|key| report.get(key).and_then(|value| public_report_scalar(key, value)))
@@ -28,7 +28,7 @@ async fn list_reports(pool: &PgPool, query: &Query) -> Result<Value, ServiceErro
         } else {
             format!("{summary} · {}", detail.join(" · "))
         };
-        items.push(json!({"id":id,"periodStart":r.try_get::<time::Date,_>("period_start").map_err(db)?.to_string(),"periodEnd":r.try_get::<time::Date,_>("period_end").map_err(db)?.to_string(),"title":r.try_get::<String,_>("title").map_err(db)?,"summary":summary,"publishedAt":timestamp(r.try_get("published_at").map_err(db)?)?,"href":format!("/transparency-reports/{id}")}));
+        items.push(json!({"id":id,"periodStart":r.period_start.to_string(),"periodEnd":r.period_end.to_string(),"title":r.title,"summary":summary,"publishedAt":timestamp(r.published_at)?,"href":format!("/transparency-reports/{id}")}));
     }
     let mut filters = Map::new();
     for name in ["periodFrom", "periodTo"] {

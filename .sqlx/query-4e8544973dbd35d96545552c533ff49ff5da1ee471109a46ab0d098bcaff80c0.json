@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.enqueue_outbox('publication_revision',$1,$2,          'projection.publication_applied.v1',$3,clock_timestamp())",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enqueue_outbox",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4e8544973dbd35d96545552c533ff49ff5da1ee471109a46ab0d098bcaff80c0"
+}

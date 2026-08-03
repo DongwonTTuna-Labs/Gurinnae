@@ -283,8 +283,11 @@ async fn research_artifact_wire_ref(
     let fetch_id = artifact.get("sourceFetchId").and_then(Value::as_str)
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or_else(|| Failure::Terminal("AGENT_RESEARCH_ARTIFACT_INVALID", "sourceFetchId".into()))?;
-    let key: String = sqlx::query_scalar("SELECT object_key FROM raw.research_artifacts WHERE source_fetch_id=$1")
-        .bind(fetch_id).fetch_optional(pool).await.map_err(database)?
+    let key: String = sqlx::query_scalar!(
+        "SELECT object_key FROM raw.research_artifacts WHERE source_fetch_id=$1",
+        fetch_id,
+    )
+        .fetch_optional(pool).await.map_err(database)?
         .ok_or_else(|| Failure::Terminal("AGENT_RESEARCH_ARTIFACT_MISSING", fetch_id.to_string()))?;
     let bytes = store.get(&key, Some(digest)).await
         .map_err(|_| Failure::Terminal("OBJECT_STORE_READ_FAILED", key))?;
@@ -376,7 +379,7 @@ async fn load_provider_turn_identity(
     turn_id: Uuid,
     idempotency_hash: &str,
 ) -> Result<ProviderTurnIdentity, Failure> {
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "SELECT provider_turn_id,agent_run_id,prior_transcript_sha256,input_snapshot_sha256,provider_config_id,
                 provider_mode,provider_candidate_id,model_id,model_configuration_sha256,
                 routing_policy_version,routing_decision_sha256,prompt_id,prompt_version,prompt_sha256,
@@ -384,42 +387,41 @@ async fn load_provider_turn_identity(
                 model_use_rights_sha256,budget_reservation_key_sha256,dispatch_key_sha256,request_sha256,
                 request_redacted,turn_sequence,attempt_sequence,dispatched_at
            FROM ops.agent_provider_turns WHERE provider_turn_id=$1 AND dispatch_key_sha256=CAST($2 AS char(64))"
+        ,
+        turn_id,
+        idempotency_hash,
     )
-    .bind(turn_id)
-    .bind(idempotency_hash)
     .fetch_one(&state.pool)
     .await
     .map_err(database)?;
     Ok(ProviderTurnIdentity {
-        turn_id: row.try_get("provider_turn_id").map_err(database)?,
-        run_id: row.try_get("agent_run_id").map_err(database)?,
+        turn_id: row.provider_turn_id,
+        run_id: row.agent_run_id,
         idempotency_hash: idempotency_hash.to_owned(),
-        request_redacted: row.try_get("request_redacted").map_err(database)?,
-        turn_sequence: row.try_get("turn_sequence").map_err(database)?,
-        attempt_sequence: row.try_get("attempt_sequence").map_err(database)?,
-        input_snapshot_sha256: row.try_get::<String, _>("input_snapshot_sha256").map_err(database)?,
-        prior_transcript_sha256: row.try_get::<String, _>("prior_transcript_sha256").map_err(database)?,
-        provider_config_id: row.try_get("provider_config_id").map_err(database)?,
-        provider_mode: row.try_get("provider_mode").map_err(database)?,
-        provider_candidate_id: row.try_get("provider_candidate_id").map_err(database)?,
-        model_id: row.try_get("model_id").map_err(database)?,
-        model_configuration_sha256: row.try_get::<String, _>("model_configuration_sha256").map_err(database)?,
-        routing_policy_version: row.try_get("routing_policy_version").map_err(database)?,
-        routing_decision_sha256: row.try_get::<String, _>("routing_decision_sha256").map_err(database)?,
-        prompt_id: row.try_get("prompt_id").map_err(database)?,
-        prompt_version: row.try_get("prompt_version").map_err(database)?,
-        prompt_sha256: row.try_get::<String, _>("prompt_sha256").map_err(database)?,
-        output_schema_id: row.try_get("output_schema_id").map_err(database)?,
-        output_schema_version: row.try_get("output_schema_version").map_err(database)?,
-        output_schema_sha256: row.try_get::<String, _>("output_schema_sha256").map_err(database)?,
-        classification: row.try_get("classification").map_err(database)?,
-        model_use_rights_sha256: row.try_get::<String, _>("model_use_rights_sha256").map_err(database)?,
-        budget_reservation_key_sha256: row.try_get::<String, _>("budget_reservation_key_sha256").map_err(database)?,
-        dispatch_key_sha256: row.try_get::<String, _>("dispatch_key_sha256").map_err(database)?,
-        request_sha256: row.try_get::<String, _>("request_sha256").map_err(database)?,
-        dispatched_at: row
-            .try_get::<time::OffsetDateTime, _>("dispatched_at")
-            .map_err(database)?
+        request_redacted: row.request_redacted,
+        turn_sequence: row.turn_sequence,
+        attempt_sequence: row.attempt_sequence,
+        input_snapshot_sha256: row.input_snapshot_sha256,
+        prior_transcript_sha256: row.prior_transcript_sha256,
+        provider_config_id: required(row.provider_config_id).map_err(database)?,
+        provider_mode: row.provider_mode,
+        provider_candidate_id: row.provider_candidate_id,
+        model_id: row.model_id,
+        model_configuration_sha256: row.model_configuration_sha256,
+        routing_policy_version: row.routing_policy_version,
+        routing_decision_sha256: row.routing_decision_sha256,
+        prompt_id: row.prompt_id,
+        prompt_version: row.prompt_version,
+        prompt_sha256: row.prompt_sha256,
+        output_schema_id: row.output_schema_id,
+        output_schema_version: row.output_schema_version,
+        output_schema_sha256: row.output_schema_sha256,
+        classification: row.classification,
+        model_use_rights_sha256: row.model_use_rights_sha256,
+        budget_reservation_key_sha256: row.budget_reservation_key_sha256,
+        dispatch_key_sha256: row.dispatch_key_sha256,
+        request_sha256: row.request_sha256,
+        dispatched_at: row.dispatched_at
             .format(&time::format_description::well_known::Rfc3339)
             .map_err(|error| Failure::Terminal("PROVIDER_RECEIPT_INVALID", error.to_string()))?,
     })
@@ -430,26 +432,26 @@ async fn existing_provider_turn(
     run_id: Uuid,
     idempotency_hash: &str,
 ) -> Result<Option<ProviderTurnIdentity>, Failure> {
-    let Some(existing) = sqlx::query(
+    let Some(existing) = sqlx::query!(
         "SELECT provider_turn_id,status FROM ops.agent_provider_turns
            WHERE agent_run_id=$1 AND dispatch_key_sha256=CAST($2 AS char(64))",
+        run_id,
+        idempotency_hash,
     )
-    .bind(run_id)
-    .bind(idempotency_hash)
     .fetch_optional(&state.pool)
     .await
     .map_err(database)?
     else {
         return Ok(None);
     };
-    let status: String = existing.try_get("status").map_err(database)?;
+    let status = existing.status;
     if status != "DISPATCHED" {
         return Err(Failure::Retryable(
             "PROVIDER_OUTCOME_UNKNOWN",
             format!("provider turn already terminal: {status}"),
         ));
     }
-    let turn_id = existing.try_get("provider_turn_id").map_err(database)?;
+    let turn_id = existing.provider_turn_id;
     Ok(Some(load_provider_turn_identity(state, turn_id, idempotency_hash).await?))
 }
 

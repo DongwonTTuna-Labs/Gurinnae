@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.payload FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id AND r.revision=c.latest_revision WHERE c.slug=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "case_revisions",
+            "name": "payload"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "35b53b7c6f0d972fcd3629af3696a09bcf30799e98a68377d0259a4f0bcfbfe1"
+}

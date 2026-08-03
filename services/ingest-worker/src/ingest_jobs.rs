@@ -31,23 +31,24 @@ async fn process_parsed_event(
         return Ok(json!({"deduplicated":true}));
     }
     let (document_id, output_digest, parser_version) = parsed_event_fields(job)?;
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "SELECT source_id,status::text status,content_sha256,parser_version,metadata \
          FROM raw.source_documents WHERE id=$1",
+        document_id,
     )
-    .bind(document_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("SOURCE_DOCUMENT_NOT_FOUND", document_id.to_string()))?;
-    let source_id: String = row.try_get("source_id").map_err(database)?;
-    let status: String = row.try_get("status").map_err(database)?;
-    let source_digest = row
-        .try_get::<String, _>("content_sha256")
-        .map_err(database)?
-        .trim()
-        .to_owned();
-    let persisted_parser: Option<String> = row.try_get("parser_version").map_err(database)?;
+    let source_id = row.source_id;
+    let status = row.status.ok_or_else(|| {
+        Failure::Retryable(
+            "DATABASE_UNAVAILABLE",
+            "source document status unexpectedly null".to_owned(),
+        )
+    })?;
+    let source_digest = row.content_sha256.trim().to_owned();
+    let persisted_parser = row.parser_version;
     if status != "PARSED" || persisted_parser.as_deref() != Some(parser_version) {
         return Err(Failure::Terminal(
             "SOURCE_DOCUMENT_CONTRACT_MISMATCH",
@@ -127,60 +128,61 @@ async fn persist_parsed_records(
     for (index, record) in records.iter().enumerate() {
         let bytes = serde_json::to_vec(record)
             .map_err(|error| Failure::Terminal("PARSED_RECORD_INVALID", error.to_string()))?;
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO raw.parsed_records(source_document_id,record_type,record_index, \
              parser_version,payload,payload_sha256) VALUES($1,$2,$3,$4,$5,$6) \
              ON CONFLICT(source_document_id,record_type,record_index,parser_version) DO NOTHING",
-        )
-        .bind(document_id)
-        .bind(
+            document_id,
             record
                 .get("recordType")
                 .and_then(Value::as_str)
                 .unwrap_or("DOCUMENT"),
-        )
-        .bind(
             i32::try_from(index).map_err(|_| {
                 Failure::Terminal("PARSED_RECORD_LIMIT", "too many records".to_owned())
             })?,
+            parser_version,
+            record,
+            sha256(&bytes),
         )
-        .bind(parser_version)
-        .bind(record)
-        .bind(sha256(&bytes))
         .execute(&mut *tx)
         .await
         .map_err(database)?;
     }
-    let previous = sqlx::query(
+    let previous = sqlx::query!(
         "SELECT id,metadata->>'parsedSchemaFingerprint' fingerprint \
          FROM raw.source_documents WHERE source_id=$1 AND id<>$2 \
            AND metadata ? 'parsedSchemaFingerprint' ORDER BY retrieved_at DESC LIMIT 1",
+        source_id,
+        document_id,
     )
-    .bind(source_id)
-    .bind(document_id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(database)?;
     if let Some(previous) = previous {
-        let before: String = previous.try_get("fingerprint").map_err(database)?;
+        let before = previous.fingerprint.ok_or_else(|| {
+            Failure::Retryable(
+                "DATABASE_UNAVAILABLE",
+                "parsedSchemaFingerprint unexpectedly null".to_owned(),
+            )
+        })?;
         if before != schema_fingerprint {
             persist_schema_drift(&mut tx, source_id, document_id, &before, schema_fingerprint)
                 .await?;
         }
     }
-    sqlx::query(
+    sqlx::query!(
         "SELECT raw.record_parsed_source_metadata($1,$2,$3,$4,$5)",
+        document_id,
+        "document-extractor",
+        parser_version,
+        "v1",
+        json!({
+            "parsedSchemaFingerprint":schema_fingerprint,
+            "parsedOutputDigest":output_digest,
+            "parsedOutputObjectKey":key,
+            "parsedRecordCount":records.len(),
+        }),
     )
-    .bind(document_id)
-    .bind("document-extractor")
-    .bind(parser_version)
-    .bind("v1")
-    .bind(json!({
-        "parsedSchemaFingerprint":schema_fingerprint,
-        "parsedOutputDigest":output_digest,
-        "parsedOutputObjectKey":key,
-        "parsedRecordCount":records.len(),
-    }))
     .execute(&mut *tx)
     .await
     .map_err(database)?;
@@ -214,25 +216,25 @@ async fn process_source_run(
         .ok_or_else(|| Failure::Terminal("INVALID_SOURCE_RUN_JOB", "sourceRunId".into()))?;
     let gateway = source_egress_url
         .ok_or_else(|| Failure::Terminal("SOURCE_EGRESS_MISSING", run_id.to_string()))?;
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "UPDATE ops.source_runs r SET status='RUNNING',started_at=COALESCE(started_at,clock_timestamp()), \
            checkpoint_before=COALESCE(checkpoint_before,(SELECT COALESCE(jsonb_object_agg(c.partition_key,c.cursor_payload),'{}'::jsonb) \
              FROM ops.source_checkpoints c WHERE c.source_id=r.source_id)) \
          FROM ops.source_registry s WHERE r.id=$1 AND r.source_id=s.source_id \
            AND r.status IN ('QUEUED','RUNNING') AND s.enabled AND s.legal_status='APPROVED' \
          RETURNING r.source_id,r.mode,r.requested_from,r.requested_to,s.base_url,s.configuration",
+        run_id,
     )
-    .bind(run_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("SOURCE_RUN_NOT_ALLOWED", run_id.to_string()))?;
-    let source_id: String = row.try_get("source_id").map_err(database)?;
-    let mode: String = row.try_get("mode").map_err(database)?;
-    let requested_from: Option<time::Date> = row.try_get("requested_from").map_err(database)?;
-    let requested_to: Option<time::Date> = row.try_get("requested_to").map_err(database)?;
-    let base_url: Option<String> = row.try_get("base_url").map_err(database)?;
-    let configuration: Value = row.try_get("configuration").map_err(database)?;
+    let source_id = row.source_id;
+    let mode = row.mode;
+    let requested_from = row.requested_from;
+    let requested_to = row.requested_to;
+    let base_url = row.base_url;
+    let configuration = row.configuration;
     let catalog = operations()
         .filter(|operation| operation.connector_id == source_id)
         .collect::<Vec<_>>();
@@ -444,33 +446,39 @@ async fn persist_source_target(
     let inserted = if mode == "DRY_RUN" {
         None
     } else {
-        let document_id: Uuid = sqlx::query_scalar(
+        let document_id: Uuid = sqlx::query_scalar!(
             "SELECT (raw.insert_source_document_revision($1,$2,$3,$4,$5,clock_timestamp(),$6::timestamptz,$7,$8,$9,$10,$11::core.source_document_status,$12,$13,$14,$15,$16,$17)).id",
+            source_id,
+            format!("{}:{}", operation.id, target.external_id),
+            &target.revision,
+            target_url,
+            fetch_id,
+            target.published_at.as_deref() as _,
+            if response.content_type.is_empty() {
+                target.content_type.as_str()
+            } else {
+                response.content_type.as_str()
+            },
+            digest,
+            i64::try_from(response.bytes.len()).unwrap_or(i64::MAX),
+            object_key,
+            "FETCHED" as _,
+            Option::<&str>::None,
+            Option::<&str>::None,
+            Option::<&str>::None,
+            json!([]),
+            Option::<&str>::None,
+            json!({"connectorOperationId":operation.id,"sourceRunId":run_id}),
         )
-        .bind(source_id)
-        .bind(format!("{}:{}", operation.id, target.external_id))
-        .bind(&target.revision)
-        .bind(target_url)
-        .bind(fetch_id)
-        .bind(target.published_at.as_deref())
-        .bind(if response.content_type.is_empty() {
-            target.content_type.as_str()
-        } else {
-            response.content_type.as_str()
-        })
-        .bind(digest)
-        .bind(i64::try_from(response.bytes.len()).unwrap_or(i64::MAX))
-        .bind(object_key)
-        .bind("FETCHED")
-        .bind(Option::<&str>::None)
-        .bind(Option::<&str>::None)
-        .bind(Option::<&str>::None)
-        .bind(json!([]))
-        .bind(Option::<&str>::None)
-        .bind(json!({"connectorOperationId":operation.id,"sourceRunId":run_id}))
         .fetch_one(&mut *tx)
         .await
-        .map_err(database)?;
+        .map_err(database)?
+        .ok_or_else(|| {
+            Failure::Retryable(
+                "DATABASE_UNAVAILABLE",
+                "insert_source_document_revision unexpectedly returned null".to_owned(),
+            )
+        })?;
         Some(document_id)
     };
     if let Some(document_id) = inserted {
@@ -478,62 +486,27 @@ async fn persist_source_target(
             persist_structured_json(&mut tx, source_id, operation, document_id, &response.bytes)
                 .await?;
         }
-        sqlx::query(
+        sqlx::query!(
             "SELECT ops.enqueue_outbox('source_document',$1,1,'source.document_stored.v1',$2,clock_timestamp())",
+            document_id.to_string(),
+            json!({"content_sha256":digest,"source_document_id":document_id,"source_id":source_id}),
         )
-        .bind(document_id.to_string())
-        .bind(json!({"content_sha256":digest,"source_document_id":document_id,"source_id":source_id}))
         .fetch_one(&mut *tx)
         .await
         .map_err(database)?;
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.source_checkpoints(source_id,partition_key,cursor_payload,remote_high_watermark,last_success_at)          VALUES($1,$2,$3,$4,clock_timestamp())          ON CONFLICT(source_id,partition_key) DO UPDATE SET cursor_payload=EXCLUDED.cursor_payload,            remote_high_watermark=EXCLUDED.remote_high_watermark,last_success_at=EXCLUDED.last_success_at,            version=ops.source_checkpoints.version+1,updated_at=clock_timestamp()",
+        source_id,
+        operation.id,
+        json!({"operationId":operation.id,"digest":digest,"sourceRunId":run_id}),
+        digest,
     )
-    .bind(source_id)
-    .bind(operation.id)
-    .bind(json!({"operationId":operation.id,"digest":digest,"sourceRunId":run_id}))
-    .bind(digest)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
     tx.commit().await.map_err(database)?;
     Ok(inserted.is_some())
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "fetch persistence binds the leased run and exact source response metadata"
-)]
-async fn persist_source_fetch(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    run_id: Uuid,
-    source_id: &str,
-    target_url: &str,
-    operation: &'static ConnectorOperation,
-    response: &SourceResponse,
-    digest: &str,
-    object_key: &str,
-) -> Result<Uuid, Failure> {
-    let fetch_id = Uuid::new_v4();
-    sqlx::query(
-        "INSERT INTO raw.source_fetches(id,source_id,source_run_id,external_locator,            requested_at,completed_at,http_status,content_type,payload_sha256,payload_size_bytes,object_key)          VALUES($1,$2,$3,$4,clock_timestamp(),clock_timestamp(),$5,$6,$7,$8,$9)          ON CONFLICT(source_id,external_locator,payload_sha256) DO NOTHING",
-    )
-    .bind(fetch_id)
-    .bind(source_id)
-    .bind(run_id)
-    .bind(target_url)
-    .bind(i32::from(response.http_status))
-    .bind(&response.content_type)
-    .bind(digest)
-    .bind(i64::try_from(response.bytes.len()).map_err(|_| {
-        Failure::Terminal("SOURCE_PAYLOAD_TOO_LARGE", operation.id.to_owned())
-    })?)
-    .bind(object_key)
-    .execute(&mut **tx)
-    .await
-    .map_err(database)?;
-    Ok(fetch_id)
 }
 
 #[expect(
@@ -560,24 +533,30 @@ async fn finish_source_run(
     let report_key = format!("reports/source-runs/{run_id}/{report_digest}.json");
     put_object(store, &report_key, report_bytes, &report_digest).await?;
     let mut tx = pool.begin().await.map_err(database)?;
-    let checkpoint_after: Value = sqlx::query_scalar(
+    let checkpoint_after: Value = sqlx::query_scalar!(
         "SELECT COALESCE(jsonb_object_agg(partition_key,cursor_payload),'{}'::jsonb) \
          FROM ops.source_checkpoints WHERE source_id=$1",
+        &source_id,
     )
-    .bind(&source_id)
     .fetch_one(&mut *tx)
     .await
-    .map_err(database)?;
-    sqlx::query(
+    .map_err(database)?
+    .ok_or_else(|| {
+        Failure::Retryable(
+            "DATABASE_UNAVAILABLE",
+            "source checkpoint aggregate unexpectedly null".to_owned(),
+        )
+    })?;
+    sqlx::query!(
         "UPDATE ops.source_runs SET status='SUCCEEDED',records_seen=$2,records_changed=$3, \
            checkpoint_after=$4,report_object_key=$5,completed_at=clock_timestamp(),error_detail=NULL \
          WHERE id=$1 AND status='RUNNING'",
+        run_id,
+        seen,
+        changed,
+        checkpoint_after,
+        &report_key,
     )
-    .bind(run_id)
-    .bind(seen)
-    .bind(changed)
-    .bind(checkpoint_after)
-    .bind(&report_key)
     .execute(&mut *tx)
     .await
     .map_err(database)?;

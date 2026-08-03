@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT intake.exchange_subscription_management_token($1,$2,$3,$4) AS \"session_id?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "70c9fa2b4739e648692afca6bd9c5759f423cecfd0ab94d74f739e1cf81f2bbc"
+}

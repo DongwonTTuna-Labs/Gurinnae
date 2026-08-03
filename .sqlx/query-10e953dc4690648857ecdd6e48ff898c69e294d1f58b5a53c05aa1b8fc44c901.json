@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) VALUES('SOURCE_RUN','ingest-worker',$1,$2,8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "10e953dc4690648857ecdd6e48ff898c69e294d1f58b5a53c05aa1b8fc44c901"
+}

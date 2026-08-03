@@ -177,29 +177,31 @@ async fn mark_source_terminal(
     code: &str,
 ) -> Result<(), Failure> {
     let mut tx = pool.begin().await.map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "UPDATE ops.source_runs SET status='FAILED',error_detail=$2,completed_at=clock_timestamp() \
          WHERE id=$1 AND status='RUNNING'",
+        run_id,
+        code,
     )
-    .bind(run_id)
-    .bind(code)
     .execute(&mut *tx)
     .await
     .map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.source_incidents(source_id,source_run_id,severity,incident_type,summary,impact,status) \
          VALUES($1,$2,'MAJOR',$3,'Source run terminal failure',$4,'OPEN')",
+        source_id,
+        run_id,
+        code,
+        json!({"sourceRunId":run_id,"errorCode":code}),
     )
-    .bind(source_id)
-    .bind(run_id)
-    .bind(code)
-    .bind(json!({"sourceRunId":run_id,"errorCode":code}))
     .execute(&mut *tx)
     .await
     .map_err(database)?;
     if code == "SOURCE_AUTHORIZATION_FAILED" {
-        sqlx::query("UPDATE ops.source_registry SET enabled=false WHERE source_id=$1")
-            .bind(source_id)
+        sqlx::query!(
+            "UPDATE ops.source_registry SET enabled=false WHERE source_id=$1",
+            source_id,
+        )
             .execute(&mut *tx)
             .await
             .map_err(database)?;
@@ -229,18 +231,18 @@ async fn persist_structured_json(
     for (index, record) in records.iter().enumerate() {
         let record_bytes = serde_json::to_vec(record)
             .map_err(|error| Failure::Terminal("SOURCE_PAYLOAD_MALFORMED", error.to_string()))?;
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO raw.parsed_records(source_document_id,record_type,record_index,parser_version,payload,payload_sha256) \
              VALUES($1,$2,$3,'connector-structured-json-v1',$4,$5) \
              ON CONFLICT(source_document_id,record_type,record_index,parser_version) DO NOTHING",
+            document_id,
+            operation.kind.to_ascii_uppercase(),
+            i32::try_from(index).map_err(|_| {
+                Failure::Terminal("SOURCE_RECORD_LIMIT", operation.id.to_owned())
+            })?,
+            record,
+            sha256(&record_bytes),
         )
-        .bind(document_id)
-        .bind(operation.kind.to_ascii_uppercase())
-        .bind(i32::try_from(index).map_err(|_| {
-            Failure::Terminal("SOURCE_RECORD_LIMIT", operation.id.to_owned())
-        })?)
-        .bind(record)
-        .bind(sha256(&record_bytes))
         .execute(&mut **tx)
         .await
         .map_err(database)?;
@@ -250,14 +252,14 @@ async fn persist_structured_json(
             normalize_dart_supplier(tx, document_id, record).await?;
         }
     }
-    sqlx::query(
+    sqlx::query!(
         "SELECT raw.mark_connector_source_document_parsed($1,$2,$3,$4,$5)",
+        document_id,
+        "connector-structured-json",
+        "connector-structured-json-v1",
+        "v1",
+        json!({"structuredRecordCount":records.len(),"connectorOperationId":operation.id}),
     )
-    .bind(document_id)
-    .bind("connector-structured-json")
-    .bind("connector-structured-json-v1")
-    .bind("v1")
-    .bind(json!({"structuredRecordCount":records.len(),"connectorOperationId":operation.id}))
     .execute(&mut **tx)
     .await
     .map_err(database)?;
@@ -335,7 +337,7 @@ async fn normalize_koneps_contract(
     };
     let amount = first_text_or_number(record, &["thtmCntrctAmt", "totCntrctAmt", "cntrctAmt"]);
     let signed_at = first_text(record, &["cntrctCnclsDate", "cntrctDt"]).and_then(normalize_date);
-    let contract_id: Uuid = sqlx::query_scalar(
+    let contract_id: Uuid = sqlx::query_scalar!(
         "INSERT INTO core.contracts(source_id,external_contract_id,contract_number,title,agency_id, \
            supplier_id,status,signed_at,original_amount,current_amount,normalization_version, \
            source_document_id,source_record_locator) \
@@ -346,30 +348,30 @@ async fn normalize_koneps_contract(
            current_amount=EXCLUDED.current_amount,source_document_id=EXCLUDED.source_document_id, \
            source_record_locator=EXCLUDED.source_record_locator,version=core.contracts.version+1 \
          RETURNING id",
+        source_id,
+        external_id,
+        title,
+        agency_id,
+        supplier_id,
+        signed_at.as_deref() as _,
+        amount.as_deref().unwrap_or(""),
+        document_id,
+        format!("json-pointer:/response/body/items/item/{index}"),
     )
-    .bind(source_id)
-    .bind(external_id)
-    .bind(title)
-    .bind(agency_id)
-    .bind(supplier_id)
-    .bind(signed_at.as_deref())
-    .bind(amount.as_deref().unwrap_or(""))
-    .bind(document_id)
-    .bind(format!("json-pointer:/response/body/items/item/{index}"))
     .fetch_one(&mut **tx)
     .await
     .map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.field_provenance(entity_type,entity_id,field_path,source_document_id, \
            source_locator,raw_value,normalized_value,transformation,parser_version,normalization_version) \
          VALUES('CONTRACT',$1,'title',$2,$3,$4,$5,'alias-list:first-non-empty', \
            'connector-structured-json-v1','connector-v1') ON CONFLICT DO NOTHING",
+        contract_id,
+        document_id,
+        format!("json-pointer:/response/body/items/item/{index}/cntrctNm"),
+        json!(title),
+        json!(title),
     )
-    .bind(contract_id)
-    .bind(document_id)
-    .bind(format!("json-pointer:/response/body/items/item/{index}/cntrctNm"))
-    .bind(json!(title))
-    .bind(json!(title))
     .execute(&mut **tx)
     .await
     .map_err(database)?;
@@ -398,20 +400,20 @@ async fn resolve_agency(
     document_id: Uuid,
 ) -> Result<Uuid, Failure> {
     if let Some(identifier) = identifier
-        && let Some(id) = sqlx::query_scalar::<_, Uuid>(
+        && let Some(id) = sqlx::query_scalar!(
             "SELECT agency_id FROM core.agency_identifiers WHERE scheme='KONEPS' AND value=$1",
+            identifier,
         )
-        .bind(identifier)
         .fetch_optional(&mut **tx)
         .await
         .map_err(database)?
     {
         return Ok(id);
     }
-    if let Some(id) = sqlx::query_scalar::<_, Uuid>(
+    if let Some(id) = sqlx::query_scalar!(
         "SELECT id FROM core.agencies WHERE canonical_name=$1 ORDER BY created_at LIMIT 1",
+        name,
     )
-    .bind(name)
     .fetch_optional(&mut **tx)
     .await
     .map_err(database)?
@@ -419,23 +421,23 @@ async fn resolve_agency(
         return Ok(id);
     }
     let id = Uuid::new_v4();
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.agencies(id,canonical_name,agency_type,jurisdiction,identity_confidence,identity_status) \
          VALUES($1,$2,'PUBLIC_AGENCY','KR',1,'VERIFIED')",
+        id,
+        name,
     )
-    .bind(id)
-    .bind(name)
     .execute(&mut **tx)
     .await
     .map_err(database)?;
     if let Some(identifier) = identifier {
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO core.agency_identifiers(agency_id,scheme,value,source_document_id) \
              VALUES($1,'KONEPS',$2,$3) ON CONFLICT DO NOTHING",
+            id,
+            identifier,
+            document_id,
         )
-        .bind(id)
-        .bind(identifier)
-        .bind(document_id)
         .execute(&mut **tx)
         .await
         .map_err(database)?;
@@ -451,20 +453,20 @@ async fn resolve_supplier(
 ) -> Result<Uuid, Failure> {
     let identifier_hash = identifier.map(|value| sha256(value.as_bytes()));
     if let Some(hash) = &identifier_hash
-        && let Some(id) = sqlx::query_scalar::<_, Uuid>(
+        && let Some(id) = sqlx::query_scalar!(
             "SELECT supplier_id FROM core.supplier_identifiers WHERE scheme IN ('BUSINESS_NUMBER','DART_CORP_CODE') AND value_hash=$1",
+            hash,
         )
-        .bind(hash)
         .fetch_optional(&mut **tx)
         .await
         .map_err(database)?
     {
         return Ok(id);
     }
-    if let Some(id) = sqlx::query_scalar::<_, Uuid>(
+    if let Some(id) = sqlx::query_scalar!(
         "SELECT id FROM core.suppliers WHERE canonical_name=$1 ORDER BY created_at LIMIT 1",
+        name,
     )
-    .bind(name)
     .fetch_optional(&mut **tx)
     .await
     .map_err(database)?
@@ -472,12 +474,12 @@ async fn resolve_supplier(
         return Ok(id);
     }
     let id = Uuid::new_v4();
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO core.suppliers(id,canonical_name,identity_confidence,identity_status) \
          VALUES($1,$2,0.9,'VERIFIED')",
+        id,
+        name,
     )
-    .bind(id)
-    .bind(name)
     .execute(&mut **tx)
     .await
     .map_err(database)?;
@@ -492,16 +494,16 @@ async fn resolve_supplier(
         } else {
             "***".to_owned()
         };
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO core.supplier_identifiers(supplier_id,scheme,value_hash,display_value, \
                source_document_id,verification_status) VALUES($1,$2,$3,$4,$5,'VERIFIED') \
              ON CONFLICT DO NOTHING",
+            id,
+            scheme,
+            hash,
+            display,
+            document_id,
         )
-        .bind(id)
-        .bind(scheme)
-        .bind(hash)
-        .bind(display)
-        .bind(document_id)
         .execute(&mut **tx)
         .await
         .map_err(database)?;

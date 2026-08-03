@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_runs SET status='SUCCEEDED',completed_at=clock_timestamp(),            record_count=1,signal_count=$2 WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "73dbc49ee9d60033a2cfe625b663b5bfb6f508d022902e9521b85ab1cca5c2e1"
+}

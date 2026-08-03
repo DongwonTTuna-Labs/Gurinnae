@@ -1,6 +1,5 @@
 use actix_web::{HttpRequest, HttpResponse, web};
 use serde::Deserialize;
-use sqlx::Row;
 use url::Url;
 
 use super::{
@@ -103,16 +102,16 @@ async fn load_preflight_configuration(
     pool: &sqlx::PgPool,
     revision: &ProviderRevision,
 ) -> Result<PreflightConfiguration, HttpResponse> {
-    let row = match sqlx::query(
+    let row = match sqlx::query!(
         "SELECT channel,adapter_id,credential_secret_reference,webhook_secret_reference, \
                 callback_path,kill_switch_code \
            FROM ops.communication_provider_configs \
           WHERE id=$1 AND version=$2 AND configuration_digest=$3 \
             AND operational_state IN ('DISABLED','UNCONFIGURED','PENDING_PROVIDER_APPROVAL')",
+        revision.config_id,
+        revision.config_version,
+        &revision.configuration_digest,
     )
-    .bind(revision.config_id)
-    .bind(revision.config_version)
-    .bind(&revision.configuration_digest)
     .fetch_optional(pool)
     .await
     {
@@ -120,21 +119,12 @@ async fn load_preflight_configuration(
         Ok(None) => return Err(problem("COMMUNICATION_PROVIDER_REVISION_INVALID", 409)),
         Err(_) => return Err(problem("COMMUNICATION_PREFLIGHT_DATABASE_FAILED", 503)),
     };
-    let channel: String = match row.try_get("channel") {
-        Ok(value) => value,
-        Err(_) => return Err(problem("COMMUNICATION_PREFLIGHT_DATABASE_FAILED", 503)),
-    };
-    let adapter_id: String = match row.try_get("adapter_id") {
-        Ok(value) => value,
-        Err(_) => return Err(problem("COMMUNICATION_PREFLIGHT_DATABASE_FAILED", 503)),
-    };
-    let credential_reference: String = match row.try_get("credential_secret_reference") {
-        Ok(value) => value,
-        Err(_) => return Err(problem("COMMUNICATION_PREFLIGHT_DATABASE_FAILED", 503)),
-    };
-    let webhook_reference: Option<String> = row.try_get("webhook_secret_reference").ok();
-    let callback_path: Option<String> = row.try_get("callback_path").ok();
-    let kill_switch_code: String = row.try_get("kill_switch_code").unwrap_or_default();
+    let channel = row.channel;
+    let adapter_id = row.adapter_id;
+    let credential_reference = row.credential_secret_reference;
+    let webhook_reference = row.webhook_secret_reference;
+    let callback_path = row.callback_path;
+    let kill_switch_code = row.kill_switch_code;
     let channel_name = match channel.as_str() {
         "SMTP_EMAIL" => "EMAIL",
         "TELEGRAM_BOT_API" => "TELEGRAM",
@@ -242,23 +232,25 @@ async fn persist_preflight_receipt(
     revision: &ProviderRevision,
     evidence: PreflightEvidence,
 ) -> Result<serde_json::Value, HttpResponse> {
-    let receipt: serde_json::Value = match sqlx::query_scalar(
+    let receipt = match sqlx::query_scalar!(
         "SELECT ops.record_communication_provider_preflight_v1( \
            $1,$2,$3,$4::char(64),$5,$6,$7,$8::char(64))",
+        provider_connection_test_id,
+        revision.config_id,
+        revision.config_version,
+        &revision.configuration_digest,
+        evidence.result,
+        evidence.checklist,
+        serde_json::json!(evidence.blockers),
+        evidence.provider_evidence_digest,
     )
-    .bind(provider_connection_test_id)
-    .bind(revision.config_id)
-    .bind(revision.config_version)
-    .bind(&revision.configuration_digest)
-    .bind(evidence.result)
-    .bind(evidence.checklist)
-    .bind(serde_json::json!(evidence.blockers))
-    .bind(evidence.provider_evidence_digest)
     .fetch_one(pool)
     .await
     {
-        Ok(value) => value,
-        Err(_) => return Err(problem("COMMUNICATION_PREFLIGHT_PERSISTENCE_FAILED", 503)),
+        Ok(Some(value)) => value,
+        Ok(None) | Err(_) => {
+            return Err(problem("COMMUNICATION_PREFLIGHT_PERSISTENCE_FAILED", 503));
+        }
     };
     Ok(receipt)
 }

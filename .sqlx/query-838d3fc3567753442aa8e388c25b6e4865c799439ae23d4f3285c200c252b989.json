@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_business_health_projection_v1(NULL::uuid, NULL::uuid, clock_timestamp())",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_business_health_projection_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "838d3fc3567753442aa8e388c25b6e4865c799439ae23d4f3285c200c252b989"
+}

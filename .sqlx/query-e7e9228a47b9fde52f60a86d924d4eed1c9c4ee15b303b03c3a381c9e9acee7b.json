@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.source_incidents(source_id,source_run_id,severity,incident_type,summary,impact,status) VALUES($1,$2,'MAJOR',$3,'Source run terminal failure',$4,'OPEN')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e7e9228a47b9fde52f60a86d924d4eed1c9c4ee15b303b03c3a381c9e9acee7b"
+}

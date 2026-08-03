@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.record_research_fetch_v1($1,$2,$3,$4,CAST($5 AS char(64)),$6,$7,$8,$9,$10,$11,$12,CAST($13 AS char(64)),$14,$15,$16,CAST($17 AS char(64)),$18,$19,$20,$21,$22,CAST($23 AS char(64)),$24,$25)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "record_research_fetch_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Bpchar",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Bpchar",
+        "Bytea",
+        "Text",
+        "Text",
+        "Bpchar",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cecee9103ef7162c35bc7f25bffc67385e67b3a9243c1a5acc06884d8ea6b707"
+}

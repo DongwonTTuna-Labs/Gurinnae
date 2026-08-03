@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT intake.get_response_receipt_session_v2($1,$2) AS \"value?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value?",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6c4213e29408054a689ddaa8367caea15189cc369e0cf0b7e20ed4003715252f"
+}

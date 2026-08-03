@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,job_type,queue,payload,attempt_count,max_attempts FROM ops.jobs WHERE queue=$1 AND status='QUEUED' AND run_after<=clock_timestamp() AND COALESCE((SELECT state FROM ops.queue_controls WHERE queue_name=queue),'RUNNING')='RUNNING' ORDER BY priority,created_at,id FOR UPDATE SKIP LOCKED LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "job_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "job_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "queue",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "queue"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "payload"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "attempt_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "attempt_count"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "max_attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "max_attempts"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2f78db6f6283c7730f4a6dd576982ad56de4e0b2d2fba0fd0e682053101479fc"
+}

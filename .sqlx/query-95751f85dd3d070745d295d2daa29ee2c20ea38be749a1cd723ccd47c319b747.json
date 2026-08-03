@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.record_provider_poll_source_receipt_v1($1::jsonb)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "record_provider_poll_source_receipt_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "95751f85dd3d070745d295d2daa29ee2c20ea38be749a1cd723ccd47c319b747"
+}

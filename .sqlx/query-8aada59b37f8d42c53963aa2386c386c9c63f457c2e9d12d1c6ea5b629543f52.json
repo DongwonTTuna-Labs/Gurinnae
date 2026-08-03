@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT raw.record_parsed_source_metadata($1,$2,$3,$4,$5)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "record_parsed_source_metadata",
+        "type_info": "Void",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8aada59b37f8d42c53963aa2386c386c9c63f457c2e9d12d1c6ea5b629543f52"
+}

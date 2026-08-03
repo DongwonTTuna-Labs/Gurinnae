@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.inbox SET processed_at=clock_timestamp(),result=$2 WHERE consumer='document-extractor' AND event_id=$1 AND processed_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2a2b08582d762ead2cf6f00736f3b178126210d94a32ed866e555a26da4cc0f8"
+}

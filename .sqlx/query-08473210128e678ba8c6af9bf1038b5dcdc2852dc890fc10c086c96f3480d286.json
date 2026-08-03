@@ -1,0 +1,105 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.id,a.name,a.agency_type,a.jurisdiction,a.coverage,a.case_counts,a.updated_at FROM public.agencies a WHERE ($1='' OR a.name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR a.agency_type=ANY($2)) AND ($3='' OR a.jurisdiction=$3) ORDER BY CASE WHEN $4='name_asc' THEN a.name END ASC,CASE WHEN $4='updated_desc' THEN a.updated_at END DESC,CASE WHEN $4='contract_count_desc' THEN (SELECT count(*) FROM public.contracts c WHERE c.agency_id=a.id) END DESC,a.id LIMIT $5 OFFSET $6",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "agency_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "agency_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "jurisdiction",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "jurisdiction"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "coverage",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "coverage"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "case_counts",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "case_counts"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "08473210128e678ba8c6af9bf1038b5dcdc2852dc890fc10c086c96f3480d286"
+}

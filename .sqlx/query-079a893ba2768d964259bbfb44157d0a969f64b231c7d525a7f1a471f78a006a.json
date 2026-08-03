@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.contracts(source_id,external_contract_id,contract_number,title,agency_id, supplier_id,status,signed_at,original_amount,current_amount,normalization_version, source_document_id,source_record_locator) VALUES($1,$2,$2,$3,$4,$5,'ACTIVE',$6::date,NULLIF($7,'')::numeric,NULLIF($7,'')::numeric, 'connector-v1',$8,$9) ON CONFLICT(source_id,external_contract_id) DO UPDATE SET title=EXCLUDED.title, agency_id=EXCLUDED.agency_id,supplier_id=EXCLUDED.supplier_id,signed_at=EXCLUDED.signed_at, current_amount=EXCLUDED.current_amount,source_document_id=EXCLUDED.source_document_id, source_record_locator=EXCLUDED.source_record_locator,version=core.contracts.version+1 RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.contracts",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Date",
+        "Text",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "079a893ba2768d964259bbfb44157d0a969f64b231c7d525a7f1a471f78a006a"
+}

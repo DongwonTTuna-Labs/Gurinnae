@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT subject FROM intake.contact_requests WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "subject",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "intake.contact_requests",
+            "name": "subject"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6bd4d30c241dbfb3889db9dd2ce1b9787c92569efcc3099279b9b9785616f9e4"
+}

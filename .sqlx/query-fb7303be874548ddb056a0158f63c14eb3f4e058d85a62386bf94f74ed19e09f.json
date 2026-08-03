@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority) VALUES('AGENT_REVIEW','AGENT_RUN',$1,'Review agent suggestions','OPEN','NORMAL') ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fb7303be874548ddb056a0158f63c14eb3f4e058d85a62386bf94f74ed19e09f"
+}

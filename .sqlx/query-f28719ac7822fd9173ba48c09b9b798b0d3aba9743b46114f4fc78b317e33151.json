@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.field_provenance(entity_type,entity_id,field_path,source_document_id, source_locator,raw_value,normalized_value,transformation,parser_version,normalization_version) VALUES('CONTRACT',$1,'title',$2,$3,$4,$5,'alias-list:first-non-empty', 'connector-structured-json-v1','connector-v1') ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f28719ac7822fd9173ba48c09b9b798b0d3aba9743b46114f4fc78b317e33151"
+}

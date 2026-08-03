@@ -322,9 +322,11 @@ async fn claim_tool_call(
         let request_kind = request.get("requestKind").and_then(Value::as_str)
             .unwrap_or("FETCH_URL");
         let source_id = if request_kind == "SEARCH_PUBLIC_WEB" { "brave-search-web-v1" } else { "public-research" };
-        let rights: Option<Value> = sqlx::query_scalar("SELECT ops.assert_research_fetch_rights_v1($1,$2)")
-            .bind(source_id)
-            .bind(request_kind)
+        let rights: Option<Value> = sqlx::query_scalar!(
+            "SELECT ops.assert_research_fetch_rights_v1($1,$2)",
+            source_id,
+            request_kind,
+        )
             .fetch_one(&state.pool)
             .await
             .map_err(database)?;
@@ -333,7 +335,7 @@ async fn claim_tool_call(
     } else {
         sha256(format!("rights-snapshot:{tool_id}:{request_sha256}").as_bytes())
     };
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.agent_tool_calls(
            tool_call_id,agent_run_id,provider_turn_id,call_id,input_snapshot_sha256,
            prior_transcript_sha256,tool_id,tool_catalog_version,tool_catalog_sha256,
@@ -349,34 +351,34 @@ async fn claim_tool_call(
            '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',1,$19,
            clock_timestamp() + interval '60 seconds',1,clock_timestamp())
          ON CONFLICT(agent_run_id,call_id) DO NOTHING",
+        tool_call_id,
+        turn.run_id,
+        turn.turn_id,
+        &call_text,
+        &turn.input_snapshot_sha256,
+        &turn.prior_transcript_sha256,
+        tool_id,
+        sha256(b"tool-catalog-v2"),
+        format!("{tool_id}.request.v2"),
+        request_schema_sha256,
+        format!("{tool_id}.response.v2"),
+        response_schema_sha256,
+        request_sha256,
+        request,
+        request_canonical,
+        sha256(format!("allowlist:{agent_type}").as_bytes()),
+        sha256(b"snapshot-scope"),
+        rights_decision_sha256,
+        sha256(call_text.as_bytes()),
     )
-    .bind(tool_call_id)
-    .bind(turn.run_id)
-    .bind(turn.turn_id)
-    .bind(&call_text)
-    .bind(&turn.input_snapshot_sha256)
-    .bind(&turn.prior_transcript_sha256)
-    .bind(tool_id)
-    .bind(sha256(b"tool-catalog-v2"))
-    .bind(format!("{tool_id}.request.v2"))
-    .bind(request_schema_sha256)
-    .bind(format!("{tool_id}.response.v2"))
-    .bind(response_schema_sha256)
-    .bind(request_sha256)
-    .bind(request)
-    .bind(request_canonical)
-    .bind(sha256(format!("allowlist:{agent_type}").as_bytes()))
-    .bind(sha256(b"snapshot-scope"))
-    .bind(rights_decision_sha256)
-    .bind(sha256(call_text.as_bytes()))
     .execute(&state.pool)
     .await
     .map_err(database)?;
-    let existing: Uuid = sqlx::query_scalar(
+    let existing: Uuid = sqlx::query_scalar!(
         "SELECT tool_call_id FROM ops.agent_tool_calls WHERE agent_run_id=$1 AND call_id=$2",
+        turn.run_id,
+        &call_text,
     )
-    .bind(turn.run_id)
-    .bind(&call_text)
     .fetch_one(&state.pool)
     .await
     .map_err(database)?;
@@ -484,12 +486,12 @@ async fn resolve_snapshot_id(
     state: &State,
     turn: &ProviderTurnIdentity,
 ) -> Result<Uuid, Failure> {
-    sqlx::query_scalar(
+    sqlx::query_scalar!(
         "SELECT id FROM core.dataset_snapshots
           WHERE snapshot_sha256=CAST($1 AS char(64)) AND snapshot_kind='AGENT_CASE' AND state='READY'
           ORDER BY ready_at DESC NULLS LAST, id LIMIT 1",
+        &turn.input_snapshot_sha256,
     )
-    .bind(&turn.input_snapshot_sha256)
     .fetch_optional(&state.pool)
     .await
     .map_err(database)?

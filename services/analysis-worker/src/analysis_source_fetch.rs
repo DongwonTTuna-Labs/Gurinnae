@@ -78,11 +78,11 @@ pub(super) async fn dispatch_source_fetch(
         .to_v2()
         .map_err(|_| Failure::Terminal("SOURCE_FETCH_REQUEST_INVALID", "v2".to_owned()))?;
     let (target, source_id, request_kind, requested_limit, expected_media_types, max_bytes, allow_redirects) = source_target(&v2)?;
-    let rights: Option<Value> = sqlx::query_scalar(
+    let rights: Option<Value> = sqlx::query_scalar!(
         "SELECT ops.assert_research_fetch_rights_v1($1,$2)",
+        source_id,
+        request_kind,
     )
-    .bind(source_id)
-    .bind(request_kind)
     .fetch_one(&state.pool)
     .await
     .map_err(database)?;
@@ -115,8 +115,17 @@ pub(super) async fn dispatch_source_fetch(
         state, turn, call, target, source_id, request_kind, status, content_type,
         bytes.clone(), response_sha256.clone(), safe_headers, redirects, policy_version, safety.receipt_sha256, rights).await?;
     let brave_pricing = if request_kind == "SEARCH_PUBLIC_WEB" {
-        Some(sqlx::query_scalar::<_, Value>("SELECT ops.brave_search_pricing_v1()")
-            .fetch_one(&state.pool).await.map_err(database)?)
+        Some(
+            sqlx::query_scalar!("SELECT ops.brave_search_pricing_v1()")
+                .fetch_one(&state.pool)
+                .await
+                .map_err(database)?
+                .ok_or_else(|| {
+                    database(sqlx::Error::Decode(Box::new(
+                        sqlx::error::UnexpectedNullError,
+                    )))
+                })?,
+        )
     } else { None };
     let output = build_fetch_output(request_kind, &bytes, requested_limit, &call.request_sha256,
         status, &policy_sha256, &decision_sha256, &retrieved_at, receipt_digest,
@@ -539,37 +548,38 @@ pub(super) async fn persist_research_fetch(
     result_sha256: &str,
     source: &PendingSourceFetch,
 ) -> Result<(), Failure> {
-    sqlx::query_scalar::<_, Value>(
+    let _: Value = sqlx::query_scalar!(
         "SELECT ops.record_research_fetch_v1($1,$2,$3,$4,CAST($5 AS char(64)),$6,$7,$8,$9,$10,$11,$12,CAST($13 AS char(64)),$14,$15,$16,CAST($17 AS char(64)),$18,$19,$20,$21,$22,CAST($23 AS char(64)),$24,$25)",
+        turn.run_id,
+        turn.turn_id,
+        tool_call_id,
+        call_id,
+        &turn.input_snapshot_sha256,
+        source.request_kind,
+        source.source_id,
+        &source.external_locator,
+        source.source_url_redacted.as_deref(),
+        source.final_url_redacted.as_deref(),
+        source.http_status,
+        source.content_media_type.as_deref(),
+        &source.request_sha256,
+        &source.content,
+        &source.object_key,
+        source.policy_version,
+        result_sha256,
+        source.fetch_id,
+        source.asset_id,
+        source.artifact_id,
+        source.source_use_id,
+        &source.source_use_sha256,
+        &source.content_safety_receipt_sha256,
+        &source.safe_headers,
+        &source.redirects,
     )
-    .bind(turn.run_id)
-    .bind(turn.turn_id)
-    .bind(tool_call_id)
-    .bind(call_id)
-    .bind(&turn.input_snapshot_sha256)
-    .bind(source.request_kind)
-    .bind(source.source_id)
-    .bind(&source.external_locator)
-    .bind(&source.source_url_redacted)
-    .bind(&source.final_url_redacted)
-    .bind(source.http_status)
-    .bind(source.content_media_type.as_deref())
-    .bind(&source.request_sha256)
-    .bind(&source.content)
-    .bind(&source.object_key)
-    .bind(source.policy_version)
-    .bind(result_sha256)
-    .bind(source.fetch_id)
-    .bind(source.asset_id)
-    .bind(source.artifact_id)
-    .bind(source.source_use_id)
-    .bind(&source.source_use_sha256)
-    .bind(&source.content_safety_receipt_sha256)
-    .bind(&source.safe_headers)
-    .bind(&source.redirects)
     .fetch_one(&mut *executor)
     .await
-    .map_err(database)?;
+    .map_err(database)?
+    .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     Ok(())
 }
 

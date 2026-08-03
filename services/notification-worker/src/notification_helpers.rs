@@ -72,9 +72,11 @@ fn response_otp(key: &[u8], access_token_hash: &str) -> Result<String, WorkerErr
 }
 
 async fn mark_failed(state: &State, id: Uuid, code: &str) -> Result<(), WorkerError> {
-    sqlx::query("UPDATE ops.email_deliveries SET status='FAILED',last_error_code=$2 WHERE id=$1")
-        .bind(id)
-        .bind(code)
+    sqlx::query!(
+        "UPDATE ops.email_deliveries SET status='FAILED',last_error_code=$2 WHERE id=$1",
+        id,
+        code,
+    )
         .execute(&state.pool)
         .await
         .map_err(|_| WorkerError::Database)?;

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority,blocker_code) SELECT 'SCHEMA_DRIFT','SCHEMA_DRIFT',$1,'Review source schema drift','OPEN','HIGH', 'SOURCE_SCHEMA_DRIFT' WHERE NOT EXISTS(SELECT 1 FROM ops.tasks WHERE task_type='SCHEMA_DRIFT' AND object_id=$1 AND status<>'DONE')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e50b819879297509d51578715fb7cd6a871a36d10c7f1430e965d1edf8d543a0"
+}

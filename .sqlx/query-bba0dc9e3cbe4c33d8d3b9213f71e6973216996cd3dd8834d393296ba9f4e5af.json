@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT public_payload_sha256 FROM editorial.publication_revisions WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "public_payload_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "public_payload_sha256"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "bba0dc9e3cbe4c33d8d3b9213f71e6973216996cd3dd8834d393296ba9f4e5af"
+}

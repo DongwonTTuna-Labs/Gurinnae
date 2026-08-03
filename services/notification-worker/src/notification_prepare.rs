@@ -20,9 +20,13 @@ async fn prepare(state: &State, event: &ClaimedEvent) -> Result<(Uuid, EmailMess
         _ => return Err(WorkerError::Database),
     };
     let recipient_hash = sha256_hex(to.as_bytes());
-    let delivery_id:Uuid=sqlx::query_scalar(
+    let delivery_id:Uuid=sqlx::query_scalar!(
         "INSERT INTO ops.email_deliveries(message_type,recipient_hash,template_version,object_type,object_id,status,attempt_count) VALUES($1,$2,'v1',$3,$4,'SENDING',1) ON CONFLICT(message_type,object_id,recipient_hash) WHERE object_id IS NOT NULL DO UPDATE SET status='SENDING',attempt_count=ops.email_deliveries.attempt_count+1,last_error_code=NULL RETURNING id",
-    ).bind(&event.event_type).bind(recipient_hash).bind("notification").bind(event.aggregate_id)
+        &event.event_type,
+        recipient_hash,
+        "notification",
+        event.aggregate_id,
+    )
      .fetch_one(&state.pool).await.map_err(|_|WorkerError::Database)?;
     Ok((
         delivery_id,
@@ -78,8 +82,10 @@ let attachment_id = pointer_uuid(&event.payload, "/attachment_id")
 async fn prepare_contact_received(state: &State, event: &ClaimedEvent) -> Result<(String, String, String, String), WorkerError> {
     Ok({
 let subject: String =
-                sqlx::query_scalar("SELECT subject FROM intake.contact_requests WHERE id=$1")
-                    .bind(event.aggregate_id)
+                sqlx::query_scalar!(
+                    "SELECT subject FROM intake.contact_requests WHERE id=$1",
+                    event.aggregate_id,
+                )
                     .fetch_optional(&state.pool)
                     .await
                     .map_err(|_| WorkerError::Database)?
@@ -112,14 +118,12 @@ let verification = derived_token(
                 "subscription-management",
                 event.aggregate_id,
             )?;
-            let row = sqlx::query(
+            let row = sqlx::query!(
                 "SELECT email_encrypted,locale FROM intake.subscriptions WHERE id=$1 AND status='PENDING'",
+                event.aggregate_id,
             )
-            .bind(event.aggregate_id)
             .fetch_one(&state.pool).await.map_err(|_|WorkerError::Database)?;
-            let encrypted: Vec<u8> = row
-                .try_get("email_encrypted")
-                .map_err(|_| WorkerError::Database)?;
+            let encrypted = row.email_encrypted;
             let to = decrypt_email(
                 state,
                 "intake.subscriptions",
@@ -150,10 +154,10 @@ let token = derived_token(
                 "correction-receipt",
                 event.aggregate_id,
             )?;
-            let encrypted: Vec<u8> = sqlx::query_scalar(
+            let encrypted: Vec<u8> = sqlx::query_scalar!(
                 "SELECT contact_email_encrypted FROM intake.correction_requests WHERE id=$1",
+                event.aggregate_id,
             )
-            .bind(event.aggregate_id)
             .fetch_one(&state.pool)
             .await
             .map_err(|_| WorkerError::Database)?;
@@ -179,20 +183,18 @@ let token = derived_token(
 
 async fn prepare_response_extension(state: &State, event: &ClaimedEvent) -> Result<(String, String, String, String), WorkerError> {
     Ok({
-let row = sqlx::query(
+let row = sqlx::query!(
                 "SELECT r.id,r.recipient_email_encrypted,x.requested_due_at \
                  FROM intake.response_extension_requests x JOIN editorial.response_requests r \
                    ON r.id=x.response_request_id WHERE x.id=$1",
+                event.aggregate_id,
             )
-            .bind(event.aggregate_id)
             .fetch_optional(&state.pool)
             .await
             .map_err(|_| WorkerError::Database)?
             .ok_or(WorkerError::Database)?;
-            let request_id: Uuid = row.try_get("id").map_err(|_| WorkerError::Database)?;
-            let encrypted: Vec<u8> = row
-                .try_get("recipient_email_encrypted")
-                .map_err(|_| WorkerError::Database)?;
+            let request_id = row.id;
+            let encrypted = row.recipient_email_encrypted;
             let to = decrypt_email(
                 state,
                 "editorial.response_requests",
@@ -200,9 +202,7 @@ let row = sqlx::query(
                 request_id,
                 &encrypted,
             )?;
-            let due: time::OffsetDateTime = row
-                .try_get("requested_due_at")
-                .map_err(|_| WorkerError::Database)?;
+            let due = row.requested_due_at;
             (
                 to,
                 "구린네 소명 기한 연장 요청 접수".to_owned(),
@@ -214,17 +214,15 @@ let row = sqlx::query(
 
 async fn prepare_response_request(state: &State, event: &ClaimedEvent) -> Result<(String, String, String, String), WorkerError> {
     Ok({
-let row = sqlx::query(
+let row = sqlx::query!(
                 "SELECT recipient_email_encrypted,party_name,due_at FROM editorial.response_requests WHERE id=$1",
+                event.aggregate_id,
             )
-            .bind(event.aggregate_id)
             .fetch_optional(&state.pool)
             .await
             .map_err(|_| WorkerError::Database)?
             .ok_or(WorkerError::Database)?;
-            let encrypted: Vec<u8> = row
-                .try_get("recipient_email_encrypted")
-                .map_err(|_| WorkerError::Database)?;
+            let encrypted = row.recipient_email_encrypted;
             let to = decrypt_email(
                 state,
                 "editorial.response_requests",
@@ -235,12 +233,12 @@ let row = sqlx::query(
             let access_token = random_token()?;
             let access_token_hash = token_hmac(&state.token_hmac_key, &access_token)?;
             let otp = response_otp(&state.token_hmac_key, &access_token_hash)?;
-            sqlx::query(
+            sqlx::query!(
                 "INSERT INTO intake.response_access_tokens(response_request_id,token_hash,expires_at) \
                  VALUES($1,$2,clock_timestamp()+interval '14 days')",
+                event.aggregate_id,
+                access_token_hash,
             )
-            .bind(event.aggregate_id)
-            .bind(access_token_hash)
             .execute(&state.pool)
             .await
             .map_err(|_| WorkerError::Database)?;
@@ -248,9 +246,7 @@ let row = sqlx::query(
                 "{}/respond/access?token={access_token}",
                 state.response_base_url
             );
-            let party: String = row
-                .try_get("party_name")
-                .map_err(|_| WorkerError::Database)?;
+            let party = row.party_name;
             (
                 to,
                 "구린네 소명 요청".to_owned(),
@@ -271,21 +267,17 @@ let token = derived_token(
                 "response-receipt",
                 event.aggregate_id,
             )?;
-            let row = sqlx::query(
+            let row = sqlx::query!(
                 "SELECT r.recipient_email_encrypted AS email_encrypted,s.response_request_id \
                  FROM intake.response_submissions s JOIN editorial.response_requests r \
                    ON r.id=s.response_request_id WHERE s.id=$1",
+                event.aggregate_id,
             )
-            .bind(event.aggregate_id)
             .fetch_one(&state.pool)
             .await
             .map_err(|_| WorkerError::Database)?;
-            let encrypted: Vec<u8> = row
-                .try_get("email_encrypted")
-                .map_err(|_| WorkerError::Database)?;
-            let request_id: Uuid = row
-                .try_get("response_request_id")
-                .map_err(|_| WorkerError::Database)?;
+            let encrypted = row.email_encrypted;
+            let request_id = row.response_request_id;
             let to = decrypt_email(
                 state,
                 "editorial.response_requests",
@@ -308,18 +300,16 @@ let token = derived_token(
 
 async fn prepare_user_invitation(state: &State, event: &ClaimedEvent) -> Result<(String, String, String, String), WorkerError> {
     Ok({
-let row = sqlx::query(
+let row = sqlx::query!(
                 "SELECT email::text email,display_name FROM ops.users WHERE id=$1 AND status='INVITED'",
+                event.aggregate_id,
             )
-            .bind(event.aggregate_id)
             .fetch_optional(&state.pool)
             .await
             .map_err(|_| WorkerError::Database)?
             .ok_or(WorkerError::Database)?;
-            let to: String = row.try_get("email").map_err(|_| WorkerError::Database)?;
-            let display: String = row
-                .try_get("display_name")
-                .map_err(|_| WorkerError::Database)?;
+            let to = row.email.ok_or(WorkerError::Database)?;
+            let display = row.display_name;
             (
                 to,
                 "구린네 내부 사용자 초대".to_owned(),
@@ -340,6 +330,5 @@ async fn prepare_correction_resolved(
         format!("<p>정정 검토가 완료되었습니다.</p><p>정정 ID: {}</p>", event.aggregate_id),
     ))
 }
-
 
 

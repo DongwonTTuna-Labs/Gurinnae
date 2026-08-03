@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.enqueue_outbox('job',$1,$2,'job.dead_lettered.v1',$3,clock_timestamp())",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enqueue_outbox",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "68cf74e00a70759a58221aa65388545d3f55f1c2fcc4ec007a8e5f76206da35d"
+}

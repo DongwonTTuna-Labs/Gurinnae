@@ -107,20 +107,26 @@ async fn scoped_attachment(
     attachment_id: Uuid,
 ) -> Result<(String, i64, String), (&'static str, u16)> {
     let scoped: Result<serde_json::Value, _> = match caller.iss.as_str() {
-        "public-web" => {
-            sqlx::query_scalar("SELECT intake.get_correction_draft_preview_session($1,$2)")
-                .bind(sha256_hex(session_token.as_bytes()))
-                .bind(&caller.iss)
-                .fetch_one(&state.pool)
-                .await
-        }
-        "response-portal" => {
-            sqlx::query_scalar("SELECT intake.get_response_preview_session_v2($1,$2)")
-                .bind(sha256_hex(session_token.as_bytes()))
-                .bind(&caller.iss)
-                .fetch_one(&state.pool)
-                .await
-        }
+        "public-web" => sqlx::query_scalar!(
+            "SELECT intake.get_correction_draft_preview_session($1,$2) AS \"value?\"",
+            sha256_hex(session_token.as_bytes()),
+            &caller.iss
+        )
+        .fetch_one(&state.pool)
+        .await
+        .and_then(|value| {
+            value.ok_or_else(|| sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError)))
+        }),
+        "response-portal" => sqlx::query_scalar!(
+            "SELECT intake.get_response_preview_session_v2($1,$2) AS \"value?\"",
+            sha256_hex(session_token.as_bytes()),
+            &caller.iss
+        )
+        .fetch_one(&state.pool)
+        .await
+        .and_then(|value| {
+            value.ok_or_else(|| sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError)))
+        }),
         _ => return Err(("BFF_CALLER_DENIED", 403)),
     };
     let scoped = scoped.map_err(|_| ("ATTACHMENT_UPLOAD_TARGET_INVALID", 404))?;
@@ -377,14 +383,16 @@ async fn validate_session(
         .iter()
         .map(|value| (*value).to_owned())
         .collect::<Vec<_>>();
-    let valid = sqlx::query("SELECT session_id FROM intake.resolve_submission_session($1,$2,$3)")
-        .bind(sha256_hex(token.as_bytes()))
-        .bind(issuer)
-        .bind(kinds)
-        .fetch_optional(&state.pool)
-        .await
-        .map_err(|_| problem("SUBMISSION_SESSION_INVALID", 401, request_id))?
-        .is_some();
+    let valid = sqlx::query!(
+        "SELECT session_id AS \"session_id?\" FROM intake.resolve_submission_session($1,$2,$3)",
+        sha256_hex(token.as_bytes()),
+        issuer,
+        &kinds
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| problem("SUBMISSION_SESSION_INVALID", 401, request_id))?
+    .is_some();
     if !valid {
         return Err(problem("SUBMISSION_SESSION_INVALID", 401, request_id));
     }

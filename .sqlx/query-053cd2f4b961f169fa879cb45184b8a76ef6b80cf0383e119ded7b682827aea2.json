@@ -1,0 +1,160 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (ops.record_outbound_delivery_observation(ROW($1::uuid,$2::bigint,'PROVIDER_RESPONSE',$3::uuid,NULL::uuid,NULL::char(64),$4::char(64),'PROVIDER_RESPONSE','PROVIDER_ACCEPTED',$5::char(64),NULL::timestamptz)::ops.outbound_delivery_observation_v1)).*",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "receipt_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "delivery_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "receipt_sequence",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "prior_delivery_version",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "delivery_version",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "attempt_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "source_kind",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "evidence_kind",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "prior_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "asserted_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "resulting_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "resulting_proof_level",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "applied",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "projection_disposition",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "provider_evidence_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "observed_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "audit_event_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "emitted_event_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 18,
+        "name": "receipt_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "idempotency_replay",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Uuid",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "053cd2f4b961f169fa879cb45184b8a76ef6b80cf0383e119ded7b682827aea2"
+}

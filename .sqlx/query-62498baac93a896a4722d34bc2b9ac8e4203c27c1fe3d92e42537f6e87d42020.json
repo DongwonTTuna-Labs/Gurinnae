@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT intake.create_dataset_export($1,$2,$3,$4,$5,$6) AS \"value?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "62498baac93a896a4722d34bc2b9ac8e4203c27c1fe3d92e42537f6e87d42020"
+}

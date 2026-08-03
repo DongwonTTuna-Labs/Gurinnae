@@ -112,15 +112,15 @@ async fn receive(
     ) {
         return problem("CALLBACK_PAYLOAD_INVALID", 400);
     }
-    match sqlx::query_scalar::<_, Value>(
+    match sqlx::query_scalar!(
         "SELECT ops.record_communication_callback_request_json($1::jsonb)",
+        payload,
     )
-    .bind(payload)
     .fetch_one(pool)
     .await
     {
-        Ok(receipt) => HttpResponse::Ok().json(receipt),
-        Err(_) => problem("CALLBACK_RECORD_FAILED", 502),
+        Ok(Some(receipt)) => HttpResponse::Ok().json(receipt),
+        Ok(None) | Err(_) => problem("CALLBACK_RECORD_FAILED", 502),
     }
 }
 
@@ -131,14 +131,14 @@ async fn load_revision(
     pool: &PgPool,
 ) -> Option<Revision> {
     let config_id = header(request, "x-gurine-provider-config-id")?
-        .parse()
+        .parse::<Uuid>()
         .ok()?;
     let version = header(request, "x-gurine-provider-config-version")?
-        .parse()
+        .parse::<i64>()
         .ok()?;
     let config_digest = header(request, "x-gurine-provider-configuration-digest")?;
     let preflight_id = header(request, "x-gurine-provider-preflight-receipt-id")
-        .and_then(|value| value.parse().ok())?;
+        .and_then(|value| value.parse::<Uuid>().ok())?;
     let preflight_digest = header(request, "x-gurine-provider-preflight-receipt-digest")?;
     let secret_reference = std::env::var(format!(
         "COMMUNICATION_{}_CALLBACK_SECRET_REFERENCE",
@@ -146,7 +146,7 @@ async fn load_revision(
     ))
     .ok()
     .filter(|value| !value.trim().is_empty())?;
-    let valid: bool = sqlx::query_scalar(
+    let valid = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.communication_provider_configs pc
          JOIN ops.communication_provider_preflight_receipts pf
            ON pf.provider_config_id=pc.id AND pf.provider_config_version=pc.version
@@ -158,18 +158,18 @@ async fn load_revision(
            AND (pc.activation_expires_at IS NULL OR pc.activation_expires_at>clock_timestamp())
            AND pf.id=$6 AND pf.receipt_digest=$7 AND pf.result='PASS'
            AND pf.expires_at>clock_timestamp() AND pf.callback_or_poll_verified AND pf.live_sandbox)",
+        config_id,
+        version,
+        config_digest,
+        integration_id,
+        channel,
+        preflight_id,
+        preflight_digest,
+        secret_reference,
     )
-    .bind(config_id)
-    .bind(version)
-    .bind(config_digest)
-    .bind(integration_id)
-    .bind(channel)
-    .bind(preflight_id)
-    .bind(preflight_digest)
-    .bind(secret_reference)
     .fetch_one(pool)
     .await
-    .ok()?;
+    .ok()??;
     valid.then_some(Revision {
         config_id,
         version,

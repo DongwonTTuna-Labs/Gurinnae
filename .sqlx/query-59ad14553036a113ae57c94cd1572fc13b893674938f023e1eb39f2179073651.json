@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT provider_turn_id,status FROM ops.agent_provider_turns\n           WHERE agent_run_id=$1 AND dispatch_key_sha256=CAST($2 AS char(64))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "provider_turn_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "provider_turn_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "59ad14553036a113ae57c94cd1572fc13b893674938f023e1eb39f2179073651"
+}

@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.agent_output_validations(\n          agent_run_id,provider_turn_id,input_snapshot_sha256,provider_output_sha256,validator_version,validator_sha256,\n          output_schema_id,output_schema_version,output_schema_sha256,validation_policy_version,validation_policy_sha256,\n          validation_status,schema_status,citation_status,policy_status,run_terminal_status,output_status,failure_details_redacted,\n          validated_outcome,validated_outcome_sha256,citation_count,proposal_count,citation_set_sha256,proposal_set_sha256,validation_sha256)\n         VALUES($1,$2,$3,CAST($4 AS char(64)),'agent-output-validator-v2',CAST($5 AS char(64)),\n          $6,$7,CAST($8 AS char(64)),'agent-output-policy-v2',CAST($9 AS char(64)),\n         'VALID','PASS','PASS','PASS','SUCCEEDED',$10,'{}'::jsonb,$11,CAST($12 AS char(64)),$13,$14,CAST($15 AS char(64)),CAST($16 AS char(64)),CAST($17 AS char(64)))\n         ON CONFLICT(agent_run_id,provider_turn_id) DO NOTHING RETURNING validation_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "validation_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_output_validations",
+            "name": "validation_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Text",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Jsonb",
+        "Bpchar",
+        "Int4",
+        "Int4",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "edfa2e79fb8c03af067e99fa4895f4faa80d3c05c951946d607e7bbf8416f9e1"
+}

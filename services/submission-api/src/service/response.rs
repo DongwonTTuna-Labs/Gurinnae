@@ -2,22 +2,24 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use gurine_auth::assertion::canonical::sha256_hex;
 use gurine_persistence_postgres::outbox::{OutboxEvent, append};
 use serde_json::Value;
-use sqlx::Row;
 use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;
 
 use super::{RequestContext, ServiceError, common};
 
 mod projection;
+mod verification;
 
 pub async fn access_status(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    let value: Value =
-        sqlx::query_scalar("SELECT intake.get_response_access_status_session_v2($1,$2)")
-            .bind(session_hash(context)?)
-            .bind(context.issuer)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let value: Value = sqlx::query_scalar!(
+        "SELECT intake.get_response_access_status_session_v2($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     let scope = uuid(&value, "scope_id")?;
     let kind = text(&value, "status")?;
     let requires_email = kind == "RESPONSE_PENDING";
@@ -37,77 +39,7 @@ pub async fn access_status(context: &RequestContext<'_>) -> Result<Value, Servic
 }
 
 pub async fn verify(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    let value = common::parse(context.body)?;
-    let otp = common::string(&value, "emailOtp")?;
-    if otp.len() < 4 || otp.len() > 12 || !otp.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Err(ServiceError::InvalidRequest);
-    }
-    let new_token = common::random_token()?;
-    let expires_at = OffsetDateTime::now_utc() + Duration::hours(12);
-    let status: Value =
-        sqlx::query_scalar("SELECT intake.get_response_access_status_session_v2($1,$2)")
-            .bind(session_hash(context)?)
-            .bind(context.issuer)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
-    let pending_expires_at =
-        OffsetDateTime::parse(common::string(&status, "expires_at")?, &Rfc3339)
-            .map_err(|_| ServiceError::Persistence)?;
-    let key_version = common::string(&status, "otp_key_version")?;
-    let key = match key_version {
-        common::RESPONSE_OTP_KEY_VERSION => &context.state.response_portal_otp_key_current,
-        common::RESPONSE_OTP_PREVIOUS_KEY_VERSION => context
-            .state
-            .response_portal_otp_key_previous
-            .as_ref()
-            .ok_or(ServiceError::InvalidSession)?,
-        _ => return Err(ServiceError::InvalidSession),
-    };
-    let candidate = common::response_otp_verifier(key, otp)?;
-    let receipt: Value = sqlx::query_scalar(
-        "SELECT to_jsonb(intake.verify_response_session_v2(ROW($1,$2,$3,$4,$5,$6)::intake.response_otp_verify_v2))",
-    )
-    .bind(session_hash(context)?)
-    .bind(context.issuer)
-    .bind(candidate)
-    .bind(key_version)
-    .bind(sha256_hex(new_token.as_bytes()))
-    .bind(expires_at)
-    .fetch_one(&context.state.pool)
-    .await
-    .map_err(common::database_error)?;
-    let request_id = uuid(&receipt, "request_id")?;
-    let session_id = receipt
-        .get("session_id")
-        .and_then(Value::as_str)
-        .map(Uuid::parse_str)
-        .transpose()
-        .map_err(|_| ServiceError::Persistence)?;
-    let disposition = text(&receipt, "disposition")?.to_owned();
-    let remaining = integer(&receipt, "remaining_attempts")? as i32;
-    if disposition == "VERIFIED" {
-        Ok(serde_json::json!({
-            "requestId": request_id,
-            "status": "VERIFIED",
-            "remainingAttempts": remaining,
-            "session": common::descriptor(new_token,"RESPONSE_ACTIVE",request_id,expires_at,1)?,
-            "sessionId": session_id,
-        }))
-    } else {
-        Ok(serde_json::json!({
-            "requestId": request_id,
-            "status": disposition,
-            "remainingAttempts": remaining,
-            "session": common::descriptor(
-                common::session(context)?.to_owned(),
-                "RESPONSE_PENDING",
-                request_id,
-                pending_expires_at,
-                1
-            )?,
-        }))
-    }
+    verification::verify(context).await
 }
 
 pub async fn get_request(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
@@ -146,13 +78,15 @@ pub async fn get_request(context: &RequestContext<'_>) -> Result<Value, ServiceE
 }
 
 pub async fn download_request(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    let bytes: Vec<u8> =
-        sqlx::query_scalar("SELECT intake.download_response_request_session_v2($1,$2)")
-            .bind(session_hash(context)?)
-            .bind(context.issuer)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let bytes: Vec<u8> = sqlx::query_scalar!(
+        "SELECT intake.download_response_request_session_v2($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     Ok(serde_json::json!({"binary": STANDARD.encode(bytes)}))
 }
 
@@ -212,24 +146,20 @@ pub async fn save_draft(context: &RequestContext<'_>) -> Result<Value, ServiceEr
         &serde_json::to_vec(answers).map_err(|_| ServiceError::InvalidRequest)?,
     )?;
     let expires_at = OffsetDateTime::now_utc() + Duration::days(7);
-    let row = sqlx::query(
-        "SELECT draft_id,version FROM intake.save_response_draft_session_v2($1,$2,$3,$4,$5,$6)",
+    let row = sqlx::query!(
+        "SELECT draft_id AS \"draft_id?\", version AS \"version?\" FROM intake.save_response_draft_session_v2($1,$2,$3,$4,$5,$6)",
+        session_hash(context)?,
+        context.issuer,
+        expected_version,
+        encrypted,
+        consent,
+        expires_at
     )
-    .bind(session_hash(context)?)
-    .bind(context.issuer)
-    .bind(expected_version)
-    .bind(encrypted)
-    .bind(consent)
-    .bind(expires_at)
     .fetch_one(&context.state.pool)
     .await
     .map_err(common::database_error)?;
-    let id: Uuid = row
-        .try_get("draft_id")
-        .map_err(|_| ServiceError::Persistence)?;
-    let version: i64 = row
-        .try_get("version")
-        .map_err(|_| ServiceError::Persistence)?;
+    let id = row.draft_id.ok_or(ServiceError::Persistence)?;
+    let version = row.version.ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, id, Some(version))
 }
 
@@ -252,19 +182,20 @@ pub async fn create_attachment(context: &RequestContext<'_>) -> Result<Value, Se
         filename.as_bytes(),
     )?;
     let object_key = format!("quarantine/responses/{id}/{digest}");
-    let persisted: Uuid = sqlx::query_scalar(
-        "SELECT intake.create_response_attachment_session_v2($1,$2,$3,$4,$5,$6,$7)",
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.create_response_attachment_session_v2($1,$2,$3,$4,$5,$6,$7) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer,
+        encrypted,
+        media_type,
+        size,
+        digest,
+        &object_key
     )
-    .bind(session_hash(context)?)
-    .bind(context.issuer)
-    .bind(encrypted)
-    .bind(media_type)
-    .bind(size)
-    .bind(digest)
-    .bind(&object_key)
     .fetch_one(&context.state.pool)
     .await
-    .map_err(common::database_error)?;
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     let mut receipt =
         common::command_receipt(context.operation, context.request_id, persisted, None)?;
     receipt["links"] = serde_json::json!([{
@@ -281,31 +212,34 @@ pub async fn finalize_attachment(context: &RequestContext<'_>) -> Result<Value, 
     let etag = common::string(&value, "objectEtag")?;
     let size = common::i64_field(&value, "uploadedSizeBytes")?;
     let digest = hash(common::string(&value, "uploadedSha256")?)?;
-    let persisted: Uuid = sqlx::query_scalar(
-        "SELECT intake.finalize_response_attachment_session_v2($1,$2,$3,$4,$5,$6)",
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.finalize_response_attachment_session_v2($1,$2,$3,$4,$5,$6) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer,
+        id,
+        etag,
+        size,
+        digest
     )
-    .bind(session_hash(context)?)
-    .bind(context.issuer)
-    .bind(id)
-    .bind(etag)
-    .bind(size)
-    .bind(digest)
     .fetch_one(&context.state.pool)
     .await
-    .map_err(common::database_error)?;
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, persisted, None)
 }
 
 pub async fn delete_attachment(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
     let id = common::attachment_id(context)?;
-    let persisted: Uuid =
-        sqlx::query_scalar("SELECT intake.delete_response_attachment_session_v2($1,$2,$3)")
-            .bind(session_hash(context)?)
-            .bind(context.issuer)
-            .bind(id)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.delete_response_attachment_session_v2($1,$2,$3) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer,
+        id
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, persisted, None)
 }
 
@@ -344,15 +278,17 @@ pub async fn request_extension(context: &RequestContext<'_>) -> Result<Value, Se
     if reason.chars().count() > 4_000 {
         return Err(ServiceError::InvalidRequest);
     }
-    let id: Uuid =
-        sqlx::query_scalar("SELECT intake.request_response_extension_session_v2($1,$2,$3,$4)")
-            .bind(session_hash(context)?)
-            .bind(context.issuer)
-            .bind(due_at)
-            .bind(reason)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let id: Uuid = sqlx::query_scalar!(
+        "SELECT intake.request_response_extension_session_v2($1,$2,$3,$4) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer,
+        due_at,
+        reason
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, id, None)
 }
 
@@ -439,28 +375,23 @@ async fn persist_submission(
         .begin()
         .await
         .map_err(|_| ServiceError::Persistence)?;
-    let row = sqlx::query(
-        "SELECT submission_id FROM intake.submit_response_session_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+    let row = sqlx::query!(
+        "SELECT submission_id AS \"submission_id?\" FROM intake.submit_response_session_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+        session_hash(context)?,
+        context.issuer,
+        version,
+        digest,
+        encrypted,
+        consent,
+        submission_id,
+        common::token_hmac(&context.state.token_hmac_key, receipt_token)?,
+        sha256_hex(receipt_session.as_bytes()),
+        expires_at
     )
-    .bind(session_hash(context)?)
-    .bind(context.issuer)
-    .bind(version)
-    .bind(digest)
-    .bind(encrypted)
-    .bind(consent)
-    .bind(submission_id)
-    .bind(common::token_hmac(
-        &context.state.token_hmac_key,
-        receipt_token,
-    )?)
-    .bind(sha256_hex(receipt_session.as_bytes()))
-    .bind(expires_at)
     .fetch_one(&mut *transaction)
     .await
     .map_err(common::database_error)?;
-    let id: Uuid = row
-        .try_get("submission_id")
-        .map_err(|_| ServiceError::Persistence)?;
+    let id = row.submission_id.ok_or(ServiceError::Persistence)?;
     let aggregate_id = id.to_string();
     let occurred_at = OffsetDateTime::now_utc();
     let payload = serde_json::json!({"actor_id":context.issuer,"occurred_at":common::timestamp(occurred_at)?,"operation_id":context.operation,"requestToken":aggregate_id,"request_id":context.request_id});
@@ -490,12 +421,15 @@ async fn persist_submission(
 }
 
 pub async fn get_receipt(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    let value: Value = sqlx::query_scalar("SELECT intake.get_response_receipt_session_v2($1,$2)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)?;
+    let value: Value = sqlx::query_scalar!(
+        "SELECT intake.get_response_receipt_session_v2($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     let id = uuid(&value, "id")?;
     let request_id = uuid(&value, "response_request_id")?;
     let digest = text(&value, "submission_sha256")?;

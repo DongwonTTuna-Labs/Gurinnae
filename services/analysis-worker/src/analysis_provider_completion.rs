@@ -223,7 +223,7 @@ async fn insert_output_validation_failure(
         "failureCode": failure_code,
         "detail": detail,
     }))?);
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.agent_output_validations(
           agent_run_id,provider_turn_id,input_snapshot_sha256,provider_output_sha256,
           validator_version,validator_sha256,output_schema_id,output_schema_version,
@@ -237,24 +237,24 @@ async fn insert_output_validation_failure(
           'INVALID','FAIL','NOT_RUN','NOT_RUN','FAILED',
           $10,$11,$12::jsonb,NULL,NULL,0,0,CAST($13 AS char(64)),CAST($13 AS char(64)),CAST($14 AS char(64)))
          ON CONFLICT(agent_run_id,provider_turn_id) DO NOTHING",
+        turn.run_id,
+        turn.turn_id,
+        &turn.input_snapshot_sha256,
+        &output_sha256,
+        sha256(b"agent-output-validator-v2"),
+        &turn.output_schema_id,
+        &turn.output_schema_version,
+        &turn.output_schema_sha256,
+        sha256(b"agent-output-policy-v2"),
+        match output.get("outcome").and_then(Value::as_str) {
+            Some("ABSTAINED") => "ABSTAINED",
+            _ => "COMPLETED",
+        },
+        failure_code,
+        json!({"reason": detail.chars().take(512).collect::<String>()}),
+        &empty_set_sha256,
+        &validation_sha256,
     )
-    .bind(turn.run_id)
-    .bind(turn.turn_id)
-    .bind(&turn.input_snapshot_sha256)
-    .bind(&output_sha256)
-    .bind(sha256(b"agent-output-validator-v2"))
-    .bind(&turn.output_schema_id)
-    .bind(&turn.output_schema_version)
-    .bind(&turn.output_schema_sha256)
-    .bind(sha256(b"agent-output-policy-v2"))
-    .bind(match output.get("outcome").and_then(Value::as_str) {
-        Some("ABSTAINED") => "ABSTAINED",
-        _ => "COMPLETED",
-    })
-    .bind(failure_code)
-    .bind(json!({"reason": detail.chars().take(512).collect::<String>()}))
-    .bind(&empty_set_sha256)
-    .bind(&validation_sha256)
     .execute(&state.pool)
     .await
     .map_err(database)?;

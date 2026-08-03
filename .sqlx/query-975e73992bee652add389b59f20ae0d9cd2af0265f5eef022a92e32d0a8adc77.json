@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.enqueue_outbox('signal',$1,1,'detection.signal_created.v1',$2,clock_timestamp())",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enqueue_outbox",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "975e73992bee652add389b59f20ae0d9cd2af0265f5eef022a92e32d0a8adc77"
+}

@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,content_type,content_sha256,content_size_bytes,object_key,status::text status FROM raw.source_documents WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.source_documents",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "content_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.source_documents",
+            "name": "content_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "content_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.source_documents",
+            "name": "content_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content_size_bytes",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "raw.source_documents",
+            "name": "content_size_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "object_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.source_documents",
+            "name": "object_key"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "b3cdff8d9fd86488f970f1d4af11efc09c00589131bdb4bb93c786429494c966"
+}

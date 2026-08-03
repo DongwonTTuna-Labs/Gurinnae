@@ -29,36 +29,36 @@ async fn complete_provider_turn_owner<'a, E>(
 where
     E: sqlx::Executor<'a, Database = sqlx::Postgres>,
 {
-    sqlx::query(
+    sqlx::query!(
         "SELECT ops.complete_agent_provider_turn(
            $1,$2,$3,$4,CAST($5 AS char(64)),CAST($6 AS char(64)),$7,$8,$9,$10,$11,$12,$13,$14,
            CAST($15 AS char(64)),$16,CAST($17 AS char(64)),CAST($18 AS char(64)),$19,$20,
            CAST($21 AS char(64)),$22,$23,CAST($24 AS char(64)))",
+        turn.turn_id,
+        expected_version,
+        status,
+        envelope_kind,
+        envelope_sha256,
+        envelope_payload_sha256,
+        envelope_canonical,
+        response_redacted,
+        response_redacted_canonical,
+        call_id,
+        tool_id,
+        receipt_id,
+        receipt,
+        receipt_canonical,
+        receipt_sha256,
+        provider_turn_canonical,
+        provider_turn_sha256,
+        turn_transcript_sha256,
+        input_units,
+        output_units,
+        provider_request_id_hash,
+        cost_krw,
+        error_code,
+        error_sha256,
     )
-    .bind(turn.turn_id)
-    .bind(expected_version)
-    .bind(status)
-    .bind(envelope_kind)
-    .bind(envelope_sha256)
-    .bind(envelope_payload_sha256)
-    .bind(envelope_canonical)
-    .bind(response_redacted)
-    .bind(response_redacted_canonical)
-    .bind(call_id)
-    .bind(tool_id)
-    .bind(receipt_id)
-    .bind(receipt)
-    .bind(receipt_canonical)
-    .bind(receipt_sha256)
-    .bind(provider_turn_canonical)
-    .bind(provider_turn_sha256)
-    .bind(turn_transcript_sha256)
-    .bind(input_units)
-    .bind(output_units)
-    .bind(provider_request_id_hash)
-    .bind(cost_krw)
-    .bind(error_code)
-    .bind(error_sha256)
     .fetch_one(executor)
     .await
     .map_err(database)?;

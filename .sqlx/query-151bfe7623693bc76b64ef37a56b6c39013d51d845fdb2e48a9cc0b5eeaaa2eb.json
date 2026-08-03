@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT draft_id AS \"draft_id?\", version AS \"version?\" FROM intake.save_correction_draft_session($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "draft_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "version?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text",
+        "Int8",
+        "Text",
+        "Bpchar",
+        "Bytea",
+        "Text",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "151bfe7623693bc76b64ef37a56b6c39013d51d845fdb2e48a9cc0b5eeaaa2eb"
+}

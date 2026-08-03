@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.enqueue_outbox('internal.outbox_dispatch',$1,0, 'internal.mark_outbox_published.v1','{}'::jsonb,clock_timestamp())",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enqueue_outbox",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "076075524b4354703d83192242d8d9f7e6b2220ac4629306a2e6518c4ff6bee8"
+}

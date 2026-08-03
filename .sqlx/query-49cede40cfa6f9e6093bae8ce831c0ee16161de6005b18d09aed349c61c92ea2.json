@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT agency_id FROM core.agency_identifiers WHERE scheme='KONEPS' AND value=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "agency_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.agency_identifiers",
+            "name": "agency_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "49cede40cfa6f9e6093bae8ce831c0ee16161de6005b18d09aed349c61c92ea2"
+}

@@ -1,18 +1,18 @@
 async fn provider_connection_test(state: &State, job: &ClaimedJob) -> Result<Value, Failure> {
     let test_id = payload_uuid(&job.payload, "providerConnectionTestId")?;
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "UPDATE ops.provider_connection_tests t SET status='RUNNING',            started_at=COALESCE(started_at,clock_timestamp())          FROM ops.provider_configs p WHERE t.id=$1 AND t.provider_id=p.id            AND t.status IN ('QUEUED','RUNNING')          RETURNING t.provider_id,t.test_model,p.provider_type,p.enabled,p.routing_policy",
+        test_id,
     )
-    .bind(test_id)
     .fetch_optional(&state.pool)
     .await
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("PROVIDER_TEST_NOT_QUEUED", test_id.to_string()))?;
-    let provider_id: Uuid = row.try_get("provider_id").map_err(database)?;
-    let model: String = row.try_get("test_model").map_err(database)?;
-    let provider_type: String = row.try_get("provider_type").map_err(database)?;
-    let enabled: bool = row.try_get("enabled").map_err(database)?;
-    let routing: Value = row.try_get("routing_policy").map_err(database)?;
+    let provider_id = row.provider_id;
+    let model = row.test_model;
+    let provider_type = row.provider_type;
+    let enabled = row.enabled;
+    let routing = row.routing_policy;
     let (status, redacted) = connection_test_result(
         state,
         &provider_type,
@@ -92,20 +92,20 @@ async fn update_connection_test(
     status: &str,
     redacted: &Value,
 ) -> Result<(), Failure> {
-    sqlx::query(
+    sqlx::query!(
         "UPDATE ops.provider_connection_tests SET status=$2,redacted_result=$3,completed_at=clock_timestamp()          WHERE id=$1 AND status='RUNNING'",
+        test_id,
+        status,
+        redacted,
     )
-    .bind(test_id)
-    .bind(status)
-    .bind(redacted)
     .execute(&mut **tx)
     .await
     .map_err(database)?;
-    sqlx::query(
+    sqlx::query!(
         "UPDATE ops.provider_configs SET last_connection_test_at=clock_timestamp(),            last_connection_test_status=$2 WHERE id=$1",
+        provider_id,
+        status,
     )
-    .bind(provider_id)
-    .bind(status)
     .execute(&mut **tx)
     .await
     .map_err(database)?;
