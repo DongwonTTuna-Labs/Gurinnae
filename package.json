@@ -19,6 +19,9 @@
     "@hey-api/openapi-ts": "0.99.0",
     "@playwright/test": "1.55.0",
     "@types/node": "24.3.0",
-    "typescript": "5.9.3"
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1",
+    "typescript": "5.9.3",
+    "yaml": "2.8.1"
   }
 }

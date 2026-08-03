@@ -8219,6 +8219,10 @@ export type PublishCaseErrors = {
      * Problem response: INTERNAL_ERROR
      */
     500: ProblemDetails;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: ProblemDetails;
 };
 
 export type PublishCaseError = PublishCaseErrors[keyof PublishCaseErrors];

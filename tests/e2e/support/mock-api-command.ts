@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
 import {
+  actionDecisionSummary,
+  actionProposalSummary,
+  actionQuorum,
+  executionAuthorizationSummary,
+} from "./mock-api-action-reads";
+import {
   actionJourneyDigests,
   actionJourneyIds,
   body,
@@ -16,14 +22,14 @@ function commandReceipt(
   return {
     operationId,
     requestId: randomUUID(),
-    status: "completed",
+    status: "COMPLETED",
     aggregateId,
     aggregateVersion: version,
     auditEventId: randomUUID(),
     acceptedAt: new Date().toISOString(),
     receiptDigest: actionJourneyDigests.receipt,
     emittedEventIds: [randomUUID()],
-    idempotencyReplay: {},
+    idempotencyReplay: false,
     links: [],
   };
 }
@@ -70,7 +76,7 @@ export async function handleCommandRoutes(
       digest: actionJourneyDigests.approval,
     });
     const executionAuthorization = approved
-      ? actionJourneyIds.executionId
+      ? executionAuthorizationSummary(actionJourneyIds.executionId)
       : null;
     return Response.json({
       command: commandReceipt(
@@ -78,18 +84,9 @@ export async function handleCommandRoutes(
         actionJourneyIds.proposalId,
         2,
       ),
-      proposal: {
-        proposalId: actionJourneyIds.proposalId,
-        version: 1,
-        state: runtime.actionJourney.proposalState,
-        approvalDigest: actionJourneyDigests.approval,
-      },
-      decision: {
-        decisionId: randomUUID(),
-        kind,
-        receiptDigest: actionJourneyDigests.receipt,
-      },
-      quorum: { complete: approved },
+      proposal: actionProposalSummary(),
+      decision: actionDecisionSummary(),
+      quorum: actionQuorum(),
       executionAuthorization,
     });
   }
@@ -123,26 +120,52 @@ export async function handleCommandRoutes(
       proposalId: actionJourneyIds.proposalId,
       digest: actionJourneyDigests.binding,
     });
+    const terminalDecision = acknowledge ? "ACKNOWLEDGE" : "DECLINE";
+    const resultingJourneyState = acknowledge ? "ACTIVE" : "BLOCKED";
+    const now = new Date().toISOString();
+    const dueAt = new Date(Date.now() + 900_000).toISOString();
+    const journeyInstanceId = "16161616-1616-4161-8161-161616161616";
     return Response.json({
-      schemaVersion: { name: "journey-handoff-decision-receipt.v1" },
+      schemaVersion: "journey-handoff-decision-receipt.v1",
       command: commandReceipt(
         "decideJourneyHandoff",
         actionJourneyIds.handoffId,
         runtime.actionJourney.handoffVersion,
       ),
       decisionReceipt: {
+        receiptId: randomUUID(),
+        receiptDigest: actionJourneyDigests.receipt,
+        journeyInstanceId,
+        journeyInstanceVersion: runtime.actionJourney.handoffVersion,
         handoffId: actionJourneyIds.handoffId,
-        state: runtime.actionJourney.handoffState,
-        version: runtime.actionJourney.handoffVersion,
-        bindingDigest: actionJourneyDigests.binding,
+        handoffVersion: runtime.actionJourney.handoffVersion,
+        handoffKind: "HS-09-ACTION_EXECUTION_CLAIM",
+        generation: 1,
+        decision: terminalDecision,
+        resultingHandoffState: runtime.actionJourney.handoffState,
+        resultingJourneyState,
+        currentOwnerBindingDigest: actionJourneyDigests.binding,
+        nextOwnerBindingDigest: null,
+        auditEventId: randomUUID(),
+        outboxEventId: randomUUID(),
       },
       replacement: null,
       finalParent: {
-        state: "SUCCEEDED",
-        proposalId: actionJourneyIds.proposalId,
+        journeyInstanceId,
+        version: runtime.actionJourney.handoffVersion,
+        state: resultingJourneyState,
+        currentOwnerBindingDigest: actionJourneyDigests.binding,
+        nextOwnerBindingDigest: null,
+        activeHandoffId: null,
+        activeHandoffGeneration: null,
+        activeHandoffState: null,
+        escalationState: "RESOLVED",
+        dueAt,
+        headReceiptId: randomUUID(),
+        headReceiptDigest: actionJourneyDigests.receipt,
       },
       effectDigest: actionJourneyDigests.receipt,
-      decidedAt: new Date().toISOString(),
+      decidedAt: now,
     });
   }
 
