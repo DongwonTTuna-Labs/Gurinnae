@@ -17,13 +17,17 @@ canonical_payload:
   arrays: preserve declared order; capabilities are sorted ascending and unique before serialization
   signature_input: <prefix>.<kid>.<payloadBase64UrlNoPadding> encoded as ASCII
 request_binding:
-  canonical_request_digest: sha256(upper(method) + "\n" + normalizedPath + "\n" + querySha256 + "\n" + bodySha256 + "\n" + lower(contentType)
-    + "\n" + (idempotencyKeySha256 or ""))
+  canonical_request_digest: >-
+    sha256(upper(method) + "\n" + normalizedPath + "\n" + querySha256 + "\n" + bodySha256 + "\n" + lower(contentType)
+    + "\n" + (idempotencyKeySha256 or "") + (nextSubmissionSessionSha256 is present ? "\n" + nextSubmissionSessionSha256 : ""))
   query: RFC3986 percent encoding; keys and values bytewise sorted; duplicate keys preserved; empty query hashes empty bytes
   body: SHA-256 of exact bytes forwarded to Control API; empty body hashes empty bytes
   path: absolute path only; dot-segments rejected before normalization; no scheme, authority, fragment or percent-decoded slash
   content_type: empty for bodyless requests; otherwise exactly application/json after parameter stripping and lowercasing
   idempotency: all non-GET Control commands bind SHA-256 of the exact Idempotency-Key; queries use null
+  next_submission_session: When X-Gurine-Next-Submission-Session is present, append one seventh line containing the lowercase SHA-256
+    of its exact bytes. Absence appends no line and preserves the historical six-line digest. A supplied header requires an exact
+    matching nextSubmissionSessionSha256 claim; a signed claim without the header is rejected.
 service_assertion:
   prefix: gurine-sa-v1
   issuer: review-console
@@ -55,6 +59,20 @@ actor_assertion:
   - stepUpAuthorizationId
   assurance: Identity API derives required assurance from specs/auth/assurance-policy.yaml; BFF echo must match. Control API verifies
     the signed assuranceLevel against the same compiled policy.
+operation_capability_resolution:
+  submitReview:
+    selector: criteria.namedIndividualOverride
+    schema_precondition: the downstream submitReviewRequest is closed and namedIndividualOverride, when present, is a non-null closed object
+    absent_capability: review.editorial
+    present_capability: review.legal
+    resolution: exactly one capability; accepting either capability or requiring both is forbidden
+    review_console_bff: derive the exact capability from the same downstream body bytes used for bodySha256 and send that single value as issueActorAssertion.requiredCapability
+    identity_api: require the session to hold that exact requested capability, then sign it as requiredCapability in the actor assertion already bound to downstream bodySha256; Identity API receives no duplicate downstream body
+    control_api: parse the asserted downstream body, recompute the selector branch, and require signed requiredCapability equality before capability authorization, audit, or command dispatch
+    database_owner: editorial.submit_review_decision recomputes the selector branch from the typed command and requires equality with the actor assertion and audit capability before every write
+    mismatch_error: CAPABILITY_DENIED
+    grant_rule: this policy does not add review.legal to any role or permit a LEGAL_REVIEWER to satisfy review.editorial
+    assurance_composition: capability and assurance are independent; namedIndividualOverride selects only requiredCapability, while the existing decision policy keeps APPROVE at STEP_UP and REJECT or CHANGES_REQUIRED at ACTIVE_SESSION
 replay_protection:
   relation: ops.assertion_replay_guard
   consume_function: ops.consume_assertion_jti(text,uuid,text,text,timestamptz,char(64))
@@ -154,6 +172,13 @@ submission_bff_service_assertion:
   max_ttl_seconds: 30
   clock_skew_seconds: 5
   single_use: true
-  request_binding: same canonical request digest as service_assertion
+  request_binding: same canonical request digest as service_assertion, including the conditional seventh digest line for
+    X-Gurine-Next-Submission-Session
+  next_submission_session_binding:
+    header: X-Gurine-Next-Submission-Session
+    claim: nextSubmissionSessionSha256
+    digest: lowercase SHA-256 of the exact 43-byte base64url-no-padding header value
+    requirement: The header and claim are either both absent or both present and equal after digesting; raw session bytes never enter
+      the assertion payload, persistence, receipts, events, audit, logs, traces or errors.
   replay_guard: ops.assertion_replay_guard
   header: X-Gurine-Service-Assertion

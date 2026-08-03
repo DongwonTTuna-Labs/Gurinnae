@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/organization.official_channel_revoked.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "revocationId",
+    "assertionId",
+    "revocationReceiptDigest",
+    "revokedAt"
+  ],
+  "properties": {
+    "revocationId": { "type": "string", "format": "uuid" },
+    "assertionId": { "type": "string", "format": "uuid" },
+    "revocationReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "revokedAt": { "type": "string", "format": "date-time" }
+  }
+}

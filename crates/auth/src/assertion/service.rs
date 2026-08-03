@@ -27,6 +27,12 @@ pub struct ServiceClaims {
     pub iss: String,
     pub jti: String,
     pub method: String,
+    #[serde(
+        default,
+        rename = "nextSubmissionSessionSha256",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub next_submission_session_sha256: Option<String>,
     pub path: String,
     #[serde(rename = "querySha256")]
     pub query_sha256: String,
@@ -170,6 +176,7 @@ pub fn verify_claims(
         || claims.query_sha256 != hashes.query_sha256
         || claims.body_sha256 != hashes.body_sha256
         || claims.content_type != hashes.content_type
+        || claims.next_submission_session_sha256 != hashes.next_submission_session_sha256
     {
         return Err(AssertionError::RequestMismatch);
     }
@@ -182,6 +189,10 @@ fn validate_schema(claims: &ServiceClaims) -> Result<(), AssertionError> {
         || claims.jti.len() != 36
         || !is_hash(&claims.query_sha256)
         || !is_hash(&claims.body_sha256)
+        || claims
+            .next_submission_session_sha256
+            .as_deref()
+            .is_some_and(|value| !is_hash(value))
     {
         return Err(AssertionError::SchemaInvalid);
     }

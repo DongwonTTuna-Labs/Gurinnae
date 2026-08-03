@@ -1,0 +1,10 @@
+{
+  "bindings": [
+    {
+      "capabilityId": "open-dart-access-production",
+      "connectorId": "open-dart",
+      "scopeId": "open-dart"
+    }
+  ],
+  "schemaVersion": "source-license-capability-bindings.v1"
+}

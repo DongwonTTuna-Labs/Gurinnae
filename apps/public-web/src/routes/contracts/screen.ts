@@ -88,7 +88,7 @@ export const screen = {
       method: "GET",
       path: "/v1/contracts/download",
       blocking: false,
-      response_schema: "BinaryDownload",
+      response_schema: "PublicContractsDownload",
     },
   ],
 } as const satisfies ScreenViewModel;

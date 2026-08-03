@@ -4,7 +4,7 @@ use actix_web::{HttpRequest, HttpResponse, http::StatusCode, web};
 use gurine_api_contracts::{OperationSpec, addendum, submission_api::OPERATIONS};
 use gurine_application::idempotency;
 use gurine_auth::assertion::{
-    AssertionError, BoundRequest,
+    AssertionError,
     canonical::{canonical_request_digest, sha256_hex},
     service::{ServiceClaims, ServiceExpectation, verify_claims},
 };
@@ -16,6 +16,16 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::state::AppState;
+
+mod idempotency_binding;
+mod problem_mapping;
+mod request_binding;
+#[cfg(test)]
+mod tests;
+
+use idempotency_binding::{IdempotencyBindingError, derive, derive_owner};
+use problem_mapping::service_problem;
+use request_binding::{bound_request, header, privacy_exchange_authority_is_closed, request_id};
 
 pub fn configure(config: &mut web::ServiceConfig) {
     let mut by_path = BTreeMap::<&str, Vec<OperationSpec>>::new();
@@ -179,8 +189,11 @@ async fn handle(
     if !caller_allowed(operation.id, &caller.iss) {
         return problem("BFF_CALLER_DENIED", 403, &request_id);
     }
+    if !privacy_exchange_authority_is_closed(operation.id, &request) {
+        return problem("SERVICE_ASSERTION_REQUEST_MISMATCH", 401, &request_id);
+    }
     let session_token = header(&request, "x-gurine-submission-session").map(str::to_owned);
-    if let Err(response) = validate_operation_session(
+    let session_id = match validate_operation_session(
         &operation,
         session_token.as_deref(),
         &caller.iss,
@@ -189,13 +202,22 @@ async fn handle(
     )
     .await
     {
-        return response;
-    }
+        Ok(value) => value,
+        Err(response) => return response,
+    };
     let attachment_id = match parse_attachment_id(request.match_info().get("attachmentId")) {
         Ok(value) => value,
         Err(()) => return problem("INVALID_PARAMETER", 400, &request_id),
     };
-    let idempotency = if operation.idempotency_required {
+    let owner_idempotency = if owner_atomic_idempotency(operation.id) {
+        match derive_owner(&operation, &request, &body) {
+            Ok(value) => Some(value),
+            Err(error) => return idempotency_problem(error, &request_id),
+        }
+    } else {
+        None
+    };
+    let idempotency = if operation.idempotency_required && owner_idempotency.is_none() {
         match prepare_idempotency(&operation, &request, &body, &state, &request_id).await {
             Ok(Prepared::Replay(response)) => return stored_response(response, &request_id),
             Ok(Prepared::Execute(value)) => Some(value),
@@ -210,6 +232,16 @@ async fn handle(
         issuer: &caller.iss,
         request_id: &request_id,
         session_token: session_token.as_deref(),
+        session_id,
+        idempotency_key_hash: owner_idempotency
+            .as_ref()
+            .or(idempotency.as_ref())
+            .map(|value| value.key_hash.as_str()),
+        request_hash: owner_idempotency
+            .as_ref()
+            .or(idempotency.as_ref())
+            .map(|value| value.request_hash.as_str()),
+        next_session_token: header(&request, "x-gurine-next-submission-session"),
         attachment_id,
         state: &state,
     })
@@ -294,9 +326,12 @@ async fn validate_operation_session(
     issuer: &str,
     state: &AppState,
     request_id: &str,
-) -> Result<(), HttpResponse> {
+) -> Result<Option<Uuid>, HttpResponse> {
     if !operation.auth.contains("scoped-submission-session") {
-        return Ok(());
+        return Ok(None);
+    }
+    if owner_authorizes_session(operation.id) {
+        return Ok(None);
     }
     let Some(token) = session_token else {
         return Err(problem("SUBMISSION_SESSION_REQUIRED", 401, request_id));
@@ -309,6 +344,11 @@ async fn validate_operation_session(
         request_id,
     )
     .await
+    .map(Some)
+}
+
+fn owner_authorizes_session(operation: &str) -> bool {
+    operation == "getPrivacyRequest"
 }
 
 async fn authorize(
@@ -319,7 +359,8 @@ async fn authorize(
 ) -> Result<ServiceClaims, HttpResponse> {
     let token = header(request, "x-gurine-service-assertion")
         .ok_or_else(|| problem("SERVICE_ASSERTION_REQUIRED", 401, request_id))?;
-    let bound = bound_request(request, body);
+    let bound =
+        bound_request(request, body).map_err(|error| assertion_problem(error, request_id))?;
     let now = OffsetDateTime::now_utc().unix_timestamp();
     let public = verify_claims(
         token,
@@ -375,7 +416,7 @@ async fn validate_session(
     issuer: &str,
     kinds: &[&str],
     request_id: &str,
-) -> Result<(), HttpResponse> {
+) -> Result<Uuid, HttpResponse> {
     if token.len() < 43 || kinds.is_empty() {
         return Err(problem("SUBMISSION_SESSION_INVALID", 401, request_id));
     }
@@ -383,7 +424,7 @@ async fn validate_session(
         .iter()
         .map(|value| (*value).to_owned())
         .collect::<Vec<_>>();
-    let valid = sqlx::query!(
+    let session_id = sqlx::query!(
         "SELECT session_id AS \"session_id?\" FROM intake.resolve_submission_session($1,$2,$3)",
         sha256_hex(token.as_bytes()),
         issuer,
@@ -392,11 +433,9 @@ async fn validate_session(
     .fetch_optional(&state.pool)
     .await
     .map_err(|_| problem("SUBMISSION_SESSION_INVALID", 401, request_id))?
-    .is_some();
-    if !valid {
-        return Err(problem("SUBMISSION_SESSION_INVALID", 401, request_id));
-    }
-    Ok(())
+    .and_then(|row| row.session_id)
+    .ok_or_else(|| problem("SUBMISSION_SESSION_INVALID", 401, request_id))?;
+    Ok(session_id)
 }
 
 enum Prepared {
@@ -411,12 +450,8 @@ async fn prepare_idempotency(
     state: &AppState,
     request_id: &str,
 ) -> Result<Prepared, HttpResponse> {
-    let key = header(request, "idempotency-key")
-        .ok_or_else(|| problem("IDEMPOTENCY_KEY_REQUIRED", 400, request_id))?;
-    let digest = canonical_request_digest(&bound_request(request, body))
-        .map_err(|_| problem("INVALID_REQUEST_BINDING", 400, request_id))?;
-    let prepared = idempotency::request(operation.id, key, digest.as_bytes())
-        .map_err(|_| problem("IDEMPOTENCY_KEY_INVALID", 400, request_id))?;
+    let prepared =
+        derive(operation, request, body).map_err(|error| idempotency_problem(error, request_id))?;
     match claim(
         &state.pool,
         &prepared.scope,
@@ -431,6 +466,21 @@ async fn prepare_idempotency(
         Ok(Claim::InFlight) => Err(problem("IDEMPOTENCY_IN_PROGRESS", 409, request_id)),
         Err(_) => Err(problem("DEPENDENCY_UNAVAILABLE", 503, request_id)),
     }
+}
+
+fn idempotency_problem(error: IdempotencyBindingError, request_id: &str) -> HttpResponse {
+    match error {
+        IdempotencyBindingError::MissingKey => problem("IDEMPOTENCY_KEY_REQUIRED", 400, request_id),
+        IdempotencyBindingError::InvalidKey => problem("IDEMPOTENCY_KEY_INVALID", 400, request_id),
+        IdempotencyBindingError::Binding => problem("INVALID_REQUEST_BINDING", 400, request_id),
+    }
+}
+
+fn owner_atomic_idempotency(operation: &str) -> bool {
+    matches!(
+        operation,
+        "createPrivacyRequest" | "exchangePrivacyRequestReceiptToken" | "submitResponse"
+    )
 }
 
 fn caller_allowed(operation: &str, issuer: &str) -> bool {
@@ -451,33 +501,9 @@ fn allowed_session_kinds(operation: &str) -> &'static [&'static str] {
         "getCorrectionReceipt" => &["CORRECTION_RECEIPT"],
         value if value.contains("Correction") => &["CORRECTION_DRAFT"],
         "getSubscription" | "updateSubscription" | "unsubscribe" => &["SUBSCRIPTION_MANAGEMENT"],
+        "getPrivacyRequest" => &["PRIVACY_REQUEST_RECEIPT"],
         _ => &[],
     }
-}
-
-fn bound_request<'a>(request: &'a HttpRequest, body: &'a [u8]) -> BoundRequest<'a> {
-    BoundRequest {
-        method: request.method().as_str(),
-        path: request.path(),
-        raw_query: request.query_string(),
-        body,
-        content_type: header(request, "content-type"),
-        idempotency_key: header(request, "idempotency-key"),
-    }
-}
-
-fn request_id(request: &HttpRequest) -> String {
-    header(request, "x-request-id")
-        .and_then(|value| Uuid::parse_str(value).ok())
-        .unwrap_or_else(Uuid::new_v4)
-        .to_string()
-}
-
-fn header<'a>(request: &'a HttpRequest, name: &str) -> Option<&'a str> {
-    request
-        .headers()
-        .get(name)
-        .and_then(|value| value.to_str().ok())
 }
 
 fn assertion_problem(error: AssertionError, request_id: &str) -> HttpResponse {
@@ -487,35 +513,6 @@ fn assertion_problem(error: AssertionError, request_id: &str) -> HttpResponse {
             problem("SERVICE_ASSERTION_REQUEST_MISMATCH", 401, request_id)
         }
         _ => problem("SERVICE_ASSERTION_INVALID", 401, request_id),
-    }
-}
-
-fn service_problem(error: crate::service::ServiceError, request_id: &str) -> HttpResponse {
-    match error {
-        crate::service::ServiceError::InvalidRequest => problem("INVALID_REQUEST", 400, request_id),
-        crate::service::ServiceError::TokenInvalid => {
-            problem("ONE_TIME_TOKEN_INVALID", 401, request_id)
-        }
-        crate::service::ServiceError::InvalidSession => {
-            problem("SUBMISSION_SESSION_INVALID", 401, request_id)
-        }
-        crate::service::ServiceError::NotFound => problem("RESOURCE_NOT_FOUND", 404, request_id),
-        crate::service::ServiceError::Conflict => {
-            problem("OPTIMISTIC_CONCURRENCY_CONFLICT", 409, request_id)
-        }
-        crate::service::ServiceError::Closed => problem("RESOURCE_CLOSED", 409, request_id),
-        crate::service::ServiceError::AbuseProofInvalid => {
-            problem("ABUSE_PROOF_INVALID", 403, request_id)
-        }
-        crate::service::ServiceError::AbuseProofUnavailable => {
-            problem("ABUSE_PROOF_UNAVAILABLE", 503, request_id)
-        }
-        crate::service::ServiceError::Persistence => {
-            problem("DEPENDENCY_UNAVAILABLE", 503, request_id)
-        }
-        crate::service::ServiceError::Cryptography => {
-            problem("CRYPTOGRAPHIC_OPERATION_FAILED", 500, request_id)
-        }
     }
 }
 

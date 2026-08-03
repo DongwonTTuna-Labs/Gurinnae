@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/privacy.request_decision_recorded.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "retentionRequestId",
+    "decisionVersion",
+    "transition",
+    "priorState",
+    "state",
+    "inventorySnapshotDigest",
+    "holdCoverageDigest",
+    "decisionDigest",
+    "receiptDigest"
+  ],
+  "properties": {
+    "retentionRequestId": { "type": "string", "format": "uuid" },
+    "decisionVersion": { "type": "integer", "minimum": 0 },
+    "transition": {
+      "type": "string",
+      "enum": ["START_REVIEW", "APPROVE", "REJECT"]
+    },
+    "priorState": {
+      "type": "string",
+      "enum": ["RECEIVED", "REVIEW"]
+    },
+    "state": {
+      "type": "string",
+      "enum": ["REVIEW", "APPROVED", "REJECTED"]
+    },
+    "inventorySnapshotDigest": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "holdCoverageDigest": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "decisionDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "receiptDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "transition": { "const": "START_REVIEW" },
+        "priorState": { "const": "RECEIVED" },
+        "state": { "const": "REVIEW" },
+        "inventorySnapshotDigest": { "type": "null" },
+        "holdCoverageDigest": { "type": "null" }
+      }
+    },
+    {
+      "properties": {
+        "transition": { "const": "APPROVE" },
+        "priorState": { "const": "REVIEW" },
+        "state": { "const": "APPROVED" },
+        "inventorySnapshotDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "holdCoverageDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    {
+      "properties": {
+        "transition": { "const": "REJECT" },
+        "priorState": { "const": "REVIEW" },
+        "state": { "const": "REJECTED" },
+        "inventorySnapshotDigest": { "type": "null" },
+        "holdCoverageDigest": { "type": "null" }
+      }
+    }
+  ]
+}

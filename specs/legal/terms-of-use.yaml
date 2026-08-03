@@ -1,0 +1,91 @@
+schema_version: 1
+specification_version: 13.0.0-r6d
+document_id: TERMS_OF_USE_KO
+document_version: supervisor-decision-v1
+language: ko-KR
+status: DRAFT_UNPUBLISHED_LAUNCH_BLOCKED
+policy_provenance:
+  decision_id: supervisor-decision-v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  external_counsel_approved: false
+  statement_ko: 감독자 결정 v1을 구현한 제품 정책 초안이며 외부 법률 자문 또는 승인 기록이 아닙니다.
+operator_input_contract: specs/legal/operator-owned-launch-inputs.yaml
+publication_gate:
+  mode: FAIL_CLOSED
+  required_operator_inputs:
+    - OPERATING_LEGAL_ENTITY
+    - PUBLIC_LEGAL_AND_PRIVACY_CONTACT
+    - EXTERNAL_KOREAN_COUNSEL_REVIEW
+  required_runtime_evidence:
+    - ACTIVE_APPROVED_RETENTION_SCHEDULES
+  source_license_matrix: specs/legal/source-license-matrix.yaml
+  blocked_state: UNPUBLISHED
+  no_partial_publication: true
+sections:
+  - id: service
+    title_ko: 서비스 조건
+    clauses:
+      - 공개 정보는 이상 징후를 설명하기 위한 기록이며 위법·부패의 자동 판정이 아닙니다.
+      - 자료의 시점·수집 범위·확인 상태에 따라 설명 가능한 범위가 달라질 수 있습니다.
+  - id: content
+    title_ko: 콘텐츠
+    clauses:
+      - 공개 revision과 근거 출처를 함께 확인해야 합니다.
+      - 확인·미확인·소명 상태를 서로 바꾸거나 생략해서 의미를 왜곡해서는 안 됩니다.
+  - id: data
+    title_ko: 데이터·공개 인터페이스
+    clauses:
+      - 각 출처의 이용 조건과 권리는 출처별 승인 기록을 따르며 구린네가 일괄 소유한다고 주장하지 않습니다.
+      - 권리가 불명확하거나 차단된 출처는 허용 범위를 발명하지 않고 재배포하지 않습니다.
+      - 기록 유형별 보존 표는 공개 시점의 유효하고 승인된 보존 일정에서만 생성하며, 일정이 없거나 만료되면 약관을 공개하지 않습니다.
+  - id: prohibited
+    title_ko: 금지
+    clauses:
+      - 개인정보 재식별, 접근 통제 우회, 명예를 해치는 문맥 조작을 금지합니다.
+      - 비확정 기록을 범죄·위법의 확정 판단처럼 표시해서는 안 됩니다.
+  - id: liability
+    title_ko: 책임·한계
+    clauses:
+      - 공개 기록은 원문과 최신 revision을 확인하기 위한 보조 자료이며 단독 법률 판단 근거가 아닙니다.
+  - id: changes
+    title_ko: 변경
+    clauses:
+      - 약관 변경은 버전과 효력 시점을 남기고 이전 버전의 이력을 보존합니다.
+redistribution_duties:
+  applicability: EVERY_PUBLIC_REDISTRIBUTION
+  mandatory:
+    - code: RETAIN_STATUS
+      text_ko: 재배포물에 원 자료의 공개·검토·정정 상태를 유지해야 합니다.
+    - code: RETAIN_NON_CONCLUSION_NOTICE
+      text_ko: 재배포물에 "이상 징후 기록이며 위법·부패의 확정이 아님" 고지를 유지해야 합니다.
+    - code: FOLLOW_CORRECTIONS
+      text_ko: 정정·철회가 게시되면 재배포물에도 해당 표시를 반영하거나 최신 revision으로 연결해야 합니다.
+  source_rights_precedence: 출처별 이용허락이 더 좁으면 그 제한을 우선 적용합니다.
+  removal_or_weakening_forbidden: true
+retention_table:
+  materialization: RUNTIME_ONLY
+  source_relation: ops.record_class_schedules
+  static_rows_forbidden: true
+  selection_contract:
+    - select the latest revision for each record_class at the request clock
+    - require effective_at at or before the request clock
+    - require review_expires_at after the request clock
+    - require bound operational, legal, and execution approval receipts
+  public_columns:
+    - record_class
+    - purpose
+    - lawful_basis
+    - trigger_kind
+    - active_duration_seconds
+    - backup_duration_seconds
+    - terminal_action
+    - effective_at
+    - review_expires_at
+    - schedule_digest
+  empty_result:
+    launch_blocking: true
+    table_state: UNAVAILABLE
+    document_state: UNPUBLISHED
+    response_behavior: FAIL_CLOSED
+    message_ko: 승인된 보존 일정이 없어 이용약관을 공개할 수 없습니다.
+  stale_or_unapproved_rows: EXCLUDE_AND_FAIL_CLOSED_IF_EMPTY

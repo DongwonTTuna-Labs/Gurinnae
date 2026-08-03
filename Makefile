@@ -109,8 +109,10 @@ verify-bun: build-ui
 	docker run --rm --user "$$(id -u):$$(id -g)" --env HOME=/tmp --volume "$(CURDIR):/workspace" --workdir /workspace oven/bun:1.3.14-debian@sha256:9dba1a1b43ce28c9d7931bfc4eb00feb63b0114720a0277a8f939ae4dfc9db6f sh -euc 'bun install --frozen-lockfile && bunx biome check . && bun run check && bun run test'
 
 verify-codegen:
+	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_addendum_openapi.py --check
 	bun run scripts/generate-clients.ts --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_connector_catalog.py --check
+	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_legal_content.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_addendum_samples.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_event_payload_registry.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_journey_registry.py --check

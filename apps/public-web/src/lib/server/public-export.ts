@@ -1,17 +1,28 @@
-import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { invokePublicOperation } from "@gurine/api-client-public";
 import { requiredServerValue } from "@gurine/config";
 import { urlFilterContractFor } from "@gurine/ui";
 import * as v from "valibot";
 import { env } from "$env/dynamic/private";
+import {
+  OPERATIONAL_INTERPRETATION_NOTICE,
+  PUBLIC_EXPORT_NOTICE,
+  type PublicExportFormat,
+  type PublicExportKind,
+  type VerifiedPublicDownloadPayload,
+  verifiedPublicDownloadPayload,
+} from "./public-export-artifact";
 
-export type PublicExportFormat = "CSV" | "JSONL";
+export type { PublicExportFormat, PublicExportKind };
+export {
+  OPERATIONAL_INTERPRETATION_NOTICE as PUBLIC_OPERATIONAL_INTERPRETATION_NOTICE,
+  PUBLIC_EXPORT_NOTICE,
+  verifiedPublicDownloadPayload,
+};
 export type PublicExportScreenId = "PUB-002" | "PUB-003";
 
 const DATASET_EXPORT_GUIDANCE =
   "현재 조건의 결과가 5,000건을 초과합니다. 전체 자료는 데이터 내려받기에서 요청하세요.";
-
 const text = v.pipe(v.string(), v.minLength(1), v.maxLength(256));
 const uuid = v.pipe(v.string(), v.uuid());
 const date = v.pipe(v.string(), v.isoDate());
@@ -45,53 +56,33 @@ const caseFiltersSchema = v.strictObject({
   sort: v.optional(v.picklist(["updated_desc", "published_desc", "title_asc"])),
 });
 
-const filterValueSchema = v.union([
-  v.string(),
-  v.boolean(),
-  v.pipe(v.array(v.string()), v.maxLength(32)),
-]);
-
 const problemCodeSchema = v.object({ code: v.string() });
-
-const downloadEnvelopeSchema = v.strictObject({
-  id: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
-  status: v.literal("READY"),
-  version: v.pipe(v.number(), v.safeInteger(), v.minValue(1)),
-  filename: v.pipe(
-    v.string(),
-    v.minLength(1),
-    v.maxLength(160),
-    v.regex(/^[\p{L}\p{N}][\p{L}\p{N}._() -]*$/u),
-  ),
-  mediaType: v.picklist([
-    "text/csv; charset=utf-8",
-    "application/x-ndjson; charset=utf-8",
-  ]),
-  byteLength: v.pipe(v.number(), v.safeInteger(), v.minValue(0)),
-  contentSha256: v.pipe(v.string(), v.regex(/^[a-f0-9]{64}$/u)),
-  contentBase64: v.pipe(v.string(), v.base64()),
-  format: v.picklist(["CSV", "JSONL"]),
-  rowCount: v.pipe(
-    v.number(),
-    v.safeInteger(),
-    v.minValue(0),
-    v.maxValue(5_000),
-  ),
-  appliedFilters: v.record(v.string(), filterValueSchema),
-  generatedAt: v.pipe(v.string(), v.isoTimestamp()),
-});
 
 type PublicExportRequest = Readonly<{
   format: PublicExportFormat;
   filters: Readonly<Record<string, string | boolean | readonly string[]>>;
 }>;
 
-type PublicExportInput = Readonly<{
+type PublicExportInputBase = Readonly<{
   fetch: typeof globalThis.fetch;
-  operationId: "downloadPublicCases" | "downloadPublicSearchRecords";
-  screenId: PublicExportScreenId;
   url: URL;
 }>;
+
+type PublicExportInput = PublicExportInputBase &
+  (
+    | Readonly<{
+        kind: "CASES";
+        operationId: "downloadPublicCases";
+        screenId: "PUB-003";
+      }>
+    | Readonly<{
+        kind: "SEARCH";
+        operationId: "downloadPublicSearchRecords";
+        screenId: "PUB-002";
+      }>
+  );
+
+export type { VerifiedPublicDownloadPayload };
 
 export async function publicExportResponse(
   input: PublicExportInput,
@@ -119,7 +110,7 @@ export async function publicExportResponse(
         "내려받기를 준비하지 못했습니다.",
       );
     }
-    return verifiedDownloadResponse(result.data, request);
+    return verifiedDownloadResponse(result.data, request, input.kind);
   } catch {
     return failureResponse(503, "내려받기를 준비하지 못했습니다.");
   }
@@ -181,6 +172,15 @@ export function parsePublicExportRequest(
   for (const [name, value] of Object.entries(parsed.output)) {
     if (value !== undefined) filters[name] = value;
   }
+  if (screenId === "PUB-002") {
+    const types = candidate.types;
+    filters.types = [
+      ...new Set(
+        (Array.isArray(types) ? types : []).map((value) => value.toUpperCase()),
+      ),
+    ];
+  }
+  filters.publicationState = parsed.output.publicationState ?? [];
   filters.sort ??= screenId === "PUB-002" ? "relevance" : "updated_desc";
   return { format: formats[0], filters };
 }
@@ -188,40 +188,27 @@ export function parsePublicExportRequest(
 function verifiedDownloadResponse(
   value: unknown,
   request: PublicExportRequest,
+  kind: Exclude<PublicExportKind, "CONTRACTS">,
 ): Response {
-  const parsed = v.safeParse(downloadEnvelopeSchema, value);
-  if (!parsed.success) {
-    return failureResponse(502, "내려받기 응답 형식이 올바르지 않습니다.");
-  }
-  const envelope = parsed.output;
-  if (
-    envelope.format !== request.format ||
-    envelope.mediaType !== expectedMediaType(request.format) ||
-    !envelope.filename
-      .toLowerCase()
-      .endsWith(expectedExtension(request.format)) ||
-    !filtersEqual(envelope.appliedFilters, request.filters)
-  ) {
+  const payload = verifiedPublicDownloadPayload(value, {
+    format: request.format,
+    kind,
+    expectedFilters: request.filters,
+  });
+  if (!payload)
     return failureResponse(502, "내려받기 응답 계약이 일치하지 않습니다.");
-  }
-
-  const bytes = Buffer.from(envelope.contentBase64, "base64");
-  const digest = createHash("sha256").update(bytes).digest("hex");
-  if (
-    bytes.toString("base64") !== envelope.contentBase64 ||
-    bytes.byteLength !== envelope.byteLength ||
-    digest !== envelope.contentSha256
-  ) {
-    return failureResponse(502, "내려받기 파일 무결성을 확인하지 못했습니다.");
-  }
-  return new Response(bytes, {
+  // Make the owned ArrayBuffer boundary explicit for DOM's BodyInit type.
+  const responseBytes = Uint8Array.from(payload.bytes);
+  return new Response(responseBytes, {
     status: 200,
     headers: {
       "cache-control": "no-store",
-      "content-disposition": contentDisposition(envelope.filename),
-      "content-length": String(bytes.byteLength),
-      "content-type": envelope.mediaType,
-      "x-content-sha256": envelope.contentSha256,
+      "content-disposition": contentDisposition(payload.filename),
+      "content-length": String(payload.bytes.byteLength),
+      "content-type": payload.mediaType,
+      "x-content-sha256": createHash("sha256")
+        .update(payload.bytes)
+        .digest("hex"),
       "x-content-type-options": "nosniff",
     },
   });
@@ -253,29 +240,6 @@ function serializedExportQuery(request: PublicExportRequest): URLSearchParams {
   }
   query.set("format", request.format);
   return query;
-}
-
-function filtersEqual(
-  actual: Readonly<Record<string, string | boolean | string[]>>,
-  expected: Readonly<Record<string, string | boolean | readonly string[]>>,
-): boolean {
-  return (
-    JSON.stringify(normalizedFilters(actual)) ===
-    JSON.stringify(normalizedFilters(expected))
-  );
-}
-
-function normalizedFilters(
-  filters: Readonly<Record<string, string | boolean | readonly string[]>>,
-): Readonly<Record<string, string | boolean | readonly string[]>> {
-  return Object.fromEntries(
-    Object.entries(filters)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([name, value]) => [
-        name,
-        Array.isArray(value) ? [...new Set(value)].sort() : value,
-      ]),
-  );
 }
 
 function isExportLimitProblem(
@@ -315,16 +279,6 @@ function failureResponse(status: number, message: string): Response {
 
 function validFailureStatus(status: number | undefined): number {
   return status && status >= 400 && status <= 599 ? status : 503;
-}
-
-function expectedMediaType(format: PublicExportFormat): string {
-  return format === "CSV"
-    ? "text/csv; charset=utf-8"
-    : "application/x-ndjson; charset=utf-8";
-}
-
-function expectedExtension(format: PublicExportFormat): string {
-  return format === "CSV" ? ".csv" : ".jsonl";
 }
 
 function contentDisposition(filename: string): string {

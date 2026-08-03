@@ -7,6 +7,7 @@ import controlApi from "../../../specs/generated/control-api.openapi.json";
 import identityServiceInternal from "../../../specs/generated/identity-service-internal.openapi.json";
 import publicApi from "../../../specs/generated/public-api.openapi.json";
 import submissionApi from "../../../specs/generated/submission-api.openapi.json";
+import { isCanonicalPublicOpenApiDocument } from "./mock-api-openapi-document";
 
 const HTTP_METHODS = new Set(["delete", "get", "patch", "post", "put"]);
 const JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
@@ -439,6 +440,16 @@ export async function validateMockResponse(
       payload.violation,
     ]);
   if (payload.noContent) return response;
+  if (operation.operationId === "downloadPublicOpenApi") {
+    if (isCanonicalPublicOpenApiDocument(payload.value)) return response;
+    return failureResponse(request, response, operation.operationId, [
+      {
+        instancePath: "",
+        schemaPath: "#/paths/~1v1~1openapi.json/get/responses/200",
+        message: "payload must equal the generated public OpenAPI document",
+      },
+    ]);
+  }
   let validator: ValidateFunction<unknown> | undefined;
   try {
     validator = validatorFor(

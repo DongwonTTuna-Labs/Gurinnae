@@ -2,7 +2,7 @@ schema_version: 2
 owner_addendum: specs/product/owner-addendum-2026-07-14.yaml
 status: REVIEW_REQUIRED
 binding_count: derived as len(bindings)
-aggregate_alias_count: 18
+aggregate_alias_count: 23
 rules:
   - Each noun has one canonical type and owner; prose cannot create runtime state.
   - Existing v13 state machines and guards are imported without reinterpretation.
@@ -14,12 +14,23 @@ aggregate_aliases:
   - {aggregate: BusinessCalendarVersion, canonical_noun: ResponseDeliveryClockDecision, rust_type: gurine_domain::response::BusinessCalendarVersion, repository: crates/persistence-postgres::response_clock, identity: calendar_id+version, concurrency: append-only-version+effective-range-exclusion}
   - {aggregate: ConflictDeclaration, canonical_noun: ConflictSnapshot, rust_type: gurine_domain::governance::ConflictDeclaration, repository: crates/persistence-postgres::conflicts, identity: declaration_id, concurrency: append-only-effective-period}
   - {aggregate: CostAllocationPeriod, canonical_noun: ProductOutcome, rust_type: gurine_domain::economics::CostAllocationPeriod, repository: crates/persistence-postgres::product_economics, identity: period_start+period_end+currency+version, concurrency: immutable-period-close+superseding-correction}
+  - {aggregate: EntityMaterialUseClosure, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RetentionDecision, repository: crates/persistence-postgres::retention, identity: entity_kind+entity_id+closure_version+receipt_digest, concurrency: unique-subject+immutable-receipt+expected-entity-updated-at+personhood-receipt-composite}
+  - {aggregate: EntityPersonhoodClassification, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RetentionDecision, repository: crates/persistence-postgres::retention, identity: entity_kind+entity_id+classification_version+receipt_digest, concurrency: unique-subject+immutable-receipt+expected-entity-updated-at}
+  - {aggregate: EntityRetentionExecution, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::RetentionDecision, repository: crates/persistence-postgres::retention, identity: execution_receipt_id+execution_receipt_digest, concurrency: unique-job+fencing-token+unique-subject+immutable-receipt}
+  - aggregate: EditorialResponse
+    canonical_noun: ResponseSubmission
+    rust_type: gurine_domain::response::ResponseSubmission
+    repository: crates/persistence-postgres::response_submission
+    identity: editorial_response_id+response_version+response_content_sha256
+    concurrency: expected-response-version+immutable-identity-receipt
+    rationale: editorial response is the reciprocal owned-intake 1:1 child of one immutable response submission, so materialization and organization-identity receipts extend ResponseSubmission rather than creating a second aggregate owner
   - {aggregate: FundingConcentrationSnapshot, canonical_noun: FundingDisclosure, rust_type: gurine_domain::funding::FundingConcentrationSnapshot, repository: crates/persistence-postgres::funding, identity: snapshot_batch_id+snapshot_digest, concurrency: immutable-signed-import}
   - {aggregate: FundingDisclosureRevision, canonical_noun: FundingDisclosure, rust_type: gurine_domain::funding::FundingDisclosureRevision, repository: crates/persistence-postgres::funding, identity: disclosure_id+revision, concurrency: prior-revision-cas+append-only}
   - {aggregate: InFlightEffect, canonical_noun: BudgetReservation, rust_type: gurine_domain::budget::InFlightEffect, repository: crates/persistence-postgres::budget_reservations, identity: effect_id+generation, concurrency: monotonic-generation+policy-fence}
   - {aggregate: CommercialControlExecution, canonical_noun: ExecutionAuthorization, rust_type: gurine_domain::commercial::CommercialControlExecution, repository: crates/persistence-postgres::commercial_control, identity: control_execution_id+version+receipt_digest, concurrency: product-fence-first+distinct-import-and-acknowledgement-receipts}
   - {aggregate: LegalHoldCoverage, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::LegalHoldCoverage, repository: crates/persistence-postgres::retention, identity: hold_id+release_sequence+coverage_digest, concurrency: append-only-nonoverlapping-coverage-cells}
   - {aggregate: OutboundDelivery, canonical_noun: CommunicationIntent, rust_type: gurine_domain::communication::OutboundDelivery, repository: crates/persistence-postgres::communication, identity: delivery_id+delivery_version, concurrency: expected-version+monotonic-provider-evidence}
+  - {aggregate: OrganizationOfficialChannelAssertion, canonical_noun: ResponseSubmission, rust_type: gurine_domain::response::ResponseSubmission, repository: crates/persistence-postgres::response_submission, identity: assertion_id+authority_version+authority_receipt_id+authority_receipt_digest, concurrency: unique-assertion+immutable-authority-receipt+current-unexpired-unrevoked-assertion}
   - {aggregate: PrivacyRequest, canonical_noun: RetentionDecision, rust_type: gurine_domain::retention::PrivacyRequest, repository: crates/persistence-postgres::retention, identity: retention_request_id+decision_version, concurrency: immutable-request+expected-decision-version}
   - {aggregate: ProductFact, canonical_noun: ProductOutcome, rust_type: gurine_observability::product::ProductFact, repository: crates/persistence-postgres::product_economics, identity: fact_id+fact_digest, concurrency: immutable-terminal-fact+superseding-correction}
   - {aggregate: PaidEvidencePacket, canonical_noun: ProductOutcome, rust_type: gurine_observability::product::PaidEvidencePacket, repository: crates/persistence-postgres::paid_evidence_packets, identity: packet_id+packet_version+packet_subject_digest, concurrency: immutable-ten-member-subject+one-terminal-binding}
@@ -101,6 +112,9 @@ bindings:
       - core.relationship_graph_assertions_v2
       - core.relationship_graph_assertion_evidence_v2
       - core.relationship_graph_verification_decisions_v2
+      - core.relationship_graph_person_nodes_v3
+      - core.relationship_graph_person_context_v3
+      - core.relationship_graph_person_erasure_receipts_v3
     identity: assertion-id+assertion-revision+assertion-digest+subject-and-object-endpoint-digests
     concurrency: immutable-endpoints+append-only-assertion-revision+independent-human-decision+snapshot-scoped-approved-read
     operations: []
@@ -293,12 +307,48 @@ bindings:
     owner: crates/domain
     application: crates/application::retention
     repository: crates/persistence-postgres::retention
-    relations: [ops.retention_requests, ops.retention_request_decisions, ops.retention_execution_receipts, ops.record_class_schedules, ops.restoration_suppressions, ops.legal_hold_target_anchors, editorial.legal_holds, editorial.legal_hold_releases]
+    relations:
+      - ops.retention_requests
+      - ops.retention_request_decisions
+      - ops.retention_execution_receipts
+      - ops.record_class_schedules
+      - ops.restoration_suppressions
+      - ops.legal_hold_target_anchors
+      - ops.r6d_record_class_catalog
+      - ops.entity_retention_snapshots_v1
+      - ops.privacy_correction_snapshots_v1
+      - ops.privacy_subscription_snapshots_v1
+      - ops.legal_hold_placement_receipts_v2
+      - ops.privacy_response_calendar_policies_v1
+      - ops.privacy_requests_v2
+      - ops.privacy_request_receipt_tokens_v2
+      - ops.privacy_request_identity_receipts_v2
+      - ops.privacy_request_extension_receipts_v2
+      - ops.privacy_request_refusal_receipts_v2
+      - ops.privacy_request_notice_receipts_v2
+      - ops.privacy_request_transition_receipts_v2
+      - ops.r6d_person_retention_execution_receipts_v1
+      - ops.privacy_request_access_policies_v1
+      - ops.privacy_request_sealed_content_v2
+      - ops.privacy_request_sealed_content_erasure_receipts_v1
+      - ops.r6d_entity_personhood_classification_receipts_v1
+      - ops.r6d_entity_material_use_closure_receipts_v1
+      - ops.r6d_entity_retention_execution_receipts_v1
+      - ops.privacy_identity_proof_authority_receipts_v1
+      - ops.privacy_request_scope_inventories_v1
+      - ops.privacy_request_scope_inventory_items_v1
+      - ops.privacy_identity_proof_consumption_receipts_v1
+      - ops.privacy_correction_plans_v1
+      - ops.privacy_response_party_name_correction_plan_bindings_v1
+      - ops.privacy_response_party_name_correction_approval_bindings_v1
+      - ops.privacy_response_party_name_correction_completion_receipts_v1
+      - editorial.legal_holds
+      - editorial.legal_hold_releases
     identity: retention_request_id+decision_version
     concurrency: expected-status+active-hold-set
-    operations: [placeLegalHold, releaseLegalHold, createPrivacyRequest, exchangePrivacyRequestReceiptToken, getPrivacyRequest, listRetentionRequests, getRetentionRequest, transitionRetentionRequest, listRecordClassSchedules, submitActionDecision]
-    events: [privacy.request_created.v1, privacy.request_decision_recorded.v1, retention.schedule_revised.v1, retention.execution_completed.v1, retention.restoration_suppression_created.v1, legal.hold_released.v1, legal.hold_review_due.v1]
-    errors: [LEGAL_HOLD_ACTIVE, RETENTION_POLICY_STALE]
+    operations: [placeLegalHold, releaseLegalHold, createPrivacyRequest, exchangePrivacyRequestReceiptToken, getPrivacyRequest, listRetentionRequests, getRetentionRequest, transitionRetentionRequest, listRecordClassSchedules, submitActionDecision, classifyEntityPersonhood, attestEntityMaterialUseClosure, createPrivacyCorrectionPlan, ops.execute_due_r6d_entity_retention_job_v1, ops.execute_privacy_response_party_name_correction_job_v1]
+    events: [privacy.request_created.v1, privacy.request_created.v2, privacy.request_identity_verified.v1, privacy.request_extension_notified.v1, privacy.request_refusal_notified.v1, privacy.request_decision_recorded.v1, retention.schedule_revised.v1, retention.execution_completed.v1, retention.restoration_suppression_created.v1, legal_hold.placed.v2, legal.hold_released.v1, legal.hold_review_due.v1, entity.personhood_classified.v1, entity.material_use_closed.v1, entity.retention_anonymized.v1]
+    errors: [LEGAL_HOLD_ACTIVE, RETENTION_POLICY_STALE, INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR, IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID, RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, INVALID_R6D_ENTITY_RETENTION_JOB, INVALID_R6D_ENTITY_RETENTION_RESULT, R6D_ENTITY_RETENTION_BINDING_MISMATCH, R6D_ENTITY_RETENTION_OWNER_REJECTED, R6D_ENTITY_RETENTION_OWNER_CONFLICT, R6D_ENTITY_RETENTION_OWNER_NOT_READY, R6D_ENTITY_RETENTION_OWNER_UNAVAILABLE]
   - noun: ResponseAppeal
     rust_type: gurine_domain::response::ResponseAppeal
     owner: crates/domain
@@ -381,7 +431,18 @@ bindings:
     owner: crates/domain
     application: crates/application::publication_gate
     repository: crates/persistence-postgres::publication_gate
-    relations: [editorial.publication_gate_decisions, editorial.publication_gate_claim_evidence, editorial.publication_gate_review_bindings, editorial.publication_gate_blockers]
+    relations:
+      - editorial.publication_gate_decisions
+      - editorial.publication_gate_claim_evidence
+      - editorial.publication_gate_review_bindings
+      - editorial.publication_gate_blockers
+      - editorial.named_person_publication_policies
+      - editorial.named_person_publication_assessments
+      - editorial.named_person_publication_findings
+      - editorial.named_person_legal_overrides
+      - editorial.named_person_review_stage_receipts_v1
+      - editorial.publication_preview_owner_receipts_v2
+      - editorial.publication_revision_owner_receipts_v2
     identity: case_id+expected_case_version+decision_digest
     concurrency: serializable-case-lock+immutable-decision
     operations: [getPublishConfirmation, publishCase, getPublicationReceipt, submitActionDecision]
@@ -579,12 +640,25 @@ bindings:
     owner: crates/domain
     application: crates/application::response_submission
     repository: crates/persistence-postgres::response_submission
-    relations: [intake.response_submissions, editorial.responses, ops.inbox, ops.audit_events, ops.outbox]
+    relations:
+      - intake.response_submissions
+      - intake.response_submission_receipts_v3
+      - editorial.responses
+      - editorial.response_submission_origin_receipts_v2
+      - editorial.organization_official_channel_authority_receipts_v1
+      - editorial.organization_official_channel_assertions_v1
+      - editorial.organization_official_channel_revocation_receipts_v1
+      - editorial.response_organization_identity_assertions_v1
+      - editorial.response_publication_identity_receipts_v1
+      - editorial.response_excerpt_approval_receipts_v2
+      - ops.inbox
+      - ops.audit_events
+      - ops.outbox
     identity: response_submission_id+receipt_version+receipt_digest
     concurrency: serializable-request-version+immutable-submission-receipt+reciprocal-owned-intake-binding
-    operations: [submitResponse]
-    events: [response.submitted.v2, notification.response_submitted.v2, workflow.response_submitted.v2, editorial.response_materialized.v1]
-    errors: [RESPONSE_SUBMISSION_BINDING_INVALID, EVENT_REPLAY_CONFLICT, EVENT_EFFECT_CONFLICT]
+    operations: [submitResponse, materializeResponseSubmissionIntake, verifyResponseOrganizationIdentity, approveResponseExcerpt, attestOrganizationOfficialChannel, revokeOrganizationOfficialChannel, ops.execute_privacy_response_party_name_correction_job_v1]
+    events: [response.submitted.v2, notification.response_submitted.v2, workflow.response_submitted.v2, editorial.response_materialized.v1, editorial.response_materialized.v2, response.organization_identity_verified.v1, response.excerpt_approved.v1, response.excerpt_approved.v2, organization.official_channel_attested.v1, organization.official_channel_revoked.v1, privacy.response_party_name_corrected.v1]
+    errors: [RESPONSE_SUBMISSION_BINDING_INVALID, EVENT_REPLAY_CONFLICT, EVENT_EFFECT_CONFLICT, INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, PRECONDITION_FAILED, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   - noun: SourcePageReceipt
     rust_type: gurine_ingestion::connector::SourcePageReceipt
     owner: crates/ingestion

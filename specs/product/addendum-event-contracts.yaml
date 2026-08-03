@@ -4662,6 +4662,150 @@ events:
       on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
       failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
       ordering: reject regression; park gaps for aggregate reconciliation
+  privacy.request_created.v2:
+    category: DOMAIN
+    schema_version: 2
+    producer: submission-api
+    producer_operations: [createPrivacyRequest]
+    aggregate: PrivacyRequest
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [retentionRequestId, requestType, subjectProofHash, jurisdiction, scopeDigest, identityState, identityVerifiedAt, dueAt, receiptDigest, commandReceiptDigest]
+      properties:
+        retentionRequestId: {$ref: '#/$defs/uuid'}
+        requestType: {type: string, enum: [ACCESS, CORRECTION, DELETION, RESTRICTION]}
+        subjectProofHash: {$ref: '#/$defs/sha256'}
+        jurisdiction: {$ref: '#/$defs/nonempty_string'}
+        scopeDigest: {$ref: '#/$defs/sha256'}
+        identityState: {type: string, const: PENDING_VERIFICATION}
+        identityVerifiedAt: {type: 'null'}
+        dueAt: {type: 'null'}
+        receiptDigest: {$ref: '#/$defs/sha256'}
+        commandReceiptDigest: {$ref: '#/$defs/sha256'}
+    payload_required: [retentionRequestId, requestType, subjectProofHash, jurisdiction, scopeDigest, identityState, identityVerifiedAt, dueAt, receiptDigest, commandReceiptDigest]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [secret, token, credential, signature bytes, raw request/response body, plaintext identity proof, contact detail, message body, cookie]
+      reference_rule: subject proof is represented only by the persisted one-way digest; an unverified request has no deadline until the separate identity-verification transition
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: one PENDING_VERIFICATION creation fact per request; identity verification is a later versioned event, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: return the stored notification result with zero repeated notice or audit effect, changed_event_identity: same event_id with a changed canonical envelope digest is EVENT_REPLAY_CONFLICT}
+    consumers: [notification-worker]
+    consumer_bindings:
+    - {consumer: notification-worker, physical_service: notification-worker, module: notifications, handler: handle_privacy_request_created_v2, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating the verification-request notice, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+
+  privacy.request_identity_verified.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [transitionRetentionRequest]
+    aggregate: PrivacyRequest
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [retentionRequestId, requestType, priorIdentityState, identityState, identityProofReceiptDigest, identityVerifiedAt, responsePolicyVersion, responsePolicyDigest, calendarVersionId, calendarDigest, dueAt, verificationReceiptDigest]
+      properties:
+        retentionRequestId: {$ref: '#/$defs/uuid'}
+        requestType: {type: string, enum: [ACCESS, CORRECTION, DELETION, RESTRICTION]}
+        priorIdentityState: {type: string, const: PENDING_VERIFICATION}
+        identityState: {type: string, const: VERIFIED}
+        identityProofReceiptDigest: {$ref: '#/$defs/sha256'}
+        identityVerifiedAt: {$ref: '#/$defs/datetime'}
+        responsePolicyVersion: {$ref: '#/$defs/nonempty_string'}
+        responsePolicyDigest: {$ref: '#/$defs/sha256'}
+        calendarVersionId: {$ref: '#/$defs/uuid'}
+        calendarDigest: {$ref: '#/$defs/sha256'}
+        dueAt: {$ref: '#/$defs/datetime'}
+        verificationReceiptDigest: {$ref: '#/$defs/sha256'}
+    payload_required: [retentionRequestId, requestType, priorIdentityState, identityState, identityProofReceiptDigest, identityVerifiedAt, responsePolicyVersion, responsePolicyDigest, calendarVersionId, calendarDigest, dueAt, verificationReceiptDigest]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [secret, token, credential, signature bytes, raw request/response body, plaintext identity proof, contact detail, message body, cookie]
+      reference_rule: proof and calendar authority leave the owner transaction only as immutable receipt IDs or digests and the derived deadline
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: PENDING_VERIFICATION advances to VERIFIED once and binds the first dueAt to the exact policy and calendar versions, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: return the stored notification result with zero repeated confirmation or due-date notice, changed_event_identity: same event_id with a changed canonical envelope digest is EVENT_REPLAY_CONFLICT}
+    consumers: [notification-worker]
+    consumer_bindings:
+    - {consumer: notification-worker, physical_service: notification-worker, module: notifications, handler: handle_privacy_request_identity_verified_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating the verification confirmation or due-date notice, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+
+  privacy.request_extension_notified.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [transitionRetentionRequest]
+    aggregate: PrivacyRequest
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [retentionRequestId, requestType, priorDueAt, dueAt, extensionBusinessDays, extensionSequence, reasonDigest, responsePolicyVersion, responsePolicyDigest, calendarVersionId, calendarDigest, notifiedAt, notificationReceiptDigest]
+      properties:
+        retentionRequestId: {$ref: '#/$defs/uuid'}
+        requestType: {type: string, enum: [ACCESS, CORRECTION, DELETION, RESTRICTION]}
+        priorDueAt: {$ref: '#/$defs/datetime'}
+        dueAt: {$ref: '#/$defs/datetime'}
+        extensionBusinessDays: {type: integer, minimum: 1, maximum: 365}
+        extensionSequence: {type: integer, minimum: 1, maximum: 10}
+        reasonDigest: {$ref: '#/$defs/sha256'}
+        responsePolicyVersion: {$ref: '#/$defs/nonempty_string'}
+        responsePolicyDigest: {$ref: '#/$defs/sha256'}
+        calendarVersionId: {$ref: '#/$defs/uuid'}
+        calendarDigest: {$ref: '#/$defs/sha256'}
+        notifiedAt: {$ref: '#/$defs/datetime'}
+        notificationReceiptDigest: {$ref: '#/$defs/sha256'}
+    payload_required: [retentionRequestId, requestType, priorDueAt, dueAt, extensionBusinessDays, extensionSequence, reasonDigest, responsePolicyVersion, responsePolicyDigest, calendarVersionId, calendarDigest, notifiedAt, notificationReceiptDigest]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [secret, token, credential, signature bytes, raw request/response body, plaintext identity proof, raw reason, contact detail, message body, cookie]
+      reference_rule: each policy-permitted extension is represented by the exact prior/new deadlines, immutable policy/calendar bindings and reason/notice digests only; the bound policy row, not this event schema, supplies the effective maximum days and count
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: extensionSequence is positive and monotonic within the structural bound and notifiedAt must precede priorDueAt; the bound policy row rejects any sequence or duration above its approved values, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: return the stored notice result with zero repeated notification or audit effect, changed_event_identity: same event_id with a changed canonical envelope digest is EVENT_REPLAY_CONFLICT}
+    consumers: [notification-worker]
+    consumer_bindings:
+    - {consumer: notification-worker, physical_service: notification-worker, module: notifications, handler: handle_privacy_request_extension_notified_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating the extension notice, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+
+  privacy.request_refusal_notified.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [transitionRetentionRequest]
+    aggregate: PrivacyRequest
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [retentionRequestId, requestType, decisionDigest, reasonDigest, appealInstructionsDigest, responsePolicyVersion, responsePolicyDigest, calendarVersionId, calendarDigest, decisionAt, noticeDueAt, notifiedAt, notificationReceiptDigest]
+      properties:
+        retentionRequestId: {$ref: '#/$defs/uuid'}
+        requestType: {type: string, enum: [ACCESS, CORRECTION, DELETION, RESTRICTION]}
+        decisionDigest: {$ref: '#/$defs/sha256'}
+        reasonDigest: {$ref: '#/$defs/sha256'}
+        appealInstructionsDigest: {$ref: '#/$defs/sha256'}
+        responsePolicyVersion: {$ref: '#/$defs/nonempty_string'}
+        responsePolicyDigest: {$ref: '#/$defs/sha256'}
+        calendarVersionId: {$ref: '#/$defs/uuid'}
+        calendarDigest: {$ref: '#/$defs/sha256'}
+        decisionAt: {$ref: '#/$defs/datetime'}
+        noticeDueAt: {$ref: '#/$defs/datetime'}
+        notifiedAt: {$ref: '#/$defs/datetime'}
+        notificationReceiptDigest: {$ref: '#/$defs/sha256'}
+    payload_required: [retentionRequestId, requestType, decisionDigest, reasonDigest, appealInstructionsDigest, responsePolicyVersion, responsePolicyDigest, calendarVersionId, calendarDigest, decisionAt, noticeDueAt, notifiedAt, notificationReceiptDigest]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [secret, token, credential, signature bytes, raw request/response body, plaintext identity proof, raw reason, raw appeal instructions, contact detail, message body, cookie]
+      reference_rule: refusal reasoning and appeal instructions remain in the authorized notice record and enter the event only as immutable digests
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: refusal notice is emitted once after decision and no later than the policy/calendar-bound noticeDueAt, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: return the stored notice result with zero repeated notification or audit effect, changed_event_identity: same event_id with a changed canonical envelope digest is EVENT_REPLAY_CONFLICT}
+    consumers: [notification-worker]
+    consumer_bindings:
+    - {consumer: notification-worker, physical_service: notification-worker, module: notifications, handler: handle_privacy_request_refusal_notified_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating the refusal notice, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+
   privacy.request_decision_recorded.v1:
     category: DOMAIN
     schema_version: 1
@@ -4677,6 +4821,7 @@ events:
       required:
       - retentionRequestId
       - decisionVersion
+      - transition
       - priorState
       - state
       - inventorySnapshotDigest
@@ -4689,6 +4834,12 @@ events:
         decisionVersion:
           type: integer
           minimum: 0
+        transition:
+          type: string
+          enum:
+          - START_REVIEW
+          - APPROVE
+          - REJECT
         priorState:
           type: string
           enum:
@@ -4701,18 +4852,39 @@ events:
           - REVIEW
           - APPROVED
           - REJECTED
-          - COMPLETED
         inventorySnapshotDigest:
-          $ref: '#/$defs/sha256'
+          type: [string, 'null']
+          pattern: ^[0-9a-f]{64}$
         holdCoverageDigest:
-          $ref: '#/$defs/sha256'
+          type: [string, 'null']
+          pattern: ^[0-9a-f]{64}$
         decisionDigest:
           $ref: '#/$defs/sha256'
         receiptDigest:
           $ref: '#/$defs/sha256'
+      oneOf:
+      - properties:
+          transition: {const: START_REVIEW}
+          priorState: {const: RECEIVED}
+          state: {const: REVIEW}
+          inventorySnapshotDigest: {type: 'null'}
+          holdCoverageDigest: {type: 'null'}
+      - properties:
+          transition: {const: APPROVE}
+          priorState: {const: REVIEW}
+          state: {const: APPROVED}
+          inventorySnapshotDigest: {$ref: '#/$defs/sha256'}
+          holdCoverageDigest: {$ref: '#/$defs/sha256'}
+      - properties:
+          transition: {const: REJECT}
+          priorState: {const: REVIEW}
+          state: {const: REJECTED}
+          inventorySnapshotDigest: {type: 'null'}
+          holdCoverageDigest: {type: 'null'}
     payload_required:
     - retentionRequestId
     - decisionVersion
+    - transition
     - priorState
     - state
     - inventorySnapshotDigest
@@ -4752,40 +4924,52 @@ events:
       exact_replay: return stored result; zero repeated domain mutation, notification, job, audit or external effect
       changed_event_identity: same event_id with changed canonical envelope digest is EVENT_REPLAY_CONFLICT and incident evidence
     consumers:
-    - submission-projector
     - retention-worker
-    - audit-indexer
     consumer_bindings:
-    - consumer: submission-projector
-      physical_service: projection-worker
-      module: submission
-      handler: handle_privacy_request_decision_recorded_v1
-      inbox_key:
-      - consumer
-      - event_id
-      on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
-      failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
-      ordering: reject regression; park gaps for aggregate reconciliation
     - consumer: retention-worker
       physical_service: workflow-worker
       module: retention
       handler: handle_privacy_request_decision_recorded_v1
+      dispatch_predicate: payload.transition == APPROVE
       inbox_key:
       - consumer
       - event_id
       on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
       failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
       ordering: reject regression; park gaps for aggregate reconciliation
-    - consumer: audit-indexer
-      physical_service: projection-worker
-      module: audit_index
-      handler: handle_privacy_request_decision_recorded_v1
-      inbox_key:
-      - consumer
-      - event_id
-      on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
-      failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
-      ordering: reject regression; park gaps for aggregate reconciliation
+  privacy.response_party_name_corrected.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: workflow-worker
+    producer_operations: []
+    producer_routines: [ops.execute_privacy_response_party_name_correction_job_v1]
+    aggregate: EditorialResponse
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [privacyRequestId, correctionPlanId, responseId, responseVersion, partyNameDigest, completionReceiptId, completionReceiptDigest, auditEventId, completedAt]
+      properties:
+        privacyRequestId: {$ref: '#/$defs/uuid'}
+        correctionPlanId: {$ref: '#/$defs/uuid'}
+        responseId: {$ref: '#/$defs/uuid'}
+        responseVersion: {type: integer, minimum: 1}
+        partyNameDigest: {$ref: '#/$defs/sha256'}
+        completionReceiptId: {$ref: '#/$defs/uuid'}
+        completionReceiptDigest: {$ref: '#/$defs/sha256'}
+        auditEventId: {$ref: '#/$defs/uuid'}
+        completedAt: {$ref: '#/$defs/datetime'}
+    payload_required: [privacyRequestId, correctionPlanId, responseId, responseVersion, partyNameDigest, completionReceiptId, completionReceiptDigest, auditEventId, completedAt]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [partyName, prior partyName, requestedValue, requestedValueCiphertextBase64, envelope key identifier, plaintext, ciphertext, job payload, job payload digest, secret, token, credential, raw response, raw reason, cookie]
+      reference_rule: the corrected value and sealed requested value remain only in their authorized response and correction-plan boundaries; this event carries the resulting value digest plus immutable completion and audit bindings
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: one fenced correction completion advances exactly one editorial response version and one privacy request to COMPLETED, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, exact_replay: validate the immutable completion receipt and return the same closed worker result with zero response, request, receipt, audit or outbox writes, changed_event_identity: same event_id with a changed canonical envelope or completion-receipt binding is EVENT_REPLAY_CONFLICT}
+    consumers: []
+    consumer_bindings: []
+    fact_semantics: IMMUTABLE_FACT
   retention.schedule_revised.v1:
     category: DOMAIN
     schema_version: 1
@@ -7709,6 +7893,122 @@ events:
     consumer_bindings:
     - {consumer: submission-projector, physical_service: projection-worker, module: submission, handler: handle_editorial_response_materialized_v1, inbox_key: [consumer, event_id], on_exact_replay: "return stored handler result without repeating response projection audit or effect", failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
     - {consumer: audit-indexer, physical_service: projection-worker, module: audit_index, handler: handle_editorial_response_materialized_v1, inbox_key: [consumer, event_id], on_exact_replay: "return stored handler result without repeating audit projection or effect", failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+
+  editorial.response_materialized.v2:
+    category: DOMAIN
+    schema_version: 2
+    producer: response-submission-materializer
+    producer_operations: [materializeResponseSubmissionIntake]
+    aggregate: ResponseSubmission
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [responseSubmissionId, responseRequestId, editorialResponseId, partyType, partyEntityId, responseVersion, responseContentSha256, publicationConsentSha256, identityStatus, submissionReceiptVersion, submissionReceiptDigest, ownedIntakeReceiptDigest, materializedAt, resultDigest]
+      properties:
+        responseSubmissionId: {$ref: '#/$defs/uuid'}
+        responseRequestId: {$ref: '#/$defs/uuid'}
+        editorialResponseId: {$ref: '#/$defs/uuid'}
+        partyType: {type: string, enum: [AGENCY, SUPPLIER, OTHER]}
+        partyEntityId:
+          oneOf:
+          - {$ref: '#/$defs/uuid'}
+          - {type: 'null'}
+        responseVersion: {type: integer, minimum: 1}
+        responseContentSha256: {$ref: '#/$defs/sha256'}
+        publicationConsentSha256: {$ref: '#/$defs/sha256'}
+        identityStatus: {type: string, const: UNVERIFIED}
+        submissionReceiptVersion: {type: integer, minimum: 1}
+        submissionReceiptDigest: {$ref: '#/$defs/sha256'}
+        ownedIntakeReceiptDigest: {$ref: '#/$defs/sha256'}
+        materializedAt: {$ref: '#/$defs/datetime'}
+        resultDigest: {$ref: '#/$defs/sha256'}
+    payload_required: [responseSubmissionId, responseRequestId, editorialResponseId, partyType, partyEntityId, responseVersion, responseContentSha256, publicationConsentSha256, identityStatus, submissionReceiptVersion, submissionReceiptDigest, ownedIntakeReceiptDigest, materializedAt, resultDigest]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [secret, token, credential, encrypted response bytes, response plaintext, party name, person name, email, domain, document, consent text, endpoint, message body, cookie]
+      reference_rule: response and consent bytes stay in their authoritative encrypted relations; only closed party kind, nullable entity UUID and immutable digests leave the owner transaction
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: one UNVERIFIED v2 materialization fact exists per immutable response submission; identity verification is a later independent transition, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: return the stored handler result with zero repeated response projection audit or effect, changed_event_identity: same event_id with a changed canonical envelope digest is EVENT_REPLAY_CONFLICT}
+    consumers: [submission-projector, audit-indexer]
+    consumer_bindings:
+    - {consumer: submission-projector, physical_service: projection-worker, module: submission, handler: handle_editorial_response_materialized_v2, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating response projection audit or effect, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+    - {consumer: audit-indexer, physical_service: projection-worker, module: audit_index, handler: handle_editorial_response_materialized_v2, inbox_key: [consumer, event_id], on_exact_replay: return stored handler result without repeating audit projection or effect, failure: bounded exponential backoff with jitter then durable DEAD_LETTER plus incident and operator-visible replay action, ordering: reject regression and park gaps for aggregate reconciliation}
+
+  response.excerpt_approved.v2:
+    category: DOMAIN
+    schema_version: 2
+    producer: control-api
+    producer_operations: [approveResponseExcerpt]
+    aggregate: EditorialResponse
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [responseId, responseVersion, excerptSha256, publicationForm, identityReceiptDigest, approvalReceiptDigest, approvedAt]
+      properties:
+        responseId: {$ref: '#/$defs/uuid'}
+        responseVersion: {type: integer, minimum: 1}
+        excerptSha256: {$ref: '#/$defs/sha256'}
+        publicationForm: {type: string, enum: [ANONYMOUS, FULL, REDACTED]}
+        identityReceiptDigest:
+          oneOf:
+          - {$ref: '#/$defs/sha256'}
+          - {type: 'null'}
+        approvalReceiptDigest: {$ref: '#/$defs/sha256'}
+        approvedAt: {$ref: '#/$defs/datetime'}
+    payload_required: [responseId, responseVersion, excerptSha256, publicationForm, identityReceiptDigest, approvalReceiptDigest, approvedAt]
+    payload_constraints:
+    - publicationForm=ANONYMOUS requires identityReceiptDigest=null
+    - publicationForm in [FULL,REDACTED] requires a non-null identityReceiptDigest bound to the exact response version and content digest by the guarded owner routine
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [secret, token, credential, raw response, raw excerpt, raw reason, person name, organization name, email, domain, document, contact detail, endpoint, message body, cookie]
+      reference_rule: the approved excerpt, reason and identity proof remain in their authoritative encrypted or immutable receipt relations; only their digests and closed publication form leave the owner transaction
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: one approval fact advances one exact locked editorial response version and cannot replace response content or identity proof, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: immutable approval fact; the guarded owner routine returns its stored receipt and emits no second event, changed_event_identity: same event_id with a changed canonical envelope digest is EVENT_REPLAY_CONFLICT}
+    consumers: []
+    consumer_bindings: []
+    fact_semantics: IMMUTABLE_FACT
+
+  response.organization_identity_verified.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [verifyResponseOrganizationIdentity]
+    aggregate: EditorialResponse
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [responseId, responseVersion, responseContentSha256, organizationId, publicationForm, identityStatus, verificationMethod, identityAssertionId, identityAssertionVersion, identityAssertionDigest, sourceVerificationReceiptDigest, auditReceiptDigest, verifiedAt]
+      properties:
+        responseId: {$ref: '#/$defs/uuid'}
+        responseVersion: {type: integer, minimum: 1}
+        responseContentSha256: {$ref: '#/$defs/sha256'}
+        organizationId: {$ref: '#/$defs/uuid'}
+        publicationForm: {type: string, enum: [FULL, REDACTED]}
+        identityStatus: {type: string, const: SECOND_FACTOR_VERIFIED}
+        verificationMethod: {type: string, enum: [OFFICIAL_DOMAIN_EMAIL, OFFICIAL_DOCUMENT]}
+        identityAssertionId: {$ref: '#/$defs/uuid'}
+        identityAssertionVersion: {type: integer, minimum: 1}
+        identityAssertionDigest: {$ref: '#/$defs/sha256'}
+        sourceVerificationReceiptDigest: {$ref: '#/$defs/sha256'}
+        auditReceiptDigest: {$ref: '#/$defs/sha256'}
+        verifiedAt: {$ref: '#/$defs/datetime'}
+    payload_required: [responseId, responseVersion, responseContentSha256, organizationId, publicationForm, identityStatus, verificationMethod, identityAssertionId, identityAssertionVersion, identityAssertionDigest, sourceVerificationReceiptDigest, auditReceiptDigest, verifiedAt]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [secret, token, credential, signature bytes, raw response, raw proof, raw reason, person name, organization name, email, domain, document, contact detail, endpoint, message body, cookie]
+      reference_rule: the official-channel source and second-factor proof remain in the authorized assertion ledger and leave it only as immutable assertion and verification-receipt digests
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: verification binds one exact response version/content digest and cannot mutate or rematerialize response content, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], exact_replay: terminal immutable audit fact; replay writes nothing, changed_event_identity: same event_id with a changed canonical envelope digest is EVENT_REPLAY_CONFLICT}
+    consumers: []
+    consumer_bindings: []
+    fact_semantics: IMMUTABLE_FACT
   response.request_sent.v1:
     category: DOMAIN
     schema_version: 1
@@ -8656,6 +8956,151 @@ events:
     consumer_bindings:
     - {consumer: operations-projector, physical_service: projection-worker, module: operations, handler: handle_supplier_relationship_assertion_decided_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored result without projection or audit, failure: bounded retry then DEAD_LETTER and incident, ordering: reject regression and park gaps}
     - {consumer: audit-indexer, physical_service: projection-worker, module: audit_index, handler: handle_supplier_relationship_assertion_decided_v1, inbox_key: [consumer, event_id], on_exact_replay: return stored result without duplicate audit, failure: bounded retry then DEAD_LETTER and incident, ordering: reject regression and park gaps}
+
+  entity.personhood_classified.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [classifyEntityPersonhood]
+    producer_routines: [ops.classify_r6d_entity_personhood_v1]
+    aggregate: EntityPersonhoodClassification
+    classification: INTERNAL_RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [entityKind, entityId, classification, evidenceSourceLocatorDigest, receiptDigest, classifiedAt]
+      properties:
+        entityKind: {type: string, enum: [AGENCY, SUPPLIER]}
+        entityId: {$ref: '#/$defs/uuid'}
+        classification: {type: string, enum: [NATURAL_PERSON, NOT_NATURAL_PERSON]}
+        evidenceSourceLocatorDigest: {$ref: '#/$defs/sha256'}
+        receiptDigest: {$ref: '#/$defs/sha256'}
+        classifiedAt: {$ref: '#/$defs/datetime'}
+    payload_required: [entityKind, entityId, classification, evidenceSourceLocatorDigest, receiptDigest, classifiedAt]
+    redaction: {allowlist: payload_schema.properties only, forbidden: [entity name, identifier plaintext, address, contact, source locator, source body, raw reason, token, secret]}
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: one immutable human classification receipt per aggregate version; changed evidence creates a new receipt, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, exact_replay: owner returns the stored receipt and emits no second event, changed_event_identity: EVENT_REPLAY_CONFLICT}
+    consumers: []
+    consumer_bindings: []
+    fact_semantics: IMMUTABLE_FACT
+
+  entity.material_use_closed.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [attestEntityMaterialUseClosure]
+    producer_routines: [ops.attest_r6d_entity_material_use_closure_v1]
+    aggregate: EntityMaterialUseClosure
+    classification: INTERNAL_RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [entityKind, entityId, personhoodReceiptDigest, closureAt, lastContractEndAt, linkedPublicationRevisionCount, receiptDigest]
+      properties:
+        entityKind: {type: string, enum: [AGENCY, SUPPLIER]}
+        entityId: {$ref: '#/$defs/uuid'}
+        personhoodReceiptDigest: {$ref: '#/$defs/sha256'}
+        closureAt: {$ref: '#/$defs/datetime'}
+        lastContractEndAt:
+          oneOf: [{$ref: '#/$defs/datetime'}, {type: 'null'}]
+        linkedPublicationRevisionCount: {type: integer, minimum: 0}
+        receiptDigest: {$ref: '#/$defs/sha256'}
+    payload_required: [entityKind, entityId, personhoodReceiptDigest, closureAt, lastContractEndAt, linkedPublicationRevisionCount, receiptDigest]
+    redaction: {allowlist: payload_schema.properties only, forbidden: [entity name, identifier plaintext, address, contact, publication content, raw reason, token, secret]}
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: closure is immutable and cannot be emitted while a material reference or legal hold remains open, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, exact_replay: owner returns the stored receipt and emits no second event, changed_event_identity: EVENT_REPLAY_CONFLICT}
+    consumers: []
+    consumer_bindings: []
+    fact_semantics: IMMUTABLE_FACT
+
+  entity.retention_anonymized.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: workflow-worker
+    producer_operations: []
+    producer_routines: [ops.execute_due_r6d_entity_retention_job_v1]
+    aggregate: EntityRetentionExecution
+    classification: INTERNAL_RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [entityKind, entityId, executionReceiptId, executionReceiptDigest, masterRowCount, identifierRowCount, aliasRowCount, anonymizedAt]
+      properties:
+        entityKind: {type: string, enum: [AGENCY, SUPPLIER]}
+        entityId: {$ref: '#/$defs/uuid'}
+        executionReceiptId: {$ref: '#/$defs/uuid'}
+        executionReceiptDigest: {$ref: '#/$defs/sha256'}
+        masterRowCount: {type: integer, minimum: 1}
+        identifierRowCount: {type: integer, minimum: 0}
+        aliasRowCount: {type: integer, minimum: 0}
+        anonymizedAt: {$ref: '#/$defs/datetime'}
+    payload_required: [entityKind, entityId, executionReceiptId, executionReceiptDigest, masterRowCount, identifierRowCount, aliasRowCount, anonymizedAt]
+    redaction: {allowlist: payload_schema.properties only, forbidden: [prior plaintext, replacement digest input, entity name, address, contact, identifier plaintext, token, secret]}
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: one fenced execution receipt completes one due job and cannot repeat anonymization, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, deduplication_relation: ops.inbox, deduplication_key: [consumer, event_id], first_success: persist the exact closed consumer result in ops.inbox atomically with the authorized public projection mutation, exact_replay: exact-validate the immutable execution receipt and outbox envelope against the closed inbox row then return the same stored result with zero writes, changed_event_identity: same event_id with changed canonical envelope or execution receipt binding is EVENT_REPLAY_CONFLICT}
+    consumers: [public-projection-worker]
+    consumer_bindings:
+    - {consumer: public-projection-worker, physical_service: projection-worker, module: public_projection, handler: handle_entity_retention_anonymized_v1, inbox_key: [consumer, event_id], on_first_success: atomically persist the exact closed result with the authorized projection mutation, on_exact_replay: exact-validate the immutable execution receipt and outbox envelope then return the same stored closed result with zero writes, failure: same event_id with changed envelope or receipt binding is EVENT_REPLAY_CONFLICT; other failures use bounded retry then DEAD_LETTER and incident, ordering: preserve public entity identity and contract links while clearing only the event-authorized nullable plaintext fields}
+    fact_semantics: IMMUTABLE_FACT
+
+  organization.official_channel_attested.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [attestOrganizationOfficialChannel]
+    producer_routines: [editorial.attest_organization_official_channel_v1]
+    aggregate: OrganizationOfficialChannelAssertion
+    classification: INTERNAL_RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [assertionId, organizationKind, organizationId, verificationMethod, authorityReceiptDigest, registryReceiptDigest, attestedAt, expiresAt]
+      properties:
+        assertionId: {$ref: '#/$defs/uuid'}
+        organizationKind: {type: string, enum: [AGENCY, SUPPLIER]}
+        organizationId: {$ref: '#/$defs/uuid'}
+        verificationMethod: {type: string, enum: [OFFICIAL_DOMAIN_EMAIL, OFFICIAL_DOCUMENT]}
+        authorityReceiptDigest: {$ref: '#/$defs/sha256'}
+        registryReceiptDigest: {$ref: '#/$defs/sha256'}
+        attestedAt: {$ref: '#/$defs/datetime'}
+        expiresAt: {$ref: '#/$defs/datetime'}
+    payload_required: [assertionId, organizationKind, organizationId, verificationMethod, authorityReceiptDigest, registryReceiptDigest, attestedAt, expiresAt]
+    redaction: {allowlist: payload_schema.properties only, forbidden: [email, domain, endpoint, document, source locator, raw proof, raw reason, organization name, token, secret]}
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: assertion is immutable and remains usable only while current unexpired and unrevoked, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, exact_replay: owner returns the stored assertion receipt and emits no second event, changed_event_identity: EVENT_REPLAY_CONFLICT}
+    consumers: []
+    consumer_bindings: []
+    fact_semantics: IMMUTABLE_FACT
+
+  organization.official_channel_revoked.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: control-api
+    producer_operations: [revokeOrganizationOfficialChannel]
+    producer_routines: [editorial.revoke_organization_official_channel_v1]
+    aggregate: OrganizationOfficialChannelAssertion
+    classification: INTERNAL_RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [revocationId, assertionId, revocationReceiptDigest, revokedAt]
+      properties:
+        revocationId: {$ref: '#/$defs/uuid'}
+        assertionId: {$ref: '#/$defs/uuid'}
+        revocationReceiptDigest: {$ref: '#/$defs/sha256'}
+        revokedAt: {$ref: '#/$defs/datetime'}
+    payload_required: [revocationId, assertionId, revocationReceiptDigest, revokedAt]
+    redaction: {allowlist: payload_schema.properties only, forbidden: [email, domain, endpoint, document, source locator, raw proof, raw reason, organization name, token, secret]}
+    ordering: {key: [aggregate_type, aggregate_id], sequence: aggregate_version, rule: revocation is append-only and immediately prevents new response-identity use, tie_breaker: [occurred_at, event_id]}
+    replay: {delivery: at-least-once, exact_replay: owner returns the stored revocation receipt and emits no second event, changed_event_identity: EVENT_REPLAY_CONFLICT}
+    consumers: []
+    consumer_bindings: []
+    fact_semantics: IMMUTABLE_FACT
 
 journey_event_runtime_contract:
   events: [journey.instance_started.v1, journey.handoff_requested.v1, journey.handoff_decided.v1, journey.handoff_escalated.v1, journey.handoff_expired.v1, journey.outcome_recorded.v1]

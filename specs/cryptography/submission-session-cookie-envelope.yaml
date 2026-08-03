@@ -17,6 +17,6 @@ aad_ascii_nul_separated:
 - exact lowercase origin without trailing slash
 - cookie path
 - SameSite mode
-cookies: defined by specs/submission/session-boundary.yaml
+cookies: defined by specs/submission/session-boundary.yaml plus specs/submission/addendum-derived-session-boundary.yaml
 payload_schema: submission-session-cookie-payload.schema.json
 test_vector: test-vectors/submission-session-cookie.json

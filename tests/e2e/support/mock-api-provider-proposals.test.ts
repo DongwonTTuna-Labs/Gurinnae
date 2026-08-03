@@ -119,6 +119,24 @@ function record(value: unknown): Record<string, unknown> {
 describe("provider-control proposal mock", () => {
   beforeEach(() => resetAll());
 
+  it("omits an absent approval-queue cursor on both routing branches", async () => {
+    const baseQueueResponse = await read("/v1/internal/action-proposals");
+    expect(baseQueueResponse.status).toBe(200);
+    const baseQueue = await json(baseQueueResponse);
+    expect(Object.hasOwn(baseQueue, "nextCursor")).toBe(false);
+
+    const createdResponse = await command(
+      "/v1/internal/action-proposals",
+      createInput("disableProviderRouting"),
+    );
+    expect(createdResponse.status).toBe(201);
+
+    const combinedQueueResponse = await read("/v1/internal/action-proposals");
+    expect(combinedQueueResponse.status).toBe(200);
+    const combinedQueue = await json(combinedQueueResponse);
+    expect(Object.hasOwn(combinedQueue, "nextCursor")).toBe(false);
+  });
+
   it("keeps all four browser actions on one governed proposal lifecycle", async () => {
     for (const operationId of providerControlOperationIds) {
       resetAll();
@@ -135,6 +153,13 @@ describe("provider-control proposal mock", () => {
         state: "DRAFT",
         version: 1,
       });
+
+      const draftDetailResponse = await read(
+        `/v1/internal/action-proposals/${proposalId}`,
+      );
+      expect(draftDetailResponse.status).toBe(200);
+      const draftQuorum = record((await json(draftDetailResponse)).quorum);
+      expect(draftQuorum.requiredSlots).toEqual(["PRIMARY_REVIEWER"]);
 
       const previewResponse = await command(
         `/v1/internal/action-proposals/${proposalId}:preview`,

@@ -85,15 +85,51 @@ pub(super) async fn arm_createcorrection(
 }
 
 pub(super) async fn arm_resolvecorrectionrequest(
-    _operation: &str,
+    operation: &str,
     payload: &Map<String, Value>,
     _id: Uuid,
-    _actor: Uuid,
+    actor: Uuid,
     _session_id: Uuid,
-    _field_keys: &EnvelopeKeyRing,
+    field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    let correction = uuid_value(payload, &["correctionId"]).ok_or(ServiceError::InvalidRequest)?;
+) -> Result<Option<OwnerCommandReceipt>, ServiceError> {
+    reject_caller_publication_guard_authority(payload)?;
+    let resolution = parse_correction_resolution(payload)?;
+    if resolution.is_resolved() {
+        return resolve_correction_with_publication(
+            operation,
+            payload,
+            &resolution,
+            actor,
+            field_keys,
+            tx,
+        )
+        .await
+        .map(Some);
+    }
+    persist_non_publication_resolution(&resolution, tx).await?;
+
+    Ok(None)
+}
+
+struct CorrectionResolution<'a> {
+    correction_id: Uuid,
+    resolution: &'a str,
+    reason: &'a str,
+    expected_version: i64,
+}
+
+impl CorrectionResolution<'_> {
+    fn is_resolved(&self) -> bool {
+        self.resolution == "RESOLVED"
+    }
+}
+
+fn parse_correction_resolution(
+    payload: &Map<String, Value>,
+) -> Result<CorrectionResolution<'_>, ServiceError> {
+    let correction_id =
+        uuid_value(payload, &["correctionId"]).ok_or(ServiceError::InvalidRequest)?;
     let resolution = string_value(payload, "resolution").ok_or(ServiceError::InvalidRequest)?;
     if !matches!(
         resolution,
@@ -101,18 +137,93 @@ pub(super) async fn arm_resolvecorrectionrequest(
     ) {
         return Err(ServiceError::InvalidRequest);
     }
-    let status = if resolution == "RESOLVED" {
-        "PUBLISHED"
-    } else {
-        "REJECTED"
-    };
+    let reason = string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?;
+    let expected_version = payload
+        .get("expectedVersion")
+        .and_then(Value::as_i64)
+        .filter(|value| *value >= 1)
+        .ok_or(ServiceError::InvalidRequest)?;
+    Ok(CorrectionResolution {
+        correction_id,
+        resolution,
+        reason,
+        expected_version,
+    })
+}
+
+async fn resolve_correction_with_publication(
+    operation: &str,
+    payload: &Map<String, Value>,
+    resolution: &CorrectionResolution<'_>,
+    actor: Uuid,
+    field_keys: &EnvelopeKeyRing,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<OwnerCommandReceipt, ServiceError> {
+    let public_payload = sqlx::query_scalar!(
+        "SELECT editorial.build_corrected_publication_payload_v2($1,$2,$3)",
+        resolution.correction_id,
+        resolution.expected_version,
+        resolution.reason,
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
+    let public_payload_sha256 = canonical_json_digest(&public_payload)?;
+    let scan = scan_publication_payload(&public_payload, field_keys, tx).await?;
+    let scan_payload = publication_scan_payload(&scan)?;
+    let mut request = super::publication::owner_authority_request(payload, actor)?;
+    request.extend([
+        ("mode".to_owned(), json!("CORRECTION")),
+        ("correctionId".to_owned(), json!(resolution.correction_id)),
+        ("resolution".to_owned(), json!(resolution.resolution)),
+        ("reason".to_owned(), json!(resolution.reason)),
+        (
+            "expectedVersion".to_owned(),
+            json!(resolution.expected_version),
+        ),
+        (
+            "publicPayloadSha256".to_owned(),
+            json!(&public_payload_sha256),
+        ),
+        ("scan".to_owned(), scan_payload),
+    ]);
+    let result = sqlx::query_scalar!(
+        "SELECT editorial.publish_guarded_revision_v2($1)",
+        Value::Object(request),
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
+    validate_resolved_correction_owner_result(
+        &result,
+        resolution.correction_id,
+        resolution.expected_version,
+        &public_payload_sha256,
+    )?;
+    parse_owner_command_receipt(
+        operation,
+        &result,
+        resolution.correction_id,
+        "correctionVersion",
+        "resolvedAt",
+        &[],
+    )
+}
+
+async fn persist_non_publication_resolution(
+    resolution: &CorrectionResolution<'_>,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
     let changed = sqlx::query!(
         "UPDATE editorial.corrections SET resolution=$2,resolution_reason=$3, \
-         resolved_at=clock_timestamp(),status=$4 WHERE id=$1 AND status='REVIEW'",
-        correction,
-        resolution,
-        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
-        status,
+         resolved_at=clock_timestamp(),status='REJECTED' \
+         WHERE id=$1 AND status='REVIEW' AND version=$4::bigint+1",
+        resolution.correction_id,
+        resolution.resolution,
+        resolution.reason,
+        resolution.expected_version,
     )
     .execute(&mut **tx)
     .await
@@ -124,12 +235,67 @@ pub(super) async fn arm_resolvecorrectionrequest(
     sqlx::query!(
         "UPDATE ops.tasks SET status='DONE',completed_at=clock_timestamp() \
          WHERE object_type='CORRECTION' AND object_id=$1 AND status<>'DONE'",
-        correction,
+        resolution.correction_id,
     )
     .execute(&mut **tx)
     .await
     .map_err(db)?;
 
+    Ok(())
+}
+
+fn validate_resolved_correction_owner_result(
+    result: &Value,
+    correction_id: Uuid,
+    expected_version: i64,
+    public_payload_sha256: &str,
+) -> Result<(), ServiceError> {
+    owner_result_has_exact_keys(
+        result,
+        &[
+            "correctionId",
+            "correctionVersion",
+            "caseId",
+            "caseVersion",
+            "reviewSnapshotId",
+            "revisionId",
+            "revision",
+            "publicationState",
+            "assessmentId",
+            "assessmentDigest",
+            "publicPayloadSha256",
+            "resolvedAt",
+            "receiptDigest",
+            "auditEventId",
+            "outboxEventIds",
+            "replayed",
+        ],
+    )?;
+    let object = result.as_object().ok_or(ServiceError::Persistence)?;
+    if required_owner_uuid(object, "correctionId")? != correction_id
+        || required_owner_uuid(object, "caseId").is_err()
+        || required_owner_uuid(object, "reviewSnapshotId").is_err()
+        || required_owner_uuid(object, "revisionId").is_err()
+        || required_owner_uuid(object, "assessmentId").is_err()
+        || object.get("correctionVersion").and_then(Value::as_i64)
+            != expected_version.checked_add(1)
+        || !object
+            .get("caseVersion")
+            .and_then(Value::as_i64)
+            .is_some_and(|value| value >= 1)
+        || !object
+            .get("revision")
+            .and_then(Value::as_i64)
+            .is_some_and(|value| value >= 1)
+        || object.get("publicationState").and_then(Value::as_str) != Some("CORRECTED")
+        || object.get("publicPayloadSha256").and_then(Value::as_str) != Some(public_payload_sha256)
+        || !object
+            .get("assessmentDigest")
+            .and_then(Value::as_str)
+            .is_some_and(is_sha256)
+    {
+        return Err(ServiceError::Persistence);
+    }
     Ok(())
 }
 

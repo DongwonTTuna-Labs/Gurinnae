@@ -7,6 +7,7 @@
   "case_id": "case_fixture_price_target",
   "slug": "synthetic-price-target",
   "display_status": "CORRECTED",
+  "non_conclusion": "이 페이지는 2026년 2월 5일에 정정됐습니다. 비교표 한 행의 체결일 표기가 잘못됐으며 표본과 계산 및 결론에는 영향이 없습니다. 아래 정정 기록에서 확인할 수 있습니다.",
   "content_hash": "b23b39d077bf4d29f9f9d74eda53c8a758d7e30e76262f0f8f1cda8c05a2fb00",
   "title": "동일 조건 합성 공공계약 중앙값의 5.0배로 나타난 장비 구매",
   "summary": "합성 데이터 비교에서 대상 단가는 비교 가능한 12건의 중앙값보다 5.0배였다. 추가 인증·서비스 비용은 완전히 확인되지 않았으며, 이 결과만으로 위법성 또는 부패 여부를 판단할 수 없다.",
@@ -285,9 +286,20 @@
   ],
   "published_at": "2026-01-30T00:00:00Z",
   "updated_at": "2026-02-05T00:00:00Z",
+  "correction_notice": {
+    "applied_at": "2026-02-05T00:00:00Z",
+    "reason": "COMPARABLE_DATE_TYPO",
+    "impact_summary": "비교표 한 행의 체결일 표기를 바로잡았다. 표본과 계산 및 결론에는 영향이 없다.",
+    "revision": 2
+  },
+  "correction_details": {
+    "effective_reason": "COMPARABLE_DATE_TYPO",
+    "limitations": []
+  },
   "review_summary": {
     "editor_approval_count": 1,
     "legal_reviewed": false,
+    "legal_review_receipt_sha256": null,
     "policy_version": "editorial-1.0.0"
   }
 }

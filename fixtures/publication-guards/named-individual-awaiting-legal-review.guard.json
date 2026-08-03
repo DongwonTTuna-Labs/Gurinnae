@@ -1,0 +1,26 @@
+{
+  "assessment": {
+    "rulesetVersion": "ko-named-individual-v1",
+    "rulesetSha256": "12cef82152a675eb9a7263c8cda984faa0da1ff676b0ff614db9437cf49d30fc",
+    "publicTextSha256": "4ce15b8c83ad0840c62722234e68fd6702a29e5c2e30fa03eb5e5525644f516c",
+    "findings": [
+      {
+        "path": "/summary",
+        "startUtf16": 0,
+        "endUtf16": 3,
+        "basis": "REGISTERED_PERSON_EXACT",
+        "rulesetVersion": "ko-named-individual-v1"
+      }
+    ]
+  },
+  "overrideReceipt": null,
+  "snapshotAuthorId": "22222222-2222-4222-8222-222222222222",
+  "editorialReviewDecision": {
+    "id": "44444444-4444-4444-8444-444444444444",
+    "decision": "APPROVE",
+    "reviewerId": "33333333-3333-4333-8333-333333333333"
+  },
+  "gateState": "BLOCKED",
+  "legalReviewRequired": true,
+  "legalReviewed": false
+}

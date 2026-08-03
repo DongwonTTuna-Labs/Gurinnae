@@ -59,6 +59,7 @@ function response(evidenceItem = evidence()) {
     seo: {
       title: "가상 계약 공개 사건 · 구린네",
       description: "가상 계약 공개 사건의 근거와 미확인 범위",
+      openGraphDescription: "가상 계약 공개 사건의 근거와 미확인 범위",
       canonicalUrl: "/cases/synthetic-case",
       robots: "index,follow",
     },
@@ -98,6 +99,7 @@ describe("closed public case presentation", () => {
     expect(presentation?.seo).toEqual({
       title: "가상 계약 공개 사건 · 구린네",
       description: "가상 계약 공개 사건의 근거와 미확인 범위",
+      openGraphDescription: "가상 계약 공개 사건의 근거와 미확인 범위",
       canonicalUrl: "https://gurinnae.example/cases/synthetic-case",
       robots: "index,follow",
     });
@@ -115,6 +117,21 @@ describe("closed public case presentation", () => {
       publicCasePresentation(
         "PUB-004",
         { getPublicCase: { ...response(), internalOnly: true } },
+        requestUrl,
+      ),
+    ).toThrow();
+  });
+
+  it("rejects a never-published state from the public detail surface", () => {
+    expect(() =>
+      publicCasePresentation(
+        "PUB-004",
+        {
+          getPublicCase: {
+            ...response(),
+            publicState: "NEVER_PUBLISHED",
+          },
+        },
         requestUrl,
       ),
     ).toThrow();

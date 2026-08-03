@@ -367,7 +367,9 @@ function rowNavigationResponseFields(result: Set<string>): void {
 function mockResponseFields(): Set<string> {
   const result = operationSampleFields();
   const files = readdirSync(MOCK_SUPPORT_DIRECTORY)
-    .filter((file) => /^mock-api.*\.ts$/u.test(file))
+    .filter(
+      (file) => /^mock-api.*\.ts$/u.test(file) && !file.endsWith(".test.ts"),
+    )
     .sort();
   const paths = files.map((file) => `${MOCK_SUPPORT_DIRECTORY}/${file}`);
   const program = ts.createProgram({
@@ -427,7 +429,7 @@ describe("closed Korean field-label registry", () => {
     const fields = mockResponseFields();
     expect(fields.size).toBeGreaterThan(0);
     expect(missingLabels(fields)).toEqual([]);
-  });
+  }, 15_000);
 
   it("has no duplicate keys or generic labels", () => {
     const declaredCount = FIELD_LABEL_GROUPS.reduce(

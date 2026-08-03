@@ -11,6 +11,7 @@ import {
   publicLedgerRenderState,
   publicLedgerStatusTone,
 } from "./public-ledger";
+import { publicStatusNotice } from "./public-status-notice";
 
 function ledger(
   overrides: Partial<PublicLedgerViewModel> = {},
@@ -19,6 +20,12 @@ function ledger(
     screenId: "PUB-003",
     sectionId: "results",
     actionId: "open-case",
+    collectionNotices: [
+      publicStatusNotice(
+        "NON_CONCLUSION",
+        "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+      ),
+    ],
     rows: [
       {
         key: "case-1",
@@ -35,6 +42,10 @@ function ledger(
           text: "공식 확인",
           tone: "positive",
         },
+        notice: publicStatusNotice(
+          "NON_CONCLUSION",
+          "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+        ),
         metric: publicLedgerCell("revision", "개정본", 3),
         href: "/cases/case-1",
       },
@@ -49,7 +60,7 @@ function withoutHref(row: PublicLedgerRow): PublicLedgerRow {
 }
 
 describe("public ledger view model", () => {
-  it("closes the component-owned actions over the seven approved ledgers", () => {
+  it("closes action ownership over the ten approved public ledgers", () => {
     expect(PUBLIC_LEDGER_SCREEN_IDS).toEqual([
       "PUB-001",
       "PUB-002",
@@ -57,14 +68,20 @@ describe("public ledger view model", () => {
       "PUB-007",
       "PUB-009",
       "PUB-011",
+      "PUB-015",
+      "PUB-016",
       "PUB-018",
+      "PUB-034",
     ]);
     expect(publicLedgerOwnsAction("PUB-002", "open-result")).toBe(true);
     expect(publicLedgerOwnsAction("PUB-003", "open-case")).toBe(true);
     expect(publicLedgerOwnsAction("PUB-007", "open-agency")).toBe(true);
     expect(publicLedgerOwnsAction("PUB-009", "open-supplier")).toBe(true);
     expect(publicLedgerOwnsAction("PUB-011", "open-contract")).toBe(true);
+    expect(publicLedgerOwnsAction("PUB-015", "open-source")).toBe(false);
+    expect(publicLedgerOwnsAction("PUB-016", "open-source")).toBe(false);
     expect(publicLedgerOwnsAction("PUB-018", "open-correction")).toBe(true);
+    expect(publicLedgerOwnsAction("PUB-034", "open-source")).toBe(false);
     expect(publicLedgerOwnsAction("PUB-003", "apply-filter")).toBe(false);
     expect(publicLedgerOwnsAction("PUB-001", "open-case")).toBe(false);
   });
@@ -178,6 +195,54 @@ describe("public ledger view model", () => {
     ).toThrow("공개 대장 행 식별자 불일치");
   });
 
+  it("requires exactly one canonical collection notice", () => {
+    const valid = ledger({ rows: [] });
+    expect(publicLedgerForSection(valid, "PUB-003", "results")).toBe(valid);
+
+    const missing = ledger();
+    Reflect.deleteProperty(missing, "collectionNotices");
+    expect(() => publicLedgerForSection(missing, "PUB-003", "results")).toThrow(
+      "공개 대장 전체 상태 고지 계약 누락",
+    );
+    expect(() =>
+      publicLedgerForSection(
+        ledger({ collectionNotices: [] }),
+        "PUB-003",
+        "results",
+      ),
+    ).toThrow("공개 대장 전체 상태 고지 계약 누락");
+
+    for (const [property, value] of [
+      ["text", " "],
+      ["label", " "],
+      ["label", "상태 해석"],
+    ] as const) {
+      const invalidNotice = publicStatusNotice("NON_CONCLUSION", "유효한 고지");
+      Object.defineProperty(invalidNotice, property, { value });
+      expect(() =>
+        publicLedgerForSection(
+          ledger({ collectionNotices: [invalidNotice] }),
+          "PUB-003",
+          "results",
+        ),
+      ).toThrow("공개 대장 전체 상태 고지 불일치");
+    }
+
+    const notice = publicStatusNotice("NON_CONCLUSION", "중복 고지");
+    expect(() =>
+      publicLedgerForSection(
+        ledger({
+          collectionNotices: [
+            notice,
+            publicStatusNotice("INTERPRETATION", "서로 다른 두 번째 고지"),
+          ],
+        }),
+        "PUB-003",
+        "results",
+      ),
+    ).toThrow("공개 대장 전체 상태 고지 중복");
+  });
+
   it("derives closed render states and status tones", () => {
     expect(publicLedgerRenderState("success", ledger())).toMatchObject({
       projectionState: "READY",
@@ -208,9 +273,22 @@ describe("public ledger view model", () => {
       new URL("./public-ledger.ts", import.meta.url),
       "utf8",
     );
+    const sectionRouter = readFileSync(
+      new URL("./components/ScreenSection.svelte", import.meta.url),
+      "utf8",
+    );
     for (const heading of ["식별자", "제목·요약", "유형", "상태", "핵심 수치"])
       expect(component).toContain(heading);
     expect(component).toContain("runtime.publicLedger");
+    expect(component).toContain("ledger.collectionNotices");
+    expect(component).toContain(
+      'screen.id === "PUB-001" && section.id === "recent"',
+    );
+    expect(component).toContain("PublicSectionStatusNotice");
+    expect(component).not.toContain("row.notice");
+    expect(component.indexOf("ledger.collectionNotices")).toBeLessThan(
+      component.indexOf("!renderState.showRows"),
+    );
     expect(component).toContain("data-action-id=");
     expect(component).toContain("status-dot");
     expect(component).not.toContain("<section");
@@ -221,5 +299,8 @@ describe("public ledger view model", () => {
     expect(model).not.toContain("ScreenSectionProjection");
     expect(model).not.toContain("collectionFields");
     expect(model).not.toContain("navigationOptions");
+    expect(sectionRouter).toContain('"PUB-015": "sources"');
+    expect(sectionRouter).toContain('"PUB-016": "list"');
+    expect(sectionRouter).toContain('"PUB-034": "impact"');
   });
 });

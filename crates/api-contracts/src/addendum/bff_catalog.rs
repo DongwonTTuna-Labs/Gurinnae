@@ -78,7 +78,7 @@ pub const SUBMISSION_OPERATIONS: &[OperationSpec] = &[
         "submission-api",
         "POST",
         "/v1/submission-session/privacy-request-receipt:exchange",
-        "bff-service-assertion-and-scoped-submission-session",
+        "bff-service-assertion",
         "none",
         "SCOPED_TOKEN",
         "COMMAND",
@@ -98,6 +98,33 @@ pub const SUBMISSION_OPERATIONS: &[OperationSpec] = &[
         QUERY_BODY
     ),
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::SUBMISSION_OPERATIONS;
+
+    #[test]
+    fn privacy_receipt_exchange_uses_the_one_time_token_not_a_prior_session() {
+        let operation = SUBMISSION_OPERATIONS
+            .iter()
+            .find(|operation| operation.id == "exchangePrivacyRequestReceiptToken");
+        assert_eq!(
+            operation.map(|value| value.auth),
+            Some("bff-service-assertion")
+        );
+    }
+
+    #[test]
+    fn privacy_status_remains_scoped_to_the_derived_session() {
+        let operation = SUBMISSION_OPERATIONS
+            .iter()
+            .find(|operation| operation.id == "getPrivacyRequest");
+        assert_eq!(
+            operation.map(|value| value.auth),
+            Some("bff-service-assertion-and-scoped-submission-session")
+        );
+    }
+}
 
 /// Procurement/identity commands are exposed by the identity-api service and
 /// kept separate from the BFF-facing control and submission arrays.

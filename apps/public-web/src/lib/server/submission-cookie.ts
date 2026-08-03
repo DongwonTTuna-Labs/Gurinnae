@@ -67,6 +67,37 @@ export function persistSubmissionSession(
   return true;
 }
 
+/**
+ * The privacy receipt exchange deliberately never returns its raw scoped
+ * token. The BFF generates and retains that token, then seals it only after an
+ * exact successful exchange receipt. Keeping this path separate prevents the
+ * generic response-descriptor flow from accepting a secret-bearing response.
+ */
+export function persistPrivacyRequestReceiptSession(
+  event: RequestEvent,
+  response: unknown,
+  opaqueSessionToken: string,
+): boolean {
+  const receipt = privacyRequestSessionReceipt(response);
+  if (!receipt || !/^[A-Za-z0-9_-]{43}$/u.test(opaqueSessionToken))
+    return false;
+  const issuedAt = now();
+  const absoluteExpiresAt = Math.floor(Date.parse(receipt.expiresAt) / 1000);
+  if (absoluteExpiresAt <= issuedAt) return false;
+  clearSubmissionSessions(event);
+  writeSubmissionSession(event, {
+    v: 1,
+    typ: "submission-session",
+    sessionKind: "PRIVACY_REQUEST_RECEIPT",
+    opaqueSessionToken,
+    csrfToken: randomBytes(32).toString("base64url"),
+    issuedAt,
+    absoluteExpiresAt,
+    csrfRotatedAt: issuedAt,
+  });
+  return true;
+}
+
 export function rotateSubmissionCsrf(event: RequestEvent): boolean {
   const current = readSubmissionSession(event);
   if (!current) return false;
@@ -111,6 +142,7 @@ export function clearSubmissionSessions(event: RequestEvent) {
     "/respond",
     "/correction-request",
     "/subscription",
+    "/privacy",
   ]) {
     for (const spec of submissionCookiesForPath(path)) {
       if (seen.has(spec.name)) continue;
@@ -145,4 +177,48 @@ function options(event: RequestEvent, path: string, maxAge: number) {
 }
 function now(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+function privacyRequestSessionReceipt(
+  value: unknown,
+): Readonly<{ expiresAt: string }> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  const receipt = value as Record<string, unknown>;
+  const expectedKeys = [
+    "cookieName",
+    "expiresAt",
+    "requestId",
+    "sessionId",
+    "state",
+    "tokenConsumedAt",
+  ] as const;
+  const actualKeys = Object.keys(receipt).sort();
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    expectedKeys.some((key, index) => actualKeys[index] !== key)
+  )
+    return;
+  if (
+    receipt.cookieName !== "gurine_privacy_request_receipt_session" ||
+    receipt.state !== "ACTIVE" ||
+    !uuid(receipt.requestId) ||
+    !uuid(receipt.sessionId) ||
+    !timestamp(receipt.expiresAt) ||
+    !timestamp(receipt.tokenConsumedAt)
+  )
+    return;
+  return { expiresAt: receipt.expiresAt };
+}
+
+function uuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value,
+    )
+  );
+}
+
+function timestamp(value: unknown): value is string {
+  return typeof value === "string" && Number.isFinite(Date.parse(value));
 }

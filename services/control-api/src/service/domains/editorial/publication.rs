@@ -48,96 +48,103 @@ pub(super) async fn arm_createretractiondraft(
 }
 
 pub(super) async fn arm_previewpublication(
-    _operation: &str,
+    operation: &str,
     payload: &Map<String, Value>,
     id: Uuid,
     actor: Uuid,
     _session_id: Uuid,
-    _field_keys: &EnvelopeKeyRing,
+    field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<OwnerCommandReceipt, ServiceError> {
+    reject_caller_publication_guard_authority(payload)?;
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
     let snapshot =
         uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?;
-    let public_payload = publication_payload(case_id, snapshot, tx).await?;
-    let digest =
-        sha256(&serde_json::to_vec(&public_payload).map_err(|_| ServiceError::Persistence)?);
-    sqlx::query!(
-        "INSERT INTO editorial.publication_previews(id,case_id,review_snapshot_id,locale, \
-         preview_payload,preview_sha256,expires_at,created_by) \
-         VALUES($1,$2,$3,$4,$5,$6,clock_timestamp()+interval '15 minutes',$7)",
-        id,
+    let locale = string_value(payload, "locale").ok_or(ServiceError::InvalidRequest)?;
+    let expected_version = sqlx::query_scalar!(
+        "SELECT c.version FROM editorial.cases c \
+         JOIN editorial.review_snapshots s ON s.id=$2 AND s.case_id=c.id \
+         WHERE c.id=$1 AND c.current_review_snapshot_id=s.id \
+           AND s.case_version=c.version",
         case_id,
         snapshot,
-        string_value(payload, "locale").ok_or(ServiceError::InvalidRequest)?,
-        public_payload,
-        digest,
-        actor,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-
-    Ok(())
-}
-
-pub(super) async fn arm_publishcase(
-    _operation: &str,
-    payload: &Map<String, Value>,
-    _id: Uuid,
-    actor: Uuid,
-    _session_id: Uuid,
-    _field_keys: &EnvelopeKeyRing,
-    tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
-    let snapshot =
-        uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?;
-    let preview_hash = string_value(payload, "previewHash")
-        .filter(|value| value.len() == 64)
-        .ok_or(ServiceError::InvalidRequest)?;
-    let snapshot_row = sqlx::query!(
-        "SELECT s.created_by,s.unresolved_blockers,c.current_review_snapshot_id, \
-         c.legal_review_required,EXISTS(SELECT 1 FROM ops.kill_switches \
-           WHERE state='ACTIVE' AND (expires_at IS NULL OR expires_at>clock_timestamp())) kill_switch \
-         FROM editorial.review_snapshots s JOIN editorial.cases c ON c.id=s.case_id \
-         WHERE s.id=$1 AND s.case_id=$2",
-        snapshot,
-        case_id,
     )
     .fetch_optional(&mut **tx)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
-    let snapshot_creator = snapshot_row.created_by;
-    let unresolved = snapshot_row.unresolved_blockers;
-    let current = snapshot_row.current_review_snapshot_id;
-    let legal_required = snapshot_row.legal_review_required;
-    let kill_switch = snapshot_row.kill_switch.ok_or_else(unexpected_null)?;
-    if current != Some(snapshot) || !unresolved.as_array().is_some_and(Vec::is_empty) || kill_switch
-    {
-        return Err(ServiceError::InvalidRequest);
-    }
-    let approval: bool = sqlx::query_scalar!(
-        "SELECT EXISTS(SELECT 1 FROM editorial.review_decisions \
-         WHERE review_snapshot_id=$1 AND decision='APPROVE' AND reviewer_id<>$2) \
-         AND (NOT $3 OR EXISTS(SELECT 1 FROM editorial.review_decisions d \
-           JOIN ops.user_roles ur ON ur.user_id=d.reviewer_id AND ur.revoked_at IS NULL \
-           JOIN ops.roles r ON r.id=ur.role_id AND r.code='LEGAL_REVIEWER' \
-           WHERE d.review_snapshot_id=$1 AND d.decision='APPROVE'))",
-        snapshot,
-        snapshot_creator,
-        legal_required,
+    .ok_or(ServiceError::VersionConflict)?;
+    let mut public_payload = publication_payload(case_id, snapshot, tx).await?;
+    bind_preview_publication_contract(&mut public_payload, payload)?;
+    let publication_state = public_payload
+        .get("publicationState")
+        .and_then(Value::as_str)
+        .ok_or(ServiceError::Persistence)?
+        .to_owned();
+    let public_payload_sha256 = canonical_json_digest(&public_payload)?;
+    let scan = scan_publication_payload(&public_payload, field_keys, tx).await?;
+    let scan_payload = publication_scan_payload(&scan)?;
+    let mut request = owner_authority_request(payload, actor)?;
+    request.extend([
+        ("previewId".to_owned(), json!(id)),
+        ("caseId".to_owned(), json!(case_id)),
+        ("reviewSnapshotId".to_owned(), json!(snapshot)),
+        ("expectedVersion".to_owned(), json!(expected_version)),
+        ("publicationState".to_owned(), json!(&publication_state)),
+        ("locale".to_owned(), json!(locale)),
+        ("publicPayload".to_owned(), public_payload),
+        (
+            "publicPayloadSha256".to_owned(),
+            json!(&public_payload_sha256),
+        ),
+        ("scan".to_owned(), scan_payload),
+        ("legalOverride".to_owned(), Value::Null),
+    ]);
+    let result = sqlx::query_scalar!(
+        "SELECT editorial.preview_publication_guarded_v2($1)",
+        Value::Object(request),
     )
     .fetch_one(&mut **tx)
     .await
     .map_err(db)?
     .ok_or_else(unexpected_null)?;
-    if !approval {
-        return Err(ServiceError::InvalidRequest);
-    }
-    let preview: Value = sqlx::query_scalar!(
-        "SELECT preview_payload FROM editorial.publication_previews \
+    validate_preview_owner_result(
+        &result,
+        id,
+        case_id,
+        snapshot,
+        expected_version,
+        &publication_state,
+        &public_payload_sha256,
+        &scan,
+    )?;
+    parse_owner_command_receipt(operation, &result, id, "caseVersion", "createdAt", &[])
+}
+
+pub(super) async fn arm_publishcase(
+    operation: &str,
+    payload: &Map<String, Value>,
+    _id: Uuid,
+    actor: Uuid,
+    _session_id: Uuid,
+    field_keys: &EnvelopeKeyRing,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<OwnerCommandReceipt, ServiceError> {
+    reject_caller_publication_guard_authority(payload)?;
+    let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
+    let snapshot =
+        uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?;
+    let preview_hash = string_value(payload, "previewHash")
+        .filter(|value| is_sha256(value))
+        .ok_or(ServiceError::InvalidRequest)?;
+    let expected_version = payload
+        .get("expectedVersion")
+        .and_then(Value::as_i64)
+        .filter(|value| *value >= 1)
+        .ok_or(ServiceError::InvalidRequest)?;
+    let reason = string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?;
+    let preview = sqlx::query!(
+        "SELECT preview_payload,btrim(preview_sha256::text) AS \"preview_sha256!\" \
+         FROM editorial.publication_previews \
          WHERE case_id=$1 AND review_snapshot_id=$2 AND preview_sha256=$3 \
            AND expires_at>clock_timestamp() ORDER BY created_at DESC LIMIT 1",
         case_id,
@@ -148,90 +155,197 @@ pub(super) async fn arm_publishcase(
     .await
     .map_err(db)?
     .ok_or(ServiceError::InvalidRequest)?;
-    let digest = sha256(&serde_json::to_vec(&preview).map_err(|_| ServiceError::Persistence)?);
-    if digest != preview_hash {
-        return Err(ServiceError::InvalidRequest);
+    let public_payload_sha256 = canonical_json_digest(&preview.preview_payload)?;
+    if preview.preview_sha256 != preview_hash || public_payload_sha256 != preview_hash {
+        return Err(ServiceError::PreconditionFailed);
     }
-    persist_published_case(
+    let scan = scan_publication_payload(&preview.preview_payload, field_keys, tx).await?;
+    let scan_payload = publication_scan_payload(&scan)?;
+    let mut request = owner_authority_request(payload, actor)?;
+    request.extend([
+        ("mode".to_owned(), json!("PUBLISH")),
+        ("caseId".to_owned(), json!(case_id)),
+        ("reviewSnapshotId".to_owned(), json!(snapshot)),
+        ("expectedVersion".to_owned(), json!(expected_version)),
+        ("previewHash".to_owned(), json!(preview_hash)),
+        ("reason".to_owned(), json!(reason)),
+        (
+            "publicPayloadSha256".to_owned(),
+            json!(&public_payload_sha256),
+        ),
+        ("scan".to_owned(), scan_payload),
+    ]);
+    let result = sqlx::query_scalar!(
+        "SELECT editorial.publish_guarded_revision_v2($1)",
+        Value::Object(request),
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
+    validate_publish_owner_result(
+        &result,
         case_id,
         snapshot,
+        expected_version,
         preview_hash,
-        preview,
-        digest,
-        actor,
-        payload,
-        tx,
+        &public_payload_sha256,
+    )?;
+    parse_owner_command_receipt(
+        operation,
+        &result,
+        case_id,
+        "caseVersion",
+        "publishedAt",
+        &[],
     )
-    .await?;
-    Ok(())
+}
+
+pub(super) fn owner_authority_request(
+    payload: &Map<String, Value>,
+    actor: Uuid,
+) -> Result<Map<String, Value>, ServiceError> {
+    const KEYS: [&str; 10] = [
+        "_actorAssertionJti",
+        "_actorAssuranceLevel",
+        "_actorEffectiveCapability",
+        "_actorActionDigest",
+        "_actorStepUpAuthorizationId",
+        "_actorIdempotencyKeySha256",
+        "_actorRequestKeySha256",
+        "_requestId",
+        "_idempotencyKeySha256",
+        "_requestSha256",
+    ];
+    let mut request = Map::from_iter([("_actorId".to_owned(), json!(actor))]);
+    for key in KEYS {
+        request.insert(
+            key.to_owned(),
+            payload.get(key).cloned().ok_or(ServiceError::Persistence)?,
+        );
+    }
+    Ok(request)
 }
 
 #[expect(
     clippy::too_many_arguments,
-    reason = "publication persistence binds case, snapshot, and receipt provenance"
+    reason = "preview owner output is checked against every server-derived authority"
 )]
-pub(super) async fn persist_published_case(
+fn validate_preview_owner_result(
+    result: &Value,
+    preview_id: Uuid,
     case_id: Uuid,
-    snapshot: Uuid,
-    preview_hash: &str,
-    preview: Value,
-    digest: String,
-    actor: Uuid,
-    payload: &Map<String, Value>,
-    tx: &mut Transaction<'_, Postgres>,
+    snapshot_id: Uuid,
+    expected_version: i64,
+    publication_state: &str,
+    public_payload_sha256: &str,
+    scan: &PublicationScan,
 ) -> Result<(), ServiceError> {
-    let row = sqlx::query!(
-        "SELECT CASE \
-           WHEN c.publication_state='NEVER_PUBLISHED' AND c.resolution_code='EXPLAINED' \
-             THEN 'PUBLISHED_EXPLAINED' \
-           WHEN c.publication_state='NEVER_PUBLISHED' THEN 'PUBLISHED_ANOMALY' \
-           ELSE c.publication_state::text \
-         END publication_state, \
-         GREATEST(COALESCE(c.current_publication_revision,0), \
-           COALESCE((SELECT max(r.revision) FROM editorial.publication_revisions r \
-                     WHERE r.case_id=c.id),0))+1 revision, \
-         NULLIF(GREATEST(COALESCE(c.current_publication_revision,0), \
-           COALESCE((SELECT max(r.revision) FROM editorial.publication_revisions r \
-                     WHERE r.case_id=c.id),0)),0) current_publication_revision \
-         FROM editorial.cases c WHERE c.id=$1 FOR UPDATE OF c",
-        case_id,
-    )
-    .fetch_one(&mut **tx)
-    .await
-    .map_err(db)?;
-    let revision = row.revision.ok_or_else(unexpected_null)?;
-    let state = row.publication_state.ok_or_else(unexpected_null)?;
-    let supersedes = row.current_publication_revision;
-    sqlx::query!(
-        "INSERT INTO editorial.publication_revisions(case_id,revision,state,review_snapshot_id, \
-         public_payload,public_payload_sha256,preview_sha256,published_by,supersedes_revision,reason) \
-         VALUES($1,$2,$3::editorial.publication_state,$4,$5,$6,$7,$8,$9,$10)",
-        case_id,
-        revision,
-        &state as _,
-        snapshot,
-        preview,
-        &digest,
-        preview_hash,
-        actor,
-        supersedes,
-        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-    sqlx::query!(
-        "UPDATE editorial.cases SET current_review_snapshot_id=$2, \
-         current_publication_revision=$3, \
-         publication_state=$4::editorial.publication_state WHERE id=$1",
-        case_id,
-        snapshot,
-        revision,
-        &state as _,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
+    owner_result_has_exact_keys(
+        result,
+        &[
+            "previewId",
+            "caseId",
+            "caseVersion",
+            "reviewSnapshotId",
+            "assessmentId",
+            "assessmentDigest",
+            "assessmentReceiptDigest",
+            "previewSha256",
+            "publicationState",
+            "publicTextSha256",
+            "registeredNameSetSha256",
+            "legalReviewRequired",
+            "status",
+            "createdAt",
+            "expiresAt",
+            "receiptDigest",
+            "auditEventId",
+            "outboxEventIds",
+            "replayed",
+        ],
+    )?;
+    let object = result.as_object().ok_or(ServiceError::Persistence)?;
+    if required_owner_uuid(object, "previewId")? != preview_id
+        || required_owner_uuid(object, "caseId")? != case_id
+        || required_owner_uuid(object, "reviewSnapshotId")? != snapshot_id
+        || object.get("caseVersion").and_then(Value::as_i64) != Some(expected_version)
+        || object.get("publicationState").and_then(Value::as_str) != Some(publication_state)
+        || object.get("previewSha256").and_then(Value::as_str) != Some(public_payload_sha256)
+        || object.get("publicTextSha256").and_then(Value::as_str)
+            != Some(scan.assessment.public_text_sha256.as_str())
+        || object
+            .get("registeredNameSetSha256")
+            .and_then(Value::as_str)
+            != Some(scan.registered_name_set_sha256.as_str())
+        || !object
+            .get("assessmentDigest")
+            .and_then(Value::as_str)
+            .is_some_and(is_sha256)
+        || !object
+            .get("assessmentReceiptDigest")
+            .and_then(Value::as_str)
+            .is_some_and(is_sha256)
+        || required_owner_uuid(object, "assessmentId").is_err()
+        || !matches!(
+            object.get("status").and_then(Value::as_str),
+            Some("READY" | "BLOCKED")
+        )
+        || !object
+            .get("legalReviewRequired")
+            .is_some_and(Value::is_boolean)
+    {
+        return Err(ServiceError::Persistence);
+    }
+    Ok(())
+}
 
+fn validate_publish_owner_result(
+    result: &Value,
+    case_id: Uuid,
+    snapshot_id: Uuid,
+    expected_version: i64,
+    preview_hash: &str,
+    public_payload_sha256: &str,
+) -> Result<(), ServiceError> {
+    owner_result_has_exact_keys(
+        result,
+        &[
+            "caseId",
+            "caseVersion",
+            "reviewSnapshotId",
+            "revisionId",
+            "revision",
+            "publicationState",
+            "assessmentId",
+            "assessmentDigest",
+            "previewSha256",
+            "publicPayloadSha256",
+            "publishedAt",
+            "receiptDigest",
+            "auditEventId",
+            "outboxEventIds",
+            "replayed",
+        ],
+    )?;
+    let object = result.as_object().ok_or(ServiceError::Persistence)?;
+    if required_owner_uuid(object, "caseId")? != case_id
+        || required_owner_uuid(object, "reviewSnapshotId")? != snapshot_id
+        || required_owner_uuid(object, "revisionId").is_err()
+        || required_owner_uuid(object, "assessmentId").is_err()
+        || object.get("caseVersion").and_then(Value::as_i64) != expected_version.checked_add(1)
+        || !object
+            .get("revision")
+            .and_then(Value::as_i64)
+            .is_some_and(|value| value >= 1)
+        || object.get("previewSha256").and_then(Value::as_str) != Some(preview_hash)
+        || object.get("publicPayloadSha256").and_then(Value::as_str) != Some(public_payload_sha256)
+        || !object
+            .get("assessmentDigest")
+            .and_then(Value::as_str)
+            .is_some_and(is_sha256)
+    {
+        return Err(ServiceError::Persistence);
+    }
     Ok(())
 }

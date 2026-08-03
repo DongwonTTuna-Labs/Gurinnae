@@ -2,6 +2,7 @@ import {
   type ProjectionPrimitive,
   presentProjectionValue,
 } from "./projection-value";
+import type { PublicStatusNotice } from "./public-status-notice";
 
 export const PUBLIC_LEDGER_CONTRACTS = {
   "PUB-001": {
@@ -34,10 +35,25 @@ export const PUBLIC_LEDGER_CONTRACTS = {
     actionId: "open-contract",
     ownsAction: true,
   },
+  "PUB-015": {
+    sectionId: "sources",
+    actionId: "open-source",
+    ownsAction: false,
+  },
+  "PUB-016": {
+    sectionId: "list",
+    actionId: "open-source",
+    ownsAction: false,
+  },
   "PUB-018": {
     sectionId: "records",
     actionId: "open-correction",
     ownsAction: true,
+  },
+  "PUB-034": {
+    sectionId: "impact",
+    actionId: "open-source",
+    ownsAction: false,
   },
 } as const;
 
@@ -69,6 +85,8 @@ export type PublicLedgerRow = Readonly<{
   title: PublicLedgerCell;
   summary?: PublicLedgerCell;
   kind: PublicLedgerCell;
+  /** Explicit on every row; null is allowed only for kinds without a public status. */
+  notice: PublicStatusNotice | null;
   status?: Readonly<{
     label: string;
     text: string;
@@ -82,6 +100,7 @@ export type PublicLedgerViewModel = Readonly<{
   screenId: PublicLedgerScreenId;
   sectionId: string;
   actionId: PublicLedgerActionId;
+  collectionNotices: readonly PublicStatusNotice[];
   rows: readonly PublicLedgerRow[];
 }>;
 
@@ -115,6 +134,7 @@ const detailPaths: Readonly<Record<PublicLedgerActionId, readonly RegExp[]>> = {
   "open-agency": [/^\/agencies\/[A-Za-z0-9._~-]+\/?$/],
   "open-supplier": [/^\/suppliers\/[A-Za-z0-9._~-]+\/?$/],
   "open-contract": [/^\/contracts\/[A-Za-z0-9._~-]+\/?$/],
+  "open-source": [/^\/sources\/[A-Za-z0-9._~-]+\/?$/],
   "open-correction": [/^\/corrections\/[A-Za-z0-9._~-]+\/?$/],
 };
 
@@ -167,8 +187,30 @@ export function publicLedgerForSection(
   )
     throw new Error(`공개 대장 런타임 계약 불일치: ${screenId}.${sectionId}`);
 
+  if (
+    !Object.hasOwn(viewModel, "collectionNotices") ||
+    !Array.isArray(viewModel.collectionNotices) ||
+    viewModel.collectionNotices.length === 0
+  )
+    throw new Error(`공개 대장 전체 상태 고지 계약 누락: ${screenId}`);
+  if (viewModel.collectionNotices.length > 1)
+    throw new Error(`공개 대장 전체 상태 고지 중복: ${screenId}`);
+  const collectionNoticeKeys = new Set<string>();
+  for (const [index, notice] of viewModel.collectionNotices.entries()) {
+    const key = collectionNoticeKey(notice, screenId, index);
+    if (collectionNoticeKeys.has(key))
+      throw new Error(
+        `공개 대장 전체 상태 고지 중복: ${screenId} ${index + 1}번째`,
+      );
+    collectionNoticeKeys.add(key);
+  }
+
   const keys = new Set<string>();
   for (const [index, row] of viewModel.rows.entries()) {
+    if (!Object.hasOwn(row, "notice"))
+      throw new Error(
+        `공개 대장 상태 고지 계약 누락: ${screenId} ${index + 1}행`,
+      );
     if (!row.key.trim() || keys.has(row.key))
       throw new Error(`공개 대장 행 식별자 불일치: ${screenId} ${index + 1}행`);
     keys.add(row.key);
@@ -270,6 +312,38 @@ function assertCell(
 ): void {
   if (!cell.label.trim() || !cell.text.trim())
     throw new Error(`공개 대장 표시 값 누락: ${screenId} ${index + 1}행`);
+}
+
+function collectionNoticeKey(
+  notice: unknown,
+  screenId: string,
+  index: number,
+): string {
+  if (!isRecord(notice))
+    throw new Error(
+      `공개 대장 전체 상태 고지 불일치: ${screenId} ${index + 1}번째`,
+    );
+  const { kind, label, text } = notice;
+  const expectedLabel =
+    kind === "NON_CONCLUSION"
+      ? "비확정 고지"
+      : kind === "INTERPRETATION"
+        ? "상태 해석"
+        : undefined;
+  if (
+    expectedLabel === undefined ||
+    label !== expectedLabel ||
+    typeof text !== "string" ||
+    !text.trim()
+  )
+    throw new Error(
+      `공개 대장 전체 상태 고지 불일치: ${screenId} ${index + 1}번째`,
+    );
+  return JSON.stringify([kind, text.trim()]);
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isAllowlistedHref(

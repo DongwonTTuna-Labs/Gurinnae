@@ -36,7 +36,8 @@ export function safeProjectionValue(
     const candidates = Object.entries(value as Record<string, unknown>).filter(
       ([key]) => !sensitiveName.test(key),
     );
-    const entries = candidates
+    const prioritized = prioritizePublicStatusNotice(candidates);
+    const entries = prioritized
       .slice(0, MAX_RECORD_ENTRIES)
       .flatMap(([name, item]) => {
         const safe = safeProjectionValue(item, name);
@@ -48,11 +49,59 @@ export function safeProjectionValue(
       ? {
           kind: "record",
           entries,
-          omittedCount: Math.max(0, candidates.length - MAX_RECORD_ENTRIES),
+          omittedCount: Math.max(0, prioritized.length - MAX_RECORD_ENTRIES),
         }
       : null;
   }
   return null;
+}
+
+/** Keep a legal notice beside its status before the bounded record projection truncates. */
+function prioritizePublicStatusNotice(
+  entries: readonly [string, unknown][],
+): readonly [string, unknown][] {
+  const hasNotice = entries.some(
+    ([name]) => name === "nonConclusion" || name === "interpretationNotice",
+  );
+  if (!hasNotice) return entries;
+  const byName = new Map(entries);
+  const correctionPriority =
+    byName.has("sourceRevision") &&
+    byName.has("reason") &&
+    byName.has("publishedAt")
+      ? [
+          "publicState",
+          "nonConclusion",
+          "summary",
+          "reason",
+          "id",
+          "publishedAt",
+        ]
+      : null;
+  const priority = correctionPriority ?? [
+    "publicState",
+    "businessStatus",
+    "status",
+    "nonConclusion",
+    "interpretationNotice",
+    // Dedicated public row renderers need these values in the same bounded
+    // record as the status and legal notice. Revisions and other metadata may
+    // be omitted; the subject and explanatory text may not.
+    "summary",
+    "reason",
+    "id",
+    "slug",
+    "title",
+    "href",
+  ];
+  return [
+    ...priority.flatMap((name) =>
+      byName.has(name)
+        ? ([[name, byName.get(name)]] as [string, unknown][])
+        : [],
+    ),
+    ...entries.filter(([name]) => !priority.includes(name)),
+  ];
 }
 
 export type AuthoritySectionStatus = {

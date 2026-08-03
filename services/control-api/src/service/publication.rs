@@ -37,14 +37,13 @@ pub(super) async fn publication_payload(
     if !source_freshness.is_object() {
         return Err(ServiceError::Persistence);
     }
-
     Ok(json!({
         "caseId":case_id,
         "reviewSnapshotId":snapshot_id,
         "slug":row.public_slug.unwrap_or_else(|| format!("case-{case_id}")),
         "title":row.title,
         "summary":row.summary.unwrap_or_default(),
-        "nonConclusion":publication_non_conclusion(&row.public_state)?,
+        "publicationState":row.public_state,
         "agencyId":relations.agency_id,
         "agencyName":relations.agency_name,
         "contractName":relations.contract_name,
@@ -59,7 +58,7 @@ pub(super) async fn publication_payload(
     }))
 }
 
-fn publication_non_conclusion(state: &str) -> Result<&'static str, ServiceError> {
+pub(super) fn static_publication_non_conclusion(state: &str) -> Result<&'static str, ServiceError> {
     match state {
         "PUBLISHED_ANOMALY" => Ok(
             "공개자료 비교에서 설명이 필요한 차이가 확인됐습니다. 현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
@@ -67,12 +66,7 @@ fn publication_non_conclusion(state: &str) -> Result<&'static str, ServiceError>
         "PUBLISHED_EXPLAINED" => Ok(
             "처음 탐지된 차이는 추가 자료에서 확인된 구성·서비스·조건의 차이로 설명됩니다. 탐지와 검증 과정을 함께 공개합니다.",
         ),
-        "OFFICIALLY_CONFIRMED" => Ok(
-            "구린네의 자체 판단이 아니라 공식 기관·법원의 확인 결과를 공개된 범위에서 요약합니다.",
-        ),
-        "CORRECTED" => Ok(
-            "이 페이지는 정정됐습니다. 잘못된 내용과 결론에 미친 영향은 아래 정정 기록에서 확인할 수 있습니다.",
-        ),
+        "OFFICIALLY_CONFIRMED" | "CORRECTED" => Err(ServiceError::PreconditionFailed),
         "RETRACTED" => Ok(
             "핵심 근거의 오류로 이 게시물을 철회했습니다. 원래 주장은 더 이상 유효하지 않습니다. 오류 원인과 후속 조치를 공개합니다.",
         ),
@@ -341,7 +335,7 @@ pub(super) fn optional_uuid_array(
 
 #[cfg(test)]
 mod tests {
-    use super::{ServiceError, publication_non_conclusion};
+    use super::{ServiceError, static_publication_non_conclusion};
 
     #[test]
     fn publication_non_conclusion_maps_all_public_states() {
@@ -355,14 +349,6 @@ mod tests {
                 "처음 탐지된 차이는 추가 자료에서 확인된 구성·서비스·조건의 차이로 설명됩니다. 탐지와 검증 과정을 함께 공개합니다.",
             ),
             (
-                "OFFICIALLY_CONFIRMED",
-                "구린네의 자체 판단이 아니라 공식 기관·법원의 확인 결과를 공개된 범위에서 요약합니다.",
-            ),
-            (
-                "CORRECTED",
-                "이 페이지는 정정됐습니다. 잘못된 내용과 결론에 미친 영향은 아래 정정 기록에서 확인할 수 있습니다.",
-            ),
-            (
                 "RETRACTED",
                 "핵심 근거의 오류로 이 게시물을 철회했습니다. 원래 주장은 더 이상 유효하지 않습니다. 오류 원인과 후속 조치를 공개합니다.",
             ),
@@ -374,7 +360,7 @@ mod tests {
 
         for (state, copy) in expected {
             assert_eq!(
-                publication_non_conclusion(state).ok(),
+                static_publication_non_conclusion(state).ok(),
                 Some(copy),
                 "state {state}"
             );
@@ -384,8 +370,18 @@ mod tests {
     #[test]
     fn publication_non_conclusion_rejects_never_published() {
         assert!(matches!(
-            publication_non_conclusion("NEVER_PUBLISHED"),
+            static_publication_non_conclusion("NEVER_PUBLISHED"),
             Err(ServiceError::InvalidRequest)
         ));
+    }
+
+    #[test]
+    fn dynamic_publication_states_fail_closed_without_exact_facts() {
+        for state in ["OFFICIALLY_CONFIRMED", "CORRECTED"] {
+            assert!(matches!(
+                static_publication_non_conclusion(state),
+                Err(ServiceError::PreconditionFailed)
+            ));
+        }
     }
 }

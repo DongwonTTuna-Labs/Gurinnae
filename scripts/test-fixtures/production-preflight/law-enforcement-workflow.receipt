@@ -1,0 +1,27 @@
+{
+  "fixtureAuthority": "TEST_ONLY",
+  "schemaVersion": "law-enforcement-workflow-receipt.v1",
+  "issuer": {
+    "name": "TEST_ONLY 운영 검토자",
+    "credentialId": "TEST_ONLY-CREDENTIAL",
+    "jurisdiction": "KR"
+  },
+  "scope": {
+    "kind": "LAW_ENFORCEMENT_REQUEST_WORKFLOW_REVIEW",
+    "documentVersion": "supervisor-decision-v1",
+    "environment": "PRODUCTION",
+    "artifactIds": [
+      "LAW_ENFORCEMENT_REQUEST_PROCEDURE_KO"
+    ],
+    "subjectSha256": "c9b4929bdc8bb5e60c5407d4e2d28120665663ac2564db657bc4965234841f39"
+  },
+  "timestamps": {
+    "issuedAt": "2026-01-01T00:00:00Z",
+    "validFrom": "2026-01-01T00:00:00Z",
+    "expiresAt": "2099-01-01T00:00:00Z"
+  },
+  "attestation": {
+    "decision": "APPROVED_FOR_PRODUCTION",
+    "statement": "TEST_ONLY 구조 검증용 수사기관 요청 절차 승인 진술"
+  }
+}

@@ -5,9 +5,11 @@ import {
   publicAgencyRows,
   publicCasePublishedAtBySlug,
   publicCaseRows,
+  publicContractRows,
   publicSearchRows,
   publicSupplierRows,
 } from "./mock-api-public-ledger-fixtures";
+import { OPERATIONAL_INTERPRETATION_NOTICE } from "./mock-api-public-notices";
 import { problem } from "./mock-api-state";
 
 type JsonObject = Record<string, unknown>;
@@ -29,6 +31,7 @@ const CASE_EXPORT_COLUMNS: readonly ExportColumn[] = [
   ["updatedAt", "updatedAt"],
   ["responseStatus", "responseStatus"],
   ["correctionStatus", "correctionStatus"],
+  ["nonConclusion", "nonConclusion"],
   ["href", "href"],
 ];
 
@@ -39,8 +42,23 @@ const SEARCH_EXPORT_COLUMNS: readonly ExportColumn[] = [
   ["subtitle", "subtitle"],
   ["status", "status"],
   ["summary", "summary"],
+  ["nonConclusion", "nonConclusion"],
+  ["interpretationNotice", "interpretationNotice"],
   ["updatedAt", "updatedAt"],
   ["href", "href"],
+];
+
+const CONTRACT_EXPORT_COLUMNS: readonly ExportColumn[] = [
+  ["id", "id"],
+  ["contractNumber", "contractNumber"],
+  ["title", "title"],
+  ["agencyName", "agencyName"],
+  ["supplierName", "supplierName"],
+  ["status", "status"],
+  ["signedAt", "signedAt"],
+  ["amount", "amount"],
+  ["currency", "currency"],
+  ["interpretationNotice", "interpretationNotice"],
 ];
 
 function jsonObject(value: unknown): JsonObject | undefined {
@@ -98,6 +116,25 @@ function searchAppliedFilters(url: URL): JsonObject {
     "dateTo",
   ])
     optionalFilter(filters, url, name);
+  return filters;
+}
+
+function contractAppliedFilters(url: URL): JsonObject {
+  const filters: JsonObject = {};
+  optionalFilter(filters, url, "q");
+  for (const name of [
+    "agencyId",
+    "supplierId",
+    "signedFrom",
+    "signedTo",
+    "amountMin",
+    "amountMax",
+  ])
+    optionalFilter(filters, url, name);
+  for (const name of ["contractStatus", "procurementMethod"]) {
+    const selected = values(url, name);
+    if (selected.length > 0) filters[name] = selected;
+  }
   return filters;
 }
 
@@ -214,6 +251,7 @@ function exportCaseRows(url: URL): JsonObject[] {
     updatedAt: row.updatedAt,
     responseStatus: row.responseStatus,
     correctionStatus: row.correctionStatus,
+    nonConclusion: row.nonConclusion,
     href: row.href,
   }));
 }
@@ -226,9 +264,45 @@ function exportSearchRows(url: URL): JsonObject[] {
     subtitle: row.subtitle,
     status: row.status,
     summary: row.summary,
+    nonConclusion: row.nonConclusion,
+    interpretationNotice: row.interpretationNotice,
     updatedAt: row.updatedAt,
     href: row.href,
   }));
+}
+
+function exportContractRows(url: URL): JsonObject[] {
+  const statuses = values(url, "contractStatus");
+  const amountMin = Number(url.searchParams.get("amountMin") ?? "-Infinity");
+  const amountMax = Number(url.searchParams.get("amountMax") ?? "Infinity");
+  const q = url.searchParams.get("q")?.trim() ?? "";
+  return publicContractRows
+    .filter((row) => {
+      const amount = Number(row.amount.amount);
+      return (
+        matchesValue(url, "agencyId", row.agency.id) &&
+        matchesValue(url, "supplierId", row.supplier.id) &&
+        matchesDateRange(row.signedAt, url, "signedFrom", "signedTo") &&
+        (statuses.length === 0 || statuses.includes(row.status)) &&
+        (!q || `${row.contractNumber} ${row.title}`.includes(q)) &&
+        Number.isFinite(amount) &&
+        amount >= amountMin &&
+        amount <= amountMax &&
+        !url.searchParams.has("procurementMethod")
+      );
+    })
+    .map((row) => ({
+      id: row.id,
+      contractNumber: row.contractNumber,
+      title: row.title,
+      agencyName: row.agency.name,
+      supplierName: row.supplier.name,
+      status: row.status,
+      signedAt: row.signedAt,
+      amount: row.amount.amount,
+      currency: row.amount.currency,
+      interpretationNotice: row.interpretationNotice,
+    }));
 }
 
 function csvCell(value: string) {
@@ -255,6 +329,19 @@ function renderJsonl(rows: readonly JsonObject[]) {
     .join("\n")}\n`;
 }
 
+function stableArtifactNotices(
+  rows: readonly JsonObject[],
+  key: "interpretationNotice" | "nonConclusion",
+) {
+  return [
+    ...new Set(
+      rows.flatMap((row) =>
+        typeof row[key] === "string" && row[key].length > 0 ? [row[key]] : [],
+      ),
+    ),
+  ];
+}
+
 function exportEnvelope(
   stem: string,
   format: ExportFormat,
@@ -267,10 +354,20 @@ function exportEnvelope(
   const bytes = Buffer.from(content, "utf8");
   const contentSha256 = createHash("sha256").update(bytes).digest("hex");
   const extension = format === "CSV" ? "csv" : "jsonl";
+  const nonConclusionNotices = stableArtifactNotices(rows, "nonConclusion");
+  const interpretationNotices = stableArtifactNotices(
+    rows,
+    "interpretationNotice",
+  );
+  if (interpretationNotices.length > 1)
+    throw new Error(
+      "public export mock has conflicting interpretation notices",
+    );
   return {
     id: `${stem}-${contentSha256}`,
     status: "READY",
     version: 1,
+    notice: EXPORT_NOTICE,
     filename: `${stem}.${extension}`,
     mediaType:
       format === "CSV"
@@ -281,6 +378,11 @@ function exportEnvelope(
     contentBase64: bytes.toString("base64"),
     format,
     rowCount: rows.length,
+    nonConclusionNotices,
+    interpretationNotice:
+      stem === "contracts"
+        ? OPERATIONAL_INTERPRETATION_NOTICE
+        : (interpretationNotices[0] ?? null),
     appliedFilters,
     generatedAt: FIXTURE_AS_OF,
   };
@@ -298,7 +400,8 @@ function requestedFormat(url: URL): ExportFormat | undefined {
 export function publicDownloadRead(url: URL): Response | undefined {
   if (
     url.pathname !== "/v1/cases/download" &&
-    url.pathname !== "/v1/search/download"
+    url.pathname !== "/v1/search/download" &&
+    url.pathname !== "/v1/contracts/download"
   )
     return undefined;
   const format = requestedFormat(url);
@@ -317,13 +420,21 @@ export function publicDownloadRead(url: URL): Response | undefined {
           exportCaseRows(url),
           caseAppliedFilters(url),
         )
-      : exportEnvelope(
-          "public-search-records",
-          format,
-          SEARCH_EXPORT_COLUMNS,
-          exportSearchRows(url),
-          searchAppliedFilters(url),
-        );
+      : url.pathname === "/v1/search/download"
+        ? exportEnvelope(
+            "public-search-records",
+            format,
+            SEARCH_EXPORT_COLUMNS,
+            exportSearchRows(url),
+            searchAppliedFilters(url),
+          )
+        : exportEnvelope(
+            "contracts",
+            format,
+            CONTRACT_EXPORT_COLUMNS,
+            exportContractRows(url),
+            contractAppliedFilters(url),
+          );
   return Response.json(envelope);
 }
 

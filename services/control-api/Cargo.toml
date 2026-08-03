@@ -11,6 +11,7 @@ gurine-application = { path = "../../crates/application" }
 gurine-auth = { path = "../../crates/auth" }
 gurine-domain = { path = "../../crates/domain" }
 gurine-persistence-postgres = { path = "../../crates/persistence-postgres" }
+gurine-publication-policy = { path = "../../crates/publication-policy" }
 serde.workspace = true
 serde_json.workspace = true
 rust_decimal.workspace = true

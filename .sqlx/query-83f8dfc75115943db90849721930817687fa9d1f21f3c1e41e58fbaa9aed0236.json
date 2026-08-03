@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,name AS \"name!\",agency_type,jurisdiction,sido_code,sigungu_code,region_code_version,coverage,descriptive_metrics,case_counts,updated_at FROM public.agencies WHERE id=$1 AND name IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "agency_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "agency_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "jurisdiction",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "jurisdiction"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "sido_code",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "sido_code"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "sigungu_code",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "sigungu_code"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "region_code_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "region_code_version"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "coverage",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "coverage"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "descriptive_metrics",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "descriptive_metrics"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "case_counts",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "case_counts"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agencies",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "83f8dfc75115943db90849721930817687fa9d1f21f3c1e41e58fbaa9aed0236"
+}

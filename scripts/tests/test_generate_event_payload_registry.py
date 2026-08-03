@@ -198,6 +198,31 @@ class EventPayloadForwardOverrideTests(unittest.TestCase):
             generator.FORWARD_OVERRIDE_EVENT_TYPES,
         )
 
+    def test_r6d_authority_events_are_new_keys_not_r6c_forward_overrides(self) -> None:
+        registry = {event_type: row for event_type, *row in generator.registry_rows()}
+        authority_events = {
+            "entity.personhood_classified.v1",
+            "entity.material_use_closed.v1",
+            "entity.retention_anonymized.v1",
+            "organization.official_channel_attested.v1",
+            "organization.official_channel_revoked.v1",
+        }
+
+        self.assertLessEqual(authority_events, set(registry))
+        self.assertTrue(
+            authority_events.isdisjoint(generator.FORWARD_OVERRIDE_EVENT_TYPES)
+        )
+        for event_type in authority_events:
+            _, schema_version, uri, schema = registry[event_type]
+            with self.subTest(event_type=event_type):
+                self.assertEqual(schema_version, 1)
+                self.assertEqual(
+                    uri,
+                    f"payloads/{event_type.replace('.', '_')}.schema.json",
+                )
+                self.assertEqual(schema["type"], "object")
+                self.assertFalse(schema["additionalProperties"])
+
     def test_render_is_deterministic_and_forward_only(self) -> None:
         first = generator.render_forward_overrides()
         second = generator.render_forward_overrides()
@@ -234,7 +259,7 @@ class EventPayloadForwardOverrideTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "start marker"):
             generator.replace_generated_region("BEGIN;\nCOMMIT;\n", "generated")
 
-    def test_generator_targets_current_additive_migration(self) -> None:
+    def test_generator_preserves_reviewed_r6c_override_origin(self) -> None:
         self.assertEqual(
             generator.TARGET_MIGRATION.name,
             "0037_r6c_conflict_investigation.sql",

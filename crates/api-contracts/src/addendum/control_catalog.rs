@@ -302,6 +302,66 @@ pub const CONTROL_OPERATIONS: &[OperationSpec] = &[
         COMMAND_RECEIPT
     ),
     operation!(
+        "verifyResponseOrganizationIdentity",
+        "control-api",
+        "POST",
+        "/v1/internal/commands/verify-response-organization-identity",
+        "actor-assertion-and-capability",
+        "responses.review",
+        "STEP_UP",
+        "COMMAND",
+        200,
+        COMMAND_RECEIPT
+    ),
+    operation!(
+        "attestOrganizationOfficialChannel",
+        "control-api",
+        "POST",
+        "/v1/internal/commands/attest-organization-official-channel",
+        "actor-assertion-and-capability",
+        "responses.review",
+        "STEP_UP",
+        "COMMAND",
+        201,
+        COMMAND_RECEIPT
+    ),
+    operation!(
+        "classifyEntityPersonhood",
+        "control-api",
+        "POST",
+        "/v1/internal/commands/classify-entity-personhood",
+        "actor-assertion-and-capability",
+        "users.manage",
+        "STEP_UP",
+        "COMMAND",
+        201,
+        COMMAND_RECEIPT
+    ),
+    operation!(
+        "attestEntityMaterialUseClosure",
+        "control-api",
+        "POST",
+        "/v1/internal/commands/attest-entity-material-use-closure",
+        "actor-assertion-and-capability",
+        "users.manage",
+        "STEP_UP",
+        "COMMAND",
+        201,
+        COMMAND_RECEIPT
+    ),
+    operation!(
+        "revokeOrganizationOfficialChannel",
+        "control-api",
+        "POST",
+        "/v1/internal/commands/revoke-organization-official-channel",
+        "actor-assertion-and-capability",
+        "responses.review",
+        "STEP_UP",
+        "COMMAND",
+        200,
+        COMMAND_RECEIPT
+    ),
+    operation!(
         "listRetentionRequests",
         "control-api",
         "GET",
@@ -324,6 +384,18 @@ pub const CONTROL_OPERATIONS: &[OperationSpec] = &[
         "QUERY",
         200,
         QUERY_BODY
+    ),
+    operation!(
+        "createPrivacyCorrectionPlan",
+        "control-api",
+        "POST",
+        "/v1/internal/commands/create-privacy-correction-plan",
+        "actor-assertion-and-capability",
+        "privacy.requests.manage",
+        "STEP_UP",
+        "COMMAND",
+        201,
+        COMMAND_RECEIPT
     ),
     operation!(
         "transitionRetentionRequest",

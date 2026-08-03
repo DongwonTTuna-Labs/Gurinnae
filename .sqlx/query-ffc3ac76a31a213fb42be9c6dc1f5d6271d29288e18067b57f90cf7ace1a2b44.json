@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.version FROM editorial.cases c JOIN editorial.review_snapshots s ON s.id=$2 AND s.case_id=c.id WHERE c.id=$1 AND c.current_review_snapshot_id=s.id AND s.case_version=c.version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ffc3ac76a31a213fb42be9c6dc1f5d6271d29288e18067b57f90cf7ace1a2b44"
+}

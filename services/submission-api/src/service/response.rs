@@ -1,6 +1,5 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use gurine_auth::assertion::canonical::sha256_hex;
-use gurine_persistence_postgres::outbox::{OutboxEvent, append};
 use serde_json::Value;
 use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;
@@ -8,6 +7,7 @@ use uuid::Uuid;
 use super::{RequestContext, ServiceError, common};
 
 mod projection;
+mod submission;
 mod verification;
 
 pub async fn access_status(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
@@ -293,131 +293,7 @@ pub async fn request_extension(context: &RequestContext<'_>) -> Result<Value, Se
 }
 
 pub async fn submit(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    let value = common::parse(context.body)?;
-    let version = common::i64_field(&value, "expectedVersion")?;
-    if !common::bool_field(&value, "attestation")? {
-        return Err(ServiceError::InvalidRequest);
-    }
-    let consent = value
-        .get("publicationConsent")
-        .filter(|field| field.is_object())
-        .ok_or(ServiceError::InvalidRequest)?;
-    let draft = projection::private_draft(context).await?;
-    if integer(&draft, "version")? != version {
-        return Err(ServiceError::Conflict);
-    }
-    let draft_id = uuid(&draft, "id")?;
-    let answers = common::decrypt_json(
-        context,
-        "intake.response_drafts",
-        "answers_encrypted",
-        draft_id,
-        "response-answers",
-        text(&draft, "answers_encrypted")?,
-    )?;
-    let submission_id = Uuid::new_v4();
-    let encrypted = common::encrypt_field(
-        context,
-        "intake.response_submissions",
-        "answers_encrypted",
-        submission_id,
-        "response-answers",
-        &serde_json::to_vec(&answers).map_err(|_| ServiceError::InvalidRequest)?,
-    )?;
-    let digest = common::digest(&serde_json::json!({
-        "answers":answers,
-        "publicationConsent":consent,
-        "draftVersion":version
-    }))?;
-    let receipt_token = common::derived_token(
-        &context.state.token_hmac_key,
-        "response-receipt",
-        submission_id,
-    )?;
-    let receipt_session = common::random_token()?;
-    let expires_at = OffsetDateTime::now_utc() + Duration::minutes(30);
-    let id = persist_submission(
-        context,
-        submission_id,
-        version,
-        &digest,
-        encrypted,
-        consent,
-        &receipt_token,
-        &receipt_session,
-        expires_at,
-    )
-    .await?;
-    let mut receipt = common::command_receipt(context.operation, context.request_id, id, None)?;
-    receipt["receiptSession"] =
-        common::descriptor(receipt_session, "RESPONSE_RECEIPT", id, expires_at, 1)?;
-    Ok(receipt)
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "submission persistence binds receipt, evidence, and idempotency provenance"
-)]
-async fn persist_submission(
-    context: &RequestContext<'_>,
-    submission_id: Uuid,
-    version: i64,
-    digest: &str,
-    encrypted: Vec<u8>,
-    consent: &Value,
-    receipt_token: &str,
-    receipt_session: &str,
-    expires_at: OffsetDateTime,
-) -> Result<Uuid, ServiceError> {
-    let mut transaction = context
-        .state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| ServiceError::Persistence)?;
-    let row = sqlx::query!(
-        "SELECT submission_id AS \"submission_id?\" FROM intake.submit_response_session_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-        session_hash(context)?,
-        context.issuer,
-        version,
-        digest,
-        encrypted,
-        consent,
-        submission_id,
-        common::token_hmac(&context.state.token_hmac_key, receipt_token)?,
-        sha256_hex(receipt_session.as_bytes()),
-        expires_at
-    )
-    .fetch_one(&mut *transaction)
-    .await
-    .map_err(common::database_error)?;
-    let id = row.submission_id.ok_or(ServiceError::Persistence)?;
-    let aggregate_id = id.to_string();
-    let occurred_at = OffsetDateTime::now_utc();
-    let payload = serde_json::json!({"actor_id":context.issuer,"occurred_at":common::timestamp(occurred_at)?,"operation_id":context.operation,"requestToken":aggregate_id,"request_id":context.request_id});
-    for event_type in [
-        "response.submitted.v1",
-        "notification.response_submitted.v1",
-    ] {
-        append(
-            &mut transaction,
-            &OutboxEvent {
-                aggregate_type: "responseSubmission",
-                aggregate_id: &id.to_string(),
-                aggregate_version: 1,
-                event_type,
-                payload: &payload,
-                occurred_at,
-            },
-        )
-        .await
-        .map_err(|_| ServiceError::Persistence)?;
-    }
-    transaction
-        .commit()
-        .await
-        .map_err(|_| ServiceError::Persistence)?;
-    Ok(id)
+    submission::submit(context).await
 }
 
 pub async fn get_receipt(context: &RequestContext<'_>) -> Result<Value, ServiceError> {

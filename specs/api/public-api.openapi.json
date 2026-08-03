@@ -705,7 +705,7 @@
         "operationId": "downloadPublicCases",
         "tags": ["operations"],
         "summary": "현재 사건 필터 결과 내려받기",
-        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.\n최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고\n다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는\n{\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"}이고 이후 레코드가 데이터다.\nrowCount는 고지 레코드를 제외한다.",
+        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.\n최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고\n다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는\n{\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"}이고 이후 레코드가 데이터다.\nrowCount는 고지 레코드를 제외한다. 응답 envelope의 nonConclusionNotices는 데이터 행의\n비어 있지 않은 nonConclusion을 행 순서대로 중복 제거한 배열이며, interpretationNotice는\n사건 상태 고지와 의미를 섞지 않도록 null이다.",
         "parameters": [
           {
             "name": "format",
@@ -1086,7 +1086,7 @@
         "operationId": "downloadCaseReproducibility",
         "tags": ["operations"],
         "summary": "재현 파일",
-        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
+        "description": "공개 재배포 산출물입니다. JSON 파일 본문은 재배포 고지와 상태별 비확정 문구를 최상위에 포함하고, CSV 파일 본문은 재배포 고지 한 셀 행과 비확정 문구 열을 보존합니다.",
         "parameters": [
           {
             "name": "caseSlug",
@@ -1121,7 +1121,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BinaryDownload"
+                  "$ref": "#/components/schemas/CaseReproducibilityDownload"
                 }
               }
             }
@@ -2084,6 +2084,17 @@
               }
             },
             "x-error-codes": ["INTERNAL_ERROR"]
+          },
+          "503": {
+            "description": "Problem response: STORAGE_FAILURE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["STORAGE_FAILURE"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2091,6 +2102,7 @@
         "x-error-codes": [
           "RATE_LIMITED",
           "RESOURCE_NOT_FOUND",
+          "STORAGE_FAILURE",
           "INTERNAL_ERROR"
         ],
         "security": [],
@@ -2158,6 +2170,17 @@
               }
             },
             "x-error-codes": ["INTERNAL_ERROR"]
+          },
+          "503": {
+            "description": "Problem response: STORAGE_FAILURE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["STORAGE_FAILURE"]
           }
         },
         "x-operation-kind": "QUERY",
@@ -2165,6 +2188,7 @@
         "x-error-codes": [
           "RATE_LIMITED",
           "RESOURCE_NOT_FOUND",
+          "STORAGE_FAILURE",
           "INTERNAL_ERROR"
         ],
         "security": [],
@@ -2362,7 +2386,7 @@
         "operationId": "downloadContracts",
         "tags": ["operations"],
         "summary": "필터 결과 export",
-        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.",
+        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.\n최대 5,000행을 CSV 또는 JSONL로 반환한다. 각 데이터 행은 interpretationNotice 열을\n보존하고, 응답 envelope의 nonConclusionNotices는 빈 배열이며 interpretationNotice는\n`이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.`이다.\nCSV와 JSONL의 첫 레코드는 공개 재배포 고지를 유지하며 rowCount는 그 고지 레코드를 제외한다.",
         "parameters": [
           {
             "name": "format",
@@ -2425,7 +2449,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BinaryDownload"
+                  "$ref": "#/components/schemas/PublicContractsDownload"
                 }
               }
             }
@@ -2440,6 +2464,17 @@
               }
             },
             "x-error-codes": ["INVALID_PARAMETER"]
+          },
+          "422": {
+            "description": "Problem response: PRECONDITION_FAILED. 현재 조건의 결과가 5,000건을 초과합니다.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": ["PRECONDITION_FAILED"]
           },
           "429": {
             "description": "Problem response: RATE_LIMITED",
@@ -2480,6 +2515,7 @@
         "x-error-codes": [
           "INVALID_PARAMETER",
           "RATE_LIMITED",
+          "PRECONDITION_FAILED",
           "STORAGE_FAILURE",
           "INTERNAL_ERROR"
         ],
@@ -3739,7 +3775,7 @@
         "operationId": "downloadPublicSearchRecords",
         "tags": ["operations"],
         "summary": "현재 검색 필터 결과 내려받기",
-        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.\n최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고\n다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는\n{\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"}이고 이후 레코드가 데이터다.\nrowCount는 고지 레코드를 제외한다.",
+        "description": "Final v13 contract. Kind: QUERY. Capability: public.read.\n최대 5,000행을 CSV 또는 JSONL로 반환한다. CSV의 첫 논리 레코드는 한 셀짜리 고지이고\n다음 레코드부터 헤더와 데이터가 이어진다. JSONL의 첫 레코드는\n{\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"}이고 이후 레코드가 데이터다.\nrowCount는 고지 레코드를 제외한다. 응답 envelope의 nonConclusionNotices는 검색 데이터\n행의 비어 있지 않은 nonConclusion을 행 순서대로 중복 제거하며, interpretationNotice는\n검색 데이터 행에 운영 상태 고지가 하나라도 있을 때 그 정확한 고지를, 없으면 null을 가진다.",
         "parameters": [
           {
             "name": "format",
@@ -5077,6 +5113,10 @@
           "coverage": {
             "$ref": "#/components/schemas/CoverageModel"
           },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          },
           "href": {
             "type": "string",
             "format": "uri-reference"
@@ -5091,6 +5131,7 @@
           "regionCodeVersion",
           "caseCounts",
           "coverage",
+          "interpretationNotice",
           "href"
         ]
       },
@@ -5117,9 +5158,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "AgencyCasesAppliedFilters": {
         "type": "object",
@@ -5152,9 +5196,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "AgencyContractsAppliedFilters": {
         "type": "object",
@@ -5187,9 +5234,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "AgencyResponse": {
         "type": "object",
@@ -5278,6 +5328,13 @@
           },
           "freshness": {
             "$ref": "#/components/schemas/FreshnessModel"
+          },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
         "required": [
@@ -5294,7 +5351,9 @@
           "recentCases",
           "recentContracts",
           "identityWarnings",
-          "freshness"
+          "freshness",
+          "interpretationNotice",
+          "seo"
         ]
       },
       "BinaryDownload": {
@@ -5309,6 +5368,10 @@
           },
           "version": {
             "type": "integer"
+          },
+          "notice": {
+            "type": "string",
+            "const": "이상 징후 기록이며 위법·부패의 확정이 아님"
           },
           "binary": {
             "type": "string",
@@ -5352,9 +5415,30 @@
           },
           "groupBy": {
             "type": "string"
+          },
+          "appliedFilters": {
+            "$ref": "#/components/schemas/ContractsAppliedFilters"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
-        "required": ["id", "status", "version"]
+        "required": [
+          "id",
+          "status",
+          "version",
+          "notice",
+          "filename",
+          "mediaType",
+          "byteLength",
+          "contentSha256",
+          "contentBase64",
+          "format",
+          "rowCount",
+          "appliedFilters",
+          "generatedAt"
+        ]
       },
       "CalculationResult": {
         "type": "object",
@@ -5412,7 +5496,6 @@
           "publicState": {
             "type": "string",
             "enum": [
-              "NEVER_PUBLISHED",
               "PUBLISHED_ANOMALY",
               "PUBLISHED_EXPLAINED",
               "OFFICIALLY_CONFIRMED",
@@ -5452,6 +5535,9 @@
               }
             ]
           },
+          "nonConclusion": {
+            "type": "string"
+          },
           "href": {
             "type": "string",
             "format": "uri-reference"
@@ -5464,6 +5550,7 @@
           "summary",
           "revision",
           "updatedAt",
+          "nonConclusion",
           "href"
         ]
       },
@@ -5517,6 +5604,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "nonConclusion": {
+            "type": "string"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
         "required": [
@@ -5531,7 +5624,9 @@
           "includedCohort",
           "excludedCohort",
           "result",
-          "limitations"
+          "limitations",
+          "nonConclusion",
+          "seo"
         ]
       },
       "CaseRevisionsAppliedFilters": {
@@ -5548,6 +5643,17 @@
             "format": "int64"
           },
           "state": {
+            "type": "string",
+            "enum": [
+              "PUBLISHED_ANOMALY",
+              "PUBLISHED_EXPLAINED",
+              "OFFICIALLY_CONFIRMED",
+              "CORRECTED",
+              "RETRACTED",
+              "TEMPORARILY_RESTRICTED"
+            ]
+          },
+          "nonConclusion": {
             "type": "string"
           },
           "publishedAt": {
@@ -5562,7 +5668,14 @@
             "format": "uri-reference"
           }
         },
-        "required": ["revision", "state", "publishedAt", "summary", "href"]
+        "required": [
+          "revision",
+          "state",
+          "nonConclusion",
+          "publishedAt",
+          "summary",
+          "href"
+        ]
       },
       "CaseRevisionsPage": {
         "type": "object",
@@ -5587,9 +5700,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "CaseStateCounts": {
         "type": "object",
@@ -6149,6 +6265,13 @@
             "items": {
               "$ref": "#/components/schemas/CaseCard"
             }
+          },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
         "required": [
@@ -6162,7 +6285,9 @@
           "changes",
           "sourceDocuments",
           "normalizationWarnings",
-          "relatedCases"
+          "relatedCases",
+          "interpretationNotice",
+          "seo"
         ]
       },
       "ContractSummary": {
@@ -6232,12 +6357,23 @@
               }
             ]
           },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          },
           "href": {
             "type": "string",
             "format": "uri-reference"
           }
         },
-        "required": ["id", "title", "agency", "status", "href"]
+        "required": [
+          "id",
+          "title",
+          "agency",
+          "status",
+          "interpretationNotice",
+          "href"
+        ]
       },
       "ContractsAppliedFilters": {
         "type": "object",
@@ -6310,9 +6446,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "Correction": {
         "type": "object",
@@ -6346,6 +6485,20 @@
           "reason": {
             "type": "string"
           },
+          "publicState": {
+            "type": "string",
+            "enum": [
+              "PUBLISHED_ANOMALY",
+              "PUBLISHED_EXPLAINED",
+              "OFFICIALLY_CONFIRMED",
+              "CORRECTED",
+              "RETRACTED",
+              "TEMPORARILY_RESTRICTED"
+            ]
+          },
+          "nonConclusion": {
+            "type": "string"
+          },
           "publishedAt": {
             "type": "string",
             "format": "date-time"
@@ -6364,6 +6517,8 @@
           "sourceRevision",
           "summary",
           "reason",
+          "publicState",
+          "nonConclusion",
           "publishedAt",
           "affectedClaims"
         ]
@@ -6399,6 +6554,9 @@
           "data": {
             "$ref": "#/components/schemas/Correction"
           },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
+          },
           "links": {
             "type": "array",
             "items": {
@@ -6406,7 +6564,7 @@
             }
           }
         },
-        "required": ["id", "status", "data", "links"]
+        "required": ["id", "status", "data", "seo", "links"]
       },
       "CorrectionSummary": {
         "type": "object",
@@ -6437,6 +6595,20 @@
           "reason": {
             "type": "string"
           },
+          "publicState": {
+            "type": "string",
+            "enum": [
+              "PUBLISHED_ANOMALY",
+              "PUBLISHED_EXPLAINED",
+              "OFFICIALLY_CONFIRMED",
+              "CORRECTED",
+              "RETRACTED",
+              "TEMPORARILY_RESTRICTED"
+            ]
+          },
+          "nonConclusion": {
+            "type": "string"
+          },
           "publishedAt": {
             "type": "string",
             "format": "date-time"
@@ -6451,6 +6623,8 @@
           "sourceRevision",
           "summary",
           "reason",
+          "publicState",
+          "nonConclusion",
           "publishedAt",
           "href"
         ]
@@ -6501,9 +6675,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "CoverageGap": {
         "type": "object",
@@ -6733,7 +6910,7 @@
             "format": "uuid"
           },
           "name": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "entityType": {
             "type": "string",
@@ -7312,19 +7489,106 @@
           "publicationConsent"
         ]
       },
+      "ApprovedRecordClassRetentionSchedule": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recordClass": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lawfulBasis": {
+            "type": "string",
+            "minLength": 1
+          },
+          "triggerKind": {
+            "type": "string",
+            "enum": [
+              "CREATED_AT",
+              "UPDATED_AT",
+              "CONSUMED_AT",
+              "EXPIRES_AT",
+              "CASE_CLOSED_AT",
+              "LAST_MATERIAL_USE_AT",
+              "SUPERSEDED_AT",
+              "DELIVERED_AT",
+              "TERMINAL_AT",
+              "CONSENT_REVOKED_AT"
+            ]
+          },
+          "activeDurationSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "backupDurationSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terminalAction": {
+            "type": "string",
+            "enum": [
+              "DELETE",
+              "ANONYMIZE",
+              "CRYPTO_ERASE",
+              "PRESERVE_PUBLIC_REVISION",
+              "PRESERVE_REFERENCED_REVISION",
+              "PRESERVE_IDENTITY_GRAPH",
+              "PRESERVE_WITH_PARENT"
+            ]
+          },
+          "effectiveAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reviewExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scheduleDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "recordClass",
+          "purpose",
+          "lawfulBasis",
+          "triggerKind",
+          "activeDurationSeconds",
+          "backupDurationSeconds",
+          "terminalAction",
+          "effectiveAt",
+          "reviewExpiresAt",
+          "scheduleDigest"
+        ]
+      },
       "PrivacyPolicy": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "version": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "updatedAt": {
+          "status": {
             "type": "string",
-            "format": "date-time"
+            "const": "PUBLISHED"
           },
           "sections": {
             "type": "array",
@@ -7332,14 +7596,15 @@
               "$ref": "#/components/schemas/ContentSection"
             }
           },
-          "sourceLinks": {
+          "retentionSchedules": {
             "type": "array",
+            "minItems": 1,
             "items": {
-              "$ref": "#/components/schemas/Link"
+              "$ref": "#/components/schemas/ApprovedRecordClassRetentionSchedule"
             }
           }
         },
-        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
+        "required": ["status", "sections", "retentionSchedules"]
       },
       "PrivacyPolicyResponse": {
         "type": "object",
@@ -7501,7 +7766,15 @@
             "type": "string"
           },
           "publicState": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "PUBLISHED_ANOMALY",
+              "PUBLISHED_EXPLAINED",
+              "OFFICIALLY_CONFIRMED",
+              "CORRECTED",
+              "RETRACTED",
+              "TEMPORARILY_RESTRICTED"
+            ]
           },
           "revision": {
             "type": "integer",
@@ -7681,6 +7954,9 @@
             "items": {
               "$ref": "#/components/schemas/RevisionDiff"
             }
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
         "required": [
@@ -7690,7 +7966,8 @@
           "snapshotHash",
           "publishedAt",
           "content",
-          "diffFromPrevious"
+          "diffFromPrevious",
+          "seo"
         ]
       },
       "PublicCaseSnapshot": {
@@ -7878,7 +8155,7 @@
       "PublicCasesDownload": {
         "type": "object",
         "additionalProperties": false,
-        "description": "최대 5,000개 사건 레코드의 동기 내려받기 결과. CSV는\n`이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가\n이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.\nrowCount는 고지 레코드를 제외한다.",
+        "description": "최대 5,000개 사건 레코드의 동기 내려받기 결과. CSV는\n`이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가\n이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.\nrowCount는 고지 레코드를 제외한다. nonConclusionNotices는 데이터 행의 비어 있지 않은\nnonConclusion을 행 순서대로 중복 제거하고 interpretationNotice는 null이다.",
         "properties": {
           "id": {
             "type": "string"
@@ -7891,6 +8168,21 @@
             "type": "integer",
             "format": "int64",
             "minimum": 1
+          },
+          "notice": {
+            "type": "string",
+            "const": "이상 징후 기록이며 위법·부패의 확정이 아님"
+          },
+          "nonConclusionNotices": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "interpretationNotice": {
+            "type": "null"
           },
           "filename": {
             "type": "string",
@@ -7933,6 +8225,9 @@
           "id",
           "status",
           "version",
+          "notice",
+          "nonConclusionNotices",
+          "interpretationNotice",
           "filename",
           "mediaType",
           "byteLength",
@@ -7970,9 +8265,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "PublicClaim": {
         "type": "object",
@@ -8016,6 +8314,94 @@
           "evidenceIds",
           "responseIds",
           "limitations"
+        ]
+      },
+      "PublicContractsDownload": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "최대 5,000개 계약 레코드의 동기 내려받기 결과. CSV와 JSONL 데이터 행은\n운영 상태 interpretationNotice를 보존한다. 응답 envelope의 nonConclusionNotices는\n빈 배열이고 interpretationNotice는 정확한 운영 상태 고지다. CSV와 JSONL의 첫 레코드는\n공개 재배포 고지를 유지하며 rowCount는 그 고지 레코드를 제외한다.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["READY"]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "notice": {
+            "type": "string",
+            "const": "이상 징후 기록이며 위법·부패의 확정이 아님"
+          },
+          "nonConclusionNotices": {
+            "type": "array",
+            "maxItems": 0,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "byteLength": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "contentSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "contentBase64": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["CSV", "JSONL"]
+          },
+          "rowCount": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 5000
+          },
+          "appliedFilters": {
+            "$ref": "#/components/schemas/ContractsAppliedFilters"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "version",
+          "notice",
+          "nonConclusionNotices",
+          "interpretationNotice",
+          "filename",
+          "mediaType",
+          "byteLength",
+          "contentSha256",
+          "contentBase64",
+          "format",
+          "rowCount",
+          "appliedFilters",
+          "generatedAt"
         ]
       },
       "PublicDatasetsAppliedFilters": {
@@ -8066,6 +8452,10 @@
                 "type": "null"
               }
             ]
+          },
+          "redistributionNotice": {
+            "type": "string",
+            "const": "이상 징후 기록이며 위법·부패의 확정이 아님"
           }
         },
         "required": [
@@ -8075,7 +8465,8 @@
           "format",
           "coverage",
           "license",
-          "updatedAt"
+          "updatedAt",
+          "redistributionNotice"
         ]
       },
       "PublicDatasetsPage": {
@@ -8101,9 +8492,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "PublicEvidence": {
         "type": "object",
@@ -8260,7 +8654,7 @@
       "PublicSearchDownload": {
         "type": "object",
         "additionalProperties": false,
-        "description": "최대 5,000개 검색 결과 레코드의 동기 내려받기 결과. CSV는\n`이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가\n이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.\nrowCount는 고지 레코드를 제외한다.",
+        "description": "최대 5,000개 검색 결과 레코드의 동기 내려받기 결과. CSV는\n`이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가\n이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.\nrowCount는 고지 레코드를 제외한다. nonConclusionNotices와 interpretationNotice는 검색\n데이터 행에서 서로 다른 의미를 유지한 채 각각 도출한다.",
         "properties": {
           "id": {
             "type": "string"
@@ -8273,6 +8667,29 @@
             "type": "integer",
             "format": "int64",
             "minimum": 1
+          },
+          "notice": {
+            "type": "string",
+            "const": "이상 징후 기록이며 위법·부패의 확정이 아님"
+          },
+          "nonConclusionNotices": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "interpretationNotice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "filename": {
             "type": "string",
@@ -8315,6 +8732,9 @@
           "id",
           "status",
           "version",
+          "notice",
+          "nonConclusionNotices",
+          "interpretationNotice",
           "filename",
           "mediaType",
           "byteLength",
@@ -8369,6 +8789,27 @@
               }
             ]
           },
+          "nonConclusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interpretationNotice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "updatedAt": {
             "anyOf": [
               {
@@ -8385,7 +8826,14 @@
             "format": "uri-reference"
           }
         },
-        "required": ["resultType", "id", "title", "href"]
+        "required": [
+          "resultType",
+          "id",
+          "title",
+          "nonConclusion",
+          "interpretationNotice",
+          "href"
+        ]
       },
       "PublicRecordsSearchResultPage": {
         "type": "object",
@@ -8410,9 +8858,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "PublicSignalSummary": {
         "type": "object",
@@ -8728,9 +9179,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "RuleResponse": {
         "type": "object",
@@ -8824,6 +9278,9 @@
           "description": {
             "type": "string"
           },
+          "openGraphDescription": {
+            "type": "string"
+          },
           "canonicalUrl": {
             "type": "string",
             "format": "uri-reference"
@@ -8842,7 +9299,13 @@
             ]
           }
         },
-        "required": ["title", "description", "canonicalUrl", "robots"]
+        "required": [
+          "title",
+          "description",
+          "openGraphDescription",
+          "canonicalUrl",
+          "robots"
+        ]
       },
       "Source": {
         "type": "object",
@@ -8878,6 +9341,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
           }
         },
         "required": [
@@ -8889,7 +9356,8 @@
           "status",
           "coverage",
           "freshness",
-          "knownIssues"
+          "knownIssues",
+          "interpretationNotice"
         ]
       },
       "SourceCoverage": {
@@ -8920,6 +9388,10 @@
             "items": {
               "$ref": "#/components/schemas/CoverageGap"
             }
+          },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
           }
         },
         "required": [
@@ -8929,7 +9401,8 @@
           "dateRange",
           "recordCount",
           "freshness",
-          "knownGaps"
+          "knownGaps",
+          "interpretationNotice"
         ]
       },
       "SourceDocumentRef": {
@@ -9014,9 +9487,12 @@
             "items": {
               "$ref": "#/components/schemas/Link"
             }
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["id", "status", "data", "links"]
+        "required": ["id", "status", "data", "links", "seo"]
       },
       "SourceStatusAppliedFilters": {
         "type": "object",
@@ -9056,9 +9532,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "SourceStatusSummary": {
         "type": "object",
@@ -9104,9 +9583,18 @@
                 "type": "null"
               }
             ]
+          },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
           }
         },
-        "required": ["sourceId", "displayName", "status"]
+        "required": [
+          "sourceId",
+          "displayName",
+          "status",
+          "interpretationNotice"
+        ]
       },
       "SupplierCasesAppliedFilters": {
         "type": "object",
@@ -9139,9 +9627,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "SupplierContractsAppliedFilters": {
         "type": "object",
@@ -9174,9 +9665,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "SupplierResponse": {
         "type": "object",
@@ -9230,6 +9724,13 @@
           },
           "freshness": {
             "$ref": "#/components/schemas/FreshnessModel"
+          },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
         "required": [
@@ -9242,7 +9743,9 @@
           "recentCases",
           "recentContracts",
           "identityWarnings",
-          "freshness"
+          "freshness",
+          "interpretationNotice",
+          "seo"
         ]
       },
       "SuppliersAppliedFilters": {
@@ -9299,6 +9802,10 @@
               "type": "string"
             }
           },
+          "interpretationNotice": {
+            "type": "string",
+            "const": "이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다."
+          },
           "href": {
             "type": "string",
             "format": "uri-reference"
@@ -9310,6 +9817,7 @@
           "caseCounts",
           "coverage",
           "identityWarnings",
+          "interpretationNotice",
           "href"
         ]
       },
@@ -9336,23 +9844,20 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "seo": {
+            "$ref": "#/components/schemas/SeoMetadata"
           }
         },
-        "required": ["items", "appliedFilters", "asOf"]
+        "required": ["items", "appliedFilters", "asOf", "seo"]
       },
       "Terms": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "version": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "updatedAt": {
+          "status": {
             "type": "string",
-            "format": "date-time"
+            "const": "PUBLISHED"
           },
           "sections": {
             "type": "array",
@@ -9360,14 +9865,15 @@
               "$ref": "#/components/schemas/ContentSection"
             }
           },
-          "sourceLinks": {
+          "retentionSchedules": {
             "type": "array",
+            "minItems": 1,
             "items": {
-              "$ref": "#/components/schemas/Link"
+              "$ref": "#/components/schemas/ApprovedRecordClassRetentionSchedule"
             }
           }
         },
-        "required": ["version", "title", "updatedAt", "sections", "sourceLinks"]
+        "required": ["status", "sections", "retentionSchedules"]
       },
       "TermsResponse": {
         "type": "object",
@@ -9680,6 +10186,94 @@
           "agencies",
           "suppliers",
           "publicCases"
+        ]
+      },
+      "CaseReproducibilityDownloadAppliedFilters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "caseSlug": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["caseSlug"]
+      },
+      "CaseReproducibilityDownload": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "한 사건의 재현 정보를 내려받는 공개 재배포 산출물. JSON 본문은 notice와 상태별\nnonConclusion을 최상위에 포함하고, CSV 본문은 notice 한 셀 행 뒤에 헤더와\nnonConclusion을 포함한 정확히 한 데이터 행을 둔다.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "const": "READY"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "notice": {
+            "type": "string",
+            "const": "이상 징후 기록이며 위법·부패의 확정이 아님"
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mediaType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "byteLength": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "contentSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "contentBase64": {
+            "type": "string",
+            "minLength": 1
+          },
+          "format": {
+            "type": "string",
+            "enum": ["JSON", "CSV"]
+          },
+          "rowCount": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 1
+          },
+          "appliedFilters": {
+            "$ref": "#/components/schemas/CaseReproducibilityDownloadAppliedFilters"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "version",
+          "notice",
+          "filename",
+          "mediaType",
+          "byteLength",
+          "contentSha256",
+          "contentBase64",
+          "format",
+          "rowCount",
+          "appliedFilters",
+          "generatedAt"
         ]
       }
     }

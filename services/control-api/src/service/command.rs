@@ -11,15 +11,9 @@ pub(super) async fn command(
     domain_events: &Mutex<InProcessDomainEventJournal>,
     request_id: Uuid,
 ) -> Result<Output, ServiceError> {
-    let payload = parse_command_payload(body)?;
+    let payload = validated_command_payload(operation.id, body)?;
+    let (payload, idempotency_body) = normalized_command_input(operation.id, payload, body)?;
     let payload_object = payload.as_object().ok_or(ServiceError::InvalidRequest)?;
-    if operation.id == "createResponseRequest"
-        && let Some(email) = payload_object.get("recipientEmail").and_then(Value::as_str)
-        && !valid_recipient_email(email)
-    {
-        return Err(ServiceError::InvalidRequest);
-    }
-    validate_command(operation.id, payload_object)?;
     match domains::command_kind(handler) {
         domains::CommandKind::Addendum => {
             return addendum_command(
@@ -30,17 +24,15 @@ pub(super) async fn command(
         domains::CommandKind::Private => return Err(ServiceError::InvalidRequest),
         domains::CommandKind::Base => {}
     }
-    let actor_id = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
-    let session_id = Uuid::parse_str(&claims.sid).map_err(|_| ServiceError::InvalidRequest)?;
+    let (actor_id, session_id) = command_actor_ids(claims)?;
     let (mut transaction, key, replay) =
-        begin_idempotency(pool, operation, request, body, claims).await?;
+        begin_idempotency(pool, operation, request, idempotency_body.as_ref(), claims).await?;
     if let Some(response) = replay {
         transaction.commit().await.map_err(db)?;
         return Ok(response);
     }
     let previous_case_state =
-        previous_case_state(operation.id, payload_object, &mut transaction).await?;
-    validate_transition_case(operation.id, payload_object, claims, &mut transaction).await?;
+        validate_case_context(operation.id, payload_object, claims, &mut transaction).await?;
     let mut prepared = prepare_command(
         operation,
         request,
@@ -50,6 +42,13 @@ pub(super) async fn command(
         &mut transaction,
     )
     .await?;
+    bind_editorial_owner_authority(
+        operation.id,
+        claims,
+        request_id,
+        &key,
+        &mut prepared.canonical_payload,
+    );
     let command_effect = domains::apply_command(
         handler,
         operation.id,
@@ -87,49 +86,16 @@ pub(super) async fn command(
     Ok(response)
 }
 
-fn emit_domain_events(
-    domain_events: &Mutex<InProcessDomainEventJournal>,
-    pending_domain_events: Vec<PendingDomainEvent>,
-) -> Result<(), ServiceError> {
-    let mut domain_event_sink = domain_events
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    for event in pending_domain_events {
-        if DomainEventSink::append(
-            &mut *domain_event_sink,
-            event.event_type,
-            &event.aggregate_id,
-            event.version,
-            &event.payload,
-        )
-        .is_err()
-        {
-            return Err(ServiceError::Persistence);
-        }
-        tracing::info!(
-            event_type = event.event_type,
-            aggregate_id = event.aggregate_id,
-            version = event.version,
-            "committed in-process domain event emitted"
-        );
-    }
-    Ok(())
-}
-
-fn valid_recipient_email(value: &str) -> bool {
-    let trimmed = value.trim();
-    let Some((local, domain)) = trimmed.split_once('@') else {
-        return false;
-    };
-    !local.is_empty()
-        && !domain.is_empty()
-        && domain.contains('.')
-        && !domain.starts_with('.')
-        && !domain.ends_with('.')
-        && !trimmed.chars().any(char::is_whitespace)
-}
-
 include!("command_addendum.rs");
+include!("command_privacy_correction.rs");
+include!("command_runtime.rs");
+include!("command_authority_replay.rs");
+
+fn command_actor_ids(claims: &ActorClaims) -> Result<(Uuid, Uuid), ServiceError> {
+    let actor_id = Uuid::parse_str(&claims.sub).map_err(|_| ServiceError::InvalidRequest)?;
+    let session_id = Uuid::parse_str(&claims.sid).map_err(|_| ServiceError::InvalidRequest)?;
+    Ok((actor_id, session_id))
+}
 
 fn parse_command_payload(body: &[u8]) -> Result<Value, ServiceError> {
     if body.is_empty() {
@@ -171,6 +137,7 @@ async fn begin_idempotency<'a>(
                 .get("content-type")
                 .and_then(|value| value.to_str().ok()),
             idempotency_key: Some(idempotency_key),
+            next_submission_session: None,
         })
         .map_err(|_| ServiceError::InvalidRequest)?,
     };
@@ -213,7 +180,7 @@ async fn begin_idempotency<'a>(
         return Err(ServiceError::IdempotencyConflict);
     }
     let replay = if claimed == 0 {
-        replay_output(receipt.response_status, receipt.response_body)?
+        replay_output(operation.id, receipt.response_status, receipt.response_body)?
             .ok_or(ServiceError::IdempotencyConflict)?
     } else {
         return Ok((transaction, key, None));
@@ -222,6 +189,7 @@ async fn begin_idempotency<'a>(
 }
 
 fn replay_output(
+    operation: &str,
     status: Option<i32>,
     response: Option<Value>,
 ) -> Result<Option<Output>, ServiceError> {
@@ -231,6 +199,7 @@ fn replay_output(
     let Some(response) = response else {
         return Ok(None);
     };
+    validate_owner_replay_if_required(operation, &response)?;
     Ok(Some(Output {
         status: status as u16,
         media_type: if status == 204 {
@@ -263,6 +232,17 @@ async fn previous_case_state(
     required_sqlx_value(state).map(Some)
 }
 
+async fn validate_case_context(
+    operation: &str,
+    payload: &Map<String, Value>,
+    claims: &ActorClaims,
+    transaction: &mut Transaction<'_, Postgres>,
+) -> Result<Option<String>, ServiceError> {
+    let previous_state = previous_case_state(operation, payload, transaction).await?;
+    validate_transition_case(operation, payload, claims, transaction).await?;
+    Ok(previous_state)
+}
+
 struct PreparedCommand {
     canonical_payload: Map<String, Value>,
     payload: Value,
@@ -272,15 +252,21 @@ struct PreparedCommand {
     status_code: u16,
     occurred_at: OffsetDateTime,
     occurred_text: String,
+    owner_receipt: Option<OwnerCommandReceipt>,
 }
 
 impl PreparedCommand {
-    fn apply_effect(&mut self, effect: Map<String, Value>) -> Result<(), ServiceError> {
+    fn apply_effect(&mut self, effect: CommandEffect) -> Result<(), ServiceError> {
+        let CommandEffect {
+            fields,
+            owner_receipt,
+            owner_replaces_aggregate_id,
+        } = effect;
         let payload = self
             .payload
             .as_object_mut()
             .ok_or(ServiceError::Persistence)?;
-        for (key, value) in effect {
+        for (key, value) in fields {
             match payload.get(&key) {
                 Some(existing) if existing == &value => {}
                 Some(_) => return Err(ServiceError::Persistence),
@@ -288,6 +274,36 @@ impl PreparedCommand {
                     payload.insert(key, value);
                 }
             }
+        }
+        if (self.owner_receipt.is_some() && owner_receipt.is_some())
+            || (owner_replaces_aggregate_id && owner_receipt.is_none())
+        {
+            return Err(ServiceError::Persistence);
+        }
+        if let Some(receipt) = owner_receipt {
+            if (receipt.aggregate_id != self.persisted_id && !owner_replaces_aggregate_id)
+                || receipt.aggregate_version < 1
+                || receipt.audit_event_id.is_nil()
+                || !is_sha256(&receipt.receipt_digest)
+                || receipt.outbox_event_ids.len() != receipt.expected_outbox_count
+                || receipt.outbox_event_ids.iter().any(Uuid::is_nil)
+                || OffsetDateTime::parse(&receipt.accepted_at, &Rfc3339).is_err()
+            {
+                return Err(ServiceError::Persistence);
+            }
+            if owner_replaces_aggregate_id {
+                self.persisted_id = receipt.aggregate_id;
+                payload.insert("id".to_owned(), json!(receipt.aggregate_id));
+                payload.insert("resourceId".to_owned(), json!(receipt.aggregate_id));
+            }
+            self.version = receipt.aggregate_version;
+            payload.insert("version".to_owned(), json!(receipt.aggregate_version));
+            payload.insert(
+                "resourceVersion".to_owned(),
+                json!(receipt.aggregate_version),
+            );
+            self.occurred_text.clone_from(&receipt.accepted_at);
+            self.owner_receipt = Some(receipt);
         }
         Ok(())
     }
@@ -334,10 +350,22 @@ async fn prepare_command(
     // must validate the expected version and mutate the aggregate atomically.
     // Running the generic guard first would increment the row before the
     // handler sees it, causing a false VERSION_CONFLICT or a double advance.
-    let canonical_version = if matches!(
-        operation.id,
-        "triageSignal" | "acceptAgentSuggestion" | "rejectAgentSuggestion"
-    ) {
+    let resolved_correction_owner = operation.id == "resolveCorrectionRequest"
+        && string_value(payload_object, "resolution") == Some("RESOLVED");
+    let canonical_version = if resolved_correction_owner
+        || matches!(
+            operation.id,
+            "attestOrganizationOfficialChannel"
+                | "attestEntityMaterialUseClosure"
+                | "approveResponseExcerpt"
+                | "publishCase"
+                | "triageSignal"
+                | "acceptAgentSuggestion"
+                | "rejectAgentSuggestion"
+                | "verifyResponseOrganizationIdentity"
+                | "revokeOrganizationOfficialChannel"
+                | "classifyEntityPersonhood"
+        ) {
         None
     } else {
         canonical_guard(operation.id, &canonical_payload, actor_id, transaction).await?
@@ -373,6 +401,7 @@ async fn prepare_command(
         status_code: operation.success_status,
         occurred_at,
         occurred_text,
+        owner_receipt: None,
     })
 }
 
@@ -433,7 +462,9 @@ async fn finalize_command(
     prepared: &mut PreparedCommand,
     transaction: &mut Transaction<'_, Postgres>,
 ) -> Result<(Output, Vec<PendingDomainEvent>), ServiceError> {
-    let audit_event_id = append_audit_event(
+    let owner_managed = owner_managed_request(operation.id, payload)?;
+    let audit_event_id = command_audit_event_id(
+        owner_managed,
         operation,
         actor_id,
         session_id,
@@ -443,7 +474,7 @@ async fn finalize_command(
         transaction,
     )
     .await?;
-    let mut receipt_data = json!({"id":prepared.persisted_id,"resourceId":prepared.persisted_id,"resourceVersion":prepared.version,"version":prepared.version,"status":"completed","operationId":operation.id,"requestId":request_id,"aggregateId":prepared.persisted_id.to_string(),"aggregateVersion":prepared.version,"auditEventId":audit_event_id,"acceptedAt":prepared.occurred_text,"data":prepared.payload,"links":[]});
+    let mut receipt_data = command_receipt_data(operation, request_id, audit_event_id, prepared)?;
     if operation.id == "triageSignal" {
         let details = triage_signal_details(prepared)?;
         let (reason_digest, receipt_digest) =
@@ -461,20 +492,17 @@ async fn finalize_command(
         .await?;
     }
     let response = response_for(operation, &receipt_data)?;
-    let candidates = event_candidates(
+    let pending_domain_events = collect_pending_domain_events(
+        owner_managed,
+        operation,
         payload,
-        EventCandidateContext {
-            operation: operation.id,
-            actor_id,
-            request_id,
-            resource_id: prepared.persisted_id,
-            resource_version: prepared.version,
-            occurred_at: &prepared.occurred_text,
-            previous_case_state,
-        },
-    )?;
-    let pending_domain_events =
-        enqueue_command_events(operation, &candidates, prepared, transaction).await?;
+        actor_id,
+        request_id,
+        previous_case_state,
+        prepared,
+        transaction,
+    )
+    .await?;
     let completed = sqlx::query!(
         "UPDATE ops.idempotency_keys SET response_status=$4,response_body=$5,resource_type=$6,resource_id=$7 \
          WHERE scope=$1 AND key_hash=$2 AND request_hash=$3 \

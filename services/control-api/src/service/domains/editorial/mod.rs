@@ -8,13 +8,18 @@ fn unexpected_null() -> ServiceError {
 }
 
 mod corrections;
+mod entity_authority;
+mod official_channel;
 mod publication;
 mod queries;
 mod responses;
 mod reviews;
+mod reviews_named_person;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
+    AttestOrganizationOfficialChannel,
+    AttestEntityMaterialUseClosure,
     ApproveResponseExcerpt,
     AssignCorrection,
     AssignReview,
@@ -22,6 +27,7 @@ pub(in crate::service) enum Command {
     CreateResponseRequest,
     CreateRetractionDraft,
     CreateReviewSnapshot,
+    ClassifyEntityPersonhood,
     PreviewPublication,
     PublishCase,
     ResolveCorrectionRequest,
@@ -29,6 +35,8 @@ pub(in crate::service) enum Command {
     SubmitReview,
     TriageCorrection,
     UpdateCorrectionDraft,
+    VerifyResponseOrganizationIdentity,
+    RevokeOrganizationOfficialChannel,
     ReconcileCommunicationDelivery,
     CancelCommunicationDelivery,
     TransitionResponseAppeal,
@@ -57,6 +65,18 @@ pub(in crate::service) enum Query {
 
 pub(super) const OPERATIONS: &[(&str, Handler)] = &[
     (
+        "attestOrganizationOfficialChannel",
+        Handler::Command(CommandHandler::Editorial(
+            Command::AttestOrganizationOfficialChannel,
+        )),
+    ),
+    (
+        "attestEntityMaterialUseClosure",
+        Handler::Command(CommandHandler::Editorial(
+            Command::AttestEntityMaterialUseClosure,
+        )),
+    ),
+    (
         "approveResponseExcerpt",
         Handler::Command(CommandHandler::Editorial(Command::ApproveResponseExcerpt)),
     ),
@@ -67,6 +87,10 @@ pub(super) const OPERATIONS: &[(&str, Handler)] = &[
     (
         "assignReview",
         Handler::Command(CommandHandler::Editorial(Command::AssignReview)),
+    ),
+    (
+        "classifyEntityPersonhood",
+        Handler::Command(CommandHandler::Editorial(Command::ClassifyEntityPersonhood)),
     ),
     (
         "createCorrection",
@@ -157,6 +181,18 @@ pub(super) const OPERATIONS: &[(&str, Handler)] = &[
         Handler::Command(CommandHandler::Editorial(Command::UpdateCorrectionDraft)),
     ),
     (
+        "verifyResponseOrganizationIdentity",
+        Handler::Command(CommandHandler::Editorial(
+            Command::VerifyResponseOrganizationIdentity,
+        )),
+    ),
+    (
+        "revokeOrganizationOfficialChannel",
+        Handler::Command(CommandHandler::Editorial(
+            Command::RevokeOrganizationOfficialChannel,
+        )),
+    ),
+    (
         "getCommunicationDeliveryReceipt",
         Handler::Query(QueryHandler::Editorial(
             Query::GetCommunicationDeliveryReceipt,
@@ -202,20 +238,25 @@ pub(super) const OPERATIONS: &[(&str, Handler)] = &[
 
 pub(super) const fn command_kind(command: Command) -> CommandKind {
     match command {
-        Command::ApproveResponseExcerpt
+        Command::AttestOrganizationOfficialChannel
+        | Command::AttestEntityMaterialUseClosure
+        | Command::ApproveResponseExcerpt
         | Command::AssignCorrection
         | Command::AssignReview
         | Command::CreateCorrection
         | Command::CreateResponseRequest
         | Command::CreateRetractionDraft
         | Command::CreateReviewSnapshot
+        | Command::ClassifyEntityPersonhood
         | Command::PreviewPublication
         | Command::PublishCase
         | Command::ResolveCorrectionRequest
         | Command::SaveResponseRequestDraft
         | Command::SubmitReview
         | Command::TriageCorrection
-        | Command::UpdateCorrectionDraft => CommandKind::Base,
+        | Command::UpdateCorrectionDraft
+        | Command::VerifyResponseOrganizationIdentity
+        | Command::RevokeOrganizationOfficialChannel => CommandKind::Base,
         Command::ReconcileCommunicationDelivery
         | Command::CancelCommunicationDelivery
         | Command::TransitionResponseAppeal
@@ -223,6 +264,16 @@ pub(super) const fn command_kind(command: Command) -> CommandKind {
         | Command::DeclareConflict
         | Command::WithdrawConflict => CommandKind::Addendum,
     }
+}
+
+pub(super) const fn owner_creates_aggregate(command: Command) -> bool {
+    matches!(
+        command,
+        Command::AttestOrganizationOfficialChannel
+            | Command::AttestEntityMaterialUseClosure
+            | Command::ClassifyEntityPersonhood
+            | Command::RevokeOrganizationOfficialChannel
+    )
 }
 
 #[expect(
@@ -238,8 +289,18 @@ pub(super) async fn apply(
     session_id: Uuid,
     field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<Option<OwnerCommandReceipt>, ServiceError> {
     match command {
+        Command::AttestOrganizationOfficialChannel => {
+            official_channel::attest(payload, actor, session_id, tx)
+                .await
+                .map(Some)
+        }
+        Command::AttestEntityMaterialUseClosure => {
+            entity_authority::attest_closure(payload, actor, session_id, tx)
+                .await
+                .map(Some)
+        }
         Command::AssignCorrection
         | Command::CreateCorrection
         | Command::ResolveCorrectionRequest
@@ -253,23 +314,33 @@ pub(super) async fn apply(
         Command::ApproveResponseExcerpt
         | Command::AssignReview
         | Command::CreateReviewSnapshot
-        | Command::SubmitReview => {
+        | Command::SubmitReview
+        | Command::VerifyResponseOrganizationIdentity => {
             apply_review(
                 command, operation, payload, id, actor, session_id, field_keys, tx,
             )
             .await
         }
-        Command::CreateResponseRequest | Command::SaveResponseRequestDraft => {
-            apply_response(
-                command, operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
+        Command::CreateResponseRequest | Command::SaveResponseRequestDraft => apply_response(
+            command, operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(|()| None),
+        Command::ClassifyEntityPersonhood => {
+            entity_authority::classify(payload, actor, session_id, tx)
+                .await
+                .map(Some)
         }
         Command::CreateRetractionDraft | Command::PreviewPublication | Command::PublishCase => {
             apply_publication(
                 command, operation, payload, id, actor, session_id, field_keys, tx,
             )
             .await
+        }
+        Command::RevokeOrganizationOfficialChannel => {
+            official_channel::revoke(payload, actor, session_id, tx)
+                .await
+                .map(Some)
         }
         Command::ReconcileCommunicationDelivery
         | Command::CancelCommunicationDelivery
@@ -293,38 +364,34 @@ async fn apply_correction(
     session_id: Uuid,
     field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<Option<OwnerCommandReceipt>, ServiceError> {
     match command {
-        Command::AssignCorrection => {
-            corrections::arm_assigncorrection(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
-        Command::CreateCorrection => {
-            corrections::arm_createcorrection(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
+        Command::AssignCorrection => corrections::arm_assigncorrection(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(|()| None),
+        Command::CreateCorrection => corrections::arm_createcorrection(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(|()| None),
         Command::ResolveCorrectionRequest => {
             corrections::arm_resolvecorrectionrequest(
                 operation, payload, id, actor, session_id, field_keys, tx,
             )
             .await
         }
-        Command::TriageCorrection => {
-            corrections::arm_triagecorrection(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
-        Command::UpdateCorrectionDraft => {
-            corrections::arm_updatecorrectiondraft(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
+        Command::TriageCorrection => corrections::arm_triagecorrection(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(|()| None),
+        Command::UpdateCorrectionDraft => corrections::arm_updatecorrectiondraft(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(|()| None),
         _ => Err(ServiceError::InvalidRequest),
     }
 }
@@ -342,27 +409,34 @@ async fn apply_review(
     session_id: Uuid,
     field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<Option<OwnerCommandReceipt>, ServiceError> {
     match command {
-        Command::ApproveResponseExcerpt => {
-            reviews::arm_approveresponseexcerpt(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
+        Command::ApproveResponseExcerpt => reviews::arm_approveresponseexcerpt(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(Some),
         Command::AssignReview => {
             reviews::arm_assignreview(operation, payload, id, actor, session_id, field_keys, tx)
                 .await
+                .map(|()| None)
         }
-        Command::CreateReviewSnapshot => {
-            reviews::arm_createreviewsnapshot(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
+        Command::CreateReviewSnapshot => reviews::arm_createreviewsnapshot(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(|()| None),
         Command::SubmitReview => {
             reviews::arm_submitreview(operation, payload, id, actor, session_id, field_keys, tx)
                 .await
+                .map(Some)
+        }
+        Command::VerifyResponseOrganizationIdentity => {
+            reviews::arm_verifyresponseorganizationidentity(
+                operation, payload, id, actor, session_id, field_keys, tx,
+            )
+            .await
+            .map(Some)
         }
         _ => Err(ServiceError::InvalidRequest),
     }
@@ -412,23 +486,22 @@ async fn apply_publication(
     session_id: Uuid,
     field_keys: &EnvelopeKeyRing,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<Option<OwnerCommandReceipt>, ServiceError> {
     match command {
-        Command::CreateRetractionDraft => {
-            publication::arm_createretractiondraft(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
-        Command::PreviewPublication => {
-            publication::arm_previewpublication(
-                operation, payload, id, actor, session_id, field_keys, tx,
-            )
-            .await
-        }
+        Command::CreateRetractionDraft => publication::arm_createretractiondraft(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(|()| None),
+        Command::PreviewPublication => publication::arm_previewpublication(
+            operation, payload, id, actor, session_id, field_keys, tx,
+        )
+        .await
+        .map(Some),
         Command::PublishCase => {
             publication::arm_publishcase(operation, payload, id, actor, session_id, field_keys, tx)
                 .await
+                .map(Some)
         }
         _ => Err(ServiceError::InvalidRequest),
     }

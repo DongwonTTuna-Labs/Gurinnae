@@ -67,6 +67,7 @@ export type AgenciesItem = {
     regionCodeVersion: string | null;
     caseCounts: CaseStateCounts;
     coverage: CoverageModel;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
     href: string;
 };
 
@@ -76,6 +77,7 @@ export type AgenciesPage = {
     totalApproximate?: number;
     appliedFilters: AgenciesAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type AgencyCasesAppliedFilters = {
@@ -90,6 +92,7 @@ export type AgencyCasesPage = {
     totalApproximate?: number;
     appliedFilters: AgencyCasesAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type AgencyContractsAppliedFilters = {
@@ -104,6 +107,7 @@ export type AgencyContractsPage = {
     totalApproximate?: number;
     appliedFilters: AgencyContractsAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type AgencyResponse = {
@@ -122,24 +126,29 @@ export type AgencyResponse = {
     recentContracts: Array<ContractSummary>;
     identityWarnings: Array<string>;
     freshness: FreshnessModel;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
+    seo: SeoMetadata;
 };
 
 export type BinaryDownload = {
     id: string;
     status: string;
     version: number;
+    notice: '이상 징후 기록이며 위법·부패의 확정이 아님';
     binary?: Blob | File;
-    filename?: string;
-    mediaType?: string;
-    byteLength?: number;
-    contentSha256?: string;
+    filename: string;
+    mediaType: string;
+    byteLength: number;
+    contentSha256: string;
     receiptSha256?: string;
-    contentBase64?: string;
-    format?: string;
-    rowCount?: number;
+    contentBase64: string;
+    format: string;
+    rowCount: number;
     from?: string;
     to?: string;
     groupBy?: string;
+    appliedFilters: ContractsAppliedFilters;
+    generatedAt: string;
 };
 
 export type CalculationResult = {
@@ -156,12 +165,13 @@ export type CalculationResult = {
 export type CaseCard = {
     slug: string;
     title: string;
-    publicState: 'NEVER_PUBLISHED' | 'PUBLISHED_ANOMALY' | 'PUBLISHED_EXPLAINED' | 'OFFICIALLY_CONFIRMED' | 'CORRECTED' | 'RETRACTED' | 'TEMPORARILY_RESTRICTED';
+    publicState: 'PUBLISHED_ANOMALY' | 'PUBLISHED_EXPLAINED' | 'OFFICIALLY_CONFIRMED' | 'CORRECTED' | 'RETRACTED' | 'TEMPORARILY_RESTRICTED';
     summary: string;
     revision: number;
     updatedAt: string;
     responseStatus?: string | null;
     correctionStatus?: string | null;
+    nonConclusion: string;
     href: string;
 };
 
@@ -178,6 +188,8 @@ export type CaseReproducibilityResponse = {
     excludedCohort: Array<ExcludedComparable>;
     result: CalculationResult;
     limitations: Array<string>;
+    nonConclusion: string;
+    seo: SeoMetadata;
 };
 
 export type CaseRevisionsAppliedFilters = {
@@ -186,7 +198,8 @@ export type CaseRevisionsAppliedFilters = {
 
 export type CaseRevisionsItem = {
     revision: number;
-    state: string;
+    state: 'PUBLISHED_ANOMALY' | 'PUBLISHED_EXPLAINED' | 'OFFICIALLY_CONFIRMED' | 'CORRECTED' | 'RETRACTED' | 'TEMPORARILY_RESTRICTED';
+    nonConclusion: string;
     publishedAt: string;
     summary: string;
     href: string;
@@ -198,6 +211,7 @@ export type CaseRevisionsPage = {
     totalApproximate?: number;
     appliedFilters: CaseRevisionsAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type CaseStateCounts = {
@@ -320,6 +334,8 @@ export type ContractResponse = {
     sourceDocuments: Array<SourceDocumentRef>;
     normalizationWarnings: Array<string>;
     relatedCases: Array<CaseCard>;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
+    seo: SeoMetadata;
 };
 
 export type ContractSummary = {
@@ -331,6 +347,7 @@ export type ContractSummary = {
     status: 'ANNOUNCED' | 'AWARDED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'SUPERSEDED' | 'UNKNOWN';
     signedAt?: string | null;
     amount?: Money | null;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
     href: string;
 };
 
@@ -354,6 +371,7 @@ export type ContractsPage = {
     totalApproximate?: number;
     appliedFilters: ContractsAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type Correction = {
@@ -363,6 +381,8 @@ export type Correction = {
     targetRevision?: number | null;
     summary: string;
     reason: string;
+    publicState: 'PUBLISHED_ANOMALY' | 'PUBLISHED_EXPLAINED' | 'OFFICIALLY_CONFIRMED' | 'CORRECTED' | 'RETRACTED' | 'TEMPORARILY_RESTRICTED';
+    nonConclusion: string;
     publishedAt: string;
     affectedClaims: Array<string>;
 };
@@ -376,6 +396,7 @@ export type CorrectionResponse = {
     title?: string;
     summary?: string;
     data: Correction;
+    seo: SeoMetadata;
     links: Array<Link>;
 };
 
@@ -385,6 +406,8 @@ export type CorrectionSummary = {
     targetRevision?: number | null;
     summary: string;
     reason: string;
+    publicState: 'PUBLISHED_ANOMALY' | 'PUBLISHED_EXPLAINED' | 'OFFICIALLY_CONFIRMED' | 'CORRECTED' | 'RETRACTED' | 'TEMPORARILY_RESTRICTED';
+    nonConclusion: string;
     publishedAt: string;
     href: string;
 };
@@ -403,6 +426,7 @@ export type CorrectionsPage = {
     totalApproximate?: number;
     appliedFilters: CorrectionsAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type CoverageGap = {
@@ -460,7 +484,7 @@ export type EditorialPolicyResponse = {
 
 export type EntityRef = {
     id: string;
-    name: string;
+    name: string | null;
     entityType: 'AGENCY' | 'SUPPLIER';
     href: string;
 };
@@ -611,12 +635,23 @@ export type PartyResponse = {
     publicationConsent: PublicationConsentModel;
 };
 
+export type ApprovedRecordClassRetentionSchedule = {
+    recordClass: string;
+    purpose: string;
+    lawfulBasis: string;
+    triggerKind: 'CREATED_AT' | 'UPDATED_AT' | 'CONSUMED_AT' | 'EXPIRES_AT' | 'CASE_CLOSED_AT' | 'LAST_MATERIAL_USE_AT' | 'SUPERSEDED_AT' | 'DELIVERED_AT' | 'TERMINAL_AT' | 'CONSENT_REVOKED_AT';
+    activeDurationSeconds: number | null;
+    backupDurationSeconds: number | null;
+    terminalAction: 'DELETE' | 'ANONYMIZE' | 'CRYPTO_ERASE' | 'PRESERVE_PUBLIC_REVISION' | 'PRESERVE_REFERENCED_REVISION' | 'PRESERVE_IDENTITY_GRAPH' | 'PRESERVE_WITH_PARENT';
+    effectiveAt: string;
+    reviewExpiresAt: string;
+    scheduleDigest: string;
+};
+
 export type PrivacyPolicy = {
-    version: string;
-    title: string;
-    updatedAt: string;
+    status: 'PUBLISHED';
     sections: Array<ContentSection>;
-    sourceLinks: Array<Link>;
+    retentionSchedules: Array<ApprovedRecordClassRetentionSchedule>;
 };
 
 export type PrivacyPolicyResponse = {
@@ -666,7 +701,7 @@ export type PublicApiDocumentationResponse = {
 export type PublicCaseResponse = {
     slug: string;
     title: string;
-    publicState: string;
+    publicState: 'PUBLISHED_ANOMALY' | 'PUBLISHED_EXPLAINED' | 'OFFICIALLY_CONFIRMED' | 'CORRECTED' | 'RETRACTED' | 'TEMPORARILY_RESTRICTED';
     revision: number;
     publishedAt: string;
     updatedAt: string;
@@ -699,6 +734,7 @@ export type PublicCaseRevisionResponse = {
     publishedAt: string;
     content: PublicCaseSnapshot;
     diffFromPrevious: Array<RevisionDiff>;
+    seo: SeoMetadata;
 };
 
 export type PublicCaseSnapshot = {
@@ -739,12 +775,16 @@ export type PublicCasesAppliedFilters = {
  * 최대 5,000개 사건 레코드의 동기 내려받기 결과. CSV는
  * `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
  * 이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
- * rowCount는 고지 레코드를 제외한다.
+ * rowCount는 고지 레코드를 제외한다. nonConclusionNotices는 데이터 행의 비어 있지 않은
+ * nonConclusion을 행 순서대로 중복 제거하고 interpretationNotice는 null이다.
  */
 export type PublicCasesDownload = {
     id: string;
     status: 'READY';
     version: number;
+    notice: '이상 징후 기록이며 위법·부패의 확정이 아님';
+    nonConclusionNotices: Array<string>;
+    interpretationNotice: null;
     filename: string;
     mediaType: string;
     byteLength: number;
@@ -764,6 +804,7 @@ export type PublicCasesPage = {
     totalApproximate?: number;
     appliedFilters: PublicCasesAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type PublicClaim = {
@@ -773,6 +814,30 @@ export type PublicClaim = {
     evidenceIds: Array<string>;
     responseIds: Array<string>;
     limitations: Array<string>;
+};
+
+/**
+ * 최대 5,000개 계약 레코드의 동기 내려받기 결과. CSV와 JSONL 데이터 행은
+ * 운영 상태 interpretationNotice를 보존한다. 응답 envelope의 nonConclusionNotices는
+ * 빈 배열이고 interpretationNotice는 정확한 운영 상태 고지다. CSV와 JSONL의 첫 레코드는
+ * 공개 재배포 고지를 유지하며 rowCount는 그 고지 레코드를 제외한다.
+ */
+export type PublicContractsDownload = {
+    id: string;
+    status: 'READY';
+    version: number;
+    notice: '이상 징후 기록이며 위법·부패의 확정이 아님';
+    nonConclusionNotices: Array<string>;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
+    filename: string;
+    mediaType: string;
+    byteLength: number;
+    contentSha256: string;
+    contentBase64: string;
+    format: 'CSV' | 'JSONL';
+    rowCount: number;
+    appliedFilters: ContractsAppliedFilters;
+    generatedAt: string;
 };
 
 export type PublicDatasetsAppliedFilters = {
@@ -788,6 +853,7 @@ export type PublicDatasetsItem = {
     license: string;
     updatedAt: string;
     downloadUrl?: string | null;
+    redistributionNotice: '이상 징후 기록이며 위법·부패의 확정이 아님';
 };
 
 export type PublicDatasetsPage = {
@@ -796,6 +862,7 @@ export type PublicDatasetsPage = {
     totalApproximate?: number;
     appliedFilters: PublicDatasetsAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type PublicEvidence = {
@@ -829,12 +896,16 @@ export type PublicRecordsSearchResultAppliedFilters = {
  * 최대 5,000개 검색 결과 레코드의 동기 내려받기 결과. CSV는
  * `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
  * 이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
- * rowCount는 고지 레코드를 제외한다.
+ * rowCount는 고지 레코드를 제외한다. nonConclusionNotices와 interpretationNotice는 검색
+ * 데이터 행에서 서로 다른 의미를 유지한 채 각각 도출한다.
  */
 export type PublicSearchDownload = {
     id: string;
     status: 'READY';
     version: number;
+    notice: '이상 징후 기록이며 위법·부패의 확정이 아님';
+    nonConclusionNotices: Array<string>;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.' | null;
     filename: string;
     mediaType: string;
     byteLength: number;
@@ -853,6 +924,8 @@ export type PublicRecordsSearchResultItem = {
     subtitle?: string | null;
     status?: string | null;
     summary?: string | null;
+    nonConclusion: string | null;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.' | null;
     updatedAt?: string | null;
     href: string;
 };
@@ -863,6 +936,7 @@ export type PublicRecordsSearchResultPage = {
     totalApproximate?: number;
     appliedFilters: PublicRecordsSearchResultAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type PublicSignalSummary = {
@@ -942,6 +1016,7 @@ export type RuleCasesPage = {
     totalApproximate?: number;
     appliedFilters: RuleCasesAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type RuleResponse = {
@@ -973,6 +1048,7 @@ export type RulesPage = {
 export type SeoMetadata = {
     title: string;
     description: string;
+    openGraphDescription: string;
     canonicalUrl: string;
     robots: string;
     structuredDataType?: string | null;
@@ -988,6 +1064,7 @@ export type Source = {
     coverage: CoverageModel;
     freshness: FreshnessModel;
     knownIssues: Array<string>;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
 };
 
 export type SourceCoverage = {
@@ -998,6 +1075,7 @@ export type SourceCoverage = {
     recordCount: number;
     freshness: FreshnessModel;
     knownGaps: Array<CoverageGap>;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
 };
 
 export type SourceDocumentRef = {
@@ -1020,6 +1098,7 @@ export type SourceResponse = {
     summary?: string;
     data: Source;
     links: Array<Link>;
+    seo: SeoMetadata;
 };
 
 export type SourceStatusAppliedFilters = {
@@ -1034,6 +1113,7 @@ export type SourceStatusPage = {
     totalApproximate?: number;
     appliedFilters: SourceStatusAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type SourceStatusSummary = {
@@ -1043,6 +1123,7 @@ export type SourceStatusSummary = {
     lastSuccessAt?: string | null;
     lagSeconds?: number | null;
     publicMessage?: string | null;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
 };
 
 export type SupplierCasesAppliedFilters = {
@@ -1057,6 +1138,7 @@ export type SupplierCasesPage = {
     totalApproximate?: number;
     appliedFilters: SupplierCasesAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type SupplierContractsAppliedFilters = {
@@ -1071,6 +1153,7 @@ export type SupplierContractsPage = {
     totalApproximate?: number;
     appliedFilters: SupplierContractsAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type SupplierResponse = {
@@ -1085,6 +1168,8 @@ export type SupplierResponse = {
     recentContracts: Array<ContractSummary>;
     identityWarnings: Array<string>;
     freshness: FreshnessModel;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
+    seo: SeoMetadata;
 };
 
 export type SuppliersAppliedFilters = {
@@ -1100,6 +1185,7 @@ export type SuppliersItem = {
     caseCounts: CaseStateCounts;
     coverage: CoverageModel;
     identityWarnings: Array<string>;
+    interpretationNotice: '이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.';
     href: string;
 };
 
@@ -1109,14 +1195,13 @@ export type SuppliersPage = {
     totalApproximate?: number;
     appliedFilters: SuppliersAppliedFilters;
     asOf: string;
+    seo: SeoMetadata;
 };
 
 export type Terms = {
-    version: string;
-    title: string;
-    updatedAt: string;
+    status: 'PUBLISHED';
     sections: Array<ContentSection>;
-    sourceLinks: Array<Link>;
+    retentionSchedules: Array<ApprovedRecordClassRetentionSchedule>;
 };
 
 export type TermsResponse = {
@@ -1203,6 +1288,31 @@ export type CoverageRecordCounts = {
     agencies: number;
     suppliers: number;
     publicCases: number;
+};
+
+export type CaseReproducibilityDownloadAppliedFilters = {
+    caseSlug: string;
+};
+
+/**
+ * 한 사건의 재현 정보를 내려받는 공개 재배포 산출물. JSON 본문은 notice와 상태별
+ * nonConclusion을 최상위에 포함하고, CSV 본문은 notice 한 셀 행 뒤에 헤더와
+ * nonConclusion을 포함한 정확히 한 데이터 행을 둔다.
+ */
+export type CaseReproducibilityDownload = {
+    id: string;
+    status: 'READY';
+    version: number;
+    notice: '이상 징후 기록이며 위법·부패의 확정이 아님';
+    filename: string;
+    mediaType: string;
+    byteLength: number;
+    contentSha256: string;
+    contentBase64: string;
+    format: 'JSON' | 'CSV';
+    rowCount: number;
+    appliedFilters: CaseReproducibilityDownloadAppliedFilters;
+    generatedAt: string;
 };
 
 export type ListAgenciesData = {
@@ -1612,7 +1722,7 @@ export type DownloadCaseReproducibilityResponses = {
     /**
      * Successful response
      */
-    200: BinaryDownload;
+    200: CaseReproducibilityDownload;
 };
 
 export type DownloadCaseReproducibilityResponse = DownloadCaseReproducibilityResponses[keyof DownloadCaseReproducibilityResponses];
@@ -2021,6 +2131,10 @@ export type GetPrivacyPolicyErrors = {
      * Problem response: INTERNAL_ERROR
      */
     500: ProblemDetails;
+    /**
+     * Problem response: STORAGE_FAILURE
+     */
+    503: ProblemDetails;
 };
 
 export type GetPrivacyPolicyError = GetPrivacyPolicyErrors[keyof GetPrivacyPolicyErrors];
@@ -2057,6 +2171,10 @@ export type GetTermsErrors = {
      * Problem response: INTERNAL_ERROR
      */
     500: ProblemDetails;
+    /**
+     * Problem response: STORAGE_FAILURE
+     */
+    503: ProblemDetails;
 };
 
 export type GetTermsError = GetTermsErrors[keyof GetTermsErrors];
@@ -2141,6 +2259,10 @@ export type DownloadContractsErrors = {
      */
     400: ProblemDetails;
     /**
+     * Problem response: PRECONDITION_FAILED. 현재 조건의 결과가 5,000건을 초과합니다.
+     */
+    422: ProblemDetails;
+    /**
      * Problem response: RATE_LIMITED
      */
     429: ProblemDetails;
@@ -2160,7 +2282,7 @@ export type DownloadContractsResponses = {
     /**
      * Successful response
      */
-    200: BinaryDownload;
+    200: PublicContractsDownload;
 };
 
 export type DownloadContractsResponse = DownloadContractsResponses[keyof DownloadContractsResponses];

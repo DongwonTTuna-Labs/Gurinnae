@@ -111,7 +111,7 @@ async fn process_event_one(
     let Some(job) = worker.claim(pool).await.map_err(WorkerError::Job)? else {
         return Ok(false);
     };
-    match handle_event(pool, store, scanner, field_keys, &job).await {
+    match handle_workflow_job(pool, store, scanner, field_keys, &job).await {
         Ok(metrics) => worker
             .complete(pool, &job, metrics)
             .await
@@ -136,6 +136,13 @@ include!("workflow_events.rs");
 include!("workflow_action_execution.rs");
 include!("workflow_hypothesis_execution.rs");
 include!("workflow_exports.rs");
+include!("workflow_response_materialization.rs");
 include!("workflow_signal.rs");
 include!("workflow_hypothesis_recursion.rs");
+include!("workflow_retention.rs");
+include!("workflow_entity_retention_job.rs");
+include!("workflow_retention_job.rs");
+include!("workflow_response_party_name_correction_contract.rs");
+include!("workflow_response_party_name_correction_job.rs");
+include!("workflow_response_party_name_correction_delegation.rs");
 include!("workflow_pending.rs");

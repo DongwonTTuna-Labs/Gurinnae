@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT person_node_id AS \"person_node_id!\", btrim(topology_digest::text) AS \"topology_digest!\", context_id AS \"context_id!\", contextual_name_ciphertext AS \"contextual_name_ciphertext!\", btrim(contextual_name_sha256::text) AS \"contextual_name_sha256!\", btrim(contextual_name_aad_digest::text) AS \"contextual_name_aad_digest!\", encryption_key_id AS \"encryption_key_id!\", btrim(person_name_digest::text) AS \"person_name_digest!\" FROM core.list_publication_person_names_v1()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "person_node_id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "topology_digest!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "context_id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "contextual_name_ciphertext!",
+        "type_info": "Bytea",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "contextual_name_sha256!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "contextual_name_aad_digest!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "encryption_key_id!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "person_name_digest!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e6f154e5de1a33a5e143c6a831858916fce2bcc7a265f89d8f35dbc8764db096"
+}

@@ -4,6 +4,10 @@ status: FINAL
 terminal_observability_events:
 - job.dead_lettered.v1
 - notification.delivery_completed.v1
+retired_event_types:
+- response.submitted.v1
+- notification.response_submitted.v1
+- workflow.response_submitted.v1
 consumers:
 - id: action-execution-worker
   accepted_event_types:
@@ -22,6 +26,8 @@ consumers:
   accepted_event_types:
   - action.execution_authorized.v1
   - action.execution_completed.v1
+  - editorial.response_materialized.v2
+  - response.submitted.v2
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
@@ -47,9 +53,13 @@ consumers:
   - notification.publication_created.v1
   - notification.response_extension_requested.v1
   - notification.response_request_delivery_requested.v1
-  - notification.response_submitted.v1
+  - notification.response_submitted.v2
   - notification.subscription_verification_requested.v1
   - notification.user_invitation_requested.v1
+  - privacy.request_created.v2
+  - privacy.request_extension_notified.v1
+  - privacy.request_identity_verified.v1
+  - privacy.request_refusal_notified.v1
   - projection.publication_applied.v1
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
@@ -67,6 +77,12 @@ consumers:
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: public-projection-worker
+  accepted_event_types:
+  - entity.retention_anonymized.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: exact immutable execution receipt aggregate version; changed event identity fails closed
 - id: provider-control-execution-worker
   accepted_event_types:
   - action.execution_authorized.v1
@@ -74,9 +90,28 @@ consumers:
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: response-submission-materializer
+  accepted_event_types:
+  - workflow.response_submitted.v2
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: retention-worker
+  accepted_event_types:
+  - privacy.request_decision_recorded.v1
+  dispatch_predicate: payload.transition == APPROVE
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
 - id: scheduler
   accepted_event_types:
   - workflow.rule_activation_applied.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: submission-projector
+  accepted_event_types:
+  - editorial.response_materialized.v2
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
@@ -90,7 +125,6 @@ consumers:
   - detection.signal_created.v1
   - export.dataset_requested.v1
   - source.schema_drift_detected.v1
-  - workflow.response_submitted.v1
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation

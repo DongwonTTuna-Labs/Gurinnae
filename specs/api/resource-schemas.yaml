@@ -275,6 +275,9 @@ resources:
           $ref: '#/components/schemas/CaseStateCounts'
         coverage:
           $ref: '#/components/schemas/CoverageModel'
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
         href:
           type: string
           format: uri-reference
@@ -287,6 +290,7 @@ resources:
       - regionCodeVersion
       - caseCounts
       - coverage
+      - interpretationNotice
       - href
     apis:
     - public-api
@@ -309,10 +313,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   AgencyCasesAppliedFilters:
@@ -346,10 +353,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   AgencyContractsAppliedFilters:
@@ -383,10 +393,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   AgencyResponse:
@@ -437,12 +450,17 @@ resources:
           type: array
           items:
             $ref: '#/components/schemas/ContractSummary'
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
         identityWarnings:
           type: array
           items:
             type: string
         freshness:
           $ref: '#/components/schemas/FreshnessModel'
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - id
       - name
@@ -456,8 +474,10 @@ resources:
       - caseCountsByState
       - recentCases
       - recentContracts
+      - interpretationNotice
       - identityWarnings
       - freshness
+      - seo
     apis:
     - public-api
   AgentRun:
@@ -908,6 +928,9 @@ resources:
           type: string
         version:
           type: integer
+        notice:
+          type: string
+          const: 이상 징후 기록이며 위법·부패의 확정이 아님
         binary:
           type: string
           format: binary
@@ -939,6 +962,11 @@ resources:
           format: date
         groupBy:
           type: string
+        appliedFilters:
+          $ref: '#/components/schemas/ContractsAppliedFilters'
+        generatedAt:
+          type: string
+          format: date-time
       required:
       - id
       - status
@@ -947,6 +975,87 @@ resources:
     - control-api
     - public-api
     - submission-api
+  CaseReproducibilityDownloadAppliedFilters:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        caseSlug:
+          type: string
+          minLength: 1
+      required:
+      - caseSlug
+    apis:
+    - public-api
+  CaseReproducibilityDownload:
+    schema:
+      type: object
+      additionalProperties: false
+      description: |-
+        한 사건의 재현 정보를 내려받는 공개 재배포 산출물. JSON 본문은 notice와 상태별
+        nonConclusion을 최상위에 포함하고, CSV 본문은 notice 한 셀 행 뒤에 헤더와
+        nonConclusion을 포함한 정확히 한 데이터 행을 둔다.
+      properties:
+        id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          const: READY
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        notice:
+          type: string
+          const: 이상 징후 기록이며 위법·부패의 확정이 아님
+        filename:
+          type: string
+          minLength: 1
+        mediaType:
+          type: string
+          minLength: 1
+        byteLength:
+          type: integer
+          format: int64
+          minimum: 1
+        contentSha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        contentBase64:
+          type: string
+          minLength: 1
+        format:
+          type: string
+          enum:
+          - JSON
+          - CSV
+        rowCount:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 1
+        appliedFilters:
+          $ref: '#/components/schemas/CaseReproducibilityDownloadAppliedFilters'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - status
+      - version
+      - notice
+      - filename
+      - mediaType
+      - byteLength
+      - contentSha256
+      - contentBase64
+      - format
+      - rowCount
+      - appliedFilters
+      - generatedAt
+    apis:
+    - public-api
   Blocker:
     schema:
       type: object
@@ -1372,6 +1481,8 @@ resources:
           anyOf:
           - type: string
           - type: 'null'
+        nonConclusion:
+          type: string
         href:
           type: string
           format: uri-reference
@@ -1382,6 +1493,7 @@ resources:
       - summary
       - revision
       - updatedAt
+      - nonConclusion
       - href
     apis:
     - control-api
@@ -1693,6 +1805,10 @@ resources:
           type: array
           items:
             type: string
+        nonConclusion:
+          type: string
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - caseSlug
       - ruleId
@@ -1706,6 +1822,8 @@ resources:
       - excludedCohort
       - result
       - limitations
+      - nonConclusion
+      - seo
     apis:
     - public-api
   CaseResponsesAppliedFilters:
@@ -1804,6 +1922,8 @@ resources:
           format: date-time
         summary:
           type: string
+        nonConclusion:
+          type: string
         href:
           type: string
           format: uri-reference
@@ -1812,6 +1932,7 @@ resources:
       - state
       - publishedAt
       - summary
+      - nonConclusion
       - href
     apis:
     - public-api
@@ -1834,10 +1955,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   CaseSignalsAppliedFilters:
@@ -2742,6 +2866,11 @@ resources:
           type: array
           items:
             $ref: '#/components/schemas/CaseCard'
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - id
       - contractNumber
@@ -2754,6 +2883,8 @@ resources:
       - sourceDocuments
       - normalizationWarnings
       - relatedCases
+      - interpretationNotice
+      - seo
     apis:
     - public-api
   ContractSummary:
@@ -2798,11 +2929,15 @@ resources:
         href:
           type: string
           format: uri-reference
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
       required:
       - id
       - title
       - agency
       - status
+      - interpretationNotice
       - href
     apis:
     - public-api
@@ -2865,10 +3000,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   Correction:
@@ -2901,6 +3039,10 @@ resources:
           items:
             type: string
             format: uuid
+        publicState:
+          type: string
+        nonConclusion:
+          type: string
       required:
       - id
       - caseSlug
@@ -2909,6 +3051,8 @@ resources:
       - reason
       - publishedAt
       - affectedClaims
+      - publicState
+      - nonConclusion
     apis:
     - public-api
   CorrectionQueueAppliedFilters:
@@ -3139,11 +3283,14 @@ resources:
           type: array
           items:
             $ref: '#/components/schemas/Link'
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - id
       - status
       - data
       - links
+      - seo
     apis:
     - public-api
   CorrectionSummary:
@@ -3172,6 +3319,10 @@ resources:
         href:
           type: string
           format: uri-reference
+        publicState:
+          type: string
+        nonConclusion:
+          type: string
       required:
       - id
       - sourceRevision
@@ -3179,6 +3330,8 @@ resources:
       - reason
       - publishedAt
       - href
+      - publicState
+      - nonConclusion
     apis:
     - control-api
     - public-api
@@ -3295,10 +3448,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   CostPoint:
@@ -3898,7 +4054,9 @@ resources:
           type: string
           format: uuid
         name:
-          type: string
+          type:
+          - string
+          - 'null'
         entityType:
           type: string
           enum:
@@ -5387,6 +5545,148 @@ resources:
       - asOf
     apis:
     - control-api
+  LegalHoldTargetBinding:
+    schema:
+      description: Closed union of thirteen supported immutable legal-hold target bindings. AUDIT_SUBJECT_RECORD is deliberately not a binding because no authoritative source relation exists; placeLegalHold recognizes that discriminator and returns LEGAL_HOLD_TARGET_UNSUPPORTED without writes.
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, caseId, reviewSnapshotId, reviewSnapshotDigest]
+        properties:
+          targetKind: {type: string, enum: [CASE]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          caseId: {type: string, format: uuid}
+          reviewSnapshotId: {type: string, format: uuid}
+          reviewSnapshotDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, publicationRevisionId]
+        properties:
+          targetKind: {type: string, enum: [PUBLICATION]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          publicationRevisionId: {type: string, format: uuid}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, evidenceId]
+        properties:
+          targetKind: {type: string, enum: [EVIDENCE]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          evidenceId: {type: string, format: uuid}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, responseId]
+        properties:
+          targetKind: {type: string, enum: [RESPONSE]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          responseId: {type: string, format: uuid}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, sourceDocumentId, sourceAssetId]
+        properties:
+          targetKind: {type: string, enum: [SOURCE_ASSET]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          sourceDocumentId: {type: string, format: uuid}
+          sourceAssetId: {type: string, format: uuid}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, researchArtifactId, researchAssetId]
+        properties:
+          targetKind: {type: string, enum: [RESEARCH_ARTIFACT]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          researchArtifactId: {type: string, format: uuid}
+          researchAssetId: {type: string, format: uuid}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, privacyRequestId, privacyRequestType]
+        properties:
+          targetKind: {type: string, enum: [PRIVACY_REQUEST]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          privacyRequestId: {type: string, format: uuid}
+          privacyRequestType:
+            type: string
+            enum: [ACCESS, CORRECTION, DELETION, RESTRICTION]
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, communicationSubjectId, communicationSubjectOriginDigest]
+        properties:
+          targetKind: {type: string, enum: [COMMUNICATION_SUBJECT]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          communicationSubjectId: {type: string, format: uuid}
+          communicationSubjectOriginDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, entityKind, entityRetentionSnapshotId, entityRetentionSnapshotDigest]
+        properties:
+          targetKind: {type: string, enum: [SUPPLIER_RETENTION_SNAPSHOT]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          entityKind: {type: string, enum: [SUPPLIER]}
+          entityRetentionSnapshotId: {type: string, format: uuid}
+          entityRetentionSnapshotDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+      - type: object
+        additionalProperties: false
+        description: targetId and targetDigest are exactly the immutable correction snapshot ID and digest; targetVersion is that snapshot version.
+        required: [targetKind, targetId, targetVersion, targetDigest, correctionId, correctionSnapshotId, correctionSnapshotDigest]
+        properties:
+          targetKind: {type: string, enum: [CORRECTION]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          correctionId: {type: string, format: uuid}
+          correctionSnapshotId: {type: string, format: uuid}
+          correctionSnapshotDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+      - type: object
+        additionalProperties: false
+        description: targetId and targetDigest are exactly the immutable subscription snapshot ID and digest; targetVersion is that snapshot version.
+        required: [targetKind, targetId, targetVersion, targetDigest, subscriptionId, subscriptionSnapshotId, subscriptionSnapshotDigest]
+        properties:
+          targetKind: {type: string, enum: [SUBSCRIPTION]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          subscriptionId: {type: string, format: uuid}
+          subscriptionSnapshotId: {type: string, format: uuid}
+          subscriptionSnapshotDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+      - type: object
+        additionalProperties: false
+        description: The common target tuple is exactly intake.communication_endpoints(id, version, endpoint_digest); no derived endpoint snapshot digest is accepted.
+        required: [targetKind, targetId, targetVersion, targetDigest, communicationEndpointId]
+        properties:
+          targetKind: {type: string, enum: [COMMUNICATION_ENDPOINT]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          communicationEndpointId: {type: string, format: uuid}
+      - type: object
+        additionalProperties: false
+        required: [targetKind, targetId, targetVersion, targetDigest, entityKind, entityRetentionSnapshotId, entityRetentionSnapshotDigest]
+        properties:
+          targetKind: {type: string, enum: [AGENCY_RETENTION_SNAPSHOT]}
+          targetId: {type: string, format: uuid}
+          targetVersion: {type: integer, format: int64, minimum: 1}
+          targetDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+          entityKind: {type: string, enum: [AGENCY]}
+          entityRetentionSnapshotId: {type: string, format: uuid}
+          entityRetentionSnapshotDigest: {type: string, pattern: '^[a-f0-9]{64}$'}
+    apis:
+    - control-api
   Link:
     schema:
       type: object
@@ -5708,27 +6008,93 @@ resources:
       type: object
       additionalProperties: false
       properties:
-        version:
+        status:
           type: string
-        title:
-          type: string
-        updatedAt:
-          type: string
-          format: date-time
+          const: PUBLISHED
         sections:
           type: array
           items:
             $ref: '#/components/schemas/ContentSection'
-        sourceLinks:
+        retentionSchedules:
           type: array
+          minItems: 1
           items:
-            $ref: '#/components/schemas/Link'
+            $ref: '#/components/schemas/ApprovedRecordClassRetentionSchedule'
       required:
-      - version
-      - title
-      - updatedAt
+      - status
       - sections
-      - sourceLinks
+      - retentionSchedules
+    apis:
+    - public-api
+  ApprovedRecordClassRetentionSchedule:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        recordClass:
+          type: string
+          minLength: 1
+        purpose:
+          type: string
+          minLength: 1
+        lawfulBasis:
+          type: string
+          minLength: 1
+        triggerKind:
+          type: string
+          enum:
+          - CREATED_AT
+          - UPDATED_AT
+          - CONSUMED_AT
+          - EXPIRES_AT
+          - CASE_CLOSED_AT
+          - LAST_MATERIAL_USE_AT
+          - SUPERSEDED_AT
+          - DELIVERED_AT
+          - TERMINAL_AT
+          - CONSENT_REVOKED_AT
+        activeDurationSeconds:
+          anyOf:
+          - type: integer
+            format: int64
+            minimum: 0
+          - type: 'null'
+        backupDurationSeconds:
+          anyOf:
+          - type: integer
+            format: int64
+            minimum: 0
+          - type: 'null'
+        terminalAction:
+          type: string
+          enum:
+          - DELETE
+          - ANONYMIZE
+          - CRYPTO_ERASE
+          - PRESERVE_PUBLIC_REVISION
+          - PRESERVE_REFERENCED_REVISION
+          - PRESERVE_IDENTITY_GRAPH
+          - PRESERVE_WITH_PARENT
+        effectiveAt:
+          type: string
+          format: date-time
+        reviewExpiresAt:
+          type: string
+          format: date-time
+        scheduleDigest:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      required:
+      - recordClass
+      - purpose
+      - lawfulBasis
+      - triggerKind
+      - activeDurationSeconds
+      - backupDurationSeconds
+      - terminalAction
+      - effectiveAt
+      - reviewExpiresAt
+      - scheduleDigest
     apis:
     - public-api
   PrivacyPolicyResponse:
@@ -6110,6 +6476,8 @@ resources:
           type: array
           items:
             $ref: '#/components/schemas/RevisionDiff'
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - slug
       - revision
@@ -6118,6 +6486,7 @@ resources:
       - publishedAt
       - content
       - diffFromPrevious
+      - seo
     apis:
     - public-api
   PublicCaseSnapshot:
@@ -6256,7 +6625,8 @@ resources:
         최대 5,000개 사건 레코드의 동기 내려받기 결과. CSV는
         `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
         이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
-        rowCount는 고지 레코드를 제외한다.
+        rowCount는 고지 레코드를 제외한다. nonConclusionNotices는 데이터 행의 비어 있지 않은
+        nonConclusion을 행 순서대로 중복 제거하고 interpretationNotice는 null이다.
       properties:
         id:
           type: string
@@ -6268,6 +6638,17 @@ resources:
           type: integer
           format: int64
           minimum: 1
+        notice:
+          type: string
+          const: 이상 징후 기록이며 위법·부패의 확정이 아님
+        nonConclusionNotices:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+        interpretationNotice:
+          type: 'null'
         filename:
           type: string
           minLength: 1
@@ -6301,6 +6682,9 @@ resources:
       - id
       - status
       - version
+      - notice
+      - nonConclusionNotices
+      - interpretationNotice
       - filename
       - mediaType
       - byteLength
@@ -6336,10 +6720,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   PublicClaim:
@@ -6378,6 +6765,85 @@ resources:
     apis:
     - control-api
     - public-api
+  PublicContractsDownload:
+    schema:
+      type: object
+      additionalProperties: false
+      description: |-
+        최대 5,000개 계약 레코드의 동기 내려받기 결과. CSV와 JSONL 데이터 행은
+        운영 상태 interpretationNotice를 보존한다. 응답 envelope의 nonConclusionNotices는
+        빈 배열이고 interpretationNotice는 정확한 운영 상태 고지다. CSV와 JSONL의 첫 레코드는
+        공개 재배포 고지를 유지하며 rowCount는 그 고지 레코드를 제외한다.
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+          - READY
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        notice:
+          type: string
+          const: 이상 징후 기록이며 위법·부패의 확정이 아님
+        nonConclusionNotices:
+          type: array
+          maxItems: 0
+          items:
+            type: string
+            minLength: 1
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
+        filename:
+          type: string
+          minLength: 1
+        mediaType:
+          type: string
+        byteLength:
+          type: integer
+          format: int64
+          minimum: 0
+        contentSha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        contentBase64:
+          type: string
+        format:
+          type: string
+          enum:
+          - CSV
+          - JSONL
+        rowCount:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 5000
+        appliedFilters:
+          $ref: '#/components/schemas/ContractsAppliedFilters'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - status
+      - version
+      - notice
+      - nonConclusionNotices
+      - interpretationNotice
+      - filename
+      - mediaType
+      - byteLength
+      - contentSha256
+      - contentBase64
+      - format
+      - rowCount
+      - appliedFilters
+      - generatedAt
+    apis:
+    - public-api
   PublicDatasetsAppliedFilters:
     schema:
       type: object
@@ -6414,6 +6880,9 @@ resources:
           - type: string
             format: uri-reference
           - type: 'null'
+        redistributionNotice:
+          type: string
+          const: 이상 징후 기록이며 위법·부패의 확정이 아님
       required:
       - id
       - title
@@ -6422,6 +6891,7 @@ resources:
       - coverage
       - license
       - updatedAt
+      - redistributionNotice
     apis:
     - public-api
   PublicDatasetsPage:
@@ -6443,10 +6913,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   PublicEvidence:
@@ -6556,7 +7029,8 @@ resources:
         최대 5,000개 검색 결과 레코드의 동기 내려받기 결과. CSV는
         `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
         이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
-        rowCount는 고지 레코드를 제외한다.
+        rowCount는 고지 레코드를 제외한다. nonConclusionNotices와 interpretationNotice는 검색
+        데이터 행에서 서로 다른 의미를 유지한 채 각각 도출한다.
       properties:
         id:
           type: string
@@ -6568,6 +7042,20 @@ resources:
           type: integer
           format: int64
           minimum: 1
+        notice:
+          type: string
+          const: 이상 징후 기록이며 위법·부패의 확정이 아님
+        nonConclusionNotices:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+        interpretationNotice:
+          anyOf:
+          - type: string
+            const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
+          - type: 'null'
         filename:
           type: string
           minLength: 1
@@ -6601,6 +7089,9 @@ resources:
       - id
       - status
       - version
+      - notice
+      - nonConclusionNotices
+      - interpretationNotice
       - filename
       - mediaType
       - byteLength
@@ -6643,10 +7134,21 @@ resources:
         href:
           type: string
           format: uri-reference
+        nonConclusion:
+          anyOf:
+          - type: string
+          - type: 'null'
+        interpretationNotice:
+          anyOf:
+          - type: string
+            const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
+          - type: 'null'
       required:
       - resultType
       - id
       - title
+      - nonConclusion
+      - interpretationNotice
       - href
     apis:
     - public-api
@@ -6669,10 +7171,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   PublicSignalSummary:
@@ -6826,6 +7331,13 @@ resources:
         expiresAt:
           type: string
           format: date-time
+        gateState:
+          type: string
+          enum:
+          - PASS
+          - BLOCKED
+        legalReviewRequired:
+          type: boolean
       required:
       - previewHash
       - caseId
@@ -6834,6 +7346,8 @@ resources:
       - validation
       - renderedRoutes
       - expiresAt
+      - gateState
+      - legalReviewRequired
     apis:
     - control-api
   PublicationReceipt:
@@ -7873,6 +8387,33 @@ resources:
           items:
             type: string
             maxLength: 1000
+        namedIndividualOverride:
+          type: object
+          additionalProperties: false
+          description: Present only for the second, STEP_UP LEGAL_REVIEWER stage; the first independent editorial APPROVE must omit it and grants no publish authority.
+          properties:
+            publicTextSha256:
+              type: string
+              pattern: ^[a-f0-9]{64}$
+            reasonCode:
+              type: string
+              enum:
+              - PUBLIC_FIGURE
+              - OFFICIAL_DISPOSITION_QUOTE
+            officialSourceLocator:
+              type: string
+            officialSourceSha256:
+              type: string
+              pattern: ^[a-f0-9]{64}$
+            editorialReviewDecisionId:
+              type: string
+              format: uuid
+          required:
+          - publicTextSha256
+          - reasonCode
+          - officialSourceLocator
+          - officialSourceSha256
+          - editorialReviewDecisionId
       required:
       - evidenceComplete
       - responsePolicySatisfied
@@ -8488,10 +9029,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   RuleConfiguration:
@@ -8947,6 +9491,8 @@ resources:
           type: string
         description:
           type: string
+        openGraphDescription:
+          type: string
         canonicalUrl:
           type: string
           format: uri-reference
@@ -8959,6 +9505,7 @@ resources:
       required:
       - title
       - description
+      - openGraphDescription
       - canonicalUrl
       - robots
     apis:
@@ -9246,6 +9793,11 @@ resources:
           type: string
         accessType:
           type: string
+        officialUrl:
+          anyOf:
+          - type: string
+            format: uri
+          - type: 'null'
         status:
           type: string
         coverage:
@@ -9256,15 +9808,20 @@ resources:
           type: array
           items:
             type: string
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
       required:
       - sourceId
       - displayName
       - owner
       - accessType
+      - officialUrl
       - status
       - coverage
       - freshness
       - knownIssues
+      - interpretationNotice
     apis:
     - public-api
   SourceContext:
@@ -9327,6 +9884,9 @@ resources:
           type: array
           items:
             $ref: '#/components/schemas/CoverageGap'
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
       required:
       - sourceId
       - displayName
@@ -9335,6 +9895,7 @@ resources:
       - recordCount
       - freshness
       - knownGaps
+      - interpretationNotice
     apis:
     - public-api
   SourceDocumentRef:
@@ -9400,11 +9961,14 @@ resources:
           type: array
           items:
             $ref: '#/components/schemas/Link'
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - id
       - status
       - data
       - links
+      - seo
     apis:
     - public-api
   SourceRun:
@@ -9582,10 +10146,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   SourceStatusSummary:
@@ -9613,10 +10180,14 @@ resources:
           anyOf:
           - type: string
           - type: 'null'
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
       required:
       - sourceId
       - displayName
       - status
+      - interpretationNotice
     apis:
     - control-api
     - public-api
@@ -9763,10 +10334,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   SupplierContractsAppliedFilters:
@@ -9800,10 +10374,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   SupplierResponse:
@@ -9838,12 +10415,17 @@ resources:
           type: array
           items:
             $ref: '#/components/schemas/ContractSummary'
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
         identityWarnings:
           type: array
           items:
             type: string
         freshness:
           $ref: '#/components/schemas/FreshnessModel'
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - id
       - name
@@ -9853,8 +10435,10 @@ resources:
       - caseCountsByState
       - recentCases
       - recentContracts
+      - interpretationNotice
       - identityWarnings
       - freshness
+      - seo
     apis:
     - public-api
   SuppliersAppliedFilters:
@@ -9896,6 +10480,9 @@ resources:
           type: array
           items:
             type: string
+        interpretationNotice:
+          type: string
+          const: 이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.
         href:
           type: string
           format: uri-reference
@@ -9905,6 +10492,7 @@ resources:
       - caseCounts
       - coverage
       - identityWarnings
+      - interpretationNotice
       - href
     apis:
     - public-api
@@ -9927,10 +10515,13 @@ resources:
         asOf:
           type: string
           format: date-time
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
       required:
       - items
       - appliedFilters
       - asOf
+      - seo
     apis:
     - public-api
   TaskAction:
@@ -10039,27 +10630,22 @@ resources:
       type: object
       additionalProperties: false
       properties:
-        version:
+        status:
           type: string
-        title:
-          type: string
-        updatedAt:
-          type: string
-          format: date-time
+          const: PUBLISHED
         sections:
           type: array
           items:
             $ref: '#/components/schemas/ContentSection'
-        sourceLinks:
+        retentionSchedules:
           type: array
+          minItems: 1
           items:
-            $ref: '#/components/schemas/Link'
+            $ref: '#/components/schemas/ApprovedRecordClassRetentionSchedule'
       required:
-      - version
-      - title
-      - updatedAt
+      - status
       - sections
-      - sourceLinks
+      - retentionSchedules
     apis:
     - public-api
   TermsResponse:
@@ -10903,6 +11489,12 @@ resources:
         excerptHash:
           type: string
           pattern: ^[a-f0-9]{64}$
+        publicationForm:
+          type: string
+          enum:
+          - ANONYMOUS
+          - FULL
+          - REDACTED
         reason:
           type: string
         expectedVersion:
@@ -10911,6 +11503,7 @@ resources:
       required:
       - responseId
       - excerptHash
+      - publicationForm
       - reason
       - expectedVersion
     apis:
@@ -13542,61 +14135,51 @@ resources:
       type: object
       additionalProperties: false
       required:
-      - caseId
-      - reviewSnapshotId
-      - objectType
-      - objectId
-      - scope
+      - target
+      - scopeAtoms
+      - affectedIds
       - authorityReference
+      - reasonCode
       - reason
-      - expectedCaseVersion
       properties:
-        caseId:
-          type: string
-          format: uuid
-        reviewSnapshotId:
-          type: string
-          format: uuid
-        objectType:
-          type: string
-          enum:
-          - CASE
-          - PUBLICATION
-          - EVIDENCE
-          - RESPONSE
-        objectId:
-          type: string
-          format: uuid
-        scope:
-          type: string
-          enum:
-          - RETENTION
-          - DISCLOSURE
-          - DELETION
-          - ALL
+        target:
+          $ref: '#/components/schemas/LegalHoldTargetBinding'
+        scopeAtoms:
+          type: array
+          uniqueItems: true
+          minItems: 1
+          maxItems: 3
+          items:
+            type: string
+            enum:
+            - RETENTION
+            - DELETION
+            - DISCLOSURE
         affectedIds:
           type: array
+          uniqueItems: true
+          minItems: 1
+          maxItems: 10000
           items:
             type: string
             format: uuid
-          uniqueItems: true
-          maxItems: 1000
         authorityReference:
           type: string
-          minLength: 3
-          maxLength: 1000
+          minLength: 1
+          maxLength: 500
+        reasonCode:
+          type: string
+          minLength: 1
+          maxLength: 100
         reason:
           type: string
-          minLength: 10
+          minLength: 1
           maxLength: 4000
         expiresAt:
           anyOf:
           - type: string
             format: date-time
           - type: 'null'
-        expectedCaseVersion:
-          type: integer
-          minimum: 1
     apis:
     - control-api
   placeTemporaryRestrictionReceipt:
@@ -13730,6 +14313,31 @@ resources:
           format: uuid
         locale:
           type: string
+        officialConfirmation:
+          type: object
+          additionalProperties: false
+          properties:
+            institution:
+              type: string
+            documentType:
+              type: string
+            documentDate:
+              type: string
+              format: date
+            confirmedScope:
+              type: string
+            sourceLocator:
+              type: string
+            sourceDigest:
+              type: string
+              pattern: ^[a-f0-9]{64}$
+          required:
+          - institution
+          - documentType
+          - documentDate
+          - confirmedScope
+          - sourceLocator
+          - sourceDigest
       required:
       - caseId
       - reviewSnapshotId
@@ -16708,6 +17316,95 @@ resources:
       - status
       - acceptedAt
       - links
+    apis:
+    - control-api
+  verifyResponseOrganizationIdentityReceipt:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId:
+          type: string
+        requestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - accepted
+          - completed
+          - rejected
+        aggregateId:
+          type: string
+        aggregateVersion:
+          type: integer
+          format: int64
+        auditEventId:
+          type: string
+          format: uuid
+        receiptToken:
+          type: string
+        acceptedAt:
+          type: string
+          format: date-time
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        identityAssertionId:
+          type: string
+          format: uuid
+      required:
+      - operationId
+      - requestId
+      - status
+      - acceptedAt
+      - links
+      - identityAssertionId
+    apis:
+    - control-api
+  verifyResponseOrganizationIdentityRequest:
+    schema:
+      type: object
+      additionalProperties: false
+      description: >-
+        Verifies a response organization against one current immutable official-channel authority assertion. The owner revalidates assertion state and the exact underlying authority proof in the transaction; missing authority fails closed.
+      properties:
+        responseId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        publicationForm:
+          type: string
+          enum:
+          - FULL
+          - REDACTED
+        verificationMethod:
+          type: string
+          enum:
+          - OFFICIAL_DOMAIN_EMAIL
+          - OFFICIAL_DOCUMENT
+        officialChannelSourceId:
+          type: string
+          format: uuid
+          description: >-
+            Identifier of the current immutable official-channel authority assertion. It is never a raw communication endpoint verification ID or official document evidence ID.
+        reason:
+          type: string
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+      - responseId
+      - organizationId
+      - publicationForm
+      - verificationMethod
+      - officialChannelSourceId
+      - reason
+      - expectedVersion
     apis:
     - control-api
   verifyResponseAccessRequest:

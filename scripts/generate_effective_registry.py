@@ -31,6 +31,9 @@ from git_authority import (
 
 MIGRATION_RE = re.compile(r"^(\d{4})_[a-z0-9_]+\.sql$")
 EVENT_RE = re.compile(r"^[a-z][a-z0-9_.-]*\.v[0-9]+$")
+EVENT_REFERENCE_FIELDS = frozenset(
+    {"domain_events", "event", "events", "integration_events"}
+)
 SCENARIO_RE = re.compile(r"^\s*#\s*scenario-id:\s*(\S+)\s*$", re.MULTILINE)
 SCENARIO_TITLE_RE = re.compile(r"^\s*Scenario(?: Outline)?:\s*(\S.*)\s*$")
 FOCUSED_FEATURE_RE = re.compile(r"(?im)^\s*@[^\n]*(?:@focus|@focused|@only)\b")
@@ -191,13 +194,37 @@ def row_ids(value: object, key: str, source: str, checks: Checks) -> set[str]:
     return checks.unique(ids, source)
 
 
-def collect_event_tokens(value: object) -> set[str]:
+def _event_tokens_from_field(value: object) -> set[str]:
     if isinstance(value, str):
         return {value} if EVENT_RE.fullmatch(value) else set()
     if isinstance(value, list):
+        return set().union(*(_event_tokens_from_field(item) for item in value), set())
+    if isinstance(value, dict):
+        key_tokens = {
+            key
+            for key in value
+            if isinstance(key, str) and EVENT_RE.fullmatch(key)
+        }
+        value_tokens = set().union(
+            *(_event_tokens_from_field(item) for item in value.values()), set()
+        )
+        return key_tokens | value_tokens
+    return set()
+
+
+def collect_event_tokens(value: object) -> set[str]:
+    """Collect references only from fields that explicitly carry events."""
+
+    if isinstance(value, list):
         return set().union(*(collect_event_tokens(item) for item in value), set())
     if isinstance(value, dict):
-        return set().union(*(collect_event_tokens(item) for item in value.values()), set())
+        references: set[str] = set()
+        for key, item in value.items():
+            if key in EVENT_REFERENCE_FIELDS:
+                references.update(_event_tokens_from_field(item))
+            else:
+                references.update(collect_event_tokens(item))
+        return references
     return set()
 
 
@@ -572,10 +599,26 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     operation_doc = load_yaml(root, "specs/product/addendum-operation-contracts.yaml", checks)
     command_doc = load_yaml(root, "specs/product/addendum-command-semantics.yaml", checks)
     event_doc = load_yaml(root, "specs/product/addendum-event-contracts.yaml", checks)
+    consumer_doc = load_yaml(root, "specs/events/consumer-catalog.yaml", checks)
+    privacy_decision_event_schema_doc = load_yaml(
+        root,
+        "specs/events/payloads/privacy_request_decision_recorded_v1.schema.json",
+        checks,
+    )
+    privacy_extension_event_schema_doc = load_yaml(
+        root,
+        "specs/events/payloads/privacy_request_extension_notified_v1.schema.json",
+        checks,
+    )
     persistence_doc = load_yaml(root, "specs/product/addendum-persistence-contracts.yaml", checks)
     state_doc = load_yaml(root, "specs/product/addendum-state-machines.yaml", checks)
     resource_doc = load_yaml(root, "specs/product/addendum-resource-error-contracts.yaml", checks)
     session_doc = load_yaml(root, "specs/submission/addendum-derived-session-boundary.yaml", checks)
+    session_cookie_payload_doc = load_yaml(
+        root,
+        "specs/cryptography/submission-session-cookie-payload.schema.json",
+        checks,
+    )
     database_doc = load_yaml(root, "specs/database/addendum/global.yaml", checks)
     closure_doc = load_yaml(root, "implementation-evidence/design-screen-closure.yaml", checks)
     domain_doc = load_yaml(root, "implementation-evidence/design-domain-closure.yaml", checks)
@@ -799,6 +842,148 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     checks.equal(additive_commands, exact_commands, "additive command persistence", "operation kind", "persistence")
     checks.equal(additive_commands, operation_dispositions, "additive command state disposition", "commands", "dispositions")
     checks.equal(additive_queries, exact_query, "additive query persistence", "operation kind", "persistence")
+
+    response_identity_public_fields = [
+        "responseId",
+        "organizationId",
+        "publicationForm",
+        "verificationMethod",
+        "officialChannelSourceId",
+        "reason",
+        "expectedVersion",
+    ]
+    response_identity_server_fields = [
+        "_actorAssertionJti",
+        "_actorAssuranceLevel",
+        "_actorEffectiveCapability",
+        "_actorActionDigest",
+        "_actorStepUpAuthorizationId",
+        "_actorIdempotencyKeySha256",
+        "_actorRequestKeySha256",
+    ]
+    response_identity_operation = additive_rows.get(
+        "verifyResponseOrganizationIdentity", {}
+    )
+    response_identity_operation_owner = response_identity_operation.get(
+        "server_derived_owner_input", {}
+    )
+    checks.require(
+        response_identity_operation.get("request", {}).get("required")
+        == response_identity_public_fields
+        and response_identity_operation_owner.get("exact_internal_fields")
+        == response_identity_server_fields,
+        "response_identity_owner_shape",
+        "verifyResponseOrganizationIdentity operation contract",
+        {
+            "public_fields": response_identity_public_fields,
+            "server_fields": response_identity_server_fields,
+        },
+        {
+            "public_fields": response_identity_operation.get("request", {}).get(
+                "required"
+            ),
+            "server_fields": response_identity_operation_owner.get(
+                "exact_internal_fields"
+            ),
+        },
+    )
+    response_identity_command = command_doc.get("external_commands", {}).get(
+        "verifyResponseOrganizationIdentity", {}
+    )
+    response_identity_command_owner = response_identity_command.get(
+        "owner_input", {}
+    )
+    checks.require(
+        response_identity_command_owner.get("public_body_fields")
+        == response_identity_public_fields
+        and response_identity_command_owner.get("server_derived_fields")
+        == response_identity_server_fields
+        and response_identity_command_owner.get("forbidden_public_fields")
+        == response_identity_server_fields,
+        "response_identity_owner_shape",
+        "verifyResponseOrganizationIdentity command semantics",
+        {
+            "public_fields": response_identity_public_fields,
+            "server_fields": response_identity_server_fields,
+        },
+        response_identity_command_owner,
+    )
+    response_identity_persistence = (
+        persistence_doc.get("exact_persistence_registry", {})
+        .get("external_command_persistence", {})
+        .get("verifyResponseOrganizationIdentity", {})
+    )
+    response_identity_persistence_owner = response_identity_persistence.get(
+        "owner_input", {}
+    )
+    checks.require(
+        response_identity_persistence_owner.get("public_fields")
+        == response_identity_public_fields
+        and response_identity_persistence_owner.get("server_derived_fields")
+        == response_identity_server_fields
+        and response_identity_persistence_owner.get("exact_key_count") == 14,
+        "response_identity_owner_shape",
+        "verifyResponseOrganizationIdentity persistence",
+        {
+            "public_fields": response_identity_public_fields,
+            "server_fields": response_identity_server_fields,
+            "exact_key_count": 14,
+        },
+        response_identity_persistence_owner,
+    )
+
+    preservation_actions = {
+        "PRESERVE_REFERENCED_REVISION",
+        "PRESERVE_IDENTITY_GRAPH",
+        "PRESERVE_WITH_PARENT",
+    }
+    action_payload_retention = (
+        resource_doc.get("schemas", {})
+        .get("ActionPayloadV1", {})
+        .get("variants", {})
+        .get("RETENTION_SCHEDULE", {})
+        .get("fields", {})
+        .get("terminalAction", "")
+    )
+    approval_retention = (
+        resource_doc.get("schemas", {})
+        .get("ActionApprovalDetailV1", {})
+        .get("variants", {})
+        .get("RETENTION_SCHEDULE", {})
+        .get("fields", {})
+        .get("terminalAction", "")
+    )
+    schedule_summary_retention = (
+        resource_doc.get("schemas", {})
+        .get("RecordClassScheduleSummaryV1", {})
+        .get("fields", {})
+        .get("terminalAction", "")
+    )
+    for source, expression, expected in (
+        (
+            "ActionPayloadV1.RETENTION_SCHEDULE",
+            action_payload_retention,
+            "enum<DELETE|ANONYMIZE|ARCHIVE|PRESERVE_REFERENCED_REVISION|PRESERVE_IDENTITY_GRAPH|PRESERVE_WITH_PARENT>",
+        ),
+        (
+            "ActionApprovalDetailV1.RETENTION_SCHEDULE",
+            approval_retention,
+            "enum<DELETE|ANONYMIZE|CRYPTO_ERASE|PRESERVE_PUBLIC_REVISION|PRESERVE_REFERENCED_REVISION|PRESERVE_IDENTITY_GRAPH|PRESERVE_WITH_PARENT>",
+        ),
+        (
+            "RecordClassScheduleSummaryV1",
+            schedule_summary_retention,
+            "enum<DELETE|ANONYMIZE|ARCHIVE|PRESERVE_REFERENCED_REVISION|PRESERVE_IDENTITY_GRAPH|PRESERVE_WITH_PARENT>",
+        ),
+    ):
+        checks.require(
+            expression == expected
+            and all(action in expression for action in preservation_actions),
+            "retention_preservation_action_set",
+            source,
+            expected,
+            expression,
+        )
     callback_rows = {
         row["operation_id"]: row
         for row in owner_doc.get("private_communication_gateway_operations", [])
@@ -943,6 +1128,227 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         | collect_event_tokens(domain_doc.get("bindings"))
     )
     checks.subset(event_references, effective_events, "event references")
+
+    privacy_decision_event_type = "privacy.request_decision_recorded.v1"
+    privacy_decision_required = [
+        "retentionRequestId",
+        "decisionVersion",
+        "transition",
+        "priorState",
+        "state",
+        "inventorySnapshotDigest",
+        "holdCoverageDigest",
+        "decisionDigest",
+        "receiptDigest",
+    ]
+    privacy_decision_branches = {
+        ("START_REVIEW", "RECEIVED", "REVIEW", "null"),
+        ("APPROVE", "REVIEW", "APPROVED", "sha256"),
+        ("REJECT", "REVIEW", "REJECTED", "null"),
+    }
+    privacy_decision_event = event_doc.get("events", {}).get(
+        privacy_decision_event_type,
+        {},
+    )
+    privacy_decision_payload = privacy_decision_event.get("payload_schema", {})
+    checks.require(
+        privacy_decision_payload.get("required") == privacy_decision_required
+        and privacy_decision_event.get("payload_required")
+        == privacy_decision_required,
+        "privacy_decision_event_required",
+        privacy_decision_event_type,
+        privacy_decision_required,
+        {
+            "payload_schema.required": privacy_decision_payload.get("required"),
+            "payload_required": privacy_decision_event.get("payload_required"),
+        },
+    )
+
+    def privacy_decision_branch_set(schema: dict[str, object]) -> set[tuple[str, str, str, str]]:
+        branches: set[tuple[str, str, str, str]] = set()
+        for branch in schema.get("oneOf", []):
+            if not isinstance(branch, dict):
+                continue
+            properties = branch.get("properties", {})
+            if not isinstance(properties, dict):
+                continue
+            transition = properties.get("transition", {})
+            prior_state = properties.get("priorState", {})
+            state = properties.get("state", {})
+            inventory = properties.get("inventorySnapshotDigest", {})
+            hold = properties.get("holdCoverageDigest", {})
+            if not all(
+                isinstance(value, dict)
+                for value in (transition, prior_state, state, inventory, hold)
+            ):
+                continue
+            digest_kind = (
+                "null"
+                if inventory.get("type") == hold.get("type") == "null"
+                else "sha256"
+                if inventory.get("$ref") == hold.get("$ref") == "#/$defs/sha256"
+                or (
+                    inventory.get("type") == hold.get("type") == "string"
+                    and inventory.get("pattern")
+                    == hold.get("pattern")
+                    == "^[0-9a-f]{64}$"
+                )
+                else "invalid"
+            )
+            branches.add(
+                (
+                    str(transition.get("const", "")),
+                    str(prior_state.get("const", "")),
+                    str(state.get("const", "")),
+                    digest_kind,
+                )
+            )
+        return branches
+
+    checks.equal(
+        privacy_decision_branch_set(privacy_decision_payload),
+        privacy_decision_branches,
+        "privacy decision event branches",
+        "addendum event contract",
+        "closed branch contract",
+    )
+    checks.require(
+        privacy_decision_event_schema_doc.get("required")
+        == privacy_decision_required,
+        "privacy_decision_event_required",
+        "privacy decision JSON Schema",
+        privacy_decision_required,
+        privacy_decision_event_schema_doc.get("required"),
+    )
+    checks.equal(
+        privacy_decision_branch_set(privacy_decision_event_schema_doc),
+        privacy_decision_branches,
+        "privacy decision event branches",
+        "JSON Schema",
+        "closed branch contract",
+    )
+    privacy_decision_consumers = {
+        str(binding.get("consumer"))
+        for binding in privacy_decision_event.get("consumer_bindings", [])
+        if isinstance(binding, dict)
+    }
+    checks.require(
+        privacy_decision_event.get("consumers") == ["retention-worker"]
+        and privacy_decision_consumers == {"retention-worker"},
+        "privacy_decision_event_consumers",
+        "event contract",
+        {
+            "consumers": ["retention-worker"],
+            "binding_consumers": {"retention-worker"},
+        },
+        {
+            "consumers": privacy_decision_event.get("consumers"),
+            "binding_consumers": privacy_decision_consumers,
+        },
+    )
+    retention_binding = next(
+        (
+            binding
+            for binding in privacy_decision_event.get("consumer_bindings", [])
+            if isinstance(binding, dict)
+            and binding.get("consumer") == "retention-worker"
+        ),
+        {},
+    )
+    checks.require(
+        retention_binding.get("dispatch_predicate")
+        == "payload.transition == APPROVE",
+        "privacy_decision_retention_dispatch",
+        privacy_decision_event_type,
+        "payload.transition == APPROVE",
+        retention_binding.get("dispatch_predicate"),
+    )
+    checks.require(
+        {
+            key: retention_binding.get(key)
+            for key in ("consumer", "physical_service", "module", "handler")
+        }
+        == {
+            "consumer": "retention-worker",
+            "physical_service": "workflow-worker",
+            "module": "retention",
+            "handler": "handle_privacy_request_decision_recorded_v1",
+        },
+        "privacy_decision_physical_consumer",
+        privacy_decision_event_type,
+        {
+            "consumer": "retention-worker",
+            "physical_service": "workflow-worker",
+            "module": "retention",
+            "handler": "handle_privacy_request_decision_recorded_v1",
+        },
+        retention_binding,
+    )
+    consumer_rows = {
+        str(row.get("id")): row
+        for row in consumer_doc.get("consumers", [])
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
+    }
+    privacy_decision_catalog_consumers = {
+        consumer_id
+        for consumer_id, row in consumer_rows.items()
+        if privacy_decision_event_type in row.get("accepted_event_types", [])
+    }
+    checks.equal(
+        privacy_decision_catalog_consumers,
+        {"retention-worker"},
+        "privacy decision consumer catalog",
+        "runtime catalog",
+        "physical event contract",
+    )
+    checks.require(
+        consumer_rows.get("retention-worker", {}).get("dispatch_predicate")
+        == "payload.transition == APPROVE",
+        "privacy_decision_retention_dispatch",
+        "consumer catalog retention-worker",
+        "payload.transition == APPROVE",
+        consumer_rows.get("retention-worker", {}).get("dispatch_predicate"),
+    )
+    privacy_extension_event = event_doc.get("events", {}).get(
+        "privacy.request_extension_notified.v1",
+        {},
+    )
+    privacy_extension_properties = privacy_extension_event.get(
+        "payload_schema", {},
+    ).get("properties", {})
+    privacy_extension_json_properties = privacy_extension_event_schema_doc.get(
+        "properties", {},
+    )
+    expected_extension_days_shape = {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 365,
+    }
+    expected_extension_sequence_shape = {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10,
+    }
+    for source, properties in (
+        ("addendum event contract", privacy_extension_properties),
+        ("privacy extension JSON Schema", privacy_extension_json_properties),
+    ):
+        checks.require(
+            properties.get("extensionBusinessDays")
+            == expected_extension_days_shape,
+            "privacy_extension_structural_days_bound",
+            source,
+            expected_extension_days_shape,
+            properties.get("extensionBusinessDays"),
+        )
+        checks.require(
+            properties.get("extensionSequence")
+            == expected_extension_sequence_shape,
+            "privacy_extension_structural_sequence_bound",
+            source,
+            expected_extension_sequence_shape,
+            properties.get("extensionSequence"),
+        )
 
     base_tables = {
         f"{row.get('schema')}.{row.get('table')}"
@@ -1102,6 +1508,443 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         if isinstance(kind, str)
     } if isinstance(cookie_profiles, dict) else set()
     checks.equal(derived_sessions, cookie_kinds, "derived session cookies", "sessions", "cookie profiles")
+    payload_session_kinds = checks.unique(
+        session_cookie_payload_doc.get("properties", {})
+        .get("sessionKind", {})
+        .get("enum", []),
+        "submission session cookie payload kinds",
+    )
+    checks.equal(
+        base_sessions | derived_sessions,
+        payload_session_kinds,
+        "effective submission session cookie payload",
+        "session contracts",
+        "payload schema",
+    )
+    privacy_cookie_profile = (
+        cookie_profiles.get("privacy_request_receipt", {})
+        if isinstance(cookie_profiles, dict)
+        else {}
+    )
+    expected_privacy_cookie_profile = {
+        "name": "gurine_privacy_request_receipt_session",
+        "path": "/privacy",
+        "session_kinds": ["PRIVACY_REQUEST_RECEIPT"],
+        "ttl_source": "privacy_request_receipt_access_policy.readOnlySessionTtlSeconds",
+    }
+    checks.require(
+        privacy_cookie_profile == expected_privacy_cookie_profile,
+        "privacy_receipt_cookie_profile",
+        "derived session cookie profile",
+        expected_privacy_cookie_profile,
+        privacy_cookie_profile,
+    )
+    privacy_overlay_profile = {
+        "name": "gurine_privacy_request_receipt_session",
+        "path": "/privacy",
+        "kinds": ["PRIVACY_REQUEST_RECEIPT"],
+    }
+    command_privacy_profile = (
+        command_doc.get("derived_session_contract", {})
+        .get("cookie_profiles", {})
+        .get("privacy_request_receipt", {})
+    )
+    persistence_privacy_profile = (
+        persistence_doc.get("derived_session_persistence_overlay", {})
+        .get("cookie_profiles", {})
+        .get("privacy_request_receipt", {})
+    )
+    for source, actual in (
+        ("command semantics privacy cookie profile", command_privacy_profile),
+        ("persistence privacy cookie profile", persistence_privacy_profile),
+    ):
+        checks.require(
+            actual == privacy_overlay_profile,
+            "privacy_receipt_cookie_profile",
+            source,
+            privacy_overlay_profile,
+            actual,
+        )
+    privacy_session_schema = resource_doc.get("schemas", {}).get(
+        "PrivacyRequestSessionReceiptV1",
+        {},
+    )
+    checks.require(
+        privacy_session_schema.get("fields", {}).get("cookieName")
+        == "const<gurine_privacy_request_receipt_session>",
+        "privacy_receipt_cookie_name",
+        "PrivacyRequestSessionReceiptV1.cookieName",
+        "const<gurine_privacy_request_receipt_session>",
+        privacy_session_schema.get("fields", {}).get("cookieName"),
+    )
+    privacy_policy_key = "privacy_request_receipt_access_policy"
+    privacy_policy_schema_version = "privacy-request-receipt-access-policy-v1"
+    privacy_policy_schema_name = "PrivacyRequestAccessPolicyV1"
+    privacy_policy_operations = {
+        "createPrivacyRequest",
+        "exchangePrivacyRequestReceiptToken",
+    }
+    expected_privacy_policy_fields = {
+        "tokenTtlSeconds": "int64[1..max]",
+        "readOnlySessionTtlSeconds": "int64[1..max]",
+        "cookieProfileId": "const<privacy_request_receipt>",
+        "cookieName": "const<gurine_privacy_request_receipt_session>",
+        "cookiePath": "const</privacy>",
+        "allowedOperations": "unique-array<const<getPrivacyRequest>>[1..1]",
+    }
+    expected_privacy_policy_physical_binding = {
+        "relation": "ops.privacy_request_access_policies_v1",
+        "primary_key": ["policy_id", "revision"],
+        "receipt_binding_key": [
+            "policy_id",
+            "revision",
+            "policy_digest",
+            "binding_digest",
+        ],
+        "version_column": "revision",
+        "lifecycle_state_column": "state",
+        "approved_state": "APPROVED",
+        "policy_version_column": "policy_version",
+        "policy_digest_column": "policy_digest",
+        "binding_digest_column": "binding_digest",
+        "authority_column": "authority",
+        "test_only_authority": "TEST_ONLY",
+        "effective_at_column": "effective_at",
+        "review_expires_at_column": "review_expires_at",
+        "selector": "ops.current_privacy_request_access_policy_v1(timestamptz)",
+        "production_preflight": "ops.preflight_privacy_request_access_policy_v1(timestamptz)",
+    }
+    resource_privacy_policy = resource_doc.get(privacy_policy_key, {})
+    checks.require(
+        resource_privacy_policy.get("schema_version")
+        == privacy_policy_schema_version,
+        "privacy_receipt_policy_schema_version",
+        "resource privacy receipt access policy",
+        privacy_policy_schema_version,
+        resource_privacy_policy.get("schema_version"),
+    )
+    checks.require(
+        resource_privacy_policy.get("payload_schema") == privacy_policy_schema_name,
+        "privacy_receipt_policy_schema",
+        "resource privacy receipt access policy",
+        privacy_policy_schema_name,
+        resource_privacy_policy.get("payload_schema"),
+    )
+    checks.require(
+        "privacy_access_policy_failure_mapping" not in resource_doc,
+        "privacy_receipt_policy_duplicate_authority",
+        "resource privacy receipt access policy",
+        "single canonical authority",
+        "privacy_access_policy_failure_mapping",
+    )
+    expected_privacy_policy_selection = {
+        "operations": sorted(privacy_policy_operations),
+        "cardinality": "EXACTLY_ONE",
+        "required_state": ["CURRENT", "APPROVED", "EFFECTIVE", "UNEXPIRED"],
+        "failure": "zero, duplicate, expired or otherwise non-current matches fail closed before any write",
+    }
+    checks.require(
+        resource_privacy_policy.get("selection")
+        == expected_privacy_policy_selection,
+        "privacy_receipt_policy_selection",
+        "resource privacy receipt access policy",
+        expected_privacy_policy_selection,
+        resource_privacy_policy.get("selection"),
+    )
+    checks.require(
+        resource_privacy_policy.get("physical_binding_status") == "FINAL"
+        and resource_privacy_policy.get("physical_binding")
+        == expected_privacy_policy_physical_binding,
+        "privacy_receipt_policy_physical_binding",
+        "resource privacy receipt access policy",
+        {
+            "physical_binding_status": "FINAL",
+            "physical_binding": expected_privacy_policy_physical_binding,
+        },
+        {
+            "physical_binding_status": resource_privacy_policy.get(
+                "physical_binding_status"
+            ),
+            "physical_binding": resource_privacy_policy.get("physical_binding"),
+        },
+    )
+    checks.require(
+        resource_privacy_policy.get("unavailable_result", {}).get("code")
+        == "DEPENDENCY_UNAVAILABLE"
+        and resource_privacy_policy.get("unavailable_result", {}).get(
+            "http_status"
+        )
+        == 503,
+        "privacy_receipt_policy_unavailable_error",
+        "resource privacy receipt access policy",
+        {"code": "DEPENDENCY_UNAVAILABLE", "http_status": 503},
+        resource_privacy_policy.get("unavailable_result"),
+    )
+    checks.require(
+        resource_privacy_policy.get("seed_contract", {}).get("production_seed")
+        == "FORBIDDEN"
+        and isinstance(
+            resource_privacy_policy.get("seed_contract", {}).get("test_values"),
+            str,
+        )
+        and resource_privacy_policy.get("seed_contract", {})
+        .get("test_values", "")
+        .startswith("fixture-only"),
+        "privacy_receipt_policy_seed",
+        "resource privacy receipt access policy",
+        {"production_seed": "FORBIDDEN", "test_values": "fixture-only"},
+        resource_privacy_policy.get("seed_contract"),
+    )
+    exchange_boundary_policy = resource_doc.get(
+        "privacy_request_receipt_exchange_boundary",
+        {},
+    ).get("access_policy", {})
+    checks.require(
+        exchange_boundary_policy
+        == {
+            "logical_authority": privacy_policy_key,
+            "schema": privacy_policy_schema_name,
+            "schema_version": privacy_policy_schema_version,
+        },
+        "privacy_receipt_policy_duplicate_authority",
+        "privacy request receipt exchange boundary",
+        {
+            "logical_authority": privacy_policy_key,
+            "schema": privacy_policy_schema_name,
+            "schema_version": privacy_policy_schema_version,
+        },
+        exchange_boundary_policy,
+    )
+    checks.require(
+        resource_privacy_policy.get("exact_payload_keys")
+        == list(expected_privacy_policy_fields),
+        "privacy_receipt_policy_payload_keys",
+        "resource privacy receipt access policy",
+        list(expected_privacy_policy_fields),
+        resource_privacy_policy.get("exact_payload_keys"),
+    )
+    privacy_policy_schema = resource_doc.get("schemas", {}).get(
+        privacy_policy_schema_name,
+        {},
+    )
+    checks.require(
+        privacy_policy_schema.get("schema_version")
+        == privacy_policy_schema_version
+        and privacy_policy_schema.get("additional_properties") is False,
+        "privacy_receipt_policy_open_schema",
+        privacy_policy_schema_name,
+        {
+            "schema_version": privacy_policy_schema_version,
+            "additional_properties": False,
+        },
+        {
+            "schema_version": privacy_policy_schema.get("schema_version"),
+            "additional_properties": privacy_policy_schema.get(
+                "additional_properties"
+            ),
+        },
+    )
+    checks.require(
+        privacy_policy_schema.get("fields") == expected_privacy_policy_fields,
+        "privacy_receipt_policy_schema_fields",
+        privacy_policy_schema_name,
+        expected_privacy_policy_fields,
+        privacy_policy_schema.get("fields"),
+    )
+    command_privacy_policy = command_doc.get("shared_contracts", {}).get(
+        privacy_policy_key,
+        {},
+    )
+    checks.require(
+        command_privacy_policy.get("schema_version")
+        == privacy_policy_schema_version,
+        "privacy_receipt_policy_schema_version",
+        "command privacy receipt access policy",
+        privacy_policy_schema_version,
+        command_privacy_policy.get("schema_version"),
+    )
+    checks.require(
+        command_privacy_policy.get("payload_schema")
+        == f"specs/product/addendum-resource-error-contracts.yaml#schemas.{privacy_policy_schema_name}",
+        "privacy_receipt_policy_schema",
+        "command privacy receipt access policy",
+        privacy_policy_schema_name,
+        command_privacy_policy.get("payload_schema"),
+    )
+    checks.require(
+        command_privacy_policy.get("additional_properties") is False,
+        "privacy_receipt_policy_open_payload",
+        "command privacy receipt access policy",
+        False,
+        command_privacy_policy.get("additional_properties"),
+    )
+    checks.require(
+        command_privacy_policy.get("exact_payload_keys")
+        == list(expected_privacy_policy_fields),
+        "privacy_receipt_policy_payload_keys",
+        "command privacy receipt access policy",
+        list(expected_privacy_policy_fields),
+        command_privacy_policy.get("exact_payload_keys"),
+    )
+    checks.require(
+        command_privacy_policy.get("payload_contract")
+        == expected_privacy_policy_fields,
+        "privacy_receipt_policy_payload",
+        "command privacy receipt access policy",
+        expected_privacy_policy_fields,
+        command_privacy_policy.get("payload_contract"),
+    )
+    checks.require(
+        command_privacy_policy.get("physical_binding_status") == "FINAL"
+        and command_privacy_policy.get("physical_binding")
+        == expected_privacy_policy_physical_binding,
+        "privacy_receipt_policy_physical_binding",
+        "command privacy receipt access policy",
+        {
+            "physical_binding_status": "FINAL",
+            "physical_binding": expected_privacy_policy_physical_binding,
+        },
+        {
+            "physical_binding_status": command_privacy_policy.get(
+                "physical_binding_status"
+            ),
+            "physical_binding": command_privacy_policy.get("physical_binding"),
+        },
+    )
+    checks.require(
+        command_privacy_policy.get("production_seed") == "FORBIDDEN"
+        and command_privacy_policy.get("test_values") == "FIXTURE_ONLY",
+        "privacy_receipt_policy_seed",
+        "command privacy receipt access policy",
+        {"production_seed": "FORBIDDEN", "test_values": "FIXTURE_ONLY"},
+        {
+            "production_seed": command_privacy_policy.get("production_seed"),
+            "test_values": command_privacy_policy.get("test_values"),
+        },
+    )
+    checks.require(
+        set(command_privacy_policy.get("operations", []))
+        == privacy_policy_operations,
+        "privacy_receipt_policy_operations",
+        "command privacy receipt access policy",
+        sorted(privacy_policy_operations),
+        command_privacy_policy.get("operations"),
+    )
+    exact_external_persistence = persistence_doc.get(
+        "exact_persistence_registry",
+        {},
+    ).get("external_command_persistence", {})
+    for operation_id in sorted(privacy_policy_operations):
+        operation_row = additive_rows.get(operation_id, {})
+        command_row = command_doc.get("external_commands", {}).get(operation_id, {})
+        persistence_row = exact_external_persistence.get(operation_id, {})
+        resource_errors = resource_doc.get("operation_error_sets", {}).get(
+            operation_id,
+            [],
+        )
+        checks.require(
+            command_row.get("access_policy_contract") == privacy_policy_key,
+            "privacy_receipt_policy_import",
+            f"command {operation_id}",
+            privacy_policy_key,
+            command_row.get("access_policy_contract"),
+        )
+        checks.require(
+            persistence_row.get("access_policy", {}).get("logical_contract")
+            == f"specs/product/addendum-command-semantics.yaml#shared_contracts.{privacy_policy_key}",
+            "privacy_receipt_policy_import",
+            f"persistence {operation_id}",
+            privacy_policy_key,
+            persistence_row.get("access_policy", {}).get("logical_contract"),
+        )
+        checks.require(
+            persistence_row.get("access_policy", {}).get("schema_version")
+            == privacy_policy_schema_version,
+            "privacy_receipt_policy_schema_version",
+            f"persistence {operation_id}",
+            privacy_policy_schema_version,
+            persistence_row.get("access_policy", {}).get("schema_version"),
+        )
+        checks.require(
+            persistence_row.get("access_policy", {}).get(
+                "physical_binding_status"
+            )
+            == "FINAL"
+            and persistence_row.get("access_policy", {}).get("physical_binding")
+            == expected_privacy_policy_physical_binding,
+            "privacy_receipt_policy_physical_binding",
+            f"persistence {operation_id}",
+            {
+                "physical_binding_status": "FINAL",
+                "physical_binding": expected_privacy_policy_physical_binding,
+            },
+            persistence_row.get("access_policy", {}),
+        )
+        for source, codes in (
+            (f"operation {operation_id}", operation_row.get("errors", [])),
+            (
+                f"command {operation_id}",
+                command_row.get("errors", {}).get("exact_codes", []),
+            ),
+            (f"persistence {operation_id}", persistence_row.get("errors", [])),
+            (f"resource {operation_id}", resource_errors),
+        ):
+            checks.require(
+                "DEPENDENCY_UNAVAILABLE" in codes,
+                "privacy_receipt_policy_unavailable_error",
+                source,
+                "DEPENDENCY_UNAVAILABLE",
+                codes,
+            )
+    privacy_state_policy = (
+        state_doc.get("machines", {})
+        .get("privacy_request", {})
+        .get("access_policy", {})
+    )
+    checks.require(
+        privacy_state_policy.get("logical_contract") == privacy_policy_key
+        and privacy_state_policy.get("schema_version")
+        == privacy_policy_schema_version
+        and privacy_state_policy.get("physical_binding_status") == "FINAL"
+        and privacy_state_policy.get("physical_binding")
+        == expected_privacy_policy_physical_binding,
+        "privacy_receipt_policy_state_binding",
+        "privacy request state machine",
+        {
+            "logical_contract": privacy_policy_key,
+            "schema_version": privacy_policy_schema_version,
+            "physical_binding_status": "FINAL",
+            "physical_binding": expected_privacy_policy_physical_binding,
+        },
+        {
+            "logical_contract": privacy_state_policy.get("logical_contract"),
+            "schema_version": privacy_state_policy.get("schema_version"),
+            "physical_binding_status": privacy_state_policy.get(
+                "physical_binding_status"
+            ),
+            "physical_binding": privacy_state_policy.get("physical_binding"),
+        },
+    )
+    privacy_derived_policy = derived_rows.get("PRIVACY_REQUEST_RECEIPT", {}).get(
+        "access_policy",
+        {},
+    )
+    checks.require(
+        privacy_derived_policy.get("logical_authority")
+        == f"specs/product/addendum-command-semantics.yaml#shared_contracts.{privacy_policy_key}"
+        and privacy_derived_policy.get("schema_version")
+        == privacy_policy_schema_version,
+        "privacy_receipt_policy_session_binding",
+        "derived privacy request receipt session",
+        {
+            "logical_authority": privacy_policy_key,
+            "schema_version": privacy_policy_schema_version,
+        },
+        {
+            "logical_authority": privacy_derived_policy.get("logical_authority"),
+            "schema_version": privacy_derived_policy.get("schema_version"),
+        },
+    )
     checks.subset(derived_session_operations, owner_additive, "derived session operation references")
 
     machines = mapping_keys(state_doc.get("machines"), "additive state machines", checks)

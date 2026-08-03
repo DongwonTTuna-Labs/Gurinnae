@@ -1,0 +1,83 @@
+{
+  "fixtureAuthority": "TEST_ONLY",
+  "privacy": {
+    "status": "PUBLISHED",
+    "sections": [
+      {
+        "id": "controller",
+        "heading": "처리자",
+        "body": "TEST_ONLY 운영 법인 fixture-operator-entity · 개인정보처리자 fixture-privacy-controller · 개인정보 보호책임자 fixture-privacy-office · 공개 문의 fixture-privacy-contact"
+      },
+      {
+        "id": "categories",
+        "heading": "정보 범주",
+        "body": "TEST_ONLY 승인 처리 목록에 결속된 정보 범주"
+      },
+      {
+        "id": "purposes",
+        "heading": "목적·법적 근거",
+        "body": "TEST_ONLY 승인 처리 목록에 결속된 목적·법적 근거"
+      },
+      {
+        "id": "retention",
+        "heading": "보존",
+        "body": "TEST_ONLY 승인 보존 일정에서 요청 시점에 생성되는 보존 표"
+      },
+      {
+        "id": "processors",
+        "heading": "처리위탁·국외",
+        "body": "TEST_ONLY 승인 근거에 결속된 처리위탁·국외 이전 항목"
+      },
+      {
+        "id": "rights",
+        "heading": "권리",
+        "body": "TEST_ONLY 신원 확인 완료 시점과 버전드 개인정보 응답 달력에 결속된 권리행사 기한"
+      },
+      {
+        "id": "security",
+        "heading": "보호",
+        "body": "TEST_ONLY 구현 근거에 결속된 목적 제한·최소 수집·암호화·접근 통제·감사 영수증"
+      },
+      {
+        "id": "history",
+        "heading": "변경 이력",
+        "body": "TEST_ONLY 문서 버전·효력 시점·이전 버전 보존 이력"
+      }
+    ]
+  },
+  "terms": {
+    "status": "PUBLISHED",
+    "sections": [
+      {
+        "id": "service",
+        "heading": "서비스 조건",
+        "body": "TEST_ONLY 운영 법인 fixture-operator-entity. 공개 정보는 이상 징후를 설명하기 위한 기록이며 위법·부패의 자동 판정이 아닙니다."
+      },
+      {
+        "id": "content",
+        "heading": "콘텐츠",
+        "body": "TEST_ONLY 공개 revision과 근거 출처, 확인·미확인·소명 상태를 함께 유지합니다."
+      },
+      {
+        "id": "data",
+        "heading": "데이터·공개 인터페이스",
+        "body": "TEST_ONLY 출처별 이용 조건과 권리를 따릅니다. 재배포물에 원 자료의 공개·검토·정정 상태를 유지해야 합니다. 재배포물에 \"이상 징후 기록이며 위법·부패의 확정이 아님\" 고지를 유지해야 합니다. 정정·철회가 게시되면 재배포물에도 해당 표시를 반영하거나 최신 revision으로 연결해야 합니다."
+      },
+      {
+        "id": "prohibited",
+        "heading": "금지",
+        "body": "TEST_ONLY 개인정보 재식별·접근 통제 우회·명예를 해치는 문맥 조작 금지"
+      },
+      {
+        "id": "liability",
+        "heading": "책임·한계",
+        "body": "TEST_ONLY 공개 기록은 단독 법률 판단 근거가 아닌 원문·최신 revision 확인 보조 자료"
+      },
+      {
+        "id": "changes",
+        "heading": "변경",
+        "body": "TEST_ONLY 공개 문의 fixture-privacy-contact · 문서 버전·효력 시점·이전 버전 보존"
+      }
+    ]
+  }
+}

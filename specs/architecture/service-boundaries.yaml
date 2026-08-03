@@ -35,6 +35,7 @@ services:
     replay_guard: ops.assertion_replay_guard via ops.consume_assertion_jti
     raw_step_up_proof_access: false
     step_up_enforcement: non-null actionDigest and stepUpAuthorizationId claims only for operations whose assurance level is STEP_UP
+    conditional_capability_enforcement: for submitReview, recompute criteria.namedIndividualOverride presence from the exact asserted body and require the signed requiredCapability to be review.editorial when absent or review.legal when present before authorization, audit or dispatch; mismatch is CAPABILITY_DENIED, and this selector never replaces the independent decision-based assurance policy
 - id: identity-api
   kind: actix-http-private
   db_role: gurine_identity_api
@@ -50,6 +51,7 @@ services:
   - opaque session lifecycle
   - action-bound step-up proofs
   - signed actor assertions
+  - authorize and sign the one Review Console-derived submitReview requiredCapability already bound to downstream bodySha256; no duplicate downstream body or capability any-of is accepted
   public_ingress: false
   authentication:
     accepted_credential: X-Gurine-Service-Assertion only on private routes
@@ -196,6 +198,9 @@ services:
   network:
   - internal
   external_egress: []
+  authentication:
+    conditional_capability_derivation: for submitReview derive exactly review.editorial when criteria.namedIndividualOverride is absent and exactly review.legal when present from the same downstream bytes used for bodySha256, then send that single value as issueActorAssertion.requiredCapability; independently derive requiredAssuranceLevel from the existing decision policy so APPROVE remains STEP_UP with or without the override
+    capability_any_of: forbidden
 - id: response-portal
   kind: sveltekit-ssr-bff
   api_clients:

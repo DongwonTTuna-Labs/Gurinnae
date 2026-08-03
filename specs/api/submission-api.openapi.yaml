@@ -4693,16 +4693,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseAppealReceiptV1'
-        '422':
-          description: 'Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID,
-            APPEAL_WINDOW_CLOSED'
+        '401':
+          description: 'Problem response: SCOPED_SESSION_REQUIRED'
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - SCOPED_SESSION_REQUIRED
+        '403':
+          description: 'Problem response: APPEAL_SCOPE_INVALID'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
           - APPEAL_SCOPE_INVALID
+        '422':
+          description: 'Problem response: APPEAL_WINDOW_CLOSED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
           - APPEAL_WINDOW_CLOSED
         '409':
           description: 'Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT'
@@ -4759,15 +4772,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResponseAppealPublicStatusV1'
-        '422':
-          description: 'Problem response: SCOPED_SESSION_REQUIRED, APPEAL_SCOPE_INVALID'
+        '401':
+          description: 'Problem response: SCOPED_SESSION_REQUIRED'
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - SCOPED_SESSION_REQUIRED
-          - APPEAL_SCOPE_INVALID
         '404':
           description: 'Problem response: RESOURCE_NOT_FOUND'
           content:
@@ -4776,6 +4788,14 @@ paths:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - RESOURCE_NOT_FOUND
+        '403':
+          description: 'Problem response: APPEAL_SCOPE_INVALID'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - APPEAL_SCOPE_INVALID
         '500':
           description: 'Problem response: INTERNAL_ERROR'
           content:
@@ -4825,28 +4845,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunicationEndpointLinkRequestedReceiptV1'
-        '422':
-          description: 'Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_TYPE_UNSUPPORTED,
-            ENDPOINT_ALREADY_LINKED, CONSENT_INVALID, ABUSE_PROOF_INVALID'
+        '401':
+          description: 'Problem response: SCOPED_SESSION_REQUIRED'
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - SCOPED_SESSION_REQUIRED
-          - ENDPOINT_TYPE_UNSUPPORTED
-          - ENDPOINT_ALREADY_LINKED
-          - CONSENT_INVALID
-          - ABUSE_PROOF_INVALID
-        '409':
-          description: 'Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT'
+        '422':
+          description: 'Problem response: ENDPOINT_TYPE_UNSUPPORTED'
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
+          - ENDPOINT_TYPE_UNSUPPORTED
+        '409':
+          description: 'Problem response: ENDPOINT_ALREADY_LINKED, VERSION_CONFLICT,
+            IDEMPOTENCY_CONFLICT'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - ENDPOINT_ALREADY_LINKED
           - VERSION_CONFLICT
           - IDEMPOTENCY_CONFLICT
+        '403':
+          description: 'Problem response: CONSENT_INVALID, ABUSE_PROOF_INVALID'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - CONSENT_INVALID
+          - ABUSE_PROOF_INVALID
         '500':
           description: 'Problem response: INTERNAL_ERROR'
           content:
@@ -4896,9 +4930,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunicationEndpointVerifiedReceiptV1'
-        '422':
+        '401':
           description: 'Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_CHALLENGE_INVALID,
-            ENDPOINT_CHALLENGE_EXPIRED, ENDPOINT_PROOF_INVALID'
+            ENDPOINT_CHALLENGE_EXPIRED'
           content:
             application/problem+json:
               schema:
@@ -4907,6 +4941,13 @@ paths:
           - SCOPED_SESSION_REQUIRED
           - ENDPOINT_CHALLENGE_INVALID
           - ENDPOINT_CHALLENGE_EXPIRED
+        '403':
+          description: 'Problem response: ENDPOINT_PROOF_INVALID'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
           - ENDPOINT_PROOF_INVALID
         '409':
           description: 'Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT'
@@ -4965,24 +5006,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommunicationEndpointUnlinkedReceiptV1'
-        '422':
-          description: 'Problem response: SCOPED_SESSION_REQUIRED, ENDPOINT_NOT_FOUND,
-            ENDPOINT_VERSION_CONFLICT'
+        '401':
+          description: 'Problem response: SCOPED_SESSION_REQUIRED'
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - SCOPED_SESSION_REQUIRED
-          - ENDPOINT_NOT_FOUND
-          - ENDPOINT_VERSION_CONFLICT
-        '409':
-          description: 'Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT'
+        '404':
+          description: 'Problem response: ENDPOINT_NOT_FOUND'
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
+          - ENDPOINT_NOT_FOUND
+        '409':
+          description: 'Problem response: ENDPOINT_VERSION_CONFLICT, VERSION_CONFLICT,
+            IDEMPOTENCY_CONFLICT'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - ENDPOINT_VERSION_CONFLICT
           - VERSION_CONFLICT
           - IDEMPOTENCY_CONFLICT
         '500':
@@ -5029,6 +5077,7 @@ paths:
       - ABUSE_PROOF_INVALID
       - RATE_LIMITED
       - IDEMPOTENCY_CONFLICT
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
       security:
       - BffServiceAssertion: []
@@ -5047,17 +5096,30 @@ paths:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - INVALID_PARAMETER
-        '422':
-          description: 'Problem response: IDENTITY_PROOF_INVALID, PRIVACY_SCOPE_INVALID,
-            ABUSE_PROOF_INVALID, RATE_LIMITED'
+        '403':
+          description: 'Problem response: IDENTITY_PROOF_INVALID, ABUSE_PROOF_INVALID'
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - IDENTITY_PROOF_INVALID
-          - PRIVACY_SCOPE_INVALID
           - ABUSE_PROOF_INVALID
+        '422':
+          description: 'Problem response: PRIVACY_SCOPE_INVALID'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - PRIVACY_SCOPE_INVALID
+        '429':
+          description: 'Problem response: RATE_LIMITED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
           - RATE_LIMITED
         '409':
           description: 'Problem response: IDEMPOTENCY_CONFLICT'
@@ -5067,6 +5129,14 @@ paths:
                 $ref: '#/components/schemas/AddendumProblemDetailsV1'
           x-error-codes:
           - IDEMPOTENCY_CONFLICT
+        '503':
+          description: 'Problem response: DEPENDENCY_UNAVAILABLE'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - DEPENDENCY_UNAVAILABLE
         '500':
           description: 'Problem response: INTERNAL_ERROR'
           content:
@@ -5097,13 +5167,13 @@ paths:
       - addendum
       x-operation-kind: COMMAND
       x-capability: none
-      x-assurance-level: SCOPED_TOKEN
+      x-assurance-level: ONE_TIME_PROOF
       x-error-codes:
       - TOKEN_INVALID
       - TOKEN_EXPIRED
       - TOKEN_REPLAYED
-      - ABUSE_PROOF_INVALID
       - RATE_LIMITED
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
       security:
       - BffServiceAssertion: []
@@ -5114,9 +5184,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PrivacyRequestSessionReceiptV1'
-        '422':
-          description: 'Problem response: TOKEN_INVALID, TOKEN_EXPIRED, TOKEN_REPLAYED,
-            ABUSE_PROOF_INVALID, RATE_LIMITED'
+        '401':
+          description: 'Problem response: TOKEN_INVALID, TOKEN_EXPIRED'
           content:
             application/problem+json:
               schema:
@@ -5124,9 +5193,30 @@ paths:
           x-error-codes:
           - TOKEN_INVALID
           - TOKEN_EXPIRED
+        '409':
+          description: 'Problem response: TOKEN_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
           - TOKEN_REPLAYED
-          - ABUSE_PROOF_INVALID
+        '429':
+          description: 'Problem response: RATE_LIMITED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
           - RATE_LIMITED
+        '503':
+          description: 'Problem response: DEPENDENCY_UNAVAILABLE'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AddendumProblemDetailsV1'
+          x-error-codes:
+          - DEPENDENCY_UNAVAILABLE
         '500':
           description: 'Problem response: INTERNAL_ERROR'
           content:
@@ -5171,8 +5261,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PrivacyRequestPublicStatusV1'
-        '422':
+                $ref: '#/components/schemas/PrivacyRequestPublicStatusV2'
+        '401':
           description: 'Problem response: SCOPED_SESSION_REQUIRED'
           content:
             application/problem+json:
@@ -7116,6 +7206,7 @@ components:
         expectedReceiptVersion:
           type: integer
           format: int64
+          minimum: 1
         reasonCode:
           type: string
           enum:
@@ -7135,10 +7226,16 @@ components:
           - HUMAN_REVIEW
         statement:
           type: string
+          minLength: 1
+          maxLength: 10000
         supportingAttachmentIds:
           type: array
           items:
             type: string
+            format: uuid
+          minItems: 0
+          maxItems: 20
+          uniqueItems: true
         attestation:
           type: boolean
         privacyConsent:
@@ -7207,15 +7304,23 @@ components:
         decisionReason:
           anyOf:
           - type: string
+            minLength: 1
+            maxLength: 4000
           - type: 'null'
         nextActions:
           type: array
           items:
             type: string
+            minLength: 1
+            maxLength: 1000
+          minItems: 0
+          maxItems: 20
         links:
           type: array
           items:
             $ref: '#/components/schemas/Link'
+          minItems: 0
+          maxItems: 16
         operationId:
           type: string
       required:
@@ -7243,6 +7348,7 @@ components:
         expectedProfileVersion:
           type: integer
           format: int64
+          minimum: 1
         abuseProof:
           $ref: '#/components/schemas/AbuseProofV1'
       required:
@@ -7289,6 +7395,7 @@ components:
         expectedProfileVersion:
           type: integer
           format: int64
+          minimum: 1
       required:
       - challengeId
       - proof
@@ -7304,6 +7411,7 @@ components:
         profileVersion:
           type: integer
           format: int64
+          minimum: 1
         authorizationEventId:
           type: string
           format: uuid
@@ -7322,9 +7430,11 @@ components:
         expectedEndpointVersion:
           type: integer
           format: int64
+          minimum: 1
         expectedProfileVersion:
           type: integer
           format: int64
+          minimum: 1
         reasonCode:
           type: string
           enum:
@@ -7349,6 +7459,7 @@ components:
         profileVersion:
           type: integer
           format: int64
+          minimum: 1
         optOutReceiptId:
           type: string
           format: uuid
@@ -7372,12 +7483,16 @@ components:
           $ref: '#/components/schemas/PrivacyIdentityProofV1'
         jurisdiction:
           type: string
+          minLength: 2
+          maxLength: 64
         scope:
           $ref: '#/components/schemas/PrivacyRequestScopeV1'
         contactEndpoint:
           $ref: '#/components/schemas/EndpointEnrollmentV1'
         statement:
           type: string
+          minLength: 1
+          maxLength: 10000
         attestation:
           type: boolean
         privacyConsent:
@@ -7404,6 +7519,8 @@ components:
           $ref: '#/components/schemas/PrivacyRequestSummaryV1'
         receiptToken:
           type: string
+          minLength: 32
+          maxLength: 4096
       required:
       - command
       - request
@@ -7414,11 +7531,10 @@ components:
       properties:
         token:
           type: string
-        proof:
-          $ref: '#/components/schemas/BrowserProofV1'
+          minLength: 32
+          maxLength: 4096
       required:
       - token
-      - proof
     PrivacyRequestSessionReceiptV1:
       type: object
       additionalProperties: false
@@ -7437,6 +7553,7 @@ components:
           format: date-time
         cookieName:
           type: string
+          const: gurine_privacy_request_receipt_session
         tokenConsumedAt:
           type: string
           format: date-time
@@ -7515,6 +7632,7 @@ components:
       properties:
         operationId:
           type: string
+          pattern: ^[A-Za-z][A-Za-z0-9]{1,127}$
         requestId:
           type: string
           format: uuid
@@ -7530,6 +7648,7 @@ components:
         aggregateVersion:
           type: integer
           format: int64
+          minimum: 1
         auditEventId:
           type: string
           format: uuid
@@ -7543,6 +7662,9 @@ components:
           type: array
           items:
             type: string
+            format: uuid
+          minItems: 1
+          maxItems: 32
         idempotencyReplay:
           type: boolean
           const: false
@@ -7550,6 +7672,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Link'
+          minItems: 0
+          maxItems: 32
       required:
       - operationId
       - requestId
@@ -7578,6 +7702,7 @@ components:
         decisionSequence:
           type: integer
           format: int64
+          minimum: 0
         state:
           type: string
           enum:
@@ -7634,6 +7759,7 @@ components:
         version:
           type: integer
           format: int64
+          minimum: 1
         channel:
           type: string
           enum:
@@ -7646,6 +7772,8 @@ components:
           - VOICE
         maskedDestination:
           type: string
+          minLength: 1
+          maxLength: 200
         state:
           type: string
           enum:
@@ -7656,6 +7784,8 @@ components:
           - SUPPRESSED
         locale:
           type: string
+          minLength: 2
+          maxLength: 35
         verifiedAt:
           anyOf:
           - type: string
@@ -7697,12 +7827,26 @@ components:
           - COMPLETED
         jurisdiction:
           type: string
+          minLength: 2
+          maxLength: 64
         scopeDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
-        dueAt:
+        identityState:
           type: string
-          format: date-time
+          enum:
+          - PENDING_VERIFICATION
+          - VERIFIED
+        identityVerifiedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        dueAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
         createdAt:
           type: string
           format: date-time
@@ -7715,6 +7859,8 @@ components:
       - state
       - jurisdiction
       - scopeDigest
+      - identityState
+      - identityVerifiedAt
       - dueAt
       - createdAt
       - updatedAt
@@ -7728,8 +7874,12 @@ components:
             const: EMAIL
           address:
             type: string
+            minLength: 3
+            maxLength: 320
           locale:
             type: string
+            minLength: 2
+            maxLength: 35
         required:
         - channel
         - address
@@ -7742,8 +7892,12 @@ components:
             const: SMS
           e164:
             type: string
+            minLength: 8
+            maxLength: 16
           locale:
             type: string
+            minLength: 2
+            maxLength: 35
         required:
         - channel
         - e164
@@ -7756,8 +7910,12 @@ components:
             const: TELEGRAM
           providerSubjectToken:
             type: string
+            minLength: 16
+            maxLength: 4096
           locale:
             type: string
+            minLength: 2
+            maxLength: 35
         required:
         - channel
         - providerSubjectToken
@@ -7770,8 +7928,12 @@ components:
             const: WHATSAPP
           providerSubjectToken:
             type: string
+            minLength: 16
+            maxLength: 4096
           locale:
             type: string
+            minLength: 2
+            maxLength: 35
         required:
         - channel
         - providerSubjectToken
@@ -7784,8 +7946,12 @@ components:
             const: LINE
           providerSubjectToken:
             type: string
+            minLength: 16
+            maxLength: 4096
           locale:
             type: string
+            minLength: 2
+            maxLength: 35
         required:
         - channel
         - providerSubjectToken
@@ -7798,8 +7964,12 @@ components:
             const: KAKAO
           e164:
             type: string
+            minLength: 8
+            maxLength: 16
           locale:
             type: string
+            minLength: 2
+            maxLength: 35
         required:
         - channel
         - e164
@@ -7812,8 +7982,12 @@ components:
             const: VOICE
           e164:
             type: string
+            minLength: 8
+            maxLength: 16
           locale:
             type: string
+            minLength: 2
+            maxLength: 35
           explicitVoiceConsentReceiptId:
             type: string
             format: uuid
@@ -7833,12 +8007,26 @@ components:
           type: array
           items:
             type: string
+            enum:
+            - SYSTEM_TRANSACTIONAL
+            - SUBSCRIPTION_UPDATE
+            - DISCRETIONARY_EXTERNAL
+            - INTERNAL_ACTION_REQUEST
+          minItems: 1
+          maxItems: 4
+          uniqueItems: true
         policyVersion:
           type: string
+          minLength: 1
+          maxLength: 100
         jurisdiction:
           type: string
+          minLength: 2
+          maxLength: 64
         locale:
           type: string
+          minLength: 2
+          maxLength: 35
         consentTextDigest:
           type: string
           pattern: ^[0-9a-f]{64}$
@@ -7865,12 +8053,17 @@ components:
           - SYNTHETIC_TEST
         token:
           type: string
+          minLength: 1
+          maxLength: 4096
         action:
           type: string
+          minLength: 1
+          maxLength: 80
         issuedAtEpochSeconds:
           anyOf:
           - type: integer
             format: int64
+            minimum: 0
           - type: 'null'
       required:
       - provider
@@ -7887,6 +8080,8 @@ components:
             const: EMAIL_LINK
           token:
             type: string
+            minLength: 32
+            maxLength: 4096
         required:
         - kind
         - token
@@ -7898,6 +8093,8 @@ components:
             const: SMS_OTP
           code:
             type: string
+            minLength: 4
+            maxLength: 12
         required:
         - kind
         - code
@@ -7917,6 +8114,8 @@ components:
             - TWILIO_VOICE
           bindingToken:
             type: string
+            minLength: 32
+            maxLength: 4096
         required:
         - kind
         - provider
@@ -7934,6 +8133,8 @@ components:
             format: uuid
           possessionToken:
             type: string
+            minLength: 32
+            maxLength: 4096
         required:
         - kind
         - receiptId
@@ -7953,26 +8154,6 @@ components:
         - kind
         - endpointChallengeId
         - endpointProof
-      - type: object
-        additionalProperties: false
-        properties:
-          kind:
-            type: string
-            const: IDENTITY_DOCUMENT_CHALLENGE
-          challengeId:
-            type: string
-            format: uuid
-          verificationReceiptId:
-            type: string
-            format: uuid
-          verificationReceiptDigest:
-            type: string
-            pattern: ^[0-9a-f]{64}$
-        required:
-        - kind
-        - challengeId
-        - verificationReceiptId
-        - verificationReceiptDigest
     PrivacyRequestScopeV1:
       type: object
       additionalProperties: false
@@ -7987,6 +8168,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PrivacyObjectRefV1'
+          minItems: 0
+          maxItems: 1000
         dateFrom:
           anyOf:
           - type: string
@@ -8056,3 +8239,87 @@ components:
       - action
       - clientNonce
       - issuedAtEpochSeconds
+    PrivacyRequestPublicStatusV2:
+      type: object
+      additionalProperties: false
+      properties:
+        request:
+          $ref: '#/components/schemas/PrivacyRequestSummaryV1'
+        decisionReasonCode:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 100
+          - type: 'null'
+        decisionReceiptId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        decisionReceiptSha256:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+        refusalNoticeReceiptId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        refusalNoticeReceiptSha256:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+        noticeReceiptIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 0
+          maxItems: 100
+        noticeReceiptSha256s:
+          type: array
+          items:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+          minItems: 0
+          maxItems: 100
+        nextActionCodes:
+          type: array
+          items:
+            type: string
+            enum:
+            - VERIFY_IDENTITY
+            - AWAIT_REVIEW
+            - AWAIT_DECISION
+            - AWAIT_EXECUTION
+            - REVIEW_REFUSAL_NOTICE
+            - COMPLETE
+          minItems: 1
+          maxItems: 1
+          uniqueItems: true
+        asOf:
+          type: string
+          format: date-time
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          minItems: 0
+          maxItems: 16
+        operationId:
+          type: string
+      required:
+      - request
+      - decisionReasonCode
+      - decisionReceiptId
+      - decisionReceiptSha256
+      - refusalNoticeReceiptId
+      - refusalNoticeReceiptSha256
+      - noticeReceiptIds
+      - noticeReceiptSha256s
+      - nextActionCodes
+      - asOf
+      - links
+      - operationId

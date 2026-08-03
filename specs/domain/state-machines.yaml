@@ -205,6 +205,9 @@ case_transitions:
   capability: review.legal
   guards:
   - legal_review_required
+  - independent_editorial_approve_for_exact_snapshot
+  - named_individual_findings_present
+  - preview_blocked_pending_legal_override
   audit_action: case.legal_review.started
   domain_events:
   - case.state_transitioned.v1
@@ -216,6 +219,7 @@ case_transitions:
   guards:
   - editorial_approved
   - legal_review_not_required
+  - no_named_individual_findings
   - snapshot_current
   audit_action: case.ready_to_publish
   domain_events:
@@ -226,7 +230,9 @@ case_transitions:
   to: READY_TO_PUBLISH
   capability: review.legal
   guards:
-  - legal_approved
+  - independent_editorial_approve_for_exact_snapshot
+  - legal_reviewer_step_up_approve_with_exact_named_override
+  - editorial_and_legal_reviewers_distinct
   - snapshot_current
   audit_action: case.ready_to_publish
   domain_events:

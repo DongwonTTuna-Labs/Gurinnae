@@ -35,7 +35,7 @@ const displayedDigest = $derived(
         <article class="approval-queue-card" data-proposal-id={item.proposalId}>
           <div>
             <h3>외부 전달 제안</h3>
-            <p>버전 {item.version} · {presentEnumValue(item.state)}</p>
+            <p>버전 v{item.version} · {presentEnumValue(item.state)}</p>
             <p class="digest">승인 요약값 {item.approvalDigest}</p>
           </div>
           <a class="secondary-button" href={item.href}>이 제안 상세 확인</a>
@@ -46,7 +46,7 @@ const displayedDigest = $derived(
   {#if selectedTarget}
     <div class="selected-approval-target" aria-label="선택된 승인 대상">
       <strong>{selectedTarget.proposalId}</strong>
-      <span>버전 {selectedTarget.expectedProposalVersion}</span>
+      <span>버전 v{selectedTarget.expectedProposalVersion}</span>
       <span>승인 요약값 {displayedDigest}</span>
     </div>
   {/if}

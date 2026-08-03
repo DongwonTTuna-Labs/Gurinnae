@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/organization.official_channel_attested.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "assertionId",
+    "organizationKind",
+    "organizationId",
+    "verificationMethod",
+    "authorityReceiptDigest",
+    "registryReceiptDigest",
+    "attestedAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "assertionId": { "type": "string", "format": "uuid" },
+    "organizationKind": {
+      "type": "string",
+      "enum": ["AGENCY", "SUPPLIER"]
+    },
+    "organizationId": { "type": "string", "format": "uuid" },
+    "verificationMethod": {
+      "type": "string",
+      "enum": ["OFFICIAL_DOMAIN_EMAIL", "OFFICIAL_DOCUMENT"]
+    },
+    "authorityReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "registryReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "attestedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" }
+  }
+}

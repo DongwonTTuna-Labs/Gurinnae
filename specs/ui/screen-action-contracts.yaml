@@ -16,29 +16,508 @@ rules:
 - Every placement owns a command-qualified action ID, selected target, form, session authority, handler, receipt and route
   destination.
 counts:
-  commands: 35
-  visible_placements: 82
+  commands: 41
+  visible_placements: 88
   journey_visible_actions: 17
   legacy_side_door_fences: 30
   base_actions: 259
-  effective_actions: 358
+  effective_actions: 364
 action_registry_set_equality:
   base_source: specs/ui/screen-catalog.yaml#screens[].actions[]
   base_keys: 259
   additive_source: command placement registry
-  additive_keys: 82
+  additive_keys: 88
   journey_source: explicit canonical journey visible-action registry
   journey_keys: 17
   overlap: 0
   effective_rule: effective actions = disjoint union(base actions, additive command actions, journey visible actions)
   runtime_status: OPEN_IMPLEMENTATION
 browser_secret_binding_oracle:
-  request_bindings: 494
-  server_only_consumed_before_render: 9
+  request_bindings: 534
+  server_only_consumed_before_render: 8
   browser_visible_secret_bindings: 0
   failure_rule: Any raw token, proof, credential, assertion or session value in a view-model/form/action/DOM binding fails
     generation.
 commands:
+- operation_id: attestEntityMaterialUseClosure
+  label: 실질 이용 종료 확인하기
+  consequence: 현재 자연인 판정·모든 계약의 서울 기준 일자 종료·공개 revision 종료·법률 보존 부재를 재검증해 충족된 경우에만 불변 종료 영수증을 남긴다.
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/attest-entity-material-use-closure
+  authorization: users.manage
+  step_up:
+    mode: REQUIRED
+    assurance: STEP_UP
+    binding: exact proposal/action/decision digest + expected versions + bounded authorization receipt
+    rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
+  request_field_set:
+  - name: entityKind
+    type: enum<AGENCY|SUPPLIER>
+    required: true
+  - name: entityId
+    type: uuid
+    required: true
+  - name: personhoodReceiptId
+    type: uuid
+    required: true
+  - name: expectedEntityUpdatedAt
+    type: datetime
+    required: true
+  - name: reason
+    type: string[1..4000]
+    required: true
+  receipt_schema: AttestEntityMaterialUseClosureReceiptV1
+  receipt_field_set:
+  - name: operationId
+    type: const<attestEntityMaterialUseClosure>
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: status
+    type: enum<accepted|completed|rejected>
+    required: true
+  - name: aggregateId
+    type: uuid
+    required: true
+  - name: aggregateVersion
+    type: const<1>
+    required: true
+  - name: auditEventId
+    type: uuid
+    required: true
+  - name: receiptToken
+    type: sha256
+    required: true
+  - name: acceptedAt
+    type: datetime
+    required: true
+  - name: links
+    type: array<Link>[0..32]
+    required: true
+  - name: closureReceiptId
+    type: uuid
+    required: true
+  - name: entityKind
+    type: enum<AGENCY|SUPPLIER>
+    required: true
+  - name: entityId
+    type: uuid
+    required: true
+  - name: personhoodReceiptId
+    type: uuid
+    required: true
+  - name: closureAt
+    type: datetime
+    required: true
+  - name: lastContractEndAt
+    type: nullable-datetime
+    required: true
+  - name: linkedPublicationRevisionCount
+    type: int64[0..max]
+    required: true
+  concurrency: null
+  transition: null
+  placements:
+  - placement_key: attestEntityMaterialUseClosure@INT-002.handoff
+    screen_id: INT-002
+    section_id: handoff
+    section_test_id: int_002__section__handoff
+    action_id: attest-entity-material-use-closure--handoff
+    action_test_id: int_002__action__attest_entity_material_use_closure__handoff
+    selected_target_source: view_model.sections.handoff.selected_target
+    form_source: view_model.sections.handoff.forms.attest_entity_material_use_closure__handoff
+    session_authority_source: request_context.review_console_session
+    request_bindings:
+    - field: entityKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+      source: view_model.sections.handoff.forms.attest_entity_material_use_closure__handoff.entityKind
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__attest_entity_material_use_closure__handoff__entityKind
+    - field: entityId
+      type: uuid
+      required: true
+      source: view_model.sections.handoff.forms.attest_entity_material_use_closure__handoff.entityId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__attest_entity_material_use_closure__handoff__entityId
+    - field: personhoodReceiptId
+      type: uuid
+      required: true
+      source: view_model.sections.handoff.forms.attest_entity_material_use_closure__handoff.personhoodReceiptId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__attest_entity_material_use_closure__handoff__personhoodReceiptId
+    - field: expectedEntityUpdatedAt
+      type: datetime
+      required: true
+      source: view_model.sections.handoff.selected_target.expectedEntityUpdatedAt
+      binding_class: IMMUTABLE_SELECTED_TARGET
+      browser_visible: true
+      error_test_id: int_002__field_error__attest_entity_material_use_closure__handoff__expectedEntityUpdatedAt
+    - field: reason
+      type: string[1..4000]
+      required: true
+      source: view_model.sections.handoff.forms.attest_entity_material_use_closure__handoff.reason
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__attest_entity_material_use_closure__handoff__reason
+    idempotency_binding: request_context.idempotency_keys.handle__int_002__attest_entity_material_use_closure__handoff
+    enabled_when:
+      all:
+      - path: view_model.sections.handoff.selected_target.load_state
+        op: eq
+        value: READY
+      - path: view_model.sections.handoff.selected_target.digest_current
+        op: eq
+        value: true
+      - path: view_model.sections.handoff.selected_target.blocking_reasons
+        op: count_eq
+        value: 0
+      - path: runtime_handlers.handle__int_002__attest_entity_material_use_closure__handoff.phase
+        op: eq
+        value: IDLE
+    placement_state_contract:
+    - state: loading
+      trigger:
+        path: view_model.sections.handoff.selected_target.load_state
+        op: eq
+        value: LOADING
+      visible: true
+      enabled: false
+      safe_action: WAIT_FOR_SELECTED_TARGET
+    - state: blocked
+      trigger:
+        path: view_model.sections.handoff.selected_target.blocking_reasons
+        op: count_gt
+        value: 0
+      visible: true
+      enabled: false
+      safe_action: FOCUS_FIRST_OWNED_BLOCKER
+    - state: stale
+      trigger:
+        path: view_model.sections.handoff.selected_target.digest_current
+        op: eq
+        value: false
+      visible: true
+      enabled: false
+      safe_action: REFRESH_AND_COMPARE_SELECTED_TARGET
+    - state: conflict
+      trigger:
+        path: view_model.sections.handoff.forms.attest_entity_material_use_closure__handoff.server_conflict_diff
+        op: present
+      visible: true
+      enabled: false
+      safe_action: PRESERVE_FORM_AND_SHOW_READABLE_DIFF
+    - state: reauth-required
+      trigger:
+        path: request_context.review_console_session.action_authorization_state
+        op: eq
+        value: REQUIRED
+      visible: true
+      enabled: false
+      safe_action: AUTHORIZE_EXACT_HANDLER_DIGEST
+    - state: submitting
+      trigger:
+        path: runtime_handlers.handle__int_002__attest_entity_material_use_closure__handoff.phase
+        op: in
+        value:
+        - CLAIMED
+        - DISPATCHING
+      visible: true
+      enabled: false
+      safe_action: KEEP_IDEMPOTENCY_KEY_AND_WAIT
+    - state: receipt
+      trigger:
+        path: action_result.attest_entity_material_use_closure__handoff.validated_receipt
+        op: validated
+      visible: true
+      enabled: false
+      safe_action: FOCUS_OWNED_RECEIPT_DESTINATION
+    - state: partial-failure
+      trigger:
+        path: runtime_handlers.handle__int_002__attest_entity_material_use_closure__handoff.effect_certainty
+        op: eq
+        value: MAY_EXIST
+      visible: true
+      enabled: false
+      safe_action: RECONCILE_BEFORE_ANY_RETRY
+    - state: terminal
+      trigger:
+        path: runtime_handlers.handle__int_002__attest_entity_material_use_closure__handoff.phase
+        op: in
+        value:
+        - CANCELLED
+        - REJECTED
+        - EXPIRED
+      visible: false
+      enabled: false
+      safe_action: SHOW_TERMINAL_REASON_AND_RECEIPT
+    receipt_source: action_result.attest_entity_material_use_closure__handoff.validated_receipt
+    handler_id: handle__int_002__attest_entity_material_use_closure__handoff
+    success_destination:
+      screen_id: INT-002
+      section_id: handoff
+      route: /internal/my-work
+      required_route_bindings: {}
+      section_heading_test_id: int_002__section__handoff
+      receipt_focus_test_id: int_002__receipt__handle__int_002__attest_entity_material_use_closure__handoff__heading
+      receipt_anchor: action-receipt-handle__int_002__attest_entity_material_use_closure__handoff
+      history: REPLACE_STATE_AFTER_RECEIPT
+    failure_focus_test_id: int_002__command_error__attest_entity_material_use_closure__handoff
+    implementation_status: OPEN_IMPLEMENTATION
+- operation_id: attestOrganizationOfficialChannel
+  label: 조직 공식 채널 확인 기록하기
+  consequence: 독립 검토자가 현재 공식 이메일 또는 문서 증거를 재검증해 만료·철회 가능한 공식 채널 권위 영수증과 등록 주장을 남긴다.
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/attest-organization-official-channel
+  authorization: responses.review
+  step_up:
+    mode: REQUIRED
+    assurance: STEP_UP
+    binding: exact proposal/action/decision digest + expected versions + bounded authorization receipt
+    rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
+  request_field_set:
+  - name: organizationKind
+    type: enum<AGENCY|SUPPLIER>
+    required: true
+  - name: organizationId
+    type: uuid
+    required: true
+  - name: verificationMethod
+    type: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+    required: true
+  - name: sourceId
+    type: uuid
+    required: true
+    description: OFFICIAL_DOMAIN_EMAIL selects one current communication_endpoint_verifications.id; OFFICIAL_DOCUMENT selects
+      one current editorial.evidence.id. The caller never supplies an authority receipt ID or digest.
+  - name: expiresAt
+    type: datetime
+    required: true
+  - name: reason
+    type: string[1..4000]
+    required: true
+  - name: expectedAuthorityVersion
+    type: const<1>
+    required: true
+  receipt_schema: AttestOrganizationOfficialChannelReceiptV1
+  receipt_field_set:
+  - name: operationId
+    type: const<attestOrganizationOfficialChannel>
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: status
+    type: enum<accepted|completed|rejected>
+    required: true
+  - name: aggregateId
+    type: uuid
+    required: true
+  - name: aggregateVersion
+    type: int64[1..max]
+    required: true
+  - name: auditEventId
+    type: uuid
+    required: true
+  - name: receiptToken
+    type: sha256
+    required: true
+  - name: acceptedAt
+    type: datetime
+    required: true
+  - name: links
+    type: array<Link>[0..32]
+    required: true
+  - name: assertionId
+    type: uuid
+    required: true
+  - name: authorityReceiptId
+    type: uuid
+    required: true
+  - name: authorityReceiptDigest
+    type: sha256
+    required: true
+  - name: registryReceiptDigest
+    type: sha256
+    required: true
+  - name: expiresAt
+    type: datetime
+    required: true
+  concurrency: null
+  transition: null
+  placements:
+  - placement_key: attestOrganizationOfficialChannel@CAS-008.verification
+    screen_id: CAS-008
+    section_id: verification
+    section_test_id: cas_008__section__verification
+    action_id: attest-organization-official-channel--verification
+    action_test_id: cas_008__action__attest_organization_official_channel__verification
+    selected_target_source: view_model.sections.verification.selected_target
+    form_source: view_model.sections.verification.forms.attest_organization_official_channel__verification
+    session_authority_source: request_context.review_console_session
+    request_bindings:
+    - field: organizationKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+      source: view_model.sections.verification.forms.attest_organization_official_channel__verification.organizationKind
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__attest_organization_official_channel__verification__organizationKind
+    - field: organizationId
+      type: uuid
+      required: true
+      source: view_model.sections.verification.forms.attest_organization_official_channel__verification.organizationId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__attest_organization_official_channel__verification__organizationId
+    - field: verificationMethod
+      type: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+      required: true
+      source: view_model.sections.verification.forms.attest_organization_official_channel__verification.verificationMethod
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__attest_organization_official_channel__verification__verificationMethod
+    - field: sourceId
+      type: uuid
+      required: true
+      source: view_model.sections.verification.forms.attest_organization_official_channel__verification.sourceId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__attest_organization_official_channel__verification__sourceId
+      description: OFFICIAL_DOMAIN_EMAIL selects one current communication_endpoint_verifications.id; OFFICIAL_DOCUMENT selects
+        one current editorial.evidence.id. The caller never supplies an authority receipt ID or digest.
+    - field: expiresAt
+      type: datetime
+      required: true
+      source: view_model.sections.verification.forms.attest_organization_official_channel__verification.expiresAt
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__attest_organization_official_channel__verification__expiresAt
+    - field: reason
+      type: string[1..4000]
+      required: true
+      source: view_model.sections.verification.forms.attest_organization_official_channel__verification.reason
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__attest_organization_official_channel__verification__reason
+    - field: expectedAuthorityVersion
+      type: const<1>
+      required: true
+      source: view_model.sections.verification.selected_target.expectedAuthorityVersion
+      binding_class: IMMUTABLE_SELECTED_TARGET
+      browser_visible: true
+      error_test_id: cas_008__field_error__attest_organization_official_channel__verification__expectedAuthorityVersion
+    idempotency_binding: request_context.idempotency_keys.handle__cas_008__attest_organization_official_channel__verification
+    enabled_when:
+      all:
+      - path: view_model.sections.verification.selected_target.load_state
+        op: eq
+        value: READY
+      - path: view_model.sections.verification.selected_target.digest_current
+        op: eq
+        value: true
+      - path: view_model.sections.verification.selected_target.blocking_reasons
+        op: count_eq
+        value: 0
+      - path: runtime_handlers.handle__cas_008__attest_organization_official_channel__verification.phase
+        op: eq
+        value: IDLE
+    placement_state_contract:
+    - state: loading
+      trigger:
+        path: view_model.sections.verification.selected_target.load_state
+        op: eq
+        value: LOADING
+      visible: true
+      enabled: false
+      safe_action: WAIT_FOR_SELECTED_TARGET
+    - state: blocked
+      trigger:
+        path: view_model.sections.verification.selected_target.blocking_reasons
+        op: count_gt
+        value: 0
+      visible: true
+      enabled: false
+      safe_action: FOCUS_FIRST_OWNED_BLOCKER
+    - state: stale
+      trigger:
+        path: view_model.sections.verification.selected_target.digest_current
+        op: eq
+        value: false
+      visible: true
+      enabled: false
+      safe_action: REFRESH_AND_COMPARE_SELECTED_TARGET
+    - state: conflict
+      trigger:
+        path: view_model.sections.verification.forms.attest_organization_official_channel__verification.server_conflict_diff
+        op: present
+      visible: true
+      enabled: false
+      safe_action: PRESERVE_FORM_AND_SHOW_READABLE_DIFF
+    - state: reauth-required
+      trigger:
+        path: request_context.review_console_session.action_authorization_state
+        op: eq
+        value: REQUIRED
+      visible: true
+      enabled: false
+      safe_action: AUTHORIZE_EXACT_HANDLER_DIGEST
+    - state: submitting
+      trigger:
+        path: runtime_handlers.handle__cas_008__attest_organization_official_channel__verification.phase
+        op: in
+        value:
+        - CLAIMED
+        - DISPATCHING
+      visible: true
+      enabled: false
+      safe_action: KEEP_IDEMPOTENCY_KEY_AND_WAIT
+    - state: receipt
+      trigger:
+        path: action_result.attest_organization_official_channel__verification.validated_receipt
+        op: validated
+      visible: true
+      enabled: false
+      safe_action: FOCUS_OWNED_RECEIPT_DESTINATION
+    - state: partial-failure
+      trigger:
+        path: runtime_handlers.handle__cas_008__attest_organization_official_channel__verification.effect_certainty
+        op: eq
+        value: MAY_EXIST
+      visible: true
+      enabled: false
+      safe_action: RECONCILE_BEFORE_ANY_RETRY
+    - state: terminal
+      trigger:
+        path: runtime_handlers.handle__cas_008__attest_organization_official_channel__verification.phase
+        op: in
+        value:
+        - CANCELLED
+        - REJECTED
+        - EXPIRED
+      visible: false
+      enabled: false
+      safe_action: SHOW_TERMINAL_REASON_AND_RECEIPT
+    receipt_source: action_result.attest_organization_official_channel__verification.validated_receipt
+    handler_id: handle__cas_008__attest_organization_official_channel__verification
+    success_destination:
+      screen_id: CAS-008
+      section_id: verification
+      route: /internal/cases/{caseId}/responses
+      required_route_bindings:
+        caseId: action_result.attest_organization_official_channel__verification.validated_receipt.destination_bindings.caseId
+      section_heading_test_id: cas_008__section__verification
+      receipt_focus_test_id: cas_008__receipt__handle__cas_008__attest_organization_official_channel__verification__heading
+      receipt_anchor: action-receipt-handle__cas_008__attest_organization_official_channel__verification
+      history: REPLACE_STATE_AFTER_RECEIPT
+    failure_focus_test_id: cas_008__command_error__attest_organization_official_channel__verification
+    implementation_status: OPEN_IMPLEMENTATION
 - operation_id: cancelActionExecution
   label: 외부 실행 취소 요청하기
   consequence: 아직 외부 효과가 시작되지 않은 실행만 취소하고 이미 시작됐으면 결과 대조로 전환한다.
@@ -1163,6 +1642,237 @@ commands:
       receipt_anchor: action-receipt-handle__int_002__claim_action_review__handoff
       history: REPLACE_STATE_AFTER_RECEIPT
     failure_focus_test_id: int_002__command_error__claim_action_review__handoff
+    implementation_status: OPEN_IMPLEMENTATION
+- operation_id: classifyEntityPersonhood
+  label: 자연인 여부 판정 기록하기
+  consequence: 검토된 공개 출처와 현재 엔티티 버전을 재검증해 자동 추론 없이 사람이 내린 자연인 여부 판정을 변경 불가능한 영수증으로 남긴다.
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/classify-entity-personhood
+  authorization: users.manage
+  step_up:
+    mode: REQUIRED
+    assurance: STEP_UP
+    binding: exact proposal/action/decision digest + expected versions + bounded authorization receipt
+    rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
+  request_field_set:
+  - name: entityKind
+    type: enum<AGENCY|SUPPLIER>
+    required: true
+  - name: entityId
+    type: uuid
+    required: true
+  - name: classification
+    type: enum<NATURAL_PERSON|NOT_NATURAL_PERSON>
+    required: true
+  - name: evidenceSourceLocator
+    type: uri-reference[1..2000]
+    required: true
+  - name: expectedEntityUpdatedAt
+    type: datetime
+    required: true
+  - name: reason
+    type: string[1..4000]
+    required: true
+  receipt_schema: ClassifyEntityPersonhoodReceiptV1
+  receipt_field_set:
+  - name: operationId
+    type: const<classifyEntityPersonhood>
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: status
+    type: enum<accepted|completed|rejected>
+    required: true
+  - name: aggregateId
+    type: uuid
+    required: true
+  - name: aggregateVersion
+    type: const<1>
+    required: true
+  - name: auditEventId
+    type: uuid
+    required: true
+  - name: receiptToken
+    type: sha256
+    required: true
+  - name: acceptedAt
+    type: datetime
+    required: true
+  - name: links
+    type: array<Link>[0..32]
+    required: true
+  - name: receiptId
+    type: uuid
+    required: true
+  - name: entityKind
+    type: enum<AGENCY|SUPPLIER>
+    required: true
+  - name: entityId
+    type: uuid
+    required: true
+  - name: classification
+    type: enum<NATURAL_PERSON|NOT_NATURAL_PERSON>
+    required: true
+  concurrency: null
+  transition: null
+  placements:
+  - placement_key: classifyEntityPersonhood@INT-002.handoff
+    screen_id: INT-002
+    section_id: handoff
+    section_test_id: int_002__section__handoff
+    action_id: classify-entity-personhood--handoff
+    action_test_id: int_002__action__classify_entity_personhood__handoff
+    selected_target_source: view_model.sections.handoff.selected_target
+    form_source: view_model.sections.handoff.forms.classify_entity_personhood__handoff
+    session_authority_source: request_context.review_console_session
+    request_bindings:
+    - field: entityKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+      source: view_model.sections.handoff.forms.classify_entity_personhood__handoff.entityKind
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__classify_entity_personhood__handoff__entityKind
+    - field: entityId
+      type: uuid
+      required: true
+      source: view_model.sections.handoff.forms.classify_entity_personhood__handoff.entityId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__classify_entity_personhood__handoff__entityId
+    - field: classification
+      type: enum<NATURAL_PERSON|NOT_NATURAL_PERSON>
+      required: true
+      source: view_model.sections.handoff.forms.classify_entity_personhood__handoff.classification
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__classify_entity_personhood__handoff__classification
+    - field: evidenceSourceLocator
+      type: uri-reference[1..2000]
+      required: true
+      source: view_model.sections.handoff.forms.classify_entity_personhood__handoff.evidenceSourceLocator
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__classify_entity_personhood__handoff__evidenceSourceLocator
+    - field: expectedEntityUpdatedAt
+      type: datetime
+      required: true
+      source: view_model.sections.handoff.selected_target.expectedEntityUpdatedAt
+      binding_class: IMMUTABLE_SELECTED_TARGET
+      browser_visible: true
+      error_test_id: int_002__field_error__classify_entity_personhood__handoff__expectedEntityUpdatedAt
+    - field: reason
+      type: string[1..4000]
+      required: true
+      source: view_model.sections.handoff.forms.classify_entity_personhood__handoff.reason
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: int_002__field_error__classify_entity_personhood__handoff__reason
+    idempotency_binding: request_context.idempotency_keys.handle__int_002__classify_entity_personhood__handoff
+    enabled_when:
+      all:
+      - path: view_model.sections.handoff.selected_target.load_state
+        op: eq
+        value: READY
+      - path: view_model.sections.handoff.selected_target.digest_current
+        op: eq
+        value: true
+      - path: view_model.sections.handoff.selected_target.blocking_reasons
+        op: count_eq
+        value: 0
+      - path: runtime_handlers.handle__int_002__classify_entity_personhood__handoff.phase
+        op: eq
+        value: IDLE
+    placement_state_contract:
+    - state: loading
+      trigger:
+        path: view_model.sections.handoff.selected_target.load_state
+        op: eq
+        value: LOADING
+      visible: true
+      enabled: false
+      safe_action: WAIT_FOR_SELECTED_TARGET
+    - state: blocked
+      trigger:
+        path: view_model.sections.handoff.selected_target.blocking_reasons
+        op: count_gt
+        value: 0
+      visible: true
+      enabled: false
+      safe_action: FOCUS_FIRST_OWNED_BLOCKER
+    - state: stale
+      trigger:
+        path: view_model.sections.handoff.selected_target.digest_current
+        op: eq
+        value: false
+      visible: true
+      enabled: false
+      safe_action: REFRESH_AND_COMPARE_SELECTED_TARGET
+    - state: conflict
+      trigger:
+        path: view_model.sections.handoff.forms.classify_entity_personhood__handoff.server_conflict_diff
+        op: present
+      visible: true
+      enabled: false
+      safe_action: PRESERVE_FORM_AND_SHOW_READABLE_DIFF
+    - state: reauth-required
+      trigger:
+        path: request_context.review_console_session.action_authorization_state
+        op: eq
+        value: REQUIRED
+      visible: true
+      enabled: false
+      safe_action: AUTHORIZE_EXACT_HANDLER_DIGEST
+    - state: submitting
+      trigger:
+        path: runtime_handlers.handle__int_002__classify_entity_personhood__handoff.phase
+        op: in
+        value:
+        - CLAIMED
+        - DISPATCHING
+      visible: true
+      enabled: false
+      safe_action: KEEP_IDEMPOTENCY_KEY_AND_WAIT
+    - state: receipt
+      trigger:
+        path: action_result.classify_entity_personhood__handoff.validated_receipt
+        op: validated
+      visible: true
+      enabled: false
+      safe_action: FOCUS_OWNED_RECEIPT_DESTINATION
+    - state: partial-failure
+      trigger:
+        path: runtime_handlers.handle__int_002__classify_entity_personhood__handoff.effect_certainty
+        op: eq
+        value: MAY_EXIST
+      visible: true
+      enabled: false
+      safe_action: RECONCILE_BEFORE_ANY_RETRY
+    - state: terminal
+      trigger:
+        path: runtime_handlers.handle__int_002__classify_entity_personhood__handoff.phase
+        op: in
+        value:
+        - CANCELLED
+        - REJECTED
+        - EXPIRED
+      visible: false
+      enabled: false
+      safe_action: SHOW_TERMINAL_REASON_AND_RECEIPT
+    receipt_source: action_result.classify_entity_personhood__handoff.validated_receipt
+    handler_id: handle__int_002__classify_entity_personhood__handoff
+    success_destination:
+      screen_id: INT-002
+      section_id: handoff
+      route: /internal/my-work
+      required_route_bindings: {}
+      section_heading_test_id: int_002__section__handoff
+      receipt_focus_test_id: int_002__receipt__handle__int_002__classify_entity_personhood__handoff__heading
+      receipt_anchor: action-receipt-handle__int_002__classify_entity_personhood__handoff
+      history: REPLACE_STATE_AFTER_RECEIPT
+    failure_focus_test_id: int_002__command_error__classify_entity_personhood__handoff
     implementation_status: OPEN_IMPLEMENTATION
 - operation_id: closeIncidentPostmortem
   label: 사후 검토 닫기
@@ -3346,6 +4056,264 @@ commands:
       history: REPLACE_STATE_AFTER_RECEIPT
     failure_focus_test_id: adm_002__command_error__create_action_proposal__requests
     implementation_status: OPEN_IMPLEMENTATION
+- operation_id: createPrivacyCorrectionPlan
+  label: 개인정보 정정 계획 만들기
+  consequence: 검증된 정정 요청의 고정된 범위·증거·현재값 digest에 결속된 불변 계획을 만들고 요청값 평문이나 대상 변경을 남기지 않는다.
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/create-privacy-correction-plan
+  authorization: privacy.requests.manage
+  step_up:
+    mode: REQUIRED
+    assurance: STEP_UP
+    binding: exact proposal/action/decision digest + expected versions + bounded authorization receipt
+    rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
+  request_field_set:
+  - name: retentionRequestId
+    type: uuid
+    required: true
+  - name: expectedDecisionVersion
+    type: int64>=0
+    required: true
+  - name: targetObjectType
+    type: enum<RESPONSE|CORRECTION|SUBSCRIPTION|COMMUNICATION_ENDPOINT|PUBLICATION|EVIDENCE|AUDIT_SUBJECT_RECORD>
+    required: true
+  - name: targetObjectId
+    type: uuid
+    required: true
+  - name: fieldPath
+    type: json-pointer[1..1000]
+    required: true
+  - name: currentValueDigest
+    type: sha256
+    required: true
+  - name: requestedValue
+    type: secret-nonempty-string
+    required: true
+  - name: evidenceIds
+    type: unique-array<uuid>[1..100]
+    required: true
+  - name: reason
+    type: nonempty_string
+    required: true
+  receipt_schema: PrivacyCorrectionPlanReceiptV1
+  receipt_field_set:
+  - name: operationId
+    type: const<createPrivacyCorrectionPlan>
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: status
+    type: enum<accepted|completed|rejected>
+    required: true
+  - name: aggregateId
+    type: uuid
+    required: true
+  - name: aggregateVersion
+    type: int64[1..max]
+    required: true
+  - name: auditEventId
+    type: uuid
+    required: true
+  - name: receiptToken
+    type: sha256
+    required: true
+  - name: acceptedAt
+    type: datetime
+    required: true
+  - name: links
+    type: array<Link>[0..32]
+    required: true
+  - name: correctionPlanId
+    type: uuid
+    required: true
+  - name: retentionRequestId
+    type: uuid
+    required: true
+  - name: planVersion
+    type: int64[1..max]
+    required: true
+  concurrency: null
+  transition: null
+  placements:
+  - placement_key: createPrivacyCorrectionPlan@COR-001.requests
+    screen_id: COR-001
+    section_id: requests
+    section_test_id: cor_001__section__requests
+    action_id: create-privacy-correction-plan--requests
+    action_test_id: cor_001__action__create_privacy_correction_plan__requests
+    selected_target_source: view_model.sections.requests.selected_target
+    form_source: view_model.sections.requests.forms.create_privacy_correction_plan__requests
+    session_authority_source: request_context.review_console_session
+    request_bindings:
+    - field: retentionRequestId
+      type: uuid
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.retentionRequestId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__retentionRequestId
+    - field: expectedDecisionVersion
+      type: int64>=0
+      required: true
+      source: view_model.sections.requests.selected_target.expectedDecisionVersion
+      binding_class: IMMUTABLE_SELECTED_TARGET
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__expectedDecisionVersion
+    - field: targetObjectType
+      type: enum<RESPONSE|CORRECTION|SUBSCRIPTION|COMMUNICATION_ENDPOINT|PUBLICATION|EVIDENCE|AUDIT_SUBJECT_RECORD>
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.targetObjectType
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__targetObjectType
+    - field: targetObjectId
+      type: uuid
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.targetObjectId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__targetObjectId
+    - field: fieldPath
+      type: json-pointer[1..1000]
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.fieldPath
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__fieldPath
+    - field: currentValueDigest
+      type: sha256
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.currentValueDigest
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__currentValueDigest
+    - field: requestedValue
+      type: secret-nonempty-string
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.requestedValue
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__requestedValue
+    - field: evidenceIds
+      type: unique-array<uuid>[1..100]
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.evidenceIds
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__evidenceIds
+    - field: reason
+      type: nonempty_string
+      required: true
+      source: view_model.sections.requests.forms.create_privacy_correction_plan__requests.reason
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__create_privacy_correction_plan__requests__reason
+    idempotency_binding: request_context.idempotency_keys.handle__cor_001__create_privacy_correction_plan__requests
+    enabled_when:
+      all:
+      - path: view_model.sections.requests.selected_target.load_state
+        op: eq
+        value: READY
+      - path: view_model.sections.requests.selected_target.digest_current
+        op: eq
+        value: true
+      - path: view_model.sections.requests.selected_target.blocking_reasons
+        op: count_eq
+        value: 0
+      - path: runtime_handlers.handle__cor_001__create_privacy_correction_plan__requests.phase
+        op: eq
+        value: IDLE
+    placement_state_contract:
+    - state: loading
+      trigger:
+        path: view_model.sections.requests.selected_target.load_state
+        op: eq
+        value: LOADING
+      visible: true
+      enabled: false
+      safe_action: WAIT_FOR_SELECTED_TARGET
+    - state: blocked
+      trigger:
+        path: view_model.sections.requests.selected_target.blocking_reasons
+        op: count_gt
+        value: 0
+      visible: true
+      enabled: false
+      safe_action: FOCUS_FIRST_OWNED_BLOCKER
+    - state: stale
+      trigger:
+        path: view_model.sections.requests.selected_target.digest_current
+        op: eq
+        value: false
+      visible: true
+      enabled: false
+      safe_action: REFRESH_AND_COMPARE_SELECTED_TARGET
+    - state: conflict
+      trigger:
+        path: view_model.sections.requests.forms.create_privacy_correction_plan__requests.server_conflict_diff
+        op: present
+      visible: true
+      enabled: false
+      safe_action: PRESERVE_FORM_AND_SHOW_READABLE_DIFF
+    - state: reauth-required
+      trigger:
+        path: request_context.review_console_session.action_authorization_state
+        op: eq
+        value: REQUIRED
+      visible: true
+      enabled: false
+      safe_action: AUTHORIZE_EXACT_HANDLER_DIGEST
+    - state: submitting
+      trigger:
+        path: runtime_handlers.handle__cor_001__create_privacy_correction_plan__requests.phase
+        op: in
+        value:
+        - CLAIMED
+        - DISPATCHING
+      visible: true
+      enabled: false
+      safe_action: KEEP_IDEMPOTENCY_KEY_AND_WAIT
+    - state: receipt
+      trigger:
+        path: action_result.create_privacy_correction_plan__requests.validated_receipt
+        op: validated
+      visible: true
+      enabled: false
+      safe_action: FOCUS_OWNED_RECEIPT_DESTINATION
+    - state: partial-failure
+      trigger:
+        path: runtime_handlers.handle__cor_001__create_privacy_correction_plan__requests.effect_certainty
+        op: eq
+        value: MAY_EXIST
+      visible: true
+      enabled: false
+      safe_action: RECONCILE_BEFORE_ANY_RETRY
+    - state: terminal
+      trigger:
+        path: runtime_handlers.handle__cor_001__create_privacy_correction_plan__requests.phase
+        op: in
+        value:
+        - CANCELLED
+        - REJECTED
+        - EXPIRED
+      visible: false
+      enabled: false
+      safe_action: SHOW_TERMINAL_REASON_AND_RECEIPT
+    receipt_source: action_result.create_privacy_correction_plan__requests.validated_receipt
+    handler_id: handle__cor_001__create_privacy_correction_plan__requests
+    success_destination:
+      screen_id: COR-001
+      section_id: requests
+      route: /internal/corrections
+      required_route_bindings: {}
+      section_heading_test_id: cor_001__section__requests
+      receipt_focus_test_id: cor_001__receipt__handle__cor_001__create_privacy_correction_plan__requests__heading
+      receipt_anchor: action-receipt-handle__cor_001__create_privacy_correction_plan__requests
+      history: REPLACE_STATE_AFTER_RECEIPT
+    failure_focus_test_id: cor_001__command_error__create_privacy_correction_plan__requests
+    implementation_status: OPEN_IMPLEMENTATION
 - operation_id: createPrivacyRequest
   label: 개인정보 요청 제출하기
   consequence: 요청 유형·범위·연락 방법·신원확인 방식을 접수하고 추적 가능한 영수증을 발급한다.
@@ -5130,18 +6098,15 @@ commands:
   api: submission-api
   method: POST
   path: /v1/submission-session/privacy-request-receipt:exchange
-  authorization: one-time-receipt-token
+  authorization: request-bound-bff-service-assertion+one-time-receipt-token
   step_up:
     mode: NOT_REQUIRED
-    assurance: SCOPED_TOKEN
+    assurance: ONE_TIME_PROOF
     binding: exact proposal/action/decision digest + expected versions + bounded authorization receipt
     rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
   request_field_set:
   - name: token
     type: secret-string[32..4096]
-    required: true
-  - name: proof
-    type: BrowserProofV1
     required: true
   receipt_schema: PrivacyRequestSessionReceiptV1
   receipt_field_set:
@@ -5158,7 +6123,7 @@ commands:
     type: datetime
     required: true
   - name: cookieName
-    type: string[1..100]
+    type: const<gurine_privacy_request_receipt_session>
     required: true
   - name: tokenConsumedAt
     type: datetime
@@ -5180,13 +6145,6 @@ commands:
       type: secret-string[32..4096]
       required: true
       source: request_context.server_only_exchange_input.token
-      binding_class: SERVER_ONLY_CONSUMED_BEFORE_RENDER
-      browser_visible: false
-      error_test_id: null
-    - field: proof
-      type: BrowserProofV1
-      required: true
-      source: request_context.server_only_exchange_input.proof
       binding_class: SERVER_ONLY_CONSUMED_BEFORE_RENDER
       browser_visible: false
       error_test_id: null
@@ -9126,6 +10084,202 @@ commands:
       history: REPLACE_STATE_AFTER_RECEIPT
     failure_focus_test_id: ops_003__command_error__retry_action_execution__recovery
     implementation_status: OPEN_IMPLEMENTATION
+- operation_id: revokeOrganizationOfficialChannel
+  label: 조직 공식 채널 철회 기록하기
+  consequence: 현재 공식 채널 주장을 즉시 철회하되 원 권위 영수증과 등록 이력은 삭제하거나 덮어쓰지 않는다.
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/revoke-organization-official-channel
+  authorization: responses.review
+  step_up:
+    mode: REQUIRED
+    assurance: STEP_UP
+    binding: exact proposal/action/decision digest + expected versions + bounded authorization receipt
+    rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
+  request_field_set:
+  - name: assertionId
+    type: uuid
+    required: true
+  - name: reasonCode
+    type: string[1..100]
+    required: true
+  - name: reason
+    type: string[1..4000]
+    required: true
+  receipt_schema: RevokeOrganizationOfficialChannelReceiptV1
+  receipt_field_set:
+  - name: operationId
+    type: const<revokeOrganizationOfficialChannel>
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: status
+    type: enum<accepted|completed|rejected>
+    required: true
+  - name: aggregateId
+    type: uuid
+    required: true
+  - name: aggregateVersion
+    type: int64[1..max]
+    required: true
+  - name: auditEventId
+    type: uuid
+    required: true
+  - name: receiptToken
+    type: sha256
+    required: true
+  - name: acceptedAt
+    type: datetime
+    required: true
+  - name: links
+    type: array<Link>[0..32]
+    required: true
+  - name: revocationId
+    type: uuid
+    required: true
+  - name: assertionId
+    type: uuid
+    required: true
+  concurrency: null
+  transition: null
+  placements:
+  - placement_key: revokeOrganizationOfficialChannel@CAS-008.verification
+    screen_id: CAS-008
+    section_id: verification
+    section_test_id: cas_008__section__verification
+    action_id: revoke-organization-official-channel--verification
+    action_test_id: cas_008__action__revoke_organization_official_channel__verification
+    selected_target_source: view_model.sections.verification.selected_target
+    form_source: view_model.sections.verification.forms.revoke_organization_official_channel__verification
+    session_authority_source: request_context.review_console_session
+    request_bindings:
+    - field: assertionId
+      type: uuid
+      required: true
+      source: view_model.sections.verification.forms.revoke_organization_official_channel__verification.assertionId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__revoke_organization_official_channel__verification__assertionId
+    - field: reasonCode
+      type: string[1..100]
+      required: true
+      source: view_model.sections.verification.forms.revoke_organization_official_channel__verification.reasonCode
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__revoke_organization_official_channel__verification__reasonCode
+    - field: reason
+      type: string[1..4000]
+      required: true
+      source: view_model.sections.verification.forms.revoke_organization_official_channel__verification.reason
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__revoke_organization_official_channel__verification__reason
+    idempotency_binding: request_context.idempotency_keys.handle__cas_008__revoke_organization_official_channel__verification
+    enabled_when:
+      all:
+      - path: view_model.sections.verification.selected_target.load_state
+        op: eq
+        value: READY
+      - path: view_model.sections.verification.selected_target.digest_current
+        op: eq
+        value: true
+      - path: view_model.sections.verification.selected_target.blocking_reasons
+        op: count_eq
+        value: 0
+      - path: runtime_handlers.handle__cas_008__revoke_organization_official_channel__verification.phase
+        op: eq
+        value: IDLE
+    placement_state_contract:
+    - state: loading
+      trigger:
+        path: view_model.sections.verification.selected_target.load_state
+        op: eq
+        value: LOADING
+      visible: true
+      enabled: false
+      safe_action: WAIT_FOR_SELECTED_TARGET
+    - state: blocked
+      trigger:
+        path: view_model.sections.verification.selected_target.blocking_reasons
+        op: count_gt
+        value: 0
+      visible: true
+      enabled: false
+      safe_action: FOCUS_FIRST_OWNED_BLOCKER
+    - state: stale
+      trigger:
+        path: view_model.sections.verification.selected_target.digest_current
+        op: eq
+        value: false
+      visible: true
+      enabled: false
+      safe_action: REFRESH_AND_COMPARE_SELECTED_TARGET
+    - state: conflict
+      trigger:
+        path: view_model.sections.verification.forms.revoke_organization_official_channel__verification.server_conflict_diff
+        op: present
+      visible: true
+      enabled: false
+      safe_action: PRESERVE_FORM_AND_SHOW_READABLE_DIFF
+    - state: reauth-required
+      trigger:
+        path: request_context.review_console_session.action_authorization_state
+        op: eq
+        value: REQUIRED
+      visible: true
+      enabled: false
+      safe_action: AUTHORIZE_EXACT_HANDLER_DIGEST
+    - state: submitting
+      trigger:
+        path: runtime_handlers.handle__cas_008__revoke_organization_official_channel__verification.phase
+        op: in
+        value:
+        - CLAIMED
+        - DISPATCHING
+      visible: true
+      enabled: false
+      safe_action: KEEP_IDEMPOTENCY_KEY_AND_WAIT
+    - state: receipt
+      trigger:
+        path: action_result.revoke_organization_official_channel__verification.validated_receipt
+        op: validated
+      visible: true
+      enabled: false
+      safe_action: FOCUS_OWNED_RECEIPT_DESTINATION
+    - state: partial-failure
+      trigger:
+        path: runtime_handlers.handle__cas_008__revoke_organization_official_channel__verification.effect_certainty
+        op: eq
+        value: MAY_EXIST
+      visible: true
+      enabled: false
+      safe_action: RECONCILE_BEFORE_ANY_RETRY
+    - state: terminal
+      trigger:
+        path: runtime_handlers.handle__cas_008__revoke_organization_official_channel__verification.phase
+        op: in
+        value:
+        - CANCELLED
+        - REJECTED
+        - EXPIRED
+      visible: false
+      enabled: false
+      safe_action: SHOW_TERMINAL_REASON_AND_RECEIPT
+    receipt_source: action_result.revoke_organization_official_channel__verification.validated_receipt
+    handler_id: handle__cas_008__revoke_organization_official_channel__verification
+    success_destination:
+      screen_id: CAS-008
+      section_id: verification
+      route: /internal/cases/{caseId}/responses
+      required_route_bindings:
+        caseId: action_result.revoke_organization_official_channel__verification.validated_receipt.destination_bindings.caseId
+      section_heading_test_id: cas_008__section__verification
+      receipt_focus_test_id: cas_008__receipt__handle__cas_008__revoke_organization_official_channel__verification__heading
+      receipt_anchor: action-receipt-handle__cas_008__revoke_organization_official_channel__verification
+      history: REPLACE_STATE_AFTER_RECEIPT
+    failure_focus_test_id: cas_008__command_error__revoke_organization_official_channel__verification
+    implementation_status: OPEN_IMPLEMENTATION
 - operation_id: startIncidentRecovery
   label: 운영 복구 시작하기
   consequence: 원인이 통제됐다는 근거와 복구 계획을 결속해 검증 가능한 복구 단계로 이동한다.
@@ -11516,7 +12670,7 @@ commands:
     type: int64>=0
     required: true
   - name: transition
-    type: START_REVIEW|APPROVE|REJECT|COMPLETE
+    type: VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND
     required: true
   - name: reasonCode
     type: string[1..100]
@@ -11524,34 +12678,103 @@ commands:
   - name: reason
     type: string[1..10000]
     required: true
-  - name: inventorySnapshotDigest
-    type: sha256
-    required: true
-  - name: holdCoverageDigest
-    type: sha256
-    required: true
-  - name: completionReceiptId
-    type: nullable-uuid
-    required: true
-  receipt_schema: RetentionRequestDecisionReceiptV1
+  - name: identityProofReceiptId
+    type: uuid
+    required: false
+  - name: extensionReasonCode
+    type: string[1..100]
+    required: false
+  - name: extensionReason
+    type: string[1..4000]
+    required: false
+  - name: extensionBusinessDays
+    type: int32[1..max]
+    required: false
+  - name: rejectionReasonCode
+    type: string[1..100]
+    required: false
+  - name: rejectionReason
+    type: string[1..4000]
+    required: false
+  - name: appealInstructions
+    type: string[1..4000]
+    required: false
+  receipt_schema: RetentionRequestDecisionReceiptV2
   receipt_field_set:
   - name: command
     type: CommandReceiptV1
     required: true
-  - name: request
-    type: RetentionRequestSummaryV1
+  - name: retentionRequestId
+    type: uuid
     required: true
-  - name: inventorySnapshotDigest
+  - name: decisionVersion
+    type: int64[1..max]
+    required: true
+  - name: requestType
+    type: enum<ACCESS|CORRECTION|DELETION|RESTRICTION>
+    required: true
+  - name: state
+    type: enum<RECEIVED|REVIEW|APPROVED|REJECTED>
+    required: true
+  - name: transition
+    type: enum<VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND>
+    required: true
+  - name: transitionReceiptId
+    type: uuid
+    required: true
+  - name: transitionReceiptDigest
     type: sha256
     required: true
-  - name: holdCoverageDigest
-    type: sha256
+  - name: identityVerifiedAt
+    type: nullable-datetime
     required: true
-  - name: completionReceiptId
-    type: nullable<uuid>
+  - name: dueAt
+    type: nullable-datetime
     required: true
-  - name: locationReceipts
-    type: array<RetentionLocationReceiptV1>[0..1000]
+  - name: policyVersion
+    type: nullable-string
+    required: true
+  - name: policyDigest
+    type: nullable-sha256
+    required: true
+  - name: calendarVersionId
+    type: nullable-uuid
+    required: true
+  - name: calendarDigest
+    type: nullable-sha256
+    required: true
+  - name: identityReceiptId
+    type: nullable-uuid
+    required: true
+  - name: identityReceiptDigest
+    type: nullable-sha256
+    required: true
+  - name: extensionReceiptId
+    type: nullable-uuid
+    required: true
+  - name: extensionReceiptDigest
+    type: nullable-sha256
+    required: true
+  - name: refusalReceiptId
+    type: nullable-uuid
+    required: true
+  - name: refusalReceiptDigest
+    type: nullable-sha256
+    required: true
+  - name: noticeReceiptId
+    type: nullable-uuid
+    required: true
+  - name: noticeReceiptDigest
+    type: nullable-sha256
+    required: true
+  - name: appealInstructionsDigest
+    type: nullable-sha256
+    required: true
+  - name: updatedAt
+    type: datetime
+    required: true
+  - name: replayed
+    type: boolean
     required: true
   concurrency: null
   transition: null
@@ -11581,7 +12804,7 @@ commands:
       browser_visible: true
       error_test_id: cor_001__field_error__transition_retention_request__requests__expectedDecisionVersion
     - field: transition
-      type: START_REVIEW|APPROVE|REJECT|COMPLETE
+      type: VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND
       required: true
       source: view_model.sections.requests.forms.transition_retention_request__requests.transition
       binding_class: USER_EDITABLE_FORM_FIELD
@@ -11601,27 +12824,55 @@ commands:
       binding_class: USER_EDITABLE_FORM_FIELD
       browser_visible: true
       error_test_id: cor_001__field_error__transition_retention_request__requests__reason
-    - field: inventorySnapshotDigest
-      type: sha256
-      required: true
-      source: view_model.sections.requests.forms.transition_retention_request__requests.inventorySnapshotDigest
+    - field: identityProofReceiptId
+      type: uuid
+      required: false
+      source: view_model.sections.requests.forms.transition_retention_request__requests.identityProofReceiptId
       binding_class: USER_EDITABLE_FORM_FIELD
       browser_visible: true
-      error_test_id: cor_001__field_error__transition_retention_request__requests__inventorySnapshotDigest
-    - field: holdCoverageDigest
-      type: sha256
-      required: true
-      source: view_model.sections.requests.forms.transition_retention_request__requests.holdCoverageDigest
+      error_test_id: cor_001__field_error__transition_retention_request__requests__identityProofReceiptId
+    - field: extensionReasonCode
+      type: string[1..100]
+      required: false
+      source: view_model.sections.requests.forms.transition_retention_request__requests.extensionReasonCode
       binding_class: USER_EDITABLE_FORM_FIELD
       browser_visible: true
-      error_test_id: cor_001__field_error__transition_retention_request__requests__holdCoverageDigest
-    - field: completionReceiptId
-      type: nullable-uuid
-      required: true
-      source: view_model.sections.requests.forms.transition_retention_request__requests.completionReceiptId
+      error_test_id: cor_001__field_error__transition_retention_request__requests__extensionReasonCode
+    - field: extensionReason
+      type: string[1..4000]
+      required: false
+      source: view_model.sections.requests.forms.transition_retention_request__requests.extensionReason
       binding_class: USER_EDITABLE_FORM_FIELD
       browser_visible: true
-      error_test_id: cor_001__field_error__transition_retention_request__requests__completionReceiptId
+      error_test_id: cor_001__field_error__transition_retention_request__requests__extensionReason
+    - field: extensionBusinessDays
+      type: int32[1..max]
+      required: false
+      source: view_model.sections.requests.forms.transition_retention_request__requests.extensionBusinessDays
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__transition_retention_request__requests__extensionBusinessDays
+    - field: rejectionReasonCode
+      type: string[1..100]
+      required: false
+      source: view_model.sections.requests.forms.transition_retention_request__requests.rejectionReasonCode
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__transition_retention_request__requests__rejectionReasonCode
+    - field: rejectionReason
+      type: string[1..4000]
+      required: false
+      source: view_model.sections.requests.forms.transition_retention_request__requests.rejectionReason
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__transition_retention_request__requests__rejectionReason
+    - field: appealInstructions
+      type: string[1..4000]
+      required: false
+      source: view_model.sections.requests.forms.transition_retention_request__requests.appealInstructions
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cor_001__field_error__transition_retention_request__requests__appealInstructions
     idempotency_binding: request_context.idempotency_keys.handle__cor_001__transition_retention_request__requests
     enabled_when:
       all:
@@ -14246,6 +15497,243 @@ commands:
       history: REPLACE_STATE_AFTER_RECEIPT
     failure_focus_test_id: pub_030__command_error__verify_communication_endpoint_link__delivery
     implementation_status: OPEN_IMPLEMENTATION
+- operation_id: verifyResponseOrganizationIdentity
+  label: 조직 신원 확인하기
+  consequence: 현재 응답 버전·조직·공개 형태를 공식 채널 증명과 재인증 영수증에 결속해 공개 가능한 신원 확인 기록을 남긴다.
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/verify-response-organization-identity
+  authorization: responses.review
+  step_up:
+    mode: REQUIRED
+    assurance: STEP_UP
+    binding: exact proposal/action/decision digest + expected versions + bounded authorization receipt
+    rule: Confirmation UI never substitutes for a required or conditional step-up authorization.
+  request_field_set:
+  - name: responseId
+    type: uuid
+    required: true
+  - name: organizationId
+    type: uuid
+    required: true
+  - name: publicationForm
+    type: enum<FULL|REDACTED>
+    required: true
+  - name: verificationMethod
+    type: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+    required: true
+  - name: officialChannelSourceId
+    type: uuid
+    required: true
+    description: Identifier of the current immutable official-channel authority assertion. It is never a raw communication
+      endpoint verification ID or official document evidence ID.
+  - name: reason
+    type: string[1..4000]
+    required: true
+  - name: expectedVersion
+    type: int64>=1
+    required: true
+  receipt_schema: VerifyResponseOrganizationIdentityReceiptV1
+  receipt_field_set:
+  - name: operationId
+    type: string
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: status
+    type: enum<accepted|completed|rejected>
+    required: true
+  - name: aggregateId
+    type: optional<string>
+    required: true
+  - name: aggregateVersion
+    type: optional<int64[0..max]>
+    required: true
+  - name: auditEventId
+    type: optional<uuid>
+    required: true
+  - name: receiptToken
+    type: optional<string>
+    required: true
+  - name: acceptedAt
+    type: datetime
+    required: true
+  - name: links
+    type: array<Link>[0..32]
+    required: true
+  - name: identityAssertionId
+    type: uuid
+    required: true
+  concurrency: null
+  transition: UNVERIFIED->SECOND_FACTOR_VERIFIED
+  placements:
+  - placement_key: verifyResponseOrganizationIdentity@CAS-008.verification
+    screen_id: CAS-008
+    section_id: verification
+    section_test_id: cas_008__section__verification
+    action_id: verify-response-organization-identity--verification
+    action_test_id: cas_008__action__verify_response_organization_identity__verification
+    selected_target_source: view_model.sections.verification.selected_target
+    form_source: view_model.sections.verification.forms.verify_response_organization_identity__verification
+    session_authority_source: request_context.review_console_session
+    request_bindings:
+    - field: responseId
+      type: uuid
+      required: true
+      source: view_model.sections.verification.forms.verify_response_organization_identity__verification.responseId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__verify_response_organization_identity__verification__responseId
+    - field: organizationId
+      type: uuid
+      required: true
+      source: view_model.sections.verification.forms.verify_response_organization_identity__verification.organizationId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__verify_response_organization_identity__verification__organizationId
+    - field: publicationForm
+      type: enum<FULL|REDACTED>
+      required: true
+      source: view_model.sections.verification.forms.verify_response_organization_identity__verification.publicationForm
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__verify_response_organization_identity__verification__publicationForm
+    - field: verificationMethod
+      type: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+      required: true
+      source: view_model.sections.verification.forms.verify_response_organization_identity__verification.verificationMethod
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__verify_response_organization_identity__verification__verificationMethod
+    - field: officialChannelSourceId
+      type: uuid
+      required: true
+      source: view_model.sections.verification.forms.verify_response_organization_identity__verification.officialChannelSourceId
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__verify_response_organization_identity__verification__officialChannelSourceId
+      description: Identifier of the current immutable official-channel authority assertion. It is never a raw communication
+        endpoint verification ID or official document evidence ID.
+    - field: reason
+      type: string[1..4000]
+      required: true
+      source: view_model.sections.verification.forms.verify_response_organization_identity__verification.reason
+      binding_class: USER_EDITABLE_FORM_FIELD
+      browser_visible: true
+      error_test_id: cas_008__field_error__verify_response_organization_identity__verification__reason
+    - field: expectedVersion
+      type: int64>=1
+      required: true
+      source: view_model.sections.verification.selected_target.expectedVersion
+      binding_class: IMMUTABLE_SELECTED_TARGET
+      browser_visible: true
+      error_test_id: cas_008__field_error__verify_response_organization_identity__verification__expectedVersion
+    idempotency_binding: request_context.idempotency_keys.handle__cas_008__verify_response_organization_identity__verification
+    enabled_when:
+      all:
+      - path: view_model.sections.verification.selected_target.load_state
+        op: eq
+        value: READY
+      - path: view_model.sections.verification.selected_target.digest_current
+        op: eq
+        value: true
+      - path: view_model.sections.verification.selected_target.blocking_reasons
+        op: count_eq
+        value: 0
+      - path: runtime_handlers.handle__cas_008__verify_response_organization_identity__verification.phase
+        op: eq
+        value: IDLE
+    placement_state_contract:
+    - state: loading
+      trigger:
+        path: view_model.sections.verification.selected_target.load_state
+        op: eq
+        value: LOADING
+      visible: true
+      enabled: false
+      safe_action: WAIT_FOR_SELECTED_TARGET
+    - state: blocked
+      trigger:
+        path: view_model.sections.verification.selected_target.blocking_reasons
+        op: count_gt
+        value: 0
+      visible: true
+      enabled: false
+      safe_action: FOCUS_FIRST_OWNED_BLOCKER
+    - state: stale
+      trigger:
+        path: view_model.sections.verification.selected_target.digest_current
+        op: eq
+        value: false
+      visible: true
+      enabled: false
+      safe_action: REFRESH_AND_COMPARE_SELECTED_TARGET
+    - state: conflict
+      trigger:
+        path: view_model.sections.verification.forms.verify_response_organization_identity__verification.server_conflict_diff
+        op: present
+      visible: true
+      enabled: false
+      safe_action: PRESERVE_FORM_AND_SHOW_READABLE_DIFF
+    - state: reauth-required
+      trigger:
+        path: request_context.review_console_session.action_authorization_state
+        op: eq
+        value: REQUIRED
+      visible: true
+      enabled: false
+      safe_action: AUTHORIZE_EXACT_HANDLER_DIGEST
+    - state: submitting
+      trigger:
+        path: runtime_handlers.handle__cas_008__verify_response_organization_identity__verification.phase
+        op: in
+        value:
+        - CLAIMED
+        - DISPATCHING
+      visible: true
+      enabled: false
+      safe_action: KEEP_IDEMPOTENCY_KEY_AND_WAIT
+    - state: receipt
+      trigger:
+        path: action_result.verify_response_organization_identity__verification.validated_receipt
+        op: validated
+      visible: true
+      enabled: false
+      safe_action: FOCUS_OWNED_RECEIPT_DESTINATION
+    - state: partial-failure
+      trigger:
+        path: runtime_handlers.handle__cas_008__verify_response_organization_identity__verification.effect_certainty
+        op: eq
+        value: MAY_EXIST
+      visible: true
+      enabled: false
+      safe_action: RECONCILE_BEFORE_ANY_RETRY
+    - state: terminal
+      trigger:
+        path: runtime_handlers.handle__cas_008__verify_response_organization_identity__verification.phase
+        op: in
+        value:
+        - CANCELLED
+        - REJECTED
+        - EXPIRED
+      visible: false
+      enabled: false
+      safe_action: SHOW_TERMINAL_REASON_AND_RECEIPT
+    receipt_source: action_result.verify_response_organization_identity__verification.validated_receipt
+    handler_id: handle__cas_008__verify_response_organization_identity__verification
+    success_destination:
+      screen_id: CAS-008
+      section_id: verification
+      route: /internal/cases/{caseId}/responses
+      required_route_bindings:
+        caseId: action_result.verify_response_organization_identity__verification.validated_receipt.destination_bindings.caseId
+      section_heading_test_id: cas_008__section__verification
+      receipt_focus_test_id: cas_008__receipt__handle__cas_008__verify_response_organization_identity__verification__heading
+      receipt_anchor: action-receipt-handle__cas_008__verify_response_organization_identity__verification
+      history: REPLACE_STATE_AFTER_RECEIPT
+    failure_focus_test_id: cas_008__command_error__verify_response_organization_identity__verification
+    implementation_status: OPEN_IMPLEMENTATION
 - operation_id: withdrawActionDecision
   label: 승인 결정 철회하기
   consequence: 최종 정족수 확정 전 본인의 현재 승인만 철회하고 대체 검토 배정 또는 공석 상태를 명시한다.
@@ -14910,6 +16398,16 @@ commands:
     failure_focus_test_id: adm_002__command_error__withdraw_conflict__conflicts
     implementation_status: OPEN_IMPLEMENTATION
 additive_action_entries:
+- action_key: INT-002.attest-entity-material-use-closure--handoff
+  operation_id: attestEntityMaterialUseClosure
+  placement_key: attestEntityMaterialUseClosure@INT-002.handoff
+  section_id: handoff
+  handler_id: handle__int_002__attest_entity_material_use_closure__handoff
+- action_key: CAS-008.attest-organization-official-channel--verification
+  operation_id: attestOrganizationOfficialChannel
+  placement_key: attestOrganizationOfficialChannel@CAS-008.verification
+  section_id: verification
+  handler_id: handle__cas_008__attest_organization_official_channel__verification
 - action_key: OPS-003.cancel-action-execution--recovery
   operation_id: cancelActionExecution
   placement_key: cancelActionExecution@OPS-003.recovery
@@ -14940,6 +16438,11 @@ additive_action_entries:
   placement_key: claimActionReview@INT-002.handoff
   section_id: handoff
   handler_id: handle__int_002__claim_action_review__handoff
+- action_key: INT-002.classify-entity-personhood--handoff
+  operation_id: classifyEntityPersonhood
+  placement_key: classifyEntityPersonhood@INT-002.handoff
+  section_id: handoff
+  handler_id: handle__int_002__classify_entity_personhood__handoff
 - action_key: OPS-001.close-incident-postmortem--incidents
   operation_id: closeIncidentPostmortem
   placement_key: closeIncidentPostmortem@OPS-001.incidents
@@ -15005,6 +16508,11 @@ additive_action_entries:
   placement_key: createActionProposal@ADM-002.requests
   section_id: requests
   handler_id: handle__adm_002__create_action_proposal__requests
+- action_key: COR-001.create-privacy-correction-plan--requests
+  operation_id: createPrivacyCorrectionPlan
+  placement_key: createPrivacyCorrectionPlan@COR-001.requests
+  section_id: requests
+  handler_id: handle__cor_001__create_privacy_correction_plan__requests
 - action_key: PUB-031.create-privacy-request--rights
   operation_id: createPrivacyRequest
   placement_key: createPrivacyRequest@PUB-031.rights
@@ -15155,6 +16663,11 @@ additive_action_entries:
   placement_key: retryActionExecution@OPS-003.recovery
   section_id: recovery
   handler_id: handle__ops_003__retry_action_execution__recovery
+- action_key: CAS-008.revoke-organization-official-channel--verification
+  operation_id: revokeOrganizationOfficialChannel
+  placement_key: revokeOrganizationOfficialChannel@CAS-008.verification
+  section_id: verification
+  handler_id: handle__cas_008__revoke_organization_official_channel__verification
 - action_key: OPS-001.start-incident-recovery--incidents
   operation_id: startIncidentRecovery
   placement_key: startIncidentRecovery@OPS-001.incidents
@@ -15305,6 +16818,11 @@ additive_action_entries:
   placement_key: verifyCommunicationEndpointLink@PUB-030.delivery
   section_id: delivery
   handler_id: handle__pub_030__verify_communication_endpoint_link__delivery
+- action_key: CAS-008.verify-response-organization-identity--verification
+  operation_id: verifyResponseOrganizationIdentity
+  placement_key: verifyResponseOrganizationIdentity@CAS-008.verification
+  section_id: verification
+  handler_id: handle__cas_008__verify_response_organization_identity__verification
 - action_key: INT-002.withdraw-action-decision--handoff
   operation_id: withdrawActionDecision
   placement_key: withdrawActionDecision@INT-002.handoff

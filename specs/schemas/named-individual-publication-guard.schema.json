@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.gurine.invalid/named-individual-publication-guard.schema.json",
+  "title": "NamedIndividualPublicationGuardEvidenceV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "assessment",
+    "overrideReceipt",
+    "snapshotAuthorId",
+    "editorialReviewDecision",
+    "gateState",
+    "legalReviewRequired",
+    "legalReviewed"
+  ],
+  "properties": {
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rulesetVersion",
+        "rulesetSha256",
+        "publicTextSha256",
+        "findings"
+      ],
+      "properties": {
+        "rulesetVersion": {
+          "const": "ko-named-individual-v1"
+        },
+        "rulesetSha256": {
+          "const": "12cef82152a675eb9a7263c8cda984faa0da1ff676b0ff614db9437cf49d30fc"
+        },
+        "publicTextSha256": {
+          "$ref": "common.schema.json#/$defs/sha256"
+        },
+        "findings": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "startUtf16",
+              "endUtf16",
+              "basis",
+              "rulesetVersion"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^/",
+                "maxLength": 2048
+              },
+              "startUtf16": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "endUtf16": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "basis": {
+                "enum": [
+                  "REGISTERED_PERSON_EXACT",
+                  "TITLE_ADJACENT_KOREAN_NAME"
+                ]
+              },
+              "rulesetVersion": {
+                "const": "ko-named-individual-v1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "overrideReceipt": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "receiptVersion",
+            "publicTextSha256",
+            "rulesetVersion",
+            "reasonCode",
+            "officialSourceLocator",
+            "officialSourceSha256",
+            "editorialReviewDecisionId",
+            "legalReviewerId",
+            "receiptSha256"
+          ],
+          "properties": {
+            "receiptVersion": {
+              "const": "named-individual-legal-override-v1"
+            },
+            "publicTextSha256": {
+              "$ref": "common.schema.json#/$defs/sha256"
+            },
+            "rulesetVersion": {
+              "const": "ko-named-individual-v1"
+            },
+            "reasonCode": {
+              "enum": ["PUBLIC_FIGURE", "OFFICIAL_DISPOSITION_QUOTE"]
+            },
+            "officialSourceLocator": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "officialSourceSha256": {
+              "$ref": "common.schema.json#/$defs/sha256"
+            },
+            "editorialReviewDecisionId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "legalReviewerId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "receiptSha256": {
+              "$ref": "common.schema.json#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "snapshotAuthorId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "currentLegalActorId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "editorialReviewDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "decision", "reviewerId"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "decision": {
+          "const": "APPROVE"
+        },
+        "reviewerId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "gateState": {
+      "enum": ["PASS", "BLOCKED"]
+    },
+    "legalReviewRequired": {
+      "type": "boolean"
+    },
+    "legalReviewed": {
+      "type": "boolean"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "assessment": {
+          "properties": {
+            "findings": {
+              "maxItems": 0
+            }
+          }
+        },
+        "overrideReceipt": {
+          "type": "null"
+        },
+        "gateState": {
+          "const": "PASS"
+        },
+        "legalReviewRequired": {
+          "const": false
+        },
+        "legalReviewed": {
+          "const": false
+        }
+      }
+    },
+    {
+      "properties": {
+        "assessment": {
+          "properties": {
+            "findings": {
+              "minItems": 1
+            }
+          }
+        },
+        "overrideReceipt": {
+          "type": "null"
+        },
+        "gateState": {
+          "const": "BLOCKED"
+        },
+        "legalReviewRequired": {
+          "const": true
+        },
+        "legalReviewed": {
+          "const": false
+        }
+      }
+    },
+    {
+      "required": ["currentLegalActorId"],
+      "properties": {
+        "assessment": {
+          "properties": {
+            "findings": {
+              "minItems": 1
+            }
+          }
+        },
+        "overrideReceipt": {
+          "type": "object"
+        },
+        "gateState": {
+          "const": "PASS"
+        },
+        "legalReviewRequired": {
+          "const": true
+        },
+        "legalReviewed": {
+          "const": true
+        }
+      }
+    }
+  ]
+}

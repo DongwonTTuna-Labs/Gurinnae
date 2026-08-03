@@ -1,0 +1,1330 @@
+schema_version: 1
+proposal_version: 2026-08-01.0039-r6d-authority-closure.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0039_r6d_authority_closure.sql
+  migration_sha256: c08732091fbfb3816c8dca85f1dd93de9a625717a1fa4d139cd6f4980f8ff6ef
+  migration_line_count: 9986
+  pglast_statement_count: 249
+  exact_relations:
+  - ops.r6d_entity_personhood_classification_receipts_v1
+  - ops.r6d_entity_material_use_closure_receipts_v1
+  - ops.r6d_entity_retention_execution_receipts_v1
+  - editorial.organization_official_channel_authority_receipts_v1
+  - ops.privacy_identity_proof_authority_receipts_v1
+  - ops.privacy_request_scope_inventories_v1
+  - ops.privacy_request_scope_inventory_items_v1
+  - ops.privacy_identity_proof_consumption_receipts_v1
+  - ops.privacy_correction_plans_v1
+  exact_new_relation_count: 9
+  relation_delta: 9
+  altered_relations:
+  - ops.event_types
+  - intake.response_submissions
+  - editorial.responses
+  - core.agencies
+  - core.suppliers
+  - core.agency_identifiers
+  - core.supplier_identifiers
+  - core.entity_aliases
+  - public.agencies
+  - public.suppliers
+  - editorial.organization_official_channel_assertions_v1
+  - editorial.organization_official_channel_revocation_receipts_v1
+  - ops.privacy_requests_v2
+  - ops.privacy_request_identity_receipts_v2
+  - ops.privacy_request_transition_receipts_v2
+  compatibility_views:
+  - ops.r6d_backup_disposal_due_inventory_v1
+  purpose: R6d authority closure for entity personhood and material-use retention, organization official-channel authority,
+    and privacy proof, scope, identity-consumption, correction, and transition ownership
+  relation_count_rule: only CREATE TABLE statements count; the due-inventory view and every ALTER, routine, trigger, index,
+    ACL, rename, and event-registry statement add zero relkind-r relations
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0038 remain byte-preserved; every physical change is forward-only in
+    0039
+  transaction_rule: one outer BEGIN is the first pglast statement and terminal COMMIT is the last statement
+  seed_rule: 0039 seeds no operating retention schedule, response calendar, organization assertion, identity proof, or privacy
+    request
+  legacy_rule: legacy rows without the immutable 0039 authority receipts remain readable but cannot enter a new classification,
+    attestation, retention, or privacy execution path
+  fail_closed_rule: missing or stale receipts, schedules, proofs, scope inventories, legal-hold authority, actor assertions,
+    step-up authority, or digests produce no protected transition
+  entity_authority_rule: entity classification, closure, legal-hold fencing, anonymization, and backup-disposal inventory
+    are database-owned and receipt-bound
+  official_channel_rule: official-channel attestation and revocation require exact immutable source and authority receipts;
+    staged 0038 rows do not acquire inferred 0039 authority
+  response_materializer_rule: the SECURITY DEFINER materializer forwards the event-bound response_request_id into the existing
+    transaction-local response-submission RLS context before invoking its private owner, and explicitly defers both reciprocal
+    constraints
+  privacy_rule: privacy create, RESPONSE_RECEIPT identity verification, correction planning, receipt exchange, and the
+    RESPONSE_RECEIPT-backed VERIFY_IDENTITY transition use exact producer, scope, step-up, and receipt authority;
+    VERIFIED_ENDPOINT remains unavailable without its separate canonical verifier/runtime producer
+statement_inventory:
+  create_table_count: 9
+  create_view_count: 1
+  owner_routine_count: 33
+  trigger_count: 21
+  explicit_index_count: 12
+  event_registry_upsert_count: 5
+  pglast_statement_count: 249
+  object_inventory_sha256: 6eef30ae2c1d1110b4eb692ff0acd029aea3e2aa66915cec67932d45a7d3cc8c
+  object_inventory_preimage: SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views, altered_relations,
+    routine signatures, trigger statements, and event_types; canonical per-statement hashes and indexes are inventoried separately
+existing_relation_changes:
+- relation: ops.event_types
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for ops.event_types in 0039
+  alter_statement_sha256: []
+- relation: intake.response_submissions
+  authority: exact forward reciprocal-FK and explicit zero-or-all CHECK repair for intake.response_submissions in 0039
+  alter_statement_sha256: &id023
+  - 216ae068c156cf4f7153a62b5cf2d67240af577cb0d6108fe4a6e54698f95d78
+- relation: editorial.responses
+  authority: exact forward reciprocal-FK, response-request binding, and explicit zero-or-all CHECK repair for editorial.responses
+    in 0039
+  alter_statement_sha256: &id024
+  - 5df8967c8fd9e73debd9aa865ef08a47e2c3717cc241289fe156633103447ddb
+- relation: core.agencies
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for core.agencies in 0039
+  alter_statement_sha256: &id001
+  - 52e391ba93a0624366c13bc3b1ba69e191cef65664abd89ea5bb5cf8ecae8de9
+  - a92768518e37eb2c62265a00dfbb85bbcdc5b732255d948258c9308153f6c80e
+- relation: core.suppliers
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for core.suppliers in 0039
+  alter_statement_sha256: &id002
+  - ccb136cd046e5b339c5de506f5f59102089707e57871f0afffb94ecf57c803ba
+  - 20958559a665775157eab3c774cf8e7ae144e281dbe849818c37b630c0a86a0f
+- relation: core.agency_identifiers
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for core.agency_identifiers in 0039
+  alter_statement_sha256: &id003
+  - 0b4bf3b28335e6e984647ccba41d3eec42ed410e5b40c0abe8257533c12e79e0
+  - 0d449ed2c4c278f7ea4d4f50358c786cc0a96944882de8e3a5756c4786ed1242
+- relation: core.supplier_identifiers
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for core.supplier_identifiers in 0039
+  alter_statement_sha256: &id004
+  - f057b963732a32bbddd15ee97a03afd49d626aee3a4a251a2f6ac4e62af29f96
+  - 66133ff4be632758c09f5f9c747fc483636b36abbaab93046ad7ea6a392603b6
+- relation: core.entity_aliases
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for core.entity_aliases in 0039
+  alter_statement_sha256: &id005
+  - 0554a75a754a13b76b08aaf9397f9edb7693a5e971ef88bbc3b9abf67907f056
+  - 372d82fc605ace5686280565ce6a9d3ce3049426381a266627886943c9aa70ee
+- relation: public.agencies
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for public.agencies in 0039
+  alter_statement_sha256: &id006
+  - 5c014b2c06c6d5a6de067276f50a73d9f10969c80648524c783a2f225ac4ed11
+- relation: public.suppliers
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for public.suppliers in 0039
+  alter_statement_sha256: &id007
+  - b3c86dea61732400d677411a3a73b848462e13ae4566ddd0294970abe70c4a36
+- relation: editorial.organization_official_channel_assertions_v1
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for editorial.organization_official_channel_assertions_v1
+    in 0039
+  alter_statement_sha256: &id013
+  - 23f2061b231714471ea57ade4a7574514471e676b41716b02960066924899c33
+- relation: editorial.organization_official_channel_revocation_receipts_v1
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for editorial.organization_official_channel_revocation_receipts_v1
+    in 0039
+  alter_statement_sha256: &id014
+  - 701a4b8b207ad63736c13ecff186d043ffd248a3ce5c771d47a4627cf22ed1d0
+  - 8e1ea77722125e85ec8e888e108e44fad365920bdc86459a307dd55f28350410
+  - 64084d3371525639b3dce827d9ade9c36fb46972ec56e222fe3cb241e266990d
+- relation: ops.privacy_requests_v2
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for ops.privacy_requests_v2 in 0039
+  alter_statement_sha256: &id015
+  - d38285015033e4c534709c59987cbd992ae06a3a38a243e5004bcf9f65e0d269
+- relation: ops.privacy_request_identity_receipts_v2
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for ops.privacy_request_identity_receipts_v2
+    in 0039
+  alter_statement_sha256: &id020
+  - e0dd20b765d274fed5a9c9260a572b2f049990b217f69e34644771fbca76cd49
+  - 5074d9f8a808ac2f1c10291979619e78fcbf6b9ec7ab9921ac25ce6e541c0367
+- relation: ops.privacy_request_transition_receipts_v2
+  authority: exact ALTER, trigger, ACL, rename, routine, or event-registry statements for ops.privacy_request_transition_receipts_v2
+    in 0039
+  alter_statement_sha256: &id021
+  - 76b4771c7a9395e0830d6283eed0b25418bf883cdb6a321a095924ac96361773
+compatibility_views:
+  ops.r6d_backup_disposal_due_inventory_v1:
+    relation_kind: view
+    security_barrier: true
+    relation_count_delta: 0
+    columns:
+    - execution_receipt_id
+    - execution_receipt_digest
+    - entity_kind
+    - entity_id
+    - schedule_id
+    - schedule_digest
+    - anonymized_at
+    - backup_disposal_due_at
+    access: SELECT only for gurine_auditor; PUBLIC is revoked
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE VIEW ops.r6d_backup_disposal_due_inventory_v1
+    alter_statement_sha256: &id011
+    - 2e89b235b1b232cca97222d3826e9e207981ef36a7d19c4b0a3829d8659bbe2c
+view_inventory:
+- relation: ops.r6d_backup_disposal_due_inventory_v1
+  relation_kind: view
+  relation_count_delta: 0
+tables:
+  ops.r6d_entity_personhood_classification_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.r6d_entity_personhood_classification_receipts_v1
+    create_statement_sha256: f443f4660e707c5827beb456b27efb0cf690d527ddbabb9ab2b420cfd64e7dde
+    columns:
+      receipt_id:
+        type: uuid
+        nullable: false
+      entity_kind:
+        type: text
+        nullable: false
+      entity_id:
+        type: uuid
+        nullable: false
+      classification:
+        type: text
+        nullable: false
+      classification_version:
+        type: bigint
+        nullable: false
+      entity_updated_at:
+        type: timestamptz
+        nullable: false
+      evidence_source_locator_digest:
+        type: char(64)
+        nullable: false
+      reason_digest:
+        type: char(64)
+        nullable: false
+      capability_authority_digest:
+        type: char(64)
+        nullable: false
+      actor_id:
+        type: uuid
+        nullable: false
+      session_id:
+        type: uuid
+        nullable: false
+      actor_assertion_jti:
+        type: uuid
+        nullable: false
+      actor_assertion_request_digest:
+        type: char(64)
+        nullable: false
+      step_up_authorization_id:
+        type: uuid
+        nullable: false
+      step_up_receipt_digest:
+        type: char(64)
+        nullable: false
+      request_id:
+        type: uuid
+        nullable: false
+      idempotency_key_sha256:
+        type: char(64)
+        nullable: false
+      request_digest:
+        type: char(64)
+        nullable: false
+      audit_event_id:
+        type: uuid
+        nullable: false
+      outbox_event_id:
+        type: uuid
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_digest:
+        type: char(64)
+        nullable: false
+      classified_at:
+        type: timestamptz
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - receipt_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id008
+    - 93f00148938c3c6f9e053d6811c80640c5f597df6324303dde88c6a7a835d5c6
+  ops.r6d_entity_material_use_closure_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.r6d_entity_material_use_closure_receipts_v1
+    create_statement_sha256: 3da31cda33634945ad9f1f18a67cfcf12c1aaa4a366ce0060439452941488690
+    columns:
+      receipt_id:
+        type: uuid
+        nullable: false
+      entity_kind:
+        type: text
+        nullable: false
+      entity_id:
+        type: uuid
+        nullable: false
+      closure_version:
+        type: bigint
+        nullable: false
+      entity_updated_at:
+        type: timestamptz
+        nullable: false
+      personhood_receipt_id:
+        type: uuid
+        nullable: false
+      personhood_receipt_digest:
+        type: char(64)
+        nullable: false
+      contract_count:
+        type: bigint
+        nullable: false
+      contract_set_digest:
+        type: char(64)
+        nullable: false
+      final_contract_end_at:
+        type: date
+        nullable: true
+      final_contract_boundary_at:
+        type: timestamptz
+        nullable: true
+      publication_revision_count:
+        type: bigint
+        nullable: false
+      publication_revision_set_digest:
+        type: char(64)
+        nullable: false
+      open_publication_revision_count:
+        type: bigint
+        nullable: false
+      legal_hold_coverage_digest:
+        type: char(64)
+        nullable: false
+      reason_digest:
+        type: char(64)
+        nullable: false
+      capability_authority_digest:
+        type: char(64)
+        nullable: false
+      actor_id:
+        type: uuid
+        nullable: false
+      session_id:
+        type: uuid
+        nullable: false
+      actor_assertion_jti:
+        type: uuid
+        nullable: false
+      actor_assertion_request_digest:
+        type: char(64)
+        nullable: false
+      step_up_authorization_id:
+        type: uuid
+        nullable: false
+      step_up_receipt_digest:
+        type: char(64)
+        nullable: false
+      request_id:
+        type: uuid
+        nullable: false
+      idempotency_key_sha256:
+        type: char(64)
+        nullable: false
+      request_digest:
+        type: char(64)
+        nullable: false
+      audit_event_id:
+        type: uuid
+        nullable: false
+      outbox_event_id:
+        type: uuid
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_digest:
+        type: char(64)
+        nullable: false
+      closure_at:
+        type: timestamptz
+        nullable: false
+      attested_at:
+        type: timestamptz
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - receipt_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id009
+    - db326735c4d832e0839a47ed4005e215c5069dabf72e4d67d9486d8927a35250
+  ops.r6d_entity_retention_execution_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.r6d_entity_retention_execution_receipts_v1
+    create_statement_sha256: d37d87e311fdb64bf9aea98f72696b140f716ea5dff3fc5b49f31e38a36825d1
+    columns:
+      execution_receipt_id:
+        type: uuid
+        nullable: false
+      job_id:
+        type: uuid
+        nullable: false
+      job_fencing_token:
+        type: bigint
+        nullable: false
+      job_lease_owner_digest:
+        type: char(64)
+        nullable: false
+      job_lease_token_sha256:
+        type: char(64)
+        nullable: false
+      job_payload_digest:
+        type: char(64)
+        nullable: false
+      entity_kind:
+        type: text
+        nullable: false
+      entity_id:
+        type: uuid
+        nullable: false
+      personhood_receipt_id:
+        type: uuid
+        nullable: false
+      personhood_receipt_digest:
+        type: char(64)
+        nullable: false
+      closure_receipt_id:
+        type: uuid
+        nullable: false
+      closure_receipt_digest:
+        type: char(64)
+        nullable: false
+      closure_at:
+        type: timestamptz
+        nullable: false
+      schedule_id:
+        type: uuid
+        nullable: false
+      schedule_record_class:
+        type: text
+        nullable: false
+      schedule_revision:
+        type: bigint
+        nullable: false
+      schedule_digest:
+        type: char(64)
+        nullable: false
+      due_at:
+        type: timestamptz
+        nullable: false
+      request_digest:
+        type: char(64)
+        nullable: false
+      idempotency_digest:
+        type: char(64)
+        nullable: false
+      legal_hold_coverage_digest:
+        type: char(64)
+        nullable: false
+      master_row_count:
+        type: bigint
+        nullable: false
+      identifier_row_count:
+        type: bigint
+        nullable: false
+      alias_row_count:
+        type: bigint
+        nullable: false
+      anonymized_at:
+        type: timestamptz
+        nullable: false
+      backup_disposal_due_at:
+        type: timestamptz
+        nullable: false
+      audit_event_id:
+        type: uuid
+        nullable: false
+      outbox_event_id:
+        type: uuid
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      execution_receipt_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - execution_receipt_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id010
+    - 09af463f4e01118c26847797f6450f237f42a6670866848fd3932ce945282931
+  editorial.organization_official_channel_authority_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE editorial.organization_official_channel_authority_receipts_v1
+    create_statement_sha256: 409de2df18278ecb2e70bab76c8241148d3bf0f714666f70a8b2509260e05132
+    columns:
+      authority_receipt_id:
+        type: uuid
+        nullable: false
+      authority_version:
+        type: bigint
+        nullable: false
+      assertion_id:
+        type: uuid
+        nullable: false
+      organization_kind:
+        type: text
+        nullable: false
+      organization_id:
+        type: uuid
+        nullable: false
+      agency_id:
+        type: uuid
+        nullable: true
+      supplier_id:
+        type: uuid
+        nullable: true
+      verification_method:
+        type: text
+        nullable: false
+      source_id:
+        type: uuid
+        nullable: false
+      communication_verification_id:
+        type: uuid
+        nullable: true
+      official_document_evidence_id:
+        type: uuid
+        nullable: true
+      source_purpose:
+        type: text
+        nullable: false
+      authority_receipt_kind:
+        type: text
+        nullable: false
+      underlying_source_proof_digest:
+        type: char(64)
+        nullable: false
+      source_snapshot_payload:
+        type: jsonb
+        nullable: false
+      source_snapshot_canonical:
+        type: bytea
+        nullable: false
+      source_snapshot_digest:
+        type: char(64)
+        nullable: false
+      attested_by_user_id:
+        type: uuid
+        nullable: false
+      actor_assertion_jti:
+        type: uuid
+        nullable: false
+      actor_action_digest:
+        type: char(64)
+        nullable: false
+      step_up_authorization_id:
+        type: uuid
+        nullable: false
+      step_up_receipt_digest:
+        type: char(64)
+        nullable: false
+      session_id:
+        type: uuid
+        nullable: false
+      reason_digest:
+        type: char(64)
+        nullable: false
+      request_id:
+        type: uuid
+        nullable: false
+      idempotency_key_sha256:
+        type: char(64)
+        nullable: false
+      request_digest:
+        type: char(64)
+        nullable: false
+      attested_at:
+        type: timestamptz
+        nullable: false
+      expires_at:
+        type: timestamptz
+        nullable: false
+      authority_payload:
+        type: jsonb
+        nullable: false
+      authority_canonical:
+        type: bytea
+        nullable: false
+      authority_receipt_digest:
+        type: char(64)
+        nullable: false
+      audit_event_id:
+        type: uuid
+        nullable: false
+      audit_receipt_digest:
+        type: char(64)
+        nullable: false
+      outbox_event_id:
+        type: uuid
+        nullable: false
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - authority_receipt_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id012
+    - 208e3e5dd83dc4a503e1d32310aa5f2bc00cc3c3d9b2bdadb0fc5e48b8a20dc1
+  ops.privacy_identity_proof_authority_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.privacy_identity_proof_authority_receipts_v1
+    create_statement_sha256: 65425e7a37b473790af1e73181a3084b59e69c41609c796e2efcf7474c9b3092
+    columns:
+      identity_proof_receipt_id:
+        type: uuid
+        nullable: false
+      privacy_request_id:
+        type: uuid
+        nullable: false
+      proof_kind:
+        type: text
+        nullable: false
+      source_proof_id:
+        type: uuid
+        nullable: false
+      source_subject_id:
+        type: uuid
+        nullable: true
+      source_subject_origin_digest:
+        type: char(64)
+        nullable: true
+      source_endpoint_id:
+        type: uuid
+        nullable: true
+      source_endpoint_version:
+        type: bigint
+        nullable: true
+      source_endpoint_digest:
+        type: char(64)
+        nullable: true
+      source_response_receipt_id:
+        type: uuid
+        nullable: true
+      source_endpoint_verification_id:
+        type: uuid
+        nullable: true
+      source_proof_digest:
+        type: char(64)
+        nullable: false
+      source_current_binding_digest:
+        type: char(64)
+        nullable: false
+      subject_proof_hash:
+        type: char(64)
+        nullable: false
+      subject_binding_digest:
+        type: char(64)
+        nullable: false
+      exact_scope_digest:
+        type: char(64)
+        nullable: false
+      request_create_receipt_digest:
+        type: char(64)
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - identity_proof_receipt_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id016
+    - 84b374e362d4d03a28d40eedae0bd29549340e4737ab1cce82ee37e1d0c36c2d
+  ops.privacy_request_scope_inventories_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.privacy_request_scope_inventories_v1
+    create_statement_sha256: 3eabab29a34f0f024ff6ffb32cb03203283a1133d0c8b4619b82c7ffa0fcc38f
+    columns:
+      scope_inventory_id:
+        type: uuid
+        nullable: false
+      privacy_request_id:
+        type: uuid
+        nullable: false
+      scope_kind:
+        type: text
+        nullable: false
+      date_from:
+        type: date
+        nullable: true
+      date_to:
+        type: date
+        nullable: true
+      include_derivatives:
+        type: boolean
+        nullable: false
+      include_backups:
+        type: boolean
+        nullable: false
+      object_item_count:
+        type: integer
+        nullable: false
+      object_item_set_digest:
+        type: char(64)
+        nullable: false
+      scope_digest:
+        type: char(64)
+        nullable: false
+      subject_scope_digest:
+        type: char(64)
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - scope_inventory_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id017
+    - c30cca9f567a9e6292507bff96c44e2cbbb7e4dd142e5e865f16960b63220332
+  ops.privacy_request_scope_inventory_items_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.privacy_request_scope_inventory_items_v1
+    create_statement_sha256: 38f694af69e8d7202208d23d5116ec4282db365aad44b77029c0e941905e9059
+    columns:
+      scope_inventory_id:
+        type: uuid
+        nullable: false
+      item_ordinal:
+        type: integer
+        nullable: false
+      privacy_request_id:
+        type: uuid
+        nullable: false
+      object_kind:
+        type: text
+        nullable: false
+      object_id:
+        type: uuid
+        nullable: false
+      item_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - scope_inventory_id
+      - item_ordinal
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id018
+    - 9d46414ce0d6e85a4459cd06f8fef71b52d6f72f3e54bcdace3e799d965135cd
+  ops.privacy_identity_proof_consumption_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.privacy_identity_proof_consumption_receipts_v1
+    create_statement_sha256: bbbafbe6965a80a7dd569f959009c753051e0f3b64fca53d8cc3920dbad9f689
+    columns:
+      consumption_receipt_id:
+        type: uuid
+        nullable: false
+      identity_proof_receipt_id:
+        type: uuid
+        nullable: false
+      identity_proof_receipt_digest:
+        type: char(64)
+        nullable: false
+      privacy_request_id:
+        type: uuid
+        nullable: false
+      subject_proof_hash:
+        type: char(64)
+        nullable: false
+      exact_scope_digest:
+        type: char(64)
+        nullable: false
+      transition_receipt_id:
+        type: uuid
+        nullable: false
+      actor_id:
+        type: uuid
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_digest:
+        type: char(64)
+        nullable: false
+      consumed_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - consumption_receipt_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id019
+    - c49dc50b50cad73093928028a20aea3f8d6176c7790a103679c72effd3759ad4
+    - 8832da949527d4a5ca0f2c4842db98f98d632a7437aa1d5eb730e1fe0a046c0e
+  ops.privacy_correction_plans_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0039_r6d_authority_closure.sql#CREATE TABLE ops.privacy_correction_plans_v1
+    create_statement_sha256: d783c6e233c72cf9b15b13185c789889e404ebcde5d0f6e52fc5891212a4daca
+    columns:
+      correction_plan_id:
+        type: uuid
+        nullable: false
+      privacy_request_id:
+        type: uuid
+        nullable: false
+      plan_version:
+        type: bigint
+        nullable: false
+      request_decision_version:
+        type: bigint
+        nullable: false
+      scope_inventory_id:
+        type: uuid
+        nullable: false
+      target_object_type:
+        type: text
+        nullable: false
+      target_object_id:
+        type: uuid
+        nullable: false
+      scope_item_digest:
+        type: char(64)
+        nullable: false
+      field_path:
+        type: text
+        nullable: false
+      field_path_syntax:
+        type: text
+        nullable: false
+      field_path_digest:
+        type: char(64)
+        nullable: false
+      current_value_digest:
+        type: char(64)
+        nullable: false
+      current_value_authority:
+        type: text
+        nullable: false
+      requested_value_ciphertext:
+        type: bytea
+        nullable: false
+      requested_value_sha256:
+        type: char(64)
+        nullable: false
+      requested_value_aad_digest:
+        type: char(64)
+        nullable: false
+      requested_value_ciphertext_digest:
+        type: char(64)
+        nullable: false
+      encryption_key_id:
+        type: text
+        nullable: false
+      evidence_ids:
+        type: uuid[]
+        nullable: false
+      evidence_snapshot_payload:
+        type: jsonb
+        nullable: false
+      evidence_set_digest:
+        type: char(64)
+        nullable: false
+      reason_digest:
+        type: char(64)
+        nullable: false
+      actor_id:
+        type: uuid
+        nullable: false
+      session_id:
+        type: uuid
+        nullable: false
+      actor_assertion_jti:
+        type: uuid
+        nullable: false
+      actor_action_digest:
+        type: char(64)
+        nullable: false
+      step_up_authorization_id:
+        type: uuid
+        nullable: false
+      step_up_receipt_digest:
+        type: char(64)
+        nullable: false
+      request_id:
+        type: uuid
+        nullable: false
+      idempotency_key_sha256:
+        type: char(64)
+        nullable: false
+      request_digest:
+        type: char(64)
+        nullable: false
+      audit_event_id:
+        type: uuid
+        nullable: false
+      plan_payload:
+        type: jsonb
+        nullable: false
+      plan_canonical:
+        type: bytea
+        nullable: false
+      plan_digest:
+        type: char(64)
+        nullable: false
+      expires_at:
+        type: timestamptz
+        nullable: false
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+    primary_key:
+      columns:
+      - correction_plan_id
+    grants:
+      authority: exact REVOKE and GRANT statements in 0039; no implicit runtime DML
+    rls:
+      enabled: false
+      forced: false
+      reason: 0039 adds no RLS policy for this internal fixed-path relation; exact ACL and owner routines close writes
+    retention:
+      authority: exact schedule tuple, immutable parent binding, or receipt ancestry in 0039; no absent authority is inferred
+    repository_roundtrip:
+      authority: exact owner routine, digest, foreign-key, and immutable receipt path in 0039
+    alter_statement_sha256: &id022
+    - f96e3496cd62dd8213c155b9383164c7553212187edcb15997df4dc17f0fa59e
+alter_statement_inventory:
+  intake.response_submissions: *id023
+  editorial.responses: *id024
+  core.agencies: *id001
+  core.suppliers: *id002
+  core.agency_identifiers: *id003
+  core.supplier_identifiers: *id004
+  core.entity_aliases: *id005
+  public.agencies: *id006
+  public.suppliers: *id007
+  ops.r6d_entity_personhood_classification_receipts_v1: *id008
+  ops.r6d_entity_material_use_closure_receipts_v1: *id009
+  ops.r6d_entity_retention_execution_receipts_v1: *id010
+  ops.r6d_backup_disposal_due_inventory_v1: *id011
+  editorial.organization_official_channel_authority_receipts_v1: *id012
+  editorial.organization_official_channel_assertions_v1: *id013
+  editorial.organization_official_channel_revocation_receipts_v1: *id014
+  ops.privacy_requests_v2: *id015
+  ops.privacy_identity_proof_authority_receipts_v1: *id016
+  ops.privacy_request_scope_inventories_v1: *id017
+  ops.privacy_request_scope_inventory_items_v1: *id018
+  ops.privacy_identity_proof_consumption_receipts_v1: *id019
+  ops.privacy_request_identity_receipts_v2: *id020
+  ops.privacy_request_transition_receipts_v2: *id021
+  ops.privacy_correction_plans_v1: *id022
+owner_routines:
+- signature: editorial.materialize_response_submission_v2(p_intake_receipt editorial.response_submission_intake_materialize_v1,
+    p_actor_id uuid, p_idempotency_key char(64), p_request_digest char(64)) RETURNS editorial.response_submission_intake_materialize_receipt_v2
+  canonical_ddl_sha256: a9505699e2987ff5645058f3756605041ef2a0e15000383b9075dd960866fb0b
+- signature: ops.place_legal_hold_v2(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key char(64), p_request_digest
+    char(64)) RETURNS jsonb
+  canonical_ddl_sha256: e03a60158448409225a80e5b77fda7a0271bfdfda1dcd424a1bf9c6951910bbd
+- signature: ops.r6d_entity_human_step_up_authority_v1(p_request jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key char(64), p_request_digest char(64), p_at_time timestamptz) RETURNS jsonb
+  canonical_ddl_sha256: a68274eeaf7c137010f1c5913aa2690011a9b6e9f554d0ece280c5b4e0d64614
+- signature: ops.classify_r6d_entity_personhood_v1(p_request jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key char(64), p_request_digest char(64)) RETURNS jsonb
+  canonical_ddl_sha256: c788d43b254e171947d29d1f2799e4c72e5c71bbd5f4fecde5072ad6f2b6e8d7
+- signature: ops.r6d_entity_material_use_state_v1(p_entity_kind text, p_entity_id uuid, p_at_time timestamptz) RETURNS jsonb
+  canonical_ddl_sha256: 380675bdd1c07c0fe2fd05550096903de80925158aa0623750679f53369141e7
+- signature: ops.list_due_r6d_backup_disposals_v1(p_limit integer) RETURNS jsonb
+  canonical_ddl_sha256: f90913f819e6c3c533d54c2dd118fb2dad242d848fc431b53dfbe51ce19a9e2c
+- signature: ops.guard_r6d_public_entity_plaintext_v1() RETURNS trigger
+  canonical_ddl_sha256: f4cda59f63e4c02b117498e5ef2ed0748786862d0030817355bfc7a9ec0f3d5b
+- signature: ops.guard_r6d_entity_authority_fields_v1() RETURNS trigger
+  canonical_ddl_sha256: 7145b82c45b1d0b29d561ce5865969d70308ab3cddc87232e31d60aa45589c6f
+- signature: ops.guard_r6d_entity_child_authority_v1() RETURNS trigger
+  canonical_ddl_sha256: e5c76c3bc083241f53018a6fb549e9ae4626dde4939d7da3f7a1fd759544bc23
+- signature: ops.attest_r6d_entity_material_use_closure_v1(p_request jsonb, p_actor_id uuid, p_session_id uuid, p_request_id
+    uuid, p_idempotency_key char(64), p_request_digest char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 4b3c90bacc6ba08ce3292268c9f4c04954c1b5f572c6d846e587dd1be8e4cb14
+- signature: ops.enqueue_due_r6d_entity_retention_jobs_v1(p_limit integer) RETURNS jsonb
+  canonical_ddl_sha256: 86332b7f9b87f4f05ba16836ab63903db48a84ac0815d4b0d905ee1be3f47f31
+- signature: ops.execute_due_r6d_entity_retention_job_v1(p_job_id uuid, p_lease_token uuid, p_fencing_token bigint) RETURNS
+    jsonb
+  canonical_ddl_sha256: 6e82d6b75a6b3d820cd306e2dc2a3053a3629378570f487a913278fa09cd576e
+- signature: ops.execute_due_r6d_person_retention_job_v1(p_job_id uuid, p_lease_token uuid, p_fencing_token bigint) RETURNS
+    jsonb
+  canonical_ddl_sha256: a7770624a66ef3a99aafeda57bee0da60c552afd8f5b937228d445938cf26e8e
+- signature: editorial.bind_organization_authority_schedule_v1() RETURNS trigger
+  canonical_ddl_sha256: 60feec4cff6be930b007e2bd665d17d796cc0e7d069d05f6f2bb4d25929c9c81
+- signature: editorial.guard_official_channel_authority_v1() RETURNS trigger
+  canonical_ddl_sha256: 3bb0244e0d1e086a2e625ae27ddf3203a7dc67f6062a4533ab6d998a1a59feda
+- signature: editorial.resolve_official_channel_source_v1(text, uuid, text, uuid, uuid, timestamptz, timestamptz) RETURNS
+    jsonb
+  canonical_ddl_sha256: da62ba9dacd004b31b97f47435a933bf64f844f82f1ebbfca13958db14e11701
+- signature: editorial.require_control_actor_assertion_v1(p_actor_assertion_jti uuid, p_actor_assertion_request_digest char(64),
+    p_evaluated_at timestamptz) RETURNS void
+  canonical_ddl_sha256: 6cf11114e8585faf8caadb14665bd207407952309f72d4f6830dce2c63ec38aa
+- signature: editorial.attest_organization_official_channel_v1(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id
+    uuid, p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: f612a8bf4b522c39f6a85671ff06f970caee777bfd99496514db3e7b3c655d0f
+- signature: editorial.guard_official_channel_revocation_v1() RETURNS trigger
+  canonical_ddl_sha256: 0894ddde71b7fb903d13f9d541c7672ef6683ed0a4859a1839297f205765acd3
+- signature: editorial.revoke_organization_official_channel_v1(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id
+    uuid, p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: b8cf0251aafa2a47decc8a1ebc324750d263c62020976b050ad2665d089666e0
+- signature: editorial.require_current_official_channel_v1(p_assertion_id uuid, p_organization_kind text, p_organization_id
+    uuid, p_response_request_id uuid, p_case_id uuid, p_identity_actor_id uuid, p_evaluated_at timestamptz) RETURNS jsonb
+  canonical_ddl_sha256: bac4324f9a6d42ae9cf16dd559f91c738c4a3de04c033373771b2649f8b54af8
+- signature: editorial.resolve_official_channel_source_v1(p_verification_method text, p_source_id uuid, p_organization_kind
+    text, p_organization_id uuid, p_authority_actor_id uuid, p_authority_expires_at timestamptz, p_evaluated_at timestamptz)
+    RETURNS jsonb
+  canonical_ddl_sha256: d9eafb0cbe0e9e8b1c2cf705e18abeda85ff245c880ed847960ca60058687907
+- signature: editorial.guard_organization_official_channel_authority_receipt_v1() RETURNS trigger
+  canonical_ddl_sha256: c0cf987698d9a182ac4a533df612e701d7509dd100981d8fc3f5370b2d0397fb
+- signature: editorial.guard_official_channel_authority_v1() RETURNS trigger
+  canonical_ddl_sha256: fad189f6f950b745ce5891f5ed8b8a27878614bcb1eb870bc2a67a4eeed62f21
+- signature: ops.create_privacy_request_v2(p_payload jsonb, p_request_id uuid, p_idempotency_key_sha256 char(64), p_request_sha256
+    char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 8b5c2086fb4b06ae0f38221029f0b8d9d88fb9086788154f552c4c1b30715ad3
+- signature: ops.privacy_identity_proof_authority_current_v1(p_identity_proof_receipt_id uuid, p_at timestamptz) RETURNS boolean
+  canonical_ddl_sha256: dc3f3f700997a35de1acc8ca90df7580bfb6d13d1b16dc72ddd86de6bab1adb7
+- signature: ops.require_privacy_step_up_v3(p_actor_id uuid, p_session_id uuid, p_actor_assertion_jti uuid, p_actor_assertion_request_sha256
+    char(64), p_actor_action_digest char(64), p_step_up_authorization_id uuid, p_idempotency_key_sha256 char(64), p_capability
+    text, p_at timestamptz) RETURNS char(64)
+  canonical_ddl_sha256: 789ecbfd4a213b728679e80f4a138430be0f6d35079e4e8256da6bcd954f40be
+- signature: ops.verify_privacy_request_identity_v3(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 050a4e5604cc705b16d7042e8f29489a4649c308cfc1939b99cf62ca5ad3fabf
+- signature: ops.bind_privacy_correction_plan_schedule_v1() RETURNS trigger
+  canonical_ddl_sha256: c3d3e7d0a6b68bd29c54fd3701c4d98fbd5540838ee9d79feb847a110fd98ce9
+- signature: ops.create_privacy_correction_plan_v1(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 2eb5e2e339ab2c8805c9a3149e5a3af97e8349dedf44e80d9c8e8f6b247ea022
+- signature: ops.exchange_privacy_request_receipt_token_v2(p_token_hmac char(64), p_next_session_sha256 char(64), p_bff_issuer
+    text, p_request_id uuid, p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 5c24fe4d8eb65327a98bfe2b0b0430a44b3f8b3714bb8a5fa7de6305a310a5f3
+- signature: ops.transition_privacy_request_v2(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid, p_idempotency_key_sha256
+    char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: a1891b583c86624449c64c717de208009bab2b92c3ee77a72b4e39eb1c9550b7
+- signature: ops.apply_control_addendum_command(p_operation_id text, p_payload jsonb, p_actor_id uuid, p_session_id uuid,
+    p_request_id uuid, p_idempotency_key_hash char(64), p_request_digest char(64)) RETURNS TABLE (aggregate_id uuid, aggregate_version
+    bigint, status text, accepted_at timestamptz, response_body jsonb, receipt_digest char(64), audit_event_id uuid, outbox_event_id
+    uuid)
+  canonical_ddl_sha256: 6339af077bb4c45cdf543cd332ad04c116dcb3c9f5be6f93e4dbe4176185ef7a
+trigger_inventory:
+- statement: CREATE TRIGGER r6d_entity_personhood_receipts_immutable_guard BEFORE DELETE OR UPDATE ON ops.r6d_entity_personhood_classification_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 558ef7fa6c12a864b64c4a4fed5fdb1776a00e6a65fb19dbebb461be2d8f567b
+- statement: CREATE TRIGGER r6d_entity_material_closure_receipts_immutable_guard BEFORE DELETE OR UPDATE ON ops.r6d_entity_material_use_closure_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: cf48b35e8a9fa83732aa023b62b2a60ec46a2126a9e2543b18d9bfee0d106264
+- statement: CREATE TRIGGER r6d_entity_retention_execution_receipts_immutable_guard BEFORE DELETE OR UPDATE ON ops.r6d_entity_retention_execution_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 38396d05d1fe94556b48507b32a338af828b4f806cb1bcdfe1e0a5ae3734c9d2
+- statement: CREATE TRIGGER agencies_r6d_plaintext_guard BEFORE INSERT OR DELETE OR UPDATE ON public.agencies FOR EACH ROW
+    EXECUTE PROCEDURE ops.guard_r6d_public_entity_plaintext_v1()
+  canonical_ddl_sha256: b28543e96932a32574bf7ded98d86edfa82c6e74d641a70e5431195726634aa0
+- statement: CREATE TRIGGER suppliers_r6d_plaintext_guard BEFORE INSERT OR DELETE OR UPDATE ON public.suppliers FOR EACH ROW
+    EXECUTE PROCEDURE ops.guard_r6d_public_entity_plaintext_v1()
+  canonical_ddl_sha256: a924c8e7e96cadc5a8f205406b0ddf9adc842dccb243ed655e29fc2c0dc2e95e
+- statement: CREATE TRIGGER agencies_r6d_authority_guard BEFORE INSERT OR UPDATE ON core.agencies FOR EACH ROW EXECUTE PROCEDURE
+    ops.guard_r6d_entity_authority_fields_v1()
+  canonical_ddl_sha256: d8d08366169f1508e3b06ea0e292bab54335c614105e4058f0acc10f3bedc17e
+- statement: CREATE TRIGGER suppliers_r6d_authority_guard BEFORE INSERT OR UPDATE ON core.suppliers FOR EACH ROW EXECUTE PROCEDURE
+    ops.guard_r6d_entity_authority_fields_v1()
+  canonical_ddl_sha256: 057522b7b2a508238d345d61450050dc84cf196fdfbc1ac9a4c6865606c8931e
+- statement: CREATE TRIGGER agency_identifiers_r6d_authority_guard BEFORE INSERT OR UPDATE ON core.agency_identifiers FOR
+    EACH ROW EXECUTE PROCEDURE ops.guard_r6d_entity_child_authority_v1()
+  canonical_ddl_sha256: 0091444ca09cd26ecfd0cbf17f45530f44f90e8f5f23e9a01acbadb7d85b10f6
+- statement: CREATE TRIGGER supplier_identifiers_r6d_authority_guard BEFORE INSERT OR UPDATE ON core.supplier_identifiers
+    FOR EACH ROW EXECUTE PROCEDURE ops.guard_r6d_entity_child_authority_v1()
+  canonical_ddl_sha256: 6d5d9c3acf6bd5937f0f7ca3d777171db1930d64cab7bf99f8accb7d6a1b2bfc
+- statement: CREATE TRIGGER entity_aliases_r6d_authority_guard BEFORE INSERT OR UPDATE ON core.entity_aliases FOR EACH ROW
+    EXECUTE PROCEDURE ops.guard_r6d_entity_child_authority_v1()
+  canonical_ddl_sha256: abaf4073ba8e4ae40be77ae76376ec42e7e3203a0061f9898d4ecd50d6e2537a
+- statement: CREATE TRIGGER organization_official_channel_authority_receipts_v1_immutable_g BEFORE DELETE OR UPDATE ON editorial.organization_official_channel_authority_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 9692c51b006d0c4fc697e96ff7f42519694bc94336df96ebdc39d851d8ae0896
+- statement: CREATE TRIGGER organization_official_channel_authority_receipts_v1_retention_b BEFORE INSERT ON editorial.organization_official_channel_authority_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE editorial.bind_organization_authority_schedule_v1()
+  canonical_ddl_sha256: e626ddb8de79ac254b361c9fc1dd2a46bdca337402561f4361f7a7b73bf6f423
+- statement: CREATE TRIGGER organization_official_channel_revocation_authority_guard BEFORE INSERT ON editorial.organization_official_channel_revocation_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE editorial.guard_official_channel_revocation_v1()
+  canonical_ddl_sha256: 2099efdc1dfaa41a4dd25b3add460e02a08dc612123be777ffd001b119b2d815
+- statement: CREATE TRIGGER organization_official_channel_assertion_authority_guard BEFORE INSERT ON editorial.organization_official_channel_assertions_v1
+    FOR EACH ROW EXECUTE PROCEDURE editorial.guard_official_channel_authority_v1()
+  canonical_ddl_sha256: c6ec154652707d47fb49c16ae995c555e9e3bc31cb83623ba16b2b4d04546e93
+- statement: CREATE TRIGGER organization_official_channel_authority_receipts_v1_binding_gua BEFORE INSERT ON editorial.organization_official_channel_authority_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE editorial.guard_organization_official_channel_authority_receipt_v1()
+  canonical_ddl_sha256: 8025cb375b693a79287c7c4cc4a83fa284551e969fd7cfec66bc68e71bdd606e
+- statement: CREATE TRIGGER privacy_identity_proof_authority_receipts_v1_immutable BEFORE DELETE OR UPDATE ON ops.privacy_identity_proof_authority_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: b0e3cd099bdb5f772b3f499ef066dd936adf17cc7d7dca816cc0f821cfa14168
+- statement: CREATE TRIGGER privacy_request_scope_inventories_v1_immutable BEFORE DELETE OR UPDATE ON ops.privacy_request_scope_inventories_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: ef68f1863658425711d4018314eb06aeb0c8de3677357f31575b3cc3d60d85b1
+- statement: CREATE TRIGGER privacy_request_scope_inventory_items_v1_immutable BEFORE DELETE OR UPDATE ON ops.privacy_request_scope_inventory_items_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 95f70b6533ddead002119783060a22c631d015edb35f2331bbfb225fdca2872c
+- statement: CREATE TRIGGER privacy_identity_proof_consumption_receipts_v1_immutable BEFORE DELETE OR UPDATE ON ops.privacy_identity_proof_consumption_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: efa2466d88f8f144d396508d16aa9824048154933f2e760adc17d067e4efbffb
+- statement: CREATE TRIGGER privacy_correction_plans_v1_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_correction_plans_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 29f37e67771026c5dcea68cf201eabf5674794ae48d51f3de5ec9643c14b3208
+- statement: CREATE TRIGGER privacy_correction_plans_v1_retention_bind BEFORE INSERT ON ops.privacy_correction_plans_v1 FOR
+    EACH ROW EXECUTE PROCEDURE ops.bind_privacy_correction_plan_schedule_v1()
+  canonical_ddl_sha256: 5655958ee9b73ac85c23b79bd939ae6f4181e7f59b88c9da28e2d9d711673f0b
+index_inventory:
+- statement: CREATE INDEX agencies_r6d_personhood_idx ON core.agencies (r6d_anonymization_state, r6d_personhood_receipt_id,
+    id)
+  canonical_ddl_sha256: 49a79ae7981fe073ebd1ebd2332ca41c06b0fe1a8fb02de816b7ef374b46b064
+- statement: CREATE INDEX suppliers_r6d_personhood_idx ON core.suppliers (r6d_anonymization_state, r6d_personhood_receipt_id,
+    id)
+  canonical_ddl_sha256: c6c73cf4582545077fe99657152c1d2338840b4c10146290c4b350535b37e571
+- statement: CREATE INDEX agency_identifiers_r6d_anonymization_idx ON core.agency_identifiers (agency_id, r6d_anonymization_state,
+    id)
+  canonical_ddl_sha256: 5fbb89c852015b104ebf852cfe2f226033a9ae7b37e6c1e6cef237d0c0d3baec
+- statement: CREATE INDEX supplier_identifiers_r6d_anonymization_idx ON core.supplier_identifiers (supplier_id, r6d_anonymization_state,
+    id)
+  canonical_ddl_sha256: a994332ccbaf40aca09f59376f8bfa2bc79adc9e3e3be0c13c18f37946011a64
+- statement: CREATE INDEX entity_aliases_r6d_anonymization_idx ON core.entity_aliases (entity_type, entity_id, r6d_anonymization_state,
+    id)
+  canonical_ddl_sha256: fb1a143245fd451322b1099e6d7c9b9eea70eca9ce66445f556a888c7e0d1649
+- statement: CREATE UNIQUE INDEX organization_official_channel_authority_receipt_uq ON editorial.organization_official_channel_assertions_v1
+    (authority_receipt_id) WHERE authority_receipt_id IS NOT NULL
+  canonical_ddl_sha256: 1b87499b7e52165d01fa9f4608d756a3d033e4a919269a60bd682677e957e2fc
+- statement: CREATE UNIQUE INDEX organization_official_channel_revocation_actor_jti_uq ON editorial.organization_official_channel_revocation_receipts_v1
+    (actor_assertion_jti) WHERE actor_assertion_jti IS NOT NULL
+  canonical_ddl_sha256: d2a71b60e50cad28bdfe5df93fd837d446a4fc73f1c8ef1967bdb10550f6f21a
+- statement: CREATE UNIQUE INDEX organization_official_channel_revocation_step_up_uq ON editorial.organization_official_channel_revocation_receipts_v1
+    (step_up_authorization_id) WHERE step_up_authorization_id IS NOT NULL
+  canonical_ddl_sha256: 63839eadbac83f035449cad117c01de184d0497034d582dcfad564bc08b020af
+- statement: CREATE UNIQUE INDEX organization_official_channel_revocation_request_uq ON editorial.organization_official_channel_revocation_receipts_v1
+    (request_id) WHERE request_id IS NOT NULL
+  canonical_ddl_sha256: 066157b18c85186949301cc8f66f86a72785100c7a6e510f65202f21407b3e0d
+- statement: CREATE UNIQUE INDEX organization_official_channel_revocation_idempotency_uq ON editorial.organization_official_channel_revocation_receipts_v1
+    (idempotency_key_sha256) WHERE idempotency_key_sha256 IS NOT NULL
+  canonical_ddl_sha256: bf5d142c3bb09af09bc422a20a04c50b02f3f6c01c54e0dd0a474398b2a675de
+- statement: CREATE UNIQUE INDEX organization_official_channel_revocation_audit_uq ON editorial.organization_official_channel_revocation_receipts_v1
+    (audit_event_id) WHERE audit_event_id IS NOT NULL
+  canonical_ddl_sha256: 3cee4eb9d56e74dc81298700b15a69c14c2260d1bc6885878816de77cb1a799f
+- statement: CREATE UNIQUE INDEX organization_official_channel_revocation_outbox_uq ON editorial.organization_official_channel_revocation_receipts_v1
+    (outbox_event_id) WHERE outbox_event_id IS NOT NULL
+  canonical_ddl_sha256: 32eecfbea235188a81e1964a8a6865f6df2342bb6267175dc6f0718215f452c5
+event_registry_contract:
+  statement: one five-row INSERT ... ON CONFLICT upsert in migration statement order; no decision-marker registry block is
+    present
+  exact_upsert_count: 5
+  events_in_order:
+  - event_type: entity.personhood_classified.v1
+    category: DOMAIN
+    schema_version: 1
+    payload_schema_uri: payloads/entity_personhood_classified_v1.schema.json
+    payload_schema_path: specs/events/payloads/entity_personhood_classified_v1.schema.json
+    payload_schema_sha256: cd0d82766446e76fbe56e71ec4acbce5c5aa0f3cfbc9875e220a48d56bbe7144
+    embedded_json_equivalent: true
+  - event_type: entity.material_use_closed.v1
+    category: DOMAIN
+    schema_version: 1
+    payload_schema_uri: payloads/entity_material_use_closed_v1.schema.json
+    payload_schema_path: specs/events/payloads/entity_material_use_closed_v1.schema.json
+    payload_schema_sha256: bdae3dcb5926c5121c18f9e7a75242d75ce7b98d352b5cf6480fd5bce0b3c16f
+    embedded_json_equivalent: true
+  - event_type: entity.retention_anonymized.v1
+    category: DOMAIN
+    schema_version: 1
+    payload_schema_uri: payloads/entity_retention_anonymized_v1.schema.json
+    payload_schema_path: specs/events/payloads/entity_retention_anonymized_v1.schema.json
+    payload_schema_sha256: 7138f19db1a458cdcf971136894f04d3166cd215c0d94e3bad96e50c83743344
+    embedded_json_equivalent: true
+  - event_type: organization.official_channel_attested.v1
+    category: DOMAIN
+    schema_version: 1
+    payload_schema_uri: payloads/organization_official_channel_attested_v1.schema.json
+    payload_schema_path: specs/events/payloads/organization_official_channel_attested_v1.schema.json
+    payload_schema_sha256: d17708bb3aaa013e5160f689bd9e3056aa5aac0157f6bd6869427fc1154d47c7
+    embedded_json_equivalent: true
+  - event_type: organization.official_channel_revoked.v1
+    category: DOMAIN
+    schema_version: 1
+    payload_schema_uri: payloads/organization_official_channel_revoked_v1.schema.json
+    payload_schema_path: specs/events/payloads/organization_official_channel_revoked_v1.schema.json
+    payload_schema_sha256: c113b625c9290479c3db83cc546cb2591b7b7d0773868139b7f8f567189a84ab
+    embedded_json_equivalent: true
+  inherited_emit_dependencies: []
+  inherited_rule: 0039 overwrites only the five exact registry rows above; delegated pre-0039 owners retain their existing
+    privacy/request and retention completion event contracts
+retention_binding_inventory:
+  schedule_bound_classes:
+  - AGENCY_MASTER
+  - SUPPLIER_MASTER
+  - RESPONSE_IDENTITY_GOVERNANCE
+  - PRIVACY_REQUEST_SEALED_CONTENT
+  static_policy_tables_without_runtime_schedule_tuple: []
+  exactness_rule: runtime authority and receipt rows use an exact schedule tuple or immutable parent authority; zero, ambiguous,
+    expired, stale, or mismatched authority fails closed
+known_fail_closed_boundaries:
+  staged_legacy_rows: pre-0039 rows without immutable authority receipts remain readable but cannot enter a new protected
+    success path
+  operating_policy_population: 0039 creates no operating schedule, calendar, assertion, identity proof, or privacy request
+  document_identity_proof: the producer-less document challenge remains rejected for new or changed privacy rows until an
+    immutable same-subject exact-scope producer exists
+  verified_endpoint_identity_proof: the privacy consumer shape remains closed, but no canonical endpoint verifier/runtime
+    producer can create its source receipt; this proof kind remains OPEN_FAIL_CLOSED with no synthetic ACTIVE endpoint
+  backup_physical_disposal: only the bounded due inventory is implemented; automatic deletion and a database disposal writer
+    are forbidden; the receipt producer remains OPERATOR_OWNED_DEFERRED and the system cannot claim completion while
+    BACKUP_PHYSICAL_DISPOSAL_RECEIPT_AUTHORITY is unset
+  privacy_correction_effect: at the historical 0039 boundary immutable typed plan creation mutates zero target rows and
+    APPROVE/COMPLETE are fail-closed; 0040 forward-supersedes that boundary for exact RESPONSE /partyName only
+  privacy_legal_hold_scope: at the historical 0039 boundary RESPONSE, PUBLICATION, and EVIDENCE are implemented while the four
+    added target kinds are fail-closed; 0040 forward-supersedes CORRECTION, SUBSCRIPTION and COMMUNICATION_ENDPOINT and keeps
+    AUDIT_SUBJECT_RECORD explicitly unsupported
+verification_obligations:
+- pglast parses the complete migration as exactly 249 statements and the explicit transaction is closed
+- the exact nine CREATE TABLE relations equal scope.exact_relations and the one view is excluded from relkind-r count
+- all 33 owner routine tuples, including duplicate signatures at distinct source positions, remain ordered and hash-exact
+- all 21 trigger statements, 12 explicit indexes, 15 altered-relation targets, and five event rows reproduce the current pglast
+  inventory
+- all five embedded event payload JSON objects are structurally equal to their named event-contract schema files
+- migration_sha256, every canonical statement hash, and object_inventory_sha256 reproduce from the current SQL bytes
+OPEN_QUESTIONS:
+- id: BACKUP-PHYSICAL-DISPOSAL-RECEIPT-AUTHORITY
+  status: OPERATOR_OWNED_DEFERRED
+  input_contract: specs/legal/operator-owned-launch-inputs.yaml#BACKUP_PHYSICAL_DISPOSAL_RECEIPT_AUTHORITY
+  question: the existing backup operator must supply the external immutable receipt ABI, storage and authentication boundary,
+    backup-artifact identity and N:M cardinality, allowed disposal methods, and method-specific independent absence evidence
+    as one decision-complete input before any producer, completion claim, or completed-item exclusion is enabled
+- id: VERIFIED-ENDPOINT-PRODUCER-AUTHORITY
+  status: OPEN_AUTHORITY_DECISION
+  question: define the versioned verifier ABI, canonical secret preimages and key revisions, immutable issuance or signature
+    receipts, and exact owner inputs before VERIFIED_ENDPOINT can produce a privacy identity authority receipt

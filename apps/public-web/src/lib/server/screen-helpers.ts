@@ -39,7 +39,11 @@ export function withoutToken(url: URL, notice?: string): string {
   const clean = new URL(url);
   clean.searchParams.delete("token");
   if (notice) clean.searchParams.set("notice", notice);
-  return `${clean.pathname}${clean.search}${clean.hash}`;
+  // Redirect locations are compared and audited as canonical URI strings.
+  // URLSearchParams uses form encoding (`+`) for spaces; normalize only that
+  // representation while preserving literal plus characters as `%2B`.
+  const query = clean.searchParams.toString().replaceAll("+", "%20");
+  return `${clean.pathname}${query ? `?${query}` : ""}${clean.hash}`;
 }
 export function tokenBody(
   operationId: string,
@@ -187,7 +191,7 @@ export function mergeFields(
 export function publicLedgerRow(
   screenId: PublicLedgerScreenId,
   index: number,
-  cells: Pick<PublicLedgerRow, "identifier" | "kind" | "title"> & {
+  cells: Pick<PublicLedgerRow, "identifier" | "kind" | "notice" | "title"> & {
     summary?: PublicLedgerCell | undefined;
     status?: PublicLedgerRow["status"] | undefined;
     metric?: PublicLedgerCell | undefined;
@@ -199,6 +203,7 @@ export function publicLedgerRow(
     identifier: cells.identifier,
     title: cells.title,
     kind: cells.kind,
+    notice: cells.notice,
     ...(cells.summary ? { summary: cells.summary } : {}),
     ...(cells.status ? { status: cells.status } : {}),
     ...(cells.metric ? { metric: cells.metric } : {}),

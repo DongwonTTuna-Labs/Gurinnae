@@ -45,7 +45,10 @@ async fn handle(
     let Some(idempotency_key) = header(&request, "idempotency-key") else {
         return problem("IDEMPOTENCY_KEY_REQUIRED", 400, &request_id);
     };
-    let bound = bound_request(&request, &body, Some(idempotency_key));
+    let bound = match bound_request(&request, &body, Some(idempotency_key)) {
+        Ok(value) => value,
+        Err(_) => return problem("INVALID_REQUEST_BINDING", 400, &request_id),
+    };
     let request_digest = match canonical_request_digest(&bound) {
         Ok(value) => value,
         Err(_) => return problem("INVALID_REQUEST_BINDING", 400, &request_id),
@@ -119,7 +122,8 @@ async fn authorize(
     let request_id = request_id(request);
     let token = header(request, "x-gurine-service-assertion")
         .ok_or_else(|| problem("SERVICE_ASSERTION_REQUIRED", 401, &request_id))?;
-    let bound = bound_request(request, body, header(request, "idempotency-key"));
+    let bound = bound_request(request, body, header(request, "idempotency-key"))
+        .map_err(|error| assertion_problem(error, &request_id))?;
     let claims = verify_claims(
         token,
         &state.service_assertion_keys,
@@ -198,15 +202,39 @@ fn bound_request<'a>(
     request: &'a HttpRequest,
     body: &'a [u8],
     idempotency_key: Option<&'a str>,
-) -> BoundRequest<'a> {
-    BoundRequest {
+) -> Result<BoundRequest<'a>, AssertionError> {
+    Ok(BoundRequest {
         method: request.method().as_str(),
         path: request.path(),
         raw_query: request.query_string(),
         body,
         content_type: header(request, "content-type"),
         idempotency_key,
+        next_submission_session: next_submission_session_header(request)?,
+    })
+}
+
+fn next_submission_session_header(request: &HttpRequest) -> Result<Option<&str>, AssertionError> {
+    let mut values = request
+        .headers()
+        .get_all("x-gurine-next-submission-session");
+    let Some(value) = values.next() else {
+        return Ok(None);
+    };
+    if values.next().is_some() {
+        return Err(AssertionError::RequestMismatch);
     }
+    let value = value
+        .to_str()
+        .map_err(|_| AssertionError::RequestMismatch)?;
+    if value.len() != 43
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+    {
+        return Err(AssertionError::RequestMismatch);
+    }
+    Ok(Some(value))
 }
 
 fn request_id(request: &HttpRequest) -> String {
@@ -275,4 +303,39 @@ fn problem(code: &str, status: u16, request_id: &str) -> HttpResponse {
             "status": status,
             "requestId": request_id,
         }))
+}
+
+#[cfg(test)]
+mod request_binding_tests {
+    use actix_web::test::TestRequest;
+
+    use super::{AssertionError, bound_request};
+
+    const NEXT_SESSION: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    #[test]
+    fn unsigned_next_submission_session_reaches_service_assertion_binding() {
+        let request = TestRequest::post()
+            .uri("/internal/v1/sessions/resolve")
+            .insert_header(("x-gurine-next-submission-session", NEXT_SESSION))
+            .to_http_request();
+        let bound = bound_request(&request, b"", None).expect("valid unique header");
+        assert_eq!(bound.next_submission_session, Some(NEXT_SESSION));
+    }
+
+    #[test]
+    fn duplicate_next_submission_session_is_rejected() {
+        let request = TestRequest::post()
+            .uri("/internal/v1/sessions/resolve")
+            .append_header(("x-gurine-next-submission-session", NEXT_SESSION))
+            .append_header((
+                "x-gurine-next-submission-session",
+                "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+            ))
+            .to_http_request();
+        assert!(matches!(
+            bound_request(&request, b"", None),
+            Err(AssertionError::RequestMismatch)
+        ));
+    }
 }

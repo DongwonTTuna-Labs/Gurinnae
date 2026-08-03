@@ -458,6 +458,7 @@ base_operation_guards:
     assurance: STEP_UP
     failure: PUBLICATION_RESTRICTION_CAUSE_INVALID
   placeLegalHold:
-    target: closed LegalHoldTargetBindingV1 including exact target version/digest and derived anchor digest
+    target: closed thirteen-kind LegalHoldTargetBindingV1 including exact target version/digest and derived anchor digest; CORRECTION and SUBSCRIPTION bind immutable snapshots and COMMUNICATION_ENDPOINT binds existing id/version/endpoint_digest
     assurance: STEP_UP
     failure: LEGAL_HOLD_TARGET_INVALID
+    unsupported_target: {targetKind: AUDIT_SUBJECT_RECORD, failure: LEGAL_HOLD_TARGET_UNSUPPORTED, http_status: 422, reason: no authoritative source relation, unlock_condition: versioned immutable source relation plus canonical digest owner lock and anchor foreign key}

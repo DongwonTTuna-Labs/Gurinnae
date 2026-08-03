@@ -25,7 +25,7 @@ function actorSummary() {
 function actionRationale() {
   return {
     summary: "검토 완료 사실을 담당자에게 전달합니다.",
-    evidenceSegmentIds: ["evidence-001"],
+    evidenceSegmentIds: ["16161616-1616-4161-8161-161616161616"],
     unknowns: [],
     alternativesConsidered: ["전달하지 않음"],
     riskNote: "수신자와 본문을 승인 지문에 결속합니다.",
@@ -133,7 +133,6 @@ export function actionQueueResponse() {
       sort: "DUE_ASC",
     },
     asOf: new Date().toISOString(),
-    nextCursor: "",
     totalApproximate: 1,
     operationId: "listActionApprovalQueue",
     links: [],
@@ -205,7 +204,6 @@ export function actionProposalDetail() {
       order: "slot-ordinal-asc-generation-asc-assignment-id-asc",
       asOf: now,
       pageDigest: actionJourneyDigests.binding,
-      nextCursor: "",
       complete: true,
     },
     decisionHistory: {
@@ -216,7 +214,6 @@ export function actionProposalDetail() {
       order: "decided-at-asc-decision-id-asc",
       asOf: now,
       pageDigest: actionJourneyDigests.receipt,
-      nextCursor: "",
       complete: true,
     },
     quorum: actionQuorum(),

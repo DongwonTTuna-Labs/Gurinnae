@@ -314,15 +314,23 @@ operations:
   repository_methods:
   - ResponseRepository::approve_excerpt
   statements:
+  - verb: CALL
+    relation: editorial.approve_response_excerpt_guarded_v2
+    purpose: atomically validate the response version, exact excerpt hash and publication form; require the exact active official-channel identity receipt for FULL or REDACTED, exempt only ANONYMOUS, then approve and return an immutable receipt
+    expected_rows: exactly-one
   - verb: SELECT_FOR_UPDATE
     relation: editorial.responses
-    purpose: lock response and exact proposed excerpt hash
+    purpose: procedure-owned lock of the response, exact proposed excerpt hash and current version
     expected_rows: exactly-one
     identity_predicate: id = :responseId
     version_predicate: version = :expectedVersion
+  - verb: SELECT
+    relation: editorial.response_publication_identity_receipts_v1
+    purpose: procedure-owned exact current assertion binding for FULL or REDACTED; SECOND_FACTOR_VERIFIED, STEP_UP-verified official-channel proof must be active, unexpired and unrevoked; OTP-only and UNVERIFIED never qualify
+    expected_rows: exactly-one-when-publication-form-is-FULL-or-REDACTED
   - verb: UPDATE
     relation: editorial.responses
-    purpose: approve public excerpt and increment version
+    purpose: procedure-owned approval and version increment after the identity guard; ANONYMOUS is the only identity-receipt exemption
     expected_rows: exactly-one
     version_predicate: version = :expectedVersion
     identity_predicate: id = :responseId
@@ -3444,48 +3452,24 @@ operations:
   repository_methods:
   - LegalHoldRepository::place
   statements:
-  - verb: UPDATE
-    relation: editorial.cases
-    purpose: compare-and-swap case version before legal hold placement
+  - verb: CALL
+    relation: ops.place_legal_hold_v2
+    purpose: validate the closed thirteen-kind LegalHoldTargetBindingV1, lock and digest the exact concrete target, reject AUDIT_SUBJECT_RECORD as LEGAL_HOLD_TARGET_UNSUPPORTED with zero writes, bind STEP_UP and conflict review, then place the hold atomically
     expected_rows: exactly-one
-    identity_predicate: id = :caseId
-    version_predicate: version = :expectedCaseVersion
-    version_mutation: version = version + 1
+  - verb: UPSERT
+    relation: ops.legal_hold_target_anchors
+    purpose: procedure-owned insert or exact reuse of one immutable target anchor; supplier and agency bind entity-retention snapshots, CORRECTION binds ops.privacy_correction_snapshots_v1(snapshot_id,correction_id,snapshot_version,snapshot_digest), SUBSCRIPTION binds ops.privacy_subscription_snapshots_v1(snapshot_id,subscription_id,snapshot_version,snapshot_digest), and COMMUNICATION_ENDPOINT binds intake.communication_endpoints(id,version,endpoint_digest) without a derived snapshot substitute
+    expected_rows: exactly-one-logical
   - verb: INSERT
     relation: editorial.legal_holds
-    purpose: insert the exact scoped active legal hold
+    purpose: procedure-owned append-only hold placement over the exact target anchor and scope atoms
     expected_rows: exactly-one
-    identity_predicate: case_id = :caseId AND object_type = :objectType AND object_id = :objectId
-  transaction: READ COMMITTED
+  transaction: SERIALIZABLE
   domain_events:
-  - legal_hold.placed.v1
+  - legal_hold.placed.v2
   integration_events: []
   audit_action: command.placeLegalHold
-  concurrency:
-    mode: OPTIMISTIC
-    version_field: expectedCaseVersion
-    guard_relation: editorial.cases
-    guard_identity_predicate: id = :caseId
-    guard_version_predicate: version = :expectedCaseVersion
-    guard_lock: conditional UPDATE obtains row lock
-    mutation_relation: editorial.cases
-    mutation_identity_predicate: id = :caseId
-    success_effect: insert one scoped legal hold and increment case version exactly once
-    zero_rows_resolution:
-      probe: read case by id without version predicate
-      missing_error: RESOURCE_NOT_FOUND
-      existing_error: VERSION_CONFLICT
-    version_mutation: version = version + 1
-    request_placeholders:
-    - caseId
-    - expectedCaseVersion
-    context_placeholders: []
-    guard_columns:
-    - id
-    - version
-    mutation_columns:
-    - id
-    - version
+  concurrency: null
 - operation_id: placeTemporaryRestriction
   api: control-api
   method: POST
@@ -3551,11 +3535,27 @@ operations:
     expected_rows: exactly-one
   - verb: SELECT
     relation: editorial.review_snapshots
-    purpose: read exact immutable snapshot
+    purpose: read the exact immutable snapshot, public-text digest and named-individual legal-risk findings
+    expected_rows: exactly-one
+  - verb: SELECT
+    relation: core.list_publication_person_names_v1
+    purpose: load only active VERIFIED and APPROVED registered PERSON names for fail-closed exact-name detection; this result is never identity-merge evidence
+    expected_rows: zero-or-more
+  - verb: INSERT
+    relation: editorial.named_person_publication_assessments
+    purpose: store the exact PREVIEW assessment bound to case version, snapshot digest, destination state, canonical public payload digest and active policy digest
+    expected_rows: exactly-one
+  - verb: INSERT
+    relation: editorial.named_person_publication_findings
+    purpose: store every registered-name or title-adjacent finding with exact path, basis, ruleset version and finding digest
+    expected_rows: zero-or-more
+  - verb: CALL
+    relation: editorial.preview_publication_guarded_v2
+    purpose: owner routine atomically classifies the exact PREVIEW, persists its assessment and findings, and inserts the guarded preview plus immutable owner receipt; malformed, stale or mismatched authority fails closed
     expected_rows: exactly-one
   - verb: INSERT
     relation: editorial.publication_previews
-    purpose: store expiring hashed preview
+    purpose: store the expiring hashed preview after the DB guard records PASS or internal BLOCKED; a BLOCKED preview is never publication-eligible
     expected_rows: exactly-one
   transaction: READ COMMITTED
   domain_events: []
@@ -3634,15 +3634,27 @@ operations:
     expected_rows: exactly-one
   - verb: SELECT
     relation: editorial.review_decisions
-    purpose: verify independent APPROVE decision
-    expected_rows: one-or-more
+    purpose: verify the exact independent editorial APPROVE and, when named findings exist, the distinct STEP_UP LEGAL_REVIEWER APPROVE bound to its editorialReviewDecisionId
+    expected_rows: one-or-more; exactly-two-required-named-review-stages-when-named-findings-exist
   - verb: SELECT
     relation: editorial.publication_previews
-    purpose: verify unexpired preview hash
+    purpose: verify the unexpired preview hash and its exact destination state, public payload digest, named-person assessment digest and override receipt digest
+    expected_rows: exactly-one
+  - verb: SELECT
+    relation: editorial.named_person_publication_assessments
+    purpose: re-read the stored exact PUBLISH assessment for the current case version, snapshot digest, destination state, payload digest and active policy digest
+    expected_rows: exactly-one
+  - verb: SELECT
+    relation: editorial.named_person_legal_overrides
+    purpose: require the immutable named-individual override bound to the exact public-text digest and first-stage editorialReviewDecisionId; legalReviewed is receipt-derived only
+    expected_rows: zero-or-one-as-required-by-finding-count
+  - verb: CALL
+    relation: editorial.publish_guarded_revision_v2
+    purpose: DB owner atomically rechecks exact-snapshot review stages and any required override before revision insertion; missing authority is PUBLICATION_GATE_BLOCKED, and OFFICIALLY_CONFIRMED requires its closed officialConfirmation facts
     expected_rows: exactly-one
   - verb: INSERT
     relation: editorial.publication_revisions
-    purpose: insert immutable revision
+    purpose: owner/trigger-guarded immutable revision insert after the exact PUBLISH guard
     expected_rows: exactly-one
   - verb: UPDATE
     relation: editorial.cases
@@ -3911,13 +3923,33 @@ operations:
   statements:
   - verb: SELECT_FOR_UPDATE
     relation: editorial.corrections
-    purpose: lock correction
+    purpose: lock the correction and exact approved correction facts used to generate the public correction notice
     expected_rows: exactly-one
     identity_predicate: id = :correctionId
     version_predicate: version = :expectedVersion
+  - verb: SELECT
+    relation: editorial.publication_revisions
+    purpose: read the exact current immutable publication revision and derive the CORRECTED destination payload; caller-authored correctionNotice is forbidden
+    expected_rows: exactly-one-when-resolution-is-RESOLVED
+  - verb: SELECT
+    relation: editorial.named_person_publication_assessments
+    purpose: read the exact CORRECTION assessment bound to the owner-generated corrected payload and current review snapshot
+    expected_rows: exactly-one-when-resolution-is-RESOLVED
+  - verb: SELECT
+    relation: editorial.named_person_legal_overrides
+    purpose: require the immutable independent legal-review override for the exact corrected public-text digest whenever named-person findings exist
+    expected_rows: zero-or-one-as-required-by-finding-count
+  - verb: CALL
+    relation: editorial.publish_guarded_revision_v2
+    purpose: apply the same atomic fail-closed owner guard to CORRECTED publication bytes and require the owner-generated appliedAt, reason, impactSummary and revision notice
+    expected_rows: exactly-one-when-resolution-is-RESOLVED
+  - verb: INSERT
+    relation: editorial.publication_revisions
+    purpose: insert the immutable CORRECTED revision only after the DB guard passes
+    expected_rows: exactly-one-when-resolution-is-RESOLVED
   - verb: UPDATE
     relation: editorial.corrections
-    purpose: apply explicit resolution and increment version
+    purpose: apply the explicit resolution and increment version; RESOLVED is atomic with the guarded CORRECTED revision
     expected_rows: exactly-one
     version_predicate: version = :expectedVersion
     identity_predicate: id = :correctionId
@@ -3926,11 +3958,13 @@ operations:
     relation: ops.tasks
     purpose: complete related task
     expected_rows: zero-or-one
-  transaction: READ COMMITTED
+  transaction: SERIALIZABLE
   domain_events:
   - correction.resolved.v1
+  - publication.revision_created.v1
   integration_events:
   - notification.correction_resolved.v1
+  - projection.publication_revision_created.v1
   audit_action: command.resolveCorrectionRequest
   concurrency:
     mode: OPTIMISTIC
@@ -4790,21 +4824,44 @@ operations:
   api: control-api
   method: POST
   operation_kind: COMMAND
+  capability_policy:
+    mode: CONDITIONAL
+    default: review.editorial
+    selector: criteria.namedIndividualOverride
+    absent: review.editorial
+    present: review.legal
+    resolution: EXACTLY_ONE
+    any_of_forbidden: true
+    mismatch_error: CAPABILITY_DENIED
+    assurance_composition: independent; namedIndividualOverride selects capability only and decision selects assurance only
+    enforcement:
+      review_console_bff: derive from the exact downstream body and send the single value as issueActorAssertion.requiredCapability
+      identity_api: authorize and sign that single value in the bodySha256-bound actor assertion; no second downstream body copy is accepted
+      control_api: recompute from the exact asserted downstream body before authorization and audit
+      database_owner: editorial.submit_review_decision recomputes from the typed command before any write
   repository_methods:
   - ReviewRepository::submit_decision
   statements:
   - verb: SELECT
     relation: editorial.review_snapshots
-    purpose: read immutable snapshot
+    purpose: read the immutable snapshot, exact public-text digest and NAMED_INDIVIDUAL finding set
     expected_rows: exactly-one
+  - verb: SELECT
+    relation: editorial.named_person_publication_assessments
+    purpose: for APPROVE with NAMED_INDIVIDUAL, require the exact PREVIEW assessment bound to the reviewed snapshot and public-text digest
+    expected_rows: exactly-one-when-approve-named-individual
   - verb: SELECT_FOR_UPDATE
     relation: editorial.review_assignments
-    purpose: lock active assignment and verify independence
+    purpose: lock the active exact-snapshot assignment, recompute the single required capability from namedIndividualOverride presence, reject any asserted/recomputed mismatch with CAPABILITY_DENIED, and validate the stage actor as either the independent editor without an override or the active LEGAL_REVIEWER with the exact override
     expected_rows: exactly-one
   - verb: INSERT
     relation: editorial.review_decisions
-    purpose: insert immutable decision
+    purpose: insert exactly one immutable stage decision; the first editorial APPROVE grants no publish authority and the second distinct STEP_UP LEGAL_REVIEWER APPROVE derives legalReviewed only from the exact override receipt
     expected_rows: exactly-one
+  - verb: INSERT
+    relation: editorial.named_person_legal_overrides
+    purpose: insert the immutable named-individual override bound to exact publicTextSha256, reasonCode, official source locator/digest and editorialReviewDecisionId; the referenced APPROVE decision reviewer differs from the snapshot author and current legal actor
+    expected_rows: zero-for-first-editorial-approve; exactly-one-for-second-legal-approve
   - verb: UPDATE
     relation: editorial.review_assignments
     purpose: mark completed

@@ -39,6 +39,7 @@ async fn handle_event(
         job.id,
         job.fence.lease_token,
         job.fence.fencing_token,
+        event_id,
         event_type,
         consumer_id,
         aggregate_id,
@@ -78,6 +79,7 @@ async fn reconcile_event(
     producer_job_id: Uuid,
     producer_job_lease_token: Uuid,
     producer_job_fencing_token: i64,
+    source_event_id: Uuid,
     event_type: &str,
     consumer_id: &str,
     aggregate_id: Uuid,
@@ -100,67 +102,105 @@ async fn reconcile_event(
             payload,
         )
         .await?
+    } else if consumer_id == "response-submission-materializer" {
+        if event_type != "workflow.response_submitted.v2" {
+            return Err(Failure::Terminal(
+                "CONSUMER_BINDING_INVALID",
+                format!("{consumer_id}:{event_type}"),
+            ));
+        }
+        reconcile_response_submission_v2(pool, source_event_id, aggregate_id, payload).await?
     } else if matches!(
         consumer_id,
         "response-request-materializer" | "response-clock-worker"
     ) {
         reconcile_communication_delivery_receipt(pool, consumer_id, payload).await?
+    } else if is_party_name_correction_delegation_event(consumer_id, event_type) {
+        reconcile_privacy_response_party_name_correction_delegation(
+            pool,
+            source_event_id,
+            aggregate_id,
+            payload,
+            producer_job_id,
+            producer_job_lease_token,
+            producer_job_fencing_token,
+        )
+        .await?
     } else if consumer_id != "workflow-worker" {
-        return Err(Failure::Terminal(
-            "CONSUMER_BINDING_INVALID",
-            consumer_id.to_owned(),
-        ));
+        reconcile_retention_consumer(consumer_id, event_type, aggregate_id, payload)?
     } else {
-        match event_type {
-            "action.execution_completed.v1" => {
-                reconcile_hypothesis_execution_completed(
-                    pool,
-                    payload,
-                    producer_job_id,
-                    producer_job_lease_token,
-                    producer_job_fencing_token,
-                )
-                .await?
-            }
-            "agent.run_completed.v1" => {
-                let agent_run = reconcile_agent_run(pool, payload).await?;
-                match agent_run.contract_version {
-                    AgentRunContractVersion::V1 => agent_run.metrics,
-                    AgentRunContractVersion::V2 => {
-                        let recursion = reconcile_hypothesis_recursion_stage_completed(
-                            pool,
-                            payload,
-                            producer_job_id,
-                            producer_job_lease_token,
-                            producer_job_fencing_token,
-                        )
-                        .await?;
-                        json!({"agentRun":agent_run.metrics,"hypothesisRecursion":recursion})
-                    }
-                }
-            }
-            "attachment.correction_scan_requested.v1" => {
-                scan_attachment(pool, store, scanner, "CORRECTION", aggregate_id).await?
-            }
-            "attachment.response_scan_requested.v1" => {
-                scan_attachment(pool, store, scanner, "RESPONSE", aggregate_id).await?
-            }
-            "audit.export_requested.v1" => export_audit(pool, store, aggregate_id).await?,
-            "detection.signal_created.v1" => {
-                reconcile_signal_created(pool, payload, producer_job_id).await?
-            }
-            "export.dataset_requested.v1" => export_dataset(pool, store, aggregate_id).await?,
-            "source.schema_drift_detected.v1" => reconcile_schema_drift(pool, payload).await?,
-            "workflow.response_submitted.v1" => reconcile_response(pool, aggregate_id).await?,
-            _ => {
-                return Err(Failure::Terminal(
-                    "UNSUPPORTED_EVENT_TYPE",
-                    event_type.to_owned(),
-                ));
-            }
-        }
+        reconcile_workflow_worker_event(
+            pool,
+            store,
+            scanner,
+            producer_job_id,
+            producer_job_lease_token,
+            producer_job_fencing_token,
+            event_type,
+            aggregate_id,
+            payload,
+        )
+        .await?
     };
     Ok(metrics)
+}
+
+async fn reconcile_workflow_worker_event(
+    pool: &PgPool,
+    store: &Store,
+    scanner: &ClamAvScanner,
+    producer_job_id: Uuid,
+    producer_job_lease_token: Uuid,
+    producer_job_fencing_token: i64,
+    event_type: &str,
+    aggregate_id: Uuid,
+    payload: &serde_json::Map<String, Value>,
+) -> Result<Value, Failure> {
+    match event_type {
+        "action.execution_completed.v1" => {
+            reconcile_hypothesis_execution_completed(
+                pool,
+                payload,
+                producer_job_id,
+                producer_job_lease_token,
+                producer_job_fencing_token,
+            )
+            .await
+        }
+        "agent.run_completed.v1" => {
+            let agent_run = reconcile_agent_run(pool, payload).await?;
+            match agent_run.contract_version {
+                AgentRunContractVersion::V1 => Ok(agent_run.metrics),
+                AgentRunContractVersion::V2 => {
+                    let recursion = reconcile_hypothesis_recursion_stage_completed(
+                        pool,
+                        payload,
+                        producer_job_id,
+                        producer_job_lease_token,
+                        producer_job_fencing_token,
+                    )
+                    .await?;
+                    Ok(json!({"agentRun":agent_run.metrics,"hypothesisRecursion":recursion}))
+                }
+            }
+        }
+        "attachment.correction_scan_requested.v1" => {
+            scan_attachment(pool, store, scanner, "CORRECTION", aggregate_id).await
+        }
+        "attachment.response_scan_requested.v1" => {
+            scan_attachment(pool, store, scanner, "RESPONSE", aggregate_id).await
+        }
+        "audit.export_requested.v1" => export_audit(pool, store, aggregate_id).await,
+        "detection.signal_created.v1" => {
+            reconcile_signal_created(pool, payload, producer_job_id).await
+        }
+        "export.dataset_requested.v1" => export_dataset(pool, store, aggregate_id).await,
+        "source.schema_drift_detected.v1" => reconcile_schema_drift(pool, payload).await,
+        _ => Err(Failure::Terminal(
+            "UNSUPPORTED_EVENT_TYPE",
+            event_type.to_owned(),
+        )),
+    }
 }
 
 async fn mark_workflow_inbox_processed(

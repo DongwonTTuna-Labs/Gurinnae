@@ -1,0 +1,180 @@
+schema_version: 1
+specification_version: 13.0.0-r6d
+document_version: supervisor-decision-v1
+status: GENERATED_NON_RUNTIME_REVIEW_MATRIX
+generated_from:
+  connector_catalog: specs/connectors/connector-catalog.yaml
+  connector_contract_pattern: specs/connectors/*/connector.yaml
+  derivation_rule: source-license-matrix.v1
+policy_provenance:
+  decision_id: supervisor-decision-v1
+  external_counsel_approved: false
+rules:
+- UNKNOWN never grants a use right
+- a catalog entry or connector blocker yields BLOCKED
+- otherwise requires_terms_review yields REVIEW_REQUIRED
+- production publication needs a separate current SOURCE_LICENSE evidence receipt
+- this generated matrix is review inventory, not a license decision
+runtime_evidence_contract:
+  relation: ops.capability_activation_evidence
+  evidence_kind: SOURCE_LICENSE
+  required_state: SATISFIED
+  required_proof_tier: PRODUCTION_LEGAL
+  expiry_behavior: FAIL_CLOSED
+connectors:
+- connector_id: koneps-contracts
+  display_name: 나라장터 계약정보
+  source_kind: OFFICIAL_REST_API
+  official_references:
+  - https://www.data.go.kr/data/15129427/openapi.do
+  operation_count: 16
+  activation_mode: KEY_ONLY_REST
+  terms_review_required: true
+  rights_status: REVIEW_REQUIRED
+  legal_blocker: null
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: provide credential/config and pass live preflight
+- connector_id: koneps-notices
+  display_name: 나라장터 입찰공고
+  source_kind: OFFICIAL_REST_API
+  official_references:
+  - https://www.data.go.kr/data/15129394/openapi.do
+  operation_count: 17
+  activation_mode: KEY_ONLY_REST
+  terms_review_required: true
+  rights_status: REVIEW_REQUIRED
+  legal_blocker: null
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: provide credential/config and pass live preflight
+- connector_id: koneps-bid-results
+  display_name: 나라장터 개찰·낙찰 메타데이터
+  source_kind: OFFICIAL_REST_API
+  official_references:
+  - https://www.data.go.kr/data/15129397/openapi.do
+  operation_count: 8
+  activation_mode: KEY_ONLY_REST
+  terms_review_required: true
+  rights_status: REVIEW_REQUIRED
+  legal_blocker: null
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: provide credential/config and pass live preflight
+- connector_id: local-finance
+  display_name: 지방재정365 공식 링크 자료
+  source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+  official_references:
+  - https://www.data.go.kr/data/15138709/openapi.do
+  - https://www.data.go.kr/data/15138713/openapi.do
+  operation_count: 3
+  activation_mode: OFFICIAL_FIXED_LINK_OR_KEY
+  terms_review_required: true
+  rights_status: REVIEW_REQUIRED
+  legal_blocker: null
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: provide credential/config and pass live preflight
+- connector_id: alio
+  display_name: ALIO 공식 공개자료 manifest
+  source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+  official_references:
+  - https://www.alio.go.kr/
+  operation_count: 2
+  activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+  terms_review_required: true
+  rights_status: REVIEW_REQUIRED
+  legal_blocker: null
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: provide official manifest URL and maintain signed manifest entries
+- connector_id: open-dart
+  display_name: Open DART
+  source_kind: OFFICIAL_REST_AND_ZIP_XML_API
+  official_references:
+  - https://opendart.fss.or.kr/guide/main.do
+  operation_count: 6
+  activation_mode: KEY_ONLY_REST
+  terms_review_required: true
+  rights_status: REVIEW_REQUIRED
+  legal_blocker: null
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: provide credential/config and pass live preflight
+- connector_id: pps-sanctions
+  display_name: 조달청 부정당업자 제재 공식 CSV
+  source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+  official_references:
+  - https://www.data.go.kr/data/15137996/fileData.do
+  - https://data.g2b.go.kr/link/AISC001_01/?reptNm=UI-ADOAAA-017R
+  operation_count: 2
+  activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+  terms_review_required: true
+  rights_status: BLOCKED
+  legal_blocker: PPS_SANCTIONS_REUSE_RIGHTS_UNCONFIRMED
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: resolve official CSV reuse rights, provide signed official manifest and pass live preflight
+- connector_id: audit-results
+  display_name: 감사 결과 공식 공개자료 manifest
+  source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+  official_references:
+  - https://www.data.go.kr/
+  operation_count: 2
+  activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+  terms_review_required: true
+  rights_status: REVIEW_REQUIRED
+  legal_blocker: null
+  rights_dimensions:
+    attribution: UNKNOWN
+    commercial_use: UNKNOWN
+    modification: UNKNOWN
+    redistribution: UNKNOWN
+    raw_mirroring: UNKNOWN
+  publication_authorized: false
+  required_evidence: SOURCE_LICENSE/PRODUCTION_LEGAL/SATISFIED
+  operator_action_required: provide official manifest URL and maintain signed manifest entries
+connector_count: 8
+operation_count: 56

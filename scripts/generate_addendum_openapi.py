@@ -10,6 +10,7 @@ contract.
 
 from __future__ import annotations
 
+import argparse
 import copy
 import json
 import re
@@ -21,38 +22,216 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 ADDENDUM = ROOT / "specs/product/addendum-operation-contracts.yaml"
 RESOURCES = ROOT / "specs/product/addendum-resource-error-contracts.yaml"
+HANDWRITTEN_RESOURCES = ROOT / "specs/api/resource-schemas.yaml"
+BASE_ERROR_CATALOG = ROOT / "specs/api/error-code-catalog.yaml"
 PROVIDER_CONTROL_OPERATION_IDS = (
     "disableProviderRouting",
     "testProviderConnection",
     "upgradeProviderModel",
     "setModelAutoUpgrade",
 )
+CONTROL_BASE_SCHEMA_IMPORTS = (
+    "LegalHoldTargetBinding",
+    "placeLegalHoldRequest",
+    "placeLegalHoldReceipt",
+)
+PUBLIC_BASE_SCHEMA_IMPORTS = (
+    "CaseReproducibilityDownloadAppliedFilters",
+    "CaseReproducibilityDownload",
+)
+
+
+def direct_contract_expression(expression: str) -> str:
+    return expression.split("@", 1)[0].strip()
+
+
+def generic_argument(expression: str, name: str) -> str | None:
+    prefix = f"{name}<"
+    if expression.lower().startswith(prefix) and expression.endswith(">"):
+        return expression[len(prefix) : -1]
+    return None
+
+
+def required_contract_fields(fields: dict) -> list[str]:
+    return [
+        name
+        for name, expression in fields.items()
+        if generic_argument(
+            direct_contract_expression(str(expression)), "optional"
+        )
+        is None
+    ]
+
+
+def const_schema(value: str) -> dict:
+    normalized = value.strip()
+    if normalized.lower() in {"true", "false"}:
+        return {"type": "boolean", "const": normalized.lower() == "true"}
+    if re.fullmatch(r"-?(?:0|[1-9]\d*)", normalized):
+        return {"type": "integer", "const": int(normalized)}
+    return {"type": "string", "const": normalized}
+
+
+def bounded_string_schema(expression: str) -> dict | None:
+    match = re.fullmatch(
+        r"(?:secret-)?string\[(\d+)\.\.(\d+|max)\]",
+        expression,
+        re.IGNORECASE,
+    )
+    if match is None:
+        return None
+    schema = {"type": "string", "minLength": int(match.group(1))}
+    if match.group(2).lower() != "max":
+        schema["maxLength"] = int(match.group(2))
+    return schema
+
+
+def patterned_string_schema(expression: str) -> dict | None:
+    match = re.fullmatch(
+        r"string-pattern<(.+)>(?:\[(\d+)\.\.(\d+|max)\])?",
+        expression,
+        re.IGNORECASE,
+    )
+    if match is None:
+        return None
+    schema = {"type": "string", "pattern": match.group(1)}
+    if match.group(2) is not None:
+        schema["minLength"] = int(match.group(2))
+    if match.group(3) is not None and match.group(3).lower() != "max":
+        schema["maxLength"] = int(match.group(3))
+    return schema
+
+
+def integer_schema(expression: str) -> dict | None:
+    match = re.fullmatch(
+        r"(int32|int64)(?:\[(-?\d+)\.\.(-?\d+|max)\]|>=(-?\d+))?(?:=(-?\d+))?",
+        expression,
+        re.IGNORECASE,
+    )
+    if match is None:
+        return None
+    schema = {"type": "integer", "format": match.group(1).lower()}
+    bracket_minimum = match.group(2)
+    minimum = bracket_minimum if bracket_minimum is not None else match.group(4)
+    if minimum is not None:
+        schema["minimum"] = int(minimum)
+    maximum = match.group(3)
+    if maximum is not None and maximum.lower() != "max":
+        schema["maximum"] = int(maximum)
+    default = match.group(5)
+    if default is not None:
+        schema["default"] = int(default)
+    return schema
+
+
+def enum_schema(expression: str) -> dict | None:
+    generic = re.fullmatch(
+        r"enum<(.+)>(?:=([^=]+))?",
+        expression,
+        re.IGNORECASE,
+    )
+    if generic is not None:
+        values = generic.group(1).split("|")
+        default = generic.group(2)
+    else:
+        normalized = expression.lower()
+        if "|" not in expression or normalized.startswith(
+            ("array<", "unique-array<", "optional<", "nullable<", "const<")
+        ):
+            return None
+        raw_values, separator, raw_default = expression.partition("=")
+        values = raw_values.split("|")
+        default = raw_default if separator else None
+    schema = {"type": "string", "enum": values}
+    if default is not None:
+        if default not in values:
+            raise ValueError(f"enum default is outside the closed set: {expression}")
+        schema["default"] = default
+    return schema
+
+
+def array_expression(
+    expression: str,
+) -> tuple[bool, str, int | None, int | None] | None:
+    match = re.fullmatch(
+        r"(unique-array|array)<(.+)>(?:\[(\d+)\.\.(\d+|max)\])?",
+        expression,
+        re.IGNORECASE,
+    )
+    if match is None:
+        return None
+    minimum = int(match.group(3)) if match.group(3) is not None else None
+    raw_maximum = match.group(4)
+    maximum = (
+        int(raw_maximum)
+        if raw_maximum is not None and raw_maximum.lower() != "max"
+        else None
+    )
+    return match.group(1).lower() == "unique-array", match.group(2), minimum, maximum
+
+
+def array_schema(
+    item_schema: dict,
+    *,
+    unique: bool,
+    minimum: int | None,
+    maximum: int | None,
+) -> dict:
+    schema = {"type": "array", "items": item_schema}
+    if minimum is not None:
+        schema["minItems"] = minimum
+    if maximum is not None:
+        schema["maxItems"] = maximum
+    if unique:
+        schema["uniqueItems"] = True
+    return schema
 
 
 def primitive(expression: str) -> dict:
-    raw_expression = expression
-    expression = expression.lower()
-    # Contract shorthand uses bare pipe-separated values for enums in the
-    # operation catalog (for example `START_REVIEW|RESOLVE`).  Preserve that
-    # closed set in OpenAPI instead of falling through to an empty object.
-    if "|" in raw_expression and not raw_expression.startswith(("array<", "unique-array<", "enum<", "optional<", "nullable<")):
-        values = raw_expression.split("=", 1)[0].split("|")
-        return {"type": "string", "enum": values}
-    if expression.startswith("const<") and expression.endswith(">"):
-        value = raw_expression[len("const<") : raw_expression.rfind(">")].strip()
-        if value.lower() in {"true", "false"}:
-            return {"type": "boolean", "const": value.lower() == "true"}
-        return {"type": "string", "const": value}
+    direct_expression = direct_contract_expression(expression)
+    normalized_expression = direct_expression.lower()
+    bounded_uri_reference = re.fullmatch(
+        r"uri-reference\[(\d+)\.\.(\d+)\]", direct_expression, re.IGNORECASE
+    )
+    if bounded_uri_reference:
+        return {
+            "type": "string",
+            "format": "uri-reference",
+            "minLength": int(bounded_uri_reference.group(1)),
+            "maxLength": int(bounded_uri_reference.group(2)),
+        }
+    bounded_json_pointer = re.fullmatch(
+        r"json-pointer\[(\d+)\.\.(\d+)\]", direct_expression, re.IGNORECASE
+    )
+    if bounded_json_pointer:
+        return {
+            "type": "string",
+            "format": "json-pointer",
+            "minLength": int(bounded_json_pointer.group(1)),
+            "maxLength": int(bounded_json_pointer.group(2)),
+        }
+    bounded_string = bounded_string_schema(direct_expression)
+    if bounded_string is not None:
+        return bounded_string
+    patterned_string = patterned_string_schema(direct_expression)
+    if patterned_string is not None:
+        return patterned_string
+    integer = integer_schema(direct_expression)
+    if integer is not None:
+        return integer
+    enum = enum_schema(direct_expression)
+    if enum is not None:
+        return enum
+    const_value = generic_argument(direct_expression, "const")
+    if const_value is not None:
+        return const_schema(const_value)
     # The product operation catalog also uses the compact `const value`
     # spelling.  Keep it a literal in OpenAPI; falling through to an empty
     # object makes generic contract fixtures emit `{}` and the owner routine
     # correctly rejects the request as invalid.
-    if expression.startswith("const "):
-        value = raw_expression[len("const ") :].strip()
-        if value.lower() in {"true", "false"}:
-            return {"type": "boolean", "const": value.lower() == "true"}
-        return {"type": "string", "const": value}
-    if expression.strip() == "enum action_payloads.kinds":
+    if normalized_expression.startswith("const "):
+        return const_schema(direct_expression[len("const ") :])
+    if normalized_expression == "enum action_payloads.kinds":
         return {"type": "string", "enum": [
             "HYPOTHESIS", "CLAIM", "TASK", "COMPARABLE", "COMMUNICATION", "PUBLICATION",
             "RETRACTION", "RULE_ACTIVATION", "ROLE_GRANT", "KILL_SWITCH",
@@ -60,32 +239,42 @@ def primitive(expression: str) -> dict:
             "FUNDING_DISCLOSURE", "CAPABILITY_ACTIVATION", "RESPONSE_POLICY_CALENDAR",
             "COMMERCIAL_CONTROL", "PROVIDER_CONTROL",
         ]}
-    if raw_expression.startswith("optional<") and raw_expression.endswith(">"):
-        inner = raw_expression[len("optional<"):-1]
-        return primitive(inner)
-    if raw_expression.startswith("nullable<") and raw_expression.endswith(">"):
-        inner = raw_expression[len("nullable<"):-1]
-        return {"anyOf": [primitive(inner), {"type": "null"}]}
-    if "array" in expression:
-        return {"type": "array", "items": {"type": "string"}}
-    if expression.startswith("enum<"):
-        values = raw_expression[len("enum<") : raw_expression.rfind(">")]
-        return {"type": "string", "enum": values.split("|")}
-    if "boolean" in expression:
+    optional_value = generic_argument(direct_expression, "optional")
+    if optional_value is not None:
+        return primitive(optional_value)
+    nullable_value = generic_argument(direct_expression, "nullable")
+    if nullable_value is not None:
+        return {"anyOf": [primitive(nullable_value), {"type": "null"}]}
+    collection = array_expression(direct_expression)
+    if collection is not None:
+        unique, item_expression, minimum, maximum = collection
+        return array_schema(
+            primitive(item_expression),
+            unique=unique,
+            minimum=minimum,
+            maximum=maximum,
+        )
+    if "boolean" in normalized_expression:
         return {"type": "boolean"}
-    if "int" in expression or "decimal" in expression:
+    if "int" in normalized_expression or "decimal" in normalized_expression:
         return {"type": "integer", "format": "int64"}
-    if "datetime" in expression:
+    if "datetime" in normalized_expression:
         return {"type": "string", "format": "date-time"}
-    if "date" in expression:
+    if "date" in normalized_expression:
         return {"type": "string", "format": "date"}
-    if "uuid" in expression:
+    if "uuid" in normalized_expression:
         return {"type": "string", "format": "uuid"}
-    if expression.startswith("uri-reference") or expression.startswith("uri"):
+    if normalized_expression.startswith(
+        "uri-reference"
+    ) or normalized_expression.startswith("uri"):
         return {"type": "string", "format": "uri-reference"}
-    if "sha256" in expression or "digest" in expression:
+    if "sha256" in normalized_expression or "digest" in normalized_expression:
         return {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-    if expression.startswith("string") or "secret" in expression:
+    if normalized_expression in {"nonempty_string", "secret-nonempty-string"}:
+        return {"type": "string", "minLength": 1}
+    if normalized_expression == "cursor":
+        return {"type": "string"}
+    if normalized_expression.startswith("string") or "secret" in normalized_expression:
         return {"type": "string"}
     # Nested schemas are named in the contract.  A closed object reference is
     # emitted here and replaced by a component with no open properties.
@@ -113,7 +302,9 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
             schemas[name] = {
                 "type": "object", "additionalProperties": False,
                 "properties": {field: contract_property(str(value), resource_doc, schemas) for field, value in fields.items()},
-                "required": list(contract.get("required", fields.keys())),
+                "required": list(
+                    contract.get("required", required_contract_fields(fields))
+                ),
             }
             return
         branches = []
@@ -128,8 +319,12 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
             properties[discriminator] = {"type": "string", "const": variant}
             selected_required = definition.get("required")
             if selected_required is None:
-                selected_required = list(variant_fields)
-            required = list(dict.fromkeys([*common, *selected_required]))
+                selected_required = required_contract_fields(variant_fields)
+            required = list(
+                dict.fromkeys(
+                    [*required_contract_fields(common), *selected_required]
+                )
+            )
             if discriminator in fields and discriminator not in required:
                 required.append(discriminator)
             branches.append({
@@ -154,7 +349,7 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
             field: contract_property(str(value), resource_doc, schemas)
             for field, value in fields.items()
         },
-        "required": list(fields),
+        "required": required_contract_fields(fields),
     }
     for value in fields.values():
         for child in referenced_names(str(value), known):
@@ -163,42 +358,55 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
 
 def contract_property(expression: str, resource_doc: dict, schemas: dict) -> dict:
     known = set(resource_doc.get("schemas", {})) | set(schemas)
-    direct = expression.strip().split("@", 1)[0]
+    direct = direct_contract_expression(expression)
     if direct in known:
         add_contract_schema(direct, resource_doc, schemas, set())
         return {"$ref": f"#/components/schemas/{direct}"}
-    wrapper = re.fullmatch(r"(optional|nullable)<([^>]+)>", direct)
-    if wrapper and wrapper.group(2) in known:
-        child = wrapper.group(2)
-        add_contract_schema(child, resource_doc, schemas, set())
-        reference = {"$ref": f"#/components/schemas/{child}"}
-        if wrapper.group(1) == "optional":
-            return reference
-        return {"anyOf": [reference, {"type": "null"}]}
+    optional_value = generic_argument(direct, "optional")
+    if optional_value is not None:
+        return contract_property(optional_value, resource_doc, schemas)
+    nullable_value = generic_argument(direct, "nullable")
+    if nullable_value is not None:
+        return {
+            "anyOf": [
+                contract_property(nullable_value, resource_doc, schemas),
+                {"type": "null"},
+            ]
+        }
     shorthand = re.fullmatch(r"nullable-(.+)", direct)
     if shorthand:
         inner = shorthand.group(1)
         return {"anyOf": [primitive(inner), {"type": "null"}]}
-    match = re.fullmatch(r"(?:unique-)?array<([^>]+)>(?:\[[^\]]+\])?", direct)
-    if match and match.group(1) in known:
-        child = match.group(1)
+    collection = array_expression(direct)
+    if collection is not None and collection[1] in known:
+        unique, child, minimum, maximum = collection
         add_contract_schema(child, resource_doc, schemas, set())
-        return {"type": "array", "items": {"$ref": f"#/components/schemas/{child}"}}
+        return array_schema(
+            {"$ref": f"#/components/schemas/{child}"},
+            unique=unique,
+            minimum=minimum,
+            maximum=maximum,
+        )
     return primitive(expression)
 
 
-def error_responses(codes: list[str]) -> dict:
+def error_responses(codes: list[str], resource_doc: dict) -> dict:
     grouped: dict[str, list[str]] = {}
+    base_catalog = yaml.safe_load(BASE_ERROR_CATALOG.read_text()).get("errors", [])
     status_by_code = {
-        "INVALID_PARAMETER": "400", "INVALID_CURSOR": "400", "INVALID_REQUEST": "400",
-        "ACTOR_ASSERTION_REQUIRED": "401", "ACTOR_ASSERTION_INVALID": "401", "SERVICE_ASSERTION_REQUIRED": "401",
-        "CAPABILITY_DENIED": "403", "BFF_CALLER_DENIED": "403", "SUBMISSION_SESSION_REQUIRED": "401",
-        "IDEMPOTENCY_CONFLICT": "409", "ACTION_PROPOSAL_REQUIRED": "409",
-        "ACTION_PROPOSAL_STALE": "409", "VERSION_CONFLICT": "409",
-        "RESOURCE_NOT_FOUND": "404", "TARGET_NOT_FOUND": "404", "INTERNAL_ERROR": "500",
+        row["code"]: str(row["http_status"])
+        for row in base_catalog
+        if isinstance(row, dict) and isinstance(row.get("code"), str)
     }
+    status_by_code.update({
+        code: str(contract["http_status"])
+        for code, contract in resource_doc.get("error_catalog_additions", {}).items()
+    })
     for code in codes:
-        grouped.setdefault(status_by_code.get(code, "422"), []).append(code)
+        status = status_by_code.get(code)
+        if status is None:
+            raise ValueError(f"uncataloged additive error code: {code}")
+        grouped.setdefault(status, []).append(code)
     return {
         status: {
             "description": "Problem response: " + ", ".join(values),
@@ -215,9 +423,29 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
     required = list(request.get("required", []))
     request_name = binding["request_schema"]
     response_name = binding["success_schema"]
-    schemas[request_name] = {"type": "object", "additionalProperties": False,
-                             "properties": {name: contract_property(str(value), resource_doc, schemas) for name, value in fields.items()},
-                             "required": required}
+    schemas[request_name] = {
+        "type": "object",
+        "additionalProperties": False,
+        **(
+            {"description": request["description"]}
+            if request.get("description")
+            else {}
+        ),
+        "properties": {
+            name: contract_property(str(value), resource_doc, schemas)
+            for name, value in fields.items()
+        },
+        "required": required,
+    }
+    field_descriptions = request.get("field_descriptions", {})
+    unknown_descriptions = set(field_descriptions) - set(fields)
+    if unknown_descriptions:
+        raise ValueError(
+            f"{operation['operation_id']} describes unknown request fields: "
+            + ", ".join(sorted(unknown_descriptions))
+        )
+    for field_name, description in field_descriptions.items():
+        schemas[request_name]["properties"][field_name]["description"] = description
     # The journey handoff request has a discriminator-sensitive nullable enum
     # branch.  Keep this exact wire shape in the generated OpenAPI even when a
     # legacy operation fixture uses the older shorthand expressions.
@@ -257,7 +485,7 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
     schemas[response_name] = {
         "type": "object", "additionalProperties": False,
         "properties": {name: contract_property(str(value), resource_doc, schemas) for name, value in response_fields.items()},
-        "required": list(response_fields),
+        "required": required_contract_fields(response_fields),
     }
     # The registered query boundary adds the operation identifier to every
     # query envelope so receipts and readbacks remain self-describing. Keep that field in the
@@ -288,6 +516,11 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
     node = {
         "operationId": operation["operation_id"],
         "summary": operation["operation_id"],
+        **(
+            {"description": operation["description"]}
+            if operation.get("description")
+            else {}
+        ),
         "tags": ["addendum"],
         "x-operation-kind": operation["kind"],
         "x-capability": operation.get("capability", "none"),
@@ -330,7 +563,7 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
             })
         if query_parameters:
             node.setdefault("parameters", []).extend(query_parameters)
-    node["responses"].update(error_responses(list(operation.get("errors", []))))
+    node["responses"].update(error_responses(list(operation.get("errors", [])), resource_doc))
     if operation["method"] != "GET":
         node.setdefault("parameters", []).append({"name": "Idempotency-Key", "in": "header", "required": True, "schema": {"type": "string", "minLength": 8, "maxLength": 200}})
         node["requestBody"] = {"required": True, "content": {"application/json": {"schema": {"$ref": f"#/components/schemas/{request_name}"}}}}
@@ -391,11 +624,80 @@ def close_provider_control_side_doors(document: dict) -> None:
         required.append("expectedVersion")
 
 
-def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
+def import_control_base_operation_extensions(document: dict) -> None:
+    """Project the authoritative handwritten schema for extended base operations.
+
+    Additive operations are rebuilt from the owner addendum below.  A base
+    operation remains in the original OpenAPI path table, so its replacement
+    request union must be copied explicitly instead of leaving the historical
+    case-shaped component in generated clients.
+    """
+
+    resource_document = yaml.safe_load(HANDWRITTEN_RESOURCES.read_text())
+    resource_schemas = resource_document.get("resources", {})
+    schemas = document.setdefault("components", {}).setdefault("schemas", {})
+    for name in CONTROL_BASE_SCHEMA_IMPORTS:
+        entry = resource_schemas.get(name)
+        if not isinstance(entry, dict) or not isinstance(entry.get("schema"), dict):
+            raise ValueError(f"handwritten resource schema is missing: {name}")
+        if "control-api" not in entry.get("apis", []):
+            raise ValueError(f"handwritten resource schema is not control-api bound: {name}")
+        schemas[name] = copy.deepcopy(entry["schema"])
+
+    operation = (
+        document.get("paths", {})
+        .get("/v1/internal/commands/place-legal-hold", {})
+        .get("post")
+    )
+    if not isinstance(operation, dict) or operation.get("operationId") != "placeLegalHold":
+        raise ValueError("base placeLegalHold OpenAPI operation is missing")
+    operation["description"] = (
+        "Places a retention, deletion or disclosure hold on one exact "
+        "versioned target from the closed thirteen-kind legal-hold union."
+    )
+
+
+def import_public_base_operation_extensions(document: dict) -> None:
+    """Project the closed reproducibility download contract into Public OpenAPI."""
+
+    resource_document = yaml.safe_load(HANDWRITTEN_RESOURCES.read_text())
+    resource_schemas = resource_document.get("resources", {})
+    schemas = document.setdefault("components", {}).setdefault("schemas", {})
+    for name in PUBLIC_BASE_SCHEMA_IMPORTS:
+        entry = resource_schemas.get(name)
+        if not isinstance(entry, dict) or not isinstance(entry.get("schema"), dict):
+            raise ValueError(f"handwritten resource schema is missing: {name}")
+        if "public-api" not in entry.get("apis", []):
+            raise ValueError(f"handwritten resource schema is not public-api bound: {name}")
+        schemas[name] = copy.deepcopy(entry["schema"])
+
+    operation = (
+        document.get("paths", {})
+        .get("/v1/cases/{caseSlug}/reproducibility/download", {})
+        .get("get")
+    )
+    if not isinstance(operation, dict) or operation.get("operationId") != "downloadCaseReproducibility":
+        raise ValueError("base downloadCaseReproducibility OpenAPI operation is missing")
+    operation["description"] = (
+        "공개 재배포 산출물입니다. JSON 파일 본문은 재배포 고지와 상태별 비확정 문구를 "
+        "최상위에 포함하고, CSV 파일 본문은 재배포 고지 한 셀 행과 비확정 문구 열을 보존합니다."
+    )
+    operation["responses"]["200"]["content"]["application/json"]["schema"] = {
+        "$ref": "#/components/schemas/CaseReproducibilityDownload"
+    }
+
+
+def merge(
+    api: str, operations: list[dict], resource_doc: dict, *, check: bool
+) -> list[Path]:
     yaml_path = ROOT / f"specs/api/{api}.openapi.yaml"
     json_path = ROOT / f"specs/api/{api}.openapi.json"
     generated_path = ROOT / f"specs/generated/{api}.openapi.json"
     document = yaml.safe_load(yaml_path.read_text())
+    if api == "control-api":
+        import_control_base_operation_extensions(document)
+    elif api == "public-api":
+        import_public_base_operation_extensions(document)
     # Re-running the generator must be idempotent; older runs appended the
     # same tag repeatedly and inflated the source diff on every regeneration.
     document["tags"] = [
@@ -466,6 +768,14 @@ def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
     # JSON is the generated source consumed by Rust and BFF imports. YAML and
     # JSON are written from the same object so semantic equality is guaranteed.
     json_bytes = json.dumps(document, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
+    if check:
+        failures: list[Path] = []
+        if yaml.safe_load(yaml_path.read_text()) != document:
+            failures.append(yaml_path)
+        for path in (json_path, generated_path):
+            if not path.is_file() or json.loads(path.read_text()) != document:
+                failures.append(path)
+        return failures
     yaml_path.write_text(yaml.safe_dump(document, allow_unicode=True, sort_keys=False))
     json_path.write_text(json_bytes)
     subprocess.run(
@@ -481,9 +791,12 @@ def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
         check=True,
     )
     generated_path.write_bytes(json_path.read_bytes())
+    return []
 
 
-def write_identity(operations: list[dict], resource_doc: dict) -> None:
+def write_identity(
+    operations: list[dict], resource_doc: dict, *, check: bool
+) -> list[Path]:
     """Emit the small procurement identity-api document separately from the
     nine-operation identity-service-internal document."""
     document = {
@@ -503,16 +816,65 @@ def write_identity(operations: list[dict], resource_doc: dict) -> None:
         node = operation_node(operation, binding, schemas, resource_doc, False)
         node["security"] = [{"ServiceAssertion": []}]
         document["paths"].setdefault(operation["path"], {})[operation["method"].lower()] = node
+    failures: list[Path] = []
     for suffix in ("api", "generated"):
         path = ROOT / f"specs/{suffix}/identity-api.openapi.{'yaml' if suffix == 'api' else 'json'}"
         payload = json.dumps(document, ensure_ascii=False, indent=2) + "\n"
-        if suffix == "api":
+        if check:
+            current = yaml.safe_load(path.read_text()) if path.is_file() else None
+            if current != document:
+                failures.append(path)
+        elif suffix == "api":
             path.write_text(yaml.safe_dump(document, allow_unicode=True, sort_keys=False))
         else:
             path.write_text(payload)
+    return failures
 
 
-def main() -> None:
+def sync_internal_identity(*, check: bool = False) -> list[Path]:
+    """Materialise the authoritative private Identity YAML as JSON.
+
+    The addendum does not own the nine private operations, but R6d extends
+    their request-bound capability contract. Keeping this projection in the
+    same source generator prevents the handwritten YAML and both JSON
+    consumers from drifting after an additive contract change.
+    """
+
+    yaml_path = ROOT / "specs/api/identity-service-internal.openapi.yaml"
+    json_path = ROOT / "specs/api/identity-service-internal.openapi.json"
+    generated_path = ROOT / "specs/generated/identity-service-internal.openapi.json"
+    document = yaml.safe_load(yaml_path.read_text())
+    if check:
+        failures: list[Path] = []
+        for path in (json_path, generated_path):
+            if not path.is_file() or json.loads(path.read_text()) != document:
+                failures.append(path)
+        return failures
+    json_path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
+    )
+    subprocess.run(
+        [
+            "bunx",
+            "biome",
+            "format",
+            "--write",
+            "--no-errors-on-unmatched",
+            str(json_path),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    generated_path.write_bytes(json_path.read_bytes())
+    return []
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--check", action="store_true", help="fail without writing when projections differ"
+    )
+    args = parser.parse_args()
     operations = yaml.safe_load(ADDENDUM.read_text())["operations"]
     resource_doc = yaml.safe_load(RESOURCES.read_text())
     grouped = {
@@ -520,11 +882,31 @@ def main() -> None:
         "control-api": [row for row in operations if row["api"] == "control-api"],
         "submission-api": [row for row in operations if row["api"] == "submission-api"],
     }
+    failures: list[Path] = []
     for api, rows in grouped.items():
-        merge(api, rows, resource_doc)
-    write_identity([row for row in operations if row.get("api") == "identity-api"], resource_doc)
-    print(f"merged {sum(map(len, grouped.values()))} additive operations")
+        failures.extend(merge(api, rows, resource_doc, check=args.check))
+    failures.extend(
+        write_identity(
+            [row for row in operations if row.get("api") == "identity-api"],
+            resource_doc,
+            check=args.check,
+        )
+    )
+    failures.extend(sync_internal_identity(check=args.check))
+    if failures:
+        print("generated OpenAPI projections differ:")
+        for path in failures:
+            print(f"- {path.relative_to(ROOT)}")
+        return 1
+    if args.check:
+        print(
+            "generated OpenAPI projections: PASS "
+            f"additive_operations={sum(map(len, grouped.values()))}"
+        )
+    else:
+        print(f"merged {sum(map(len, grouped.values()))} additive operations")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

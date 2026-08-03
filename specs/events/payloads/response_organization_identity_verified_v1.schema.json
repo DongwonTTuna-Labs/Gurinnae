@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/response.organization_identity_verified.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "responseId",
+    "responseVersion",
+    "responseContentSha256",
+    "organizationId",
+    "publicationForm",
+    "identityStatus",
+    "verificationMethod",
+    "identityAssertionId",
+    "identityAssertionVersion",
+    "identityAssertionDigest",
+    "sourceVerificationReceiptDigest",
+    "auditReceiptDigest",
+    "verifiedAt"
+  ],
+  "properties": {
+    "responseId": { "type": "string", "format": "uuid" },
+    "responseVersion": { "type": "integer", "minimum": 1 },
+    "responseContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "organizationId": { "type": "string", "format": "uuid" },
+    "publicationForm": { "type": "string", "enum": ["FULL", "REDACTED"] },
+    "identityStatus": { "type": "string", "const": "SECOND_FACTOR_VERIFIED" },
+    "verificationMethod": {
+      "type": "string",
+      "enum": ["OFFICIAL_DOMAIN_EMAIL", "OFFICIAL_DOCUMENT"]
+    },
+    "identityAssertionId": { "type": "string", "format": "uuid" },
+    "identityAssertionVersion": { "type": "integer", "minimum": 1 },
+    "identityAssertionDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sourceVerificationReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "auditReceiptDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "verifiedAt": { "type": "string", "format": "date-time" }
+  }
+}

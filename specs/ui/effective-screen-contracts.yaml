@@ -27,7 +27,7 @@ counts:
   explicit_browser_projection_allowlists: 492
   semantic_dimensions_per_screen: 6
   base_operation_occurrences: 221
-  additive_operation_section_occurrences: 100
+  additive_operation_section_occurrences: 106
   screens_requiring_api_or_bff_projection_work: 89
   build_manifest_profile_refinements: 94
   archetype_default_overrides: 63
@@ -16136,6 +16136,87 @@ screens:
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+  - operation_id: attestOrganizationOfficialChannel
+    source: specs/product/addendum-operation-contracts.yaml
+    kind: COMMAND
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-organization-official-channel
+    request_schema: AttestOrganizationOfficialChannelRequestV1
+    request_field_set:
+    - name: organizationKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+    - name: organizationId
+      type: uuid
+      required: true
+    - name: verificationMethod
+      type: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+      required: true
+    - name: sourceId
+      type: uuid
+      required: true
+      description: OFFICIAL_DOMAIN_EMAIL selects one current communication_endpoint_verifications.id; OFFICIAL_DOCUMENT selects
+        one current editorial.evidence.id. The caller never supplies an authority receipt ID or digest.
+    - name: expiresAt
+      type: datetime
+      required: true
+    - name: reason
+      type: string[1..4000]
+      required: true
+    - name: expectedAuthorityVersion
+      type: const<1>
+      required: true
+    server_only_request_field_set: []
+    response_schema: AttestOrganizationOfficialChannelReceiptV1
+    success_status: 201
+    response_field_set:
+    - name: operationId
+      type: const<attestOrganizationOfficialChannel>
+      required: true
+    - name: requestId
+      type: uuid
+      required: true
+    - name: status
+      type: enum<accepted|completed|rejected>
+      required: true
+    - name: aggregateId
+      type: uuid
+      required: true
+    - name: aggregateVersion
+      type: int64[1..max]
+      required: true
+    - name: auditEventId
+      type: uuid
+      required: true
+    - name: acceptedAt
+      type: datetime
+      required: true
+    - name: links
+      type: array<Link>[0..32]
+      required: true
+    - name: assertionId
+      type: uuid
+      required: true
+    - name: authorityReceiptId
+      type: uuid
+      required: true
+    - name: authorityReceiptDigest
+      type: sha256
+      required: true
+    - name: registryReceiptDigest
+      type: sha256
+      required: true
+    - name: expiresAt
+      type: datetime
+      required: true
+    server_only_response_field_set:
+    - name: receiptToken
+      type: sha256
+      required: true
+    browser_boundary: BFF_PROJECTED
+    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+    section_binding: verification
   - operation_id: cancelCommunicationDelivery
     source: specs/product/addendum-operation-contracts.yaml
     kind: COMMAND
@@ -16366,9 +16447,142 @@ screens:
     browser_boundary: BFF_PROJECTED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
     section_binding: timeline
+  - operation_id: revokeOrganizationOfficialChannel
+    source: specs/product/addendum-operation-contracts.yaml
+    kind: COMMAND
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/revoke-organization-official-channel
+    request_schema: RevokeOrganizationOfficialChannelRequestV1
+    request_field_set:
+    - name: assertionId
+      type: uuid
+      required: true
+    - name: reasonCode
+      type: string[1..100]
+      required: true
+    - name: reason
+      type: string[1..4000]
+      required: true
+    server_only_request_field_set: []
+    response_schema: RevokeOrganizationOfficialChannelReceiptV1
+    success_status: 200
+    response_field_set:
+    - name: operationId
+      type: const<revokeOrganizationOfficialChannel>
+      required: true
+    - name: requestId
+      type: uuid
+      required: true
+    - name: status
+      type: enum<accepted|completed|rejected>
+      required: true
+    - name: aggregateId
+      type: uuid
+      required: true
+    - name: aggregateVersion
+      type: int64[1..max]
+      required: true
+    - name: auditEventId
+      type: uuid
+      required: true
+    - name: acceptedAt
+      type: datetime
+      required: true
+    - name: links
+      type: array<Link>[0..32]
+      required: true
+    - name: revocationId
+      type: uuid
+      required: true
+    - name: assertionId
+      type: uuid
+      required: true
+    server_only_response_field_set:
+    - name: receiptToken
+      type: sha256
+      required: true
+    browser_boundary: BFF_PROJECTED
+    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+    section_binding: verification
+  - operation_id: verifyResponseOrganizationIdentity
+    source: specs/product/addendum-operation-contracts.yaml
+    kind: COMMAND
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/verify-response-organization-identity
+    request_schema: VerifyResponseOrganizationIdentityRequestV1
+    request_field_set:
+    - name: responseId
+      type: uuid
+      required: true
+    - name: organizationId
+      type: uuid
+      required: true
+    - name: publicationForm
+      type: enum<FULL|REDACTED>
+      required: true
+    - name: verificationMethod
+      type: enum<OFFICIAL_DOMAIN_EMAIL|OFFICIAL_DOCUMENT>
+      required: true
+    - name: officialChannelSourceId
+      type: uuid
+      required: true
+      description: Identifier of the current immutable official-channel authority assertion. It is never a raw communication
+        endpoint verification ID or official document evidence ID.
+    - name: reason
+      type: string[1..4000]
+      required: true
+    - name: expectedVersion
+      type: int64>=1
+      required: true
+    server_only_request_field_set: []
+    response_schema: VerifyResponseOrganizationIdentityReceiptV1
+    success_status: 200
+    response_field_set:
+    - name: operationId
+      type: string
+      required: true
+    - name: requestId
+      type: uuid
+      required: true
+    - name: status
+      type: enum<accepted|completed|rejected>
+      required: true
+    - name: aggregateId
+      type: optional<string>
+      required: true
+    - name: aggregateVersion
+      type: optional<int64[0..max]>
+      required: true
+    - name: auditEventId
+      type: optional<uuid>
+      required: true
+    - name: acceptedAt
+      type: datetime
+      required: true
+    - name: links
+      type: array<Link>[0..32]
+      required: true
+    - name: identityAssertionId
+      type: uuid
+      required: true
+    server_only_response_field_set:
+    - name: receiptToken
+      type: optional<string>
+      required: true
+    browser_boundary: BFF_PROJECTED
+    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+    section_binding: verification
   integration_dependencies:
   - approveResponseExcerpt fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser view-model.
+  - attestOrganizationOfficialChannel fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser
+    view-model.
   - reconcileCommunicationDelivery fields ['safeRetryProof'] are BFF/session-boundary only and must never enter the browser
+    view-model.
+  - revokeOrganizationOfficialChannel fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser
+    view-model.
+  - verifyResponseOrganizationIdentity fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser
     view-model.
   - 'CAS-008.object: listCaseResponses.$projection.requests_object must be added to the closed BFF projection.'
   - 'CAS-008.state: listCaseResponses.$projection.verification_state must be added to the closed BFF projection.'
@@ -26166,6 +26380,85 @@ screens:
       required: false
     browser_boundary: BFF_PROJECTED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+  - operation_id: createPrivacyCorrectionPlan
+    source: specs/product/addendum-operation-contracts.yaml
+    kind: COMMAND
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/create-privacy-correction-plan
+    request_schema: CreatePrivacyCorrectionPlanRequestV1
+    request_field_set:
+    - name: retentionRequestId
+      type: uuid
+      required: true
+    - name: expectedDecisionVersion
+      type: int64>=0
+      required: true
+    - name: targetObjectType
+      type: enum<RESPONSE|CORRECTION|SUBSCRIPTION|COMMUNICATION_ENDPOINT|PUBLICATION|EVIDENCE|AUDIT_SUBJECT_RECORD>
+      required: true
+    - name: targetObjectId
+      type: uuid
+      required: true
+    - name: fieldPath
+      type: json-pointer[1..1000]
+      required: true
+    - name: currentValueDigest
+      type: sha256
+      required: true
+    - name: requestedValue
+      type: secret-nonempty-string
+      required: true
+    - name: evidenceIds
+      type: unique-array<uuid>[1..100]
+      required: true
+    - name: reason
+      type: nonempty_string
+      required: true
+    server_only_request_field_set: []
+    response_schema: PrivacyCorrectionPlanReceiptV1
+    success_status: 201
+    response_field_set:
+    - name: operationId
+      type: const<createPrivacyCorrectionPlan>
+      required: true
+    - name: requestId
+      type: uuid
+      required: true
+    - name: status
+      type: enum<accepted|completed|rejected>
+      required: true
+    - name: aggregateId
+      type: uuid
+      required: true
+    - name: aggregateVersion
+      type: int64[1..max]
+      required: true
+    - name: auditEventId
+      type: uuid
+      required: true
+    - name: acceptedAt
+      type: datetime
+      required: true
+    - name: links
+      type: array<Link>[0..32]
+      required: true
+    - name: correctionPlanId
+      type: uuid
+      required: true
+    - name: retentionRequestId
+      type: uuid
+      required: true
+    - name: planVersion
+      type: int64[1..max]
+      required: true
+    server_only_response_field_set:
+    - name: receiptToken
+      type: sha256
+      required: true
+    browser_boundary: BFF_PROJECTED
+    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+    section_binding: requests
   - operation_id: getResponseAppealWorkspace
     source: specs/product/addendum-operation-contracts.yaml
     kind: QUERY
@@ -26243,13 +26536,28 @@ screens:
       type: RetentionRequestSummaryV1
       required: true
     - name: identityVerificationReceiptId
-      type: uuid
+      type: nullable-uuid
+      required: true
+    - name: identityVerificationReceiptDigest
+      type: nullable-sha256
+      required: true
+    - name: policyVersion
+      type: nullable-string
+      required: true
+    - name: policyDigest
+      type: nullable-sha256
+      required: true
+    - name: calendarVersionId
+      type: nullable-uuid
+      required: true
+    - name: calendarDigest
+      type: nullable-sha256
       required: true
     - name: inventorySnapshotDigest
-      type: sha256
+      type: nullable-sha256
       required: true
     - name: holdCoverageDigest
-      type: sha256
+      type: nullable-sha256
       required: true
     - name: activeHoldIds
       type: array<uuid>[0..1000]
@@ -26261,10 +26569,22 @@ screens:
       type: array<RetentionLocationReceiptV1>[0..1000]
       required: true
     - name: decisionReceipts
-      type: array<RetentionDecisionSummaryV1>[0..100]
+      type: array<RetentionDecisionSummaryV2>[0..100]
       required: true
     - name: completionReceiptId
       type: nullable<uuid>
+      required: true
+    - name: completionReceiptDigest
+      type: nullable-sha256
+      required: true
+    - name: completedResponseVersion
+      type: nullable<int64[1..max]>
+      required: true
+    - name: completedValueDigest
+      type: nullable-sha256
+      required: true
+    - name: accessProjection
+      type: nullable<PrivacyResponsePartyNameAccessProjectionV1>
       required: true
     - name: asOf
       type: datetime
@@ -26396,7 +26716,7 @@ screens:
     api: control-api
     method: POST
     path: /v1/internal/commands/transition-retention-request
-    request_schema: TransitionRetentionRequestRequestV1
+    request_schema: TransitionRetentionRequestRequestV2
     request_field_set:
     - name: retentionRequestId
       type: uuid
@@ -26405,7 +26725,7 @@ screens:
       type: int64>=0
       required: true
     - name: transition
-      type: START_REVIEW|APPROVE|REJECT|COMPLETE
+      type: VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND
       required: true
     - name: reasonCode
       type: string[1..100]
@@ -26413,36 +26733,105 @@ screens:
     - name: reason
       type: string[1..10000]
       required: true
-    - name: inventorySnapshotDigest
-      type: sha256
-      required: true
-    - name: holdCoverageDigest
-      type: sha256
-      required: true
-    - name: completionReceiptId
-      type: nullable-uuid
-      required: true
+    - name: identityProofReceiptId
+      type: uuid
+      required: false
+    - name: extensionReasonCode
+      type: string[1..100]
+      required: false
+    - name: extensionReason
+      type: string[1..4000]
+      required: false
+    - name: extensionBusinessDays
+      type: int32[1..max]
+      required: false
+    - name: rejectionReasonCode
+      type: string[1..100]
+      required: false
+    - name: rejectionReason
+      type: string[1..4000]
+      required: false
+    - name: appealInstructions
+      type: string[1..4000]
+      required: false
     server_only_request_field_set: []
-    response_schema: RetentionRequestDecisionReceiptV1
+    response_schema: RetentionRequestDecisionReceiptV2
     success_status: 200
     response_field_set:
     - name: command
       type: CommandReceiptV1
       required: true
-    - name: request
-      type: RetentionRequestSummaryV1
+    - name: retentionRequestId
+      type: uuid
       required: true
-    - name: inventorySnapshotDigest
+    - name: decisionVersion
+      type: int64[1..max]
+      required: true
+    - name: requestType
+      type: enum<ACCESS|CORRECTION|DELETION|RESTRICTION>
+      required: true
+    - name: state
+      type: enum<RECEIVED|REVIEW|APPROVED|REJECTED>
+      required: true
+    - name: transition
+      type: enum<VERIFY_IDENTITY|START_REVIEW|APPROVE|REJECT|EXTEND>
+      required: true
+    - name: transitionReceiptId
+      type: uuid
+      required: true
+    - name: transitionReceiptDigest
       type: sha256
       required: true
-    - name: holdCoverageDigest
-      type: sha256
+    - name: identityVerifiedAt
+      type: nullable-datetime
       required: true
-    - name: completionReceiptId
-      type: nullable<uuid>
+    - name: dueAt
+      type: nullable-datetime
       required: true
-    - name: locationReceipts
-      type: array<RetentionLocationReceiptV1>[0..1000]
+    - name: policyVersion
+      type: nullable-string
+      required: true
+    - name: policyDigest
+      type: nullable-sha256
+      required: true
+    - name: calendarVersionId
+      type: nullable-uuid
+      required: true
+    - name: calendarDigest
+      type: nullable-sha256
+      required: true
+    - name: identityReceiptId
+      type: nullable-uuid
+      required: true
+    - name: identityReceiptDigest
+      type: nullable-sha256
+      required: true
+    - name: extensionReceiptId
+      type: nullable-uuid
+      required: true
+    - name: extensionReceiptDigest
+      type: nullable-sha256
+      required: true
+    - name: refusalReceiptId
+      type: nullable-uuid
+      required: true
+    - name: refusalReceiptDigest
+      type: nullable-sha256
+      required: true
+    - name: noticeReceiptId
+      type: nullable-uuid
+      required: true
+    - name: noticeReceiptDigest
+      type: nullable-sha256
+      required: true
+    - name: appealInstructionsDigest
+      type: nullable-sha256
+      required: true
+    - name: updatedAt
+      type: datetime
+      required: true
+    - name: replayed
+      type: boolean
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -26451,6 +26840,7 @@ screens:
   integration_dependencies:
   - assignCorrection fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser view-model.
   - triageCorrection fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser view-model.
+  - createPrivacyCorrectionPlan fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser view-model.
   - 'COR-001.object: listCorrectionQueue.$projection.urgent_object must be added to the closed BFF projection.'
   - 'COR-001.state: listCorrectionQueue.$projection.requests_state must be added to the closed BFF projection.'
   - 'COR-001.answer: listCorrectionQueue.$projection.requests_answer must be added to the closed BFF projection.'
@@ -27766,6 +28156,7 @@ screens:
         item_type: SourceStatusSummary
         allowed_item_fields:
         - displayName
+        - interpretationNotice
         - lagSeconds
         - lastSuccessAt
         - publicMessage
@@ -29189,6 +29580,85 @@ screens:
       required: false
     browser_boundary: BFF_PROJECTED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+  - operation_id: attestEntityMaterialUseClosure
+    source: specs/product/addendum-operation-contracts.yaml
+    kind: COMMAND
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/attest-entity-material-use-closure
+    request_schema: AttestEntityMaterialUseClosureRequestV1
+    request_field_set:
+    - name: entityKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+    - name: entityId
+      type: uuid
+      required: true
+    - name: personhoodReceiptId
+      type: uuid
+      required: true
+    - name: expectedEntityUpdatedAt
+      type: datetime
+      required: true
+    - name: reason
+      type: string[1..4000]
+      required: true
+    server_only_request_field_set: []
+    response_schema: AttestEntityMaterialUseClosureReceiptV1
+    success_status: 201
+    response_field_set:
+    - name: operationId
+      type: const<attestEntityMaterialUseClosure>
+      required: true
+    - name: requestId
+      type: uuid
+      required: true
+    - name: status
+      type: enum<accepted|completed|rejected>
+      required: true
+    - name: aggregateId
+      type: uuid
+      required: true
+    - name: aggregateVersion
+      type: const<1>
+      required: true
+    - name: auditEventId
+      type: uuid
+      required: true
+    - name: acceptedAt
+      type: datetime
+      required: true
+    - name: links
+      type: array<Link>[0..32]
+      required: true
+    - name: closureReceiptId
+      type: uuid
+      required: true
+    - name: entityKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+    - name: entityId
+      type: uuid
+      required: true
+    - name: personhoodReceiptId
+      type: uuid
+      required: true
+    - name: closureAt
+      type: datetime
+      required: true
+    - name: lastContractEndAt
+      type: nullable-datetime
+      required: true
+    - name: linkedPublicationRevisionCount
+      type: int64[0..max]
+      required: true
+    server_only_response_field_set:
+    - name: receiptToken
+      type: sha256
+      required: true
+    browser_boundary: BFF_PROJECTED
+    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+    section_binding: handoff
   - operation_id: claimActionReview
     source: specs/product/addendum-operation-contracts.yaml
     kind: COMMAND
@@ -29230,6 +29700,79 @@ screens:
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
+    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
+    section_binding: handoff
+  - operation_id: classifyEntityPersonhood
+    source: specs/product/addendum-operation-contracts.yaml
+    kind: COMMAND
+    api: control-api
+    method: POST
+    path: /v1/internal/commands/classify-entity-personhood
+    request_schema: ClassifyEntityPersonhoodRequestV1
+    request_field_set:
+    - name: entityKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+    - name: entityId
+      type: uuid
+      required: true
+    - name: classification
+      type: enum<NATURAL_PERSON|NOT_NATURAL_PERSON>
+      required: true
+    - name: evidenceSourceLocator
+      type: uri-reference[1..2000]
+      required: true
+    - name: expectedEntityUpdatedAt
+      type: datetime
+      required: true
+    - name: reason
+      type: string[1..4000]
+      required: true
+    server_only_request_field_set: []
+    response_schema: ClassifyEntityPersonhoodReceiptV1
+    success_status: 201
+    response_field_set:
+    - name: operationId
+      type: const<classifyEntityPersonhood>
+      required: true
+    - name: requestId
+      type: uuid
+      required: true
+    - name: status
+      type: enum<accepted|completed|rejected>
+      required: true
+    - name: aggregateId
+      type: uuid
+      required: true
+    - name: aggregateVersion
+      type: const<1>
+      required: true
+    - name: auditEventId
+      type: uuid
+      required: true
+    - name: acceptedAt
+      type: datetime
+      required: true
+    - name: links
+      type: array<Link>[0..32]
+      required: true
+    - name: receiptId
+      type: uuid
+      required: true
+    - name: entityKind
+      type: enum<AGENCY|SUPPLIER>
+      required: true
+    - name: entityId
+      type: uuid
+      required: true
+    - name: classification
+      type: enum<NATURAL_PERSON|NOT_NATURAL_PERSON>
+      required: true
+    server_only_response_field_set:
+    - name: receiptToken
+      type: sha256
+      required: true
+    browser_boundary: BFF_PROJECTED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
     section_binding: handoff
   - operation_id: decideJourneyHandoff
@@ -29808,6 +30351,9 @@ screens:
     section_binding: handoff
   integration_dependencies:
   - reassignTask fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser view-model.
+  - attestEntityMaterialUseClosure fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser
+    view-model.
+  - classifyEntityPersonhood fields ['receiptToken'] are BFF/session-boundary only and must never enter the browser view-model.
   - getActionExecutionReceipt fields ['authorization'] are BFF/session-boundary only and must never enter the browser view-model.
   - 'INT-002.object: listMyTasks.$projection.views_object must be added to the closed BFF projection.'
   - 'INT-002.state: listMyTasks.$projection.handoff_state must be added to the closed BFF projection.'
@@ -32215,6 +32761,7 @@ screens:
         item_type: SourceStatusSummary
         allowed_item_fields:
         - displayName
+        - interpretationNotice
         - lagSeconds
         - lastSuccessAt
         - publicMessage
@@ -39619,6 +40166,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -39692,6 +40242,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -39736,6 +40289,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -40605,6 +41161,15 @@ screens:
     - name: version
       type: integer
       required: true
+    - name: notice
+      type: string
+      required: true
+    - name: nonConclusionNotices
+      type: array:string
+      required: true
+    - name: interpretationNotice
+      type: nullable-string
+      required: true
     - name: filename
       type: string
       required: true
@@ -40692,6 +41257,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -41596,6 +42164,15 @@ screens:
     - name: version
       type: integer
       required: true
+    - name: notice
+      type: string
+      required: true
+    - name: nonConclusionNotices
+      type: array:string
+      required: true
+    - name: interpretationNotice
+      type: nullable-string
+      required: true
     - name: filename
       type: string
       required: true
@@ -41695,6 +42272,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -42470,6 +43050,8 @@ screens:
         allowed_item_fields:
         - href
         - id
+        - nonConclusion
+        - publicState
         - publishedAt
         - reason
         - sourceRevision
@@ -42601,6 +43183,12 @@ screens:
     - name: limitations
       type: array:string
       required: true
+    - name: nonConclusion
+      type: string
+      required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -42638,6 +43226,9 @@ screens:
       type: date-time
       required: true
     - name: summary
+      type: string
+      required: true
+    - name: nonConclusion
       type: string
       required: true
     - name: confirmedFacts
@@ -42723,6 +43314,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -43013,6 +43607,7 @@ screens:
         item_type: CaseRevisionsItem
         allowed_item_fields:
         - href
+        - nonConclusion
         - publishedAt
         - revision
         - state
@@ -43300,6 +43895,9 @@ screens:
     - name: diffFromPrevious
       type: array:RevisionDiff
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -43344,6 +43942,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -44070,10 +44671,46 @@ screens:
       required: true
       in: query
     server_only_request_field_set: []
-    response_schema: BinaryDownload
+    response_schema: CaseReproducibilityDownload
     response_field_set:
-    - name: binary
-      type: binary
+    - name: id
+      type: string
+      required: true
+    - name: status
+      type: enum:READY
+      required: true
+    - name: version
+      type: integer
+      required: true
+    - name: notice
+      type: string
+      required: true
+    - name: filename
+      type: string
+      required: true
+    - name: mediaType
+      type: string
+      required: true
+    - name: byteLength
+      type: integer
+      required: true
+    - name: contentSha256
+      type: sha256
+      required: true
+    - name: contentBase64
+      type: string
+      required: true
+    - name: format
+      type: enum:JSON,CSV
+      required: true
+    - name: rowCount
+      type: integer(1..1)
+      required: true
+    - name: appliedFilters
+      type: CaseReproducibilityDownloadAppliedFilters
+      required: true
+    - name: generatedAt
+      type: date-time
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -44129,12 +44766,16 @@ screens:
     - name: limitations
       type: array:string
       required: true
+    - name: nonConclusion
+      type: string
+      required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   integration_dependencies:
-  - downloadCaseReproducibility must provide filename, media type, byte length, checksum, rights and revision metadata beside
-    the binary body.
   - 'PUB-006.next_action: getCaseReproducibility.$projection.download_metadata must be added to the closed BFF projection.'
   - 'PUB-006.download: getCaseReproducibility.$projection.download_metadata must be implemented as Pub006DownloadDownloadMetadataProjectionV1.'
   design_contract_status: DECISION_FINAL
@@ -45013,6 +45654,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -45414,6 +46058,7 @@ screens:
         allowed_item_fields:
         - correctionStatus
         - href
+        - nonConclusion
         - publicState
         - responseStatus
         - revision
@@ -45583,6 +46228,7 @@ screens:
         - contractNumber
         - href
         - id
+        - interpretationNotice
         - signedAt
         - status
         - supplier
@@ -45705,11 +46351,17 @@ screens:
     - name: recentContracts
       type: array:ContractSummary
       required: true
+    - name: interpretationNotice
+      type: string
+      required: true
     - name: identityWarnings
       type: array:string
       required: true
     - name: freshness
       type: FreshnessModel
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -45756,6 +46408,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -45800,6 +46455,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -46638,6 +47296,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -47039,6 +47700,7 @@ screens:
         allowed_item_fields:
         - correctionStatus
         - href
+        - nonConclusion
         - publicState
         - responseStatus
         - revision
@@ -47208,6 +47870,7 @@ screens:
         - contractNumber
         - href
         - id
+        - interpretationNotice
         - signedAt
         - status
         - supplier
@@ -47328,11 +47991,17 @@ screens:
     - name: recentContracts
       type: array:ContractSummary
       required: true
+    - name: interpretationNotice
+      type: string
+      required: true
     - name: identityWarnings
       type: array:string
       required: true
     - name: freshness
       type: FreshnessModel
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -47379,6 +48048,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -47423,6 +48095,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -48248,10 +48923,52 @@ screens:
       required: false
       in: query
     server_only_request_field_set: []
-    response_schema: BinaryDownload
+    response_schema: PublicContractsDownload
     response_field_set:
-    - name: binary
-      type: binary
+    - name: id
+      type: string
+      required: true
+    - name: status
+      type: enum:READY
+      required: true
+    - name: version
+      type: integer
+      required: true
+    - name: notice
+      type: string
+      required: true
+    - name: nonConclusionNotices
+      type: array:string
+      required: true
+    - name: interpretationNotice
+      type: string
+      required: true
+    - name: filename
+      type: string
+      required: true
+    - name: mediaType
+      type: string
+      required: true
+    - name: byteLength
+      type: integer
+      required: true
+    - name: contentSha256
+      type: sha256
+      required: true
+    - name: contentBase64
+      type: string
+      required: true
+    - name: format
+      type: enum:CSV,JSONL
+      required: true
+    - name: rowCount
+      type: integer(0..5000)
+      required: true
+    - name: appliedFilters
+      type: ContractsAppliedFilters
+      required: true
+    - name: generatedAt
+      type: date-time
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -48330,12 +49047,13 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   integration_dependencies:
-  - downloadContracts must provide filename, media type, byte length, checksum, rights and revision metadata beside the binary
-    body.
   - 'PUB-011.object: listContracts.$projection.scope_object must be added to the closed BFF projection.'
   - 'PUB-011.state: listContracts.$projection.results_state must be added to the closed BFF projection.'
   - 'PUB-011.answer: listContracts.$projection.results_answer must be added to the closed BFF projection.'
@@ -48788,6 +49506,7 @@ screens:
         allowed_item_fields:
         - correctionStatus
         - href
+        - nonConclusion
         - publicState
         - responseStatus
         - revision
@@ -48847,6 +49566,7 @@ screens:
         allowed_item_fields:
         - correctionStatus
         - href
+        - nonConclusion
         - publicState
         - responseStatus
         - revision
@@ -49038,6 +49758,12 @@ screens:
       required: true
     - name: relatedCases
       type: array:CaseCard
+      required: true
+    - name: interpretationNotice
+      type: string
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -50712,6 +51438,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -50971,6 +51700,7 @@ screens:
         - dateRange
         - displayName
         - freshness
+        - interpretationNotice
         - knownGaps
         - recordCount
         - sourceId
@@ -51029,6 +51759,7 @@ screens:
         - dateRange
         - displayName
         - freshness
+        - interpretationNotice
         - knownGaps
         - recordCount
         - sourceId
@@ -51382,6 +52113,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -52219,6 +52953,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -52572,7 +53309,9 @@ screens:
         - coverage
         - displayName
         - freshness
+        - interpretationNotice
         - knownIssues
+        - officialUrl
         - owner
         - sourceId
         - status
@@ -52718,7 +53457,9 @@ screens:
         - coverage
         - displayName
         - freshness
+        - interpretationNotice
         - knownIssues
+        - officialUrl
         - owner
         - sourceId
         - status
@@ -52924,6 +53665,9 @@ screens:
       required: true
     - name: links
       type: array:Link
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -53770,6 +54514,9 @@ screens:
     - name: asOf
       type: date-time
       required: true
+    - name: seo
+      type: SeoMetadata
+      required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
@@ -54138,6 +54885,8 @@ screens:
         - affectedClaims
         - caseSlug
         - id
+        - nonConclusion
+        - publicState
         - publishedAt
         - reason
         - sourceRevision
@@ -54186,6 +54935,8 @@ screens:
         - affectedClaims
         - caseSlug
         - id
+        - nonConclusion
+        - publicState
         - publishedAt
         - reason
         - sourceRevision
@@ -54447,6 +55198,9 @@ screens:
       required: true
     - name: links
       type: array:Link
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -55553,6 +56307,9 @@ screens:
       required: true
     - name: asOf
       type: date-time
+      required: true
+    - name: seo
+      type: SeoMetadata
       required: true
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
@@ -63135,11 +63892,9 @@ screens:
       - path: retention_and_limitations
         type: PrivacyPolicy
         allowed_fields:
+        - retentionSchedules
         - sections
-        - sourceLinks
-        - title
-        - updatedAt
-        - version
+        - status
         additional_properties: false
       array_item_fields: []
       deny_unlisted_at_every_depth: true
@@ -63255,11 +64010,9 @@ screens:
       - path: processing_contract
         type: PrivacyPolicy
         allowed_fields:
+        - retentionSchedules
         - sections
-        - sourceLinks
-        - title
-        - updatedAt
-        - version
+        - status
         additional_properties: false
       array_item_fields:
       - path: rights_request_route[]
@@ -63663,9 +64416,6 @@ screens:
     - name: token
       type: secret-string[32..4096]
       required: true
-    - name: proof
-      type: BrowserProofV1
-      required: true
     response_schema: PrivacyRequestSessionReceiptV1
     success_status: 200
     response_field_set:
@@ -63682,7 +64432,7 @@ screens:
       type: datetime
       required: true
     - name: cookieName
-      type: string[1..100]
+      type: const<gurine_privacy_request_receipt_session>
       required: true
     - name: tokenConsumedAt
       type: datetime
@@ -63700,20 +64450,35 @@ screens:
     request_schema: GetPrivacyRequestRequestV1
     request_field_set: []
     server_only_request_field_set: []
-    response_schema: PrivacyRequestPublicStatusV1
+    response_schema: PrivacyRequestPublicStatusV2
     success_status: 200
     response_field_set:
     - name: request
       type: PrivacyRequestSummaryV1
       required: true
-    - name: decisionReason
-      type: nullable<string[1..4000]>
+    - name: decisionReasonCode
+      type: nullable<string[1..100]>
       required: true
-    - name: completionSummary
-      type: nullable<string[1..4000]>
+    - name: decisionReceiptId
+      type: nullable-uuid
       required: true
-    - name: nextActions
-      type: array<string[1..1000]>[0..20]
+    - name: decisionReceiptSha256
+      type: nullable-sha256
+      required: true
+    - name: refusalNoticeReceiptId
+      type: nullable-uuid
+      required: true
+    - name: refusalNoticeReceiptSha256
+      type: nullable-sha256
+      required: true
+    - name: noticeReceiptIds
+      type: array<uuid>[0..100]
+      required: true
+    - name: noticeReceiptSha256s
+      type: array<sha256>[0..100]
+      required: true
+    - name: nextActionCodes
+      type: unique-array<enum<VERIFY_IDENTITY|AWAIT_REVIEW|AWAIT_DECISION|AWAIT_EXECUTION|REVIEW_REFUSAL_NOTICE|COMPLETE>>[1..1]
       required: true
     - name: asOf
       type: datetime
@@ -63729,8 +64494,7 @@ screens:
   - getPrivacyPolicy must replace its generic data field with a closed screen-owned projection.
   - createPrivacyRequest fields ['abuseProof', 'receiptToken', 'subjectIdentityProof'] are BFF/session-boundary only and must
     never enter the browser view-model.
-  - exchangePrivacyRequestReceiptToken fields ['proof', 'token'] are BFF/session-boundary only and must never enter the browser
-    view-model.
+  - exchangePrivacyRequestReceiptToken fields ['token'] are BFF/session-boundary only and must never enter the browser view-model.
   - 'PUB-031.categories: getPrivacyPolicy.$projection.data_category_projection must be implemented as Pub031CategoriesDataCategoryProjectionProjectionV1.'
   - 'PUB-031.purposes: getPrivacyPolicy.$projection.processing_purpose_projection must be implemented as Pub031PurposesProcessingPurposeProjectionProjectionV1.'
   - 'PUB-031.processors: getPrivacyPolicy.$projection.processor_projection must be implemented as Pub031ProcessorsProcessorProjectionProjectionV1.'
@@ -64020,11 +64784,9 @@ screens:
       - path: content_and_data_terms
         type: Terms
         allowed_fields:
+        - retentionSchedules
         - sections
-        - sourceLinks
-        - title
-        - updatedAt
-        - version
+        - status
         additional_properties: false
       array_item_fields: []
       deny_unlisted_at_every_depth: true
@@ -64181,11 +64943,9 @@ screens:
       - path: liability_and_prohibitions
         type: Terms
         allowed_fields:
+        - retentionSchedules
         - sections
-        - sourceLinks
-        - title
-        - updatedAt
-        - version
+        - status
         additional_properties: false
       array_item_fields: []
       deny_unlisted_at_every_depth: true
@@ -65326,6 +66086,7 @@ screens:
         item_type: SourceStatusSummary
         allowed_item_fields:
         - displayName
+        - interpretationNotice
         - lagSeconds
         - lastSuccessAt
         - publicMessage
@@ -67269,31 +68030,23 @@ screens:
     path: /v1/internal/commands/place-legal-hold
     request_schema: placeLegalHoldRequest
     request_field_set:
-    - name: caseId
-      type: uuid
+    - name: target
+      type: LegalHoldTargetBindingV1
       required: true
       in: body
-    - name: reviewSnapshotId
-      type: uuid
-      required: true
-      in: body
-    - name: objectType
-      type: enum:CASE,PUBLICATION,EVIDENCE,RESPONSE
-      required: true
-      in: body
-    - name: objectId
-      type: uuid
-      required: true
-      in: body
-    - name: scope
-      type: enum:RETENTION,DISCLOSURE,DELETION,ALL
+    - name: scopeAtoms
+      type: array:enum:RETENTION,DELETION,DISCLOSURE
       required: true
       in: body
     - name: affectedIds
       type: array:uuid
-      required: false
+      required: true
       in: body
     - name: authorityReference
+      type: string
+      required: true
+      in: body
+    - name: reasonCode
       type: string
       required: true
       in: body
@@ -67302,12 +68055,8 @@ screens:
       required: true
       in: body
     - name: expiresAt
-      type: date-time
+      type: nullable:date-time
       required: false
-      in: body
-    - name: expectedCaseVersion
-      type: integer
-      required: true
       in: body
     server_only_request_field_set: []
     response_schema: placeLegalHoldReceipt

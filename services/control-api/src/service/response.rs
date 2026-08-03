@@ -1,6 +1,8 @@
 use super::*;
 
 include!("response_addendum.rs");
+include!("response_retention.rs");
+include!("response_retention_replay.rs");
 include!("response_command_projection.rs");
 include!("response_materialize.rs");
 include!("response_query_projection.rs");

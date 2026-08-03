@@ -1,0 +1,124 @@
+schema_version: 1
+specification_version: 13.0.0-r6d
+document_id: PRIVACY_NOTICE_KO
+document_version: supervisor-decision-v1
+language: ko-KR
+status: DRAFT_UNPUBLISHED_LAUNCH_BLOCKED
+policy_provenance:
+  decision_id: supervisor-decision-v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  external_counsel_approved: false
+  statement_ko: 감독자 결정 v1을 구현한 제품 정책 초안이며 외부 법률 자문 또는 승인 기록이 아닙니다.
+operator_input_contract: specs/legal/operator-owned-launch-inputs.yaml
+publication_gate:
+  mode: FAIL_CLOSED
+  required_operator_inputs:
+    - OPERATING_LEGAL_ENTITY
+    - PRIVACY_CONTROLLER
+    - PRIVACY_OFFICER_OR_CPO
+    - PUBLIC_LEGAL_AND_PRIVACY_CONTACT
+    - EXTERNAL_KOREAN_COUNSEL_REVIEW
+  required_runtime_evidence:
+    - ACTIVE_APPROVED_RETENTION_SCHEDULES
+    - APPROVED_PROCESSING_INVENTORY
+  blocked_state: UNPUBLISHED
+  no_partial_publication: true
+sections:
+  - id: controller
+    title_ko: 처리자
+    body_ko: 처리자·개인정보 보호책임자·문의 연락처는 사용자 승인 입력에서만 표시합니다.
+    evidence:
+      kind: OPERATOR_INPUTS
+      refs:
+        - PRIVACY_CONTROLLER
+        - PRIVACY_OFFICER_OR_CPO
+        - PUBLIC_LEGAL_AND_PRIVACY_CONTACT
+    missing_evidence_behavior: BLOCK_PUBLICATION
+  - id: categories
+    title_ko: 정보 범주
+    body_ko: 처리 정보 범주는 승인된 개인정보 처리 목록에서만 표시합니다.
+    evidence:
+      kind: APPROVED_RUNTIME_DATA
+      policy_id: APPROVED_PROCESSING_INVENTORY
+    missing_evidence_behavior: BLOCK_PUBLICATION
+  - id: purposes
+    title_ko: 목적·법적 근거
+    body_ko: 처리 목적과 법적 근거는 승인된 개인정보 처리 목록에서만 표시합니다.
+    evidence:
+      kind: APPROVED_RUNTIME_DATA
+      policy_id: APPROVED_PROCESSING_INVENTORY
+    missing_evidence_behavior: BLOCK_PUBLICATION
+  - id: retention
+    title_ko: 보존
+    body_ko: 보존 표는 요청 시점의 승인된 보존 일정으로 생성합니다. 승인된 일정이 없으면 방침을 공개하지 않습니다.
+    evidence:
+      kind: RUNTIME_RELATION
+      binding_id: ACTIVE_APPROVED_RETENTION_SCHEDULES
+    missing_evidence_behavior: BLOCK_PUBLICATION
+  - id: processors
+    title_ko: 처리위탁·국외
+    body_ko: 처리위탁·국외 이전은 유효한 계약·이전·공급자 승인 근거가 있는 항목만 표시합니다.
+    evidence:
+      kind: APPROVED_GOVERNANCE_EVIDENCE
+      evidence_kinds:
+        - PROCESSOR_DPA
+        - TRANSFER_MECHANISM
+        - PROVIDER_APPROVAL
+    missing_evidence_behavior: OMIT_UNAPPROVED_ENTRY
+  - id: rights
+    title_ko: 권리
+    body_ko: 신원 확인이 완료된 때부터 버전드 개인정보 응답 달력에 따라 열람·정정·삭제·처리정지 요청 기한을 계산합니다.
+    content_contract:
+      request_types:
+        - ACCESS
+        - CORRECTION
+        - DELETION
+        - RESTRICTION
+      due_policy_id: PRIVACY_RESPONSE_CALENDAR
+      due_policy_value_source: RUNTIME_VERSIONED_POLICY
+      identity_verification_starts_clock: true
+  - id: security
+    title_ko: 보호
+    body_ko: 목적 제한, 최소 수집, 필드 암호화, 접근 통제와 감사 영수증의 구현 근거가 확인된 범위만 표시합니다.
+    content_contract:
+      permitted_claims:
+        - PURPOSE_LIMITATION
+        - DATA_MINIMIZATION
+        - FIELD_ENCRYPTION
+        - ACCESS_CONTROL
+        - AUDIT_RECEIPTS
+      implementation_evidence_required: true
+  - id: history
+    title_ko: 변경 이력
+    body_ko: 각 변경은 문서 버전과 효력 시점을 연결하고 이전 버전을 보존합니다.
+    evidence:
+      kind: DOCUMENT_REVISION_CHAIN
+      document_id: PRIVACY_NOTICE_KO
+    missing_evidence_behavior: BLOCK_PUBLICATION
+retention_table:
+  materialization: RUNTIME_ONLY
+  source_relation: ops.record_class_schedules
+  static_rows_forbidden: true
+  selection_contract:
+    - select the latest revision for each record_class at the request clock
+    - require effective_at at or before the request clock
+    - require review_expires_at after the request clock
+    - require bound operational, legal, and execution approval receipts
+  public_columns:
+    - record_class
+    - purpose
+    - lawful_basis
+    - trigger_kind
+    - active_duration_seconds
+    - backup_duration_seconds
+    - terminal_action
+    - effective_at
+    - review_expires_at
+    - schedule_digest
+  empty_result:
+    launch_blocking: true
+    table_state: UNAVAILABLE
+    document_state: UNPUBLISHED
+    response_behavior: FAIL_CLOSED
+    message_ko: 승인된 보존 일정이 없어 개인정보 처리방침을 공개할 수 없습니다.
+  stale_or_unapproved_rows: EXCLUDE_AND_FAIL_CLOSED_IF_EMPTY

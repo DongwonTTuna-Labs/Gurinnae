@@ -176,6 +176,9 @@ export type IssueActorAssertionRequest = {
     opaqueSessionToken: string;
     downstreamRequest: DownstreamRequestBinding;
     operationId: string;
+    /**
+     * The one exact capability derived by Review Console from the bodySha256-bound downstream request. For submitReview this is review.editorial when criteria.namedIndividualOverride is absent and review.legal when it is present; Identity authorizes and signs this single value without accepting an any-of set or a second body copy. This capability selector is independent from requiredAssuranceLevel, which remains decision-based.
+     */
     requiredCapability: string;
     actionContext: ActionAuthorizationContext | null;
     actionDigest: string | null;

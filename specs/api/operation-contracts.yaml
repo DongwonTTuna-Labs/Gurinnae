@@ -1240,6 +1240,29 @@ operations:
     in: body
   request_schema: approveResponseExcerptRequest
   response_schema: approveResponseExcerptReceipt
+  response_publication_identity_guard:
+    owner: editorial.approve_response_excerpt_guarded_v2
+    required_for_publication_forms:
+    - FULL
+    - REDACTED
+    exempt_publication_forms:
+    - ANONYMOUS
+    assurance_level: SECOND_FACTOR_VERIFIED
+    assertion_binding:
+    - responseId
+    - responseRequestId
+    - submissionId
+    - partyId
+    - organizationId
+    - responseVersion
+    - contentSha256
+    - publicationConsentSha256
+    - publicationForm
+    required_source_state: active, unexpired and unrevoked official-channel proof plus immutable STEP_UP verifier receipt
+    forbidden_qualifiers:
+    - OTP_ONLY
+    - UNVERIFIED
+    failure_error: PRECONDITION_FAILED
   idempotency: required
   optimistic_concurrency: required
   audit: required
@@ -7112,6 +7135,7 @@ operations:
   path: /v1/cases/{caseSlug}/reproducibility/download
   purpose:
   - 재현 파일
+  - JSON·CSV 파일 본문에 재배포 고지와 상태별 비확정 문구를 함께 보존
   consumers:
   - PUB-006
   auth: anonymous
@@ -7126,7 +7150,7 @@ operations:
     required: true
     in: query
   request_schema: downloadCaseReproducibilityQuery
-  response_schema: BinaryDownload
+  response_schema: CaseReproducibilityDownload
   idempotency: not-applicable
   optimistic_concurrency: not-applicable
   audit: read-access-log
@@ -7141,8 +7165,44 @@ operations:
   nonblocking_consumers:
   - PUB-006
   response_fields:
-  - name: binary
-    type: binary
+  - name: id
+    type: string
+    required: true
+  - name: status
+    type: enum:READY
+    required: true
+  - name: version
+    type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: filename
+    type: string
+    required: true
+  - name: mediaType
+    type: string
+    required: true
+  - name: byteLength
+    type: integer
+    required: true
+  - name: contentSha256
+    type: sha256
+    required: true
+  - name: contentBase64
+    type: string
+    required: true
+  - name: format
+    type: enum:JSON,CSV
+    required: true
+  - name: rowCount
+    type: integer(1..1)
+    required: true
+  - name: appliedFilters
+    type: CaseReproducibilityDownloadAppliedFilters
+    required: true
+  - name: generatedAt
+    type: date-time
     required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
@@ -7196,6 +7256,7 @@ operations:
   path: /v1/contracts/download
   purpose:
   - 필터 결과 export
+  - 계약 행과 envelope에 운영 상태 interpretationNotice를 보존하는 공개 재배포 산출물
   consumers:
   - PUB-011
   auth: anonymous
@@ -7222,13 +7283,14 @@ operations:
     required: false
     in: query
   request_schema: downloadContractsQuery
-  response_schema: BinaryDownload
+  response_schema: PublicContractsDownload
   idempotency: not-applicable
   optimistic_concurrency: not-applicable
   audit: read-access-log
   rate_limit: public-read
   errors:
   - '400'
+  - '422'
   - '429'
   - '500'
   - '503'
@@ -7236,8 +7298,50 @@ operations:
   nonblocking_consumers:
   - PUB-011
   response_fields:
-  - name: binary
-    type: binary
+  - name: id
+    type: string
+    required: true
+  - name: status
+    type: enum:READY
+    required: true
+  - name: version
+    type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: nonConclusionNotices
+    type: array:string
+    required: true
+  - name: interpretationNotice
+    type: string
+    required: true
+  - name: filename
+    type: string
+    required: true
+  - name: mediaType
+    type: string
+    required: true
+  - name: byteLength
+    type: integer
+    required: true
+  - name: contentSha256
+    type: sha256
+    required: true
+  - name: contentBase64
+    type: string
+    required: true
+  - name: format
+    type: enum:CSV,JSONL
+    required: true
+  - name: rowCount
+    type: integer(0..5000)
+    required: true
+  - name: appliedFilters
+    type: ContractsAppliedFilters
+    required: true
+  - name: generatedAt
+    type: date-time
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -7251,17 +7355,21 @@ operations:
   - RATE_LIMITED
   authorization_errors: []
   concurrency_errors: []
-  domain_errors: []
+  domain_errors:
+  - PRECONDITION_FAILED
   provider_errors:
   - STORAGE_FAILURE
   error_codes:
   - INVALID_PARAMETER
   - RATE_LIMITED
+  - PRECONDITION_FAILED
   - STORAGE_FAILURE
   - INTERNAL_ERROR
   http_error_mapping:
     '400':
     - INVALID_PARAMETER
+    '422':
+    - PRECONDITION_FAILED
     '429':
     - RATE_LIMITED
     '500':
@@ -7288,6 +7396,7 @@ operations:
   purpose:
   - 현재 사건 필터 결과를 CSV 또는 JSONL로 내려받기
   - 최대 5,000행과 재배포 비확정 고지를 함께 제공
+  - 행 순서 stable-dedup nonConclusionNotices와 nullable interpretationNotice를 envelope에 제공
   consumers:
   - PUB-003
   auth: anonymous
@@ -7364,6 +7473,15 @@ operations:
     required: true
   - name: version
     type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: nonConclusionNotices
+    type: array:string
+    required: true
+  - name: interpretationNotice
+    type: nullable-string
     required: true
   - name: filename
     type: string
@@ -7507,6 +7625,7 @@ operations:
   purpose:
   - 현재 검색 필터 결과를 CSV 또는 JSONL로 내려받기
   - 최대 5,000행과 재배포 비확정 고지를 함께 제공
+  - 비확정·운영 상태 고지를 서로 다른 envelope 필드로 제공
   consumers:
   - PUB-002
   auth: anonymous
@@ -7575,6 +7694,15 @@ operations:
     required: true
   - name: version
     type: integer
+    required: true
+  - name: notice
+    type: string
+    required: true
+  - name: nonConclusionNotices
+    type: array:string
+    required: true
+  - name: interpretationNotice
+    type: nullable-string
     required: true
   - name: filename
     type: string
@@ -9438,11 +9566,17 @@ operations:
   - name: recentContracts
     type: array:ContractSummary
     required: true
+  - name: interpretationNotice
+    type: string
+    required: true
   - name: identityWarnings
     type: array:string
     required: true
   - name: freshness
     type: FreshnessModel
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -9957,6 +10091,12 @@ operations:
   - name: limitations
     type: array:string
     required: true
+  - name: nonConclusion
+    type: string
+    required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/get_case_reproducibility.rs
@@ -10294,6 +10434,12 @@ operations:
   - name: relatedCases
     type: array:CaseCard
     required: true
+  - name: interpretationNotice
+    type: string
+    required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
     application: crates/application/src/queries/get_contract.rs
@@ -10394,6 +10540,9 @@ operations:
     required: true
   - name: links
     type: array:Link
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/corrections.rs
@@ -12483,6 +12632,7 @@ operations:
   - '404'
   - '429'
   - '500'
+  - '503'
   blocking_consumers: []
   nonblocking_consumers:
   - PUB-031
@@ -12527,10 +12677,12 @@ operations:
   concurrency_errors: []
   domain_errors:
   - RESOURCE_NOT_FOUND
-  provider_errors: []
+  provider_errors:
+  - STORAGE_FAILURE
   error_codes:
   - RATE_LIMITED
   - RESOURCE_NOT_FOUND
+  - STORAGE_FAILURE
   - INTERNAL_ERROR
   http_error_mapping:
     '404':
@@ -12539,6 +12691,8 @@ operations:
     - RATE_LIMITED
     '500':
     - INTERNAL_ERROR
+    '503':
+    - STORAGE_FAILURE
   internal_errors:
   - INTERNAL_ERROR
   operation_kind: QUERY
@@ -12852,6 +13006,9 @@ operations:
   - name: diffFromPrevious
     type: array:RevisionDiff
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/get_public_case_revision.rs
@@ -12993,6 +13150,11 @@ operations:
     in: query
   request_schema: getPublicationPreviewQuery
   response_schema: PublicationPreviewResponse
+  blocked_preview_contract:
+    gate_state: BLOCKED
+    legal_review_required: true
+    applies_when: the exact PREVIEW assessment has named-individual findings and no exact legal override yet
+    authority_effect: internal triage only; grants no publish authority
   idempotency: not-applicable
   optimistic_concurrency: not-applicable
   audit: read-access-log
@@ -13029,6 +13191,12 @@ operations:
     required: true
   - name: expiresAt
     type: date-time
+    required: true
+  - name: gateState
+    type: enum:PASS,BLOCKED
+    required: true
+  - name: legalReviewRequired
+    type: boolean
     required: true
   implementation_files:
     handler: services/control-api/src/service/domains/editorial/mod.rs
@@ -15138,6 +15306,9 @@ operations:
   - name: links
     type: array:Link
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/sources.rs
     application: crates/application/src/queries/get_source.rs
@@ -15513,11 +15684,17 @@ operations:
   - name: recentContracts
     type: array:ContractSummary
     required: true
+  - name: interpretationNotice
+    type: string
+    required: true
   - name: identityWarnings
     type: array:string
     required: true
   - name: freshness
     type: FreshnessModel
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -15582,6 +15759,7 @@ operations:
   - '404'
   - '429'
   - '500'
+  - '503'
   blocking_consumers: []
   nonblocking_consumers:
   - PUB-032
@@ -15626,10 +15804,12 @@ operations:
   concurrency_errors: []
   domain_errors:
   - RESOURCE_NOT_FOUND
-  provider_errors: []
+  provider_errors:
+  - STORAGE_FAILURE
   error_codes:
   - RATE_LIMITED
   - RESOURCE_NOT_FOUND
+  - STORAGE_FAILURE
   - INTERNAL_ERROR
   http_error_mapping:
     '404':
@@ -15638,6 +15818,8 @@ operations:
     - RATE_LIMITED
     '500':
     - INTERNAL_ERROR
+    '503':
+    - STORAGE_FAILURE
   internal_errors:
   - INTERNAL_ERROR
   operation_kind: QUERY
@@ -16581,6 +16763,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
     application: crates/application/src/queries/list_agencies.rs
@@ -16678,6 +16863,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
@@ -16780,6 +16968,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -17805,6 +17996,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/list_case_revisions.rs
@@ -18306,6 +18500,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
     application: crates/application/src/queries/list_contracts.rs
@@ -18550,6 +18747,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/corrections.rs
@@ -19734,6 +19934,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/list_public_cases.rs
@@ -19830,6 +20033,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -20293,6 +20499,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
@@ -20878,6 +21087,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/sources.rs
     application: crates/application/src/queries/list_source_status.rs
@@ -20986,6 +21198,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/cases.rs
     application: crates/application/src/queries/list_supplier_cases.rs
@@ -21087,6 +21302,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -21196,6 +21414,9 @@ operations:
     required: true
   - name: asOf
     type: date-time
+    required: true
+  - name: seo
+    type: SeoMetadata
     required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
@@ -22359,37 +22580,29 @@ operations:
   method: POST
   path: /v1/internal/commands/place-legal-hold
   purpose:
-  - place a retention, disclosure or deletion legal hold on an exact reviewed case object
+  - place a retention, disclosure or deletion legal hold on one exact typed target anchor
   consumers:
   - REV-002
   auth: actor-assertion-and-capability
   capability: review.legal
   request_fields:
-  - name: caseId
-    type: uuid
+  - name: target
+    type: LegalHoldTargetBindingV1
     required: true
     in: body
-  - name: reviewSnapshotId
-    type: uuid
-    required: true
-    in: body
-  - name: objectType
-    type: enum:CASE,PUBLICATION,EVIDENCE,RESPONSE
-    required: true
-    in: body
-  - name: objectId
-    type: uuid
-    required: true
-    in: body
-  - name: scope
-    type: enum:RETENTION,DISCLOSURE,DELETION,ALL
+  - name: scopeAtoms
+    type: array:enum:RETENTION,DELETION,DISCLOSURE
     required: true
     in: body
   - name: affectedIds
     type: array:uuid
-    required: false
+    required: true
     in: body
   - name: authorityReference
+    type: string
+    required: true
+    in: body
+  - name: reasonCode
     type: string
     required: true
     in: body
@@ -22398,17 +22611,45 @@ operations:
     required: true
     in: body
   - name: expiresAt
-    type: date-time
+    type: nullable:date-time
     required: false
-    in: body
-  - name: expectedCaseVersion
-    type: integer
-    required: true
     in: body
   request_schema: placeLegalHoldRequest
   response_schema: placeLegalHoldReceipt
+  legal_hold_target_contract:
+    discriminator: target.targetKind
+    target_kinds:
+    - CASE
+    - PUBLICATION
+    - EVIDENCE
+    - RESPONSE
+    - SOURCE_ASSET
+    - RESEARCH_ARTIFACT
+    - PRIVACY_REQUEST
+    - COMMUNICATION_SUBJECT
+    - SUPPLIER_RETENTION_SNAPSHOT
+    - AGENCY_RETENTION_SNAPSHOT
+    - CORRECTION
+    - SUBSCRIPTION
+    - COMMUNICATION_ENDPOINT
+    exact_common_binding:
+    - targetId
+    - targetVersion
+    - targetDigest
+    entity_retention_rule: supplier and agency targets bind an immutable ops.entity_retention_snapshots_v1 identity and digest; mutable entity UUIDs are not legal-hold anchors
+    correction_rule: targetId equals correctionSnapshotId, targetVersion and targetDigest bind ops.privacy_correction_snapshots_v1(snapshot_id,correction_id,snapshot_version,snapshot_digest) exactly, and correctionId binds the snapshotted object
+    subscription_rule: targetId equals subscriptionSnapshotId, targetVersion and targetDigest bind ops.privacy_subscription_snapshots_v1(snapshot_id,subscription_id,snapshot_version,snapshot_digest) exactly, and subscriptionId binds the snapshotted object
+    communication_endpoint_rule: targetId equals communicationEndpointId and the common target tuple binds intake.communication_endpoints(id, version, endpoint_digest) exactly; endpointSnapshotDigest is not accepted
+    explicitly_unsupported:
+      target_kind: AUDIT_SUBJECT_RECORD
+      error: LEGAL_HOLD_TARGET_UNSUPPORTED
+      http_status: 422
+      reason: no authoritative source relation exists from which to derive and lock a target version and canonical digest
+      unlock_condition: a versioned immutable audit-subject source relation, canonical digest preimage, owner lock and exact anchor foreign key are authorized
+    owner: ops.place_legal_hold_v2
+    direct_table_write: forbidden
   idempotency: required
-  optimistic_concurrency: required
+  optimistic_concurrency: target-binding-procedure-owned
   audit: required
   rate_limit: internal-user
   errors:
@@ -22479,6 +22720,8 @@ operations:
   - VALIDATION_FAILED
   - INVALID_STATE_TRANSITION
   - PUBLICATION_GATE_BLOCKED
+  - LEGAL_HOLD_TARGET_INVALID
+  - LEGAL_HOLD_TARGET_UNSUPPORTED
   provider_errors: []
   error_codes:
   - INVALID_PARAMETER
@@ -22500,6 +22743,8 @@ operations:
   - VALIDATION_FAILED
   - INVALID_STATE_TRANSITION
   - PUBLICATION_GATE_BLOCKED
+  - LEGAL_HOLD_TARGET_INVALID
+  - LEGAL_HOLD_TARGET_UNSUPPORTED
   - INTERNAL_ERROR
   http_error_mapping:
     '400':
@@ -22529,6 +22774,8 @@ operations:
     - PRECONDITION_FAILED
     - VALIDATION_FAILED
     - PUBLICATION_GATE_BLOCKED
+    - LEGAL_HOLD_TARGET_INVALID
+    - LEGAL_HOLD_TARGET_UNSUPPORTED
     '500':
     - INTERNAL_ERROR
   internal_errors:
@@ -22536,31 +22783,6 @@ operations:
   operation_kind: COMMAND
   mutates_state: true
   success_status: 201
-  concurrency_contract:
-    mode: OPTIMISTIC
-    version_field: expectedCaseVersion
-    guard_relation: editorial.cases
-    guard_identity_predicate: id = :caseId
-    guard_version_predicate: version = :expectedCaseVersion
-    guard_lock: conditional UPDATE obtains row lock
-    mutation_relation: editorial.cases
-    mutation_identity_predicate: id = :caseId
-    success_effect: insert one scoped legal hold and increment case version exactly once
-    zero_rows_resolution:
-      probe: read case by id without version predicate
-      missing_error: RESOURCE_NOT_FOUND
-      existing_error: VERSION_CONFLICT
-    version_mutation: version = version + 1
-    request_placeholders:
-    - caseId
-    - expectedCaseVersion
-    context_placeholders: []
-    guard_columns:
-    - id
-    - version
-    mutation_columns:
-    - id
-    - version
   step_up_policy:
     owner: PRIVATE_IDENTITY_API
     credential: request-bound actor assertion only
@@ -22817,8 +23039,33 @@ operations:
     type: string
     required: true
     in: body
+  - name: officialConfirmation
+    type: OfficialConfirmation
+    required: false
+    in: body
   request_schema: previewPublicationRequest
   response_schema: previewPublicationReceipt
+  official_confirmation_contract:
+    closed_fields:
+    - institution
+    - documentType
+    - documentDate
+    - confirmedScope
+    - sourceLocator
+    - sourceDigest
+    required_when: exact destination publication state is OFFICIALLY_CONFIRMED
+    forbidden_when: exact destination publication state is not OFFICIALLY_CONFIRMED
+    failure_error: PUBLICATION_GATE_BLOCKED
+  named_person_publication_guard:
+    owner: editorial.assert_r6d_publication_guard_v1
+    context: PREVIEW
+    exact_binding: case version, review snapshot digest, destination state, canonical public payload digest and active policy digest
+    named_finding_disposition: persist the exact assessment and findings as internal BLOCKED with legalReviewRequired=true when no exact override exists
+    blocked_preview_result: successful preview persistence and readback; named findings without an override are not an HTTP error
+    publish_authority: none; a blocked preview cannot authorize a revision
+    invalid_override_disposition: a supplied but malformed, stale or mismatched override fails closed
+    legal_reviewed_source: immutable override receipt only
+    failure_error: PUBLICATION_GATE_BLOCKED
   idempotency: required
   optimistic_concurrency: required-when-resource-versioned
   audit: required
@@ -23188,6 +23435,26 @@ operations:
     in: body
   request_schema: publishCaseRequest
   response_schema: publishCaseReceipt
+  named_person_publication_guard:
+    owner: editorial.publish_guarded_revision_v2
+    exact_preview_recheck:
+    - caseId
+    - expectedVersion
+    - reviewSnapshotId
+    - previewHash
+    - destinationPublicationState
+    - publicPayloadSha256
+    - namedPersonAssessmentDigest
+    - namedPersonOverrideReceiptDigest
+    two_stage_review_required_when_named_findings:
+    - an immutable independent editorial APPROVE for the exact snapshot whose request omitted namedIndividualOverride
+    - an immutable STEP_UP LEGAL_REVIEWER APPROVE for the same snapshot whose request carried the exact override and referenced the editorial decision
+    - distinct editorial reviewer, snapshot author and current legal actor as required by the named-individual override contract
+    missing_stage_result: PUBLICATION_GATE_BLOCKED and zero publication revision
+    immutable_revision_insert: DB owner only after the stored preview assessment and override receipt pass exact revalidation
+    official_confirmation_rule: OFFICIALLY_CONFIRMED requires the closed officialConfirmation facts stored in the exact preview; other states forbid them
+    legal_reviewed_source: immutable override receipt only
+    failure_error: PUBLICATION_GATE_BLOCKED
   idempotency: required
   optimistic_concurrency: required
   audit: required
@@ -24338,6 +24605,13 @@ operations:
     in: body
   request_schema: resolveCorrectionRequestRequest
   response_schema: resolveCorrectionRequestReceipt
+  corrected_publication_guard:
+    owner: editorial.publish_guarded_revision_v2
+    applies_when: resolution is RESOLVED and creates a CORRECTED publication revision
+    public_payload_source: exact approved correction facts; caller-supplied correctionNotice is forbidden
+    correction_notice_source: DB owner generates appliedAt, reason, impactSummary and revision from approved facts
+    named_person_rule: exact CORRECTION assessment and immutable independent legal-review override receipt when findings exist
+    failure_error: PUBLICATION_GATE_BLOCKED
   idempotency: required
   optimistic_concurrency: required
   audit: required
@@ -27102,6 +27376,9 @@ operations:
   - name: asOf
     type: date-time
     required: true
+  - name: seo
+    type: SeoMetadata
+    required: true
   implementation_files:
     handler: services/public-api/src/routes/operations.rs
     application: crates/application/src/queries/search_public_records.rs
@@ -28560,6 +28837,22 @@ operations:
   - REV-002
   auth: actor-assertion-and-capability
   capability: review.editorial
+  capability_policy:
+    mode: CONDITIONAL
+    default: review.editorial
+    conditions:
+    - when:
+        field: criteria.namedIndividualOverride
+        operator: ABSENT
+      required_capability: review.editorial
+    - when:
+        field: criteria.namedIndividualOverride
+        operator: PRESENT
+      required_capability: review.legal
+    resolution: EXACTLY_ONE
+    any_of_forbidden: true
+    mismatch_error: CAPABILITY_DENIED
+    assurance_composition: independent; capability is selected only by namedIndividualOverride presence, while assurance remains selected only by decision under the existing assurance_policy
   request_fields:
   - name: reviewSnapshotId
     type: uuid
@@ -28579,6 +28872,38 @@ operations:
     in: body
   request_schema: submitReviewRequest
   response_schema: submitReviewReceipt
+  named_individual_review_guard:
+    applies_when: decision is approve and the exact snapshot contains a NAMED_INDIVIDUAL finding
+    criteria_path: criteria.namedIndividualOverride
+    closed_override_fields:
+    - publicTextSha256
+    - reasonCode
+    - officialSourceLocator
+    - officialSourceSha256
+    - editorialReviewDecisionId
+    allowed_reason_code_values:
+    - PUBLIC_FIGURE
+    - OFFICIAL_DISPOSITION_QUOTE
+    exact_binding: publicTextSha256 must equal the reviewed snapshot public-text digest, officialSourceSha256 must bind the cited official source, and editorialReviewDecisionId must reference an immutable APPROVE decision for that snapshot
+    first_editorial_stage:
+      actor_role: EDITOR
+      decision: approve
+      override_field: forbidden
+      result: immutable independent editorial APPROVE only; set or preserve legalReviewRequired and grant no publish authority
+    second_legal_stage:
+      actor_role: LEGAL_REVIEWER
+      required_assurance: STEP_UP
+      decision: approve
+      override_field: required
+      referenced_decision: editorialReviewDecisionId must identify the first-stage APPROVE for the exact snapshot
+      result: immutable legal APPROVE plus exact override receipt
+    actor_rule: the current submitReview actor is the legal reviewer exactly when namedIndividualOverride is present
+    capability_rule: a schema-valid request without namedIndividualOverride requires only review.editorial; a schema-valid request with namedIndividualOverride requires only review.legal; accepting either capability or requiring both is forbidden
+    capability_assurance_cross_rule: namedIndividualOverride presence never lowers or selects assurance; decision approve remains STEP_UP and reject or changes_required remains ACTIVE_SESSION under the existing assurance policy
+    reviewer_rule: the reviewer on the referenced APPROVE decision must differ from both the snapshot author and the current legal actor
+    publish_authority: neither decision alone authorizes publication; named-individual publication requires both decisions plus the exact override receipt
+    legal_reviewed_source: receipt-derived only; caller-supplied legalReviewed is forbidden
+    failure_error: PUBLICATION_GATE_BLOCKED
   idempotency: required
   optimistic_concurrency: required-when-resource-versioned
   audit: required
@@ -28653,6 +28978,7 @@ operations:
   - PRECONDITION_FAILED
   - VALIDATION_FAILED
   - INVALID_STATE_TRANSITION
+  - PUBLICATION_GATE_BLOCKED
   provider_errors: []
   error_codes:
   - INVALID_PARAMETER
@@ -28673,6 +28999,7 @@ operations:
   - PRECONDITION_FAILED
   - VALIDATION_FAILED
   - INVALID_STATE_TRANSITION
+  - PUBLICATION_GATE_BLOCKED
   - INTERNAL_ERROR
   http_error_mapping:
     '400':
@@ -28701,6 +29028,7 @@ operations:
     '422':
     - PRECONDITION_FAILED
     - VALIDATION_FAILED
+    - PUBLICATION_GATE_BLOCKED
     '500':
     - INTERNAL_ERROR
   internal_errors:

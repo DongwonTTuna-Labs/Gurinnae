@@ -13,14 +13,13 @@ let { screen, runtime }: { screen: ScreenViewModel; runtime: ScreenRuntime } =
 const contract = $derived(typedScreenViewModel(screen));
 const projection = $derived(projectScreen(screen, runtime));
 const surface = $derived(surfaceForScreen(screen.id));
-const publicSeo = $derived(
-  screen.id === "PUB-004" ? runtime.publicSeo : undefined,
-);
+const publicSeo = $derived(runtime.publicSeo);
 </script>
 
 <svelte:head>
   <title>{publicSeo?.title ?? `${screen.title} · 구린네`}</title>
   <meta name="description" content={publicSeo?.description ?? `${screen.title} — 근거와 한계를 함께 확인합니다.`} />
+  {#if publicSeo}<meta property="og:description" content={publicSeo.openGraphDescription} />{/if}
   {#if publicSeo}
     <link rel="canonical" href={publicSeo.canonicalUrl} />
     <meta name="robots" content={publicSeo.robots} />

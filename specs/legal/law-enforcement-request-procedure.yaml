@@ -1,0 +1,76 @@
+schema_version: 1
+specification_version: 13.0.0-r6d
+document_id: LAW_ENFORCEMENT_REQUEST_PROCEDURE_KO
+document_version: supervisor-decision-v1
+language: ko-KR
+status: DRAFT_PROCEDURE_STUB
+policy_provenance:
+  decision_id: supervisor-decision-v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  external_counsel_approved: false
+  statement_ko: 기술·운영 절차 스텁이며 수사기관 대응에 관한 외부 법률 자문 기록이 아닙니다.
+operator_input_contract: specs/legal/operator-owned-launch-inputs.yaml
+activation_gate:
+  required_operator_inputs:
+    - OPERATING_LEGAL_ENTITY
+    - PUBLIC_LEGAL_AND_PRIVACY_CONTACT
+    - EXTERNAL_KOREAN_COUNSEL_REVIEW
+  missing_input_behavior: DO_NOT_DISCLOSE
+hard_rules:
+  automatic_disclosure: forbidden
+  broad_or_unbounded_collection: forbidden
+  credential_or_access_control_bypass: forbidden
+  whistleblower_identity_disclosure_without_exact_authority: forbidden
+  legal_hold_does_not_equal_disclosure_authority: true
+workflow:
+  - order: 1
+    id: INTAKE_AND_RECEIPT
+    action_ko: 요청 원문·수신 시각·제출 기관·담당자·법적 근거·범위를 보존하고 접수 영수증을 남깁니다.
+    required_evidence:
+      - REQUEST_ARTIFACT_DIGEST
+      - INTAKE_RECEIPT
+  - order: 2
+    id: AUTHORITY_VERIFICATION
+    action_ko: 발신 기관과 담당 권한, 문서 진위, 관할과 유효기간을 독립 확인합니다.
+    failure_behavior: REJECT_OR_REQUEST_CLARIFICATION
+  - order: 3
+    id: SCOPE_AND_CONFLICT_REVIEW
+    action_ko: 요청 범위를 최소화하고 개인정보 요청·통신 대상·법적 보존과의 충돌을 확인합니다.
+    required_checks:
+      - DATA_MINIMIZATION
+      - PRIVACY_REQUEST_CONFLICT
+      - COMMUNICATION_SUBJECT_CONFLICT
+      - LEGAL_HOLD_COVERAGE
+  - order: 4
+    id: INDEPENDENT_LEGAL_DECISION
+    action_ko: 독립 법률 검토자가 공개 가능 범위·거절·이의·통지 제한을 기록합니다.
+    required_evidence:
+      - LEGAL_DECISION_RECEIPT
+      - EXACT_SCOPE_DIGEST
+  - order: 5
+    id: SUBJECT_NOTICE_DECISION
+    action_ko: 금지 사유가 없는 한 정보주체 통지 여부와 시점을 결정하고 근거를 기록합니다.
+    required_evidence:
+      - NOTICE_DECISION_RECEIPT
+  - order: 6
+    id: BOUNDED_DISCLOSURE
+    action_ko: 승인된 정확한 범위만 추출하고 이중 검토 뒤 전달합니다.
+    required_evidence:
+      - DISCLOSURE_MANIFEST
+      - DELIVERY_RECEIPT
+      - REVIEWER_SET_DIGEST
+  - order: 7
+    id: CLOSE_AND_REPORT
+    action_ko: 요청·결정·제공·거절·통지 영수증을 연결하고 비식별 집계만 투명성 보고 입력으로 남깁니다.
+    required_evidence:
+      - TERMINAL_RECEIPT
+      - TRANSPARENCY_AGGREGATE
+retention_and_hold:
+  classification: LEGAL_OPERATIONAL_AUDIT
+  schedule_source: ops.record_class_schedules
+  schedule_values_in_document: forbidden
+  hold_anchor_required_before_destructive_action: true
+implementation_boundary:
+  document_only_stub: true
+  no_runtime_producer_claim: true
+  launch_readiness_requires_executable_workflow_and_external_review: true

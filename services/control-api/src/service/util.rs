@@ -12,15 +12,65 @@ pub(super) fn command_parameters(
     parameters
 }
 
-pub(super) fn query_parameters(request: &HttpRequest) -> BTreeMap<String, String> {
-    let mut parameters: BTreeMap<String, String> =
-        url::form_urlencoded::parse(request.query_string().as_bytes())
-            .map(|(k, v)| (k.into_owned(), v.into_owned()))
-            .collect();
+pub(super) fn query_parameters(
+    operation: &str,
+    request: &HttpRequest,
+) -> Result<BTreeMap<String, String>, ServiceError> {
+    let repeatable = repeatable_query_parameters(operation)?;
+    let mut parameters = BTreeMap::<String, String>::new();
+    for (key, value) in url::form_urlencoded::parse(request.query_string().as_bytes()) {
+        let key = key.into_owned();
+        let value = value.into_owned();
+        if let Some(existing) = parameters.get_mut(&key) {
+            if !repeatable.contains(&key) {
+                return Err(ServiceError::InvalidRequest);
+            }
+            existing.push(',');
+            existing.push_str(&value);
+        } else {
+            parameters.insert(key, value);
+        }
+    }
     for (name, value) in request.match_info().iter() {
         parameters.insert(name.to_owned(), value.to_owned());
     }
+    Ok(parameters)
+}
+
+fn repeatable_query_parameters(operation: &str) -> Result<BTreeSet<String>, ServiceError> {
+    let spec = SPEC
+        .get_or_init(|| serde_json::from_str(CONTROL_OPENAPI).map_err(|_| ()))
+        .as_ref()
+        .map_err(|_| ServiceError::Persistence)?;
+    let paths = spec
+        .get("paths")
+        .and_then(Value::as_object)
+        .ok_or(ServiceError::Persistence)?;
+    let definition = paths
+        .values()
+        .filter_map(Value::as_object)
+        .flat_map(|path| path.values())
+        .find(|candidate| candidate.get("operationId").and_then(Value::as_str) == Some(operation))
+        .ok_or(ServiceError::Persistence)?;
+    let parameters = definition
+        .get("parameters")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
     parameters
+        .iter()
+        .filter(|parameter| {
+            parameter.get("in").and_then(Value::as_str) == Some("query")
+                && parameter.pointer("/schema/type").and_then(Value::as_str) == Some("array")
+        })
+        .map(|parameter| {
+            parameter
+                .get("name")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+                .ok_or(ServiceError::Persistence)
+        })
+        .collect()
 }
 
 pub(super) fn uuid_value(payload: &Map<String, Value>, keys: &[&str]) -> Option<Uuid> {
@@ -283,6 +333,134 @@ pub(super) fn format_time(value: OffsetDateTime) -> Result<String, ServiceError>
 }
 
 pub(super) fn db(error: sqlx::Error) -> ServiceError {
-    tracing::error!(error = %error, "control persistence operation failed");
-    ServiceError::Persistence
+    let database_error = error.as_database_error();
+    let sql_state = database_error
+        .and_then(|database| database.code())
+        .map(|code| code.into_owned());
+    let message = database_error.map(|database| database.message());
+    let service_error = classify_database_error(sql_state.as_deref(), message);
+    tracing::error!(
+        sql_state = sql_state.as_deref().unwrap_or("NON_DATABASE"),
+        classification = ?service_error,
+        "control persistence operation failed"
+    );
+    service_error
+}
+
+fn classify_database_error(sql_state: Option<&str>, message: Option<&str>) -> ServiceError {
+    match (sql_state, message) {
+        (Some("42501"), Some("response_identity_step_up_invalid")) => ServiceError::StepUpRequired,
+        (Some("0A000"), Some("LEGAL_HOLD_TARGET_UNSUPPORTED")) => {
+            ServiceError::LegalHoldTargetUnsupported
+        }
+        (Some("0A000"), Some("PRIVACY_CORRECTION_TARGET_UNSUPPORTED")) => {
+            ServiceError::PrivacyCorrectionTargetUnsupported
+        }
+        (Some("55000"), Some("r6d_entity_closure_legal_hold_active")) => {
+            ServiceError::LegalHoldActive
+        }
+        (Some("55000"), Some("privacy_correction_legal_hold_active")) => {
+            ServiceError::LegalHoldActive
+        }
+        (Some("22023"), _) => ServiceError::InvalidRequest,
+        (Some("P0002"), _) => ServiceError::NotFound,
+        (Some("40001"), _) => ServiceError::VersionConflict,
+        (Some("23514" | "55000"), _) => ServiceError::PreconditionFailed,
+        _ => ServiceError::Persistence,
+    }
+}
+
+#[cfg(test)]
+mod database_error_tests {
+    use super::*;
+
+    #[test]
+    fn response_identity_step_up_error_has_one_narrow_typed_mapping() {
+        assert!(matches!(
+            classify_database_error(Some("42501"), Some("response_identity_step_up_invalid")),
+            ServiceError::StepUpRequired
+        ));
+        assert!(matches!(
+            classify_database_error(Some("42501"), Some("permission denied for table responses")),
+            ServiceError::Persistence
+        ));
+        assert!(matches!(
+            classify_database_error(Some("42501"), Some("privacy_step_up_authority_invalid")),
+            ServiceError::Persistence
+        ));
+        assert!(matches!(
+            classify_database_error(Some("23514"), Some("response_identity_step_up_invalid")),
+            ServiceError::PreconditionFailed
+        ));
+    }
+
+    #[test]
+    fn entity_closure_active_hold_has_one_narrow_typed_mapping() {
+        assert!(matches!(
+            classify_database_error(Some("55000"), Some("r6d_entity_closure_legal_hold_active")),
+            ServiceError::LegalHoldActive
+        ));
+        assert!(matches!(
+            classify_database_error(Some("55000"), Some("another_precondition")),
+            ServiceError::PreconditionFailed
+        ));
+        assert!(matches!(
+            classify_database_error(Some("23514"), Some("r6d_entity_closure_legal_hold_active")),
+            ServiceError::PreconditionFailed
+        ));
+        assert!(matches!(
+            classify_database_error(Some("23514"), Some("BUSINESS_CALENDAR_STALE")),
+            ServiceError::PreconditionFailed
+        ));
+    }
+
+    #[test]
+    fn privacy_correction_active_hold_has_one_narrow_typed_mapping() {
+        assert!(matches!(
+            classify_database_error(Some("55000"), Some("privacy_correction_legal_hold_active")),
+            ServiceError::LegalHoldActive
+        ));
+        assert!(matches!(
+            classify_database_error(Some("55000"), Some("PRIVACY_CORRECTION_LEGAL_HOLD_ACTIVE")),
+            ServiceError::PreconditionFailed
+        ));
+        assert!(matches!(
+            classify_database_error(
+                Some("55000"),
+                Some("privacy_correction_legal_hold_active: changed")
+            ),
+            ServiceError::PreconditionFailed
+        ));
+        assert!(matches!(
+            classify_database_error(Some("23514"), Some("privacy_correction_legal_hold_active")),
+            ServiceError::PreconditionFailed
+        ));
+    }
+
+    #[test]
+    fn r6d_unsupported_authority_errors_have_exact_typed_mappings() {
+        assert!(matches!(
+            classify_database_error(Some("0A000"), Some("LEGAL_HOLD_TARGET_UNSUPPORTED")),
+            ServiceError::LegalHoldTargetUnsupported
+        ));
+        assert!(matches!(
+            classify_database_error(Some("0A000"), Some("PRIVACY_CORRECTION_TARGET_UNSUPPORTED")),
+            ServiceError::PrivacyCorrectionTargetUnsupported
+        ));
+        assert!(matches!(
+            classify_database_error(Some("0A000"), Some("legal_hold_target_unsupported")),
+            ServiceError::Persistence
+        ));
+        assert!(matches!(
+            classify_database_error(Some("55000"), Some("LEGAL_HOLD_TARGET_UNSUPPORTED")),
+            ServiceError::PreconditionFailed
+        ));
+        assert!(matches!(
+            classify_database_error(
+                Some("0A000"),
+                Some("PRIVACY_CORRECTION_TARGET_UNSUPPORTED: response")
+            ),
+            ServiceError::Persistence
+        ));
+    }
 }

@@ -33,7 +33,12 @@ def validate(root: Path, result: Validation) -> None:
     commands=load_yaml(root/'specs/application/command-semantics.yaml')['commands']; cmd_by={c['operation_id']:c for c in commands}
     persistence=load_yaml(root/'specs/api/operation-persistence.yaml')['operations']; per_by={p['operation_id']:p for p in persistence}
     events=load_yaml(root/'specs/events/event-catalog.yaml')['events']; event_by={e['event_type']:e for e in events}
-    consumer_doc=load_yaml(root/'specs/events/consumer-catalog.yaml'); terminal=set(consumer_doc.get('terminal_observability_events',[]))
+    consumer_doc=load_yaml(root/'specs/events/consumer-catalog.yaml')
+    terminal=set(consumer_doc.get('terminal_observability_events',[]))
+    retired=set(consumer_doc.get('retired_event_types',[]))
+    event_addendum=load_yaml(root/'specs/product/addendum-event-contracts.yaml')
+    response_submission_overlay=event_addendum['response_submission_v2_overlay']
+    retired_authority=set(response_submission_overlay['retired_events'])
     command_ids={o['operation_id'] for o in operations if o['operation_kind']=='COMMAND'}
     assurance_doc=load_yaml(root/'specs/auth/assurance-policy.yaml')
     assurance_by={item['operation_id']:item for item in assurance_doc['commands']}
@@ -42,6 +47,20 @@ def validate(root: Path, result: Validation) -> None:
     result.require(set(per_by)==set(op_by),'persistence mapping is incomplete')
     result.require(len(event_by)==99,'expected 99 events')
     accepted={e for c in consumer_doc['consumers'] for e in c['accepted_event_types']}
+    runtime_consumers={
+        event_type:{
+            consumer['id']
+            for consumer in consumer_doc['consumers']
+            if event_type in consumer['accepted_event_types']
+        }
+        for event_type in response_submission_overlay['atomic_events']
+    }
+    for event_type, consumers in runtime_consumers.items():
+        expected=set(event_addendum['events'][event_type]['consumers'])
+        result.require(
+            consumers==expected,
+            f'{event_type}: runtime consumer set differs from response-submission authority',
+        )
     produced={}
     for command in commands:
         for event in command['domain_events']+command['integration_events']: produced.setdefault(event,set()).add(command['operation_id'])
@@ -52,7 +71,10 @@ def validate(root: Path, result: Validation) -> None:
         if payload.is_file(): Draft202012Validator.check_schema(load_json(payload))
         if event['category']=='INTEGRATION': result.require(bool(event['consumers']) or event_type in terminal,f'{event_type}: integration event has no consumer or terminal declaration')
     integration={e['event_type'] for e in events if e['category']=='INTEGRATION'}
-    result.require(integration-terminal <= accepted,f'integration events missing consumer declarations: {sorted(integration-terminal-accepted)}')
+    result.require(retired==retired_authority,f'consumer retired-event set differs from response-submission authority: missing={sorted(retired_authority-retired)} extra={sorted(retired-retired_authority)}')
+    result.require(retired <= set(event_by),f'consumer catalog retires unknown events: {sorted(retired-set(event_by))}')
+    result.require(not (retired & accepted),f'retired events remain accepted by runtime consumers: {sorted(retired & accepted)}')
+    result.require(integration-terminal-retired <= accepted,f'integration events missing consumer declarations: {sorted(integration-terminal-retired-accepted)}')
     for oid,op in op_by.items():
         p=per_by[oid]; result.require(p['operation_kind']==op['operation_kind'],f'{oid}: persistence kind mismatch')
         mutating=[s for s in p.get('statements',[]) if s['verb'] in MUTATING]

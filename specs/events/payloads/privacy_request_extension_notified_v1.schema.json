@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/privacy.request_extension_notified.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "retentionRequestId",
+    "requestType",
+    "priorDueAt",
+    "dueAt",
+    "extensionBusinessDays",
+    "extensionSequence",
+    "reasonDigest",
+    "responsePolicyVersion",
+    "responsePolicyDigest",
+    "calendarVersionId",
+    "calendarDigest",
+    "notifiedAt",
+    "notificationReceiptDigest"
+  ],
+  "properties": {
+    "retentionRequestId": { "type": "string", "format": "uuid" },
+    "requestType": {
+      "type": "string",
+      "enum": ["ACCESS", "CORRECTION", "DELETION", "RESTRICTION"]
+    },
+    "priorDueAt": { "type": "string", "format": "date-time" },
+    "dueAt": { "type": "string", "format": "date-time" },
+    "extensionBusinessDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365
+    },
+    "extensionSequence": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "reasonDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "responsePolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "responsePolicyDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "calendarVersionId": { "type": "string", "format": "uuid" },
+    "calendarDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "notifiedAt": { "type": "string", "format": "date-time" },
+    "notificationReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

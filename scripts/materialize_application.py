@@ -51,6 +51,7 @@ TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
                 "license": "CC-BY-4.0",
                 "updatedAt": "2026-07-12T00:00:00Z",
                 "downloadUrl": None,
+                "redistributionNotice": "이상 징후 기록이며 위법·부패의 확정이 아님",
             },
             {
                 "id": "public-contracts",
@@ -70,6 +71,7 @@ TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
                 "license": "CC-BY-4.0",
                 "updatedAt": "2026-07-12T00:00:00Z",
                 "downloadUrl": None,
+                "redistributionNotice": "이상 징후 기록이며 위법·부패의 확정이 아님",
             },
             {
                 "id": "published-corrections",
@@ -89,15 +91,26 @@ TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
                 "license": "CC-BY-4.0",
                 "updatedAt": "2026-07-12T00:00:00Z",
                 "downloadUrl": None,
+                "redistributionNotice": "이상 징후 기록이며 위법·부패의 확정이 아님",
             },
         ],
         "appliedFilters": {"format": []},
         "asOf": "2026-07-12T00:00:00Z",
+        "seo": {
+            "title": "공개 데이터",
+            "description": "공개 데이터 · 이상 징후 기록이며 위법·부패의 확정이 아님",
+            "openGraphDescription": "공개 데이터 · 이상 징후 기록이며 위법·부패의 확정이 아님",
+            "canonicalUrl": "/data",
+            "robots": "index,follow",
+        },
     },
     "downloadPublicCases": {
         "id": "public-cases-a95cbf94fea10d08",
         "status": "READY",
         "version": 1,
+        "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+        "nonConclusionNotices": [],
+        "interpretationNotice": None,
         "filename": "public-cases.jsonl",
         "mediaType": "application/x-ndjson; charset=utf-8",
         "byteLength": 75,
@@ -112,6 +125,9 @@ TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
         "id": "public-search-records-a95cbf94fea10d08",
         "status": "READY",
         "version": 1,
+        "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+        "nonConclusionNotices": [],
+        "interpretationNotice": None,
         "filename": "public-search-records.jsonl",
         "mediaType": "application/x-ndjson; charset=utf-8",
         "byteLength": 75,
@@ -125,6 +141,21 @@ TEST_ONLY_OPERATION_RESPONSE_BODIES: dict[str, Any] = {
             "publicationState": [],
             "sort": "relevance",
         },
+        "generatedAt": "2026-07-12T00:00:00Z",
+    },
+    "downloadCaseReproducibility": {
+        "id": "case-test-case-reproducibility-e29870585c26a607",
+        "status": "READY",
+        "version": 1,
+        "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+        "filename": "case-test-case-reproducibility.json",
+        "mediaType": "application/json; charset=utf-8",
+        "byteLength": 262,
+        "contentSha256": "e29870585c26a607893ea06d81cdfc8a0a17652b6fe8a1c4c04470525a9559e4",
+        "contentBase64": "eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIiwibm9uQ29uY2x1c2lvbiI6IuqzteqwnOyekOujjCDruYTqtZDsl5DshJwg7ISk66qF7J20IO2VhOyalO2VnCDssKjsnbTqsIAg7ZmV7J2465CQ7Iq164uI64ukLiDtmITsnqwg7J6Q66OM66eM7Jy866GcIOychOuyleyEseydtOuCmCDrtoDtjKgg7Jes67aA66W8IO2MkOuLqO2VoCDsiJgg7JeG7Iq164uI64ukLiIsImRhdGEiOnt9fQ==",
+        "format": "JSON",
+        "rowCount": 1,
+        "appliedFilters": {"caseSlug": "test-case"},
         "generatedAt": "2026-07-12T00:00:00Z",
     },
     "listRelayModels": {
@@ -179,6 +210,24 @@ TEST_ONLY_OPERATION_RESPONSE_PATCHES: dict[str, dict[str, Any]] = {
         "sidoCode": "11",
         "sigunguCode": "11680",
         "regionCodeVersion": "행정표준코드-2026.1",
+    },
+    "getPrivacyPolicy": {
+        "data": {
+            "retentionSchedules": [
+                {
+                    "recordClass": "AGENCY_MASTER",
+                    "purpose": "TEST_ONLY generated response fixture",
+                    "lawfulBasis": "TEST_ONLY generated response fixture",
+                    "triggerKind": "CREATED_AT",
+                    "activeDurationSeconds": 0,
+                    "backupDurationSeconds": 0,
+                    "terminalAction": "DELETE",
+                    "effectiveAt": "2026-07-12T00:00:00Z",
+                    "reviewExpiresAt": "2026-07-13T00:00:00Z",
+                    "scheduleDigest": "0" * 64,
+                }
+            ]
+        }
     },
     "listPublicCases": {
         "appliedFilters": {"sidoCode": "11", "sigunguCode": "11680"},
@@ -248,14 +297,27 @@ def crate_ident(value: str) -> str:
     return value.replace("-", "_")
 
 
-def sample_for_schema(schema: Any, document: dict[str, Any], depth: int = 0) -> Any:
+def sample_for_schema(
+    schema: Any,
+    document: dict[str, Any],
+    depth: int = 0,
+    *,
+    operation_id: str | None = None,
+    property_name: str | None = None,
+) -> Any:
     if depth > 14 or not isinstance(schema, dict):
         return None
     if "$ref" in schema:
         current: Any = document
         for segment in schema["$ref"].removeprefix("#/").split("/"):
             current = current[segment.replace("~1", "/").replace("~0", "~")]
-        return sample_for_schema(current, document, depth + 1)
+        return sample_for_schema(
+            current,
+            document,
+            depth + 1,
+            operation_id=operation_id,
+            property_name=property_name,
+        )
     if "example" in schema:
         return schema["example"]
     if "const" in schema:
@@ -265,14 +327,26 @@ def sample_for_schema(schema: Any, document: dict[str, Any], depth: int = 0) -> 
     if "allOf" in schema:
         merged: dict[str, Any] = {}
         for branch in schema["allOf"]:
-            value = sample_for_schema(branch, document, depth + 1)
+            value = sample_for_schema(
+                branch,
+                document,
+                depth + 1,
+                operation_id=operation_id,
+                property_name=property_name,
+            )
             if isinstance(value, dict):
                 merged.update(value)
         return merged
     for union in ("oneOf", "anyOf"):
         if schema.get(union):
             non_null = [part for part in schema[union] if part.get("type") != "null"]
-            return sample_for_schema((non_null or schema[union])[0], document, depth + 1)
+            return sample_for_schema(
+                (non_null or schema[union])[0],
+                document,
+                depth + 1,
+                operation_id=operation_id,
+                property_name=property_name,
+            )
     schema_type = schema.get("type")
     if isinstance(schema_type, list):
         schema_type = next((kind for kind in schema_type if kind != "null"), "null")
@@ -280,13 +354,28 @@ def sample_for_schema(schema: Any, document: dict[str, Any], depth: int = 0) -> 
         properties = schema.get("properties", {})
         required = schema.get("required", list(properties))
         return {
-            name: sample_for_schema(properties[name], document, depth + 1)
+            name: sample_for_schema(
+                properties[name],
+                document,
+                depth + 1,
+                operation_id=operation_id,
+                property_name=name,
+            )
             for name in required
             if name in properties
         }
     if schema_type == "array":
         count = int(schema.get("minItems", 0))
-        return [sample_for_schema(schema.get("items", {}), document, depth + 1) for _ in range(count)]
+        return [
+            sample_for_schema(
+                schema.get("items", {}),
+                document,
+                depth + 1,
+                operation_id=operation_id,
+                property_name=property_name,
+            )
+            for _ in range(count)
+        ]
     if schema_type == "integer":
         return max(int(schema.get("minimum", 0)), 0)
     if schema_type == "number":
@@ -294,6 +383,8 @@ def sample_for_schema(schema: Any, document: dict[str, Any], depth: int = 0) -> 
     if schema_type == "boolean":
         return False
     if schema_type == "string" or schema.get("format"):
+        if property_name == "operationId" and operation_id is not None:
+            return operation_id
         fmt = schema.get("format")
         values = {
             "uuid": "00000000-0000-4000-8000-000000000001",
@@ -353,7 +444,11 @@ def primary_response(
 
 
 def response_sample(
-    status: int, response: dict[str, Any], document: dict[str, Any]
+    status: int,
+    response: dict[str, Any],
+    document: dict[str, Any],
+    *,
+    operation_id: str,
 ) -> tuple[str, Any]:
     content = response.get("content", {})
     if not isinstance(content, dict) or not content:
@@ -362,7 +457,11 @@ def response_sample(
     media = content[media_type]
     if not isinstance(media, dict):
         raise ValueError(f"response media declaration is not an object: {status}:{media_type}")
-    body = sample_for_schema(media.get("schema", {}), document)
+    body = sample_for_schema(
+        media.get("schema", {}),
+        document,
+        operation_id=operation_id,
+    )
     if media_type == "application/problem+json" and isinstance(body, dict):
         body["status"] = status
         error_codes = response.get("x-error-codes", [])
@@ -390,7 +489,12 @@ def operation_response_samples() -> dict[str, tuple[int, str, Any]]:
                 if operation_id in mapping:
                     raise ValueError(f"duplicate OpenAPI operation id: {operation_id}")
                 status, response = primary_response(method, operation_id=operation_id)
-                media_type, body = response_sample(status, response, document)
+                media_type, body = response_sample(
+                    status,
+                    response,
+                    document,
+                    operation_id=operation_id,
+                )
                 mapping[operation_id] = (status, media_type, body)
     for operation_id, body in TEST_ONLY_OPERATION_RESPONSE_BODIES.items():
         generated = mapping.get(operation_id)

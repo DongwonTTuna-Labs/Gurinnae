@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 
 use super::errors::AssertionError;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct BoundRequest<'a> {
     pub method: &'a str,
     pub path: &'a str,
@@ -13,6 +13,11 @@ pub struct BoundRequest<'a> {
     pub body: &'a [u8],
     pub content_type: Option<&'a str>,
     pub idempotency_key: Option<&'a str>,
+    /// Opaque continuation secret carried only long enough to bind its digest.
+    ///
+    /// `Debug` is intentionally not implemented for `BoundRequest`, so a raw
+    /// submission-session token cannot be emitted by ordinary diagnostics.
+    pub next_submission_session: Option<&'a str>,
 }
 
 #[derive(Debug)]
@@ -147,6 +152,16 @@ pub fn request_hashes(request: &BoundRequest<'_>) -> Result<RequestHashes, Asser
     validate_path(request.path)?;
     let canonical_query = canonical_query(request.raw_query)?;
     let content_type = canonical_content_type(request.content_type, request.body)?;
+    let next_submission_session_sha256 = request
+        .next_submission_session
+        .map(|value| {
+            if value.is_empty() {
+                Err(AssertionError::RequestMismatch)
+            } else {
+                Ok(sha256_hex(value.as_bytes()))
+            }
+        })
+        .transpose()?;
     Ok(RequestHashes {
         method,
         path: request.path.to_owned(),
@@ -156,6 +171,7 @@ pub fn request_hashes(request: &BoundRequest<'_>) -> Result<RequestHashes, Asser
         idempotency_key_sha256: request
             .idempotency_key
             .map(|value| sha256_hex(value.as_bytes())),
+        next_submission_session_sha256,
     })
 }
 
@@ -167,11 +183,12 @@ pub struct RequestHashes {
     pub body_sha256: String,
     pub content_type: String,
     pub idempotency_key_sha256: Option<String>,
+    pub next_submission_session_sha256: Option<String>,
 }
 
 pub fn canonical_request_digest(request: &BoundRequest<'_>) -> Result<String, AssertionError> {
     let hashes = request_hashes(request)?;
-    let input = format!(
+    let mut input = format!(
         "{}\n{}\n{}\n{}\n{}\n{}",
         hashes.method,
         hashes.path,
@@ -180,6 +197,10 @@ pub fn canonical_request_digest(request: &BoundRequest<'_>) -> Result<String, As
         hashes.content_type,
         hashes.idempotency_key_sha256.as_deref().unwrap_or("")
     );
+    if let Some(next_submission_session_sha256) = hashes.next_submission_session_sha256 {
+        input.push('\n');
+        input.push_str(&next_submission_session_sha256);
+    }
     Ok(sha256_hex(input.as_bytes()))
 }
 
@@ -306,6 +327,7 @@ mod tests {
             body: b"binary\0payload",
             content_type: Some("Application/Octet-Stream; charset=binary"),
             idempotency_key: None,
+            next_submission_session: None,
         })
         .expect("binary request must be accepted");
         assert_eq!(hashes.content_type, "application/octet-stream");
@@ -321,6 +343,7 @@ mod tests {
             body: b"payload",
             content_type: Some("text/plain"),
             idempotency_key: None,
+            next_submission_session: None,
         });
         assert!(matches!(result, Err(AssertionError::RequestMismatch)));
     }
@@ -334,6 +357,7 @@ mod tests {
             body: b"",
             content_type: None,
             idempotency_key: None,
+            next_submission_session: None,
         })
         .expect("RFC3986 query must be accepted");
         assert_eq!(
@@ -348,6 +372,7 @@ mod tests {
             body: b"",
             content_type: None,
             idempotency_key: None,
+            next_submission_session: None,
         });
         assert!(matches!(rejected, Err(AssertionError::RequestMismatch)));
     }

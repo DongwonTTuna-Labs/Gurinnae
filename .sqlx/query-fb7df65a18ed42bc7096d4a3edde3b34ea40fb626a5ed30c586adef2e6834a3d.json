@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT editorial.preview_publication_guarded_v2($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "preview_publication_guarded_v2",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "fb7df65a18ed42bc7096d4a3edde3b34ea40fb626a5ed30c586adef2e6834a3d"
+}

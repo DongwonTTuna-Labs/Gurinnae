@@ -15,7 +15,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"\",\"status\":\"\",\"version\":0}",
+        response_json: "{\"id\":\"case-test-case-reproducibility-e29870585c26a607\",\"status\":\"READY\",\"version\":1,\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\",\"filename\":\"case-test-case-reproducibility.json\",\"mediaType\":\"application/json; charset=utf-8\",\"byteLength\":262,\"contentSha256\":\"e29870585c26a607893ea06d81cdfc8a0a17652b6fe8a1c4c04470525a9559e4\",\"contentBase64\":\"eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIiwibm9uQ29uY2x1c2lvbiI6IuqzteqwnOyekOujjCDruYTqtZDsl5DshJwg7ISk66qF7J20IO2VhOyalO2VnCDssKjsnbTqsIAg7ZmV7J2465CQ7Iq164uI64ukLiDtmITsnqwg7J6Q66OM66eM7Jy866GcIOychOuyleyEseydtOuCmCDrtoDtjKgg7Jes67aA66W8IO2MkOuLqO2VoCDsiJgg7JeG7Iq164uI64ukLiIsImRhdGEiOnt9fQ==\",\"format\":\"JSON\",\"rowCount\":1,\"appliedFilters\":{\"caseSlug\":\"test-case\"},\"generatedAt\":\"2026-07-12T00:00:00Z\"}",
     },
     OperationSpec {
         id: "downloadContracts",
@@ -30,7 +30,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"\",\"status\":\"\",\"version\":0}",
+        response_json: "{\"id\":\"\",\"status\":\"READY\",\"version\":1,\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\",\"nonConclusionNotices\":[],\"interpretationNotice\":\"이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.\",\"filename\":\"x\",\"mediaType\":\"\",\"byteLength\":0,\"contentSha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"contentBase64\":\"\",\"format\":\"CSV\",\"rowCount\":0,\"appliedFilters\":{\"q\":\"\",\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"supplierId\":\"00000000-0000-4000-8000-000000000001\",\"contractStatus\":[],\"procurementMethod\":[],\"signedFrom\":\"2026-07-12\",\"signedTo\":\"2026-07-12\",\"amountMin\":\"0\",\"amountMax\":\"0\"},\"generatedAt\":\"2026-07-12T00:00:00Z\"}",
     },
     OperationSpec {
         id: "downloadPublicCases",
@@ -45,7 +45,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"public-cases-a95cbf94fea10d08\",\"status\":\"READY\",\"version\":1,\"filename\":\"public-cases.jsonl\",\"mediaType\":\"application/x-ndjson; charset=utf-8\",\"byteLength\":75,\"contentSha256\":\"a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81\",\"contentBase64\":\"eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K\",\"format\":\"JSONL\",\"rowCount\":0,\"appliedFilters\":{\"publicationState\":[],\"sort\":\"updated_desc\"},\"generatedAt\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"id\":\"public-cases-a95cbf94fea10d08\",\"status\":\"READY\",\"version\":1,\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\",\"nonConclusionNotices\":[],\"interpretationNotice\":null,\"filename\":\"public-cases.jsonl\",\"mediaType\":\"application/x-ndjson; charset=utf-8\",\"byteLength\":75,\"contentSha256\":\"a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81\",\"contentBase64\":\"eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K\",\"format\":\"JSONL\",\"rowCount\":0,\"appliedFilters\":{\"publicationState\":[],\"sort\":\"updated_desc\"},\"generatedAt\":\"2026-07-12T00:00:00Z\"}",
     },
     OperationSpec {
         id: "downloadPublicOpenApi",
@@ -60,7 +60,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"\",\"status\":\"\",\"version\":0}",
+        response_json: "{\"id\":\"\",\"status\":\"\",\"version\":0,\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\",\"filename\":\"\",\"mediaType\":\"\",\"byteLength\":0,\"contentSha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"contentBase64\":\"\",\"format\":\"\",\"rowCount\":0,\"appliedFilters\":{\"q\":\"\",\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"supplierId\":\"00000000-0000-4000-8000-000000000001\",\"contractStatus\":[],\"procurementMethod\":[],\"signedFrom\":\"2026-07-12\",\"signedTo\":\"2026-07-12\",\"amountMin\":\"0\",\"amountMax\":\"0\"},\"generatedAt\":\"2026-07-12T00:00:00Z\"}",
     },
     OperationSpec {
         id: "downloadPublicSearchRecords",
@@ -75,7 +75,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"public-search-records-a95cbf94fea10d08\",\"status\":\"READY\",\"version\":1,\"filename\":\"public-search-records.jsonl\",\"mediaType\":\"application/x-ndjson; charset=utf-8\",\"byteLength\":75,\"contentSha256\":\"a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81\",\"contentBase64\":\"eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K\",\"format\":\"JSONL\",\"rowCount\":0,\"appliedFilters\":{\"q\":\"계약\",\"types\":[],\"publicationState\":[],\"sort\":\"relevance\"},\"generatedAt\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"id\":\"public-search-records-a95cbf94fea10d08\",\"status\":\"READY\",\"version\":1,\"notice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\",\"nonConclusionNotices\":[],\"interpretationNotice\":null,\"filename\":\"public-search-records.jsonl\",\"mediaType\":\"application/x-ndjson; charset=utf-8\",\"byteLength\":75,\"contentSha256\":\"a95cbf94fea10d089ddf966be1f5e2b11f263c110cff3efa60077101764fda81\",\"contentBase64\":\"eyJub3RpY2UiOiLsnbTsg4Eg7KeV7ZuEIOq4sOuhneydtOupsCDsnITrspXCt+u2gO2MqOydmCDtmZXsoJXsnbQg7JWE64uYIn0K\",\"format\":\"JSONL\",\"rowCount\":0,\"appliedFilters\":{\"q\":\"계약\",\"types\":[],\"publicationState\":[],\"sort\":\"relevance\"},\"generatedAt\":\"2026-07-12T00:00:00Z\"}",
     },
     OperationSpec {
         id: "getAboutContent",
@@ -120,7 +120,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"\",\"agencyType\":\"\",\"sidoCode\":\"11\",\"sigunguCode\":\"11680\",\"regionCodeVersion\":\"행정표준코드-2026.1\",\"identifiers\":[],\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"metrics\":[],\"caseCountsByState\":{\"total\":0,\"publication\":{\"neverPublished\":0,\"publishedAnomaly\":0,\"publishedExplained\":0,\"officiallyConfirmed\":0,\"corrected\":0,\"retracted\":0,\"temporarilyRestricted\":0},\"investigation\":{\"signalDetected\":0,\"triage\":0,\"investigating\":0,\"awaitingResponse\":0,\"editorialReview\":0,\"legalReview\":0,\"readyToPublish\":0,\"closed\":0},\"resolution\":{\"none\":0,\"dataError\":0,\"duplicate\":0,\"explained\":0,\"insufficientEvidence\":0,\"referredConfidential\":0,\"archived\":0}},\"recentCases\":[],\"recentContracts\":[],\"identityWarnings\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}}",
+        response_json: "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"\",\"agencyType\":\"\",\"sidoCode\":\"11\",\"sigunguCode\":\"11680\",\"regionCodeVersion\":\"행정표준코드-2026.1\",\"identifiers\":[],\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"metrics\":[],\"caseCountsByState\":{\"total\":0,\"publication\":{\"neverPublished\":0,\"publishedAnomaly\":0,\"publishedExplained\":0,\"officiallyConfirmed\":0,\"corrected\":0,\"retracted\":0,\"temporarilyRestricted\":0},\"investigation\":{\"signalDetected\":0,\"triage\":0,\"investigating\":0,\"awaitingResponse\":0,\"editorialReview\":0,\"legalReview\":0,\"readyToPublish\":0,\"closed\":0},\"resolution\":{\"none\":0,\"dataError\":0,\"duplicate\":0,\"explained\":0,\"insufficientEvidence\":0,\"referredConfidential\":0,\"archived\":0}},\"recentCases\":[],\"recentContracts\":[],\"identityWarnings\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"interpretationNotice\":\"이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "getCaseReproducibility",
@@ -135,7 +135,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"caseSlug\":\"\",\"ruleId\":\"\",\"ruleVersion\":\"\",\"inputDigest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"resultDigest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"formula\":\"\",\"roundingPolicy\":\"\",\"target\":{\"id\":\"\",\"agencyName\":\"\",\"observedAt\":\"2026-07-12\",\"unit\":\"\",\"unitPrice\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"bundleSummary\":[],\"compatibility\":\"\"},\"includedCohort\":[],\"excludedCohort\":[],\"result\":{\"benchmarkType\":\"\",\"benchmarkValue\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"targetValue\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"ratio\":\"0\",\"includedCount\":0,\"excludedCount\":0,\"formula\":\"\",\"roundingPolicy\":\"\"},\"limitations\":[]}",
+        response_json: "{\"caseSlug\":\"\",\"ruleId\":\"\",\"ruleVersion\":\"\",\"inputDigest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"resultDigest\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"formula\":\"\",\"roundingPolicy\":\"\",\"target\":{\"id\":\"\",\"agencyName\":\"\",\"observedAt\":\"2026-07-12\",\"unit\":\"\",\"unitPrice\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"bundleSummary\":[],\"compatibility\":\"\"},\"includedCohort\":[],\"excludedCohort\":[],\"result\":{\"benchmarkType\":\"\",\"benchmarkValue\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"targetValue\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"ratio\":\"0\",\"includedCount\":0,\"excludedCount\":0,\"formula\":\"\",\"roundingPolicy\":\"\"},\"limitations\":[],\"nonConclusion\":\"\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "getContactContent",
@@ -165,7 +165,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"contractNumber\":\"\",\"title\":\"\",\"agency\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"\",\"entityType\":\"AGENCY\",\"href\":\"\"},\"status\":\"\",\"currency\":\"\",\"lineItems\":[],\"changes\":[],\"sourceDocuments\":[],\"normalizationWarnings\":[],\"relatedCases\":[]}",
+        response_json: "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"contractNumber\":\"\",\"title\":\"\",\"agency\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"\",\"entityType\":\"AGENCY\",\"href\":\"\"},\"status\":\"\",\"currency\":\"\",\"lineItems\":[],\"changes\":[],\"sourceDocuments\":[],\"normalizationWarnings\":[],\"relatedCases\":[],\"interpretationNotice\":\"이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "getCorrection",
@@ -180,7 +180,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"caseSlug\":\"\",\"sourceRevision\":0,\"summary\":\"\",\"reason\":\"\",\"publishedAt\":\"2026-07-12T00:00:00Z\",\"affectedClaims\":[]},\"links\":[]}",
+        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"caseSlug\":\"\",\"sourceRevision\":0,\"summary\":\"\",\"reason\":\"\",\"publicState\":\"PUBLISHED_ANOMALY\",\"nonConclusion\":\"\",\"publishedAt\":\"2026-07-12T00:00:00Z\",\"affectedClaims\":[]},\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"},\"links\":[]}",
     },
     OperationSpec {
         id: "getCoverage",
@@ -270,7 +270,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"version\":\"\",\"title\":\"\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"sections\":[],\"sourceLinks\":[]},\"links\":[]}",
+        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"status\":\"PUBLISHED\",\"sections\":[],\"retentionSchedules\":[{\"recordClass\":\"AGENCY_MASTER\",\"purpose\":\"TEST_ONLY generated response fixture\",\"lawfulBasis\":\"TEST_ONLY generated response fixture\",\"triggerKind\":\"CREATED_AT\",\"activeDurationSeconds\":0,\"backupDurationSeconds\":0,\"terminalAction\":\"DELETE\",\"effectiveAt\":\"2026-07-12T00:00:00Z\",\"reviewExpiresAt\":\"2026-07-13T00:00:00Z\",\"scheduleDigest\":\"0000000000000000000000000000000000000000000000000000000000000000\"}]},\"links\":[]}",
     },
     OperationSpec {
         id: "getPublicApiDocumentation",
@@ -300,7 +300,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"slug\":\"\",\"title\":\"\",\"publicState\":\"\",\"revision\":0,\"publishedAt\":\"2026-07-12T00:00:00Z\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"summary\":\"\",\"agencyName\":\"\",\"contractName\":\"\",\"amount\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"nonConclusion\":\"\",\"confirmedFacts\":[],\"criticalUnknowns\":[],\"partyResponses\":[],\"signals\":[],\"counterEvidence\":[],\"claims\":[],\"evidence\":[],\"timeline\":[],\"corrections\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"limitations\":[],\"seo\":{\"title\":\"\",\"description\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
+        response_json: "{\"slug\":\"\",\"title\":\"\",\"publicState\":\"PUBLISHED_ANOMALY\",\"revision\":0,\"publishedAt\":\"2026-07-12T00:00:00Z\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"summary\":\"\",\"agencyName\":\"\",\"contractName\":\"\",\"amount\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"nonConclusion\":\"\",\"confirmedFacts\":[],\"criticalUnknowns\":[],\"partyResponses\":[],\"signals\":[],\"counterEvidence\":[],\"claims\":[],\"evidence\":[],\"timeline\":[],\"corrections\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"limitations\":[],\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "getPublicCaseRevision",
@@ -315,7 +315,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"slug\":\"\",\"revision\":0,\"isLatest\":false,\"snapshotHash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"publishedAt\":\"2026-07-12T00:00:00Z\",\"content\":{\"case\":{\"slug\":\"\",\"title\":\"\",\"publicState\":\"NEVER_PUBLISHED\",\"summary\":\"\",\"revision\":0,\"updatedAt\":\"2026-07-12T00:00:00Z\",\"href\":\"\"},\"agencyName\":\"\",\"contractName\":\"\",\"amount\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"nonConclusion\":\"\",\"confirmedFacts\":[],\"criticalUnknowns\":[],\"partyResponses\":[],\"signals\":[],\"counterEvidence\":[],\"claims\":[],\"evidence\":[],\"timeline\":[],\"corrections\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"limitations\":[]},\"diffFromPrevious\":[]}",
+        response_json: "{\"slug\":\"\",\"revision\":0,\"isLatest\":false,\"snapshotHash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"publishedAt\":\"2026-07-12T00:00:00Z\",\"content\":{\"case\":{\"slug\":\"\",\"title\":\"\",\"publicState\":\"PUBLISHED_ANOMALY\",\"summary\":\"\",\"revision\":0,\"updatedAt\":\"2026-07-12T00:00:00Z\",\"nonConclusion\":\"\",\"href\":\"\"},\"agencyName\":\"\",\"contractName\":\"\",\"amount\":{\"amount\":\"0\",\"currency\":\"xxx\"},\"nonConclusion\":\"\",\"confirmedFacts\":[],\"criticalUnknowns\":[],\"partyResponses\":[],\"signals\":[],\"counterEvidence\":[],\"claims\":[],\"evidence\":[],\"timeline\":[],\"corrections\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"limitations\":[]},\"diffFromPrevious\":[],\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "getPublicSystemStatus",
@@ -360,7 +360,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"sourceId\":\"\",\"displayName\":\"\",\"owner\":\"\",\"accessType\":\"\",\"officialUrl\":\"https://gurinnae.example/\",\"status\":\"\",\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"knownIssues\":[]},\"links\":[]}",
+        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"sourceId\":\"\",\"displayName\":\"\",\"owner\":\"\",\"accessType\":\"\",\"officialUrl\":\"https://gurinnae.example/\",\"status\":\"\",\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"knownIssues\":[],\"interpretationNotice\":\"이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.\"},\"links\":[],\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "getSupplier",
@@ -375,7 +375,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"\",\"identifiers\":[],\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"metrics\":[],\"caseCountsByState\":{\"total\":0,\"publication\":{\"neverPublished\":0,\"publishedAnomaly\":0,\"publishedExplained\":0,\"officiallyConfirmed\":0,\"corrected\":0,\"retracted\":0,\"temporarilyRestricted\":0},\"investigation\":{\"signalDetected\":0,\"triage\":0,\"investigating\":0,\"awaitingResponse\":0,\"editorialReview\":0,\"legalReview\":0,\"readyToPublish\":0,\"closed\":0},\"resolution\":{\"none\":0,\"dataError\":0,\"duplicate\":0,\"explained\":0,\"insufficientEvidence\":0,\"referredConfidential\":0,\"archived\":0}},\"recentCases\":[],\"recentContracts\":[],\"identityWarnings\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}}",
+        response_json: "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"\",\"identifiers\":[],\"coverage\":{\"dateRange\":{\"label\":\"\"},\"sourceIds\":[],\"recordCount\":0,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"metrics\":[],\"caseCountsByState\":{\"total\":0,\"publication\":{\"neverPublished\":0,\"publishedAnomaly\":0,\"publishedExplained\":0,\"officiallyConfirmed\":0,\"corrected\":0,\"retracted\":0,\"temporarilyRestricted\":0},\"investigation\":{\"signalDetected\":0,\"triage\":0,\"investigating\":0,\"awaitingResponse\":0,\"editorialReview\":0,\"legalReview\":0,\"readyToPublish\":0,\"closed\":0},\"resolution\":{\"none\":0,\"dataError\":0,\"duplicate\":0,\"explained\":0,\"insufficientEvidence\":0,\"referredConfidential\":0,\"archived\":0}},\"recentCases\":[],\"recentContracts\":[],\"identityWarnings\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"interpretationNotice\":\"이 상태는 자료의 수집·공개·검토 상태이며 위법성이나 부패 여부에 대한 판단이 아닙니다.\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "getTerms",
@@ -390,7 +390,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"version\":\"\",\"title\":\"\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"sections\":[],\"sourceLinks\":[]},\"links\":[]}",
+        response_json: "{\"id\":{\"id\":\"\",\"status\":\"\",\"version\":0},\"status\":\"\",\"data\":{\"status\":\"PUBLISHED\",\"sections\":[],\"retentionSchedules\":[{\"recordClass\":\"x\",\"purpose\":\"x\",\"lawfulBasis\":\"x\",\"triggerKind\":\"CREATED_AT\",\"activeDurationSeconds\":0,\"backupDurationSeconds\":0,\"terminalAction\":\"DELETE\",\"effectiveAt\":\"2026-07-12T00:00:00Z\",\"reviewExpiresAt\":\"2026-07-12T00:00:00Z\",\"scheduleDigest\":\"0000000000000000000000000000000000000000000000000000000000000000\"}]},\"links\":[]}",
     },
     OperationSpec {
         id: "listAgencies",
@@ -405,7 +405,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"agencyType\":[],\"jurisdiction\":\"\"},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"agencyType\":[],\"jurisdiction\":\"\"},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listAgencyCases",
@@ -420,7 +420,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listAgencyContracts",
@@ -435,7 +435,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listCaseRevisions",
@@ -450,7 +450,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listContractChanges",
@@ -480,7 +480,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"supplierId\":\"00000000-0000-4000-8000-000000000001\",\"contractStatus\":[],\"procurementMethod\":[],\"signedFrom\":\"2026-07-12\",\"signedTo\":\"2026-07-12\",\"amountMin\":\"0\",\"amountMax\":\"0\"},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"supplierId\":\"00000000-0000-4000-8000-000000000001\",\"contractStatus\":[],\"procurementMethod\":[],\"signedFrom\":\"2026-07-12\",\"signedTo\":\"2026-07-12\",\"amountMin\":\"0\",\"amountMax\":\"0\"},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listCorrections",
@@ -495,7 +495,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{\"publicationState\":[],\"publishedFrom\":\"2026-07-12\",\"publishedTo\":\"2026-07-12\"},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{\"publicationState\":[],\"publishedFrom\":\"2026-07-12\",\"publishedTo\":\"2026-07-12\"},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listPublicCases",
@@ -510,7 +510,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{\"publicationState\":[],\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"sidoCode\":\"11\",\"sigunguCode\":\"11680\",\"supplierId\":\"00000000-0000-4000-8000-000000000001\",\"ruleId\":\"\",\"publishedFrom\":\"2026-07-12\",\"publishedTo\":\"2026-07-12\",\"hasResponse\":false,\"hasCorrection\":false,\"sort\":\"updated_desc\"},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{\"publicationState\":[],\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"sidoCode\":\"11\",\"sigunguCode\":\"11680\",\"supplierId\":\"00000000-0000-4000-8000-000000000001\",\"ruleId\":\"\",\"publishedFrom\":\"2026-07-12\",\"publishedTo\":\"2026-07-12\",\"hasResponse\":false,\"hasCorrection\":false,\"sort\":\"updated_desc\"},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listPublicDatasets",
@@ -525,7 +525,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[{\"id\":\"published-cases\",\"title\":\"공개 사례 기록\",\"description\":\"게시된 사례와 개정 이력을 확인하는 구조화 데이터\",\"format\":\"JSONL\",\"coverage\":{\"dateRange\":{\"label\":\"2025.01–2026.07\"},\"sourceIds\":[\"mock-procurement-source\"],\"recordCount\":864,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"license\":\"CC-BY-4.0\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"downloadUrl\":null},{\"id\":\"public-contracts\",\"title\":\"계약 대장\",\"description\":\"공개 계약의 기관·업체·금액을 정리한 표 형식 데이터\",\"format\":\"CSV\",\"coverage\":{\"dateRange\":{\"label\":\"2024.01–2026.07\"},\"sourceIds\":[\"mock-procurement-source\"],\"recordCount\":2416,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"license\":\"CC-BY-4.0\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"downloadUrl\":null},{\"id\":\"published-corrections\",\"title\":\"공개 정정 기록\",\"description\":\"공개 내용의 정정 사유와 적용 시점을 보존한 기록\",\"format\":\"JSONL\",\"coverage\":{\"dateRange\":{\"label\":\"2025.06–2026.07\"},\"sourceIds\":[\"mock-publication-register\"],\"recordCount\":37,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"license\":\"CC-BY-4.0\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"downloadUrl\":null}],\"appliedFilters\":{\"format\":[]},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[{\"id\":\"published-cases\",\"title\":\"공개 사례 기록\",\"description\":\"게시된 사례와 개정 이력을 확인하는 구조화 데이터\",\"format\":\"JSONL\",\"coverage\":{\"dateRange\":{\"label\":\"2025.01–2026.07\"},\"sourceIds\":[\"mock-procurement-source\"],\"recordCount\":864,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"license\":\"CC-BY-4.0\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"downloadUrl\":null,\"redistributionNotice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"},{\"id\":\"public-contracts\",\"title\":\"계약 대장\",\"description\":\"공개 계약의 기관·업체·금액을 정리한 표 형식 데이터\",\"format\":\"CSV\",\"coverage\":{\"dateRange\":{\"label\":\"2024.01–2026.07\"},\"sourceIds\":[\"mock-procurement-source\"],\"recordCount\":2416,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"license\":\"CC-BY-4.0\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"downloadUrl\":null,\"redistributionNotice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"},{\"id\":\"published-corrections\",\"title\":\"공개 정정 기록\",\"description\":\"공개 내용의 정정 사유와 적용 시점을 보존한 기록\",\"format\":\"JSONL\",\"coverage\":{\"dateRange\":{\"label\":\"2025.06–2026.07\"},\"sourceIds\":[\"mock-publication-register\"],\"recordCount\":37,\"knownGaps\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}},\"license\":\"CC-BY-4.0\",\"updatedAt\":\"2026-07-12T00:00:00Z\",\"downloadUrl\":null,\"redistributionNotice\":\"이상 징후 기록이며 위법·부패의 확정이 아님\"}],\"appliedFilters\":{\"format\":[]},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"공개 데이터\",\"description\":\"공개 데이터 · 이상 징후 기록이며 위법·부패의 확정이 아님\",\"openGraphDescription\":\"공개 데이터 · 이상 징후 기록이며 위법·부패의 확정이 아님\",\"canonicalUrl\":\"/data\",\"robots\":\"index,follow\"}}",
     },
     OperationSpec {
         id: "listRuleCases",
@@ -540,7 +540,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listRules",
@@ -570,7 +570,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{\"status\":[]},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{\"status\":[]},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listSupplierCases",
@@ -585,7 +585,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listSupplierContracts",
@@ -600,7 +600,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listSuppliers",
@@ -615,7 +615,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"businessStatus\":[],\"identityStatus\":[]},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"businessStatus\":[],\"identityStatus\":[]},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
     OperationSpec {
         id: "listTransparencyReports",
@@ -645,6 +645,6 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"types\":[],\"publicationState\":[],\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"sidoCode\":\"11\",\"sigunguCode\":\"11680\",\"dateFrom\":\"2026-07-12\",\"dateTo\":\"2026-07-12\",\"sort\":\"relevance\"},\"asOf\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"items\":[],\"appliedFilters\":{\"q\":\"\",\"types\":[],\"publicationState\":[],\"agencyId\":\"00000000-0000-4000-8000-000000000001\",\"sidoCode\":\"11\",\"sigunguCode\":\"11680\",\"dateFrom\":\"2026-07-12\",\"dateTo\":\"2026-07-12\",\"sort\":\"relevance\"},\"asOf\":\"2026-07-12T00:00:00Z\",\"seo\":{\"title\":\"\",\"description\":\"\",\"openGraphDescription\":\"\",\"canonicalUrl\":\"\",\"robots\":\"\"}}",
     },
 ];

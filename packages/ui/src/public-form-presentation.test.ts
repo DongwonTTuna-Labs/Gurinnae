@@ -121,6 +121,7 @@ describe("public form presentation", () => {
           format: "JSONL",
           license: "CC-BY-4.0",
           updatedAt: "2026-07-12T00:00:00Z",
+          redistributionNotice: "이상 징후 기록이며 위법·부패의 확정이 아님",
         },
       ]),
     ).toEqual([
@@ -131,6 +132,7 @@ describe("public form presentation", () => {
         format: "JSONL",
         license: "CC-BY-4.0",
         updatedAt: "2026-07-12T00:00:00Z",
+        redistributionNotice: "이상 징후 기록이며 위법·부패의 확정이 아님",
       },
     ]);
     expect(
@@ -142,9 +144,23 @@ describe("public form presentation", () => {
           format: "NDJSON.GZ",
           license: "CC-BY-4.0",
           updatedAt: "2026-07-12T00:00:00Z",
+          redistributionNotice: "이상 징후 기록이며 위법·부패의 확정이 아님",
         },
       ])[0]?.format,
     ).toBe("NDJSON.GZ");
+    expect(() =>
+      publicDatasetCards([
+        {
+          id: "missing-notice",
+          title: "고지 누락 데이터",
+          description: "재배포 고지 검증",
+          format: "JSONL",
+          license: "CC-BY-4.0",
+          updatedAt: "2026-07-12T00:00:00Z",
+          redistributionNotice: " ",
+        },
+      ]),
+    ).toThrow("재배포 고지 누락");
   });
 
   it("closes the dataset-export wire fields and server presets", () => {

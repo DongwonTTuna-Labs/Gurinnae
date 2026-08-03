@@ -15,7 +15,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"acceptAgentSuggestion\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "acknowledgeSourceIncident",
@@ -30,7 +30,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"acknowledgeSourceIncident\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "activateKillSwitch",
@@ -45,7 +45,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"activateKillSwitch\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "activateRuleVersion",
@@ -60,7 +60,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"activateRuleVersion\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "addClaim",
@@ -75,7 +75,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"addClaim\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "addEvidence",
@@ -90,7 +90,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"addEvidence\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "approveResponseExcerpt",
@@ -105,7 +105,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"approveResponseExcerpt\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "approveSchemaMapping",
@@ -120,7 +120,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"approveSchemaMapping\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "assignCase",
@@ -135,7 +135,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"assignCase\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "assignCorrection",
@@ -150,7 +150,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"assignCorrection\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "assignReview",
@@ -165,7 +165,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"assignReview\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "assignSignal",
@@ -180,7 +180,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"assignSignal\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "cancelJob",
@@ -195,7 +195,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"cancelJob\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createAccessRequest",
@@ -210,7 +210,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createAccessRequest\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createAuditExport",
@@ -240,7 +240,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createCorrection\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createEvidenceRedaction",
@@ -255,7 +255,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createEvidenceRedaction\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createHypothesis",
@@ -270,7 +270,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createHypothesis\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createResponseRequest",
@@ -285,7 +285,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createResponseRequest\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createRetractionDraft",
@@ -300,7 +300,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createRetractionDraft\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createReviewSnapshot",
@@ -315,7 +315,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createReviewSnapshot\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createRuleVersionDraft",
@@ -330,7 +330,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"createRuleVersionDraft\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "createSavedView",
@@ -360,7 +360,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"deactivateKillSwitch\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "deleteSavedView",
@@ -405,7 +405,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"disableUser\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "downloadSourceRunReport",
@@ -465,7 +465,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"extendKillSwitch\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "getAgentRun",
@@ -510,7 +510,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"id\":\"\",\"status\":\"\",\"data\":{\"summary\":{\"currency\":\"\",\"dailyLimit\":\"0\",\"dailyUsed\":\"0\",\"monthlyLimit\":\"0\",\"monthlyUsed\":\"0\",\"status\":\"\",\"unknownReason\":\"\",\"forecastConfidence\":\"\",\"forecastAssumption\":\"\",\"softLimit\":\"\",\"hardLimit\":\"\",\"fallbackAction\":\"\",\"alertThreshold\":\"\",\"lastChangedBy\":\"\",\"lastChangeReason\":\"\",\"asOf\":\"2026-07-12T00:00:00Z\",\"reservationSummary\":{\"reserved\":\"\",\"settled\":\"\",\"exposure\":\"\",\"ledgerEntryCount\":0,\"reconciliationRequired\":false,\"asOf\":\"2026-07-12T00:00:00Z\"}},\"providers\":[],\"dailySeries\":[],\"topCases\":[],\"updatedAt\":\"2026-07-12T00:00:00Z\"},\"links\":[],\"operationId\":\"\"}",
+        response_json: "{\"id\":\"\",\"status\":\"\",\"data\":{\"summary\":{\"currency\":\"\",\"dailyLimit\":\"0\",\"dailyUsed\":\"0\",\"monthlyLimit\":\"0\",\"monthlyUsed\":\"0\",\"status\":\"\",\"unknownReason\":\"\",\"forecastConfidence\":\"\",\"forecastAssumption\":\"\",\"softLimit\":\"\",\"hardLimit\":\"\",\"fallbackAction\":\"\",\"alertThreshold\":\"\",\"lastChangedBy\":\"\",\"lastChangeReason\":\"\",\"asOf\":\"2026-07-12T00:00:00Z\",\"reservationSummary\":{\"reserved\":\"\",\"settled\":\"\",\"exposure\":\"\",\"ledgerEntryCount\":0,\"reconciliationRequired\":false,\"asOf\":\"2026-07-12T00:00:00Z\"}},\"providers\":[],\"dailySeries\":[],\"topCases\":[],\"updatedAt\":\"2026-07-12T00:00:00Z\"},\"links\":[],\"operationId\":\"getBudgetOverview\"}",
     },
     OperationSpec {
         id: "getCaseWorkspaceOverview",
@@ -690,7 +690,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "QUERY",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"previewHash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"caseId\":\"00000000-0000-4000-8000-000000000001\",\"snapshotId\":\"00000000-0000-4000-8000-000000000001\",\"publicPayload\":{\"case\":{\"slug\":\"\",\"title\":\"\",\"publicState\":\"NEVER_PUBLISHED\",\"summary\":\"\",\"revision\":0,\"updatedAt\":\"2026-07-12T00:00:00Z\",\"href\":\"\"},\"confirmedFacts\":[],\"criticalUnknowns\":[],\"partyResponses\":[],\"signals\":[],\"counterEvidence\":[],\"claims\":[],\"evidence\":[],\"timeline\":[],\"corrections\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"limitations\":[]},\"validation\":[],\"renderedRoutes\":[],\"expiresAt\":\"2026-07-12T00:00:00Z\"}",
+        response_json: "{\"previewHash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"caseId\":\"00000000-0000-4000-8000-000000000001\",\"snapshotId\":\"00000000-0000-4000-8000-000000000001\",\"publicPayload\":{\"case\":{\"slug\":\"\",\"title\":\"\",\"publicState\":\"NEVER_PUBLISHED\",\"summary\":\"\",\"revision\":0,\"updatedAt\":\"2026-07-12T00:00:00Z\",\"href\":\"\"},\"confirmedFacts\":[],\"criticalUnknowns\":[],\"partyResponses\":[],\"signals\":[],\"counterEvidence\":[],\"claims\":[],\"evidence\":[],\"timeline\":[],\"corrections\":[],\"freshness\":{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"},\"limitations\":[]},\"validation\":[],\"renderedRoutes\":[],\"expiresAt\":\"2026-07-12T00:00:00Z\",\"gateState\":\"PASS\",\"legalReviewRequired\":false}",
     },
     OperationSpec {
         id: "getPublicationReceipt",
@@ -870,7 +870,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"grantRole\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "inviteUser",
@@ -885,7 +885,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"inviteUser\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "linkEvidence",
@@ -900,7 +900,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"linkEvidence\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "linkSignalToCase",
@@ -915,7 +915,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"linkSignalToCase\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "listCaseAgentRuns",
@@ -1305,7 +1305,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"markNotificationRead\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "pauseBackfill",
@@ -1320,7 +1320,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"pauseBackfill\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "pauseJobQueue",
@@ -1335,7 +1335,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"pauseJobQueue\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "pauseSource",
@@ -1350,7 +1350,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"pauseSource\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "placeLegalHold",
@@ -1380,7 +1380,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"placeTemporaryRestriction\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "previewPublication",
@@ -1395,7 +1395,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"previewPublication\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "proposeRoleDefinitionChange",
@@ -1410,7 +1410,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"proposeRoleDefinitionChange\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "publishCase",
@@ -1425,7 +1425,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 201,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"publishCase\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "quarantineJob",
@@ -1440,7 +1440,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"quarantineJob\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "reassignTask",
@@ -1455,7 +1455,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"reassignTask\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "rejectAgentSuggestion",
@@ -1470,7 +1470,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"rejectAgentSuggestion\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "rejectSchemaMapping",
@@ -1485,7 +1485,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"rejectSchemaMapping\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "resolveCorrectionRequest",
@@ -1500,7 +1500,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"resolveCorrectionRequest\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "retryJob",
@@ -1515,7 +1515,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"retryJob\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "retryJobs",
@@ -1530,7 +1530,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"retryJobs\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "retrySourceRun",
@@ -1545,7 +1545,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"retrySourceRun\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "revokeOwnSession",
@@ -1560,7 +1560,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"revokeOwnSession\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "revokeRole",
@@ -1575,7 +1575,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"revokeRole\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "revokeUserSessions",
@@ -1590,7 +1590,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"revokeUserSessions\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "rollbackRuleVersion",
@@ -1605,7 +1605,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"rollbackRuleVersion\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "runRuleEvaluation",
@@ -1620,7 +1620,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"runRuleEvaluation\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "saveResponseRequestDraft",
@@ -1635,7 +1635,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"saveResponseRequestDraft\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "scheduleRuleActivation",
@@ -1650,7 +1650,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"scheduleRuleActivation\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "searchAuditEvents",
@@ -1710,7 +1710,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"startAccessReview\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "startAgentRun",
@@ -1725,7 +1725,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"startAgentRun\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "startBackfill",
@@ -1740,7 +1740,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"startBackfill\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "startRuleShadow",
@@ -1755,7 +1755,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"startRuleShadow\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "startSourceRun",
@@ -1770,7 +1770,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"startSourceRun\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "submitReview",
@@ -1785,7 +1785,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"submitReview\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "testProviderConnection",
@@ -1815,7 +1815,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"transitionCase\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "triageCorrection",
@@ -1830,7 +1830,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"triageCorrection\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "triageSignal",
@@ -1845,7 +1845,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"triageSignal\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "unlinkSignalFromCase",
@@ -1860,7 +1860,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"unlinkSignalFromCase\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "updateBudgetLimit",
@@ -1875,7 +1875,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"updateBudgetLimit\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "updateClaim",
@@ -1890,7 +1890,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"updateClaim\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "updateCorrectionDraft",
@@ -1905,7 +1905,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"updateCorrectionDraft\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "updateEvidence",
@@ -1920,7 +1920,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"updateEvidence\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "updateHypothesis",
@@ -1935,7 +1935,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"updateHypothesis\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "updateSavedView",
@@ -1980,7 +1980,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"validateClaims\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "verifyAuditIntegrity",
@@ -1995,7 +1995,7 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 202,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"verifyAuditIntegrity\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
     OperationSpec {
         id: "verifyEvidence",
@@ -2010,6 +2010,6 @@ pub const OPERATIONS: &[OperationSpec] = &[
         operation_kind: "COMMAND",
         success_status: 200,
         media_type: "application/json",
-        response_json: "{\"operationId\":\"\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
+        response_json: "{\"operationId\":\"verifyEvidence\",\"requestId\":\"00000000-0000-4000-8000-000000000001\",\"status\":\"accepted\",\"acceptedAt\":\"2026-07-12T00:00:00Z\",\"links\":[]}",
     },
 ];

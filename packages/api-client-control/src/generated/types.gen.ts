@@ -845,7 +845,7 @@ export type DataQualitySummary = {
 
 export type EntityRef = {
     id: string;
-    name: string;
+    name: string | null;
     entityType: 'AGENCY' | 'SUPPLIER';
     href: string;
 };
@@ -1370,6 +1370,8 @@ export type PublicationPreviewResponse = {
     validation: Array<GateResult>;
     renderedRoutes: Array<string>;
     expiresAt: string;
+    gateState: 'PASS' | 'BLOCKED';
+    legalReviewRequired: boolean;
 };
 
 export type PublicationReceipt = {
@@ -1548,6 +1550,16 @@ export type ReviewCriteria = {
     legalReviewSatisfied: boolean;
     criticalUnknownsVisible: boolean;
     notes: Array<string>;
+    /**
+     * Present only for the second, STEP_UP LEGAL_REVIEWER stage; the first independent editorial APPROVE must omit it and grants no publish authority.
+     */
+    namedIndividualOverride?: {
+        publicTextSha256: string;
+        reasonCode: 'PUBLIC_FIGURE' | 'OFFICIAL_DISPOSITION_QUOTE';
+        officialSourceLocator: string;
+        officialSourceSha256: string;
+        editorialReviewDecisionId: string;
+    };
 };
 
 export type ReviewEvidence = {
@@ -2778,16 +2790,13 @@ export type PlaceLegalHoldReceipt = {
 };
 
 export type PlaceLegalHoldRequest = {
-    caseId: string;
-    reviewSnapshotId: string;
-    objectType: 'CASE' | 'PUBLICATION' | 'EVIDENCE' | 'RESPONSE';
-    objectId: string;
-    scope: 'RETENTION' | 'DISCLOSURE' | 'DELETION' | 'ALL';
-    affectedIds?: Array<string>;
+    target: LegalHoldTargetBinding;
+    scopeAtoms: Array<'RETENTION' | 'DELETION' | 'DISCLOSURE'>;
+    affectedIds: Array<string>;
     authorityReference: string;
+    reasonCode: string;
     reason: string;
     expiresAt?: string | null;
-    expectedCaseVersion: number;
 };
 
 export type PlaceTemporaryRestrictionReceipt = {
@@ -3589,8 +3598,8 @@ export type ActionApprovalQueuePageV1 = {
     items: Array<ActionApprovalQueueItemV1>;
     appliedFilters: ActionApprovalQueueFiltersV1;
     asOf: string;
-    nextCursor: string;
-    totalApproximate: number;
+    nextCursor?: string;
+    totalApproximate?: number;
     operationId: string;
     links: Array<Link>;
 };
@@ -3742,7 +3751,7 @@ export type ReleaseLegalHoldRequestV1 = {
     reviewSnapshotId: string;
     expectedReleaseSequence: number;
     expectedCaseVersion: number;
-    releaseScopeAtoms: Array<string>;
+    releaseScopeAtoms: Array<'RETENTION' | 'DELETION' | 'DISCLOSURE'>;
     affectedIds: Array<string>;
     releaseAuthorityReference: string;
     reasonCode: 'AUTHORITY_WITHDRAWN' | 'EXPIRED_REVIEWED' | 'RESOLVED' | 'SUPERSEDED' | 'COURT_ORDER' | 'OTHER';
@@ -3817,7 +3826,9 @@ export type TriageIncidentRequestV1 = {
     incidentId: string;
     expectedVersion: number;
     severity: 'SEV0' | 'SEV1' | 'SEV2' | 'SEV3';
-    affectedCapabilities: Array<string>;
+    affectedCapabilities: Array<{
+        [key: string]: never;
+    }>;
     ownerUserId: string;
     commanderUserId: string | null;
     nextUpdateAt: string;
@@ -3892,8 +3903,8 @@ export type ResponseAppealQueuePageV1 = {
     items: Array<ResponseAppealSummaryV1>;
     appliedFilters: ResponseAppealQueueFiltersV1;
     asOf: string;
-    nextCursor: string;
-    totalApproximate: number;
+    nextCursor?: string;
+    totalApproximate?: number;
     operationId: string;
     links: Array<Link>;
 };
@@ -3965,8 +3976,8 @@ export type RetentionRequestQueuePageV1 = {
     items: Array<RetentionRequestSummaryV1>;
     appliedFilters: RetentionRequestQueueFiltersV1;
     asOf: string;
-    nextCursor: string;
-    totalApproximate: number;
+    nextCursor?: string;
+    totalApproximate?: number;
     operationId: string;
     links: Array<Link>;
 };
@@ -3977,37 +3988,89 @@ export type GetRetentionRequestRequestV1 = {
 
 export type RetentionRequestWorkspaceV1 = {
     request: RetentionRequestSummaryV1;
-    identityVerificationReceiptId: string;
-    inventorySnapshotDigest: string;
-    holdCoverageDigest: string;
+    identityVerificationReceiptId: string | null;
+    identityVerificationReceiptDigest: string | null;
+    policyVersion: string | null;
+    policyDigest: string | null;
+    calendarVersionId: string | null;
+    calendarDigest: string | null;
+    inventorySnapshotDigest: string | null;
+    holdCoverageDigest: string | null;
     activeHoldIds: Array<string>;
     affectedRecordClasses: Array<string>;
     locationReceipts: Array<RetentionLocationReceiptV1>;
-    decisionReceipts: Array<RetentionDecisionSummaryV1>;
+    decisionReceipts: Array<RetentionDecisionSummaryV2>;
     completionReceiptId: string | null;
+    completionReceiptDigest: string | null;
+    completedResponseVersion: number | null;
+    completedValueDigest: string | null;
+    accessProjection: PrivacyResponsePartyNameAccessProjectionV1 | null;
     asOf: string;
     links: Array<Link>;
     operationId: string;
 };
 
-export type TransitionRetentionRequestRequestV1 = {
+export type PrivacyResponsePartyNameAccessProjectionV1 = {
+    schemaVersion: 'privacy-response-party-name-access.v1';
     retentionRequestId: string;
-    expectedDecisionVersion: number;
-    transition: 'START_REVIEW' | 'APPROVE' | 'REJECT' | 'COMPLETE';
-    reasonCode: string;
-    reason: string;
-    inventorySnapshotDigest: string;
-    holdCoverageDigest: string;
-    completionReceiptId: string | null;
+    targetObjectType: 'RESPONSE';
+    targetObjectId: string;
+    fieldPath: '/partyName';
+    partyName: string;
+    currentValueDigest: string;
+    projectionDigest: string;
+    responseVersion: number;
+    privacyIdentityProofReceiptId: string;
+    privacyIdentityProofReceiptDigest: string;
+    responseSubmissionReceiptId: string;
+    responseSubmissionReceiptDigest: string;
+    responseOriginReceiptId: string;
+    responseOriginReceiptDigest: string;
+    sourceResponseRequestId: string;
+    asOf: string;
 };
 
-export type RetentionRequestDecisionReceiptV1 = {
+export type TransitionRetentionRequestRequestV2 = {
+    retentionRequestId: string;
+    expectedDecisionVersion: number;
+    transition: 'VERIFY_IDENTITY' | 'START_REVIEW' | 'APPROVE' | 'REJECT' | 'EXTEND';
+    reasonCode: string;
+    reason: string;
+    identityProofReceiptId?: string;
+    extensionReasonCode?: string;
+    extensionReason?: string;
+    extensionBusinessDays?: number;
+    rejectionReasonCode?: string;
+    rejectionReason?: string;
+    appealInstructions?: string;
+};
+
+export type RetentionRequestDecisionReceiptV2 = {
     command: CommandReceiptV1;
-    request: RetentionRequestSummaryV1;
-    inventorySnapshotDigest: string;
-    holdCoverageDigest: string;
-    completionReceiptId: string | null;
-    locationReceipts: Array<RetentionLocationReceiptV1>;
+    retentionRequestId: string;
+    decisionVersion: number;
+    requestType: 'ACCESS' | 'CORRECTION' | 'DELETION' | 'RESTRICTION';
+    state: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED';
+    transition: 'VERIFY_IDENTITY' | 'START_REVIEW' | 'APPROVE' | 'REJECT' | 'EXTEND';
+    transitionReceiptId: string;
+    transitionReceiptDigest: string;
+    identityVerifiedAt: string | null;
+    dueAt: string | null;
+    policyVersion: string | null;
+    policyDigest: string | null;
+    calendarVersionId: string | null;
+    calendarDigest: string | null;
+    identityReceiptId: string | null;
+    identityReceiptDigest: string | null;
+    extensionReceiptId: string | null;
+    extensionReceiptDigest: string | null;
+    refusalReceiptId: string | null;
+    refusalReceiptDigest: string | null;
+    noticeReceiptId: string | null;
+    noticeReceiptDigest: string | null;
+    appealInstructionsDigest: string | null;
+    updatedAt: string;
+    replayed: boolean;
 };
 
 export type ListRecordClassSchedulesRequestV1 = {
@@ -4017,9 +4080,9 @@ export type ListRecordClassSchedulesRequestV1 = {
 export type RecordClassSchedulePageV1 = {
     items: Array<RecordClassScheduleSummaryV1>;
     appliedRecordClasses: Array<string>;
-    appliedStates: Array<string>;
+    appliedStates: Array<'CURRENT' | 'FUTURE' | 'REVIEW_EXPIRED'>;
     asOf: string;
-    nextCursor: string;
+    nextCursor?: string;
     operationId: string;
     links: Array<Link>;
 };
@@ -4117,7 +4180,12 @@ export type PromoteResearchArtifactReceiptV1 = {
     idempotencyKeySha256: string;
     promotedAt: string;
     receiptSha256: string;
-    links: Array<Link>;
+    links: [
+        Link,
+        Link,
+        Link,
+        Link
+    ];
 };
 
 export type CancelAgentRunRequestV2 = {
@@ -4246,8 +4314,8 @@ export type QuorumStatusV1 = {
 
 export type ActionApprovalQueueFiltersV1 = {
     actionKind: Array<ActionKindV1>;
-    proposalState: Array<string>;
-    assignmentState: Array<string>;
+    proposalState: Array<'DRAFT' | 'PENDING_QUORUM' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUIRED' | 'EXPIRED' | 'SUPERSEDED' | 'WITHDRAWN'>;
+    assignmentState: Array<'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'RECUSED' | 'CANCELLED' | 'VACANT'>;
     dueBefore: string | null;
     sort: 'DUE_ASC' | 'UPDATED_DESC';
 };
@@ -4459,7 +4527,7 @@ export type ActionPayloadV1 = {
     assetSha256: string;
     expectedDecisionVersion: number;
     decision: 'ALLOW' | 'RESTRICT' | 'DENY' | 'REVIEW_REQUIRED';
-    dimensions: Array<string>;
+    dimensions: Array<'STORE' | 'PARSE' | 'MODEL_USE' | 'INTERNAL_DISPLAY' | 'PUBLICATION' | 'EXTERNAL_SHARE'>;
     legalBasis: string;
     licenseEvidenceDigests: Array<string>;
     jurisdiction: string;
@@ -4480,7 +4548,7 @@ export type ActionPayloadV1 = {
     activeDuration: string;
     backupDuration: string;
     locations: Array<string>;
-    terminalAction: 'DELETE' | 'ANONYMIZE' | 'ARCHIVE';
+    terminalAction: 'DELETE' | 'ANONYMIZE' | 'ARCHIVE' | 'PRESERVE_REFERENCED_REVISION' | 'PRESERVE_IDENTITY_GRAPH' | 'PRESERVE_WITH_PARENT';
     holdBehavior: 'PAUSE' | 'PRESERVE';
     restoreSuppressionBehavior: 'REAPPLY' | 'BLOCK_RESTORE';
     effectiveAt: string;
@@ -4527,7 +4595,7 @@ export type ActionPayloadV1 = {
     calendarId: string;
     expectedCalendarVersion: number;
     timezone: string;
-    weekendDays: Array<string>;
+    weekendDays: Array<'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'>;
     holidayDates: Array<string>;
     policyDigest: string;
     effectiveAt: string;
@@ -4546,7 +4614,7 @@ export type ActionPayloadV1 = {
     dependencyInputSetDigest: string;
     evidenceSetDigest: string;
     affectedScopeDigest: string;
-    requestedActions: Array<string>;
+    requestedActions: Array<'PAUSE_NEW_GA_SALES' | 'PAUSE_PAID_ACQUISITION' | 'SUSPEND_AFFECTED_PAID_CAPABILITY' | 'RESUME_NEW_GA_SALES' | 'RESUME_PAID_ACQUISITION' | 'REACTIVATE_PAID_CAPABILITY'>;
     expectedKillSwitchGeneration: number;
     expectedCapabilityVersionSetDigest: string;
     expectedContractVersionSetDigest: string;
@@ -4821,11 +4889,11 @@ export type ActionApprovalDetailV1 = {
     currentScheduleDigest: string;
     purposeDigest: string;
     lawfulBasisDigest: string;
-    trigger: 'CREATED_AT' | 'UPDATED_AT' | 'CONSUMED_AT' | 'EXPIRES_AT' | 'CASE_CLOSED_AT' | 'LAST_MATERIAL_USE_AT' | 'SUPERSEDED_AT' | 'DELIVERED_AT' | 'TERMINAL_AT';
+    trigger: 'CREATED_AT' | 'UPDATED_AT' | 'CONSUMED_AT' | 'EXPIRES_AT' | 'CASE_CLOSED_AT' | 'LAST_MATERIAL_USE_AT' | 'SUPERSEDED_AT' | 'DELIVERED_AT' | 'TERMINAL_AT' | 'CONSENT_REVOKED_AT';
     activeDurationSeconds: number | null;
     backupDurationSeconds: number | null;
     locationSetDigest: string;
-    terminalAction: 'DELETE' | 'ANONYMIZE' | 'CRYPTO_ERASE' | 'PRESERVE_PUBLIC_REVISION';
+    terminalAction: 'DELETE' | 'ANONYMIZE' | 'CRYPTO_ERASE' | 'PRESERVE_PUBLIC_REVISION' | 'PRESERVE_REFERENCED_REVISION' | 'PRESERVE_IDENTITY_GRAPH' | 'PRESERVE_WITH_PARENT';
     holdBehavior: 'BLOCK_ON_RETENTION' | 'BLOCK_ON_RETENTION_OR_DELETION' | 'NOT_DESTRUCTIVE';
     restoreSuppressionBehavior: 'REAPPLY_BEFORE_ACCESS' | 'NOT_APPLICABLE';
     currentLegalHoldSetDigest: string;
@@ -4870,7 +4938,7 @@ export type ActionApprovalDetailV1 = {
     expectedCalendarVersion: number;
     currentCalendarDigest: string;
     timezone: string;
-    weekendDays: Array<string>;
+    weekendDays: Array<'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'>;
     holidayDateSetDigest: string;
     policyDigest: string;
     responseClockImpactDigest: string;
@@ -4888,7 +4956,7 @@ export type ActionApprovalDetailV1 = {
     transitiveInputSetDigest: string;
     triggerPolicyDigest: string;
     affectedScopeDigest: string;
-    requestedActions: Array<string>;
+    requestedActions: Array<'PAUSE_NEW_GA_SALES' | 'PAUSE_PAID_ACQUISITION' | 'SUSPEND_AFFECTED_PAID_CAPABILITY' | 'RESUME_NEW_GA_SALES' | 'RESUME_PAID_ACQUISITION' | 'REACTIVATE_PAID_CAPABILITY'>;
     requestedActionSetDigest: string;
     currentOfferProfileDigest: string;
     currentContractHeadDigest: string;
@@ -5127,7 +5195,17 @@ export type ActionApprovalDetailViewV1 = {
     kind: 'ASSET_RIGHTS_DECISION';
     assetLabel: string;
     decisionKind: 'GRANT' | 'DENY' | 'SUSPEND' | 'REVOKE';
-    nineDimensionSummary: Array<string>;
+    nineDimensionSummary: [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+    ];
     legalBasisAndLicense: string;
     downstreamImpact: string;
 } | {
@@ -5186,7 +5264,7 @@ export type ActionAssignmentHistoryPageV1 = {
     order: 'slot-ordinal-asc-generation-asc-assignment-id-asc';
     asOf: string;
     pageDigest: string;
-    nextCursor: string;
+    nextCursor?: string;
     complete: boolean;
 };
 
@@ -5195,7 +5273,7 @@ export type ActionDecisionHistoryPageV1 = {
     order: 'decided-at-asc-decision-id-asc';
     asOf: string;
     pageDigest: string;
-    nextCursor: string;
+    nextCursor?: string;
     complete: boolean;
 };
 
@@ -5293,8 +5371,8 @@ export type ExecutionReceiptV1 = {
 export type LegalHoldCoverageV1 = {
     holdId: string;
     releaseSequence: number;
-    activeScopeAtoms: Array<string>;
-    releasedScopeAtoms: Array<string>;
+    activeScopeAtoms: Array<'RETENTION' | 'DELETION' | 'DISCLOSURE'>;
+    releasedScopeAtoms: Array<'RETENTION' | 'DELETION' | 'DISCLOSURE'>;
     affectedSetDigest: string;
     coverageDigest: string;
     state: 'ACTIVE' | 'PARTIALLY_RELEASED' | 'FULLY_RELEASED';
@@ -5404,7 +5482,7 @@ export type ResponseAppealSummaryV1 = {
 };
 
 export type ResponseAppealQueueFiltersV1 = {
-    state: Array<string>;
+    state: Array<'RECEIVED' | 'REVIEW' | 'RESOLVED' | 'REJECTED' | 'DUPLICATE' | 'WITHDRAWN'>;
     caseId: string | null;
     dueBefore: string | null;
     sort: 'DUE_ASC' | 'CREATED_DESC';
@@ -5415,7 +5493,7 @@ export type ResponseAppealInformationTaskV1 = {
     description: string;
     assigneeUserId: string;
     dueAt: string;
-    requestedEvidenceKinds: Array<string>;
+    requestedEvidenceKinds: Array<'DELIVERY' | 'CONSENT' | 'SCOPE' | 'PUBLICATION_EXCERPT' | 'DEADLINE' | 'IDENTITY' | 'OTHER'>;
 };
 
 export type ResponseAppealDecisionSummaryV1 = {
@@ -5451,15 +5529,17 @@ export type RetentionRequestSummaryV1 = {
     state: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
     jurisdiction: string;
     scopeDigest: string;
+    identityState: 'PENDING_VERIFICATION' | 'VERIFIED';
+    identityVerifiedAt: string | null;
+    dueAt: string | null;
     legalHoldBlocked: boolean;
-    dueAt: string;
     createdAt: string;
     updatedAt: string;
 };
 
 export type RetentionRequestQueueFiltersV1 = {
-    requestType: Array<string>;
-    state: Array<string>;
+    requestType: Array<'ACCESS' | 'CORRECTION' | 'DELETION' | 'RESTRICTION'>;
+    state: Array<'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED'>;
     dueBefore: string | null;
     legalHoldBlocked: boolean | null;
     sort: 'DUE_ASC' | 'CREATED_DESC';
@@ -5497,7 +5577,7 @@ export type RecordClassScheduleSummaryV1 = {
     lawfulBasis: string;
     activeDuration: string;
     backupDuration: string;
-    terminalAction: 'DELETE' | 'ANONYMIZE' | 'ARCHIVE';
+    terminalAction: 'DELETE' | 'ANONYMIZE' | 'ARCHIVE' | 'PRESERVE_REFERENCED_REVISION' | 'PRESERVE_IDENTITY_GRAPH' | 'PRESERVE_WITH_PARENT';
     effectiveAt: string;
     reviewExpiresAt: string;
     scheduleDigest: string;
@@ -5632,7 +5712,7 @@ export type JourneyHandoffTerminalReceiptV1 = {
 
 export type JourneyHandoffReplacementReceiptV1 = {
     handoffId: string;
-    handoffVersion: '1';
+    handoffVersion: 1;
     generation: number;
     bindingDigest: string;
     requestReceiptId: string;
@@ -5732,7 +5812,7 @@ export type CommunicationReconciliationEvidenceV1 = {
 export type PromoteResearchArtifactRefV1 = {
     id: string;
     assetId: string;
-    assetRevision: '1';
+    assetRevision: 1;
     artifactSha256: string;
     contentSha256: string;
     sourceFetchId: string;
@@ -5993,6 +6073,306 @@ export type ProviderControlApprovalDetailV1 = {
 };
 
 export type ProviderControlOperationIdV1 = 'disableProviderRouting' | 'testProviderConnection' | 'upgradeProviderModel' | 'setModelAutoUpgrade';
+
+/**
+ * Verifies a response organization against one current immutable official-channel authority assertion. The owner revalidates assertion state and the exact underlying authority proof in the transaction; missing authority fails closed.
+ */
+export type VerifyResponseOrganizationIdentityRequest = {
+    responseId: string;
+    organizationId: string;
+    publicationForm: 'FULL' | 'REDACTED';
+    verificationMethod: 'OFFICIAL_DOMAIN_EMAIL' | 'OFFICIAL_DOCUMENT';
+    /**
+     * Identifier of the current immutable official-channel authority assertion. It is never a raw communication endpoint verification ID or official document evidence ID.
+     */
+    officialChannelSourceId: string;
+    reason: string;
+    expectedVersion: number;
+};
+
+export type VerifyResponseOrganizationIdentityReceipt = {
+    operationId: string;
+    requestId: string;
+    status: 'accepted' | 'completed' | 'rejected';
+    aggregateId: string;
+    aggregateVersion: number;
+    auditEventId: string;
+    receiptToken: string;
+    acceptedAt: string;
+    links: Array<Link>;
+    identityAssertionId: string;
+};
+
+export type RetentionDecisionSummaryV2 = {
+    transitionReceiptId: string;
+    decisionVersion: number;
+    transition: 'VERIFY_IDENTITY' | 'START_REVIEW' | 'APPROVE' | 'REJECT' | 'EXTEND';
+    priorState: 'RECEIVED' | 'REVIEW' | 'APPROVED';
+    state: 'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED';
+    reasonCode: string;
+    reasonDigest: string;
+    identityReceiptId: string | null;
+    extensionReceiptId: string | null;
+    refusalReceiptId: string | null;
+    noticeReceiptId: string | null;
+    decidedAt: string;
+    transitionReceiptDigest: string;
+};
+
+/**
+ * Closed union of thirteen supported immutable legal-hold target bindings. AUDIT_SUBJECT_RECORD is deliberately not a binding because no authoritative source relation exists; placeLegalHold recognizes that discriminator and returns LEGAL_HOLD_TARGET_UNSUPPORTED without writes.
+ */
+export type LegalHoldTargetBinding = {
+    targetKind: 'CASE';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    caseId: string;
+    reviewSnapshotId: string;
+    reviewSnapshotDigest: string;
+} | {
+    targetKind: 'PUBLICATION';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    publicationRevisionId: string;
+} | {
+    targetKind: 'EVIDENCE';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    evidenceId: string;
+} | {
+    targetKind: 'RESPONSE';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    responseId: string;
+} | {
+    targetKind: 'SOURCE_ASSET';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    sourceDocumentId: string;
+    sourceAssetId: string;
+} | {
+    targetKind: 'RESEARCH_ARTIFACT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    researchArtifactId: string;
+    researchAssetId: string;
+} | {
+    targetKind: 'PRIVACY_REQUEST';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    privacyRequestId: string;
+    privacyRequestType: 'ACCESS' | 'CORRECTION' | 'DELETION' | 'RESTRICTION';
+} | {
+    targetKind: 'COMMUNICATION_SUBJECT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    communicationSubjectId: string;
+    communicationSubjectOriginDigest: string;
+} | {
+    targetKind: 'SUPPLIER_RETENTION_SNAPSHOT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    entityKind: 'SUPPLIER';
+    entityRetentionSnapshotId: string;
+    entityRetentionSnapshotDigest: string;
+} | {
+    targetKind: 'CORRECTION';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    correctionId: string;
+    correctionSnapshotId: string;
+    correctionSnapshotDigest: string;
+} | {
+    targetKind: 'SUBSCRIPTION';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    subscriptionId: string;
+    subscriptionSnapshotId: string;
+    subscriptionSnapshotDigest: string;
+} | {
+    targetKind: 'COMMUNICATION_ENDPOINT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    communicationEndpointId: string;
+} | {
+    targetKind: 'AGENCY_RETENTION_SNAPSHOT';
+    targetId: string;
+    targetVersion: number;
+    targetDigest: string;
+    entityKind: 'AGENCY';
+    entityRetentionSnapshotId: string;
+    entityRetentionSnapshotDigest: string;
+};
+
+/**
+ * Verifies a response organization against one current immutable official-channel authority assertion. The owner revalidates assertion state and the exact underlying authority proof in the transaction; missing authority fails closed.
+ */
+export type VerifyResponseOrganizationIdentityRequestV1 = {
+    responseId: string;
+    organizationId: string;
+    publicationForm: 'FULL' | 'REDACTED';
+    verificationMethod: 'OFFICIAL_DOMAIN_EMAIL' | 'OFFICIAL_DOCUMENT';
+    /**
+     * Identifier of the current immutable official-channel authority assertion. It is never a raw communication endpoint verification ID or official document evidence ID.
+     */
+    officialChannelSourceId: string;
+    reason: string;
+    expectedVersion: number;
+};
+
+export type VerifyResponseOrganizationIdentityReceiptV1 = {
+    operationId: string;
+    requestId: string;
+    status: 'accepted' | 'completed' | 'rejected';
+    aggregateId?: string;
+    aggregateVersion?: number;
+    auditEventId?: string;
+    receiptToken?: string;
+    acceptedAt: string;
+    links: Array<Link>;
+    identityAssertionId: string;
+};
+
+export type ClassifyEntityPersonhoodRequestV1 = {
+    entityKind: 'AGENCY' | 'SUPPLIER';
+    entityId: string;
+    classification: 'NATURAL_PERSON' | 'NOT_NATURAL_PERSON';
+    evidenceSourceLocator: string;
+    expectedEntityUpdatedAt: string;
+    reason: string;
+};
+
+export type ClassifyEntityPersonhoodReceiptV1 = {
+    operationId: 'classifyEntityPersonhood';
+    requestId: string;
+    status: 'accepted' | 'completed' | 'rejected';
+    aggregateId: string;
+    aggregateVersion: 1;
+    auditEventId: string;
+    receiptToken: string;
+    acceptedAt: string;
+    links: Array<Link>;
+    receiptId: string;
+    entityKind: 'AGENCY' | 'SUPPLIER';
+    entityId: string;
+    classification: 'NATURAL_PERSON' | 'NOT_NATURAL_PERSON';
+};
+
+export type AttestEntityMaterialUseClosureRequestV1 = {
+    entityKind: 'AGENCY' | 'SUPPLIER';
+    entityId: string;
+    personhoodReceiptId: string;
+    expectedEntityUpdatedAt: string;
+    reason: string;
+};
+
+export type AttestEntityMaterialUseClosureReceiptV1 = {
+    operationId: 'attestEntityMaterialUseClosure';
+    requestId: string;
+    status: 'accepted' | 'completed' | 'rejected';
+    aggregateId: string;
+    aggregateVersion: 1;
+    auditEventId: string;
+    receiptToken: string;
+    acceptedAt: string;
+    links: Array<Link>;
+    closureReceiptId: string;
+    entityKind: 'AGENCY' | 'SUPPLIER';
+    entityId: string;
+    personhoodReceiptId: string;
+    closureAt: string;
+    lastContractEndAt: string | null;
+    linkedPublicationRevisionCount: number;
+};
+
+export type AttestOrganizationOfficialChannelRequestV1 = {
+    organizationKind: 'AGENCY' | 'SUPPLIER';
+    organizationId: string;
+    verificationMethod: 'OFFICIAL_DOMAIN_EMAIL' | 'OFFICIAL_DOCUMENT';
+    /**
+     * OFFICIAL_DOMAIN_EMAIL selects one current communication_endpoint_verifications.id; OFFICIAL_DOCUMENT selects one current editorial.evidence.id. The caller never supplies an authority receipt ID or digest.
+     */
+    sourceId: string;
+    expiresAt: string;
+    reason: string;
+    expectedAuthorityVersion: 1;
+};
+
+export type AttestOrganizationOfficialChannelReceiptV1 = {
+    operationId: 'attestOrganizationOfficialChannel';
+    requestId: string;
+    status: 'accepted' | 'completed' | 'rejected';
+    aggregateId: string;
+    aggregateVersion: number;
+    auditEventId: string;
+    receiptToken: string;
+    acceptedAt: string;
+    links: Array<Link>;
+    assertionId: string;
+    authorityReceiptId: string;
+    authorityReceiptDigest: string;
+    registryReceiptDigest: string;
+    expiresAt: string;
+};
+
+export type RevokeOrganizationOfficialChannelRequestV1 = {
+    assertionId: string;
+    reasonCode: string;
+    reason: string;
+};
+
+export type RevokeOrganizationOfficialChannelReceiptV1 = {
+    operationId: 'revokeOrganizationOfficialChannel';
+    requestId: string;
+    status: 'accepted' | 'completed' | 'rejected';
+    aggregateId: string;
+    aggregateVersion: number;
+    auditEventId: string;
+    receiptToken: string;
+    acceptedAt: string;
+    links: Array<Link>;
+    revocationId: string;
+    assertionId: string;
+};
+
+export type CreatePrivacyCorrectionPlanRequestV1 = {
+    retentionRequestId: string;
+    expectedDecisionVersion: number;
+    targetObjectType: 'RESPONSE' | 'CORRECTION' | 'SUBSCRIPTION' | 'COMMUNICATION_ENDPOINT' | 'PUBLICATION' | 'EVIDENCE' | 'AUDIT_SUBJECT_RECORD';
+    targetObjectId: string;
+    fieldPath: string;
+    currentValueDigest: string;
+    requestedValue: string;
+    evidenceIds: Array<string>;
+    reason: string;
+};
+
+export type PrivacyCorrectionPlanReceiptV1 = {
+    operationId: 'createPrivacyCorrectionPlan';
+    requestId: string;
+    status: 'accepted' | 'completed' | 'rejected';
+    aggregateId: string;
+    aggregateVersion: number;
+    auditEventId: string;
+    receiptToken: string;
+    acceptedAt: string;
+    links: Array<Link>;
+    correctionPlanId: string;
+    retentionRequestId: string;
+    planVersion: number;
+};
 
 export type AcceptAgentSuggestionData = {
     body: AcceptAgentSuggestionRequest;
@@ -9661,7 +10041,7 @@ export type SubmitReviewErrors = {
      */
     415: ProblemDetails;
     /**
-     * Problem response: PRECONDITION_FAILED, VALIDATION_FAILED
+     * Problem response: PRECONDITION_FAILED, VALIDATION_FAILED, PUBLICATION_GATE_BLOCKED
      */
     422: ProblemDetails;
     /**
@@ -13528,13 +13908,13 @@ export type ListActionApprovalQueueData = {
     body?: never;
     path?: never;
     query?: {
-        actionKind?: Array<string>;
-        proposalState?: Array<string>;
-        assignmentState?: Array<string>;
-        dueBefore?: string;
-        cursor?: {
+        actionKind?: Array<{
             [key: string]: never;
-        };
+        }>;
+        proposalState?: Array<'DRAFT' | 'PENDING_QUORUM' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUIRED' | 'EXPIRED' | 'SUPERSEDED' | 'WITHDRAWN'>;
+        assignmentState?: Array<'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'RECUSED' | 'CANCELLED' | 'VACANT'>;
+        dueBefore?: string;
+        cursor?: string;
         limit?: number;
         sort?: 'DUE_ASC' | 'UPDATED_DESC';
     };
@@ -13682,13 +14062,9 @@ export type UpdateActionDraftErrors = {
      */
     400: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -13720,17 +14096,21 @@ export type PreviewActionDraftData = {
 
 export type PreviewActionDraftErrors = {
     /**
-     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_POLICY_BLOCKED, CAPABILITY_UNCONFIGURED
+     * Problem response: ACTION_POLICY_BLOCKED
      */
     422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_UNCONFIGURED
+     */
+    503: AddendumProblemDetailsV1;
 };
 
 export type PreviewActionDraftError = PreviewActionDraftErrors[keyof PreviewActionDraftErrors];
@@ -13758,11 +14138,11 @@ export type SubmitActionForReviewData = {
 
 export type SubmitActionForReviewErrors = {
     /**
-     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_PREVIEW_STALE, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_PREVIEW_STALE, ACTION_POLICY_BLOCKED, ACTION_QUORUM_UNAVAILABLE
+     * Problem response: ACTION_POLICY_BLOCKED, ACTION_QUORUM_UNAVAILABLE
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -13800,13 +14180,9 @@ export type ClaimActionReviewErrors = {
      */
     403: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_REVIEW_ALREADY_CLAIMED, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_REVIEW_ALREADY_CLAIMED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -13838,11 +14214,15 @@ export type SubmitActionDecisionData = {
 
 export type SubmitActionDecisionErrors = {
     /**
-     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTION_CONFLICT_UNRESOLVED, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTION_KIND_MISMATCH, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, ACTION_CONFLICT_UNRESOLVED, STEP_UP_REQUIRED
+     * Problem response: ACTION_KIND_MISMATCH
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -13883,11 +14263,7 @@ export type GetActionExecutionReceiptErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: EXECUTION_RECEIPT_INCOMPLETE
-     */
-    422: AddendumProblemDetailsV1;
-    /**
-     * Problem response: INTERNAL_ERROR
+     * Problem response: EXECUTION_RECEIPT_INCOMPLETE, INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
 };
@@ -13917,13 +14293,9 @@ export type CancelActionExecutionData = {
 
 export type CancelActionExecutionErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, EXECUTION_ALREADY_TERMINAL, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, EXECUTION_ALREADY_TERMINAL
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -13955,11 +14327,15 @@ export type RetryActionExecutionData = {
 
 export type RetryActionExecutionErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: EXECUTION_FENCE_STALE, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: EXECUTION_FENCE_STALE, EXECUTION_RETRY_UNSAFE, EXECUTION_ATTEMPT_LIMIT, STEP_UP_REQUIRED
+     * Problem response: EXECUTION_RETRY_UNSAFE, EXECUTION_ATTEMPT_LIMIT
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -13991,11 +14367,19 @@ export type ReleaseLegalHoldData = {
 
 export type ReleaseLegalHoldErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: CONFLICT_UNRESOLVED, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: LEGAL_HOLD_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: LEGAL_HOLD_RELEASE_STALE, LEGAL_HOLD_ALREADY_RELEASED, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: LEGAL_HOLD_NOT_FOUND, LEGAL_HOLD_RELEASE_STALE, LEGAL_HOLD_SCOPE_INVALID, LEGAL_HOLD_ALREADY_RELEASED, CONFLICT_UNRESOLVED, STEP_UP_REQUIRED
+     * Problem response: LEGAL_HOLD_SCOPE_INVALID
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -14036,11 +14420,7 @@ export type GetCommunicationDeliveryReceiptErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: DELIVERY_RECEIPT_INCOMPLETE
-     */
-    422: AddendumProblemDetailsV1;
-    /**
-     * Problem response: INTERNAL_ERROR
+     * Problem response: DELIVERY_RECEIPT_INCOMPLETE, INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
 };
@@ -14070,11 +14450,15 @@ export type ReconcileCommunicationDeliveryData = {
 
 export type ReconcileCommunicationDeliveryErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DELIVERY_VERSION_CONFLICT, DELIVERY_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: DELIVERY_VERSION_CONFLICT, DELIVERY_RECONCILIATION_EVIDENCE_INVALID, DELIVERY_STATE_INVALID, STEP_UP_REQUIRED
+     * Problem response: DELIVERY_RECONCILIATION_EVIDENCE_INVALID
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -14108,13 +14492,13 @@ export type CancelCommunicationDeliveryData = {
 
 export type CancelCommunicationDeliveryErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DELIVERY_VERSION_CONFLICT, DELIVERY_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: DELIVERY_VERSION_CONFLICT, DELIVERY_STATE_INVALID, STEP_UP_REQUIRED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14187,11 +14571,11 @@ export type TriageIncidentErrors = {
      */
     403: AddendumProblemDetailsV1;
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_COMMANDER_REQUIRED
+     * Problem response: INCIDENT_COMMANDER_REQUIRED
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -14229,11 +14613,11 @@ export type ContainIncidentErrors = {
      */
     403: AddendumProblemDetailsV1;
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_CONTAINMENT_INCOMPLETE
+     * Problem response: INCIDENT_CONTAINMENT_INCOMPLETE
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -14271,13 +14655,9 @@ export type StartIncidentRecoveryErrors = {
      */
     403: AddendumProblemDetailsV1;
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14309,11 +14689,15 @@ export type ResolveIncidentData = {
 
 export type ResolveIncidentErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: RECENT_AUTH_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_RESOLUTION_BLOCKED, RECENT_AUTH_REQUIRED
+     * Problem response: INCIDENT_RESOLUTION_BLOCKED
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -14347,11 +14731,15 @@ export type CloseIncidentPostmortemData = {
 
 export type CloseIncidentPostmortemErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: RECENT_AUTH_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: INCIDENT_VERSION_CONFLICT, INCIDENT_STATE_INVALID, INCIDENT_POSTMORTEM_INCOMPLETE, RECENT_AUTH_REQUIRED
+     * Problem response: INCIDENT_POSTMORTEM_INCOMPLETE
      */
     422: AddendumProblemDetailsV1;
     /**
@@ -14375,12 +14763,10 @@ export type ListResponseAppealsData = {
     body?: never;
     path?: never;
     query?: {
-        state?: Array<string>;
+        state?: Array<'RECEIVED' | 'REVIEW' | 'RESOLVED' | 'REJECTED' | 'DUPLICATE' | 'WITHDRAWN'>;
         caseId?: string;
         dueBefore?: string;
-        cursor?: {
-            [key: string]: never;
-        };
+        cursor?: string;
         limit?: number;
         sort?: 'DUE_ASC' | 'CREATED_DESC';
     };
@@ -14464,13 +14850,13 @@ export type TransitionResponseAppealData = {
 
 export type TransitionResponseAppealErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: APPEAL_SCOPE_INVALID, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: APPEAL_VERSION_CONFLICT, APPEAL_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: APPEAL_VERSION_CONFLICT, APPEAL_STATE_INVALID, APPEAL_SCOPE_INVALID, STEP_UP_REQUIRED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14500,13 +14886,13 @@ export type DecideResponseExtensionData = {
 
 export type DecideResponseExtensionErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: EXTENSION_VERSION_CONFLICT, EXTENSION_STATE_INVALID, BUSINESS_CALENDAR_STALE, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: EXTENSION_VERSION_CONFLICT, EXTENSION_STATE_INVALID, BUSINESS_CALENDAR_STALE, STEP_UP_REQUIRED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14528,13 +14914,11 @@ export type ListRetentionRequestsData = {
     body?: never;
     path?: never;
     query?: {
-        requestType?: Array<string>;
-        state?: Array<string>;
+        requestType?: Array<'ACCESS' | 'CORRECTION' | 'DELETION' | 'RESTRICTION'>;
+        state?: Array<'RECEIVED' | 'REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED'>;
         dueBefore?: string;
         legalHoldBlocked?: boolean;
-        cursor?: {
-            [key: string]: never;
-        };
+        cursor?: string;
         limit?: number;
         sort?: 'DUE_ASC' | 'CREATED_DESC';
     };
@@ -14554,6 +14938,10 @@ export type ListRetentionRequestsErrors = {
      * Problem response: INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: AddendumProblemDetailsV1;
 };
 
 export type ListRetentionRequestsError = ListRetentionRequestsErrors[keyof ListRetentionRequestsErrors];
@@ -14593,6 +14981,10 @@ export type GetRetentionRequestErrors = {
      * Problem response: INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: AddendumProblemDetailsV1;
 };
 
 export type GetRetentionRequestError = GetRetentionRequestErrors[keyof GetRetentionRequestErrors];
@@ -14607,7 +14999,7 @@ export type GetRetentionRequestResponses = {
 export type GetRetentionRequestResponse = GetRetentionRequestResponses[keyof GetRetentionRequestResponses];
 
 export type TransitionRetentionRequestData = {
-    body: TransitionRetentionRequestRequestV1;
+    body: TransitionRetentionRequestRequestV2;
     headers: {
         'Idempotency-Key': string;
     };
@@ -14618,17 +15010,33 @@ export type TransitionRetentionRequestData = {
 
 export type TransitionRetentionRequestErrors = {
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDENTITY_PROOF_INVALID, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, BUSINESS_CALENDAR_STALE, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, LEGAL_HOLD_ACTIVE, RETENTION_COMPLETION_INCOMPLETE, STEP_UP_REQUIRED
+     * Problem response: PRIVACY_SCOPE_INVALID
      */
     422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: LEGAL_HOLD_ACTIVE
+     */
+    423: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: AddendumProblemDetailsV1;
 };
 
 export type TransitionRetentionRequestError = TransitionRetentionRequestErrors[keyof TransitionRetentionRequestErrors];
@@ -14637,7 +15045,7 @@ export type TransitionRetentionRequestResponses = {
     /**
      * Successful response
      */
-    200: RetentionRequestDecisionReceiptV1;
+    200: RetentionRequestDecisionReceiptV2;
 };
 
 export type TransitionRetentionRequestResponse = TransitionRetentionRequestResponses[keyof TransitionRetentionRequestResponses];
@@ -14647,10 +15055,8 @@ export type ListRecordClassSchedulesData = {
     path?: never;
     query?: {
         recordClass?: Array<string>;
-        state?: Array<string>;
-        cursor?: {
-            [key: string]: never;
-        };
+        state?: Array<'CURRENT' | 'FUTURE' | 'REVIEW_EXPIRED'>;
+        cursor?: string;
         limit?: number;
     };
     url: '/v1/internal/queries/list-record-class-schedules';
@@ -14698,7 +15104,7 @@ export type DeclareConflictErrors = {
      */
     400: AddendumProblemDetailsV1;
     /**
-     * Problem response: CAPABILITY_DENIED
+     * Problem response: CAPABILITY_DENIED, STEP_UP_REQUIRED
      */
     403: AddendumProblemDetailsV1;
     /**
@@ -14706,13 +15112,9 @@ export type DeclareConflictErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, STEP_UP_REQUIRED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14748,7 +15150,7 @@ export type WithdrawConflictErrors = {
      */
     400: AddendumProblemDetailsV1;
     /**
-     * Problem response: CAPABILITY_DENIED
+     * Problem response: CONFLICT_WITHDRAWAL_FORBIDDEN, CAPABILITY_DENIED, STEP_UP_REQUIRED
      */
     403: AddendumProblemDetailsV1;
     /**
@@ -14756,13 +15158,9 @@ export type WithdrawConflictErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: IDEMPOTENCY_CONFLICT
+     * Problem response: CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, CONFLICT_DEPENDENCY_ACTIVE, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, CONFLICT_WITHDRAWAL_FORBIDDEN, CONFLICT_DEPENDENCY_ACTIVE, STEP_UP_REQUIRED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14806,13 +15204,9 @@ export type WithdrawActionProposalErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14849,7 +15243,7 @@ export type WithdrawActionDecisionErrors = {
      */
     400: AddendumProblemDetailsV1;
     /**
-     * Problem response: CAPABILITY_DENIED
+     * Problem response: STEP_UP_REQUIRED, CAPABILITY_DENIED
      */
     403: AddendumProblemDetailsV1;
     /**
@@ -14857,13 +15251,9 @@ export type WithdrawActionDecisionErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTION_PROPOSAL_STALE, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, STEP_UP_REQUIRED
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -14901,7 +15291,7 @@ export type PromoteResearchArtifactToEvidenceErrors = {
      */
     401: AddendumProblemDetailsV1;
     /**
-     * Problem response: CAPABILITY_DENIED
+     * Problem response: CAPABILITY_DENIED, RIGHTS_DENIED
      */
     403: AddendumProblemDetailsV1;
     /**
@@ -14909,17 +15299,21 @@ export type PromoteResearchArtifactToEvidenceErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, CONTENT_HASH_MISMATCH
      */
     409: AddendumProblemDetailsV1;
     /**
-     * Problem response: ARTIFACT_NOT_CLEAN, RIGHTS_DENIED, LOCATOR_MISMATCH, CONTENT_HASH_MISMATCH, VALIDATION_FAILED, DEPENDENCY_UNAVAILABLE
+     * Problem response: ARTIFACT_NOT_CLEAN, LOCATOR_MISMATCH, VALIDATION_FAILED
      */
     422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
     500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: AddendumProblemDetailsV1;
 };
 
 export type PromoteResearchArtifactToEvidenceError = PromoteResearchArtifactToEvidenceErrors[keyof PromoteResearchArtifactToEvidenceErrors];
@@ -14959,13 +15353,9 @@ export type CancelAgentRunErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     * Problem response: VERSION_CONFLICT, AGENT_RUN_STATE_INVALID, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: AGENT_RUN_STATE_INVALID
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -15001,11 +15391,11 @@ export type DecideJourneyHandoffErrors = {
      */
     400: AddendumProblemDetailsV1;
     /**
-     * Problem response: ACTOR_ASSERTION_INVALID
+     * Problem response: ACTOR_ASSERTION_INVALID, SERVICE_ASSERTION_INVALID
      */
     401: AddendumProblemDetailsV1;
     /**
-     * Problem response: CAPABILITY_DENIED
+     * Problem response: CAPABILITY_DENIED, HANDOFF_RECEIVER_MISMATCH
      */
     403: AddendumProblemDetailsV1;
     /**
@@ -15013,13 +15403,9 @@ export type DecideJourneyHandoffErrors = {
      */
     404: AddendumProblemDetailsV1;
     /**
-     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     * Problem response: ACTOR_ASSERTION_REPLAYED, SERVICE_ASSERTION_REPLAYED, HANDOFF_STATE_INVALID, HANDOFF_BINDING_MISMATCH, VERSION_CONFLICT, HANDOFF_EXPIRED, JOURNEY_TERMINAL, IDEMPOTENCY_CONFLICT
      */
     409: AddendumProblemDetailsV1;
-    /**
-     * Problem response: ACTOR_ASSERTION_REPLAYED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_REPLAYED, HANDOFF_RECEIVER_MISMATCH, HANDOFF_STATE_INVALID, HANDOFF_BINDING_MISMATCH, HANDOFF_EXPIRED, JOURNEY_TERMINAL
-     */
-    422: AddendumProblemDetailsV1;
     /**
      * Problem response: INTERNAL_ERROR
      */
@@ -15036,3 +15422,299 @@ export type DecideJourneyHandoffResponses = {
 };
 
 export type DecideJourneyHandoffResponse = DecideJourneyHandoffResponses[keyof DecideJourneyHandoffResponses];
+
+export type VerifyResponseOrganizationIdentityData = {
+    body: VerifyResponseOrganizationIdentityRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/verify-response-organization-identity';
+};
+
+export type VerifyResponseOrganizationIdentityErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: PRECONDITION_FAILED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type VerifyResponseOrganizationIdentityError = VerifyResponseOrganizationIdentityErrors[keyof VerifyResponseOrganizationIdentityErrors];
+
+export type VerifyResponseOrganizationIdentityResponses = {
+    /**
+     * Successful response
+     */
+    200: VerifyResponseOrganizationIdentityReceiptV1;
+};
+
+export type VerifyResponseOrganizationIdentityResponse = VerifyResponseOrganizationIdentityResponses[keyof VerifyResponseOrganizationIdentityResponses];
+
+export type ClassifyEntityPersonhoodData = {
+    body: ClassifyEntityPersonhoodRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/classify-entity-personhood';
+};
+
+export type ClassifyEntityPersonhoodErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: PRECONDITION_FAILED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type ClassifyEntityPersonhoodError = ClassifyEntityPersonhoodErrors[keyof ClassifyEntityPersonhoodErrors];
+
+export type ClassifyEntityPersonhoodResponses = {
+    /**
+     * Successful response
+     */
+    201: ClassifyEntityPersonhoodReceiptV1;
+};
+
+export type ClassifyEntityPersonhoodResponse = ClassifyEntityPersonhoodResponses[keyof ClassifyEntityPersonhoodResponses];
+
+export type AttestEntityMaterialUseClosureData = {
+    body: AttestEntityMaterialUseClosureRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/attest-entity-material-use-closure';
+};
+
+export type AttestEntityMaterialUseClosureErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: PRECONDITION_FAILED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: LEGAL_HOLD_ACTIVE
+     */
+    423: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type AttestEntityMaterialUseClosureError = AttestEntityMaterialUseClosureErrors[keyof AttestEntityMaterialUseClosureErrors];
+
+export type AttestEntityMaterialUseClosureResponses = {
+    /**
+     * Successful response
+     */
+    201: AttestEntityMaterialUseClosureReceiptV1;
+};
+
+export type AttestEntityMaterialUseClosureResponse = AttestEntityMaterialUseClosureResponses[keyof AttestEntityMaterialUseClosureResponses];
+
+export type AttestOrganizationOfficialChannelData = {
+    body: AttestOrganizationOfficialChannelRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/attest-organization-official-channel';
+};
+
+export type AttestOrganizationOfficialChannelErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: PRECONDITION_FAILED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type AttestOrganizationOfficialChannelError = AttestOrganizationOfficialChannelErrors[keyof AttestOrganizationOfficialChannelErrors];
+
+export type AttestOrganizationOfficialChannelResponses = {
+    /**
+     * Successful response
+     */
+    201: AttestOrganizationOfficialChannelReceiptV1;
+};
+
+export type AttestOrganizationOfficialChannelResponse = AttestOrganizationOfficialChannelResponses[keyof AttestOrganizationOfficialChannelResponses];
+
+export type RevokeOrganizationOfficialChannelData = {
+    body: RevokeOrganizationOfficialChannelRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/revoke-organization-official-channel';
+};
+
+export type RevokeOrganizationOfficialChannelErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: CAPABILITY_DENIED, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: VERSION_CONFLICT, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: PRECONDITION_FAILED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type RevokeOrganizationOfficialChannelError = RevokeOrganizationOfficialChannelErrors[keyof RevokeOrganizationOfficialChannelErrors];
+
+export type RevokeOrganizationOfficialChannelResponses = {
+    /**
+     * Successful response
+     */
+    200: RevokeOrganizationOfficialChannelReceiptV1;
+};
+
+export type RevokeOrganizationOfficialChannelResponse = RevokeOrganizationOfficialChannelResponses[keyof RevokeOrganizationOfficialChannelResponses];
+
+export type CreatePrivacyCorrectionPlanData = {
+    body: CreatePrivacyCorrectionPlanRequestV1;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/create-privacy-correction-plan';
+};
+
+export type CreatePrivacyCorrectionPlanErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: IDENTITY_PROOF_INVALID, CAPABILITY_DENIED, STEP_UP_REQUIRED
+     */
+    403: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RETENTION_VERSION_CONFLICT, RETENTION_STATE_INVALID, IDEMPOTENCY_CONFLICT
+     */
+    409: AddendumProblemDetailsV1;
+    /**
+     * Problem response: PRIVACY_SCOPE_INVALID, PRIVACY_CORRECTION_TARGET_UNSUPPORTED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE
+     */
+    503: AddendumProblemDetailsV1;
+};
+
+export type CreatePrivacyCorrectionPlanError = CreatePrivacyCorrectionPlanErrors[keyof CreatePrivacyCorrectionPlanErrors];
+
+export type CreatePrivacyCorrectionPlanResponses = {
+    /**
+     * Successful response
+     */
+    201: PrivacyCorrectionPlanReceiptV1;
+};
+
+export type CreatePrivacyCorrectionPlanResponse = CreatePrivacyCorrectionPlanResponses[keyof CreatePrivacyCorrectionPlanResponses];

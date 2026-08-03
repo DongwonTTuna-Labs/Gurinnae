@@ -7,6 +7,7 @@
   "case_id": "case_fixture_price_target",
   "slug": "synthetic-price-target",
   "display_status": "PUBLISHED_ANOMALY",
+  "non_conclusion": "공개자료 비교에서 설명이 필요한 차이가 확인됐습니다. 현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
   "content_hash": "3b7f62290fe12781bdf199781e5fcd1790b70a3e05a2a5ba70182296389aa601",
   "title": "동일 조건 합성 공공계약 중앙값의 5.0배로 나타난 장비 구매",
   "summary": "합성 데이터 비교에서 대상 단가는 비교 가능한 12건의 중앙값보다 5.0배였다. 추가 인증·서비스 비용은 완전히 확인되지 않았으며, 이 결과만으로 위법성 또는 부패 여부를 판단할 수 없다.",
@@ -267,6 +268,7 @@
   "review_summary": {
     "editor_approval_count": 1,
     "legal_reviewed": false,
+    "legal_review_receipt_sha256": null,
     "policy_version": "editorial-1.0.0"
   }
 }

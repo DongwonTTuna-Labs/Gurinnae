@@ -1,3 +1,4 @@
+import type { ApprovedRetentionScheduleRow } from "./retention-schedule";
 import type { ProjectionField } from "./screen-projection";
 import type { Cas010Metric } from "./view-models/cas-010";
 import type { Cas011GraphRow } from "./view-models/cas-011";
@@ -12,4 +13,5 @@ export type SpecializedProjection = {
   fields: ProjectionField[];
   blocked: boolean;
   analysis?: AnalysisProjection;
+  retentionSchedules?: readonly ApprovedRetentionScheduleRow[];
 };

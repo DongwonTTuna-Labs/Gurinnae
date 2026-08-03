@@ -935,6 +935,12 @@ resolveIncident|운영 사고 해결하기|서비스 목표와 사용자 영향�
 closeIncidentPostmortem|사후 검토 닫기|원인·영향·개선 과제·담당자·기한이 저장된 경우에만 사후 검토를 종료한다.
 transitionResponseAppeal|소명 이의 결정하기|정확한 이의 revision을 접수·추가정보요청·인용검토·상태정정·종결 중 허용된 상태로 전환한다.
 decideResponseExtension|소명 기한 연장 결정하기|기존 기한·요청 기한·사유·영향을 검토해 승인 또는 거절 영수증을 남긴다.
+classifyEntityPersonhood|자연인 여부 판정 기록하기|검토된 공개 출처와 현재 엔티티 버전을 재검증해 자동 추론 없이 사람이 내린 자연인 여부 판정을 변경 불가능한 영수증으로 남긴다.
+attestEntityMaterialUseClosure|실질 이용 종료 확인하기|현재 자연인 판정·모든 계약의 서울 기준 일자 종료·공개 revision 종료·법률 보존 부재를 재검증해 충족된 경우에만 불변 종료 영수증을 남긴다.
+attestOrganizationOfficialChannel|조직 공식 채널 확인 기록하기|독립 검토자가 현재 공식 이메일 또는 문서 증거를 재검증해 만료·철회 가능한 공식 채널 권위 영수증과 등록 주장을 남긴다.
+revokeOrganizationOfficialChannel|조직 공식 채널 철회 기록하기|현재 공식 채널 주장을 즉시 철회하되 원 권위 영수증과 등록 이력은 삭제하거나 덮어쓰지 않는다.
+verifyResponseOrganizationIdentity|조직 신원 확인하기|현재 응답 버전·조직·공개 형태를 공식 채널 증명과 재인증 영수증에 결속해 공개 가능한 신원 확인 기록을 남긴다.
+createPrivacyCorrectionPlan|개인정보 정정 계획 만들기|검증된 정정 요청의 고정된 범위·증거·현재값 digest에 결속된 불변 계획을 만들고 요청값 평문이나 대상 변경을 남기지 않는다.
 transitionRetentionRequest|보존 요청 결정하기|법적 보존과 삭제 요청을 분리해 정확한 record class·범위·근거에 허용된 결정을 남긴다.
 requestCommunicationEndpointLink|메시지 수신처 연결 요청하기|선택한 이메일·문자·메신저 수신처와 동의를 검증 challenge에 결속한다.
 verifyCommunicationEndpointLink|메시지 수신처 확인하기|일회용 증명과 challenge를 검증해 해당 수신처만 활성화한다.
@@ -1026,6 +1032,12 @@ closeIncidentPostmortem@OPS-001.incidents|close-incident-postmortem--incidents|v
 transitionResponseAppeal@COR-001.requests|transition-response-appeal--requests|view_model.sections.requests.selected_target|view_model.sections.requests.forms.transition_response_appeal__requests|request_context.review_console_session|action_result.transition_response_appeal__requests.validated_receipt|COR-001|requests|handle__cor_001__transition_response_appeal__requests
 decideResponseExtension@CAS-008.requests|decide-response-extension--requests|view_model.sections.requests.selected_target|view_model.sections.requests.forms.decide_response_extension__requests|request_context.review_console_session|action_result.decide_response_extension__requests.validated_receipt|CAS-008|requests|handle__cas_008__decide_response_extension__requests
 decideResponseExtension@CAS-008.timeline|decide-response-extension--timeline|view_model.sections.timeline.selected_target|view_model.sections.timeline.forms.decide_response_extension__timeline|request_context.review_console_session|action_result.decide_response_extension__timeline.validated_receipt|CAS-008|requests|handle__cas_008__decide_response_extension__timeline
+classifyEntityPersonhood@INT-002.handoff|classify-entity-personhood--handoff|view_model.sections.handoff.selected_target|view_model.sections.handoff.forms.classify_entity_personhood__handoff|request_context.review_console_session|action_result.classify_entity_personhood__handoff.validated_receipt|INT-002|handoff|handle__int_002__classify_entity_personhood__handoff
+attestEntityMaterialUseClosure@INT-002.handoff|attest-entity-material-use-closure--handoff|view_model.sections.handoff.selected_target|view_model.sections.handoff.forms.attest_entity_material_use_closure__handoff|request_context.review_console_session|action_result.attest_entity_material_use_closure__handoff.validated_receipt|INT-002|handoff|handle__int_002__attest_entity_material_use_closure__handoff
+attestOrganizationOfficialChannel@CAS-008.verification|attest-organization-official-channel--verification|view_model.sections.verification.selected_target|view_model.sections.verification.forms.attest_organization_official_channel__verification|request_context.review_console_session|action_result.attest_organization_official_channel__verification.validated_receipt|CAS-008|verification|handle__cas_008__attest_organization_official_channel__verification
+revokeOrganizationOfficialChannel@CAS-008.verification|revoke-organization-official-channel--verification|view_model.sections.verification.selected_target|view_model.sections.verification.forms.revoke_organization_official_channel__verification|request_context.review_console_session|action_result.revoke_organization_official_channel__verification.validated_receipt|CAS-008|verification|handle__cas_008__revoke_organization_official_channel__verification
+verifyResponseOrganizationIdentity@CAS-008.verification|verify-response-organization-identity--verification|view_model.sections.verification.selected_target|view_model.sections.verification.forms.verify_response_organization_identity__verification|request_context.review_console_session|action_result.verify_response_organization_identity__verification.validated_receipt|CAS-008|verification|handle__cas_008__verify_response_organization_identity__verification
+createPrivacyCorrectionPlan@COR-001.requests|create-privacy-correction-plan--requests|view_model.sections.requests.selected_target|view_model.sections.requests.forms.create_privacy_correction_plan__requests|request_context.review_console_session|action_result.create_privacy_correction_plan__requests.validated_receipt|COR-001|requests|handle__cor_001__create_privacy_correction_plan__requests
 transitionRetentionRequest@COR-001.requests|transition-retention-request--requests|view_model.sections.requests.selected_target|view_model.sections.requests.forms.transition_retention_request__requests|request_context.review_console_session|action_result.transition_retention_request__requests.validated_receipt|COR-001|requests|handle__cor_001__transition_retention_request__requests
 requestCommunicationEndpointLink@PUB-030.delivery|request-communication-endpoint-link--delivery|view_model.sections.delivery.selected_target|view_model.sections.delivery.forms.request_communication_endpoint_link__delivery|request_context.public_proof_session|action_result.request_communication_endpoint_link__delivery.validated_receipt|PUB-030|delivery|handle__pub_030__request_communication_endpoint_link__delivery
 verifyCommunicationEndpointLink@PUB-030.delivery|verify-communication-endpoint-link--delivery|view_model.sections.delivery.selected_target|view_model.sections.delivery.forms.verify_communication_endpoint_link__delivery|request_context.public_proof_session|action_result.verify_communication_endpoint_link__delivery.validated_receipt|PUB-030|delivery|handle__pub_030__verify_communication_endpoint_link__delivery
@@ -1751,8 +1763,18 @@ def additive_operation_contract(operation: dict[str, Any], resources: dict[str, 
     metadata = additive_operation_metadata(operation, resources)
     request = operation.get("request", {})
     required = set(request.get("required", []))
+    field_descriptions = request.get("field_descriptions", {})
     request_fields = [
-        {"name": name, "type": field_type, "required": name in required}
+        {
+            "name": name,
+            "type": field_type,
+            "required": name in required,
+            **(
+                {"description": field_descriptions[name]}
+                if name in field_descriptions
+                else {}
+            ),
+        }
         for name, field_type in request.get("fields", {}).items()
     ]
     response_fields = schema_fields(operation.get("response", ""), resources)
@@ -2858,6 +2880,7 @@ def exact_request_bindings(
 ) -> list[dict[str, Any]]:
     request = operation.get("request", {})
     required = set(request.get("required", []))
+    field_descriptions = request.get("field_descriptions", {})
     path_parameters = set(re.findall(r"\{([^}]+)\}", operation["path"]))
     return [
         {
@@ -2882,6 +2905,11 @@ def exact_request_bindings(
             "error_test_id": None
             if is_server_only_browser_field({"name": name, "type": field_type})
             else f"{snake_screen(screen_id)}__field_error__{action_id.replace('-', '_')}__{name}",
+            **(
+                {"description": field_descriptions[name]}
+                if name in field_descriptions
+                else {}
+            ),
         }
         for name, field_type in request.get("fields", {}).items()
     ]
@@ -3024,6 +3052,7 @@ def build_action_contracts(
         placement_count += len(placements)
         request = operation.get("request", {})
         required = set(request.get("required", []))
+        field_descriptions = request.get("field_descriptions", {})
         command_contract = {
                 "operation_id": operation_id,
                 "label": label,
@@ -3034,7 +3063,16 @@ def build_action_contracts(
                 "authorization": operation.get("authorization", operation.get("capability")),
                 "step_up": step_up_contract(operation["assurance"]),
                 "request_field_set": [
-                    {"name": name, "type": field_type, "required": name in required}
+                    {
+                        "name": name,
+                        "type": field_type,
+                        "required": name in required,
+                        **(
+                            {"description": field_descriptions[name]}
+                            if name in field_descriptions
+                            else {}
+                        ),
+                    }
                     for name, field_type in request.get("fields", {}).items()
                 ],
                 "receipt_schema": operation["response"],

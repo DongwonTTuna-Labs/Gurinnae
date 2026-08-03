@@ -13,6 +13,7 @@ import {
 import type { ScreenProjection } from "../../screen-projection";
 import ArchetypeAssembly from "../archetypes/ArchetypeAssembly.svelte";
 import ProjectionValue from "../ProjectionValue.svelte";
+import PublicDetailStatusContext from "../PublicDetailStatusContext.svelte";
 import PublicHeader from "../PublicHeader.svelte";
 import ScreenActions from "../ScreenActions.svelte";
 import ScreenSection from "../ScreenSection.svelte";
@@ -49,7 +50,6 @@ const publicCaseMetaFields = $derived.by((): PublicCaseField[] => {
   if (!lead) return [];
   return [
     { name: "slug", label: "사건 식별자", value: lead.slug },
-    { name: "publicState", label: "공개 상태", value: lead.publicState },
     { name: "revision", label: "개정본", value: lead.revision },
     ...(lead.agencyName
       ? [{ name: "agencyName", label: "기관명", value: lead.agencyName }]
@@ -90,14 +90,12 @@ const publicCaseStatFields = $derived.by((): PublicCaseField[] => {
 });
 const publicCaseTitle = $derived(runtime.publicCaseLead?.title ?? screen.title);
 const publicCaseSummary = $derived(runtime.publicCaseLead?.summary ?? null);
-const publicCaseNonConclusion = $derived(
-  runtime.publicCaseLead?.nonConclusion ?? null,
-);
+const publicStatusContext = $derived(runtime.publicStatusContext);
 </script>
 
 <div class="shell public-shell">
   <PublicHeader {runtime} />
-            <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="main public-main" class:public-case-detail={publicCaseDetail} data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
+            <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="main public-main" class:public-case-detail={publicCaseDetail} class:public-status-detail={publicStatusContext !== undefined} data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
     {#if publicCaseDetail && statusSectionId}
       {@const statusSection = sourceSectionForId(screen, statusSectionId)}
       <Breadcrumb {screen} {runtime} />
@@ -111,7 +109,7 @@ const publicCaseNonConclusion = $derived(
       <header class="public-case-heading" data-journey={contract.journey}>
         <h1 id={`${screen.id.toLowerCase()}__heading`} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{publicCaseTitle}</h1>
         {#if publicCaseSummary}<p>{publicCaseSummary}</p>{/if}
-        {#if publicCaseNonConclusion}<p class="public-case-non-conclusion"><strong>비확정 고지</strong><span>{publicCaseNonConclusion}</span></p>{/if}
+        {#if publicStatusContext}<PublicDetailStatusContext context={publicStatusContext} showSubject={false} />{/if}
       </header>
       <section id={statusSection.id} tabindex="-1" aria-labelledby={`section-${statusSection.id}-heading`} data-testid={statusSection.test_id} data-focus-target={projection.sections[statusSection.id]?.focusTarget} data-component={statusSection.component} data-projection-state={projection.sections[statusSection.id]?.state} class="section pre-title-status">
         <div class="public-case-status-heading"><h2 id={`section-${statusSection.id}-heading`}>{statusSection.title}</h2><p>{statusSection.purpose}</p></div>
@@ -134,6 +132,7 @@ const publicCaseNonConclusion = $derived(
       {/if}
       {#if evidenceLanding}<StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />{/if}
       <ScreenHeading variant={home ? "public-home" : "public"} {screen} {runtime} {contract} {projection} />
+      {#if publicStatusContext}<PublicDetailStatusContext context={publicStatusContext} />{/if}
       <ScreenActions {screen} {runtime} actionIds={actionPlacement?.headerActionIds ?? []} attachments={false} context="header" />
       {#if !evidenceLanding}<StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />{/if}
     {/if}
@@ -159,7 +158,7 @@ const publicCaseNonConclusion = $derived(
 }
 
 @media (min-width: 1101px) {
-  .public-main.public-case-detail {
+  .public-main:is(.public-case-detail, .public-status-detail) {
     padding-bottom: 16px;
   }
 }
@@ -203,7 +202,7 @@ const publicCaseNonConclusion = $derived(
 }
 
 .public-case-heading {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .public-case-heading h1,
@@ -226,22 +225,6 @@ const publicCaseNonConclusion = $derived(
   color: var(--ink-700);
   font-size: 0.8125rem;
   line-height: 1.45;
-}
-
-.public-case-heading .public-case-non-conclusion {
-  display: flex;
-  gap: 0.375rem 0.625rem;
-  align-items: baseline;
-  margin-top: 0.375rem;
-  padding: 0.375rem 0.5rem;
-  border-block: 1px solid var(--paper-200);
-  color: var(--ink-700);
-}
-
-.public-case-non-conclusion strong {
-  flex: 0 0 auto;
-  color: var(--ink-900);
-  font-size: 0.75rem;
 }
 
 .public-case-status-heading {

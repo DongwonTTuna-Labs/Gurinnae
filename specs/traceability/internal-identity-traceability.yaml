@@ -123,6 +123,18 @@ operations:
   success_status: 200
   bff_callers:
   - review-console authenticated server loads/actions
+  conditional_capability_binding:
+    operation_id: submitReview
+    selector: criteria.namedIndividualOverride
+    absent: review.editorial
+    present: review.legal
+    review_console_rule: derive one exact value from the bodySha256-bound downstream body
+    identity_rule: authorize and sign issueActorAssertion.requiredCapability as supplied; no any-of set or duplicate downstream body is accepted
+    downstream_verifiers:
+    - control-api recomputes the branch before authorization and audit
+    - editorial.submit_review_decision recomputes the branch before any write
+    mismatch_error: CAPABILITY_DENIED
+    assurance_composition: requiredCapability is independent from requiredAssuranceLevel; APPROVE remains STEP_UP under the existing decision policy with or without the override
   handler: services/identity-api/src/routes/identity_internal.rs
   application: crates/auth/src/internal/issue_actor_assertion.rs
   persistence: crates/persistence-postgres/src/repositories/identity.rs

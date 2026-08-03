@@ -4,6 +4,10 @@
 -- deliberately creates no operational policy or source activation row, makes
 -- no external request, and rolls back every row after exercising the owner
 -- routines under their runtime roles.
+--
+-- The single v2 PERSON row is loaded below with replica triggers disabled only
+-- to model a row that existed before migration 0038.  Normal runtime-role
+-- writes remain subject to the 0038 retirement guard and are asserted to fail.
 
 BEGIN;
 
@@ -40,7 +44,8 @@ CREATE TEMP TABLE r6c_graph_decisions (
 CREATE TEMP TABLE r6c_graph_endpoint_boundary (
   before_count bigint NOT NULL,
   shape_denied boolean NOT NULL DEFAULT false,
-  identity_denied boolean NOT NULL DEFAULT false
+  identity_denied boolean NOT NULL DEFAULT false,
+  retired_denied boolean NOT NULL DEFAULT false
 );
 CREATE TEMP TABLE r6c_graph_assertion_boundary (
   before_count bigint NOT NULL,
@@ -371,6 +376,7 @@ WITH fixtures(
   SELECT request.fixture_key, request.parsed_record_id,
          core.record_typed_relationship_endpoint_v2(request.request) AS result
   FROM requests AS request
+  WHERE request.endpoint_kind <> 'PERSON'
 )
 INSERT INTO r6c_graph_endpoints(
   fixture_key, endpoint_id, endpoint_kind, endpoint_digest,
@@ -386,6 +392,58 @@ SELECT
 FROM recorded;
 
 RESET SESSION AUTHORIZATION;
+
+-- Migration 0038 intentionally preserves existing v2 PERSON rows as staged
+-- legacy while refusing every new runtime-role write.  Seed exactly one such
+-- pre-0038 row for the R6c read/assertion compatibility proof; the positive
+-- writer path below remains closed and is tested independently.
+SET LOCAL session_replication_role=replica;
+SET LOCAL SESSION AUTHORIZATION gurine_ingest_worker;
+WITH recorded AS (
+  SELECT core.record_typed_relationship_endpoint_v2(jsonb_build_object(
+    'schemaVersion', 'typed-relationship-endpoint.record.request.v2',
+    'endpointKind', 'PERSON',
+    'contextualName', '테스트 공시 인물',
+    'roleTitle', '전직 담당자',
+    'sourceKind', 'PUBLIC_OFFICIAL_ETHICS_NOTICE',
+    'sourceLocator', 'https://fixture.invalid/ethics/TEST-001#person',
+    'identifierDigest', (
+      SELECT expected_digest
+      FROM r6c_graph_digest_preimages
+      WHERE digest_domain = 'IDENTIFIER' AND fixture_key = 'person'
+    ),
+    'entityId', NULL,
+    'entityRevision', NULL,
+    'entityDigest', NULL,
+    'sourceDocument', jsonb_build_object(
+      'id', '31300000-0000-4000-8000-000000000001'::uuid,
+      'assetId', '31300000-0000-4000-8000-000000000001'::uuid,
+      'assetRevision', 1,
+      'contentSha256', repeat('1', 64),
+      'parserRunId', '31500000-0000-4000-8000-000000000001'::uuid,
+      'parsedRecordId', '31500000-0000-4000-8000-000000000006'::uuid,
+      'parserVersion', 'connector-structured-json-v1',
+      'parsedPayloadSha256',
+        '2c8f9b3674474a255df9f11bc21fb1dfdfe70fc69562a2e9da568b6c5d7d1c17'
+    ),
+    'operationId', 'recordTypedRelationshipEndpoint'
+  )) AS result
+)
+INSERT INTO r6c_graph_endpoints(
+  fixture_key, endpoint_id, endpoint_kind, endpoint_digest,
+  identity_resolution_status, parsed_record_id
+)
+SELECT
+  'person',
+  (recorded.result->>'endpointId')::uuid,
+  recorded.result->>'endpointKind',
+  recorded.result->>'endpointDigest',
+  recorded.result->>'identityResolutionStatus',
+  '31500000-0000-4000-8000-000000000006'::uuid
+FROM recorded;
+RESET SESSION AUTHORIZATION;
+SET LOCAL session_replication_role=origin;
+
 DO $$
 BEGIN
   IF (SELECT count(*) FROM r6c_graph_endpoints) <> 6
@@ -455,6 +513,7 @@ DO $$
 DECLARE
   v_shape_denied boolean := false;
   v_identity_denied boolean := false;
+  v_retired_denied boolean := false;
 BEGIN
   BEGIN
     PERFORM core.record_typed_relationship_endpoint_v2(jsonb_build_object(
@@ -514,13 +573,47 @@ BEGIN
   EXCEPTION WHEN SQLSTATE '23514' THEN
     v_identity_denied := SQLERRM = 'typed_person_endpoint_l4_boundary_invalid';
   END;
+  BEGIN
+    PERFORM core.record_typed_relationship_endpoint_v2(jsonb_build_object(
+      'schemaVersion', 'typed-relationship-endpoint.record.request.v2',
+      'endpointKind', 'PERSON',
+      'contextualName', '테스트 공시 인물',
+      'roleTitle', '전직 담당자',
+      'sourceKind', 'PUBLIC_OFFICIAL_ETHICS_NOTICE',
+      'sourceLocator',
+        'https://fixture.invalid/ethics/TEST-001#person-new-write',
+      'identifierDigest', (
+        SELECT expected_digest
+        FROM r6c_graph_digest_preimages
+        WHERE digest_domain = 'IDENTIFIER' AND fixture_key = 'person'
+      ),
+      'entityId', NULL,
+      'entityRevision', NULL,
+      'entityDigest', NULL,
+      'sourceDocument', jsonb_build_object(
+        'id', '31300000-0000-4000-8000-000000000001'::uuid,
+        'assetId', '31300000-0000-4000-8000-000000000001'::uuid,
+        'assetRevision', 1,
+        'contentSha256', repeat('1', 64),
+        'parserRunId', '31500000-0000-4000-8000-000000000001'::uuid,
+        'parsedRecordId', '31500000-0000-4000-8000-000000000006'::uuid,
+        'parserVersion', 'connector-structured-json-v1',
+        'parsedPayloadSha256',
+          '2c8f9b3674474a255df9f11bc21fb1dfdfe70fc69562a2e9da568b6c5d7d1c17'
+      ),
+      'operationId', 'recordTypedRelationshipEndpoint'
+    ));
+  EXCEPTION WHEN SQLSTATE '55000' THEN
+    v_retired_denied := SQLERRM = 'r6d_person_v2_plaintext_write_retired';
+  END;
   UPDATE r6c_graph_endpoint_boundary
   SET shape_denied = v_shape_denied,
-      identity_denied = v_identity_denied;
-  IF NOT v_shape_denied OR NOT v_identity_denied THEN
+      identity_denied = v_identity_denied,
+      retired_denied = v_retired_denied;
+  IF NOT v_shape_denied OR NOT v_identity_denied OR NOT v_retired_denied THEN
     RAISE EXCEPTION
-      'R6c PERSON endpoint closure invalid: shape %, identity %',
-      v_shape_denied, v_identity_denied;
+      'R6c PERSON endpoint closure invalid: shape %, identity %, retired %',
+      v_shape_denied, v_identity_denied, v_retired_denied;
   END IF;
 END $$;
 
@@ -531,6 +624,7 @@ DECLARE
 BEGIN
   SELECT * INTO STRICT v_boundary FROM r6c_graph_endpoint_boundary;
   IF NOT v_boundary.shape_denied OR NOT v_boundary.identity_denied
+     OR NOT v_boundary.retired_denied
      OR (SELECT count(*) FROM core.relationship_graph_endpoints_v2) <>
        v_boundary.before_count
      OR EXISTS (

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "specificationVersion": "13.0.0",
-  "contractCount": 66,
+  "contractCount": 65,
   "contracts": [
     {
       "operationId": "acceptAgentSuggestion",
@@ -333,16 +333,6 @@
       "guardColumns": ["source_id", "version"],
       "mutationColumns": ["source_id", "version"],
       "requestPlaceholders": ["expectedVersion", "sourceId"],
-      "contextPlaceholders": []
-    },
-    {
-      "operationId": "placeLegalHold",
-      "versionField": "expectedCaseVersion",
-      "guardRelation": "editorial.cases",
-      "mutationRelation": "editorial.cases",
-      "guardColumns": ["id", "version"],
-      "mutationColumns": ["id", "version"],
-      "requestPlaceholders": ["caseId", "expectedCaseVersion"],
       "contextPlaceholders": []
     },
     {

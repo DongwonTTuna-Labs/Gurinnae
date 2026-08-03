@@ -3,6 +3,10 @@ import { createHash, createHmac, randomUUID } from "node:crypto";
 const digest = (value: string | Uint8Array): string =>
   createHash("sha256").update(value).digest("hex");
 
+const NEXT_SUBMISSION_SESSION_HEADER =
+  "x-gurine-next-submission-session" as const;
+const SUBMISSION_SESSION_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
 export function downstreamRequestBinding(input: {
   method: string;
   path: string;
@@ -41,9 +45,14 @@ export function serviceAssertion(input: {
   body: string | Uint8Array;
   contentType: string;
   idempotencyKey?: string;
+  nextSubmissionSession?: string;
 }): string {
   const key = Buffer.from(input.keyBase64, "base64");
   if (key.length < 32) throw new Error("service assertion key is invalid");
+  const nextSubmissionSession =
+    input.nextSubmissionSession === undefined
+      ? undefined
+      : validNextSubmissionSession(input.nextSubmissionSession);
   const now = Math.floor(Date.now() / 1000);
   const claims = {
     aud: input.audience,
@@ -54,6 +63,11 @@ export function serviceAssertion(input: {
     iss: input.issuer,
     jti: randomUUID(),
     method: input.method,
+    ...(nextSubmissionSession
+      ? {
+          nextSubmissionSessionSha256: digest(nextSubmissionSession),
+        }
+      : {}),
     path: input.path,
     querySha256: digest(canonicalQuery(input.rawQuery ?? "")),
     typ: "service",
@@ -98,6 +112,7 @@ export async function assertedRequest(input: {
   const bytes = input.body === undefined ? "" : JSON.stringify(input.body);
   const idempotencyKey = input.idempotency ? randomUUID() : undefined;
   const rawQuery = canonicalQuery(input.rawQuery ?? "");
+  const nextSubmissionSession = nextSubmissionSessionFromRecord(input.headers);
   const assertion = serviceAssertion({
     keyBase64: input.keyBase64,
     issuer: input.issuer,
@@ -108,6 +123,7 @@ export async function assertedRequest(input: {
     body: bytes,
     contentType: "application/json",
     ...(idempotencyKey ? { idempotencyKey } : {}),
+    ...(nextSubmissionSession ? { nextSubmissionSession } : {}),
   });
   const response = await input.fetch(
     `${input.baseUrl.replace(/\/$/, "")}${input.path}${rawQuery ? `?${rawQuery}` : ""}`,
@@ -156,6 +172,16 @@ export function serviceAssertionFetch(input: {
     const url = new URL(request.url);
     const body = new Uint8Array(await request.clone().arrayBuffer());
     const idempotencyKey = request.headers.get("idempotency-key") ?? undefined;
+    const requestNextSubmissionSession = nextSubmissionSessionFromHeaders(
+      request.headers,
+    );
+    const additionalNextSubmissionSession = nextSubmissionSessionFromRecord(
+      input.additionalHeaders,
+    );
+    if (requestNextSubmissionSession && additionalNextSubmissionSession)
+      throw new Error("duplicate next submission session header");
+    const nextSubmissionSession =
+      requestNextSubmissionSession ?? additionalNextSubmissionSession;
     const assertion = serviceAssertion({
       keyBase64: input.keyBase64,
       issuer: input.issuer,
@@ -166,6 +192,7 @@ export function serviceAssertionFetch(input: {
       body,
       contentType: request.headers.get("content-type") ?? "",
       ...(idempotencyKey ? { idempotencyKey } : {}),
+      ...(nextSubmissionSession ? { nextSubmissionSession } : {}),
     });
     const headers = new Headers(request.headers);
     headers.set("x-gurine-service-assertion", assertion);
@@ -174,6 +201,31 @@ export function serviceAssertionFetch(input: {
       headers.set(name, value);
     return input.fetch(new Request(request, { headers }));
   };
+}
+
+function nextSubmissionSessionFromHeaders(
+  headers: Headers,
+): string | undefined {
+  const value = headers.get(NEXT_SUBMISSION_SESSION_HEADER);
+  return value === null ? undefined : validNextSubmissionSession(value);
+}
+
+function nextSubmissionSessionFromRecord(
+  headers: Record<string, string> | undefined,
+): string | undefined {
+  const matches = Object.entries(headers ?? {}).filter(
+    ([name]) => name.toLowerCase() === NEXT_SUBMISSION_SESSION_HEADER,
+  );
+  if (matches.length > 1)
+    throw new Error("duplicate next submission session header");
+  const value = matches[0]?.[1];
+  return value === undefined ? undefined : validNextSubmissionSession(value);
+}
+
+function validNextSubmissionSession(value: string): string {
+  if (!SUBMISSION_SESSION_TOKEN.test(value))
+    throw new Error("next submission session header is invalid");
+  return value;
 }
 
 function canonicalQuery(raw: string): string {

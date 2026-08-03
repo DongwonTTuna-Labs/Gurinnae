@@ -68,6 +68,50 @@ describe("projection value presentation", () => {
     expect(safeProjectionValue({ token: "redacted" })).toBeNull();
   });
 
+  it("keeps a public status and its legal notice before bounded truncation", () => {
+    const value = safeProjectionValue({
+      slug: "case-1",
+      title: "공개 사건",
+      summary: "사건 요약",
+      revision: 3,
+      updatedAt: "2026-07-30T00:00:00Z",
+      href: "/cases/case-1",
+      publicState: "PUBLISHED_ANOMALY",
+      nonConclusion:
+        "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+    });
+    if (!value || typeof value !== "object" || value.kind !== "record")
+      throw new Error("record projection expected");
+    expect(value.entries.map((entry) => entry.name).slice(0, 2)).toEqual([
+      "publicState",
+      "nonConclusion",
+    ]);
+  });
+
+  it("keeps the complete home-correction row beside its legal notice", () => {
+    const value = safeProjectionValue({
+      id: "correction-1",
+      sourceRevision: 1,
+      targetRevision: 2,
+      summary: "계약 기간 표기 정정",
+      reason: "종료일을 원문 계약서 기준으로 바로잡았습니다.",
+      publicState: "CORRECTED",
+      nonConclusion: "정정 시각과 영향을 아래 기록에서 확인할 수 있습니다.",
+      publishedAt: "2026-07-30T00:00:00Z",
+      href: "/corrections/correction-1",
+    });
+    if (!value || typeof value !== "object" || value.kind !== "record")
+      throw new Error("record projection expected");
+    expect(value.entries.map((entry) => entry.name)).toEqual([
+      "publicState",
+      "nonConclusion",
+      "summary",
+      "reason",
+      "id",
+      "publishedAt",
+    ]);
+  });
+
   it("selects one authority status by explicit priority", () => {
     expect(
       authoritySectionStatus({

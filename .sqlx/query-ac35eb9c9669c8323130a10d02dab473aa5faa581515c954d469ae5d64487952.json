@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT to_jsonb(editorial.materialize_response_submission_v2( ROW($1::uuid,$2::char(64),$3::uuid,$4::uuid,$5::bigint, $6::char(64),$7::char(64),$8::bigint,$9::char(64),$10::timestamptz )::editorial.response_submission_intake_materialize_v1, NULL::uuid,$11::char(64),$12::char(64) )) AS \"receipt!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "receipt!",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Bpchar",
+        "Bpchar",
+        "Int8",
+        "Bpchar",
+        "Timestamptz",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ac35eb9c9669c8323130a10d02dab473aa5faa581515c954d469ae5d64487952"
+}

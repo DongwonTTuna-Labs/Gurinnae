@@ -147,10 +147,22 @@ fn service_error_contract(error: &service::ServiceError) -> (&'static str, u16) 
         service::ServiceError::VersionConflict => ("VERSION_CONFLICT", 409),
         service::ServiceError::InvalidStateTransition => ("INVALID_STATE_TRANSITION", 409),
         service::ServiceError::PreconditionFailed => ("PRECONDITION_FAILED", 422),
+        service::ServiceError::LegalHoldActive => ("LEGAL_HOLD_ACTIVE", 423),
+        service::ServiceError::LegalHoldTargetUnsupported => ("LEGAL_HOLD_TARGET_UNSUPPORTED", 422),
+        service::ServiceError::IdentityProofInvalid => ("IDENTITY_PROOF_INVALID", 403),
+        service::ServiceError::PrivacyScopeInvalid => ("PRIVACY_SCOPE_INVALID", 422),
+        service::ServiceError::PrivacyCorrectionTargetUnsupported => {
+            ("PRIVACY_CORRECTION_TARGET_UNSUPPORTED", 422)
+        }
+        service::ServiceError::RetentionVersionConflict => ("RETENTION_VERSION_CONFLICT", 409),
+        service::ServiceError::RetentionStateInvalid => ("RETENTION_STATE_INVALID", 409),
+        service::ServiceError::BusinessCalendarStale => ("BUSINESS_CALENDAR_STALE", 409),
+        service::ServiceError::DependencyUnavailable => ("DEPENDENCY_UNAVAILABLE", 503),
         service::ServiceError::CapabilityDenied => ("CAPABILITY_DENIED", 403),
+        service::ServiceError::StepUpRequired => ("STEP_UP_REQUIRED", 403),
         service::ServiceError::ProposalRequired => ("ACTION_PROPOSAL_REQUIRED", 409),
-        service::ServiceError::IdempotencyConflict => ("IDEMPOTENCY_REQUEST_CONFLICT", 409),
-        service::ServiceError::Persistence => ("DEPENDENCY_UNAVAILABLE", 503),
+        service::ServiceError::IdempotencyConflict => ("IDEMPOTENCY_CONFLICT", 409),
+        service::ServiceError::Persistence => ("INTERNAL_ERROR", 500),
     }
 }
 
@@ -165,6 +177,8 @@ async fn authorize(
         .get("x-gurine-actor-assertion")
         .and_then(|value| value.to_str().ok())
         .ok_or_else(|| problem("ACTOR_ASSERTION_REQUIRED", 401))?;
+    let next_submission_session =
+        next_submission_session_header(request).map_err(assertion_problem)?;
     let bound_request = BoundRequest {
         method: request.method().as_str(),
         path: request.path(),
@@ -178,16 +192,17 @@ async fn authorize(
             .headers()
             .get("idempotency-key")
             .and_then(|value| value.to_str().ok()),
+        next_submission_session,
     };
-    let assurance = effective_assurance(operation, body);
+    let authorization = effective_authorization(operation, body);
     let claims = verify_claims(
         token,
         &state.assertion_keys,
         &bound_request,
         ActorExpectation {
             operation: operation.id,
-            capability: operation.capability,
-            assurance,
+            capability: authorization.capability,
+            assurance: authorization.assurance,
             now: OffsetDateTime::now_utc().unix_timestamp(),
         },
     )
@@ -212,12 +227,78 @@ async fn authorize(
     Ok(claims)
 }
 
-fn effective_assurance(operation: &OperationSpec, body: &[u8]) -> &'static str {
+fn next_submission_session_header(request: &HttpRequest) -> Result<Option<&str>, AssertionError> {
+    let mut values = request
+        .headers()
+        .get_all("x-gurine-next-submission-session");
+    let Some(value) = values.next() else {
+        return Ok(None);
+    };
+    if values.next().is_some() {
+        return Err(AssertionError::RequestMismatch);
+    }
+    let value = value
+        .to_str()
+        .map_err(|_| AssertionError::RequestMismatch)?;
+    if value.len() != 43
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+    {
+        return Err(AssertionError::RequestMismatch);
+    }
+    Ok(Some(value))
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct EffectiveAuthorization {
+    capability: &'static str,
+    assurance: &'static str,
+}
+
+fn effective_authorization(operation: &OperationSpec, body: &[u8]) -> EffectiveAuthorization {
+    if operation.id == "submitReview" {
+        let Ok(payload) = serde_json::from_slice::<Value>(body) else {
+            return EffectiveAuthorization {
+                capability: "review.legal",
+                assurance: "STEP_UP",
+            };
+        };
+        let Some(criteria) = payload.get("criteria").and_then(Value::as_object) else {
+            return EffectiveAuthorization {
+                capability: "review.legal",
+                assurance: "STEP_UP",
+            };
+        };
+        return if criteria.contains_key("namedIndividualOverride") {
+            EffectiveAuthorization {
+                capability: "review.legal",
+                assurance: "STEP_UP",
+            }
+        } else {
+            let assurance = match payload.get("decision").and_then(Value::as_str) {
+                Some("reject" | "REJECT" | "changes_required" | "CHANGES_REQUIRED") => {
+                    "ACTIVE_SESSION"
+                }
+                Some("approve" | "APPROVE") | Some(_) | None => "STEP_UP",
+            };
+            EffectiveAuthorization {
+                capability: "review.editorial",
+                assurance,
+            }
+        };
+    }
     if operation.assurance_level != "conditional-by-action-and-decision" {
-        return operation.assurance_level;
+        return EffectiveAuthorization {
+            capability: operation.capability,
+            assurance: operation.assurance_level,
+        };
     }
     let Ok(payload) = serde_json::from_slice::<Value>(body) else {
-        return "ACTIVE_SESSION";
+        return EffectiveAuthorization {
+            capability: operation.capability,
+            assurance: "ACTIVE_SESSION",
+        };
     };
     let action_kind = payload.get("actionKind").and_then(Value::as_str);
     let decision_kind = payload
@@ -226,9 +307,12 @@ fn effective_assurance(operation: &OperationSpec, body: &[u8]) -> &'static str {
         .and_then(|decision| decision.get("kind"))
         .and_then(Value::as_str);
     if decision_kind != Some("APPROVE") {
-        return "ACTIVE_SESSION";
+        return EffectiveAuthorization {
+            capability: operation.capability,
+            assurance: "ACTIVE_SESSION",
+        };
     }
-    match action_kind {
+    let assurance = match action_kind {
         Some("HYPOTHESIS" | "CAPABILITY_ACTIVATION" | "COMMERCIAL_CONTROL") => "STEP_UP",
         Some("PROVIDER_CONTROL") => {
             match payload.get("providerOperationId").and_then(Value::as_str) {
@@ -244,6 +328,10 @@ fn effective_assurance(operation: &OperationSpec, body: &[u8]) -> &'static str {
             }
         }
         _ => "ACTIVE_SESSION",
+    };
+    EffectiveAuthorization {
+        capability: operation.capability,
+        assurance,
     }
 }
 
@@ -299,11 +387,53 @@ mod tests {
         response_json: "{}",
     };
 
+    const NEXT_SESSION: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    #[test]
+    fn unsigned_next_submission_session_reaches_actor_rejection() {
+        let request = actix_test::TestRequest::post()
+            .uri("/v1/internal/commands/publish-case")
+            .insert_header(("x-gurine-next-submission-session", NEXT_SESSION))
+            .to_http_request();
+        assert_eq!(
+            next_submission_session_header(&request),
+            Ok(Some(NEXT_SESSION))
+        );
+    }
+
+    #[test]
+    fn duplicate_next_submission_session_is_rejected() {
+        let request = actix_test::TestRequest::post()
+            .uri("/v1/internal/commands/publish-case")
+            .append_header(("x-gurine-next-submission-session", NEXT_SESSION))
+            .append_header((
+                "x-gurine-next-submission-session",
+                "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+            ))
+            .to_http_request();
+        assert_eq!(
+            next_submission_session_header(&request),
+            Err(AssertionError::RequestMismatch)
+        );
+    }
+
     #[test]
     fn proposal_required_error_uses_the_closed_problem_contract() {
         assert_eq!(
             service_error_contract(&service::ServiceError::ProposalRequired),
             ("ACTION_PROPOSAL_REQUIRED", 409)
+        );
+    }
+
+    #[test]
+    fn privacy_dependency_error_does_not_reclassify_generic_persistence_failures() {
+        assert_eq!(
+            service_error_contract(&service::ServiceError::DependencyUnavailable),
+            ("DEPENDENCY_UNAVAILABLE", 503)
+        );
+        assert_eq!(
+            service_error_contract(&service::ServiceError::Persistence),
+            ("INTERNAL_ERROR", 500)
         );
     }
 
@@ -366,7 +496,7 @@ mod tests {
                 r#"{{"actionKind":"PROVIDER_CONTROL","providerOperationId":"{provider_operation_id}","decision":{{"kind":"APPROVE"}}}}"#
             );
             assert_eq!(
-                effective_assurance(&CONDITIONAL_OPERATION, body.as_bytes()),
+                effective_authorization(&CONDITIONAL_OPERATION, body.as_bytes()).assurance,
                 expected,
                 "wrong assurance for {provider_operation_id}"
             );
@@ -380,7 +510,7 @@ mod tests {
             br#"{"actionKind":"PROVIDER_CONTROL","providerOperationId":"futureProviderCommand","decision":{"kind":"APPROVE"}}"#.as_slice(),
         ] {
             assert_eq!(
-                effective_assurance(&CONDITIONAL_OPERATION, body),
+                effective_authorization(&CONDITIONAL_OPERATION, body).assurance,
                 "STEP_UP"
             );
         }
@@ -393,10 +523,59 @@ mod tests {
                 r#"{{"actionKind":"PROVIDER_CONTROL","providerOperationId":"upgradeProviderModel","decision":{{"kind":"{decision}"}}}}"#
             );
             assert_eq!(
-                effective_assurance(&CONDITIONAL_OPERATION, body.as_bytes()),
+                effective_authorization(&CONDITIONAL_OPERATION, body.as_bytes()).assurance,
                 "ACTIVE_SESSION",
                 "wrong assurance for {decision}"
             );
         }
     }
+
+    #[test]
+    fn named_person_review_selects_capability_and_assurance_independently()
+    -> Result<(), &'static str> {
+        let operation = OPERATIONS
+            .iter()
+            .find(|operation| operation.id == "submitReview")
+            .ok_or("submitReview operation missing")?;
+        for body in [
+            br#"{"decision":"approve","criteria":{"namedIndividualOverride":{}}}"#.as_slice(),
+            br#"{"decision":"APPROVE","criteria":{"namedIndividualOverride":null}}"#.as_slice(),
+            br#"{}"#.as_slice(),
+            b"not-json".as_slice(),
+        ] {
+            assert_eq!(
+                effective_authorization(operation, body),
+                EffectiveAuthorization {
+                    capability: "review.legal",
+                    assurance: "STEP_UP",
+                }
+            );
+        }
+        for body in [br#"{"decision":"approve","criteria":{}}"#.as_slice()] {
+            assert_eq!(
+                effective_authorization(operation, body),
+                EffectiveAuthorization {
+                    capability: "review.editorial",
+                    assurance: "STEP_UP",
+                }
+            );
+        }
+        for body in [
+            br#"{"decision":"reject","criteria":{}}"#.as_slice(),
+            br#"{"decision":"changes_required","criteria":{}}"#.as_slice(),
+        ] {
+            assert_eq!(
+                effective_authorization(operation, body),
+                EffectiveAuthorization {
+                    capability: "review.editorial",
+                    assurance: "ACTIVE_SESSION",
+                }
+            );
+        }
+        Ok(())
+    }
 }
+
+#[cfg(test)]
+#[path = "error_contract_tests.rs"]
+mod error_contract_tests;

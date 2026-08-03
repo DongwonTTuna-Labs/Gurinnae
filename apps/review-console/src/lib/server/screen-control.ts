@@ -18,6 +18,7 @@ import {
   stringExtension,
   stringValue,
 } from "./screen-helpers";
+import { submitReviewAuthorization } from "./screen-review-authorization";
 import type { ElevatedAuthorization } from "./screen-types";
 import { identityServiceFetch } from "./service-assertion";
 export async function controlRequest(
@@ -34,7 +35,12 @@ export async function controlRequest(
 ) {
   const session = sessionToken(event);
   if (!session) throw new Error("SESSION_NOT_ACTIVE");
+  const reviewAuthorization = submitReviewAuthorization(
+    indexed.operation.operationId,
+    body,
+  );
   const assurance =
+    reviewAuthorization?.assurance ??
     requiredAssuranceLevel ??
     stringExtension(indexed, "x-assurance-level") ??
     "ACTIVE_SESSION";
@@ -74,7 +80,10 @@ export async function controlRequest(
         opaqueSessionToken: session,
         downstreamRequest: binding,
         operationId: indexed.operation.operationId,
-        requiredCapability: stringExtension(indexed, "x-capability") ?? "",
+        requiredCapability:
+          reviewAuthorization?.capability ??
+          stringExtension(indexed, "x-capability") ??
+          "",
         actionContext: actionContext ?? null,
         actionDigest: elevated?.actionDigest ?? null,
         stepUpAuthorizationToken: elevated?.stepUpAuthorizationToken ?? null,

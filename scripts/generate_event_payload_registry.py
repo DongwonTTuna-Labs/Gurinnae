@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Generate reviewed forward overrides for closed event payload schemas.
+"""Generate and verify reviewed R6c forward overrides for event payload schemas.
 
-Migration 0030 is historical authority and must remain byte-stable.  When an
-event producer/consumer contract is corrected later, this generator embeds the
-reviewed source schema in the current additive migration instead of rewriting
-that historical registry.
+Migration 0030 remains immutable historical authority, and the two reviewed
+schema corrections below remain pinned to their 0037 forward origin. New event
+keys registered by later migrations are validated through their own physical
+inventory instead of silently retargeting or rewriting this historical region.
 """
 
 from __future__ import annotations
@@ -26,8 +26,8 @@ START = "-- BEGIN GENERATED EVENT PAYLOAD FORWARD OVERRIDES\n"
 END = "-- END GENERATED EVENT PAYLOAD FORWARD OVERRIDES\n"
 
 # Every entry is a separately reviewed forward schema correction.  Keeping this
-# list closed prevents an unrelated catalog edit from silently changing a
-# runtime admission contract in migration 0037.
+# list closed prevents an unrelated catalog edit or later registry addition
+# from silently changing a runtime admission contract in migration 0037.
 ATTACHMENT_SCAN_EVENT_TYPE = "attachment.scan_completed.v1"
 AGENT_RUN_CONTROL_EVENT_TYPE = "agent.run_control_changed.v2"
 FORWARD_OVERRIDE_EVENT_TYPES = (

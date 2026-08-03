@@ -12,8 +12,14 @@ use uuid::Uuid;
 
 use crate::config::Config;
 use crate::consumer_catalog::consumers_for;
+use crate::entity_retention_scheduler::schedule_due_entity_retention_jobs;
 use crate::event_delivery_payload::event_occurred_at;
+use crate::person_retention_scheduler::schedule_due_person_retention_jobs;
 use crate::relay_model_catalog_sync::schedule_relay_model_catalog_sync;
+
+mod cycle_activity;
+
+use cycle_activity::CycleActivity;
 
 #[derive(Debug, Error)]
 pub enum SchedulerError {
@@ -21,6 +27,8 @@ pub enum SchedulerError {
     Initialization,
     #[error("scheduler database operation failed: {0}")]
     Database(#[source] sqlx::Error),
+    #[error("scheduler database contract failed: {0}")]
+    DatabaseContract(&'static str),
     #[error("scheduler event routing failed: {0}")]
     EventRouting(&'static str),
     #[error("scheduler event timestamp formatting failed")]
@@ -64,30 +72,6 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
     }
 }
 
-struct CycleActivity {
-    recovered: u64,
-    source_runs: u64,
-    delivery_polls: u64,
-    snapshot_builds: u64,
-    catalog_syncs: u64,
-    publication_expiry: Option<Uuid>,
-    dispatched: u64,
-    consumed: bool,
-}
-
-impl CycleActivity {
-    fn is_idle(&self) -> bool {
-        self.recovered == 0
-            && self.source_runs == 0
-            && self.delivery_polls == 0
-            && self.snapshot_builds == 0
-            && self.catalog_syncs == 0
-            && self.publication_expiry.is_none()
-            && self.dispatched == 0
-            && !self.consumed
-    }
-}
-
 async fn run_cycle(
     pool: &PgPool,
     event_worker: &Worker,
@@ -106,6 +90,12 @@ async fn run_cycle(
     let snapshot_builds = schedule_detection_snapshot_builds(pool, config.batch_size)
         .await
         .map_err(|error| log_stage_error("schedule_detection_snapshot_builds", error))?;
+    let entity_retention_jobs = schedule_due_entity_retention_jobs(pool, config.batch_size)
+        .await
+        .map_err(|error| log_stage_error("schedule_due_entity_retention_jobs", error))?;
+    let person_retention_jobs = schedule_due_person_retention_jobs(pool, config.batch_size)
+        .await
+        .map_err(|error| log_stage_error("schedule_due_person_retention_jobs", error))?;
     let catalog_syncs = schedule_relay_model_catalog_sync(pool)
         .await
         .map_err(|error| log_stage_error("schedule_relay_model_catalog_sync", error))?;
@@ -115,6 +105,8 @@ async fn run_cycle(
         source_runs,
         delivery_polls,
         snapshot_builds,
+        entity_retention_jobs,
+        person_retention_jobs,
         catalog_syncs,
         publication_expiry,
         dispatched: dispatch_batch(pool, config.batch_size).await?,

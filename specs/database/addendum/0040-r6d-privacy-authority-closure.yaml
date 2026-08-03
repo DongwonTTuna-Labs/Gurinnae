@@ -1,0 +1,737 @@
+schema_version: 1
+proposal_version: 2026-08-02.0040-r6d-privacy-authority-closure.v2
+status: REVIEW_REQUIRED
+scope:
+  migration: 0040_r6d_privacy_authority_closure.sql
+  migration_sha256: 4a985b1be4489fb5c3a43805494e09abb5a80a6f807198ad1dbc0b1c45bcdd0a
+  migration_line_count: 6669
+  pglast_statement_count: 159
+  exact_relations:
+  - ops.privacy_correction_snapshots_v1
+  - ops.privacy_subscription_snapshots_v1
+  - ops.privacy_response_party_name_correction_plan_bindings_v1
+  - ops.privacy_response_party_name_correction_approval_bindings_v1
+  - ops.privacy_response_party_name_correction_completion_receipts_v1
+  exact_new_relation_count: 5
+  relation_delta: 5
+  altered_relations:
+  - editorial.corrections
+  - intake.subscriptions
+  - ops.legal_hold_target_anchors
+  - editorial.legal_holds
+  - editorial.conflict_snapshots
+  - ops.legal_hold_placement_receipts_v2
+  - ops.event_types
+  - editorial.responses
+  compatibility_views: []
+  purpose: R6d privacy authority closure for immutable correction/subscription snapshots, thirteen legal-hold branches, exact
+    RESPONSE /partyName ACCESS-to-COMPLETE correction authority, and users.manage governance authority
+  relation_count_rule: only CREATE TABLE statements count; ALTER, routine, trigger, ACL, and registry statements add zero
+    relkind-r relations
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0039 remain byte-preserved; all physical changes are forward-only in
+    0040
+  transaction_rule: one outer BEGIN is the first pglast statement and terminal COMMIT is the last statement
+  seed_rule: no operating retention policy, identity proof, verified endpoint, correction target, legal hold, or privacy object
+    is seeded
+  legacy_rule: pre-0040 correction and subscription rows remain STAGED_LEGACY; no historical snapshot is invented
+  q1_governance_rule: both entity governance commands require users.manage, STEP_UP, and request-bound human authority; classification
+    independence is human-versus-automation with no second per-command maker-reviewer, while closure actor_id must differ from
+    the exact referenced personhood-classification receipt actor_id
+  q3_verified_endpoint_rule: existing key-ring, HMAC/replay, delivery-receipt, and scoped-session primitives are reusable,
+    but no canonical verifier producer is connected; VERIFIED_ENDPOINT remains zero-write fail-closed
+  q4_correction_rule: RESPONSE /partyName is the sole executable field cell because its current-value digest is derived from the
+    exact ACCESS receipt chain and its fenced workflow owner completes through immutable plan, approval and completion bindings;
+    every other object/path pair is rejected before writes
+  q5_hold_rule: CORRECTION and SUBSCRIPTION use immutable snapshot tuples; COMMUNICATION_ENDPOINT uses the existing (id,version,endpoint_digest);
+    AUDIT_SUBJECT_RECORD is loudly unsupported; privacy-request coverage is evaluated only from a complete materialized OBJECT_SET
+    inventory and otherwise fails closed
+  release_rule: release reuses immutable placement/anchor and existing coverage ownership without invented mutable-head currentness
+  fail_closed_rule: missing, staged-legacy, stale, partial, unsupported, or digest-mismatched authority produces no protected
+    transition
+statement_inventory:
+  create_table_count: 5
+  create_view_count: 0
+  owner_routine_count: 27
+  trigger_count: 12
+  explicit_index_count: 0
+  event_registry_upsert_count: 2
+  pglast_statement_count: 159
+  object_inventory_sha256: c6b00caad12fac5db95cf0747c6ac4024af38510cbe9e6dc953f8f3628d22d80
+  object_inventory_preimage: SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views, altered_relations,
+    routine signatures, trigger statements, and event_types; per-statement hashes and indexes are separate
+existing_relation_changes:
+- relation: editorial.corrections
+  authority: staged-legacy/current snapshot head, zero-or-all CHECK, deferred reciprocal FK, and materializer triggers in
+    0040
+  alter_statement_sha256:
+  - ddee1419508e6edfc2055342c8541aea1afb3ffb7991799b77024329b1854490
+  - 9903d98f7c7757cfcee3cdaa5ed8c21199d8f237383517eb7ba204b562ba8174
+- relation: intake.subscriptions
+  authority: staged-legacy/current snapshot head, zero-or-all CHECK, deferred reciprocal FK, and materializer triggers in
+    0040
+  alter_statement_sha256:
+  - 734a514a9923785ece1cd9a876824366abaf015b6534163912811aa23a0f69d7
+  - 8e8831292317e1543088e06f287215930621e6e2a9807f409b5f0e9e513bf4f5
+- relation: ops.legal_hold_target_anchors
+  authority: thirteen-kind union, exact CORRECTION/SUBSCRIPTION/COMMUNICATION_ENDPOINT FKs, shape, and digest checks in 0040
+  alter_statement_sha256:
+  - 7d35cdd89451a340d518b70aca5a5a493e5bb7692a90a4187f4eb7b71c24c071
+  - 25f50ff599627d9ccf4de74038671e55ff5213c773bec79f79f7642d95e3e471
+  - 052c28bfe79f120aa5eca514d6d70e3b3484dd6d53fa125af370fb2ccab5c351
+- relation: editorial.legal_holds
+  authority: thirteen-kind object-type and case/review-context CHECK replacement in 0040
+  alter_statement_sha256:
+  - 3afbe7eeaf60d7e2894f63323df5dc5c0e43aba4b0b934b82cf890be4b970266
+  - 4f1276280f38e9a415996ecfd3021b3fb12397c366783a66338e9ddbf7916c02
+- relation: editorial.conflict_snapshots
+  authority: thirteen-kind investigation target CHECK replacement in 0040
+  alter_statement_sha256:
+  - 0421700ec62fd273e1ddec0e3ae018bb7465f4aa7f402401a2982511c0205850
+  - 47f48b9a1dd49ee0057303bff53ffe446be52a4b037a64b3c25d2523bfb0b48a
+- relation: ops.legal_hold_placement_receipts_v2
+  authority: thirteen-kind immutable placement-receipt target CHECK and payload guard in 0040
+  alter_statement_sha256:
+  - 6f8002de0e89f5d0844ead9a14869ea6e74409da339cb07e81f1daad43a37a54
+  - 928b8beb11fd2b64e335b269242d29f2c9efa6f91a2df4e6c7fb3fac7bed7849
+- relation: ops.event_types
+  authority: legal_hold.placed.v2 thirteen-branch forward corrective registry upsert plus privacy.response_party_name_corrected.v1
+    completion-event registration in 0040
+  alter_statement_sha256: []
+- relation: editorial.responses
+  authority: guarded party_name mutation surface owned only by the fenced Q4 completion routine
+  alter_statement_sha256: []
+compatibility_views: {}
+view_inventory: []
+tables:
+  ops.privacy_correction_snapshots_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0040_r6d_privacy_authority_closure.sql#CREATE TABLE ops.privacy_correction_snapshots_v1
+    create_statement_sha256: 1d7bb055703f74f0e828ae0831d9faf2e78d0209b2944f8a13b967318859c963
+    columns:
+      snapshot_id:
+        type: uuid
+        nullable: false
+      correction_id:
+        type: uuid
+        nullable: false
+      snapshot_version:
+        type: bigint
+        nullable: false
+      source_correction_version:
+        type: bigint
+        nullable: false
+      case_id:
+        type: uuid
+        nullable: false
+      source_updated_at:
+        type: timestamptz
+        nullable: false
+      snapshot_payload:
+        type: jsonb
+        nullable: false
+      snapshot_canonical:
+        type: bytea
+        nullable: false
+      snapshot_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+      classification:
+        type: text
+        nullable: false
+        default: RESTRICTED_GOVERNANCE
+    primary_key:
+      columns:
+      - snapshot_id
+    unique_constraints:
+    - - snapshot_digest
+    - - correction_id
+      - snapshot_version
+    - &id001
+      - snapshot_id
+      - correction_id
+      - snapshot_version
+      - snapshot_digest
+    foreign_keys:
+    - columns:
+      - correction_id
+      references: editorial.corrections(id)
+      on_delete: RESTRICT
+    - columns:
+      - case_id
+      references: editorial.cases(id)
+      on_delete: RESTRICT
+    reciprocal_head_binding:
+      reciprocal_head_relation: editorial.corrections
+      reciprocal_head_columns:
+      - r6d_privacy_snapshot_id
+      - id
+      - r6d_privacy_snapshot_version
+      - r6d_privacy_snapshot_digest
+      target_relation: ops.privacy_correction_snapshots_v1
+      references: *id001
+      match: SIMPLE
+      deferrable: true
+      initially_deferred: true
+      zero_or_all_check: editorial.corrections.r6d_privacy_snapshot_shape_ck
+    grants:
+      authority: exact REVOKE and SELECT-only GRANT statements; runtime INSERT is trigger-owner only
+    rls:
+      enabled: false
+      forced: false
+      reason: internal immutable relation closed by ACL, append-owner GUC, and immutable trigger
+    retention:
+      authority: immutable hold anchor for the parent lifecycle; 0040 invents no operating schedule
+    repository_roundtrip:
+      authority: DB materializer appends one canonical digest-bound row per post-0040 parent write; plaintext-bearing fields
+        are digest-only
+    alter_statement_sha256:
+    - 79a621bcf349f6342a7556a160acb476ac485115d09f95442e899c7328434e7f
+  ops.privacy_subscription_snapshots_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0040_r6d_privacy_authority_closure.sql#CREATE TABLE ops.privacy_subscription_snapshots_v1
+    create_statement_sha256: 96c66b5d7337a4bcbd5ee74d366cc0a49738db247c90399e53b41deeb3d5011e
+    columns:
+      snapshot_id:
+        type: uuid
+        nullable: false
+      subscription_id:
+        type: uuid
+        nullable: false
+      snapshot_version:
+        type: bigint
+        nullable: false
+      source_updated_at:
+        type: timestamptz
+        nullable: false
+      snapshot_payload:
+        type: jsonb
+        nullable: false
+      snapshot_canonical:
+        type: bytea
+        nullable: false
+      snapshot_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+      classification:
+        type: text
+        nullable: false
+        default: RESTRICTED_GOVERNANCE
+    primary_key:
+      columns:
+      - snapshot_id
+    unique_constraints:
+    - - snapshot_digest
+    - - subscription_id
+      - snapshot_version
+    - &id002
+      - snapshot_id
+      - subscription_id
+      - snapshot_version
+      - snapshot_digest
+    foreign_keys:
+    - columns:
+      - subscription_id
+      references: intake.subscriptions(id)
+      on_delete: RESTRICT
+    reciprocal_head_binding:
+      reciprocal_head_relation: intake.subscriptions
+      reciprocal_head_columns:
+      - r6d_privacy_snapshot_id
+      - id
+      - r6d_privacy_snapshot_version
+      - r6d_privacy_snapshot_digest
+      target_relation: ops.privacy_subscription_snapshots_v1
+      references: *id002
+      match: SIMPLE
+      deferrable: true
+      initially_deferred: true
+      zero_or_all_check: intake.subscriptions.r6d_privacy_snapshot_shape_ck
+    grants:
+      authority: exact REVOKE and SELECT-only GRANT statements; runtime INSERT is trigger-owner only
+    rls:
+      enabled: false
+      forced: false
+      reason: internal immutable relation closed by ACL, append-owner GUC, and immutable trigger
+    retention:
+      authority: immutable hold anchor for the parent lifecycle; 0040 invents no operating schedule
+    repository_roundtrip:
+      authority: DB materializer appends one canonical digest-bound row per post-0040 parent write; plaintext-bearing fields
+        are digest-only
+    alter_statement_sha256:
+    - 749bee9b5be4ede5473910a372a97d5b611866404c6966cfdcf30185a4744fc4
+  ops.privacy_response_party_name_correction_plan_bindings_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0040_r6d_privacy_authority_closure.sql#CREATE TABLE ops.privacy_response_party_name_correction_plan_bindings_v1
+    create_statement_sha256: 1674b74bf346f244cd3cf57c9794d0fd577784fbadd0ae7d75ccf1c2c46f0309
+    columns:
+      correction_plan_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      plan_version: {type: bigint, nullable: false}
+      plan_digest: {type: 'char(64)', nullable: false}
+      scope_inventory_id: {type: uuid, nullable: false}
+      scope_item_digest: {type: 'char(64)', nullable: false}
+      response_id: {type: uuid, nullable: false}
+      expected_response_version: {type: bigint, nullable: false}
+      expected_current_value_digest: {type: 'char(64)', nullable: false}
+      access_projection_digest: {type: 'char(64)', nullable: false}
+      privacy_identity_proof_receipt_id: {type: uuid, nullable: false}
+      privacy_identity_proof_receipt_digest: {type: 'char(64)', nullable: false}
+      response_submission_receipt_id: {type: uuid, nullable: false}
+      response_submission_receipt_digest: {type: 'char(64)', nullable: false}
+      response_origin_receipt_id: {type: uuid, nullable: false}
+      response_origin_receipt_digest: {type: 'char(64)', nullable: false}
+      source_response_request_id: {type: uuid, nullable: false}
+      binding_payload: {type: jsonb, nullable: false}
+      binding_canonical: {type: bytea, nullable: false}
+      binding_digest: {type: 'char(64)', nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key: {columns: [correction_plan_id]}
+    unique_constraints:
+      - {columns: [plan_digest]}
+      - {columns: [binding_digest]}
+      - {columns: [privacy_request_id, plan_version]}
+      - {columns: [correction_plan_id, binding_digest]}
+    foreign_keys:
+      - {columns: [correction_plan_id], references: 'ops.privacy_correction_plans_v1(correction_plan_id)', on_delete: RESTRICT}
+      - {columns: [privacy_request_id], references: 'ops.privacy_requests_v2(id)', on_delete: RESTRICT}
+      - {columns: [scope_inventory_id], references: 'ops.privacy_request_scope_inventories_v1(scope_inventory_id)', on_delete: RESTRICT}
+      - {columns: [response_id], references: 'editorial.responses(id)', on_delete: RESTRICT}
+      - {columns: [response_submission_receipt_id], references: 'intake.response_submission_receipts_v3(receipt_id)', on_delete: RESTRICT}
+      - {columns: [response_origin_receipt_id], references: 'editorial.response_submission_origin_receipts_v2(receipt_id)', on_delete: RESTRICT}
+      - {columns: [source_response_request_id], references: 'editorial.response_requests(id)', on_delete: RESTRICT}
+    grants:
+      gurine_auditor: [SELECT]
+      runtime_mutation: owner-routine-only; no direct runtime relation privilege
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal authority relation closed by ACL and reject-mutation trigger
+    retention:
+      authority: immutable child of the privacy correction plan and request authority; deletion is forbidden while either parent exists
+    repository_roundtrip:
+      authority: createPrivacyCorrectionPlan appends one exact ACCESS-derived digest-only binding; direct update and delete are rejected
+    alter_statement_sha256:
+      - 393791aa3e5d471d2433c4bdabe70fa33c2f240784391e7b0c6cfd330bc5182f
+  ops.privacy_response_party_name_correction_approval_bindings_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0040_r6d_privacy_authority_closure.sql#CREATE TABLE ops.privacy_response_party_name_correction_approval_bindings_v1
+    create_statement_sha256: 85c8b635c55481d58345d058c85233be745a058e5a349ff76e4533870bd45b56
+    columns:
+      approval_binding_id: {type: uuid, nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      request_decision_version: {type: bigint, nullable: false}
+      correction_plan_id: {type: uuid, nullable: false}
+      plan_version: {type: bigint, nullable: false}
+      plan_digest: {type: 'char(64)', nullable: false}
+      plan_binding_digest: {type: 'char(64)', nullable: false}
+      response_id: {type: uuid, nullable: false}
+      expected_response_version: {type: bigint, nullable: false}
+      expected_current_value_digest: {type: 'char(64)', nullable: false}
+      access_projection_digest: {type: 'char(64)', nullable: false}
+      privacy_identity_proof_receipt_id: {type: uuid, nullable: false}
+      privacy_identity_proof_receipt_digest: {type: 'char(64)', nullable: false}
+      response_submission_receipt_id: {type: uuid, nullable: false}
+      response_submission_receipt_digest: {type: 'char(64)', nullable: false}
+      response_origin_receipt_id: {type: uuid, nullable: false}
+      response_origin_receipt_digest: {type: 'char(64)', nullable: false}
+      hold_coverage_digest: {type: 'char(64)', nullable: false}
+      transition_receipt_id: {type: uuid, nullable: false}
+      transition_receipt_digest: {type: 'char(64)', nullable: false}
+      job_id: {type: uuid, nullable: false}
+      job_payload_digest: {type: 'char(64)', nullable: false}
+      binding_payload: {type: jsonb, nullable: false}
+      binding_canonical: {type: bytea, nullable: false}
+      binding_digest: {type: 'char(64)', nullable: false}
+      approved_at: {type: timestamptz, nullable: false}
+    primary_key: {columns: [approval_binding_id]}
+    unique_constraints:
+      - {columns: [correction_plan_id]}
+      - {columns: [transition_receipt_id]}
+      - {columns: [transition_receipt_digest]}
+      - {columns: [job_id]}
+      - {columns: [job_payload_digest]}
+      - {columns: [binding_digest]}
+      - {columns: [privacy_request_id, request_decision_version]}
+    foreign_keys:
+      - {columns: [privacy_request_id], references: 'ops.privacy_requests_v2(id)', on_delete: RESTRICT}
+      - {columns: [response_id], references: 'editorial.responses(id)', on_delete: RESTRICT}
+      - {columns: [job_id], references: 'ops.jobs(id)', on_delete: RESTRICT}
+      - {name: privacy_response_party_name_approval_plan_fk, columns: [correction_plan_id, plan_binding_digest], references: 'ops.privacy_response_party_name_correction_plan_bindings_v1(correction_plan_id,binding_digest)', on_delete: RESTRICT}
+      - {name: privacy_response_party_name_approval_transition_fk, columns: [transition_receipt_id, privacy_request_id], references: 'ops.privacy_request_transition_receipts_v2(transition_receipt_id,privacy_request_id)', on_delete: RESTRICT, deferrable: true, initially_deferred: true}
+    grants:
+      gurine_auditor: [SELECT]
+      runtime_mutation: owner-routine-only; no direct runtime relation privilege
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal authority relation closed by ACL and reject-mutation trigger
+    retention:
+      authority: immutable approval child retained with its privacy request, plan, transition receipt and dedicated job
+    repository_roundtrip:
+      authority: APPROVE appends exactly one digest-only job and authority binding; replay returns the existing transition without a second row
+    alter_statement_sha256:
+      - 4e27d191cf0dcddcdd70354c341f12f98e7a07449915c1f09532b6e42f874588
+  ops.privacy_response_party_name_correction_completion_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0040_r6d_privacy_authority_closure.sql#CREATE TABLE ops.privacy_response_party_name_correction_completion_receipts_v1
+    create_statement_sha256: 8028ff1fa73d6bce8bb425c25ca463ae3c7b90da4f652df42e122a76cf793b26
+    columns:
+      completion_receipt_id: {type: uuid, nullable: false}
+      job_id: {type: uuid, nullable: false}
+      job_payload_digest: {type: 'char(64)', nullable: false}
+      approval_binding_id: {type: uuid, nullable: false}
+      approval_binding_digest: {type: 'char(64)', nullable: false}
+      privacy_request_id: {type: uuid, nullable: false}
+      approval_decision_version: {type: bigint, nullable: false}
+      completion_decision_version: {type: bigint, nullable: false}
+      correction_plan_id: {type: uuid, nullable: false}
+      plan_version: {type: bigint, nullable: false}
+      plan_digest: {type: 'char(64)', nullable: false}
+      response_id: {type: uuid, nullable: false}
+      prior_response_version: {type: bigint, nullable: false}
+      response_version: {type: bigint, nullable: false}
+      prior_party_name_digest: {type: 'char(64)', nullable: false}
+      party_name_digest: {type: 'char(64)', nullable: false}
+      hold_coverage_digest: {type: 'char(64)', nullable: false}
+      approval_transition_receipt_id: {type: uuid, nullable: false}
+      approval_transition_receipt_digest: {type: 'char(64)', nullable: false}
+      audit_event_id: {type: uuid, nullable: false}
+      outbox_event_id: {type: uuid, nullable: false}
+      outbox_event_digest: {type: 'char(64)', nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: 'char(64)', nullable: false}
+      completed_at: {type: timestamptz, nullable: false}
+    primary_key: {columns: [completion_receipt_id]}
+    unique_constraints:
+      - {columns: [job_id]}
+      - {columns: [approval_binding_id]}
+      - {columns: [privacy_request_id]}
+      - {columns: [correction_plan_id]}
+      - {columns: [approval_transition_receipt_id]}
+      - {columns: [approval_transition_receipt_digest]}
+      - {columns: [audit_event_id]}
+      - {columns: [outbox_event_id]}
+      - {columns: [outbox_event_digest]}
+      - {columns: [receipt_digest]}
+    foreign_keys:
+      - {columns: [job_id], references: 'ops.jobs(id)', on_delete: RESTRICT}
+      - {columns: [approval_binding_id], references: 'ops.privacy_response_party_name_correction_approval_bindings_v1(approval_binding_id)', on_delete: RESTRICT}
+      - {columns: [privacy_request_id], references: 'ops.privacy_requests_v2(id)', on_delete: RESTRICT}
+      - {columns: [correction_plan_id], references: 'ops.privacy_correction_plans_v1(correction_plan_id)', on_delete: RESTRICT}
+      - {columns: [response_id], references: 'editorial.responses(id)', on_delete: RESTRICT}
+      - {columns: [audit_event_id], references: 'ops.audit_events(id)', on_delete: RESTRICT}
+      - {columns: [outbox_event_id], references: 'ops.outbox(id)', on_delete: RESTRICT}
+      - {name: privacy_response_party_name_completion_transition_fk, columns: [approval_transition_receipt_id, privacy_request_id], references: 'ops.privacy_request_transition_receipts_v2(transition_receipt_id,privacy_request_id)', on_delete: RESTRICT}
+    grants:
+      gurine_auditor: [SELECT]
+      runtime_mutation: owner-routine-only; no direct runtime relation privilege
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal receipt relation closed by ACL and reject-mutation trigger
+    retention:
+      authority: immutable completion proof retained with the bound privacy request, response, approval, audit and outbox records
+    repository_roundtrip:
+      authority: the fenced worker apply appends one exact twenty-two-key digest-only receipt; exact replay performs zero writes
+    alter_statement_sha256:
+      - 9939ea36d46d8b9ee2e4b0da5077aea21593f5017ff476dfa00a848c1f44c2bd
+owner_routines:
+- signature: ops.r6d_privacy_correction_snapshot_payload_v1(p_row editorial.corrections, p_snapshot_id uuid, p_snapshot_version
+    bigint) RETURNS jsonb
+  canonical_ddl_sha256: 4500f608519767f6fea7f9647c2147c7af39dab88d220c0391fcb04f5689ed29
+- signature: ops.r6d_privacy_subscription_snapshot_payload_v1(p_row intake.subscriptions, p_snapshot_id uuid, p_snapshot_version
+    bigint) RETURNS jsonb
+  canonical_ddl_sha256: 16f721703b8c512c05de9a81c7e5e5906b4e6802939ebbdf13cedd31b0387c20
+- signature: ops.prepare_r6d_correction_privacy_snapshot_v1() RETURNS trigger
+  canonical_ddl_sha256: 5169c921b3537efd96d85fe28f9f7fed7071320aff73627f1f182b0049c07df1
+- signature: ops.prepare_r6d_subscription_privacy_snapshot_v1() RETURNS trigger
+  canonical_ddl_sha256: d815cd75ee75ef9be7326634bb038097c1784a07bb8024918d6fac619cd7d9fe
+- signature: ops.guard_r6d_privacy_snapshot_append_v1() RETURNS trigger
+  canonical_ddl_sha256: 82d8c47435c328cb12b43b398beb9e7cbb686811d35bae5f056f6df847495f6a
+- signature: ops.append_r6d_correction_privacy_snapshot_v1() RETURNS trigger
+  canonical_ddl_sha256: fcffd0df47101a6ce5f5d825a913541c303ea741b02bed9a9dad2eb05a64317d
+- signature: ops.append_r6d_subscription_privacy_snapshot_v1() RETURNS trigger
+  canonical_ddl_sha256: 553d376192292c31ccc8ad99794341ade77ecccb345972ccba67df8720e9741b
+- signature: ops.r6d_legal_hold_target_payload_valid_v3(p_kind text, p_target_id uuid, p_target_version bigint, p_target_digest
+    char(64), p_anchor_digest char(64), p_payload jsonb) RETURNS boolean
+  canonical_ddl_sha256: 926c70705a633a82a20b092257f6f908e5f1efc09ad74bffd845b71d23a7b47d
+- signature: ops.place_r6d_privacy_object_legal_hold_v1(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key
+    char(64), p_request_digest char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 607fbfec6dbb82389c07a97545440825e04c63cdb9d28df3d44d2d3bfe44c620
+- signature: ops.place_legal_hold_v2(p_payload jsonb, p_actor_id uuid, p_request_id uuid, p_idempotency_key char(64), p_request_digest
+    char(64)) RETURNS jsonb
+  canonical_ddl_sha256: a743232a0695dafc09fb38dd6c047903e1cc68b0c8e40982e70867e973881728
+- signature: ops.r6d_privacy_request_legal_hold_coverage_v1(p_privacy_request_id uuid, p_at_time timestamptz) RETURNS jsonb
+  canonical_ddl_sha256: 169171e4abdb519a1c06ee1b39a73b1360461fbeae4866be7c3da71444563bd7
+- signature: ops.create_privacy_correction_plan_v1(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 63dbc2b8d17afc9a31c3dbf2408528d83990efbbd0a8c59e1c04558d834313c0
+- signature: ops.apply_control_addendum_command(p_operation_id text, p_payload jsonb, p_actor_id uuid, p_session_id uuid,
+    p_request_id uuid, p_idempotency_key_hash char(64), p_request_digest char(64)) RETURNS TABLE (aggregate_id uuid, aggregate_version
+    bigint, status text, accepted_at timestamptz, response_body jsonb, receipt_digest char(64), audit_event_id uuid, outbox_event_id
+    uuid)
+  canonical_ddl_sha256: febcde918b29bb596267cdb241446e4a2745a1b95c8ad88a981f9ed53fe99717
+- signature: ops.r6d_entity_human_step_up_authority_v1(p_request jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key char(64), p_request_digest char(64), p_at_time timestamptz) RETURNS jsonb
+  canonical_ddl_sha256: 303612e13af1b920659b3fe77f6bc7f132c06cf43cd0eb154df2de224683fa81
+- signature: ops.classify_r6d_entity_personhood_v1(p_request jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key char(64), p_request_digest char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 4c55e0b54e1e8c9615be748abc69d6e0ec71554d478b6403832241f97efaac3c
+- signature: ops.attest_r6d_entity_material_use_closure_v1(p_request jsonb, p_actor_id uuid, p_session_id uuid, p_request_id
+    uuid, p_idempotency_key char(64), p_request_digest char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 2129b8f50826031518e92bab782ac19365c5763b4d9f71ebf5c176be240c08f9
+- signature: ops.read_privacy_response_party_name_access_v1(p_privacy_request_id uuid, p_response_id uuid) RETURNS jsonb
+  canonical_ddl_sha256: 1b785a5e36aa685e7e4836e1b2ade09ed4f44df2478a02317f7c3760a6f85102
+- signature: ops.create_privacy_correction_plan_v1(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 4739d143f66364c738b9db9037d3380fcdd1254bcb8a545806bbf20646f47b9e
+- signature: ops.approve_privacy_response_party_name_correction_v1(p_payload jsonb, p_actor_id uuid, p_session_id uuid,
+    p_request_id uuid, p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 8d01ad4b3f74c89805b309622ec9ebc944cf56674d37b354f6a78ae2e518d22e
+- signature: ops.transition_privacy_request_v2(p_payload jsonb, p_actor_id uuid, p_session_id uuid, p_request_id uuid,
+    p_idempotency_key_sha256 char(64), p_request_sha256 char(64)) RETURNS jsonb
+  canonical_ddl_sha256: ed2a0eefae8d751c68efd8266077df7ae684ffcaa66712b8528f39cbb09fc6e3
+- signature: ops.apply_control_addendum_command(p_operation_id text, p_payload jsonb, p_actor_id uuid, p_session_id uuid,
+    p_request_id uuid, p_idempotency_key_hash char(64), p_request_digest char(64)) RETURNS TABLE (aggregate_id uuid, aggregate_version
+    bigint, status text, accepted_at timestamptz, response_body jsonb, receipt_digest char(64), audit_event_id uuid, outbox_event_id
+    uuid)
+  canonical_ddl_sha256: 27f5ea02a99887fb262bb713ee2f1338ff45d70146f63415726f453d194eb0c4
+- signature: ops.ack_privacy_response_party_name_correction_delegation_v1(p_source_event_id uuid, p_privacy_request_id uuid,
+    p_decision_version bigint, p_transition_receipt_digest char(64), p_delivery_job_id uuid, p_lease_token uuid, p_fencing_token
+    bigint) RETURNS jsonb
+  canonical_ddl_sha256: 4935a4cfe9ebfa010dae83f228a7208eea4e71776887ef210b0d66a4262d8372
+- signature: editorial.guard_response_party_name_correction_v1() RETURNS trigger
+  canonical_ddl_sha256: 1756dc4e0d1112748272592eac2c1fad9b670c9c0c41ff91cdc634ce00392d39
+- signature: ops.load_privacy_response_party_name_correction_job_v1(p_job_id uuid, p_lease_token uuid, p_fencing_token bigint)
+    RETURNS jsonb
+  canonical_ddl_sha256: 2b322724ea258a795410ae710178fe2fd83c03a52ef3671772fc1a85de384883
+- signature: ops.execute_privacy_response_party_name_correction_job_v1(p_job_id uuid, p_lease_token uuid, p_fencing_token
+    bigint, p_party_name text, p_party_name_digest char(64)) RETURNS jsonb
+  canonical_ddl_sha256: 6ae6e20649c7a06d4d6a20fbe0ebd99253c54a93a7df6ba7544e5b7286d5f17a
+- signature: ops.read_privacy_retention_request_workspace_v2(p_request_id uuid) RETURNS jsonb
+  canonical_ddl_sha256: 62d695dfb5065343a985c34104508dd8d5b264d27b2316b6ddc5f12486ea9320
+- signature: ops.get_privacy_request_v2(p_session_sha256 char(64), p_bff_issuer text) RETURNS jsonb
+  canonical_ddl_sha256: f796bed02817f2e7d996feeca6ee44d89bb386db308f0c38530d01c150e667c2
+trigger_inventory:
+- statement: CREATE TRIGGER privacy_correction_snapshots_v1_append_guard BEFORE INSERT ON ops.privacy_correction_snapshots_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.guard_r6d_privacy_snapshot_append_v1()
+  canonical_ddl_sha256: 235ce5c68b0fd9bba29cae00ce8c08806e5ad805bf88bb15ac369f0c0f9b2099
+- statement: CREATE TRIGGER privacy_correction_snapshots_v1_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_correction_snapshots_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 45bb1cd286632a25052c2255d1a255f6554534dc56a92c65bd6b4719259cc14b
+- statement: CREATE TRIGGER privacy_subscription_snapshots_v1_append_guard BEFORE INSERT ON ops.privacy_subscription_snapshots_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.guard_r6d_privacy_snapshot_append_v1()
+  canonical_ddl_sha256: d8f453b8fff335612390dc2f4f6e5e38a209e13cc2dd6d0c26cbf2c578a41c26
+- statement: CREATE TRIGGER privacy_subscription_snapshots_v1_immutable_guard BEFORE DELETE OR UPDATE ON ops.privacy_subscription_snapshots_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 11095d15ad5ec76c478f4c541e26120b21713e436cda4ef89c71346b07ee83c3
+- statement: CREATE TRIGGER zz_corrections_r6d_privacy_snapshot_prepare BEFORE INSERT OR UPDATE ON editorial.corrections FOR
+    EACH ROW EXECUTE PROCEDURE ops.prepare_r6d_correction_privacy_snapshot_v1()
+  canonical_ddl_sha256: ce4ea7312206aca7f74283399273eab63702ed09ce3af07e6d31c2f5e4c6a19d
+- statement: CREATE TRIGGER zz_corrections_r6d_privacy_snapshot_append AFTER INSERT OR UPDATE ON editorial.corrections FOR
+    EACH ROW EXECUTE PROCEDURE ops.append_r6d_correction_privacy_snapshot_v1()
+  canonical_ddl_sha256: 2d3c8560752933aaeabe09d2913089f241e8c0904af8db005e8ea50d82e0a1a5
+- statement: CREATE TRIGGER zz_subscriptions_r6d_privacy_snapshot_prepare BEFORE INSERT OR UPDATE ON intake.subscriptions
+    FOR EACH ROW EXECUTE PROCEDURE ops.prepare_r6d_subscription_privacy_snapshot_v1()
+  canonical_ddl_sha256: ab79a1a5d41387dca7098707a73de3859db54b354f4c73bb3b6c8f4ecf6d5a96
+- statement: CREATE TRIGGER zz_subscriptions_r6d_privacy_snapshot_append AFTER INSERT OR UPDATE ON intake.subscriptions FOR
+    EACH ROW EXECUTE PROCEDURE ops.append_r6d_subscription_privacy_snapshot_v1()
+  canonical_ddl_sha256: 38508e386f26bd07e190740b9cad750fb37e1fd25a5bbc215dfecac50c6e67e6
+- statement: CREATE TRIGGER privacy_response_party_name_plan_bindings_v1_immutable BEFORE DELETE OR UPDATE ON ops.privacy_response_party_name_correction_plan_bindings_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 022d1ef4096cdbdc10704395bd806a97ca2e4afba53a984bf06746ebaeda36f6
+- statement: CREATE TRIGGER privacy_response_party_name_approval_bindings_v1_immutable BEFORE DELETE OR UPDATE ON ops.privacy_response_party_name_correction_approval_bindings_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: a01b13f4dd5aea8a832a349a13c6e607beca1f80b2c2447305d8daca7ae8d92e
+- statement: CREATE TRIGGER editorial_responses_party_name_correction_v1_guard BEFORE UPDATE OF party_name ON editorial.responses
+    FOR EACH ROW EXECUTE PROCEDURE editorial.guard_response_party_name_correction_v1()
+  canonical_ddl_sha256: d664bdb31bea2b4f2048aef7f7c90cc242a97cf3c9082eeda96ee5807ae6cb1b
+- statement: CREATE TRIGGER privacy_response_party_name_completion_receipts_v1_immutable BEFORE DELETE OR UPDATE ON ops.privacy_response_party_name_correction_completion_receipts_v1
+    FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 961a11b472e6aff9e31f6ba9ddf098741010dbba9998e3a486b6e31fd929c45b
+index_inventory: []
+event_registry_contract:
+  statement: ordered legal_hold.placed.v2 corrective upsert followed by privacy.response_party_name_corrected.v1 registration;
+    no decision-marker block
+  exact_upsert_count: 2
+  events_in_order:
+  - event_type: legal_hold.placed.v2
+    category: DOMAIN
+    schema_version: 2
+    payload_schema_uri: payloads/legal_hold_placed_v2.schema.json
+    payload_schema_path: specs/events/payloads/legal_hold_placed_v2.schema.json
+    payload_schema_sha256: 7da326d45b806fd741a7192cf489cd09d3f2aadd9337d88379265ec802ecb21d
+    embedded_json_equivalent: true
+    forward_supersedes:
+      migration: 0038_r6d_legal_hardening.sql
+      event_ordinal: 8
+  - event_type: privacy.response_party_name_corrected.v1
+    category: DOMAIN
+    schema_version: 1
+    payload_schema_uri: payloads/privacy_response_party_name_corrected_v1.schema.json
+    payload_schema_path: specs/events/payloads/privacy_response_party_name_corrected_v1.schema.json
+    payload_schema_sha256: b953dec5df7faa0e40ca251fb88e1d0aa7a53d363736116a327f5250025875b7
+    embedded_json_equivalent: true
+  forward_overrides:
+  - event_type: legal_hold.placed.v2
+    historical_owner: 0038_r6d_legal_hardening.sql
+    current_owner: 0040_r6d_privacy_authority_closure.sql
+    reason: 0040 extends the closed target oneOf from ten to thirteen branches; the 0038 inline payload remains byte-preserved
+      historical authority
+  current_schema_validation_rule: compare the named current schema with latest owner 0040; validate the 0038 inline JSON as
+    its then-effective historical contract rather than rewriting it
+  inherited_emit_dependencies: []
+snapshot_authority:
+  correction_anchor:
+    tuple:
+    - snapshot_id
+    - correction_id
+    - snapshot_version
+    - snapshot_digest
+    parent: editorial.corrections
+    append_owner: ops.append_r6d_correction_privacy_snapshot_v1
+    plaintext_rule: summary, reason, replacement content, triage reason, and resolution reason are digest-only
+  subscription_anchor:
+    tuple:
+    - snapshot_id
+    - subscription_id
+    - snapshot_version
+    - snapshot_digest
+    parent: intake.subscriptions
+    append_owner: ops.append_r6d_subscription_privacy_snapshot_v1
+    plaintext_rule: email, ciphertext, topics, verification token, and management token are digest-only
+  append_rule: BEFORE materializer selects the tuple and defers its named reciprocal FK; AFTER materializer appends one exact
+    immutable row under a transaction-local owner GUC
+privacy_correction_authority:
+  supported_targets:
+  - target_object_type: RESPONSE
+    field_path: /partyName
+    access_projection: ops.read_privacy_response_party_name_access_v1
+    access_projection_keys: 17
+    plan_binding: ops.privacy_response_party_name_correction_plan_bindings_v1
+    approval_binding: ops.privacy_response_party_name_correction_approval_bindings_v1
+    job_type: PRIVACY_RESPONSE_PARTY_NAME_CORRECTION
+    complete_owner: ops.execute_privacy_response_party_name_correction_job_v1
+    completion_receipt: ops.privacy_response_party_name_correction_completion_receipts_v1
+    completion_event: privacy.response_party_name_corrected.v1
+  unsupported_targets:
+    error: PRIVACY_CORRECTION_TARGET_UNSUPPORTED
+    sqlstate: 0A000
+    zero_write: true
+    scope: every object/path pair except exact RESPONSE /partyName
+  forbidden_categories:
+  - procurement facts
+  - detection results
+  - publication decisions
+  - audit records
+  - organization or supplier identity
+  authority_rule: the plan locks the same receipt-to-submission-to-origin-receipt-to-editorial-response chain and digest used
+    by ACCESS; APPROVE creates only its immutable binding, the existing decision event and one dedicated job; only the fenced
+    worker COMPLETE may change party_name and append the redacted completion receipt, audit and event
+  secret_rule: partyName, priorPartyName, requestedValue, ciphertext, encryption key, lease token and job payload are forbidden
+    from public status, event, audit, log, trace, metric and error surfaces
+legal_hold_target_authority:
+  supported_target_kinds:
+  - CASE
+  - PUBLICATION
+  - EVIDENCE
+  - RESPONSE
+  - SOURCE_ASSET
+  - RESEARCH_ARTIFACT
+  - PRIVACY_REQUEST
+  - COMMUNICATION_SUBJECT
+  - SUPPLIER_RETENTION_SNAPSHOT
+  - AGENCY_RETENTION_SNAPSHOT
+  - CORRECTION
+  - SUBSCRIPTION
+  - COMMUNICATION_ENDPOINT
+  new_concrete_branches:
+    CORRECTION: immutable (snapshot_id,correction_id,snapshot_version,snapshot_digest)
+    SUBSCRIPTION: immutable (snapshot_id,subscription_id,snapshot_version,snapshot_digest)
+    COMMUNICATION_ENDPOINT: existing intake.communication_endpoints(id,version,endpoint_digest)
+  unsupported_target:
+    target_kind: AUDIT_SUBJECT_RECORD
+    error: LEGAL_HOLD_TARGET_UNSUPPORTED
+    sqlstate: 0A000
+    zero_write: true
+    reason: no authoritative versioned immutable source relation
+    unlock_condition: authorize a versioned immutable source relation, digest preimage, placement/release anchor, and lifecycle
+      owner
+  event_branch_count: 13
+governance_authority:
+  operations:
+  - classifyEntityPersonhood
+  - attestEntityMaterialUseClosure
+  capability: users.manage
+  assurance_level: STEP_UP
+  independence_required: true
+  per_command_maker_reviewer_required: false
+  classification_independence:
+    comparator: HUMAN_VERSUS_AUTOMATION
+    enforcement: active human user, request-bound assertion, users.manage capability, and exact STEP_UP authorization
+    per_command_maker_reviewer: false
+  closure_independence:
+    comparator: closure p_actor_id differs from referenced personhood classification receipt actor_id
+    database_owner: ops.attest_r6d_entity_material_use_closure_v1
+    error: PRECONDITION_FAILED
+    sqlstate: '55000'
+    database_message: r6d_entity_closure_actor_not_independent
+    zero_write: true
+  excluded_comparators: [entity source producer, represented entity subject, inferred maker-reviewer actor]
+  migration_effect: 0040 replaces the 0039 owners forward-only; sources.operate is not accepted
+verified_endpoint_authority:
+  status: OPEN_FAIL_CLOSED
+  reusable_infrastructure:
+  - crates/auth/src/assertion/service.rs
+  - services/submission-api/src/config.rs
+  - services/submission-api/src/state.rs
+  - services/submission-api/src/service/common.rs
+  - services/submission-api/src/routes/request_binding.rs
+  - services/submission-api/src/routes/idempotency_binding.rs
+  - services/notification-worker/src/notification_typed_delivery_body.rs
+  - db/migrations/0030_v13_submission_session_hardening.sql
+  - db/migrations/0038_r6d_legal_hardening.sql
+  - apps/public-web/src/routes/submission-token-exchange.ts
+  missing_authority:
+  - canonical challenge preimage and persisted verifier kid revision
+  - typed endpoint-verification delivery intent/rendering producer
+  - request-to-verified-endpoint link owner
+  - immutable mailbox-possession producer receipt
+  rule: no new cryptography, synthetic ACTIVE endpoint, or legacy email delivery status is treated as authority
+known_fail_closed_boundaries:
+  staged_legacy_snapshots: rows without an immutable tuple cannot be selected as CORRECTION or SUBSCRIPTION hold targets
+  privacy_correction_effect: every target except exact RESPONSE /partyName returns typed 422 with zero writes; the supported
+    cell mutates only through the fenced completion owner and immutable receipt/audit/event transaction
+  verified_endpoint_identity_proof: reusable primitives alone do not authorize a VERIFIED_ENDPOINT receipt
+  audit_subject_hold: AUDIT_SUBJECT_RECORD returns typed 422 and SQLSTATE 0A000; no UUID/digest is synthesized
+  privacy_scope_inventory: a missing inventory, non-OBJECT_SET selector, zero or noncontiguous items, count mismatch, unsupported
+    object kind, or derivative/backup scope without materialized location authority raises SQLSTATE 55000 instead of returning
+    false coverage
+  d1_independent_reviewer: classification excludes automation without a second human reviewer; closure exact-compares its actor
+    against the referenced classification receipt actor and rejects equality as typed PRECONDITION_FAILED with zero writes
+verification_obligations:
+- pglast parses exactly 159 statements with one BEGIN and one terminal COMMIT
+- exactly five CREATE TABLE relations match scope.exact_relations and no view changes relkind-r count
+- all 27 routines, 12 triggers, 0 indexes, 8 altered relations, and two event upserts reproduce the pglast inventory
+- 0040 embedded legal_hold.placed.v2 and privacy.response_party_name_corrected.v1 equal their named schemas; 0040 is the latest
+  registry owner for both
+- migration_sha256, all canonical statement hashes, and object_inventory_sha256 reproduce from current SQL
+- the three new hold branches use exact anchors and AUDIT_SUBJECT_RECORD rejects before persistence
+- Q4 exposes only RESPONSE /partyName, derives the current digest from the exact ACCESS authority chain, creates one job on
+  APPROVE, and applies one versioned response mutation plus immutable completion receipt, redacted audit and event on COMPLETE
+- both entity governance commands accept only users.manage under STEP_UP request-bound human authority; classification proves
+  human-versus-automation independence without a per-command maker-reviewer, and closure rejects the referenced classifier actor
+  with exact SQLSTATE/message, typed PRECONDITION_FAILED, and zero writes before accepting a distinct human actor
+resolved_decisions:
+- id: D1-INDEPENDENT-REVIEWER-COMPARATOR
+  status: RESOLVED_BY_SUPERVISOR_R6D_D1_FINAL
+  classification_rule: human versus automation is the complete independence comparator; no second maker-reviewer actor
+  closure_rule: closure actor_id must differ from the exact referenced personhood-classification receipt actor_id

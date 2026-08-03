@@ -56,12 +56,13 @@ export function providerAssignment(proposal: ProviderControlProposal) {
 export function providerQuorum(proposal: ProviderControlProposal) {
   const submitted = proposal.state !== "DRAFT";
   const approved = proposal.state === "APPROVED";
+  const requiredSlots = ["PRIMARY_REVIEWER"];
   return {
     planDigest: canonicalJsonSha256({
       actionKind: "PROVIDER_CONTROL",
-      requiredSlots: submitted ? ["PRIMARY_REVIEWER"] : [],
+      requiredSlots,
     }),
-    requiredSlots: submitted ? ["PRIMARY_REVIEWER"] : [],
+    requiredSlots,
     satisfiedSlots: approved ? ["PRIMARY_REVIEWER"] : [],
     blockingSlots: submitted && !approved ? ["PRIMARY_REVIEWER"] : [],
     conflictSnapshotDigest: canonicalJsonSha256({
@@ -147,7 +148,6 @@ export function providerQueueResponse(proposals: ProviderControlProposal[]) {
       sort: "DUE_ASC",
     },
     asOf: now(),
-    nextCursor: "",
     totalApproximate: items.length,
     operationId: "listActionApprovalQueue",
     links: [],
@@ -174,7 +174,6 @@ export function providerProposalDetail(
       pageDigest: canonicalJsonSha256(
         assignment ? [assignment.assignmentId] : [],
       ),
-      nextCursor: "",
       complete: true,
     },
     decisionHistory: {
@@ -182,7 +181,6 @@ export function providerProposalDetail(
       order: "decided-at-asc-decision-id-asc",
       asOf,
       pageDigest: canonicalJsonSha256(decision ? [decision.receiptDigest] : []),
-      nextCursor: "",
       complete: true,
     },
     quorum: providerQuorum(proposal),

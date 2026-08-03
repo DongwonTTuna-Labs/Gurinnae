@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/entity.personhood_classified.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entityKind",
+    "entityId",
+    "classification",
+    "evidenceSourceLocatorDigest",
+    "receiptDigest",
+    "classifiedAt"
+  ],
+  "properties": {
+    "entityKind": { "type": "string", "enum": ["AGENCY", "SUPPLIER"] },
+    "entityId": { "type": "string", "format": "uuid" },
+    "classification": {
+      "type": "string",
+      "enum": ["NATURAL_PERSON", "NOT_NATURAL_PERSON"]
+    },
+    "evidenceSourceLocatorDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "receiptDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "classifiedAt": { "type": "string", "format": "date-time" }
+  }
+}
