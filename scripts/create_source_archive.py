@@ -13,10 +13,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from archive_manifest import (
+    MANIFEST_METADATA,
     source_tree_sha256,
     verify_archive_manifest,
     write_source_archive_manifest,
 )
+from git_authority import AUTHORITY_MANIFEST_FILE, render_authority_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +41,8 @@ EXCLUDED_FILES = {
     ".env.local",
     ".env.production",
     ".env.test",
+    AUTHORITY_MANIFEST_FILE,
+    *MANIFEST_METADATA,
 }
 @dataclass(frozen=True)
 class SourceArchiveCreation:
@@ -128,6 +132,9 @@ def create_source_archive(
         source = temporary_root / "source"
         source.mkdir()
         copy_source(source, root)
+        (source / AUTHORITY_MANIFEST_FILE).write_bytes(
+            render_authority_manifest(root)
+        )
         write_source_archive_manifest(source, "source")
         entries = verify_archive_manifest(source, "source")
         manifest_sha256 = sha256(source / "MANIFEST.sha256")

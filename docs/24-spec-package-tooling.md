@@ -52,19 +52,22 @@ infra/runtime images
 - `make verify-specs`: 현재 `specs/`, frozen tag 핀, migration, acceptance source/design 계약
 - `make verify-codegen`: OpenAPI/client, response, acceptance registry, UI registry 결정성
 - `make build-ui`: UI 빌드 공통 경계
-- `make verify-final`: spec/codegen, source, SQLx, runtime, container, recovery, UI hard gate
+- `make verify-final`: sealed acceptance를 포함한 전체 단일 개발자 hard gate
 - `make verify-acceptance`: sealed acceptance 실행과 독립 evidence 검증
 
-명세 validator는 실제 Rust/Bun/Docker runtime gate를 대신하지 않는다. `verify-final`은
-소스·runtime 체인을 소유하고, sealed acceptance는 `verify-acceptance`에서 별도로 소유한다.
+명세 validator는 실제 Rust/Bun/Docker runtime gate를 대신하지 않는다. `verify-prearchive`는
+archive가 없어도 실행 가능한 소스·runtime 체인을 소유하고, `verify-final`은 그 체인과
+`verify-acceptance`를 모두 직접 요구한다.
 
 ## 6. Acceptance 기본 artifact
 
-override가 없으면 acceptance runner는 Git이 무시하는
-`artifacts/acceptance/`에 run-scoped evidence, source bundle, extraction receipt, run index와
-seal을 생성한다. 소스 commit/tree digest와 artifact digest는 현재 실행에서 파생하고
-독립 validator가 재검증한다. 명시적 override는 release workflow의 외부 evidence
-바인딩을 위해 보존한다.
+`make verify-acceptance`는 evidence root, run ID, source commit/tree digest, source archive,
+extraction receipt와 receipt digest의 일곱 입력을 모두 명시적으로 요구한다. release workflow는
+`verify-prearchive` → `source-archive` → `clean-extraction-verify` → `verify-acceptance` 순서로
+실행한다. 고정 출력은 `artifacts/gurine-source-v13.0.0.tar.gz`, 그 `.sha256` sidecar와
+`artifacts/gurine-source-v13.0.0.extraction-receipt.json`이다. 마지막 단계는 이를
+`artifacts/acceptance/`의 새 run-scoped evidence에 바인딩하고 별도 읽기 전용 컨테이너가
+증거를 재검증한다.
 
 ## 7. Archive-local Manifest
 
@@ -72,6 +75,10 @@ seal을 생성한다. 소스 commit/tree digest와 artifact digest는 현재 실
 Manifest는 package-relative file hash를 기록하고 fresh extraction에서 재검증하며,
 timestamp를 넣지 않는다. 루트 source tree에 Manifest를 유지하거나 frozen tag 비교를
 대체하는 용도로 사용하지 않는다.
+
+Git checkout에서 검증할 때는 `authority-v13-frozen` 태그가 반드시 존재해야 한다. CI checkout은
+`fetch-depth: 0`과 `fetch-tags: true`를 사용하며, origin에 태그가 없으면 감독자가
+`git push origin authority-v13-frozen`으로 먼저 게시해야 한다.
 
 ## 8. Dependency
 

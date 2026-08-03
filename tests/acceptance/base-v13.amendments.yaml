@@ -1,0 +1,20 @@
+schema_version: 1
+policy: APPEND_ONLY
+amendments:
+- path: tests/acceptance/docker-development.feature
+  frozen_sha256: f93d40bea2d195f3c8da7e32a65fcacdf537459568c2b346df7076e7ced9bdf4
+  amended_sha256: c3ba69792798ae0d6e7b134e46612a2d636d4693b234eeae3001403418e0400d
+  reason: R1 replaced deleted standalone compose.test.yaml reference with compose.yaml test profile
+  authority: User F1 correction 2 confirms the corresponding R1 change.
+- path: tests/acceptance/production-readiness.feature
+  frozen_sha256: 83e5e748702456409c8d5ca9aa28c13fe83ebb61f00404daff95c4bc26dbc0a8
+  amended_sha256: bcff1eb3eeb14840e5915fb2875c5465f067cd385a86619162b8c27fb529e829
+  reason: >-
+    R1 replaced retired MANIFEST/authority-tree semantics with active specs plus authority-v13-frozen and
+    Git-bound source-tree digest
+  authority: User F1 correction 2 confirms the corresponding R1 change.
+- path: tests/acceptance/executable-mapping.yaml
+  frozen_sha256: f85a72768d18c12d3111adcb2895661b64d6cbd2b32112467d2526a52319ae83
+  amended_sha256: ea1c5fe553d8564f7bea8fb10d434e64701258eec31774d983ec05fdacf2755b
+  reason: mapping aligned AC-PRODUCTION_READINESS-006 title while preserving ID/execution binding.
+  authority: User F1 correction 2 confirms the corresponding R1 change.

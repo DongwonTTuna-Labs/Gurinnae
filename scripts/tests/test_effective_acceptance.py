@@ -166,24 +166,189 @@ class EffectiveAcceptanceContractTests(unittest.TestCase):
                 {problem.code for problem in checks.problems},
             )
 
-    def test_make_graph_rejects_duplicate_external_evidence_validation(self) -> None:
+    def test_make_graph_requires_acceptance_in_final_gate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+            makefile = makefile.replace(
+                "verify-final: verify-acceptance verify-prearchive",
+                "verify-final: verify-prearchive",
+            )
+            (root / "Makefile").write_text(makefile, encoding="utf-8")
+            checks = Checks("mutation")
+            _validate_make_graph(root, checks)
+            self.assertIn(
+                "acceptance_make_dependency",
+                {problem.code for problem in checks.problems},
+            )
+
+    def test_make_graph_requires_all_explicit_acceptance_inputs(self) -> None:
+        variables = {
+            "ACCEPTANCE_EVIDENCE_ROOT": "--evidence-root",
+            "ACCEPTANCE_RUN_ID": "--run-id",
+            "ACCEPTANCE_SOURCE_COMMIT": "--source-commit",
+            "ACCEPTANCE_SOURCE_TREE_SHA256": "--source-tree-sha256",
+            "ACCEPTANCE_ARCHIVE": "--archive",
+            "ACCEPTANCE_EXTRACTION_RECEIPT": "--extraction-receipt",
+            "ACCEPTANCE_EXTRACTION_RECEIPT_SHA256": "--extraction-receipt-sha256",
+        }
+        original = (ROOT / "Makefile").read_text(encoding="utf-8")
+        for variable, argument in variables.items():
+            guard = (
+                f'\t@test -n "$({variable})" || {{ printf \'%s\\n\' '
+                f"'{variable} is required'; exit 2; }}\n"
+            )
+            with (
+                self.subTest(variable=variable, contract="guard"),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                self.assertIn(guard, original)
+                (root / "Makefile").write_text(
+                    original.replace(guard, "", 1), encoding="utf-8"
+                )
+                checks = Checks("mutation")
+                _validate_make_graph(root, checks)
+                self.assertIn(
+                    "acceptance_make_required_guard",
+                    {problem.code for problem in checks.problems},
+                )
+            explicit = f'\t\t{argument} "$({variable})"'
+            with (
+                self.subTest(variable=variable, contract="argument"),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                self.assertIn(explicit, original)
+                (root / "Makefile").write_text(
+                    original.replace(explicit, f"\t\t{argument}", 1), encoding="utf-8"
+                )
+                checks = Checks("mutation")
+                _validate_make_graph(root, checks)
+                self.assertIn(
+                    "acceptance_make_explicit_argument",
+                    {problem.code for problem in checks.problems},
+                )
+
+    def test_make_graph_binds_explicit_inputs_to_runner_command(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+            argument = '\t\t--run-id "$(ACCEPTANCE_RUN_ID)" \\\n'
+            self.assertIn(argument, makefile)
+            runner_end = (
+                '\t\t--extraction-receipt-sha256 '
+                '"$(ACCEPTANCE_EXTRACTION_RECEIPT_SHA256)"\n'
+            )
+            self.assertIn(runner_end, makefile)
+            mutation = makefile.replace(argument, "", 1).replace(
+                runner_end,
+                runner_end
+                + '\t@printf \'%s\\n\' \'--run-id "$(ACCEPTANCE_RUN_ID)"\' '
+                ">/dev/null\n",
+                1,
+            )
             (root / "Makefile").write_text(
-                "verify-specs:\n"
-                "run-acceptance-439: verify-specs\n"
-                "\tpython3 -B scripts/run_acceptance.py\n"
+                mutation, encoding="utf-8"
+            )
+            checks = Checks("mutation")
+            _validate_make_graph(root, checks)
+            self.assertIn(
+                "acceptance_make_explicit_argument",
+                {problem.code for problem in checks.problems},
+            )
+
+    def test_make_graph_requires_external_evidence_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            makefile = (ROOT / "Makefile").read_text(encoding="utf-8").replace(
+                "python -B scripts/validation/effective_acceptance.py --mode evidence",
+                "printf 'validation removed\\n'",
+            )
+            (root / "Makefile").write_text(makefile, encoding="utf-8")
+            checks = Checks("mutation")
+            _validate_make_graph(root, checks)
+            self.assertIn(
+                "acceptance_make_evidence_validator",
+                {problem.code for problem in checks.problems},
+            )
+
+    def test_make_graph_requires_evidence_validator_to_run_in_docker(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+            source = (
                 "verify-execution-evidence: run-acceptance-439\n"
-                "\tpython3 -B scripts/validation/effective_acceptance.py --mode evidence\n"
-                "verify-acceptance: verify-execution-evidence\n",
+                '\tdocker run --rm --network none --user "$$(id -u):$$(id -g)"'
+            )
+            self.assertIn(source, makefile)
+            (root / "Makefile").write_text(
+                makefile.replace(
+                    source,
+                    "verify-execution-evidence: run-acceptance-439\n"
+                    "\tpython -B scripts/validation/effective_acceptance.py "
+                    "--mode evidence",
+                    1,
+                ),
                 encoding="utf-8",
             )
             checks = Checks("mutation")
             _validate_make_graph(root, checks)
             self.assertIn(
-                "acceptance_make_duplicate_evidence_validation",
+                "acceptance_make_out_of_process_evidence_validator",
                 {problem.code for problem in checks.problems},
             )
+
+    def test_make_graph_binds_evidence_verdict_to_validator_container(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+            target_start = "verify-execution-evidence: run-acceptance-439\n"
+            target_end = "\nverify-acceptance: verify-execution-evidence\n"
+            before, separator, remainder = makefile.partition(target_start)
+            self.assertEqual(separator, target_start)
+            _, separator, after = remainder.partition(target_end)
+            self.assertEqual(separator, target_end)
+            mutation = target_start + (
+                '\tdocker run --rm --volume "$(CURDIR):/workspace:ro" '
+                '--volume "$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence:ro" '
+                "gurine-authority-validator:13.0.0 true\n"
+                "\tpython -B scripts/validation/effective_acceptance.py "
+                "--mode evidence --evidence-root /acceptance-evidence "
+                '--run-index "$(ACCEPTANCE_RUN_ID)/run-index.json"\n'
+            ) + target_end
+            (root / "Makefile").write_text(
+                before + mutation + after, encoding="utf-8"
+            )
+            checks = Checks("mutation")
+            _validate_make_graph(root, checks)
+            self.assertIn(
+                "acceptance_make_out_of_process_evidence_validator",
+                {problem.code for problem in checks.problems},
+            )
+
+    def test_make_graph_requires_read_only_workspace_and_evidence_mounts(self) -> None:
+        mutations = {
+            '"$(CURDIR):/workspace:ro"': (
+                '"$(CURDIR):/workspace"',
+                "acceptance_make_workspace_read_only",
+            ),
+            '"$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence:ro"': (
+                '"$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence"',
+                "acceptance_make_evidence_read_only",
+            ),
+        }
+        for source, (replacement, expected_code) in mutations.items():
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+                self.assertIn(source, makefile)
+                (root / "Makefile").write_text(
+                    makefile.replace(source, replacement), encoding="utf-8"
+                )
+                checks = Checks("mutation")
+                _validate_make_graph(root, checks)
+                self.assertIn(expected_code, {problem.code for problem in checks.problems})
 
 
 if __name__ == "__main__":

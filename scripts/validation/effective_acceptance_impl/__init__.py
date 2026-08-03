@@ -311,6 +311,23 @@ def _make_targets(text: str) -> dict[str, tuple[list[str], list[str]]]:
     return targets
 
 
+def _make_recipe_commands(recipes: Iterable[str]) -> tuple[str, ...]:
+    commands: list[str] = []
+    continued: list[str] = []
+    for recipe in recipes:
+        stripped = recipe.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        has_continuation = stripped.endswith("\\")
+        continued.append(stripped[:-1].rstrip() if has_continuation else stripped)
+        if not has_continuation:
+            commands.append(" ".join(continued))
+            continued = []
+    if continued:
+        commands.append(" ".join(continued))
+    return tuple(commands)
+
+
 def _validate_make_graph(root: Path, checks: Checks) -> None:
     path = root / "Makefile"
     try:
@@ -322,6 +339,18 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
         "run-acceptance-439": {"verify-specs"},
         "verify-execution-evidence": {"run-acceptance-439"},
         "verify-acceptance": {"verify-execution-evidence"},
+        "verify-prearchive": {
+            "verify-specs",
+            "verify-codegen",
+            "test-rust-workspace",
+            "test-sqlx-prepare",
+            "verify-bun",
+            "verify-runtime",
+            "verify-containers",
+            "test-ui-e2e",
+            "test-ui-visual",
+        },
+        "verify-final": {"verify-acceptance", "verify-prearchive"},
     }
     for target, required in required_edges.items():
         dependencies, recipes = targets.get(target, ([], []))
@@ -350,27 +379,101 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
         )
     run_recipes = targets.get("run-acceptance-439", ([], []))[1]
     evidence_recipes = targets.get("verify-execution-evidence", ([], []))[1]
+    required_acceptance_arguments = (
+        ("ACCEPTANCE_EVIDENCE_ROOT", "--evidence-root"),
+        ("ACCEPTANCE_RUN_ID", "--run-id"),
+        ("ACCEPTANCE_SOURCE_COMMIT", "--source-commit"),
+        ("ACCEPTANCE_SOURCE_TREE_SHA256", "--source-tree-sha256"),
+        ("ACCEPTANCE_ARCHIVE", "--archive"),
+        ("ACCEPTANCE_EXTRACTION_RECEIPT", "--extraction-receipt"),
+        ("ACCEPTANCE_EXTRACTION_RECEIPT_SHA256", "--extraction-receipt-sha256"),
+    )
+    run_commands = _make_recipe_commands(run_recipes)
+    runner_commands = tuple(
+        command for command in run_commands if "scripts/run_acceptance.py" in command
+    )
     checks.need(
-        any("scripts/run_acceptance.py" in recipe for recipe in run_recipes),
+        bool(runner_commands),
         "acceptance_make_runner",
         "Makefile#run-acceptance-439",
         "scripts/run_acceptance.py",
         run_recipes,
     )
-    duplicate_validation = [
-        recipe
-        for recipe in evidence_recipes
-        if "effective_acceptance.py --mode evidence" in recipe
-        or "GURINNAE_ACCEPTANCE_RUN_INDEX" in recipe
-        or "ACCEPTANCE_EVIDENCE_ROOT" in recipe
-    ]
-    checks.need(
-        not duplicate_validation,
-        "acceptance_make_duplicate_evidence_validation",
-        "Makefile#verify-execution-evidence",
-        "runner-owned validate_external_evidence only",
-        duplicate_validation,
+    for variable, argument in required_acceptance_arguments:
+        guard = (
+            f'@test -n "$({variable})" || {{ printf \'%s\\n\' '
+            f"'{variable} is required'; exit 2; }}"
+        )
+        checks.need(
+            guard in run_recipes,
+            "acceptance_make_required_guard",
+            "Makefile#run-acceptance-439",
+            guard,
+            run_recipes,
+        )
+        checks.need(
+            any(
+                f'{argument} "$({variable})"' in command
+                for command in runner_commands
+            ),
+            "acceptance_make_explicit_argument",
+            "Makefile#run-acceptance-439",
+            f'{argument} "$({variable})"',
+            run_recipes,
+        )
+    evidence_commands = _make_recipe_commands(evidence_recipes)
+    validator_commands = tuple(
+        command
+        for command in evidence_commands
+        if "effective_acceptance.py --mode evidence" in command
     )
+    validator_image = "gurine-authority-validator:13.0.0"
+    docker_validator_commands = tuple(
+        command
+        for command in validator_commands
+        if command.lstrip("@+").startswith("docker run ")
+        and validator_image in command
+        and command.partition(validator_image)[2]
+        .lstrip()
+        .startswith("python -B scripts/validation/effective_acceptance.py --mode evidence")
+    )
+    checks.need(
+        bool(docker_validator_commands),
+        "acceptance_make_out_of_process_evidence_validator",
+        "Makefile#verify-execution-evidence",
+        "authority-validator docker run owns evidence verdict",
+        evidence_recipes,
+    )
+    checks.need(
+        bool(validator_commands),
+        "acceptance_make_evidence_validator",
+        "Makefile#verify-execution-evidence",
+        "effective_acceptance.py --mode evidence",
+        evidence_recipes,
+    )
+    checks.need(
+        any(
+            '--volume "$(CURDIR):/workspace:ro"' in command
+            for command in docker_validator_commands
+        ),
+        "acceptance_make_workspace_read_only",
+        "Makefile#verify-execution-evidence",
+        '--volume "$(CURDIR):/workspace:ro"',
+        evidence_recipes,
+    )
+    checks.need(
+        any(
+            '--volume "$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence:ro"'
+            in command
+            for command in docker_validator_commands
+        ),
+        "acceptance_make_evidence_read_only",
+        "Makefile#verify-execution-evidence",
+        '--volume "$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence:ro"',
+        evidence_recipes,
+    )
+
+
 def validate_static(root: Path) -> tuple[Checks, dict[str, Any]]:
     checks = Checks("structure")
     root = root.resolve()

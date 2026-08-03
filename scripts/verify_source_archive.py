@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -12,16 +14,20 @@ import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
+from jsonschema import Draft202012Validator
+
 from archive_manifest import (
     ManifestEntry,
     source_tree_sha256,
     verify_archive_manifest,
 )
+from design_bundle_digest import build_manifest as build_design_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARCHIVE = ROOT / "artifacts" / "gurine-source-v13.0.0.tar.gz"
 DEFAULT_EXTRACTION_ROOT = Path("/var/tmp")
+EXTRACTION_RECEIPT_SCHEMA = ROOT / "specs/acceptance/extraction-receipt-v1.schema.json"
 
 
 @dataclass(frozen=True)
@@ -36,6 +42,8 @@ class SourceArchiveVerification:
     verification_argv: tuple[str, ...]
     manifested_files: int
     manifested_bytes: int
+    design_bundle_sha256: str
+    member_manifest_sha256: str
 
 
 def sha256(path: Path) -> str:
@@ -125,6 +133,86 @@ def verify_source_digest(
     return actual
 
 
+def default_receipt_path(archive: Path) -> Path:
+    suffix = ".tar.gz"
+    if not archive.name.endswith(suffix):
+        raise RuntimeError("source archive filename must end with .tar.gz")
+    stem = archive.name.removesuffix(suffix)
+    return archive.with_name(f"{stem}.extraction-receipt.json")
+
+
+def receipt_artifact(path: Path, parent: Path, media_type: str) -> dict[str, object]:
+    metadata = path.lstat()
+    if path.is_symlink() or not path.is_file() or metadata.st_size < 1:
+        raise RuntimeError(f"extraction receipt artifact is not plain: {path}")
+    try:
+        relative = path.relative_to(parent).as_posix()
+    except ValueError as error:
+        raise RuntimeError("extraction receipt artifacts must be receipt siblings") from error
+    return {
+        "path": relative,
+        "sha256": sha256(path),
+        "size": metadata.st_size,
+        "media_type": media_type,
+    }
+
+
+def extraction_receipt(
+    archive: Path, verification: SourceArchiveVerification, verified_at: str
+) -> dict[str, object]:
+    parent = archive.parent
+    sidecar = Path(f"{archive}.sha256")
+    return {
+        "schema_version": 1,
+        "receipt_kind": "CLEAN_SOURCE_ARCHIVE_EXTRACTION",
+        "status": "PASSED",
+        "verified_at": verified_at,
+        "archive_sha256": verification.archive_sha256,
+        "source_tree_sha256": verification.source_tree_sha256,
+        "design_bundle_sha256": verification.design_bundle_sha256,
+        "member_manifest_sha256": verification.member_manifest_sha256,
+        "manifest_sha256": verification.manifest_sha256,
+        "archive_member_count": verification.archive_member_count,
+        "extracted_member_count": verification.extracted_member_count,
+        "residue_paths": list(verification.residue_paths),
+        "verification_argv": list(verification.verification_argv),
+        "artifacts": [
+            receipt_artifact(archive, parent, "application/gzip"),
+            receipt_artifact(sidecar, parent, "text/plain"),
+        ],
+    }
+
+
+def validate_receipt(receipt: dict[str, object]) -> None:
+    schema = json.loads(EXTRACTION_RECEIPT_SCHEMA.read_text(encoding="utf-8"))
+    errors = sorted(
+        Draft202012Validator(schema).iter_errors(receipt),
+        key=lambda error: [str(part) for part in error.absolute_path],
+    )
+    if errors:
+        raise RuntimeError(f"extraction receipt violates schema: {errors[0].message}")
+
+
+def write_receipt(path: Path, receipt: dict[str, object]) -> str:
+    path = path.resolve()
+    if path.parent != DEFAULT_ARCHIVE.parent.resolve():
+        raise RuntimeError("extraction receipt must be an artifacts/ archive sibling")
+    if path.is_symlink():
+        raise RuntimeError("extraction receipt must not be a symlink")
+    content = (
+        json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    ).encode("utf-8")
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    if temporary.exists():
+        raise RuntimeError(f"stale extraction receipt temporary file: {temporary}")
+    try:
+        temporary.write_bytes(content)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return hashlib.sha256(content).hexdigest()
+
+
 def verify_source_archive(
     archive: Path,
     extraction_root: Path = DEFAULT_EXTRACTION_ROOT,
@@ -154,10 +242,14 @@ def verify_source_archive(
         source_digest = verify_source_digest(entries, expected_source_tree_sha256)
         environment = os.environ.copy()
         environment["GURINE_CLEAN_EXTRACTION"] = "1"
-        # Acceptance sealing and source archive creation are standalone, so
-        # verify-final is the complete non-recursive clean-extraction gate.
-        verification_argv = ("make", "verify-final")
+        # Acceptance evidence is produced only after this receipt exists.
+        # Running the non-acceptance hard gates here keeps archive verification
+        # independent and prevents verify-final from recursively starting a run.
+        verification_argv = ("make", "verify-prearchive")
         subprocess.run(verification_argv, cwd=source, env=environment, check=True)
+        design = build_design_manifest(source)
+        design_bundle_sha256 = str(design["bundle_sha256"])
+        member_manifest_sha256 = str(design["member_manifest_sha256"])
         manifested_files = len(entries)
         manifested_bytes = sum(entry.size for entry in entries)
     if temporary_path is None or temporary_path.exists():
@@ -173,10 +265,18 @@ def verify_source_archive(
         verification_argv=verification_argv,
         manifested_files=manifested_files,
         manifested_bytes=manifested_bytes,
+        design_bundle_sha256=design_bundle_sha256,
+        member_manifest_sha256=member_manifest_sha256,
     )
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--write-receipt", action="store_true")
+    parser.add_argument("--receipt", type=Path)
+    args = parser.parse_args()
+    if args.receipt is not None and not args.write_receipt:
+        raise RuntimeError("--receipt requires --write-receipt")
     archive = Path(os.environ.get("SOURCE_ARCHIVE", DEFAULT_ARCHIVE)).resolve()
     extraction_root = Path(
         os.environ.get("GURINE_CLEAN_EXTRACTION_ROOT", DEFAULT_EXTRACTION_ROOT)
@@ -188,7 +288,26 @@ def main() -> int:
         expected_source_tree_sha256=expected_source_tree_sha256,
     )
     print(f"SOURCE_ARCHIVE_VERIFICATION={json.dumps(asdict(verification), sort_keys=True)}")
-    print("clean extraction verify-final hard-gate verification: PASS")
+    if args.write_receipt:
+        receipt_path = (
+            args.receipt.resolve()
+            if args.receipt is not None
+            else default_receipt_path(archive)
+        )
+        receipt = extraction_receipt(
+            archive,
+            verification,
+            datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        )
+        validate_receipt(receipt)
+        receipt_sha256 = write_receipt(receipt_path, receipt)
+        print(
+            "SOURCE_EXTRACTION_RECEIPT="
+            + json.dumps(
+                {"path": str(receipt_path), "sha256": receipt_sha256}, sort_keys=True
+            )
+        )
+    print("clean extraction verify-prearchive hard-gate verification: PASS")
     return 0
 
 

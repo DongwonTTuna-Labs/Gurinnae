@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from git_authority import AUTHORITY_MANIFEST_FILE
 from verify_migrations import verify_migrations
 
 
@@ -77,7 +78,10 @@ def collect_entries(root: Path) -> tuple[ManifestEntry, ...]:
 
 def source_tree_sha256(entries: tuple[ManifestEntry, ...]) -> str:
     digest = hashlib.sha256(SOURCE_TREE_DOMAIN)
-    for entry in sorted(entries, key=lambda item: item.relative):
+    source_entries = (
+        entry for entry in entries if entry.relative != AUTHORITY_MANIFEST_FILE
+    )
+    for entry in sorted(source_entries, key=lambda item: item.relative):
         encoded = entry.relative.encode("utf-8")
         digest.update(len(encoded).to_bytes(4, "big"))
         digest.update(encoded)
@@ -100,7 +104,8 @@ def render_source_document(
 - Manifested files: **{len(entries)}**
 - Manifested bytes: **{size}**
 - Hash algorithm: **SHA-256**
-- Manifest excludes its two circular digest files and generated build/cache output.
+- Checksum coverage excludes its two circular digest files and generated build/cache output.
+- Source provenance also excludes the archive-only frozen-authority manifest.
 
 ## Contract counts
 

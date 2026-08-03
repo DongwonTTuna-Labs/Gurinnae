@@ -13,9 +13,12 @@ sys.path.insert(0, str(SCRIPTS))
 from archive_manifest import (  # noqa: E402
     ArchiveManifestError,
     collect_entries,
+    parse_checksum_manifest,
+    source_tree_sha256,
     verify_archive_manifest,
 )
 from create_source_archive import excluded  # noqa: E402
+from git_authority import AUTHORITY_MANIFEST_FILE  # noqa: E402
 
 
 def write_manifest(root: Path, archive_root: str = "source") -> None:
@@ -79,6 +82,30 @@ class ArchiveManifestTests(unittest.TestCase):
     def test_archive_output_directories_are_not_copied(self) -> None:
         self.assertTrue(excluded(Path(".fable-sol/cache/result")))
         self.assertTrue(excluded(Path("artifacts/source.tar.gz")))
+        self.assertTrue(excluded(Path(AUTHORITY_MANIFEST_FILE)))
+        self.assertTrue(excluded(Path("MANIFEST.sha256")))
+        self.assertTrue(excluded(Path("MANIFEST.md")))
+
+    def test_authority_metadata_is_covered_but_not_source_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "payload.txt").write_text("payload\n", encoding="utf-8")
+            before = collect_entries(root)
+            before_digest = source_tree_sha256(before)
+
+            (root / AUTHORITY_MANIFEST_FILE).write_text("authority\n", encoding="utf-8")
+            with_authority = collect_entries(root)
+
+            self.assertIn(
+                AUTHORITY_MANIFEST_FILE,
+                {entry.relative for entry in with_authority},
+            )
+            self.assertEqual(source_tree_sha256(with_authority), before_digest)
+
+            (root / "other-metadata.json").write_text("{}\n", encoding="utf-8")
+            self.assertNotEqual(source_tree_sha256(collect_entries(root)), before_digest)
+            write_manifest(root)
+            self.assertIn(AUTHORITY_MANIFEST_FILE, parse_checksum_manifest(root))
 
 
 if __name__ == "__main__":
