@@ -5112,7 +5112,8 @@ commands:
     - VALIDATION_FAILED
     - INVALID_STATE_TRANSITION
     - PUBLICATION_GATE_BLOCKED
-    provider: []
+    provider:
+    - DEPENDENCY_UNAVAILABLE
     internal:
     - INTERNAL_ERROR
   receipt: publishCaseReceipt

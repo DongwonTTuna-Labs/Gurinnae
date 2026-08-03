@@ -5862,6 +5862,14 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
           x-error-codes:
           - INTERNAL_ERROR
+        '503':
+          description: 'Problem response: DEPENDENCY_UNAVAILABLE'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - DEPENDENCY_UNAVAILABLE
       x-operation-kind: COMMAND
       x-capability: publication.publish
       x-error-codes:
@@ -5885,6 +5893,7 @@ paths:
       - VALIDATION_FAILED
       - INVALID_STATE_TRANSITION
       - PUBLICATION_GATE_BLOCKED
+      - DEPENDENCY_UNAVAILABLE
       - INTERNAL_ERROR
       requestBody:
         required: true
@@ -21808,7 +21817,13 @@ components:
             asOf:
               type: string
               format: date-time
-          required: [reserved, settled, exposure, ledgerEntryCount, reconciliationRequired, asOf]
+          required:
+          - reserved
+          - settled
+          - exposure
+          - ledgerEntryCount
+          - reconciliationRequired
+          - asOf
       required:
       - currency
       - dailyLimit

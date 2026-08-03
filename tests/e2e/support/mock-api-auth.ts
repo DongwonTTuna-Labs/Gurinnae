@@ -85,10 +85,13 @@ export async function handleAuthRoutes(
     ) {
       return problem(401, "SESSION_NOT_ACTIVE");
     }
+    const now = new Date().toISOString();
     return Response.json({
       actor: actor(),
       sessionExpiresAt: expiresAt(),
-      assuranceLevel: "ACTIVE_SESSION",
+      stepUpAt: null,
+      csrfRotatedAt: now,
+      csrfTokenReturned: false,
     });
   }
 
@@ -104,6 +107,7 @@ export async function handleAuthRoutes(
     return Response.json({
       revoked: true,
       revokedAt: new Date().toISOString(),
+      auditEventId: randomUUID(),
     });
   }
 

@@ -149,10 +149,10 @@ function clearObservations() {
 }
 function actor() {
   return {
-    actorId: "00000000-0000-4000-8000-000000000001",
-    subject: "e2e-reviewer",
+    userId: "00000000-0000-4000-8000-000000000001",
+    email: "e2e-reviewer@example.test",
     displayName: "E2E 검토자",
-    roles: ["administrator", "publisher"],
+    roleCodes: ["administrator", "publisher"],
     capabilities: [
       "publication.publish",
       "cases.investigate",
@@ -172,7 +172,7 @@ function actor() {
 }
 function problem(status: number, code: string, title = code) {
   return Response.json(
-    { type: "about:blank", title, status, code },
+    { type: "about:blank", title, status, requestId: randomUUID(), code },
     { status, headers: { "content-type": "application/problem+json" } },
   );
 }

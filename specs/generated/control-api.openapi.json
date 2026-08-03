@@ -8477,6 +8477,19 @@
             "x-error-codes": [
               "INTERNAL_ERROR"
             ]
+          },
+          "503": {
+            "description": "Problem response: DEPENDENCY_UNAVAILABLE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE"
+            ]
           }
         },
         "x-operation-kind": "COMMAND",
@@ -8502,6 +8515,7 @@
           "VALIDATION_FAILED",
           "INVALID_STATE_TRANSITION",
           "PUBLICATION_GATE_BLOCKED",
+          "DEPENDENCY_UNAVAILABLE",
           "INTERNAL_ERROR"
         ],
         "requestBody": {

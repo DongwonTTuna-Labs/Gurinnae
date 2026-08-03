@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -394,7 +395,19 @@ def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
     json_bytes = json.dumps(document, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
     yaml_path.write_text(yaml.safe_dump(document, allow_unicode=True, sort_keys=False))
     json_path.write_text(json_bytes)
-    generated_path.write_text(json_bytes)
+    subprocess.run(
+        [
+            "bunx",
+            "biome",
+            "format",
+            "--write",
+            "--no-errors-on-unmatched",
+            str(json_path),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    generated_path.write_bytes(json_path.read_bytes())
 
 
 def write_identity(operations: list[dict], resource_doc: dict) -> None:

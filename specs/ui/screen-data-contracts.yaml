@@ -80,7 +80,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/agents/mod.rs
     application: crates/application/src/commands/accept_agent_suggestion.rs
     integration_test: tests/integration/api/control-api/accept_agent_suggestion.rs
     generated_client: packages/api-client-control/src/generated/
@@ -268,7 +268,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/acknowledge_source_incident.rs
     integration_test: tests/integration/api/control-api/acknowledge_source_incident.rs
     generated_client: packages/api-client-control/src/generated/
@@ -467,7 +467,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/resilience_cost.rs
     application: crates/application/src/commands/activate_kill_switch.rs
     integration_test: tests/integration/api/control-api/activate_kill_switch.rs
     generated_client: packages/api-client-control/src/generated/
@@ -672,7 +672,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/commands/activate_rule_version.rs
     integration_test: tests/integration/api/control-api/activate_rule_version.rs
     generated_client: packages/api-client-control/src/generated/
@@ -888,7 +888,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/add_claim.rs
     integration_test: tests/integration/api/control-api/add_claim.rs
     generated_client: packages/api-client-control/src/generated/
@@ -1099,7 +1099,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/add_evidence.rs
     integration_test: tests/integration/api/control-api/add_evidence.rs
     generated_client: packages/api-client-control/src/generated/
@@ -1286,7 +1286,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/responses.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/approve_response_excerpt.rs
     integration_test: tests/integration/api/control-api/approve_response_excerpt.rs
     generated_client: packages/api-client-control/src/generated/
@@ -1485,7 +1485,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/approve_schema_mapping.rs
     integration_test: tests/integration/api/control-api/approve_schema_mapping.rs
     generated_client: packages/api-client-control/src/generated/
@@ -1686,7 +1686,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/cases.rs
     application: crates/application/src/commands/assign_case.rs
     integration_test: tests/integration/api/control-api/assign_case.rs
     generated_client: packages/api-client-control/src/generated/
@@ -1869,7 +1869,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/corrections.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/assign_correction.rs
     integration_test: tests/integration/api/control-api/assign_correction.rs
     generated_client: packages/api-client-control/src/generated/
@@ -2066,7 +2066,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/assign_review.rs
     integration_test: tests/integration/api/control-api/assign_review.rs
     generated_client: packages/api-client-control/src/generated/
@@ -2256,7 +2256,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/signals.rs
     application: crates/application/src/commands/assign_signal.rs
     integration_test: tests/integration/api/control-api/assign_signal.rs
     generated_client: packages/api-client-control/src/generated/
@@ -2440,7 +2440,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/commands/cancel_job.rs
     integration_test: tests/integration/api/control-api/cancel_job.rs
     generated_client: packages/api-client-control/src/generated/
@@ -2851,7 +2851,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/create_access_request.rs
     integration_test: tests/integration/api/control-api/create_access_request.rs
     generated_client: packages/api-client-control/src/generated/
@@ -3016,7 +3016,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/audit.rs
+    handler: services/control-api/src/service/domains/audit_retention.rs
     application: crates/application/src/commands/create_audit_export.rs
     integration_test: tests/integration/api/control-api/create_audit_export.rs
     generated_client: packages/api-client-control/src/generated/
@@ -3375,7 +3375,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/corrections.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/create_correction.rs
     integration_test: tests/integration/api/control-api/create_correction.rs
     generated_client: packages/api-client-control/src/generated/
@@ -4332,7 +4332,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/create_evidence_redaction.rs
     integration_test: tests/integration/api/control-api/create_evidence_redaction.rs
     generated_client: packages/api-client-control/src/generated/
@@ -4527,7 +4527,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/create_hypothesis.rs
     integration_test: tests/integration/api/control-api/create_hypothesis.rs
     generated_client: packages/api-client-control/src/generated/
@@ -4912,7 +4912,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/responses.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/create_response_request.rs
     integration_test: tests/integration/api/control-api/create_response_request.rs
     generated_client: packages/api-client-control/src/generated/
@@ -5107,7 +5107,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/create_retraction_draft.rs
     integration_test: tests/integration/api/control-api/create_retraction_draft.rs
     generated_client: packages/api-client-control/src/generated/
@@ -5308,7 +5308,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/create_review_snapshot.rs
     integration_test: tests/integration/api/control-api/create_review_snapshot.rs
     generated_client: packages/api-client-control/src/generated/
@@ -5504,7 +5504,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/commands/create_rule_version_draft.rs
     integration_test: tests/integration/api/control-api/create_rule_version_draft.rs
     generated_client: packages/api-client-control/src/generated/
@@ -5703,7 +5703,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/commands/create_saved_view.rs
     integration_test: tests/integration/api/control-api/create_saved_view.rs
     generated_client: packages/api-client-control/src/generated/
@@ -5996,7 +5996,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/resilience_cost.rs
     application: crates/application/src/commands/deactivate_kill_switch.rs
     integration_test: tests/integration/api/control-api/deactivate_kill_switch.rs
     generated_client: packages/api-client-control/src/generated/
@@ -6755,7 +6755,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/commands/delete_saved_view.rs
     integration_test: tests/integration/api/control-api/delete_saved_view.rs
     generated_client: packages/api-client-control/src/generated/
@@ -6882,7 +6882,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/commands/disable_provider_routing.rs
     integration_test: tests/integration/api/control-api/disable_provider_routing.rs
     generated_client: packages/api-client-control/src/generated/
@@ -7086,7 +7086,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/disable_user.rs
     integration_test: tests/integration/api/control-api/disable_user.rs
     generated_client: packages/api-client-control/src/generated/
@@ -7608,7 +7608,7 @@ operations:
     type: binary
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/queries/download_source_run_report.rs
     integration_test: tests/integration/api/control-api/download_source_run_report.rs
     generated_client: packages/api-client-control/src/generated/
@@ -7746,7 +7746,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/queries/estimate_backfill.rs
     integration_test: tests/integration/api/control-api/estimate_backfill.rs
     generated_client: packages/api-client-control/src/generated/
@@ -8364,7 +8364,7 @@ operations:
     type: binary
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/resilience_cost.rs
     application: crates/application/src/queries/export_cost_report.rs
     integration_test: tests/integration/api/control-api/export_cost_report.rs
     generated_client: packages/api-client-control/src/generated/
@@ -8502,7 +8502,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/resilience_cost.rs
     application: crates/application/src/commands/extend_kill_switch.rs
     integration_test: tests/integration/api/control-api/extend_kill_switch.rs
     generated_client: packages/api-client-control/src/generated/
@@ -9346,7 +9346,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/agents/mod.rs
     application: crates/application/src/queries/get_agent_run.rs
     integration_test: tests/integration/api/control-api/get_agent_run.rs
     generated_client: packages/api-client-control/src/generated/
@@ -9496,7 +9496,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/audit.rs
+    handler: services/control-api/src/service/domains/audit_retention.rs
     application: crates/application/src/queries/get_audit_export.rs
     integration_test: tests/integration/api/control-api/get_audit_export.rs
     generated_client: packages/api-client-control/src/generated/
@@ -9627,7 +9627,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/resilience_cost.rs
     application: crates/application/src/queries/get_budget_overview.rs
     integration_test: tests/integration/api/control-api/get_budget_overview.rs
     generated_client: packages/api-client-control/src/generated/
@@ -9858,7 +9858,7 @@ operations:
     type: integer
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/cases.rs
     application: crates/application/src/queries/get_case_workspace_overview.rs
     integration_test: tests/integration/api/control-api/get_case_workspace_overview.rs
     generated_client: packages/api-client-control/src/generated/
@@ -10693,7 +10693,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/corrections.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/get_correction_workspace.rs
     integration_test: tests/integration/api/control-api/get_correction_workspace.rs
     generated_client: packages/api-client-control/src/generated/
@@ -10897,7 +10897,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/queries/get_current_account.rs
     integration_test: tests/integration/api/control-api/get_current_account.rs
     generated_client: packages/api-client-control/src/generated/
@@ -11009,7 +11009,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/queries/get_current_user_capabilities.rs
     integration_test: tests/integration/api/control-api/get_current_user_capabilities.rs
     generated_client: packages/api-client-control/src/generated/
@@ -11211,7 +11211,7 @@ operations:
     type: array:Blocker
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/queries/get_evidence_workspace.rs
     integration_test: tests/integration/api/control-api/get_evidence_workspace.rs
     generated_client: packages/api-client-control/src/generated/
@@ -11516,7 +11516,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/cases.rs
     application: crates/application/src/queries/get_internal_case.rs
     integration_test: tests/integration/api/control-api/get_internal_case.rs
     generated_client: packages/api-client-control/src/generated/
@@ -11629,7 +11629,7 @@ operations:
     type: array:Notification
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/queries/get_internal_dashboard.rs
     integration_test: tests/integration/api/control-api/get_internal_dashboard.rs
     generated_client: packages/api-client-control/src/generated/
@@ -11746,7 +11746,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/queries/get_internal_rule_version.rs
     integration_test: tests/integration/api/control-api/get_internal_rule_version.rs
     generated_client: packages/api-client-control/src/generated/
@@ -11868,7 +11868,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/queries/get_internal_source.rs
     integration_test: tests/integration/api/control-api/get_internal_source.rs
     generated_client: packages/api-client-control/src/generated/
@@ -12000,7 +12000,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/queries/get_job.rs
     integration_test: tests/integration/api/control-api/get_job.rs
     generated_client: packages/api-client-control/src/generated/
@@ -12204,7 +12204,7 @@ operations:
     type: array:AuditSummary
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/queries/get_operations_overview.rs
     integration_test: tests/integration/api/control-api/get_operations_overview.rs
     generated_client: packages/api-client-control/src/generated/
@@ -12818,7 +12818,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/get_publication_preview.rs
     integration_test: tests/integration/api/control-api/get_publication_preview.rs
     generated_client: packages/api-client-control/src/generated/
@@ -12947,7 +12947,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/get_publication_receipt.rs
     integration_test: tests/integration/api/control-api/get_publication_receipt.rs
     generated_client: packages/api-client-control/src/generated/
@@ -13080,7 +13080,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/get_publish_confirmation.rs
     integration_test: tests/integration/api/control-api/get_publish_confirmation.rs
     generated_client: packages/api-client-control/src/generated/
@@ -13747,7 +13747,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/responses.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/get_response_request_composer.rs
     integration_test: tests/integration/api/control-api/get_response_request_composer.rs
     generated_client: packages/api-client-control/src/generated/
@@ -13996,7 +13996,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/get_review_readiness.rs
     integration_test: tests/integration/api/control-api/get_review_readiness.rs
     generated_client: packages/api-client-control/src/generated/
@@ -14132,7 +14132,7 @@ operations:
     type: array:RevisionDiff
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/get_review_snapshot.rs
     integration_test: tests/integration/api/control-api/get_review_snapshot.rs
     generated_client: packages/api-client-control/src/generated/
@@ -14355,7 +14355,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/queries/get_rule_activation_readiness.rs
     integration_test: tests/integration/api/control-api/get_rule_activation_readiness.rs
     generated_client: packages/api-client-control/src/generated/
@@ -14476,7 +14476,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/queries/get_rule_evaluation.rs
     integration_test: tests/integration/api/control-api/get_rule_evaluation.rs
     generated_client: packages/api-client-control/src/generated/
@@ -14598,7 +14598,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/queries/get_schema_drift.rs
     integration_test: tests/integration/api/control-api/get_schema_drift.rs
     generated_client: packages/api-client-control/src/generated/
@@ -14806,7 +14806,7 @@ operations:
     type: array:AuditSummary
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/signals.rs
     application: crates/application/src/queries/get_signal_triage_view.rs
     integration_test: tests/integration/api/control-api/get_signal_triage_view.rs
     generated_client: packages/api-client-control/src/generated/
@@ -15038,7 +15038,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/queries/get_source_run.rs
     integration_test: tests/integration/api/control-api/get_source_run.rs
     generated_client: packages/api-client-control/src/generated/
@@ -15498,7 +15498,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/queries/get_user_access_detail.rs
     integration_test: tests/integration/api/control-api/get_user_access_detail.rs
     generated_client: packages/api-client-control/src/generated/
@@ -15638,7 +15638,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/grant_role.rs
     integration_test: tests/integration/api/control-api/grant_role.rs
     generated_client: packages/api-client-control/src/generated/
@@ -15838,7 +15838,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/invite_user.rs
     integration_test: tests/integration/api/control-api/invite_user.rs
     generated_client: packages/api-client-control/src/generated/
@@ -16002,7 +16002,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/link_evidence.rs
     integration_test: tests/integration/api/control-api/link_evidence.rs
     generated_client: packages/api-client-control/src/generated/
@@ -16192,7 +16192,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/signals.rs
     application: crates/application/src/commands/link_signal_to_case.rs
     integration_test: tests/integration/api/control-api/link_signal_to_case.rs
     generated_client: packages/api-client-control/src/generated/
@@ -16681,7 +16681,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/agents/mod.rs
     application: crates/application/src/queries/list_case_agent_runs.rs
     integration_test: tests/integration/api/control-api/list_case_agent_runs.rs
     generated_client: packages/api-client-control/src/generated/
@@ -16823,7 +16823,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/audit_retention.rs
     application: crates/application/src/queries/list_case_audit_events.rs
     integration_test: tests/integration/api/control-api/list_case_audit_events.rs
     generated_client: packages/api-client-control/src/generated/
@@ -16951,7 +16951,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/queries/list_case_claims.rs
     integration_test: tests/integration/api/control-api/list_case_claims.rs
     generated_client: packages/api-client-control/src/generated/
@@ -17079,7 +17079,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/list_case_corrections.rs
     integration_test: tests/integration/api/control-api/list_case_corrections.rs
     generated_client: packages/api-client-control/src/generated/
@@ -17218,7 +17218,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/queries/list_case_evidence.rs
     integration_test: tests/integration/api/control-api/list_case_evidence.rs
     generated_client: packages/api-client-control/src/generated/
@@ -17345,7 +17345,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/queries/list_case_hypotheses.rs
     integration_test: tests/integration/api/control-api/list_case_hypotheses.rs
     generated_client: packages/api-client-control/src/generated/
@@ -17472,7 +17472,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/list_case_responses.rs
     integration_test: tests/integration/api/control-api/list_case_responses.rs
     generated_client: packages/api-client-control/src/generated/
@@ -17708,7 +17708,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/signals.rs
     application: crates/application/src/queries/list_case_signals.rs
     integration_test: tests/integration/api/control-api/list_case_signals.rs
     generated_client: packages/api-client-control/src/generated/
@@ -17843,7 +17843,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/cases.rs
     application: crates/application/src/queries/list_case_timeline.rs
     integration_test: tests/integration/api/control-api/list_case_timeline.rs
     generated_client: packages/api-client-control/src/generated/
@@ -18202,7 +18202,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/corrections.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/list_correction_queue.rs
     integration_test: tests/integration/api/control-api/list_correction_queue.rs
     generated_client: packages/api-client-control/src/generated/
@@ -18462,7 +18462,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/cases.rs
     application: crates/application/src/queries/list_internal_cases.rs
     integration_test: tests/integration/api/control-api/list_internal_cases.rs
     generated_client: packages/api-client-control/src/generated/
@@ -18585,7 +18585,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/queries/list_internal_notifications.rs
     integration_test: tests/integration/api/control-api/list_internal_notifications.rs
     generated_client: packages/api-client-control/src/generated/
@@ -18708,7 +18708,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/queries/list_internal_rules.rs
     integration_test: tests/integration/api/control-api/list_internal_rules.rs
     generated_client: packages/api-client-control/src/generated/
@@ -18836,7 +18836,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/queries/list_internal_sources.rs
     integration_test: tests/integration/api/control-api/list_internal_sources.rs
     generated_client: packages/api-client-control/src/generated/
@@ -18974,7 +18974,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/queries/list_jobs.rs
     integration_test: tests/integration/api/control-api/list_jobs.rs
     generated_client: packages/api-client-control/src/generated/
@@ -19101,7 +19101,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/resilience_cost.rs
     application: crates/application/src/queries/list_kill_switches.rs
     integration_test: tests/integration/api/control-api/list_kill_switches.rs
     generated_client: packages/api-client-control/src/generated/
@@ -19231,7 +19231,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/queries/list_my_tasks.rs
     integration_test: tests/integration/api/control-api/list_my_tasks.rs
     generated_client: packages/api-client-control/src/generated/
@@ -19359,7 +19359,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/queries/list_providers.rs
     integration_test: tests/integration/api/control-api/list_providers.rs
     generated_client: packages/api-client-control/src/generated/
@@ -19722,7 +19722,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/queries/list_review_queue.rs
     integration_test: tests/integration/api/control-api/list_review_queue.rs
     generated_client: packages/api-client-control/src/generated/
@@ -19848,7 +19848,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/queries/list_role_definitions.rs
     integration_test: tests/integration/api/control-api/list_role_definitions.rs
     generated_client: packages/api-client-control/src/generated/
@@ -20197,7 +20197,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/queries/list_saved_views.rs
     integration_test: tests/integration/api/control-api/list_saved_views.rs
     generated_client: packages/api-client-control/src/generated/
@@ -20292,7 +20292,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/signals.rs
     application: crates/application/src/queries/list_signals.rs
     integration_test: tests/integration/api/control-api/list_signals.rs
     generated_client: packages/api-client-control/src/generated/
@@ -20420,7 +20420,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/queries/list_source_runs.rs
     integration_test: tests/integration/api/control-api/list_source_runs.rs
     generated_client: packages/api-client-control/src/generated/
@@ -21080,7 +21080,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/queries/list_users.rs
     integration_test: tests/integration/api/control-api/list_users.rs
     generated_client: packages/api-client-control/src/generated/
@@ -21333,7 +21333,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/commands/mark_notification_read.rs
     integration_test: tests/integration/api/control-api/mark_notification_read.rs
     generated_client: packages/api-client-control/src/generated/
@@ -21517,7 +21517,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/pause_backfill.rs
     integration_test: tests/integration/api/control-api/pause_backfill.rs
     generated_client: packages/api-client-control/src/generated/
@@ -21712,7 +21712,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/commands/pause_job_queue.rs
     integration_test: tests/integration/api/control-api/pause_job_queue.rs
     generated_client: packages/api-client-control/src/generated/
@@ -21902,7 +21902,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/pause_source.rs
     integration_test: tests/integration/api/control-api/pause_source.rs
     generated_client: packages/api-client-control/src/generated/
@@ -22124,7 +22124,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/reviews.rs
+    handler: services/control-api/src/service/domains/audit_retention.rs
     application: crates/application/src/commands/place_legal_hold.rs
     integration_test: tests/integration/api/control-api/place_legal_hold.rs
     generated_client: packages/api-client-control/src/generated/
@@ -22339,7 +22339,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/place_temporary_restriction.rs
     integration_test: tests/integration/api/control-api/place_temporary_restriction.rs
     generated_client: packages/api-client-control/src/generated/
@@ -22539,7 +22539,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/preview_publication.rs
     integration_test: tests/integration/api/control-api/preview_publication.rs
     generated_client: packages/api-client-control/src/generated/
@@ -22706,7 +22706,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/propose_role_definition_change.rs
     integration_test: tests/integration/api/control-api/propose_role_definition_change.rs
     generated_client: packages/api-client-control/src/generated/
@@ -22876,6 +22876,7 @@ operations:
   - '415'
   - '422'
   - '500'
+  - '503'
   blocking_consumers:
   - REV-003
   nonblocking_consumers: []
@@ -22908,7 +22909,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/publish_case.rs
     integration_test: tests/integration/api/control-api/publish_case.rs
     generated_client: packages/api-client-control/src/generated/
@@ -22938,7 +22939,8 @@ operations:
   - VALIDATION_FAILED
   - INVALID_STATE_TRANSITION
   - PUBLICATION_GATE_BLOCKED
-  provider_errors: []
+  provider_errors:
+  - DEPENDENCY_UNAVAILABLE
   error_codes:
   - INVALID_PARAMETER
   - INVALID_REQUEST
@@ -22960,6 +22962,7 @@ operations:
   - VALIDATION_FAILED
   - INVALID_STATE_TRANSITION
   - PUBLICATION_GATE_BLOCKED
+  - DEPENDENCY_UNAVAILABLE
   - INTERNAL_ERROR
   http_error_mapping:
     '400':
@@ -22992,6 +22995,8 @@ operations:
     - PUBLICATION_GATE_BLOCKED
     '500':
     - INTERNAL_ERROR
+    '503':
+    - DEPENDENCY_UNAVAILABLE
   internal_errors:
   - INTERNAL_ERROR
   operation_kind: COMMAND
@@ -23112,7 +23117,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/commands/quarantine_job.rs
     integration_test: tests/integration/api/control-api/quarantine_job.rs
     generated_client: packages/api-client-control/src/generated/
@@ -23303,7 +23308,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/commands/reassign_task.rs
     integration_test: tests/integration/api/control-api/reassign_task.rs
     generated_client: packages/api-client-control/src/generated/
@@ -23487,7 +23492,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/agents/mod.rs
     application: crates/application/src/commands/reject_agent_suggestion.rs
     integration_test: tests/integration/api/control-api/reject_agent_suggestion.rs
     generated_client: packages/api-client-control/src/generated/
@@ -23686,7 +23691,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/reject_schema_mapping.rs
     integration_test: tests/integration/api/control-api/reject_schema_mapping.rs
     generated_client: packages/api-client-control/src/generated/
@@ -24053,7 +24058,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/corrections.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/resolve_correction_request.rs
     integration_test: tests/integration/api/control-api/resolve_correction_request.rs
     generated_client: packages/api-client-control/src/generated/
@@ -24247,7 +24252,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/commands/retry_job.rs
     integration_test: tests/integration/api/control-api/retry_job.rs
     generated_client: packages/api-client-control/src/generated/
@@ -24440,7 +24445,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/commands/retry_jobs.rs
     integration_test: tests/integration/api/control-api/retry_jobs.rs
     generated_client: packages/api-client-control/src/generated/
@@ -24605,7 +24610,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/retry_source_run.rs
     integration_test: tests/integration/api/control-api/retry_source_run.rs
     generated_client: packages/api-client-control/src/generated/
@@ -24782,7 +24787,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/revoke_own_session.rs
     integration_test: tests/integration/api/control-api/revoke_own_session.rs
     generated_client: packages/api-client-control/src/generated/
@@ -24938,7 +24943,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/revoke_role.rs
     integration_test: tests/integration/api/control-api/revoke_role.rs
     generated_client: packages/api-client-control/src/generated/
@@ -25127,7 +25132,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/revoke_user_sessions.rs
     integration_test: tests/integration/api/control-api/revoke_user_sessions.rs
     generated_client: packages/api-client-control/src/generated/
@@ -25301,7 +25306,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/commands/rollback_rule_version.rs
     integration_test: tests/integration/api/control-api/rollback_rule_version.rs
     generated_client: packages/api-client-control/src/generated/
@@ -25505,7 +25510,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/commands/run_rule_evaluation.rs
     integration_test: tests/integration/api/control-api/run_rule_evaluation.rs
     generated_client: packages/api-client-control/src/generated/
@@ -26090,7 +26095,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/responses.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/save_response_request_draft.rs
     integration_test: tests/integration/api/control-api/save_response_request_draft.rs
     generated_client: packages/api-client-control/src/generated/
@@ -26285,7 +26290,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/commands/schedule_rule_activation.rs
     integration_test: tests/integration/api/control-api/schedule_rule_activation.rs
     generated_client: packages/api-client-control/src/generated/
@@ -26497,7 +26502,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/audit_retention.rs
     application: crates/application/src/queries/search_audit_events.rs
     integration_test: tests/integration/api/control-api/search_audit_events.rs
     generated_client: packages/api-client-control/src/generated/
@@ -26624,7 +26629,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/cases.rs
     application: crates/application/src/queries/search_internal_records.rs
     integration_test: tests/integration/api/control-api/search_internal_records.rs
     generated_client: packages/api-client-control/src/generated/
@@ -26879,7 +26884,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/access.rs
+    handler: services/control-api/src/service/domains/identity_governance.rs
     application: crates/application/src/commands/start_access_review.rs
     integration_test: tests/integration/api/control-api/start_access_review.rs
     generated_client: packages/api-client-control/src/generated/
@@ -27055,7 +27060,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/agents/mod.rs
     application: crates/application/src/commands/start_agent_run.rs
     integration_test: tests/integration/api/control-api/start_agent_run.rs
     generated_client: packages/api-client-control/src/generated/
@@ -27224,7 +27229,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/start_backfill.rs
     integration_test: tests/integration/api/control-api/start_backfill.rs
     generated_client: packages/api-client-control/src/generated/
@@ -27489,7 +27494,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/rules.rs
+    handler: services/control-api/src/service/domains/rules.rs
     application: crates/application/src/commands/start_rule_shadow.rs
     integration_test: tests/integration/api/control-api/start_rule_shadow.rs
     generated_client: packages/api-client-control/src/generated/
@@ -27673,7 +27678,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/sources.rs
+    handler: services/control-api/src/service/domains/sources.rs
     application: crates/application/src/commands/start_source_run.rs
     integration_test: tests/integration/api/control-api/start_source_run.rs
     generated_client: packages/api-client-control/src/generated/
@@ -28175,7 +28180,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/submit_review.rs
     integration_test: tests/integration/api/control-api/submit_review.rs
     generated_client: packages/api-client-control/src/generated/
@@ -28361,7 +28366,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/operations.rs
     application: crates/application/src/commands/test_provider_connection.rs
     integration_test: tests/integration/api/control-api/test_provider_connection.rs
     generated_client: packages/api-client-control/src/generated/
@@ -28525,7 +28530,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/cases.rs
     application: crates/application/src/commands/transition_case.rs
     integration_test: tests/integration/api/control-api/transition_case.rs
     generated_client: packages/api-client-control/src/generated/
@@ -28716,7 +28721,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/corrections.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/triage_correction.rs
     integration_test: tests/integration/api/control-api/triage_correction.rs
     generated_client: packages/api-client-control/src/generated/
@@ -28913,7 +28918,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/signals.rs
     application: crates/application/src/commands/triage_signal.rs
     integration_test: tests/integration/api/control-api/triage_signal.rs
     generated_client: packages/api-client-control/src/generated/
@@ -29100,7 +29105,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/cases.rs
+    handler: services/control-api/src/service/domains/signals.rs
     application: crates/application/src/commands/unlink_signal_from_case.rs
     integration_test: tests/integration/api/control-api/unlink_signal_from_case.rs
     generated_client: packages/api-client-control/src/generated/
@@ -29442,7 +29447,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/resilience_cost.rs
     application: crates/application/src/commands/update_budget_limit.rs
     integration_test: tests/integration/api/control-api/update_budget_limit.rs
     generated_client: packages/api-client-control/src/generated/
@@ -29644,7 +29649,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/update_claim.rs
     integration_test: tests/integration/api/control-api/update_claim.rs
     generated_client: packages/api-client-control/src/generated/
@@ -29839,7 +29844,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/corrections.rs
+    handler: services/control-api/src/service/domains/editorial/mod.rs
     application: crates/application/src/commands/update_correction_draft.rs
     integration_test: tests/integration/api/control-api/update_correction_draft.rs
     generated_client: packages/api-client-control/src/generated/
@@ -30037,7 +30042,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/update_evidence.rs
     integration_test: tests/integration/api/control-api/update_evidence.rs
     generated_client: packages/api-client-control/src/generated/
@@ -30236,7 +30241,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/update_hypothesis.rs
     integration_test: tests/integration/api/control-api/update_hypothesis.rs
     generated_client: packages/api-client-control/src/generated/
@@ -30467,7 +30472,7 @@ operations:
     type: date-time
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/work_management.rs
     application: crates/application/src/commands/update_saved_view.rs
     integration_test: tests/integration/api/control-api/update_saved_view.rs
     generated_client: packages/api-client-control/src/generated/
@@ -30756,7 +30761,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/validate_claims.rs
     integration_test: tests/integration/api/control-api/validate_claims.rs
     generated_client: packages/api-client-control/src/generated/
@@ -30944,7 +30949,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/audit_retention.rs
     application: crates/application/src/commands/verify_audit_integrity.rs
     integration_test: tests/integration/api/control-api/verify_audit_integrity.rs
     generated_client: packages/api-client-control/src/generated/
@@ -31112,7 +31117,7 @@ operations:
     type: array:Link
     required: true
   implementation_files:
-    handler: services/control-api/src/routes/operations.rs
+    handler: services/control-api/src/service/domains/claims_evidence.rs
     application: crates/application/src/commands/verify_evidence.rs
     integration_test: tests/integration/api/control-api/verify_evidence.rs
     generated_client: packages/api-client-control/src/generated/

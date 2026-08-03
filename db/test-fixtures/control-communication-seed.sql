@@ -5,6 +5,7 @@ BEGIN;
 DO $$
 DECLARE
   d constant char(64) := repeat('b',64);
+  integration constant uuid := '73100000-0000-4000-8000-000000000011';
   delivery constant uuid := '99999999-9999-4999-8999-999999999999';
   endpoint constant uuid := '0f6d16aa-3c47-5e6a-9c5e-c0c33c45d7a8';
   link_event constant uuid := 'b9c4a581-5b9f-5d6e-9953-7a3c979d74a1';
@@ -12,8 +13,29 @@ DECLARE
   reservation constant uuid := '7f0f0a74-4a15-5b79-b3ae-0fdac4308a6d';
   rendering constant uuid := 'e1e7f6f7-8c52-5c32-8f1f-2fef5f7c9d71';
   receipt constant uuid := 'e2d2e5d3-3d9f-5c1b-9c58-7d80e28f9f10';
+  v_provider_revision_snapshot jsonb;
+  v_configuration_digest char(64);
   now_at timestamptz := clock_timestamp();
 BEGIN
+  v_provider_revision_snapshot := jsonb_build_object(
+    'id','59e6fe3c-6803-5f19-8ee2-1595abc421a8'::uuid,
+    'integrationId',integration,'deploymentId','control','environment','test',
+    'channel','SMTP_EMAIL','adapterId','smtp-email-v1','version',1::bigint,
+    'providerAccountHmac',btrim(d::text),
+    'senderIdentityCiphertextDigest',encode(extensions.digest(
+      convert_to(rpad('sender',32,' '),'UTF8'),'sha256'),'hex'),
+    'senderIdentityHmac',btrim(d::text),'encryptionKeyId','fixture-key',
+    'credentialSecretReference','secret://control-provider/value@v1',
+    'webhookSecretReference',to_jsonb('secret://control-webhook/value@v1'::text),
+    'callbackPath',to_jsonb('/private/v1/callbacks/control'::text),
+    'callbackAllowlistDigest',to_jsonb(btrim(d::text)),
+    'jurisdictionSetDigest',btrim(d::text),'dpaEvidenceDigest',btrim(d::text),
+    'approvedTemplateCatalogDigest',btrim(d::text),
+    'rateLimitPolicyDigest',btrim(d::text),'costPolicyDigest',btrim(d::text),
+    'providerCapabilitiesDigest',btrim(d::text),'killSwitchCode','CONTROL_FIXTURE');
+  v_configuration_digest := encode(extensions.digest(
+    ops.canonical_jsonb_v1(v_provider_revision_snapshot),'sha256'),'hex');
+
   INSERT INTO intake.communication_subjects(
     id,subject_kind,origin_object_type,origin_object_id,origin_object_version,
     origin_binding_digest,subject_pseudonym_hmac,hmac_key_version,jurisdiction,
@@ -40,7 +62,7 @@ BEGIN
   ON CONFLICT DO NOTHING;
 
   INSERT INTO ops.communication_provider_configs(
-    id,deployment_id,environment,channel,adapter_id,operational_state,version,
+    id,integration_id,deployment_id,environment,channel,adapter_id,operational_state,version,
     provider_account_hmac,sender_identity_ciphertext,sender_identity_hmac,
     encryption_key_id,credential_secret_reference,webhook_secret_reference,
     callback_path,callback_allowlist_digest,jurisdiction_set,jurisdiction_set_digest,
@@ -48,11 +70,11 @@ BEGIN
     rate_limit_policy_digest,cost_policy,cost_policy_digest,provider_capabilities,
     provider_capabilities_digest,kill_switch_code,configuration_digest,created_by,
     updated_by)
-  VALUES('59e6fe3c-6803-5f19-8ee2-1595abc421a8','control','test','SMTP_EMAIL',
+  VALUES('59e6fe3c-6803-5f19-8ee2-1595abc421a8',integration,'control','test','SMTP_EMAIL',
     'smtp-email-v1','DISABLED',1,d,convert_to(rpad('sender',32,' '),'UTF8'),d,
     'fixture-key','secret://control-provider/value@v1','secret://control-webhook/value@v1',
     '/private/v1/callbacks/control',d,'{}'::jsonb,d,d,d,'{}'::jsonb,d,'{}'::jsonb,d,
-    '{}'::jsonb,d,'CONTROL_FIXTURE',d,'11111111-1111-4111-8111-111111111111',
+    '{}'::jsonb,d,'CONTROL_FIXTURE',v_configuration_digest,'11111111-1111-4111-8111-111111111111',
     '11111111-1111-4111-8111-111111111111')
   ON CONFLICT DO NOTHING;
 
@@ -65,7 +87,8 @@ BEGIN
     blocker_set,blocker_set_digest,provider_evidence_digest,
     contract_test_receipt_digest,receipt_digest,performed_by_service,requested_by,
     started_at,completed_at,expires_at)
-  VALUES(preflight,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,'{}'::jsonb,d,1,
+  VALUES(preflight,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_configuration_digest,
+    v_provider_revision_snapshot,v_configuration_digest,1,
     'test','PASS',true,true,true,true,'NATIVE_IDEMPOTENCY','AUTHENTICATED_POLL',
     'DELIVERED','{}'::jsonb,d,'[]'::jsonb,d,d,d,d,'control-fixture',
     '11111111-1111-4111-8111-111111111111',now_at,now_at,now_at+interval '1 day')
@@ -80,7 +103,7 @@ BEGIN
   VALUES(reservation,d,d,'ACTION_EXECUTION',
     'f4e7c4f1-7b4d-5d2e-9d7c-7e53dbdf7c7d',1,1,'TEST',
     '148b09d5-aa28-5351-b471-9ef333a3e410','control-fixture-provider',
-    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,'control-v1',1,'KRW',d,
+    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_configuration_digest,'control-v1',1,'KRW',d,
     gen_random_uuid(),d,now_at+interval '1 day',now_at,now_at)
   ON CONFLICT DO NOTHING;
 
@@ -122,7 +145,7 @@ BEGIN
     current_evidence_rank,highest_proof_level,not_before,next_attempt_at,queued_at,
     updated_at,message_type,recipient_hash,template_version)
   VALUES(delivery,'COMMUNICATION_V1',false,'4a1c75f0-a2ec-5bd4-9e85-b8f57fe4f158',d,rendering,endpoint,1,d,
-    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,preflight,d,'SMTP_EMAIL',d,d,d,d,
+    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_configuration_digest,preflight,d,'SMTP_EMAIL',d,d,d,d,
     d,reservation,d,d,'DELIVERED',2,1,2,1,1,3,50,'DELIVERED',now_at,now_at,now_at,
     now_at,'COMMUNICATION',d,'v1')
   ON CONFLICT DO NOTHING;
@@ -138,7 +161,7 @@ BEGIN
     deadline_at,claimed_at,lease_expires_at,attempt_digest,claim_receipt_digest,
     audit_event_id)
   VALUES('c0d5cb1a-e63b-5e23-92ef-8d94ea73bf03',delivery,1,1,1,endpoint,1,d,
-    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,preflight,d,reservation,
+    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_configuration_digest,preflight,d,reservation,
     'control-fixture-worker',d,1,d,d,d,d,d,d,d,'communication-v1',
     now_at+interval '2 hours',now_at,now_at+interval '1 hour',d,d,gen_random_uuid())
   ON CONFLICT DO NOTHING;
@@ -156,7 +179,7 @@ BEGIN
     receipt_digest,audit_event_id,outbox_event_id)
   VALUES(receipt,delivery,1,2,1,2,'c0d5cb1a-e63b-5e23-92ef-8d94ea73bf03','PROVIDER_RESPONSE',d,'APPLIED','PROVIDER_RESPONSE',50,
     'QUEUED','DELIVERED','DELIVERED','NONE','DELIVERED',true,d,d,endpoint,1,d,d,
-    preflight,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,d,d,d,d,reservation,now_at,
+    preflight,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_configuration_digest,d,d,d,d,reservation,now_at,
     'AUTHORIZED_SERVICE',NULL,gen_random_uuid(),'control-fixture',d,
     gen_random_uuid(),gen_random_uuid())
   ON CONFLICT DO NOTHING;
@@ -176,8 +199,13 @@ DECLARE
   reservation constant uuid := '7f0f0a74-4a15-5b79-b3ae-0fdac4308a6d';
   attempt constant uuid := '2b6d8bf1-3c56-5e4b-9a5d-6d9e4f8c1b20';
   receipt constant uuid := 'f3c6e7d8-4e0a-5d2c-8b69-1e2f3a4c5d60';
+  v_config_digest char(64);
   now_at timestamptz := clock_timestamp();
 BEGIN
+  SELECT pc.configuration_digest INTO STRICT v_config_digest
+    FROM ops.communication_provider_configs pc
+   WHERE pc.id='59e6fe3c-6803-5f19-8ee2-1595abc421a8' AND pc.version=1;
+
   INSERT INTO ops.outbound_deliveries(
     id,contract_version,dispatch_eligible,intent_id,intent_digest,rendering_id,endpoint_id,endpoint_version,
     endpoint_snapshot_digest,provider_config_id,provider_config_version,provider_configuration_digest,
@@ -187,7 +215,7 @@ BEGIN
     attempt_count,max_attempts,current_evidence_rank,highest_proof_level,not_before,next_attempt_at,queued_at,
     updated_at,message_type,recipient_hash,template_version)
   VALUES(delivery,'COMMUNICATION_V1',false,intent,d,rendering,endpoint,1,d,
-    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,preflight,d,'SMTP_EMAIL',repeat('d',64),d,d,d,d,
+    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_config_digest,preflight,d,'SMTP_EMAIL',repeat('d',64),d,d,d,d,
     reservation,repeat('d',64),d,'RECONCILIATION_REQUIRED',2,1,2,1,1,3,50,'NONE',now_at,now_at,now_at,
     now_at,'COMMUNICATION',d,'v1')
   ON CONFLICT DO NOTHING;
@@ -199,7 +227,7 @@ BEGIN
     lease_token_hash,fencing_token,provider_idempotency_key_sha256,request_sha256,rendered_sha256,
     authorization_snapshot_digest,suppression_snapshot_digest,activation_receipt_digest,policy_fence_digest,
     transport_policy_version,deadline_at,claimed_at,lease_expires_at,attempt_digest,claim_receipt_digest,audit_event_id)
-  VALUES(attempt,delivery,1,1,1,endpoint,1,d,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,preflight,d,
+  VALUES(attempt,delivery,1,1,1,endpoint,1,d,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_config_digest,preflight,d,
     reservation,'control-reconcile-fixture-worker',d,2,d,d,d,d,d,d,d,'communication-v1',now_at+interval '2 hours',
     now_at,now_at+interval '1 hour',repeat('a',64),repeat('9',64),gen_random_uuid())
   ON CONFLICT DO NOTHING;
@@ -214,7 +242,7 @@ BEGIN
     budget_reservation_id,observed_at,actor_type,actor_id,request_id,trace_id,receipt_digest,audit_event_id,outbox_event_id)
   VALUES(receipt,delivery,1,2,1,2,attempt,'DISPATCH_FENCE',repeat('e',64),'APPLIED','PRE_DISPATCH_FENCE',50,
     'SENDING','RECONCILIATION_REQUIRED','RECONCILIATION_REQUIRED','NONE','NONE',true,d,d,endpoint,1,d,d,
-    preflight,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,d,d,d,d,d,reservation,now_at,'AUTHORIZED_SERVICE',NULL,
+    preflight,'59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_config_digest,d,d,d,d,reservation,now_at,'AUTHORIZED_SERVICE',NULL,
     gen_random_uuid(),'control-reconcile-fixture',repeat('f',64),gen_random_uuid(),gen_random_uuid())
   ON CONFLICT DO NOTHING;
 END $$;
@@ -233,8 +261,13 @@ DECLARE
   attempt constant uuid := '8c9d0e1f-7a6b-5c4d-8e3f-2a1b9c8d7e6f';
   receipt constant uuid := '9d0e1f2a-8b7c-6d5e-4f3a-2b1c0d9e8f7a';
   calendar constant uuid := '34c9c2b6-a0a8-517c-afc0-1bf96c7829e6';
+  v_config_digest char(64);
   now_at timestamptz := clock_timestamp();
 BEGIN
+  SELECT pc.configuration_digest INTO STRICT v_config_digest
+    FROM ops.communication_provider_configs pc
+   WHERE pc.id='59e6fe3c-6803-5f19-8ee2-1595abc421a8' AND pc.version=1;
+
   INSERT INTO intake.communication_endpoint_link_events(
     id,subject_id,subject_origin_binding_digest,endpoint_id,endpoint_sequence,
     profile_version,prior_endpoint_version,endpoint_version,endpoint_hmac,endpoint_digest,channel,
@@ -280,7 +313,7 @@ BEGIN
     current_evidence_rank,highest_proof_level,not_before,next_attempt_at,queued_at,updated_at,
     message_type,recipient_hash,template_version)
   VALUES(delivery,'COMMUNICATION_V1',false,intent,d,rendering,'0f6d16aa-3c47-5e6a-9c5e-c0c33c45d7a8',2,d,
-    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,repeat('b',64),'d8a95eb4-1fb4-5a23-a6e7-0d2dd9ef09ef',repeat('b',64),
+    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_config_digest,'d8a95eb4-1fb4-5a23-a6e7-0d2dd9ef09ef',repeat('b',64),
     'SMTP_EMAIL',d,d,d,d,d,'7f0f0a74-4a15-5b79-b3ae-0fdac4308a6d',d,d,'DELIVERED',2,1,2,1,1,3,50,'DELIVERED',
     now_at,now_at,now_at,now_at,'COMMUNICATION',d,'v1')
   ON CONFLICT DO NOTHING;
@@ -294,7 +327,7 @@ BEGIN
     activation_receipt_digest,policy_fence_digest,transport_policy_version,deadline_at,claimed_at,
     lease_expires_at,attempt_digest,claim_receipt_digest,audit_event_id)
   VALUES(attempt,delivery,1,1,1,'0f6d16aa-3c47-5e6a-9c5e-c0c33c45d7a8',2,d,
-    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,repeat('b',64),'d8a95eb4-1fb4-5a23-a6e7-0d2dd9ef09ef',repeat('b',64),
+    '59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_config_digest,'d8a95eb4-1fb4-5a23-a6e7-0d2dd9ef09ef',repeat('b',64),
     '7f0f0a74-4a15-5b79-b3ae-0fdac4308a6d','control-extension-worker',d,1,d,d,d,d,d,d,d,'communication-v1',
     now_at+interval '2 hours',now_at,now_at+interval '1 hour',d,d,gen_random_uuid())
   ON CONFLICT DO NOTHING;
@@ -310,7 +343,7 @@ BEGIN
     actor_type,actor_id,request_id,trace_id,receipt_digest,audit_event_id,outbox_event_id)
   VALUES(receipt,delivery,1,2,1,2,'c0d5cb1a-e63b-5e23-92ef-8d94ea73bf03','PROVIDER_RESPONSE',d,'APPLIED','PROVIDER_RESPONSE',50,
     'QUEUED','DELIVERED','DELIVERED','NONE','DELIVERED',true,d,d,'0f6d16aa-3c47-5e6a-9c5e-c0c33c45d7a8',2,d,d,
-    'd8a95eb4-1fb4-5a23-a6e7-0d2dd9ef09ef','59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,repeat('b',64),repeat('b',64),d,d,d,
+    'd8a95eb4-1fb4-5a23-a6e7-0d2dd9ef09ef','59e6fe3c-6803-5f19-8ee2-1595abc421a8',1,v_config_digest,repeat('b',64),d,d,d,
     '7f0f0a74-4a15-5b79-b3ae-0fdac4308a6d',now_at,'AUTHORIZED_SERVICE',NULL,gen_random_uuid(),'control-extension',d,gen_random_uuid(),gen_random_uuid())
   ON CONFLICT DO NOTHING;
 

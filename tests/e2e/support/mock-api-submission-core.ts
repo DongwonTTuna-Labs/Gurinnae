@@ -99,22 +99,25 @@ export async function handleCoreSubmissionRoutes(
       sessionTokenSha256: sha256(sessionToken),
       bodySha256: canonicalJsonSha256(input),
     });
-    return Response.json({
-      operationId: "createCorrectionRequest",
-      requestId: randomUUID(),
-      status: "accepted",
-      aggregateId: "99999999-9999-4999-8999-999999999999",
-      aggregateVersion: 1,
-      acceptedAt: new Date().toISOString(),
-      links: [],
-      receiptSession: {
-        opaqueSessionToken: token(`correction-receipt-${randomUUID()}`),
-        sessionKind: "CORRECTION_RECEIPT",
-        scopeId: "99999999-9999-4999-8999-999999999999",
-        expiresAt: expiresAt(),
-        version: 1,
+    return Response.json(
+      {
+        operationId: "createCorrectionRequest",
+        requestId: randomUUID(),
+        status: "accepted",
+        aggregateId: "99999999-9999-4999-8999-999999999999",
+        aggregateVersion: 1,
+        acceptedAt: new Date().toISOString(),
+        links: [],
+        receiptSession: {
+          opaqueSessionToken: token(`correction-receipt-${randomUUID()}`),
+          sessionKind: "CORRECTION_RECEIPT",
+          scopeId: "99999999-9999-4999-8999-999999999999",
+          expiresAt: expiresAt(),
+          version: 1,
+        },
       },
-    });
+      { status: 201 },
+    );
   }
 
   if (
@@ -310,7 +313,18 @@ export async function handleCoreSubmissionRoutes(
       sessionTokenSha256: sha256(sessionToken),
       bodySha256: canonicalJsonSha256(await body(request)),
     });
-    if (kind === "response") return new Response(null, { status: 204 });
+    if (kind === "response")
+      return Response.json(
+        {
+          operationId: "deleteResponseAttachment",
+          requestId: randomUUID(),
+          status: "accepted",
+          aggregateId: id,
+          acceptedAt: new Date().toISOString(),
+          links: [],
+        },
+        { status: 204 },
+      );
     return Response.json({
       operationId: "deleteCorrectionAttachment",
       requestId: randomUUID(),

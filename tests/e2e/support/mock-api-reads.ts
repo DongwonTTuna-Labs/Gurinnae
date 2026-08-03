@@ -1,18 +1,21 @@
+import operationSamples from "../../../verification/generated-operation-samples.json";
 import {
   actionExecutionReceipt,
   actionProposalDetail,
   actionQueueResponse,
 } from "./mock-api-action-reads";
 import { handleExchange } from "./mock-api-exchange";
-import {
-  actionJourneyIds,
-  asserted,
-  attachmentStatus,
-  expiresAt,
-  problem,
-  runtime,
-  sha256,
-} from "./mock-api-state";
+import { mockOperationId } from "./mock-api-openapi";
+import { actionJourneyIds, problem, runtime } from "./mock-api-state";
+import { handleSubmissionRead } from "./mock-api-submission-reads";
+
+type OperationSample = {
+  body: unknown;
+  mediaType: string;
+  status: number;
+};
+
+const responseSamples = operationSamples as Record<string, OperationSample>;
 
 export async function handleReadRoutes(
   request: Request,
@@ -20,124 +23,19 @@ export async function handleReadRoutes(
 ): Promise<Response> {
   const exchangeResponse = await handleExchange(request, url);
   if (exchangeResponse) return exchangeResponse;
-
-  const submissionReadPaths = new Set([
-    "/v1/response-session/access-status",
-    "/v1/response-session",
-    "/v1/response-session/draft",
-    "/v1/response-session/download",
-    "/v1/response-session/preview",
-    "/v1/response-receipt",
-    "/v1/correction-session",
-    "/v1/correction-session/preview",
-    "/v1/correction-receipt",
-    "/v1/subscription-session",
-  ]);
-  if (request.method === "GET" && submissionReadPaths.has(url.pathname)) {
-    if (!asserted(request)) return problem(401, "SERVICE_ASSERTION_REQUIRED");
-    const sessionToken =
-      request.headers.get("x-gurine-submission-session") ?? "";
-    if (!sessionToken) return problem(401, "SUBMISSION_SESSION_REQUIRED");
-    runtime.submissionReads.push({
-      path: url.pathname,
-      sessionTokenSha256: sha256(sessionToken),
-    });
-    if (url.pathname === "/v1/response-session/download") {
-      return Response.json({
-        binary: btoa(
-          JSON.stringify({
-            requestId: "77777777-7777-4777-8777-777777777777",
-            status: "READY",
-          }),
-        ),
-      });
-    }
-    if (url.pathname === "/v1/response-session/draft") {
-      const attachments = [...runtime.attachmentUploads.values()]
-        .filter(
-          (item) =>
-            item.kind === "response" &&
-            item.sessionTokenSha256 === sha256(sessionToken),
-        )
-        .map(attachmentStatus);
-      return Response.json({
-        requestId: "77777777-7777-4777-8777-777777777777",
-        version: runtime.responseDraftVersion,
-        answers: [],
-        attachments,
-        publicationConsent: {
-          body: false,
-          attachments: [],
-          redactionAcknowledged: false,
-          scopeExplanation: "아직 공개 동의를 확정하지 않았습니다.",
-          updatedAt: new Date().toISOString(),
-        },
-        savedAt: new Date().toISOString(),
-        expiresAt: expiresAt(),
-      });
-    }
-    if (url.pathname === "/v1/response-session/preview") {
-      return Response.json({
-        request: {
-          requestId: "77777777-7777-4777-8777-777777777777",
-          casePublicTitle: "E2E 공개 사건",
-          partyName: "E2E 응답 기관",
-          status: "OPEN",
-          dueAt: expiresAt(),
-          questionCount: 1,
-        },
-        answers: [],
-        attachments: [],
-        publicationConsent: {
-          body: true,
-          attachments: [],
-          redactionAcknowledged: true,
-          scopeExplanation: "본문 공개에 동의합니다.",
-          updatedAt: new Date().toISOString(),
-        },
-        warnings: [],
-        submissionDigest: "b".repeat(64),
-      });
-    }
-    if (url.pathname === "/v1/correction-session") {
-      return Response.json({
-        id: "88888888-8888-4888-8888-888888888888",
-        version: runtime.correctionDraftVersion,
-        requesterType: "CITIZEN",
-        contactEmail: "requester@example.test",
-        summary: "공개 문장의 수치를 바로잡아 주세요.",
-        requestedChanges: ["계약 금액을 원문과 일치시켜 주세요."],
-        evidenceDescription: "공개 원문 링크를 확인했습니다.",
-      });
-    }
-    if (url.pathname === "/v1/correction-session/preview") {
-      const attachments = [...runtime.attachmentUploads.values()]
-        .filter(
-          (item) =>
-            item.kind === "correction" &&
-            item.sessionTokenSha256 === sha256(sessionToken),
-        )
-        .map(attachmentStatus);
-      return Response.json({
-        draft: {
-          id: "88888888-8888-4888-8888-888888888888",
-          version: runtime.correctionDraftVersion,
-        },
-        attachments,
-        warnings: [],
-        submissionDigest: "a".repeat(64),
-      });
-    }
-    return Response.json({
-      id: "77777777-7777-4777-8777-777777777777",
-      status: "READY",
-      version: 1,
-      items: [],
-      links: [],
-    });
-  }
+  const submissionRead = await handleSubmissionRead(request, url);
+  if (submissionRead) return submissionRead;
 
   if (request.method === "GET") {
+    if (url.pathname === "/v1/openapi.json") {
+      return Response.json({
+        id: "public-openapi-v1",
+        status: "READY",
+        version: 1,
+        filename: "gurine-public-api.openapi.json",
+        mediaType: "application/json",
+      });
+    }
     // CAS-010/011 use the same typed authority envelopes as production.  Keep
     // these fixtures rich enough to exercise the authenticated
     // API -> projection -> rendered visualization/provenance path; the
@@ -185,7 +83,6 @@ export async function handleReadRoutes(
         proposalStates: [],
         sort: "NEWEST",
       },
-      suggestions: [{ pending: 1, accepted: 0, rejected: 0, expired: 0 }],
       budget: {
         periodLabel: "현재 케이스",
         state: "AVAILABLE",
@@ -205,11 +102,17 @@ export async function handleReadRoutes(
     };
     if (url.pathname.endsWith("/list-case-agent-runs")) {
       return Response.json({
-        caseId: casCaseId,
-        items: cas010Vm.runs,
-        appliedFilters: cas010Vm.filters,
         analysisVm: cas010Vm,
-        nextCursor: null,
+        items: [
+          {
+            id: casRunId,
+            agentType: "DOCUMENT_ANALYSIS",
+            status: "SUCCEEDED",
+            objective: "공개 원문과 계약 금액의 차이를 확인합니다.",
+          },
+        ],
+        appliedFilters: { caseId: casCaseId, status: [], agentType: [] },
+        asOf: "2026-07-19T00:00:00Z",
       });
     }
     if (url.pathname.endsWith("/get-agent-run")) {
@@ -283,14 +186,23 @@ export async function handleReadRoutes(
             },
           ],
         },
-        viewModelSha256: "g".repeat(64),
+        viewModelSha256: "f".repeat(64),
       };
       return Response.json({
         id: casRunId,
-        caseId: casCaseId,
         status: "SUCCEEDED",
-        analysisVm: cas011Vm,
-        data: { analysisVm: cas011Vm },
+        data: {
+          analysisVm: cas011Vm,
+          id: casRunId,
+          caseId: casCaseId,
+          agentType: "DOCUMENT_ANALYSIS",
+          objective: "공개 원문과 계약 금액의 차이를 확인합니다.",
+          status: "SUCCEEDED",
+          evidenceScopeIds: [],
+          citations: [],
+          unknowns: [],
+        },
+        links: [],
       });
     }
     if (url.pathname === "/v1/content/funding") {
@@ -353,7 +265,7 @@ export async function handleReadRoutes(
     if (url.pathname === "/v1/transparency-reports") {
       return Response.json({
         items: [],
-        nextCursor: null,
+        appliedFilters: Object.fromEntries(url.searchParams),
         asOf: "2026-07-19T00:00:00Z",
       });
     }
@@ -365,7 +277,9 @@ export async function handleReadRoutes(
       });
     }
     if (url.pathname === "/v1/cases/synthetic-record") {
+      const sample = operationSamples.getPublicCase.body;
       return Response.json({
+        ...sample,
         slug: "synthetic-record",
         title: "공개 사례 테스트",
         publicState: "PUBLISHED_ANOMALY",
@@ -374,46 +288,123 @@ export async function handleReadRoutes(
         updatedAt: "2026-07-13T00:00:00Z",
         summary: "원문에 연결된 확인 사실 요약입니다.",
         confirmedFacts: [
-          { id: "fact-1", text: "계약 금액이 공개 원문과 일치합니다." },
+          {
+            id: "fact-1",
+            statement: "계약 금액이 공개 원문과 일치합니다.",
+            evidenceIds: ["80000000-0000-4000-8000-000000000001"],
+            verifiedAt: "2026-07-13T00:00:00Z",
+            scope: null,
+          },
         ],
         criticalUnknowns: [
           {
             id: "unknown-1",
-            text: "추가 당사자 자료는 아직 확인되지 않았습니다.",
+            question: "추가 당사자 자료는 확인되었습니까?",
+            whyMaterial: "추가 자료가 결론의 적용 범위를 바꿀 수 있습니다.",
+            nextAction: null,
+            status: "OPEN",
           },
         ],
         partyResponses: [
           {
-            party: "공급기관",
+            id: "80000000-0000-4000-8000-000000000002",
+            partyName: "공급기관",
             status: "RECEIVED",
             submittedAt: "2026-07-12T12:00:00Z",
+            excerpt: null,
+            attachmentCount: 0,
+            publicationConsent: {
+              body: true,
+              attachments: [],
+              redactionAcknowledged: true,
+              scopeExplanation: "본문 공개에 동의했습니다.",
+              updatedAt: "2026-07-12T12:00:00Z",
+            },
           },
         ],
-        signals: [{ id: "signal-1", state: "OPEN", label: "반복 계약" }],
+        signals: [
+          {
+            id: "80000000-0000-4000-8000-000000000003",
+            ruleId: "repeat-contract",
+            label: "반복 계약",
+            explanation: "동일 당사자의 반복 계약을 확인합니다.",
+            calculationSummary: "공개 원문 기준 집계",
+            blockers: [],
+          },
+        ],
         comparison: {
-          cohort: "동일 기관·동일 기간",
-          exclusions: [],
-          distribution: "중앙값 기준",
+          target: {
+            id: "target-contract",
+            contractId: "80000000-0000-4000-8000-000000000004",
+            agencyName: "공급기관",
+            supplierName: null,
+            observedAt: "2026-07-12",
+            quantity: "1",
+            unit: "건",
+            unitPrice: { amount: "1000000", currency: "KRW" },
+            vatIncluded: null,
+            bundleSummary: [],
+            compatibility: "COMPARABLE",
+            includeReason: "동일 기관·동일 기간",
+          },
+          result: {
+            benchmarkType: "MEDIAN",
+            benchmarkValue: { amount: "1000000", currency: "KRW" },
+            targetValue: { amount: "1000000", currency: "KRW" },
+            ratio: "1",
+            includedCount: 1,
+            excludedCount: 0,
+            formula: "target / median",
+            roundingPolicy: "NONE",
+          },
+          included: [],
+          excluded: [],
+          blockers: [],
+          limitations: [],
         },
         counterEvidence: [
-          { id: "counter-1", text: "대안 설명 자료가 검토되었습니다." },
+          {
+            id: "80000000-0000-4000-8000-000000000005",
+            title: "대안 설명 자료",
+            evidenceType: "DOCUMENT",
+            verificationStatus: "VALIDATED",
+            supports: [],
+            href: null,
+          },
         ],
-        claims: [{ id: "claim-1", text: "핵심 주장", status: "SUPPORTED" }],
+        claims: [
+          {
+            id: "80000000-0000-4000-8000-000000000006",
+            claimType: "FACTUAL",
+            text: "핵심 주장",
+            evidenceIds: ["80000000-0000-4000-8000-000000000001"],
+            responseIds: [],
+            limitations: [],
+          },
+        ],
         evidence: [
           {
-            id: "evidence-1",
-            locator: "원문 p.2",
-            validationStatus: "VALIDATED",
+            id: "80000000-0000-4000-8000-000000000001",
+            title: "원문 p.2",
+            evidenceType: "DOCUMENT",
+            sourceUrl: null,
+            sourceLocator: "원문 p.2",
+            contentSha256: "a".repeat(64),
+            publicExcerpt: null,
+            restriction: null,
           },
         ],
         timeline: [
           {
             id: "event-1",
-            label: "공개 revision 3",
-            at: "2026-07-13T00:00:00Z",
+            occurredAt: "2026-07-13T00:00:00Z",
+            eventType: "REVISION_PUBLISHED",
+            title: "공개 revision 3",
+            description: null,
+            actor: null,
+            revision: 3,
           },
         ],
-        corrections: [],
         freshness: { status: "CURRENT", asOf: "2026-07-13T00:00:00Z" },
         limitations: ["공개자료에 포함된 범위만 검토합니다."],
         seo: {
@@ -458,11 +449,13 @@ export async function handleReadRoutes(
         links: [],
       });
     }
-    return Response.json({
-      items: [],
-      appliedFilters: Object.fromEntries(url.searchParams),
-      asOf: "2026-07-12T00:00:00Z",
-      nextCursor: null,
+    const operationId = mockOperationId(request);
+    const sample = operationId ? responseSamples[operationId] : undefined;
+    if (!operationId || !sample)
+      return problem(500, "MOCK_READ_RESPONSE_SAMPLE_MISSING");
+    return new Response(JSON.stringify(sample.body), {
+      status: sample.status,
+      headers: { "content-type": sample.mediaType },
     });
   }
   return problem(409, "SYNTHETIC_READ_ONLY", "Synthetic mutation disabled");
