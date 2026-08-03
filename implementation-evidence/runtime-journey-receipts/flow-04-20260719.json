@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "LIVE_POSTGRES_RESPONSE_REQUEST_SUBMISSION",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "flowId": "FLOW-04",
+  "flowName": "RESPONSE_REQUEST_SUBMISSION",
+  "operationId": "createResponseRequest",
+  "correlationId": "2bd680ad-ba47-49d2-b8e4-f612e6c4e985",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "normal": {
+    "pass": true,
+    "caseId": "721975a0-886a-4c86-84f5-0e26dff23a34",
+    "requestId": "94aecf9a-df45-403d-8779-be0e80b6bcef",
+    "caseVersion": 2,
+    "auditEventId": "84305500-f3d3-4f57-8e4c-0134e6c2e9da",
+    "draftVersion": 1,
+    "submissionId": "c5a163af-c2e5-47bc-8f14-9053b77027b5",
+    "requestStatus": "SUBMITTED",
+    "requestVersion": 2,
+    "receiptReadback": {
+      "id": "c5a163af-c2e5-47bc-8f14-9053b77027b5",
+      "status": "SUBMITTED",
+      "submitted_at": "2026-07-20T20:09:49.66168+00:00",
+      "draft_version": 1,
+      "submission_sha256": "faf3f8670450669143156b647907b565fded36fb28f37482e91cc24a91947a07",
+      "publication_consent": {
+        "consent": "PUBLIC_EXCERPT"
+      },
+      "response_request_id": "94aecf9a-df45-403d-8779-be0e80b6bcef",
+      "editorial_response_id": null,
+      "receipt_token_consumed_at": null
+    },
+    "submissionStatus": "SUBMITTED",
+    "followUpTaskCount": 1,
+    "activeSessionState": "CONSUMED",
+    "requestOutboxCount": 2,
+    "createReceiptDigest": "7899f2461f4e50529805f6dfff01c611725fe3de40af77c31db2ed2ce8b6d921",
+    "pendingSessionState": "CONSUMED",
+    "receiptSessionCount": 1,
+    "attachmentScanStatus": "CLEAN",
+    "submissionOutboxCount": 1,
+    "attachmentUploadStatus": "FINALIZED",
+    "submissionAuditEventId": "3ff6e0f2-1693-467d-9760-c0027a42af44",
+    "submissionDraftVersion": 1,
+    "flowId": "FLOW-04",
+    "operationId": "submitResponse",
+    "createResponseRequestReceipt": {
+      "operationId": "createResponseRequest",
+      "aggregateId": "94aecf9a-df45-403d-8779-be0e80b6bcef",
+      "aggregateVersion": 1,
+      "status": "SENT",
+      "auditEventId": "84305500-f3d3-4f57-8e4c-0134e6c2e9da",
+      "receiptDigest": "7899f2461f4e50529805f6dfff01c611725fe3de40af77c31db2ed2ce8b6d921",
+      "outboxEventCount": 2
+    },
+    "submitResponseReceipt": {
+      "operationId": "submitResponse",
+      "aggregateId": "c5a163af-c2e5-47bc-8f14-9053b77027b5",
+      "status": "SUBMITTED",
+      "receiptSessionCount": 1,
+      "auditEventId": "3ff6e0f2-1693-467d-9760-c0027a42af44",
+      "outboxEventCount": 1
+    },
+    "operations": [
+      "createResponseRequest",
+      "exchangeResponseAccessToken",
+      "verifyResponseAccess",
+      "saveResponseDraft",
+      "createResponseAttachment",
+      "finalizeResponseAttachment",
+      "scanResponseAttachment",
+      "submitResponse",
+      "exchangeResponseReceiptToken"
+    ]
+  },
+  "negative": {
+    "branch": "consumed-session-replay",
+    "expectedError": "28000:response_session_invalid",
+    "observedError": {
+      "message": "response_session_invalid",
+      "sqlstate": "28000",
+      "forbiddenMutationCount": 0,
+      "pass": true
+    },
+    "receiptCountBefore": {
+      "outboxCount": 3,
+      "requestVersion": 2,
+      "submissionCount": 1
+    },
+    "receiptCountAfterNegative": {
+      "outboxCount": 3,
+      "requestVersion": 2,
+      "submissionCount": 1
+    },
+    "pass": true
+  },
+  "sourceTreeDigest": "8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060",
+  "observedAt": "2026-07-20T20:09:51Z",
+  "pass": true
+}

@@ -1,0 +1,17 @@
+{
+  "run_id": "00000000-0000-0000-0000-00000000c356",
+  "case_id": "00000000-0000-0000-0000-0000000186a6",
+  "objective": "citation-verifier 합성 평가 unknown_evidence",
+  "evidence_snapshot_hash": "facd20487bd28763ca5484816fb04a474ac8aee21dc7a00e04f45b7f75c7e05a",
+  "allowed_evidence_ids": [
+    "00000000-0000-0000-0000-0000000003e9",
+    "00000000-0000-0000-0000-0000000003ea",
+    "00000000-0000-0000-0000-0000000003eb"
+  ],
+  "budget_krw": 1000,
+  "locale": "ko-KR",
+  "known_unknowns": [
+    "설치·인증 비용 포함 여부"
+  ],
+  "policy_flags": []
+}

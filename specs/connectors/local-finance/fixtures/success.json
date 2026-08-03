@@ -1,0 +1,24 @@
+{
+  "fixture_origin": "synthetic-manifest-contract-not-live-evidence",
+  "connector_id": "local-finance",
+  "kind": "success",
+  "manifest": {
+    "manifest_version": "1",
+    "publisher": "가상 공식자료 공급자",
+    "generated_at": "2026-07-01T00:00:00Z",
+    "documents": [
+      {
+        "external_id": "local-finance-SYN-001",
+        "title": "지방재정365 공식 링크 자료 합성 문서",
+        "url": "https://example.invalid/local-finance/document-1.pdf",
+        "published_at": "2026-07-01T00:00:00Z",
+        "content_type": "application/pdf",
+        "revision": "1",
+        "sha256": "0a4a54f8cd0cfb72a6c93156096a449b95226ca8a85f46236bb3c9c6dd45551c",
+        "agency_name": "가상기관",
+        "category": "synthetic",
+        "deleted": false
+      }
+    ]
+  }
+}

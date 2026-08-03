@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "INT-001",
+  "route": "/internal/dashboard",
+  "url": "http://127.0.0.1:29102/internal/dashboard",
+  "observedAt": "2026-07-19T15:35:38.286Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "INT-001",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "critical",
+        "component": "RevisionAndCorrectionPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "my-work",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "incidents",
+        "component": "OperationsStatusPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "queues",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "cost",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

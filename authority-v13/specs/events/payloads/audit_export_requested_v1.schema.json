@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/audit-export-requested-v1.json",
+  "title": "Audit Export Requested v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "auditExportId",
+    "requestedBy",
+    "from",
+    "to",
+    "format",
+    "scope",
+    "reason",
+    "watermarkPolicy",
+    "expiresAt"
+  ],
+  "properties": {
+    "auditExportId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "requestedBy": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "from": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "to": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "format": {
+      "enum": [
+        "CSV",
+        "JSONL"
+      ]
+    },
+    "scope": {
+      "enum": [
+        "CASE",
+        "OBJECT",
+        "GLOBAL"
+      ]
+    },
+    "objectType": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "objectId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "watermarkPolicy": {
+      "enum": [
+        "ACTOR_AND_TIME",
+        "CLASSIFICATION_BANNER"
+      ]
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

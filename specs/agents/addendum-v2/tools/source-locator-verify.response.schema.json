@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/source-locator-verify-response.json",
+  "title": "SourceLocatorVerifyResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "verification",
+    "actualSelectedTextRedacted",
+    "actualSelectedContentSha256",
+    "actualSupportsSha256",
+    "sourceUseId",
+    "sourceUseSha256",
+    "verificationSha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "source.locator_verify.response.v2" },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "locatorExists",
+        "contentMatches",
+        "supportsMatches",
+        "failureCode"
+      ],
+      "properties": {
+        "status": { "enum": ["VALID", "INVALID", "SOURCE_UNAVAILABLE"] },
+        "locatorExists": { "type": "boolean" },
+        "contentMatches": { "type": "boolean" },
+        "supportsMatches": { "type": "boolean" },
+        "failureCode": {
+          "type": ["string", "null"],
+          "enum": [
+            null,
+            "SOURCE_NOT_IN_SNAPSHOT",
+            "SOURCE_BYTES_UNAVAILABLE",
+            "LOCATOR_NOT_FOUND",
+            "CONTENT_HASH_MISMATCH",
+            "SUPPORTS_HASH_MISMATCH",
+            "RIGHTS_DENIED",
+            "PARSER_VERSION_UNAVAILABLE"
+          ]
+        }
+      }
+    },
+    "actualSelectedTextRedacted": {
+      "type": ["string", "null"],
+      "maxLength": 4000
+    },
+    "actualSelectedContentSha256": {
+      "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+    },
+    "actualSupportsSha256": {
+      "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+    },
+    "sourceUseId": { "type": ["string", "null"], "format": "uuid" },
+    "sourceUseSha256": {
+      "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+    },
+    "verificationSha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+}

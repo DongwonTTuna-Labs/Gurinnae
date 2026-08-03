@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/provider-receipt.json",
+  "title": "ProviderReceiptV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "receiptId",
+    "agentRunId",
+    "providerTurnId",
+    "providerMode",
+    "providerConfigId",
+    "providerCandidateId",
+    "modelId",
+    "modelConfigurationSha256",
+    "semanticRequestSha256",
+    "idempotencyKeySha256",
+    "outcome",
+    "proofKind",
+    "proofSha256",
+    "providerRequestIdHash",
+    "usage",
+    "pricing",
+    "dataPolicy",
+    "dispatchedAt",
+    "observedAt",
+    "completedAt",
+    "receiptSha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "provider-receipt.v2" },
+    "receiptId": { "type": "string", "format": "uuid" },
+    "agentRunId": { "type": "string", "format": "uuid" },
+    "providerTurnId": { "type": "string", "format": "uuid" },
+    "providerMode": {
+      "enum": ["EXTERNAL_APPROVED", "LOCAL_APPROVED", "DETERMINISTIC_DOUBLE"]
+    },
+    "providerConfigId": { "type": ["string", "null"], "format": "uuid" },
+    "providerCandidateId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "modelId": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "modelConfigurationSha256": { "$ref": "#/$defs/sha256" },
+    "semanticRequestSha256": { "$ref": "#/$defs/sha256" },
+    "idempotencyKeySha256": { "$ref": "#/$defs/sha256" },
+    "outcome": {
+      "enum": [
+        "ACCEPTED_FINAL",
+        "ACCEPTED_TOOL_CALL",
+        "DEFINITIVE_REJECTED",
+        "RATE_LIMITED",
+        "TIMED_OUT_BEFORE_SEND",
+        "OUTCOME_UNKNOWN",
+        "CANCELLED_CONFIRMED",
+        "NO_DISPATCH_CONFIRMED"
+      ]
+    },
+    "proofKind": {
+      "enum": [
+        "AUTHENTICATED_RESPONSE_HEADERS",
+        "SIGNED_PROVIDER_RECEIPT",
+        "IDEMPOTENCY_LOOKUP",
+        "USAGE_LOOKUP",
+        "DEFINITIVE_NO_DISPATCH"
+      ]
+    },
+    "proofSha256": { "$ref": "#/$defs/sha256" },
+    "providerRequestIdHash": {
+      "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "inputUnits",
+        "outputUnits",
+        "cachedInputUnits",
+        "billableUnits",
+        "usageEvidenceSha256"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "NOT_APPLICABLE",
+            "ESTIMATED",
+            "PROVIDER_REPORTED",
+            "BILLING_VERIFIED",
+            "UNKNOWN"
+          ]
+        },
+        "inputUnits": { "type": ["integer", "null"], "minimum": 0 },
+        "outputUnits": { "type": ["integer", "null"], "minimum": 0 },
+        "cachedInputUnits": { "type": ["integer", "null"], "minimum": 0 },
+        "billableUnits": { "type": ["integer", "null"], "minimum": 0 },
+        "usageEvidenceSha256": {
+          "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pricingVersion",
+        "pricingSha256",
+        "currency",
+        "fxRateFactId",
+        "reservedMicrosKrw",
+        "actualMicrosKrw",
+        "costState"
+      ],
+      "properties": {
+        "pricingVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "pricingSha256": { "$ref": "#/$defs/sha256" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "fxRateFactId": { "type": ["string", "null"], "format": "uuid" },
+        "reservedMicrosKrw": { "type": "integer", "minimum": 0 },
+        "actualMicrosKrw": { "type": ["integer", "null"], "minimum": 0 },
+        "costState": {
+          "enum": [
+            "RESERVED",
+            "ESTIMATED",
+            "SETTLED",
+            "RELEASED",
+            "RECONCILIATION_REQUIRED"
+          ]
+        }
+      }
+    },
+    "dataPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "processingRegion",
+        "retentionMode",
+        "trainingUse",
+        "policyVersion",
+        "policySha256",
+        "rightsDecisionSetSha256"
+      ],
+      "properties": {
+        "classification": { "enum": ["PUBLIC", "INTERNAL"] },
+        "processingRegion": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}(?:-[A-Z0-9]{1,12})?$"
+        },
+        "retentionMode": {
+          "enum": ["ZERO_RETENTION", "BOUNDED_PROVIDER_RETENTION", "LOCAL_ONLY"]
+        },
+        "trainingUse": { "const": "PROHIBITED" },
+        "policyVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "policySha256": { "$ref": "#/$defs/sha256" },
+        "rightsDecisionSetSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "dispatchedAt": { "type": "string", "format": "date-time" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": ["string", "null"], "format": "date-time" },
+    "receiptSha256": { "$ref": "#/$defs/sha256" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "providerMode": { "const": "EXTERNAL_APPROVED" } }
+      },
+      "then": {
+        "properties": {
+          "providerConfigId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "else": {
+        "properties": {
+          "providerConfigId": { "type": ["string", "null"], "format": "uuid" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": { "enum": ["ACCEPTED_FINAL", "ACCEPTED_TOOL_CALL"] }
+        }
+      },
+      "then": {
+        "properties": {
+          "providerRequestIdHash": { "$ref": "#/$defs/sha256" },
+          "completedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  ],
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["receiptSha256"]
+  }
+}

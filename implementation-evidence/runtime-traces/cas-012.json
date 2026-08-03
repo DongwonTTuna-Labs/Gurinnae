@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-012",
+  "route": "/internal/cases/{caseId}/timeline",
+  "url": "http://127.0.0.1:29102/internal/cases/80000000-0000-4000-8000-000000000001/timeline",
+  "observedAt": "2026-07-19T15:35:44.148Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "CAS-012",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "timeline",
+        "component": "RevisionTimeline",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "public-view",
+        "component": "RevisionTimeline",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "related",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 6,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

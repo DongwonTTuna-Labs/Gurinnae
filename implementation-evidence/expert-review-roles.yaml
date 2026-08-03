@@ -1,0 +1,51 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+canonical_role_count: 14
+alias_policy:
+  - Each legacy alias resolves to exactly one canonical role.
+  - A canonical role has exactly one independent reviewer and one final record.
+  - An alias is never accepted as a final review record role.
+roles:
+  - role: PDM
+    aliases: [PDM_DESIGN]
+    blocking_question: Are the core journeys connected from entry to durable outcome, understandable, measurable, owned and operable?
+  - role: PRODUCT_DESIGN
+    aliases: [PRODUCT_DESIGN_CONSTITUTION]
+    blocking_question: Does each screen expose the right object, hierarchy, evidence, uncertainty and action with consistent visual language?
+  - role: ACCESSIBILITY_RESPONSIVE
+    aliases: [COGNITIVE_ACCESSIBILITY, COGNITIVE_ACCESSIBILITY_DESIGN]
+    blocking_question: Is every state usable at compact through wide, zoom, keyboard and screen reader with deterministic focus, error and recovery behavior?
+  - role: BUSINESS_MODEL
+    aliases: [BUSINESS_MODEL_DESIGN]
+    blocking_question: Do target customer, valuable job, acquisition, activation, retention, revenue, cost and trust firewall reconcile to authoritative facts?
+  - role: AI_MULTIMODAL_RESEARCH
+    aliases: [AI_DATA_PLATFORM, AI_DATA_PLATFORM_DESIGN]
+    blocking_question: Do authorized real inputs traverse typed tools, providers and parsers with citations, abstention and human promotion without invented evidence?
+  - role: DATA_VISUALIZATION
+    aliases: [SEARCH_VISUALIZATION, SEARCH_VISUALIZATION_DESIGN]
+    blocking_question: Are warehouse membership, lineage, retrieval, projection, chart and table semantics, uncertainty and digest equality exact and reproducible?
+  - role: DATABASE
+    aliases: [RUST_DOMAIN_DATABASE]
+    blocking_question: Do physical schema, constraints, transactions, typed persistence, authorization and concurrency make invalid domain states unrepresentable?
+  - role: COMMAND_EVENT_LIFECYCLE
+    aliases: [RUST_DOMAIN, RUST_DOMAIN_DESIGN]
+    blocking_question: Does every mutation have one exact command, persistence effect, event, consumer, replay rule, owner and terminal or recovery path?
+  - role: HUMAN_APPROVAL
+    aliases: [HUMAN_APPROVAL_DESIGN]
+    blocking_question: Is the exact common subject independently decided, quorum-bound and separated from fenced execution and reconciliation?
+  - role: OMNICHANNEL_SESSION
+    aliases: [OMNICHANNEL, OMNICHANNEL_DESIGN]
+    blocking_question: Are identity, scoped session, consent, endpoint and config version, rendering, provider callback, opt-out and receipt closed per channel?
+  - role: SRE_FINOPS
+    aliases: [SRE_COST, SRE_COST_DESIGN]
+    blocking_question: Are observed health, capacity, scheduler, provider fallback, budget, cost, kill switch, incident, restore and rollback production-operable?
+  - role: TRUST_PRIVACY_LEGAL
+    aliases: [TRUST_LEGAL, TRUST_LEGAL_DESIGN]
+    blocking_question: Are publication, response, correction, rights, privacy, retention, holds, conflicts, funding and legal activation fail-closed and auditable?
+  - role: QA_TRACEABILITY
+    aliases: [ACCEPTANCE, ACCEPTANCE_DESIGN]
+    blocking_question: Does executable evidence prove every effective ID and hard gate exactly once without placeholder, fixture-only effect, skip or false green?
+  - role: PROCUREMENT_DOMAIN
+    aliases: [KOREAN_PROCUREMENT_DOMAIN]
+    blocking_question: Are Korean procurement facts, comparability, entity and source revision, anomaly wording, counter-evidence and investigation decisions domain-correct?

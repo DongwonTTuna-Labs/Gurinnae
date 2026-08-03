@@ -1,0 +1,41 @@
+{
+  "specification_version": "13.0.0",
+  "sections": [
+    "design"
+  ],
+  "stats": {
+    "additive_foreign_keys_validated": 509,
+    "additive_sql_expressions_parsed": 1385,
+    "approval_binding_common_fields": 32,
+    "approval_detail_relations": 17,
+    "design_aggregate_aliases": 18,
+    "design_domain_bindings": 58,
+    "design_screens": 94,
+    "duplicate_key_canaries": "PASS",
+    "generated_constraint_names": 417,
+    "global_additive_tables": 128,
+    "journey_graph_branches": 17,
+    "journey_graph_edges": 129,
+    "journey_graph_journeys": 12,
+    "journey_validator_negative_canaries": 114,
+    "owner_additive_events": 88,
+    "owner_additive_operation_commands": 35,
+    "owner_additive_operation_queries": 12,
+    "owner_additive_operations": 47,
+    "owner_additive_operations_control_api": 36,
+    "owner_additive_operations_identity_api": 3,
+    "owner_additive_operations_submission_api": 8,
+    "owner_additive_tables": 128,
+    "owner_private_application_commands": 16,
+    "owner_private_callback_operations": 8,
+    "owner_state_edges": 247,
+    "owner_state_machines": 50,
+    "persistence_additive_tables": 128,
+    "physical_additive_tables": 128,
+    "product_additive_events": 88,
+    "public_projector_direct_relation_grants": 0
+  },
+  "warnings": [],
+  "errors": [],
+  "result": "PASS"
+}

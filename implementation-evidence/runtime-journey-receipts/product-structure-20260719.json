@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "LIVE_POSTGRES_ACCEPTANCE_PROBE",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE",
+    "function": "ops.acceptance_runtime_probe_v1(text)"
+  },
+  "command": "GURINNAE_DATABASE_URL=<ephemeral-postgresql-18.4> cargo test -p gurine-acceptance-tests --test product_structure -- --nocapture",
+  "result": "PASS",
+  "scenarios": [
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-001",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    },
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-002",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    },
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-003",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    },
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-004",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    },
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-005",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    },
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-006",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    },
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-007",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    },
+    {
+      "scenarioId": "AC-PRODUCT_STRUCTURE-008",
+      "action": true,
+      "domain": true,
+      "receipt": true,
+      "audit": true,
+      "outbox": true,
+      "event": true,
+      "destination": true,
+      "passed": true
+    }
+  ],
+  "notes": [
+    "The probe runs the owner journey start/request/ack routines and reads back durable receipt, audit, outbox, event and destination rows.",
+    "No environment-string readiness shortcut or fixture-only result is used.",
+    "This evidence closes the product-structure runtime gate only; it does not claim authority flows 01-10 or operations SLI closure."
+  ]
+}

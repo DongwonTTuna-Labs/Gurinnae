@@ -1,0 +1,16 @@
+[package]
+name = "gurine-agent-orchestration"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+time.workspace = true
+uuid.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

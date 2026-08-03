@@ -1,0 +1,1137 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Gurine Identity/BFF Contract",
+    "version": "13.0.0",
+    "description": "OIDC BFF and internal session flows. This is the final semantic API contract; Rust-generated OpenAPI must be equivalent."
+  },
+  "servers": [
+    {
+      "url": "https://review.example.invalid"
+    }
+  ],
+  "tags": [
+    {
+      "name": "auth"
+    }
+  ],
+  "paths": {
+    "/auth/callback": {
+      "get": {
+        "operationId": "completeOidcCallback",
+        "tags": [
+          "auth"
+        ],
+        "summary": "completeOidcCallback",
+        "description": "Final v12 contract. Kind: COMMAND. Capability: none.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "iss",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri-reference"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "See Other",
+            "headers": {
+              "Location": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uri-reference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ]
+          },
+          "401": {
+            "description": "Problem response: TOKEN_INVALID",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "TOKEN_INVALID"
+            ]
+          },
+          "409": {
+            "description": "Problem response: VERSION_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VERSION_CONFLICT"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          },
+          "503": {
+            "description": "Problem response: DEPENDENCY_UNAVAILABLE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE"
+            ]
+          }
+        },
+        "x-operation-kind": "COMMAND",
+        "x-capability": "none",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "TOKEN_INVALID",
+          "VERSION_CONFLICT",
+          "DEPENDENCY_UNAVAILABLE",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "OidcTransaction": []
+          }
+        ],
+        "x-assurance-policy": {
+          "mode": "STATIC",
+          "default": "ANONYMOUS_PROOF",
+          "conditions": [],
+          "step_up_possible": false
+        },
+        "x-assurance-level": "ANONYMOUS_PROOF",
+        "x-step-up-required": false
+      }
+    },
+    "/auth/login": {
+      "get": {
+        "operationId": "startOidcLogin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "OIDC authorization / OIDC 재시작",
+        "description": "Final v12 contract. Kind: COMMAND. Capability: none.",
+        "parameters": [
+          {
+            "name": "returnTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri-reference"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "See Other",
+            "headers": {
+              "Location": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uri-reference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          },
+          "503": {
+            "description": "Problem response: DEPENDENCY_UNAVAILABLE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE"
+            ]
+          }
+        },
+        "x-operation-kind": "COMMAND",
+        "x-capability": "none",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "DEPENDENCY_UNAVAILABLE",
+          "INTERNAL_ERROR"
+        ],
+        "security": [],
+        "x-assurance-policy": {
+          "mode": "STATIC",
+          "default": "ANONYMOUS_PROOF",
+          "conditions": [],
+          "step_up_possible": false
+        },
+        "x-assurance-level": "ANONYMOUS_PROOF",
+        "x-step-up-required": false
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logoutInternalSession",
+        "tags": [
+          "auth"
+        ],
+        "summary": "logoutInternalSession",
+        "description": "Final v12 contract. Kind: COMMAND. Capability: none.",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed with no response body"
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER, INVALID_REQUEST",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ]
+          },
+          "401": {
+            "description": "Problem response: AUTHENTICATION_REQUIRED, SESSION_EXPIRED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "AUTHENTICATION_REQUIRED",
+              "SESSION_EXPIRED"
+            ]
+          },
+          "404": {
+            "description": "Problem response: RESOURCE_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "Problem response: IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "IDEMPOTENCY_CONFLICT"
+            ]
+          },
+          "413": {
+            "description": "Problem response: PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ]
+          },
+          "415": {
+            "description": "Problem response: UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ]
+          },
+          "422": {
+            "description": "Problem response: PRECONDITION_FAILED, VALIDATION_FAILED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "x-operation-kind": "COMMAND",
+        "x-capability": "none",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "INVALID_REQUEST",
+          "UNSUPPORTED_MEDIA_TYPE",
+          "PAYLOAD_TOO_LARGE",
+          "AUTHENTICATION_REQUIRED",
+          "SESSION_EXPIRED",
+          "IDEMPOTENCY_CONFLICT",
+          "RESOURCE_NOT_FOUND",
+          "PRECONDITION_FAILED",
+          "VALIDATION_FAILED",
+          "INTERNAL_ERROR"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/logoutInternalSessionRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "InternalSession": []
+          }
+        ],
+        "x-assurance-policy": {
+          "mode": "STATIC",
+          "default": "ACTIVE_SESSION",
+          "conditions": [],
+          "step_up_possible": false
+        },
+        "x-assurance-level": "ACTIVE_SESSION",
+        "x-step-up-required": false
+      }
+    },
+    "/auth/security-management": {
+      "get": {
+        "operationId": "getSecurityManagementRedirect",
+        "tags": [
+          "auth"
+        ],
+        "summary": "getSecurityManagementRedirect",
+        "description": "Final v12 contract. Kind: QUERY. Capability: none.",
+        "parameters": [
+          {
+            "name": "returnTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri-reference"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "See Other",
+            "headers": {
+              "Location": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uri-reference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ]
+          },
+          "401": {
+            "description": "Problem response: AUTHENTICATION_REQUIRED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "AUTHENTICATION_REQUIRED"
+            ]
+          },
+          "404": {
+            "description": "Problem response: RESOURCE_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "RESOURCE_NOT_FOUND"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "x-operation-kind": "QUERY",
+        "x-capability": "none",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "AUTHENTICATION_REQUIRED",
+          "RESOURCE_NOT_FOUND",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "InternalSession": []
+          }
+        ],
+        "x-assurance-policy": {
+          "mode": "STATIC",
+          "default": "ACTIVE_SESSION",
+          "conditions": [],
+          "step_up_possible": false
+        },
+        "x-assurance-level": "ACTIVE_SESSION",
+        "x-step-up-required": false
+      }
+    },
+    "/auth/step-up/start": {
+      "post": {
+        "operationId": "startStepUpAuthentication",
+        "tags": [
+          "auth"
+        ],
+        "summary": "고위험 행동에 결합된 OIDC step-up transaction 시작",
+        "description": "Final v12 contract. Kind: COMMAND. Capability: none.",
+        "parameters": [
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "See Other",
+            "headers": {
+              "Location": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uri-reference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER, INVALID_REQUEST",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INVALID_PARAMETER",
+              "INVALID_REQUEST"
+            ]
+          },
+          "401": {
+            "description": "Problem response: AUTHENTICATION_REQUIRED, SESSION_EXPIRED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "AUTHENTICATION_REQUIRED",
+              "SESSION_EXPIRED"
+            ]
+          },
+          "403": {
+            "description": "Problem response: CSRF_FAILED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "CSRF_FAILED"
+            ]
+          },
+          "409": {
+            "description": "Problem response: IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "IDEMPOTENCY_CONFLICT"
+            ]
+          },
+          "413": {
+            "description": "Problem response: PAYLOAD_TOO_LARGE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "PAYLOAD_TOO_LARGE"
+            ]
+          },
+          "415": {
+            "description": "Problem response: UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "UNSUPPORTED_MEDIA_TYPE"
+            ]
+          },
+          "422": {
+            "description": "Problem response: PRECONDITION_FAILED, VALIDATION_FAILED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "PRECONDITION_FAILED",
+              "VALIDATION_FAILED"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          },
+          "503": {
+            "description": "Problem response: DEPENDENCY_UNAVAILABLE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE"
+            ]
+          }
+        },
+        "x-operation-kind": "COMMAND",
+        "x-capability": "none",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "INVALID_REQUEST",
+          "UNSUPPORTED_MEDIA_TYPE",
+          "PAYLOAD_TOO_LARGE",
+          "AUTHENTICATION_REQUIRED",
+          "SESSION_EXPIRED",
+          "CSRF_FAILED",
+          "IDEMPOTENCY_CONFLICT",
+          "PRECONDITION_FAILED",
+          "VALIDATION_FAILED",
+          "DEPENDENCY_UNAVAILABLE",
+          "INTERNAL_ERROR"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/startStepUpAuthenticationRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "InternalSession": []
+          }
+        ],
+        "x-assurance-policy": {
+          "mode": "STATIC",
+          "default": "ACTIVE_SESSION",
+          "conditions": [],
+          "step_up_possible": false
+        },
+        "x-assurance-level": "ACTIVE_SESSION",
+        "x-step-up-required": false
+      }
+    },
+    "/auth/step-up/callback": {
+      "get": {
+        "operationId": "completeStepUpAuthentication",
+        "tags": [
+          "auth"
+        ],
+        "summary": "MFA/step-up",
+        "description": "Final v12 contract. Kind: COMMAND. Capability: none.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "iss",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri-reference"
+            }
+          },
+          {
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "See Other",
+            "headers": {
+              "Location": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uri-reference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem response: INVALID_PARAMETER",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INVALID_PARAMETER"
+            ]
+          },
+          "401": {
+            "description": "Problem response: AUTHENTICATION_REQUIRED, SESSION_EXPIRED, TOKEN_INVALID",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "AUTHENTICATION_REQUIRED",
+              "SESSION_EXPIRED",
+              "TOKEN_INVALID"
+            ]
+          },
+          "409": {
+            "description": "Problem response: VERSION_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VERSION_CONFLICT"
+            ]
+          },
+          "422": {
+            "description": "Problem response: PRECONDITION_FAILED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "PRECONDITION_FAILED"
+            ]
+          },
+          "500": {
+            "description": "Problem response: INTERNAL_ERROR",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          },
+          "503": {
+            "description": "Problem response: DEPENDENCY_UNAVAILABLE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "x-error-codes": [
+              "DEPENDENCY_UNAVAILABLE"
+            ]
+          }
+        },
+        "x-operation-kind": "COMMAND",
+        "x-capability": "none",
+        "x-error-codes": [
+          "INVALID_PARAMETER",
+          "AUTHENTICATION_REQUIRED",
+          "SESSION_EXPIRED",
+          "TOKEN_INVALID",
+          "VERSION_CONFLICT",
+          "PRECONDITION_FAILED",
+          "DEPENDENCY_UNAVAILABLE",
+          "INTERNAL_ERROR"
+        ],
+        "security": [
+          {
+            "InternalSession": [],
+            "StepUpTransaction": []
+          }
+        ],
+        "x-assurance-policy": {
+          "mode": "STATIC",
+          "default": "ACTIVE_SESSION",
+          "conditions": [],
+          "step_up_possible": false
+        },
+        "x-assurance-level": "ACTIVE_SESSION",
+        "x-step-up-required": false
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OidcTransaction": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "gurine_oidc_transaction"
+      },
+      "StepUpTransaction": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "gurine_step_up_transaction"
+      },
+      "InternalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "gurine_internal_session"
+      }
+    },
+    "schemas": {
+      "FieldError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "requestId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "fieldErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          },
+          "retryAfterSeconds": {
+            "type": "integer"
+          }
+        }
+      },
+      "logoutInternalSessionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "csrfToken": {
+            "type": "string"
+          },
+          "returnTo": {
+            "type": "string",
+            "format": "uri-reference"
+          }
+        },
+        "required": [
+          "csrfToken"
+        ]
+      },
+      "startStepUpAuthenticationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "returnTo": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "actionDescriptor": {
+            "$ref": "#/components/schemas/HighImpactActionDescriptor"
+          },
+          "csrfToken": {
+            "type": "string",
+            "minLength": 43,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "returnTo",
+          "actionDescriptor",
+          "csrfToken"
+        ]
+      },
+      "CoverageRecordCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sourceDocuments": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "contracts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "contractLineItems": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "agencies": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "suppliers": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "publicCases": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sourceDocuments",
+          "contracts",
+          "contractLineItems",
+          "agencies",
+          "suppliers",
+          "publicCases"
+        ]
+      },
+      "HighImpactActionDescriptor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9]{1,127}$"
+          },
+          "aggregateType": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]{0,127}$"
+          },
+          "aggregateId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "expectedVersion": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "businessPayloadSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "operationId",
+          "aggregateType",
+          "aggregateId",
+          "expectedVersion",
+          "businessPayloadSha256"
+        ]
+      }
+    }
+  }
+}

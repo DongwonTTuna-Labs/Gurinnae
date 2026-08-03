@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "SRC-005",
+  "route": "/internal/sources/{sourceId}/schema-drift",
+  "url": "http://127.0.0.1:29102/internal/sources/80000000-0000-4000-8000-000000000001/schema-drift",
+  "observedAt": "2026-07-19T15:35:48.717Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "SRC-005",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "alert",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "diff",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "samples",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "impact",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "mapping",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "shadow",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "decision",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

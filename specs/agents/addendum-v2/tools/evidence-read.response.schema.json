@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/evidence-read-response.json",
+  "title": "EvidenceReadResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "evidence", "segments", "truncated"],
+  "properties": {
+    "schemaVersion": {
+      "const": "evidence.read.response.v2"
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidenceId",
+        "evidenceVersion",
+        "evidenceDigest",
+        "evidenceType",
+        "title",
+        "description",
+        "classification",
+        "verificationStatus",
+        "sourceDocumentId",
+        "sourceAssetId",
+        "sourceAssetRevision",
+        "sourceContentSha256",
+        "retrievedAt",
+        "sourceAuthority",
+        "publicExcerpt"
+      ],
+      "properties": {
+        "evidenceId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "evidenceVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidenceDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidenceType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": ["string", "null"],
+          "maxLength": 4000
+        },
+        "classification": {
+          "enum": ["PUBLIC", "INTERNAL", "RESTRICTED"]
+        },
+        "verificationStatus": {
+          "enum": ["PENDING", "VERIFIED", "REJECTED", "NEEDS_WORK"]
+        },
+        "sourceDocumentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceAssetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceAssetRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceContentSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "retrievedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceAuthority": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "publicExcerpt": {
+          "type": ["string", "null"],
+          "maxLength": 4000
+        }
+      }
+    },
+    "segments": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidenceSegmentId",
+          "datasetSnapshotId",
+          "snapshotMemberId",
+          "snapshotMemberDigest",
+          "locator",
+          "selectedText",
+          "selectedContentSha256",
+          "extractionVersion",
+          "confidence",
+          "sourceUseId",
+          "sourceUseSha256"
+        ],
+        "properties": {
+          "evidenceSegmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "datasetSnapshotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshotMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshotMemberDigest": {
+            "$ref": "#/$defs/sha256"
+          },
+          "locator": {
+            "$ref": "#/$defs/locator"
+          },
+          "selectedText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50000
+          },
+          "selectedContentSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "extractionVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "confidence": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "sourceUseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "locatorSha256"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH",
+            "JSON_POINTER",
+            "HTML_CSS_SELECTOR",
+            "API_FIELD",
+            "TEXT_RANGE",
+            "IMAGE_BBOX",
+            "AUDIO_TIME_RANGE",
+            "VIDEO_TIME_RANGE",
+            "VIDEO_REGION_TIME"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "locatorSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

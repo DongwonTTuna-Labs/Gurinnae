@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "SRC-003",
+  "route": "/internal/sources/{sourceId}/runs",
+  "url": "http://127.0.0.1:29102/internal/sources/80000000-0000-4000-8000-000000000001/runs",
+  "observedAt": "2026-07-19T15:35:48.075Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "SRC-003",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "summary",
+        "component": "OperationsStatusPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "runs",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "schedule",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 6,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

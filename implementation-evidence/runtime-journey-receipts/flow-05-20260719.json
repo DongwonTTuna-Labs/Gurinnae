@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 6,
+  "evidenceKind": "LIVE_POSTGRES_CORRECTION_RETRACTION_OWNER_FLOW",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "flowId": "FLOW-05",
+  "flowName": "CORRECTION_RETRACTION",
+  "operationId": "submitCorrectionRequest",
+  "correlationId": "2bd680ad-ba47-49d2-b8e4-f612e6c4e985",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "normal": {
+    "submission": {
+      "receipt": {
+        "id": "7530a491-b517-4505-8c1a-1c550ad8adc0",
+        "status": "SUBMITTED",
+        "summary": "Correction request",
+        "updated_at": "2026-07-20T20:09:52.107191+00:00",
+        "submitted_at": "2026-07-20T20:09:52.107191+00:00",
+        "requester_type": "PUBLIC",
+        "assigned_user_id": null,
+        "public_case_slug": "pdm-correction-e6d151a9",
+        "requested_changes": [
+          {
+            "claimId": "claim-pdm"
+          }
+        ],
+        "evidence_description": "Independent evidence",
+        "publication_revision": 1,
+        "receipt_token_consumed_at": null
+      },
+      "negative": {
+        "observedError": "28000:submission_session_invalid_expired_or_out_of_scope"
+      },
+      "requestId": "7530a491-b517-4505-8c1a-1c550ad8adc0",
+      "receiptSessionId": "c820a3fc-3ca6-401a-9f4c-06017e96b3bb"
+    },
+    "pass": true,
+    "create": {
+      "caseId": "e6d151a9-e6cd-495b-87e8-639ec748876a",
+      "snapshotId": "3b601b45-25d9-4851-a689-b121f0177730",
+      "operationId": "createCorrectionCase",
+      "auditEventId": "e1914894-6908-4364-9afb-1802ed13633d",
+      "outboxEventId": "7a5da228-a9c5-4356-9b22-24acd0be0a6a",
+      "receiptDigest": "aa2adbfdd4bd6f0884012543246af685fc66f738d297e10785f4e2c616aa24ad",
+      "aggregateVersion": 1,
+      "publicationRevisionId": "268181ea-5b98-4d43-9c88-4611bf683e36"
+    },
+    "triage": {
+      "caseId": "e6d151a9-e6cd-495b-87e8-639ec748876a",
+      "operationId": "triageCorrection",
+      "auditEventId": "664f7c21-9bf9-4ecb-a900-9390ce85c864",
+      "correctionId": "c6d047fe-775c-451b-a8f3-a711992fda61",
+      "outboxEventId": "e0fbdb1b-92fc-4bc3-b6bc-94df369a0f3d",
+      "receiptDigest": "fea8de94febc44423490f8c10de0206d07da3bc4f193b415015336043599bc9d",
+      "aggregateVersion": 1
+    },
+    "publish": {
+      "caseId": "e6d151a9-e6cd-495b-87e8-639ec748876a",
+      "revision": 2,
+      "snapshotId": "fa1b360f-a549-4a5f-8661-c280b4e5c09a",
+      "operationId": "publishCorrection",
+      "auditEventId": "fefb6b9d-1a6a-4ba4-8246-94c406e1b862",
+      "correctionId": "c6d047fe-775c-451b-a8f3-a711992fda61",
+      "outboxEventId": "d3320790-f341-482d-a438-f4766a3f6e3e",
+      "receiptDigest": "e3da754ae181974355972c53e1c48188d1a43b60b5bc7a234302d67e69e58fe5",
+      "aggregateVersion": 2,
+      "publicationRevisionId": "e99e2a7f-96af-4a37-a78a-5e359c0dfa3a"
+    },
+    "negative": {
+      "observedError": "28000:submission_session_invalid_expired_or_out_of_scope",
+      "outboxCountAfter": 39,
+      "outboxCountBefore": 39,
+      "requestCountAfter": 1,
+      "requestCountBefore": 1,
+      "revisionCountAfter": 3,
+      "revisionCountBefore": 3
+    },
+    "retraction": {
+      "operationId": "createRetractionDraft",
+      "auditEventId": "137d62e7-510b-46a7-9681-8d5b23f65956",
+      "outboxEventId": "44508d1a-6e13-42ea-b1d5-62d5789806c5",
+      "receiptDigest": "92552d328b11a63f2c12d655e9041dfaf82674384e5017ca27830ae16a052d86",
+      "aggregateVersion": 1,
+      "retractionDraftId": "12af14b2-addf-4643-82a0-cfabeba420ef",
+      "publicationRevisionId": "e99e2a7f-96af-4a37-a78a-5e359c0dfa3a"
+    },
+    "newRevisionDigest": "923495f80450106992b275e90f895b374651565caf6e1632109009eaa6ecfea7",
+    "oldRevisionDigest": "f72f79816d6cf7c75cecf786bccfd7e1d5a5cb961fe8ee5b081605de66189ba9",
+    "publicApiReadback": true,
+    "auditReadbackCount": 4,
+    "oldRevisionUnchanged": true,
+    "downloadReadbackDigest": "d1ba3090920fd14b114fa868653622db50e718d2a1250a1ea74f6c801fbdb615",
+    "notificationReadbackCount": 2
+  },
+  "negative": {
+    "branch": "receipt-session-reuse",
+    "expectedError": "28000:submission_session_invalid_expired_or_out_of_scope",
+    "observedError": "28000:submission_session_invalid_expired_or_out_of_scope",
+    "forbiddenMutationCount": 0,
+    "receiptCountBefore": 1,
+    "receiptCountAfter": 1,
+    "revisionCountBefore": 3,
+    "revisionCountAfter": 3,
+    "outboxCountBefore": 39,
+    "outboxCountAfter": 39,
+    "pass": true
+  },
+  "sourceTreeDigest": "8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060",
+  "observedAt": "2026-07-20T20:09:52Z",
+  "pass": true
+}

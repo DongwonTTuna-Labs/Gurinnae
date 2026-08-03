@@ -1,0 +1,124 @@
+schema_version: 1
+specification_version: 13.0.0
+status: BYTE_IMMUTABLE
+authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+catalog:
+  path: acceptance-catalog.yaml
+  sha256: 13b4be1c9f22850d0220bb2be5e3a9ba8bc26252805c1b7b7eae987bb7e622c6
+executable_mapping:
+  path: executable-mapping.yaml
+  sha256: f85a72768d18c12d3111adcb2895661b64d6cbd2b32112467d2526a52319ae83
+feature_count: 35
+scenario_count: 271
+feature_manifest_sha256: 197b105ffcfe13ec0f7671410a2963de87af32d74ebc59ff1ddd2b42442d817f
+ordered_scenario_identity_sha256: 2436ef73893e37d94d7a22e90d4b4a2fdc7bd098b6ea141a3d5650595146156f
+features:
+- path: accessibility-responsive.feature
+  sha256: 517822199db3f79850d1be477110b5bc1157646f7635adfc8ccaff1b711268b1
+  size: 2690
+- path: analytics-privacy.feature
+  sha256: 91317d0a6b1b8a881b10650fd54e1586787bcb9cb5f39e050426bcf75e74d986
+  size: 2227
+- path: architecture-boundaries.feature
+  sha256: cbd6bdbff4b121f80bed1bfabc415e64776916f63f0f18f6189675046d43a5b6
+  size: 3900
+- path: budget-and-kill-switch.feature
+  sha256: 4b9c1d0653df0bd2dddd5e504cfd1e2b24808038c7c1d4d772a0aa8b4ff25efd
+  size: 1908
+- path: case-lifecycle.feature
+  sha256: f79739a8962818153ec91c5f6e2bff9f3ba5f2625f4d039ef1d933425ca5818d
+  size: 2297
+- path: code-quality-and-idioms.feature
+  sha256: 63442cc4e3adac06495fc839ea0f494ea5fd92ba7462f8b3fa3b0340bda355d5
+  size: 2147
+- path: copy-safety.feature
+  sha256: 191f7a96cdc753e11b60f99c14b2c3f87cb888907be6cadb679c0c3e08b4a961
+  size: 1776
+- path: correction-history.feature
+  sha256: 74d1bc712c9b7d765b36b1cb47664f6da5587fba3ae38a1d59d39b0c3431a1a8
+  size: 1595
+- path: dependency-pinning.feature
+  sha256: 5c6e5335d0a6ef3eebb9a020599b3215d77c362e7624a00bfcfd4fd1a08c969c
+  size: 2964
+- path: docker-development.feature
+  sha256: f93d40bea2d195f3c8da7e32a65fcacdf537459568c2b346df7076e7ced9bdf4
+  size: 4018
+- path: entity-resolution.feature
+  sha256: 96c17fdfcd06ec4332fb9633bdc7e0e9884a5df95d41810343326028a5cd7d41
+  size: 1626
+- path: eventing.feature
+  sha256: 6a0d3e6b742d40244b20507f4917bbe840335542733eb2994648fcd3808ff1ec
+  size: 1579
+- path: final-delivery.feature
+  sha256: 967f76e55f817be5676f2fffb2cb24ffa2e015b7f83951e4e2f288410b2eb547
+  size: 1752
+- path: ingestion-idempotency.feature
+  sha256: d4f17e803bbbe390d513caef67ff844a403cd379820b8b4b23e4a08c8177f8e7
+  size: 3614
+- path: internal-workspace.feature
+  sha256: c2fe65d0fcf44b0cad57ebb1558db966a64e42d15a5162cc1e760f4708e5b84a
+  size: 2719
+- path: oidc-compose-concurrency.feature
+  sha256: 53afbdfd3d2000a8f746badfbfab1425e9e085d541bd5256ebcdbd91cc77e17b
+  size: 8511
+- path: openapi-codegen.feature
+  sha256: ea31313c6856e01e791ce0a5f870eef11d6c1d3fe71685bf1fe4021b07ff601c
+  size: 3261
+- path: price-comparability.feature
+  sha256: e13c38fadccb7a9dc4f769fbdada95d0e3f1d3aae458d49747795e6cdb7d73a3
+  size: 2668
+- path: product-structure.feature
+  sha256: 5e1a21a8b020d55af42e392b6bd7ca734c4014e9ff9c6cb6699f891de4b6fb46
+  size: 2716
+- path: production-readiness.feature
+  sha256: 83e5e748702456409c8d5ca9aa28c13fe83ebb61f00404daff95c4bc26dbc0a8
+  size: 2613
+- path: prompt-injection.feature
+  sha256: 9ce7beba1a318304bd3143b5b13752af764824111d777dbab7fe3052e3e4983c
+  size: 2102
+- path: provenance.feature
+  sha256: c04228c90acf3471a8a7d70f749011f658fda2ff10b5cb5afc4bc89bb60d88a1
+  size: 2239
+- path: public-comprehension.feature
+  sha256: 62059ae21c831debc29f887c769fc65161559bd51091bd5938e899970aff2de3
+  size: 2767
+- path: public-private-boundary.feature
+  sha256: 52e4a24985a063dcefa7f48c15a4e4dcb9e8001e57758795f13e902c41afeb35
+  size: 1730
+- path: publication-gate.feature
+  sha256: 80a3c33c197927dd376152f3d0110f003c0afd2982d93ee996b66968ef608831
+  size: 4055
+- path: response-portal-experience.feature
+  sha256: 25dee5bdf1d8f56b58546046baab1bc39afc0f7c3a5c30a69f864ba7d4b83a10
+  size: 2796
+- path: response-rights.feature
+  sha256: 4178878febcf007d19bf2e967b15dc567941ff93e345003f9e1024c91cdb7247
+  size: 2455
+- path: route-operation-completeness.feature
+  sha256: b1fbba4e142427d7626a4bc753df37f3a68c60bf3f187d7c920eb5aa012a64e5
+  size: 1424
+- path: runtime-configuration.feature
+  sha256: c14b12309256e80ccf264f9fc91aaa5f74cec27b43ba59bda59b287c1726cad4
+  size: 1528
+- path: schema-drift.feature
+  sha256: 8f168d4ec8fc38ae6d906664b6275c2650022995e9df8f28f916ff1fb08cf782
+  size: 1699
+- path: screen-contracts.feature
+  sha256: d655d729176f9a3cf9fb077f827a379c22d0f95235f0efe8bdc40fd965a49523
+  size: 3546
+- path: source-freshness.feature
+  sha256: 557618e456bf96c61a5079023b9c2a8dea0f753c81dbc57f8273900ca7f7860d
+  size: 1489
+- path: sqlx-postgres.feature
+  sha256: 0b6abcc111e950403c236069932653ee661295f8f49077b5710de53a5bda8f47
+  size: 4088
+- path: submission-boundary.feature
+  sha256: 9e7cda153c1df93072929b662deed117cfa4cdb3499ae494e7960b6868af4230
+  size: 5168
+- path: sveltekit-ssr.feature
+  sha256: 68eaa01ff6e5b20a80bc6101fdc5e687d2416ebe2687f6d4f9e226f715ea876f
+  size: 3446
+rules:
+- Base feature, catalog and executable-mapping bytes are immutable.
+- Scenario conflict resolution is an ID-addressed overlay and never edits a base scenario.
+- Supplemental and UI registries cannot replace or double-count a base scenario.

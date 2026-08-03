@@ -1,0 +1,32 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: REPEATED_SINGLE_SOURCE
+name: 반복 수의계약
+version: 1.0.0
+required:
+- contracts
+- window_days
+thresholds:
+  minimum_contracts: 4
+  minimum_distinct_days: 3
+  minimum_total_amount: 50000000
+formula: count and sum same agency+supplier+category single-source contracts within window
+blockers:
+- REQUIRED_FIELD_MISSING
+- INSUFFICIENT_CONTRACTS
+- DATE_UNKNOWN
+metamorphic:
+- input order does not change result
+- competitive contracts excluded
+- duplicate contract id ignored
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/repeated_single_source.rs
+reference_evaluator: specs/detection/reference_evaluator.py

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-025",
+  "route": "/editorial-policy",
+  "url": "http://127.0.0.1:29101/editorial-policy",
+  "observedAt": "2026-07-19T15:35:30.741Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-025",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "states",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "publication-gate",
+        "component": "KnownUnknownResponse",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "language",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "response",
+        "component": "KnownUnknownResponse",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "correction",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "privacy",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "history",
+        "component": "LongFormArticle",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 10,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

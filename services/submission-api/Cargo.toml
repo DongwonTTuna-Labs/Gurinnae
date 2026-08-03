@@ -1,0 +1,31 @@
+[package]
+name = "gurine-submission-api"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+actix-web.workspace = true
+base64.workspace = true
+getrandom.workspace = true
+gurine-api-contracts = { path = "../../crates/api-contracts" }
+gurine-application = { path = "../../crates/application" }
+gurine-auth = { path = "../../crates/auth" }
+gurine-object-store = { path = "../../crates/object-store" }
+gurine-persistence-postgres = { path = "../../crates/persistence-postgres" }
+hmac.workspace = true
+reqwest.workspace = true
+gurine-observability = { path = "../../crates/observability" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true

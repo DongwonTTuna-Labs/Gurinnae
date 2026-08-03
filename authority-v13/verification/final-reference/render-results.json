@@ -1,0 +1,72 @@
+[
+  {
+    "view": "home",
+    "viewport": "1440x1050",
+    "file": "verification/final-reference/desktop-home.png",
+    "bytes": 121467,
+    "page_errors": []
+  },
+  {
+    "view": "case",
+    "viewport": "1440x1050",
+    "file": "verification/final-reference/desktop-case.png",
+    "bytes": 144746,
+    "page_errors": []
+  },
+  {
+    "view": "search",
+    "viewport": "1440x1050",
+    "file": "verification/final-reference/desktop-search.png",
+    "bytes": 94008,
+    "page_errors": []
+  },
+  {
+    "view": "agency",
+    "viewport": "1440x1050",
+    "file": "verification/final-reference/desktop-agency.png",
+    "bytes": 94068,
+    "page_errors": []
+  },
+  {
+    "view": "workspace",
+    "viewport": "1440x1050",
+    "file": "verification/final-reference/desktop-workspace.png",
+    "bytes": 144098,
+    "page_errors": []
+  },
+  {
+    "view": "review",
+    "viewport": "1440x1050",
+    "file": "verification/final-reference/desktop-review.png",
+    "bytes": 123377,
+    "page_errors": []
+  },
+  {
+    "view": "response",
+    "viewport": "1440x1050",
+    "file": "verification/final-reference/desktop-response.png",
+    "bytes": 82288,
+    "page_errors": []
+  },
+  {
+    "view": "case",
+    "viewport": "390x844",
+    "file": "verification/final-reference/mobile-case.png",
+    "bytes": 65100,
+    "page_errors": []
+  },
+  {
+    "view": "response",
+    "viewport": "390x844",
+    "file": "verification/final-reference/mobile-response.png",
+    "bytes": 61526,
+    "page_errors": []
+  },
+  {
+    "view": "workspace",
+    "viewport": "820x1050",
+    "file": "verification/final-reference/tablet-workspace.png",
+    "bytes": 67725,
+    "page_errors": []
+  }
+]

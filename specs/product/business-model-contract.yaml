@@ -1,0 +1,1987 @@
+schema_version: 1
+specification_version: 13.1.0-business-model-r3
+contract_version: 2026-07-15.business-model.r3
+decision_revision: 2
+status: REVIEW_REQUIRED
+authority:
+  archive: gurine-codex-authority-pack-v13.0.0-20260712.zip
+  sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+  rule: This contract closes the business-model decisions left implicit by the pinned v13 authority; retired packs and unrelated Gurinnae material are not inputs.
+
+scope:
+  sku: EVIDENCE_WORKSPACE_ORGANIZATION_V1
+  deployment: one isolated organization per physical deployment
+  reporting_currency: KRW
+  accounting_timezone: deployment-bound IANA timezone; Asia/Seoul is the first deployment default
+  commercial_ui: existing review-console screens only
+  no_new_surface: true
+  no_self_service_checkout: true
+  no_payment_api: true
+  contracting_and_cash_collection: signed external operating records imported through typed, audited boundaries
+
+business_thesis:
+  customer: Korean investigative newsrooms and public-interest research organizations with 3-20 recurring procurement investigators
+  economic_buyer: investigation editor or research director accountable for research throughput and budget
+  primary_users:
+    - data reporter or civic researcher finding and comparing procurement records
+    - investigator building evidence and counter-evidence
+    - editor and independent reviewer approving an exact packet or action
+    - data operator maintaining sources, snapshots, parsers, and quality
+    - operations and finance owner maintaining providers, cost, invoice, SLA, and recovery
+  champion: senior investigator or data editor who owns a recurring procurement research program
+  required_qualification_roles:
+    - economic buyer
+    - operational owner
+    - independent reviewer distinct from the proposer for exact approvals
+    - data/source-rights owner
+    - incident and support owner with a named backup
+  non_participants:
+    - public readers and subscribers
+    - response subjects, suppliers, agencies, witnesses, and people appearing in source data
+    - sources, correction requesters, appellants, and privacy-rights requesters
+  non_participant_rule: Non-participants are never leads, billable units, advertising audiences, cross-session profiles, or product-training inputs; their access and rights do not depend on a customer contract.
+  deferred_segments:
+    - multi-tenant SaaS
+    - self-service checkout and card billing
+    - public-agency internal audit product
+    - general corporate compliance product
+    - commercial ranking, due-diligence scoring, or automated wrongdoing claims
+
+qualification_contract:
+  policy_version: 1
+  cohort_unit: one deployment_id plus organization_id plus EVIDENCE_WORKSPACE_ORGANIZATION_V1 plus qualification_episode_id
+  criterion_registry_ordered_exactly:
+    - {ordinal: 1, code: RECURRING_JOB_ATTESTED, field: recurring_job_attested}
+    - {ordinal: 2, code: AUTHORIZED_DATA_IDENTIFIED, field: authorized_data_identified}
+    - {ordinal: 3, code: AUTHORIZED_DATA_FEASIBLE, field: authorized_data_feasible}
+    - {ordinal: 4, code: ECONOMIC_BUYER_OWNED, field: economic_buyer_role_bound}
+    - {ordinal: 5, code: OPERATIONAL_OWNER_OWNED, field: operational_owner_role_bound}
+    - {ordinal: 6, code: INDEPENDENT_REVIEW_READY, field: independent_reviewer_role_bound}
+    - {ordinal: 7, code: SOURCE_RIGHTS_OWNER_OWNED, field: source_rights_owner_role_bound}
+    - {ordinal: 8, code: INCIDENT_SUPPORT_OWNER_OWNED, field: incident_support_owner_role_bound}
+    - {ordinal: 9, code: PILOT_SCOPE_ACCEPTED, field: pilot_scope_accepted}
+    - {ordinal: 10, code: SUCCESS_METRIC_ACCEPTED, field: success_metric_accepted}
+    - {ordinal: 11, code: BUDGET_AUTHORITY_ACCEPTED, field: budget_authority_accepted}
+    - {ordinal: 12, code: SUPPORT_EXPECTATION_ACCEPTED, field: support_expectation_accepted}
+    - {ordinal: 13, code: TRUST_TERMS_ACCEPTED, field: trust_terms_accepted}
+  criterion_count: 13
+  criterion_rule: Every ordered criterion is true under one current qualification policy and evidence-set digest. A missing, false, stale, differently ordered, or policy-mismatched criterion is not qualified and is never silently defaulted.
+  decision_times:
+    decision_effective_at: the signed human decision instant for this exact ORIGINAL, REPLACEMENT, or REVERSAL receipt; as-of chain selection and reversal effect use this field
+    first_qualified_at: the ORIGINAL accepted decision_effective_at, preserved byte-for-byte by every successor in the same episode; it alone assigns the acquisition/qualification cohort and starts configuration observation
+    recorded_at: append/import time only; it is never a cohort or funnel clock
+    ordering: decision_effective_at ASC, revision ASC, id ASC
+    invariants:
+      - ORIGINAL has receipt_effect ORIGINAL, decision_effective_at = first_qualified_at, and revision 1.
+      - REPLACEMENT and REVERSAL preserve first_qualified_at and have decision_effective_at strictly greater than the predecessor decision_effective_at; neither may backdate qualification or move a cohort.
+      - decision_effective_at is no later than recorded_at and no later than the metric cutoff. A future or ambiguous source decision is UNKNOWN.
+      - A REVERSAL removes current qualification only from its decision_effective_at forward. Historical as-of results before that instant remain reproducible.
+      - Qualification after churn or after a reversal requires a new qualification_episode_id and a new first_qualified_at; an old episode is never reopened.
+  role_binding_registry_ordered_exactly:
+    - {ordinal: 1, function: ECONOMIC_BUYER, primary_field: economic_buyer_primary_role_binding_hmac, backup_field: economic_buyer_backup_role_binding_hmac}
+    - {ordinal: 2, function: OPERATIONAL_OWNER, primary_field: operational_owner_primary_role_binding_hmac, backup_field: operational_owner_backup_role_binding_hmac}
+    - {ordinal: 3, function: INDEPENDENT_REVIEWER, primary_field: independent_reviewer_primary_role_binding_hmac, backup_field: independent_reviewer_backup_role_binding_hmac}
+    - {ordinal: 4, function: SOURCE_RIGHTS_OWNER, primary_field: source_rights_owner_primary_role_binding_hmac, backup_field: source_rights_owner_backup_role_binding_hmac}
+    - {ordinal: 5, function: INCIDENT_SUPPORT_OWNER, primary_field: incident_support_owner_primary_role_binding_hmac, backup_field: incident_support_owner_backup_role_binding_hmac}
+  role_binding_rules:
+    - Every registry row has two non-null lowercase domain-separated HMAC-SHA-256 bindings under the receipt's declared binding-key version; raw person, account, email, directory, CRM, or contact identifiers are forbidden.
+    - Within each function primary and backup HMACs are distinct. A missing or same-person backup fails qualification.
+    - Small-team cross-function reuse is allowed except that the actor counted as independent reviewer for an exact packet/action must be distinct from its proposer and must satisfy the action-time recusal and authorization policy. Qualification assignment alone never proves decision independence.
+    - Role changes append a REPLACEMENT receipt with a new role-binding-set digest. A stale role binding blocks later configuration, review, incident, support, renewal, and resume decisions that depend on it.
+  acquisition_binding:
+    optional_at_qualification: true
+    known_shape: acquisition_source_receipt_id and acquisition_source_receipt_digest identify one same-organization current non-reversed receipt valid at first_qualified_at
+    unknown_shape: both fields are null and attribution state is UNKNOWN_SOURCE; qualification may remain valid but channel allocation, CAC, and payback remain blocked as declared below
+    pair_rule: exactly both fields or neither; a stale, reversed, cross-organization, reused-episode, or digest-mismatched pair is ATTRIBUTION_UNKNOWN
+  canonical_digests:
+    criterion_set_digest: Gurine Canonical JSON v1 SHA-256 over the thirteen code/boolean pairs in criterion_registry_ordered_exactly order
+    role_binding_set_digest: Gurine Canonical JSON v1 SHA-256 over function, primary HMAC, and backup HMAC in role_binding_registry_ordered_exactly order
+    qualification_receipt_digest: Gurine Canonical JSON v1 SHA-256 over every immutable business field except recorded_at, including both decision times and all ordered digests
+
+first_sku_contract:
+  sku: EVIDENCE_WORKSPACE_ORGANIZATION_V1
+  sale_unit: one isolated single-organization Evidence Workspace deployment; there is no second tier, tenant switcher, self-service checkout, or payment entitlement
+  core_paid_capabilities:
+    - authorized private source ingestion and immutable reproducible snapshots
+    - permitted multimodal batch analysis with exact tool/model/source provenance
+    - saved queries and cohorts with scheduled refresh
+    - team annotation, contrary-evidence handling, independent review, and exact-digest approval
+    - persisted packet and audited organization decision, export, or delivery receipt
+    - usage, quality, cost, recovery, support, and audit evidence
+  base_meter_contract:
+    active_contributors: ten are included; read-only viewers are not a billable meter in v1; additional active contributors are sold only in blocks of ten
+    processing_credits: included quantity and unit price come from the signed tariff; reserve maximum before work and settle actual versioned job/provider credits
+    storage_gb_month: decimal encrypted GB-month using the exact byte-hour formula in usage_receipt_contract
+    api_record_unit: exactly 1000 normalized records successfully returned
+    signed_webhook_and_digest: included bounded quotas only in v1; exhaustion is visible and no undeclared overage line is permitted
+  default_offer_template:
+    template_is_not_authority: true
+    included_by_default: [PUBLIC_WEB, VERIFIED_EMAIL, API_EXPORT, SIGNED_WEBHOOK, DAILY_DIGEST, WEEKLY_DIGEST]
+    not_included_by_default: [SMS, TELEGRAM, WHATSAPP, LINE, KAKAO, VOICE]
+    rule: The default is a sales drafting aid only. The signed OfferProfileV1 exact subset bound by the current contract is authority; an omitted capability is NOT_OFFERED, not implicitly included.
+  value_loop_ordered_exactly:
+    - authorize source rights, contract, offer, tariff, isolation, and owners
+    - produce the first non-empty immutable reproducible snapshot with visible limitations
+    - save one scoped query or cohort and schedule the next authorized refresh
+    - detect changed evidence and preserve source, parser, transformation, and comparison provenance
+    - assemble supporting, contrary, unknown, freshness, and limitation evidence into PaidEvidencePacketV1
+    - obtain exact human decision and independent-review disposition
+    - complete one finalized organization decision or reconciled DELIVERED/READ audited delivery
+    - show the durable value/cost/recovery receipt and create the next scoped watch without automatic external action
+  loop_measurement:
+    activation: the first strict paid MVW after DATA_READY closes the first loop
+    retention: two additional strict paid MVWs in the fixed days-29-through-56 window prove repeat use; notifications or page views never substitute
+    expansion_and_renewal: require repeated value plus actual economics, P75 tariff economics, readiness, support, SLA, trust, and exact OfferProfileV1 evidence; no metric auto-mutates the contract
+
+value_delivery:
+  job_to_be_done: When a team repeatedly investigates procurement records across documents and updates, produce a reviewable and reproducible evidence packet without rebuilding collection, extraction, comparison, collaboration, approval, and delivery by hand.
+  paid_outcome_type: PaidEvidencePacketV1
+  paid_outcome_required_members:
+    - authorized immutable dataset snapshot and member-set digest
+    - source rights and capability activation receipts valid for the work interval
+    - extraction and transformation lineage with parser and model/tool revisions
+    - comparison population, exclusions, and deterministic reproduction inputs
+    - supporting evidence, contrary evidence, and exact source locators
+    - freshness, limitations, disagreement, and unknown-state disclosure
+    - AI proposal provenance when AI contributed, including provider turns, tool calls, and citations
+    - human decision and exact content/action digest
+    - independent review or an explicit policy-backed not-required decision
+    - durable persisted-packet, export, organization-decision, or audited-delivery receipt
+  paid_value:
+    - repeatable private authorized collection and snapshots
+    - permitted multimodal batch analysis with provenance
+    - collaboration, annotation, independent review, and exact-digest approval
+    - saved queries/cohorts, scheduled processing, export/API integration, quota, SLA, and support
+    - usage, quality, cost, audit, and recovery evidence
+  not_value:
+    - page view, login, setup, fixture, synthetic run, draft, failed job, or raw signal
+    - triage alone, reviewed investigation alone, or accepted proposal before a responsible terminal outcome
+    - unreviewed AI output, model confidence, generated prose, or citation UUID without opened evidence
+    - signed but inactive/unprovisioned contract, invoice without value, or recognized revenue without a paid workflow
+  success_promise: A qualified team reaches its first paid verified workflow within 7 days of authorized data readiness; P90 must be no more than 14 days.
+
+commercial_trust_firewall:
+  invariants:
+    - Payment never changes detection thresholds, source priority, case priority, factual wording, publication timing, response opportunity, correction priority, or evidence and approval gates.
+    - Customer data never enters public editorial work, model training, cross-deployment analysis, fundraising, or another customer deployment.
+    - Billing, customer, contract, invoice, acquisition, and funder identity is unavailable to public, submission, detection, and editorial-priority paths.
+    - Customer output is labelled as customer-controlled work and is not an official Gurinnae finding.
+    - A related public case requires disclosure, recusal, independent review, and the ordinary publication gate; no commercial receipt satisfies an editorial gate.
+    - Cost or margin failure changes price, quota, efficiency, support, or sale decisions only; it never weakens evidence, privacy, rights, correction, response, accessibility, or approval behavior.
+  hard_stop_conditions:
+    - unauthorized customer-data reuse or cross-deployment access
+    - commercial influence on editorial/detection/correction/public access
+    - material unreported conflict, fabricated metric receipt, or billing from unknown usage
+    - production processing without current source rights, privacy basis, or capability activation
+  hard_stop_effect: Suspend the affected paid capability, preserve evidence, open an incident, notify accountable trust owners, and block new sales/renewal until independently closed; never silently degrade a trust gate.
+
+free_public_access_policy:
+  free_forever:
+    - public facts, evidence locators, source links, and current public revisions
+    - corrections, retractions, limitation notices, and revision history
+    - right of reply, response submission/status, appeal, correction, rights, and privacy requests
+    - methodology, rule behavior, source coverage/freshness, funding, governance, conflict, and editorial-independence disclosures
+    - basic verified subscriptions and reasonable public API/export for public records
+  prohibited_paywalls:
+    - evidence required to understand or verify a public claim
+    - response, correction, appeal, privacy, accessibility, or unsubscribe flows
+    - adverse history, uncertainty, counter-evidence, funding, or conflicts
+  fair_use_rule: Abuse controls may rate-limit by a documented content-neutral policy, but payment cannot buy factual completeness, priority, suppression, or a weaker safety gate.
+  customer_contract_may_gate_only:
+    - isolated private-workspace provisioning and private authorized source ingestion
+    - private multimodal batch analysis, saved cohorts, scheduled refresh, collaboration, independent review, and audited organization-controlled delivery
+    - organization-only API/export, signed webhook, selected messenger adapters, quota, SLA, support, and private audit/economics evidence
+  boundary_invariants:
+    - A paid private packet may cite a free public fact, but the public fact, locator, revision, limitation, counter-evidence, correction, response, appeal, privacy route, and verification evidence remain reachable without the customer contract.
+    - Contract expiry, suspension, quota exhaustion, invoice failure, churn, or a commercial hard stop may block private processing and delivery only; it cannot remove, truncate, delay, or make less verifiable any free_public_access_policy.free_forever member.
+    - Free public access is not a trial tier, acquisition discount, metered preview, or paid-workspace entitlement. Paid workspace value is private repeated workflow execution and accountable receipts, never exclusive factual completeness.
+    - The same source object may participate in both boundaries only through separately authorized projections with distinct scope and evidence digests; customer identity and private work never enter the public projection.
+
+funnel_contract:
+  subject: one deployment_id plus organization_id plus EVIDENCE_WORKSPACE_ORGANIZATION_V1
+  episode_rule: An ORIGINAL accepted ops.commercial_qualification_receipts row creates a random qualification_episode_id and immutable first_qualified_at; every derived stage is scoped to that episode, and post-churn or post-reversal requalification creates a new ID so historical and current cohorts cannot merge.
+  time_model: half-open intervals [start,end) evaluated in the contract accounting timezone and persisted as UTC instants
+  correction_model: append-only original/replacement/reversal facts; current state uses the unique non-reversed chain head as of the metric cutoff
+  analytics_rule: ops.product_events may prove ordered workflow milestones but never by themselves establish a commercial stage, paid MVW, invoice, revenue, churn, or retention fact
+  projection_rule: Except for QUALIFIED, no commercial stage row or event is persisted. CONFIGURED, DATA_READY, FIRST_PAID_VALUE, ACTIVATED, RETAINED, AT_RISK, and CHURNED are deterministic as-of projections over the exact immutable sources named below; the same source snapshot, formula version, policy digest, and cutoff must return byte-equivalent stage evidence.
+  stages:
+    QUALIFIED:
+      entered_when: the current non-reversed immutable qualification receipt passes all thirteen qualification_contract.criterion_registry_ordered_exactly members under one policy, criterion, role-binding, and evidence-set digest
+      cohort_entered_at: immutable first_qualified_at from the ORIGINAL accepted receipt; replacement, import delay, or metric recomputation never moves it
+      current_decision_at: current head decision_effective_at; this controls as-of validity and reversal without replacing cohort_entered_at
+      criteria: exact qualification_contract.criterion_registry_ordered_exactly in ordinal order; no prose subset or aggregate boolean may substitute
+      cannot_be_inferred_from: [lead, contact, page_view, acquisition_receipt, meeting, proposal, unsigned_quote]
+    CONFIGURED:
+      entered_when: the deterministic as-of projection finds a current ACTIVE and PROVISIONED contract period, matching deployment configuration, APPROVED and ACTIVE PAID_WORKSPACE_PROCESSING decision/evidence, and satisfied OIDC/roster/isolation readiness items for the qualification episode
+      derived_from: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.capability_activation_decisions, ops.capability_activation_evidence, ops.sku_readiness_evaluations, ops.sku_readiness_items]
+      blocked_when: any required receipt is missing, expired, suspended, fixture-only, or for another configuration/environment
+    DATA_READY:
+      entered_when: the deterministic as-of projection finds the earliest cutoff at which the core pilot readiness profile is READY, at least one non-empty authorized DatasetSnapshot is immutable/reproducible, and source freshness/coverage/limitations/rights evidence is current for the episode
+      derived_from: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.sku_readiness_evaluations, ops.sku_readiness_items, core.dataset_snapshots]
+      clock_start: earliest qualifying readiness evidence_cutoff_at; a later query may not backdate it from mutable state
+      cannot_be_inferred_from: [connector_green_without_snapshot, source_run_started, fixture_snapshot, unreviewed_parser_output]
+    FIRST_PAID_VALUE:
+      entered_when: the deterministic as-of projection selects the earliest strict paid-MVW-eligible current outcome head at or after data_ready_at and within a current active contract period for the episode
+      derived_from: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.outcome_facts, ops.outbound_delivery_receipts, ops.audit_events]
+      clock_end: paid outcome effective_from
+      uniqueness: one projected first-value outcome per organization, SKU, and qualification episode; a corrected-away candidate recomputes to the next eligible outcome in that episode or UNKNOWN
+    ACTIVATED:
+      entered_when: projected FIRST_PAID_VALUE exists; activation is on-time when elapsed time from projected DATA_READY is at most 7x24 hours and late when greater than 7x24 hours
+      service_objective: P90 elapsed time is at most 14x24 hours
+      late_rule: A value after 14 days still records truthful activation but fails both the 7-day rate and the P90 objective; it is never backdated.
+    RETAINED:
+      stage_class: fixed_cohort_milestone
+      entered_when: an activated organization completes at least two additional strict paid MVWs in [activation_at + 29 days, activation_at + 57 days); current trailing-30-day health is deliberately not part of this immutable fixed-window milestone
+      derived_from: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.outcome_facts]
+      cohort_maturity: evaluate the days-29-through-56 result only when as_of is at least activation_at + 57 days
+      early_churn_rule: ENDED or CANCELLED before day 57 remains in the matured denominator and is a retention failure. Contract termination, loss of access, missing value, or support withdrawal never removes a poor outcome from the fixed cohort.
+    AT_RISK:
+      stage_class: current_relationship_health_overlay
+      entered_when: a non-churned episode is ONBOARDING_AT_RISK or POST_ACTIVATION_AT_RISK under relationship_health_contract; this overlay is reported beside the highest achieved funnel milestone and never rewrites fixed cohort history
+      derived_from: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.outcome_facts, ops.sku_readiness_evaluations, ops.sku_readiness_items, ops.sli_window_receipts]
+      exit_when: current receipts prove every active reason cleared under relationship_health_contract; onboarding recovery does not require a fabricated paid MVW, while post-activation inactivity recovery requires a strict paid MVW in the trailing 30 days
+      rule: Inactivity may create AT_RISK but never fabricates CHURNED.
+    CHURNED:
+      entered_when: the deterministic as-of contract projection selects an ENDED or CANCELLED current contract-period leaf and proves no ACTIVE or SUSPENDED replacement interval for the episode; inactivity alone is insufficient
+      derived_from: [ops.commercial_qualification_receipts, ops.commercial_contract_periods]
+      effective_at: max(terminal contract state_effective_at, contract period_end local-midnight instant)
+      reactivation: starts a new qualification_episode_id at QUALIFIED and repeats configuration, data readiness, first paid value, and activation; the prior episode and churn remain immutable.
+  allowed_transitions:
+    - START -> QUALIFIED
+    - QUALIFIED -> CONFIGURED
+    - CONFIGURED -> DATA_READY
+    - DATA_READY -> FIRST_PAID_VALUE
+    - FIRST_PAID_VALUE -> ACTIVATED
+    - ACTIVATED -> RETAINED
+    - QUALIFIED|CONFIGURED|DATA_READY|FIRST_PAID_VALUE|ACTIVATED|RETAINED -> AT_RISK relationship overlay
+    - AT_RISK -> highest still-proven QUALIFIED|CONFIGURED|DATA_READY|FIRST_PAID_VALUE|ACTIVATED|RETAINED milestone when every current risk reason clears
+    - QUALIFIED|CONFIGURED|DATA_READY|FIRST_PAID_VALUE|ACTIVATED|RETAINED|AT_RISK -> CHURNED
+    - CHURNED -> QUALIFIED in a new qualification episode
+  missing_predecessor_rule: A later-stage projection without every required predecessor source is invalid; dashboards report UNKNOWN/BLOCKED and the first missing gate, never silently skip a stage.
+
+relationship_health_contract:
+  projection_kind: current as-of overlay; never a persisted general lifecycle fact or a replacement for fixed-window retention
+  states: [HEALTHY_ONBOARDING, ONBOARDING_AT_RISK, HEALTHY_ACTIVE, POST_ACTIVATION_AT_RISK, CHURNED, UNKNOWN]
+  onboarding_at_risk_reasons:
+    - CONFIGURATION_NOT_COMPLETE by first_qualified_at + 14 days
+    - DATA_NOT_READY by configured_at + 14 days
+    - required readiness, source rights, isolation, owner, billing path, cost path, or telemetry evidence BLOCKED/UNKNOWN for more than 72 hours
+    - a current contract or tariff will expire before the next committed onboarding checkpoint without a valid successor
+  post_activation_at_risk_reasons:
+    - no strict paid MVW in trailing 30 days
+    - fixed days-29-through-56 retention failure after maturity
+    - required readiness, rights, SLA, support, reconciliation, or trust evidence BLOCKED/UNKNOWN for more than 72 hours
+    - a current contract ends within 60 days and renewal projection is INELIGIBLE or UNKNOWN
+  early_churn:
+    fixed_retention: remains a denominator failure after day-57 cohort maturity
+    current_health: becomes CHURNED at the exact contract terminal effective_at; it is not first rewritten as healthy, excluded, or censored
+    recovery: only a new qualification episode may re-enter after churn; the old episode's retention and churn remain immutable
+  recovery_rules:
+    ONBOARDING_AT_RISK: all onboarding blockers have current closure receipts and the next legitimate milestone may be reached; no paid-value event is required before DATA_READY
+    POST_ACTIVATION_AT_RISK: all active blockers have current closure receipts and, when NO_PAID_VALUE_30D applied, at least one new strict paid MVW exists in the trailing 30 days
+    UNKNOWN: missing evidence must be repaired before HEALTHY; time passage or operator acknowledgement alone is insufficient
+  reason_order: [TRUST_REVIEW_OPEN, CONTRACT_NOT_CURRENT, RIGHTS_NOT_CURRENT, CONFIGURATION_MISMATCH, SNAPSHOT_EMPTY_OR_UNREPRODUCIBLE, SLA_TELEMETRY_GAP, INVOICE_MEMBERSHIP_GAP, COST_CAPTURE_INCOMPLETE, NO_PAID_VALUE_30D, RETENTION_WINDOW_FAILED]
+  output_rule: Return every active typed reason, firstObservedAt, owner, backup owner, dueAt, nextReviewAt, and evidence digest; choose the primary reason by reason_order without discarding the rest.
+
+activation_measurement_contract:
+  clock: elapsed exact seconds from DATA_READY effective_at inclusive to FIRST_PAID_VALUE effective_at exclusive, divided by 3600 using PostgreSQL numeric; calendar-day subtraction, import time, and recorded_at are forbidden
+  observation_unit: one qualification episode with valid DATA_READY, fixed to organization, SKU, accounting timezone, cohort, formula/policy digest, and as_of cutoff
+  seven_day_rate:
+    maturity: include in the decision denominator only when as_of >= data_ready_at + 168 hours or a terminal-without-value contract event occurred earlier
+    success: first paid value exists at elapsed hours <= 168
+    failure: no qualifying value by 168 hours, a value after 168 hours, or terminal-without-value before 168 hours
+    pending: an active episode observed for less than 168 hours; report separately and never place in denominator
+  p90_objective:
+    horizon: 336 hours
+    survivor_bias_decision: Every DATA_READY episode whose 336-hour observation has matured remains in the objective population whether or not it activated. Computing percentile only among activated survivors is forbidden.
+    event: first valid paid value at its exact elapsed hours
+    right_censor: Only an active, nonterminal episode without value at as_of is right-censored at elapsed(as_of - data_ready_at). A corrected/reversed qualification or DATA_READY input is UNKNOWN, not censored. ENDED/CANCELLED/CHURNED without value is TERMINAL_WITHOUT_EVENT and never non-informatively censored or excluded.
+    maturity: Objective threshold is evaluated only over episodes with at least 336 hours observable follow-up or an earlier TERMINAL_WITHOUT_EVENT. Younger active episodes remain pending outside the matured objective denominator.
+    estimator: RESTRICTED_EMPIRICAL_P90_OBJECTIVE_V1; let n be the matured population, k = integer_divide(9*n + 9, 10), and x be exact first-value events with elapsed hours <= 336. This answers the declared P90<=336 objective without pretending to identify the post-horizon quantile.
+    exact_result: If x >= k, sort only exact timely event hours ascending and select the kth value. estimateState is EXACT, p90Hours is that duration, and no active censor can precede it because every included active censor was observed through 336 hours. Linear interpolation and percentile_cont are forbidden.
+    lower_bound_result: If x < k, the true P90 is known to be strictly greater than 336 but its exact late value is not identified. estimateState is EXCEEDS_OBJECTIVE_BOUND, p90Hours is null, lowerBoundHours is 336, boundOperator is GREATER_THAN, and the result is a truthful KNOWN breach for eligibleCount >= 10. No infinity sentinel or fabricated finite latency is emitted.
+    right_censor_decision: Because threshold cohorts are 336-hour matured, no active episode may be censored before the objective boundary. A pre-336 cutoff is pending/COHORT_NOT_MATURE rather than an estimable P90.
+  corrections: A corrected-away first value recomputes the ordered set at the new cutoff and may turn an exact P90 into a lower bound. Historical metric receipts and ordered-set digests remain immutable.
+  small_sample:
+    eligible_lt_5: status NOT_APPLICABLE, reason SAMPLE_TOO_SMALL, no rate/P90 claim and no automated verdict; return typed counts plus privacy-controlled ordered observations as declared in MetricOrderedObservationSetV1
+    eligible_5_to_9: display the exact rate/Wilson or exact/bounded P90 evidence, but thresholdState remains NOT_EVALUATED and no automated scale, pause, or stop verdict is emitted
+    eligible_at_least_10: threshold decisions are permitted when all inputs are KNOWN
+  ordering: elapsedHours ASC, observationKind EVENT before RIGHT_CENSORED before TERMINAL_WITHOUT_EVENT for equal finite bounds, then qualificationEpisodeHmac ASC only inside the server digest; the HMAC is never serialized to aggregate screens
+
+paid_mvw_contract:
+  metric_id: BM-VALUE-PAID-MVW
+  unit: one unique root outcome-fact chain
+  paid_semantics: Paid means the workflow occurred inside a current paid SKU contract after DATA_READY. It does not mean invoice issued, cash collected, or revenue recognized; those authorities are deliberately independent.
+  eligibility:
+    scope_kind: ORGANIZATION
+    organization_id: must equal the configured organization and current contract
+    sku: EVIDENCE_WORKSPACE_ORGANIZATION_V1 through the bound contract period
+    environment: production only
+    allowed_terminal_pairs:
+      - {fact_type: AUDITED_DELIVERY, terminal_receipt_kind: OUTBOUND_DELIVERY}
+      - {fact_type: COMPLETED_DECISION_CYCLE, terminal_receipt_kind: ORGANIZATION_DECISION}
+    chain_rule: Select the greatest correction_sequence for each root_fact_id as of cutoff; ORIGINAL or SUPERSEDING counts one and INVERSE counts zero.
+    interval_rule: effective_from is at or after DATA_READY and inside an ACTIVE, PROVISIONED contract period for the same organization/SKU.
+    proof_rule: The exact four ordered VerifiedWorkflowProofV1 milestones and the terminal receipt are valid and bind PaidEvidencePacketV1, its evidence set, human decision, independent-review disposition, and durable outcome receipt.
+    delivery_rule: AUDITED_DELIVERY requires an applied DELIVERED or READ outbound-delivery receipt; QUEUED, SENDING, PROVIDER_ACCEPTED, RETRY_SCHEDULED, ambiguous, cancelled, suppressed, or failed delivery does not count.
+    decision_rule: COMPLETED_DECISION_CYCLE requires a finalized organization-decision receipt whose approved content/action digest equals the persisted packet/action digest; proposal acceptance or execution start is insufficient.
+    terminality_rule: The current non-INVERSE outcome head, PaidEvidencePacketV1, exact terminal receipt candidate key/version/digest, and terminal resulting state are locked and validated in one SERIALIZABLE append. Provider acceptance, dispatch, queued/running execution, acknowledgement without effect, or an ambiguous outcome is non-terminal.
+    temporal_rule: packet persistedAt <= terminal receipt effective_at = outcome effective_from; effective_from must be inside the same ACTIVE and PROVISIONED contract interval and no earlier than DATA_READY. Import/recorded timestamps never substitute.
+  explicit_exclusions:
+    - TRIAGED_SIGNAL
+    - REVIEWED_INVESTIGATION
+    - ACCEPTED_PROPOSAL
+    - PUBLICATION
+    - CORRECTION
+    - public-scope outcomes
+    - product-event rows without an eligible outcome fact
+    - fixture, synthetic, sandbox, preview, draft, failed, cancelled, suppressed, or unreviewed work
+    - AI output, agent proposal, tool call, citation identifier, or generated visualization by itself
+  deduplication: A terminal receipt, workflow_instance_hmac, and root outcome chain can contribute at most one unit; delivery retries and correction history never multiply the unit.
+  unknown_rule: Missing/expired proof, ambiguous terminal effect, absent contract/readiness binding, or an incomplete correction chain is UNKNOWN and excluded with a reason count; it is never treated as zero-cost success or coerced into an eligible unit.
+  correction_rule:
+    - ORIGINAL or SUPERSEDING current outcome heads may count once; INVERSE counts zero. A correction never changes the original packet, receipt, invoice, revenue, or cost bytes.
+    - Correcting away a paid outcome recomputes value, activation, retention, expansion, and renewal projections at the new cutoff and opens typed reconciliation for any already-issued invoice, recognized revenue, or allocated cost. It does not silently reverse those independent facts.
+    - Correcting invoice, revenue, cost, cash, tax, or attribution never creates, deletes, or makes a product outcome eligible. Each authority needs its own valid append-only correction and shared causal receipt digest.
+
+economic_fact_boundary_contract:
+  authorities:
+    product_value:
+      source: current ops.outcome_facts root heads validated by paid_mvw_contract
+      proves: a responsible terminal customer workflow
+      does_not_prove: usage quantity, invoice, cash, tax, revenue, cost, margin, renewal, or editorial quality
+    usage:
+      source: current ops.usage_window_receipts and ops.usage_facts heads
+      proves: complete, partial, unknown, reversed, or zero measured service consumption
+      does_not_prove: a charge, product value, payment, or revenue
+    billing:
+      source: current ops.invoice_facts, ops.invoice_line_facts, and ops.invoice_usage_memberships heads
+      proves: reconciled amount billed for one exact service interval and membership set
+      does_not_prove: cash collection, revenue recognition, paid MVW, margin, or retention
+    revenue:
+      source: current ops.revenue_facts heads under revenue_recognition_contract
+      proves: tax-exclusive accounting revenue recognized under one policy
+      does_not_prove: cash collection, product value, invoice payment, or healthy economics
+    cost:
+      source: current closed ops.cost_allocations period and line-set heads under cost_completeness_contract
+      proves: captured/allocated/unknown/unallocated cost for one exact period
+      does_not_prove: revenue, product value, or invoice accuracy
+    cash:
+      source: signed external accounting/bank settlement record imported only if a future typed authority approved by the owner exists
+      proves: cash settlement/application only
+      does_not_prove: revenue, paid MVW, invoice correctness, tax correctness, or entitlement
+      v1_product_status: OUT_OF_SCOPE_NO_TABLE_NO_API; no cash value is synthesized from invoice or contract state
+    tax:
+      source: tax-exclusive/tax columns and tax-policy digest on immutable invoice lines plus append-only tax-targeted correction
+      proves: invoice tax basis/liability presentation under the bound policy
+      does_not_prove: revenue or operating cost
+  no_cascade_rule: A change in one authority never mutates another authority in place and never fabricates a compensating fact. It creates a reconciliation issue and requires the target authority's typed append-only restatement/reversal/adjustment.
+  same_cutoff_rule: A composite metric selects every current chain head at one as_of, accounting timezone, policy/formula catalog, and transitive input-set digest; mixing close times or latest-now joins is forbidden.
+  correction_effect_union:
+    normalized_effects: [ORIGINAL, REPLACEMENT, REVERSAL, INVERSE, SUPERSEDING, RESTATEMENT, WITHDRAWN, ADJUSTMENT]
+    lossless_mapping:
+      ORIGINAL: physical ORIGINAL or first immutable fact
+      REPLACEMENT: physical REPLACEMENT successor
+      REVERSAL: physical REVERSAL successor with zero future effect
+      INVERSE: physical INVERSE outcome head
+      SUPERSEDING: physical SUPERSEDING outcome head
+      RESTATEMENT: invoice, membership, revenue, or cost successor that replaces a complete prior set
+      WITHDRAWN: physical WITHDRAWAL or withdrawn terminal window; source spelling and source row digest remain in CorrectionHeadBindingV1
+      ADJUSTMENT: signed nonzero delta that preserves the original and identifies exact amount kind
+    forbidden_loss: A generic CORRECTED flag, latest-row overwrite, or normalized effect without source relation, source effect, predecessor, sequence, effective delta where applicable, and head digest is invalid.
+
+tax_credit_and_cash_boundary:
+  invoice_equation: tax-exclusive subtotal - price-reduction discounts + tax + separately authorized accounting adjustments = invoice total; tax and cash are never included in recognized revenue or variable gross margin revenue
+  tax_ledger_rule: Each invoice line binds tax category, basis, rate, exemption when applicable, policy digest, rounded tax amount, and source evidence. TAX_CORRECTION targets tax only and appends; it cannot change tax-exclusive revenue or product value.
+  credit_classes:
+    PRICE_REDUCTION:
+      examples: [contract discount, refund of transaction price, SLA service credit classified by the bound accounting policy as consideration reduction]
+      effect: reduces tax-exclusive invoice consideration and any related future/corrected revenue through separate exact target corrections; it never records an operating expense for the same amount
+    CUSTOMER_COMPENSATION:
+      examples: [damages, incident compensation, goodwill payment not classified as transaction-price reduction]
+      effect: signed external liability/expense evidence and cost treatment under the accounting policy; it does not reduce invoice/revenue unless a separate price-reduction decision is also valid
+    TAX_ADJUSTMENT:
+      effect: changes tax basis/liability only through a tax-targeted correction
+    CASH_APPLICATION:
+      effect: changes receivable/cash settlement only in the external accounting authority; never product entitlement, revenue timing, or paid MVW
+  no_double_effect: One source credit/settlement identity may resolve to exactly one primary economic class. A policy-approved split uses distinct ordered components whose amounts conserve the signed source total and whose component-set digest is bound by every target correction.
+  v1_runtime_boundary: Gurinnae has no checkout, payment, receivable, cash-ledger, or tax-remittance API. Existing invoice/revenue/cost screens must label those states separately and show UNKNOWN when the required external accounting acknowledgement is absent.
+
+pricing_and_billing:
+  sku: EVIDENCE_WORKSPACE_ORGANIZATION_V1
+  currency: KRW
+  tariff_source: current immutable ops.tariff_versions row covering the full service interval
+  formula_version: 1
+  formula: >-
+    monthly_pre_tax_charge = exact_sum6(
+      prorated_workspace_base
+      + prorated_active_contributor_block_charge
+      + processing_credit_overage_charge
+      + storage_gb_month_overage_charge
+      + api_record_unit_overage_charge
+      + prorated_selected_sla_add_on
+      - approved_discount_amount);
+    monthly_invoice_total = exact_sum6(ordered already-rounded line_total values, including tax_amount and separately authorized accounting_adjustment_amount)
+  components:
+    period_proration: active calendar days in the billed slice divided by calendar days in the accounting month, calculated exactly before one half-even rounding at the charge line
+    prorated_workspace_base: round6_half_even(workspace_base_amount * period_proration)
+    active_contributor_blocks: ceil(max(active_contributors - included_active_contributors, 0) / active_contributor_block_size)
+    prorated_active_contributor_block_charge: round6_half_even(active_contributor_blocks * active_contributor_block_amount * period_proration)
+    processing_credit_overage: max(processing_credits - included_processing_credits, 0)
+    processing_credit_overage_charge: round6_half_even(processing_credit_overage * processing_credit_overage_amount)
+    storage_gb_month_overage: max(storage_gb_month - included_storage_gb_month, 0)
+    storage_gb_month_overage_charge: round6_half_even(storage_gb_month_overage * storage_gb_month_overage_amount)
+    api_record_unit_overage: max(api_record_units - included_api_record_units, 0)
+    api_record_unit_overage_charge: round6_half_even(api_record_unit_overage * api_record_unit_overage_amount)
+    prorated_selected_sla_add_on: round6_half_even(sla_add_on_amount * period_proration) when contract.sla_add_on_selected is true; otherwise 0; null amount means unavailable and cannot be selected
+    approved_discount_amount: sum of effective immutable discount decisions applied only to eligible line kinds, bounded by the pre-discount subtotal
+    accounting_adjustment_amount: append-only effective corrections; never an in-place rewrite
+  rounding:
+    function: ops.round_half_even_numeric_v1
+    storage_scale: 6
+    rule: Every normalized quantity, line subtotal, discount, tax basis, tax, correction, and line total uses numeric arithmetic and half-even rounding at its declared scale; the invoice aggregate is the exact sum of already-rounded line columns and is not independently re-rounded. PostgreSQL round() away-from-zero is forbidden.
+  taxes: Applied after net taxable amount using the versioned tax policy bound by invoice; taxes are not revenue until the accounting policy says so.
+  forbidden_price_metrics:
+    - case, signal, claim, allegation, publication, correction, response, or subject count
+    - person identity, sensitivity, wrongdoing likelihood, model confidence, or editorial priority
+  v1_quota_rule: Signed-webhook and digest quotas are included service limits; v1 does not silently create an undeclared overage line. Exhaustion uses a visible bounded quota state and a reviewed tariff amendment.
+
+usage_receipt_contract:
+  authoritative_chain: ops.usage_window_receipts -> ops.usage_facts -> ops.invoice_usage_memberships -> optional charged ops.invoice_line_facts
+  rules:
+    - Every usage fact binds one current non-reversed signed window receipt, contract period, tariff version, measurement window, meter policy version/digest, unit, and source record-set digest.
+    - COMPLETE with observed quantity zero is billable truth; PARTIAL or UNKNOWN is not zero and cannot generate an automatic charge.
+    - Replacements and reversals append; only the current chain head participates in a new invoice reconciliation.
+    - One effective usage fact is represented once in the invoice membership set, including a zero-overage/included-quota membership, or the reconciliation is incomplete.
+  meter_definitions:
+    active_contributors: distinct rostered non-read-only identities with at least one successful eligible internal command or independent-review receipt in the service window; login and read-only viewing do not count
+    processing_credits: versioned sum of settled actual job/provider credits after reservation; rejected, cancelled-before-effect, and unexecuted maximum reservations do not count
+    storage_gb_month: round6_half_even(encrypted_byte_hours / (1000000000 * exact_local_period_hours)); decimal GB-month is normative for v1
+    api_record_units: round6_half_even(normalized_records_successfully_returned / 1000); request count and failed responses do not substitute
+    delivery_attempts: authentic provider dispatch attempts, not callback count; included quota only in v1
+    export_bytes: successfully materialized authorized export bytes, included quota only in v1
+
+invoice_membership_contract:
+  authority: current immutable ops.invoice_usage_memberships chain selected per usage_root_fact_id and billing cutoff; invoice lines alone are not membership authority
+  header: one ops.invoice_facts row for one organization, contract period, SKU, currency, and half-open service interval
+  line_set:
+    order: line_ordinal ASC then id ASC
+    digest: exact immutable line-set digest bound by the header
+    gap_rule: line ordinals are contiguous 1..line_count with no duplicate
+  fixed_lines:
+    WORKSPACE_BASE: exactly one per covered accounting month or prorated contract fragment, quantity 1, no usage_fact_id
+    SLA_ADD_ON: exactly one only when selected and available; otherwise zero lines
+    ACCOUNTING_ADJUSTMENT: only a signed append-only provider/accounting correction with its source digest
+  metered_lines:
+    ACTIVE_CONTRIBUTOR_BLOCK: exact current ACTIVE_CONTRIBUTOR usage fact
+    PROCESSING_CREDIT_OVERAGE: exact current PROCESSING_CREDIT usage fact
+    STORAGE_GB_MONTH_OVERAGE: exact current STORAGE_GB_MONTH usage fact
+    API_RECORD_UNIT_OVERAGE: exact current API_RECORD_UNIT usage fact
+  membership_rule: Every due meter/window is returned by ops.read_invoice_membership_v1 before observation-state filtering. Every effective COMPLETE usage root in the service interval has exactly one current ops.invoice_usage_memberships leaf, including ZERO_USAGE and INCLUDED_ALLOWANCE rows with null invoice_line_id; BILLED_OVERAGE binds exactly one same-invoice line. No root may fund two current invoices or effective lines.
+  conservation: subtotal - discount_total = taxable_amount; taxable_amount + tax_total + correction_total = invoice_total
+  unknown_rule: Missing receipt, partial window, stale tariff, currency mismatch, membership gap, or total mismatch makes invoice reconciliation UNKNOWN/BLOCKED and forbids revenue/margin/readiness claims from that invoice.
+
+revenue_contract:
+  recognized_source: current append-only ops.revenue_facts chains under a versioned accounting policy
+  not_revenue: [signed_contract, binding_commitment, invoice_total, cash_expectation, accepted_proposal, triage, usage_without_invoice]
+  rules:
+    - A revenue fact binds exact organization, contract period, invoice header and eligible non-adjustment invoice line, recognition interval, currency, policy version/digest, signed source receipt, and import receipt.
+    - Cumulative recognized amount for a line cannot exceed its effective recognizable amount; intervals do not overlap.
+    - Corrections append through ops.accounting_corrections; original invoice and revenue bytes never change.
+    - Binding committed amount is forecast/funding evidence only and is never recognized revenue.
+
+revenue_recognition_contract:
+  eligible_basis: tax-exclusive recognizable amount of one reconciled non-adjustment invoice line after effective price-reduction discounts and before tax; cash, tax, compensation expense, commitment, and invoice total are excluded
+  recognition_methods:
+    POINT_IN_TIME_V1:
+      eligible_lines: only a line whose bound performance-obligation policy and terminal performance receipt declare point-in-time recognition
+      recognized_at: exact terminal performance receipt effective_at
+      allocation: the full effective recognizable amount belongs to the unique half-open accounting window containing recognized_at
+    OVER_TIME_STRAIGHT_LINE_UTC_MICROSECOND_V1:
+      eligible_lines: recurring workspace, SLA, and other lines whose bound policy declares over-time recognition
+      service_interval: exact invoice-line [service_period_start,service_period_end), with both instants derived from the contract accounting timezone and then persisted in UTC
+      exact_fraction: integer UTC microseconds in intersection(service interval, reporting window) divided by integer UTC microseconds in the full service interval; binary float and calendar-month averaging are forbidden
+      ordered_allocation: calculate unrounded numeric allocations for every chronological accounting-window intersection; round all but the last nonempty slice half-even to scale 6; set the last slice to effective recognizable amount minus the exact sum of prior rounded slices
+      residual_rule: the final residual is deterministic, preserves sign and total, and is bound by ordered allocation-set digest; spreading, dropping, or posting it to an unrelated current month is forbidden
+  cross_month_rule: Revenue is reported by exact interval overlap. A multi-month line cannot be recognized wholly at invoice issue, payment, import, or month end unless its bound method is POINT_IN_TIME_V1 and its actual performance receipt occurred then.
+  cumulative_cap: Across all current non-reversed revenue facts and corrections for one invoice line/policy, recognized tax-exclusive amount equals no more than the current effective recognizable amount; overlapping recognition intervals are forbidden and adjacency is allowed.
+  corrections_and_restatement:
+    - A price reduction, line restatement, performance-date correction, or policy correction appends exact accounting correction and successor revenue facts for every affected historical/future slice; it never edits a prior fact.
+    - Prior-period effects remain assigned to their original accounting windows in metric as-of reconstruction. A separately approved accounting presentation may show a current-period adjustment but must also expose original-window restatement and cannot change source economics.
+    - WITHDRAWN or reversed revenue contributes zero after its effective correction, while historical cutoffs before correction remain byte-reproducible.
+    - Reallocation locks invoice-line plus policy, locks existing revenue/correction heads in deterministic order, and atomically proves no gap, overlap, negative final slice, over-recognition, or duplicate residual.
+  proof_fields: [invoice_line_id, invoice_line_digest, recognition_method, service_period_start, service_period_end, terminal_performance_receipt_id, terminal_performance_receipt_digest, recognition_policy_version, recognition_policy_digest, exact_unrounded_fraction, rounded_amount, residual_amount, allocation_ordinal, allocation_set_digest, source_receipt_digest]
+
+unit_economics:
+  cost_source: current closed ops.cost_allocations period and line set
+  variable_cost_categories:
+    - COMPUTE
+    - DATABASE_WAL_BACKUP
+    - STORAGE
+    - EGRESS
+    - MODEL_OCR
+    - SEARCH
+    - DELIVERY
+    - OBSERVABILITY
+    - SUPPORT
+    - HUMAN_REVIEW
+    - LEGAL_SECURITY
+  acquisition_cost_category: SALES_CUSTOMER_ACQUISITION
+  eligibility:
+    cost_capture_coverage_min: 0.99
+    direct_coverage_required: 1.0
+    total_coverage_min: 0.95
+    unknown_or_unallocated_rule: Missing, unknown, or unallocated cost stays visible and blocks a healthy margin claim; it is never zero.
+  margin_targets:
+    pilot_p75_variable_gross_margin_min: 0.60
+    general_availability_p75_variable_gross_margin_min: 0.70
+    lower_pilot_price: requires independent oversight reason, expiry, exact cost evidence, and no trust-gate change
+  support_capacity_hours_per_activated_org_month_max: 4.0
+  cac_payback_months_max: 12.0
+  cac_rule: Only SALES_CUSTOMER_ACQUISITION allocations with a current non-reversed acquisition receipt and matching organization/campaign count; lead/contact/query/cookie/message content is forbidden.
+
+cost_completeness_contract:
+  close_unit: one deployment, half-open accounting period, reporting currency, accounting timezone, cost-policy version/digest, and current superseding period head
+  required_source_category_matrix:
+    source_registry: exact current configured provider, infrastructure, payroll/time, legal/security, support, and internal allocation sources effective for the period
+    category_registry: [COMPUTE, DATABASE_WAL_BACKUP, STORAGE, EGRESS, MODEL_OCR, SEARCH, DELIVERY, OBSERVABILITY, SUPPORT, HUMAN_REVIEW, LEGAL_SECURITY, SALES_CUSTOMER_ACQUISITION]
+    cell_states: [COMPLETE, NO_ACTIVITY_WITH_PROOF, UNKNOWN]
+    rule: Every expected source/category cell appears exactly once in the close set. NO_ACTIVITY_WITH_PROOF binds a signed zero-activity receipt; absent, late, partial, duplicate, or unsigned cells are UNKNOWN rather than omitted.
+  completeness_dimensions:
+    event_coverage: captured expected source-event count / expected source-event count is at least 0.99 when the expected count is known
+    direct_amount_coverage: known directly attributable amount / direct eligible amount equals 1.0
+    total_amount_coverage: known allocated amount / captured known amount is at least 0.95
+    category_coverage: every required category is COMPLETE or NO_ACTIVITY_WITH_PROOF; a high aggregate percentage cannot hide a missing category
+  unknown_amount_contract:
+    required_fields: unknown source/category cell count, reason set digest, conservative upper-bound amount or UPPER_BOUND_UNAVAILABLE, upper-bound policy version/digest, materiality policy version/digest
+    rule: An absent upper bound remains UNKNOWN and blocks exact margin, contribution, cost-per-MVW, CAC/payback, expansion, renewal, and scale claims. A finite upper bound may support a displayed conservative range but never changes UNKNOWN to KNOWN or supplies zero.
+    materiality_rule: Deployment-configured materiality controls escalation and review cadence only. It cannot exclude a required source/category, weaken 100% direct coverage, or make unknown/unallocated cost healthy.
+  unallocated_policy:
+    known_portfolio_cost: Every captured known unallocated amount remains included in portfolio total variable cost and conservative contribution/margin bounds; it is never dropped to improve economics.
+    unit_metrics: Any positive unallocated amount whose eligible target set intersects an organization, paid outcome, acquisition cohort, or SKU window makes the affected unit metric UNKNOWN until an append-only allocation restatement resolves it.
+    explicit_pool: Unallocated acquisition cost uses the exact privacy-safe pool digest and makes cohort CAC/payback UNKNOWN; it is never divided only across attributed organizations.
+  close_rule: A period may persist with state UNKNOWN for truthful operations, but only a CLOSED+COMPLETE current head with all matrix, amount, FX, correction, allocation, and upper-bound evidence may support a KNOWN healthy economics claim.
+  correction_rule: Cost corrections append a complete superseding period header and full ordered line set. Delta-only orphan lines, in-place edits, partial carry-forward, or a latest-period join that loses the predecessor/correction union are forbidden.
+
+sla_contract:
+  applies_when: current contract selects an available SLA add-on and binds a versioned SLA policy digest
+  window: one accounting calendar month
+  availability_formula: round12_half_even((eligible_service_minutes - unavailable_minutes) / eligible_service_minutes)
+  eligible_service_minutes: all scheduled service minutes minus only policy-allowed maintenance announced at least 72 hours in advance and capped at 4 hours per month
+  unavailable_minutes: union of minute intervals in which a contracted critical capability is unavailable; overlapping incidents count once
+  target: exact target and service-credit schedule from the signed SLA policy bound by the contract; a missing target is UNKNOWN and the add-on cannot be sold
+  telemetry_rule: Missing required SLI receipts or telemetry makes the window UNKNOWN, opens a telemetry-gap incident, and forbids claiming SLA success.
+  service_credit: a signed SERVICE_CREDIT discount/accounting correction; never rewrite the invoice or hide the breached window
+  excluded_causes: only the closed signed policy set may exclude a minute; provider fault, capacity exhaustion, deployment error, and unknown cause are not automatically excluded
+
+pilot_readiness:
+  profile_id: BM-PILOT-CORE-V1
+  stage: PILOT_ENTRY_READINESS
+  stage_semantics: This is the pre-activation admission gate for one paid private workspace pilot, not an ACTIVATED funnel stage, a completed value event, or proof of post-billing economics.
+  evidence_cutoff: evaluation.evidence_cutoff_at
+  mandatory_core_items:
+    - PAID_WORKSPACE_PROCESSING_ACTIVE
+    - DEPLOYMENT_ISOLATION_PROVEN
+    - OIDC_AND_ROSTER_READY
+    - DATA_STORES_KEYS_QUEUES_ISOLATED
+    - SOURCE_RIGHTS_CONFIGURED
+    - TELEMETRY_ALERTS_RUNBOOK_READY
+    - BACKUP_RESTORE_PROVEN
+    - INCIDENT_OWNERSHIP_READY
+    - CURRENT_CONTRACT_PERIOD
+    - CURRENT_TARIFF_VERSION
+    - BILLING_RECONCILIATION_PATH_READY
+    - COST_CAPTURE_PATH_READY
+    - P75_VARIABLE_GROSS_MARGIN
+    - SUPPORT_CAPACITY
+  post_first_billing_required:
+    - ACTUAL_BILLABLE_RECONCILIATION
+    - ACTUAL_COST_CAPTURE
+    - FIRST_PAID_VERIFIED_WORKFLOW_CYCLE
+  general_availability_only:
+    - CAC_PAYBACK
+  conditional_when_explicitly_offered:
+    - PUBLIC_WEB_ACTIVE
+    - VERIFIED_EMAIL_ACTIVE
+    - API_EXPORT_ACTIVE
+    - SIGNED_WEBHOOK_ACTIVE
+    - DAILY_DIGEST_ACTIVE
+    - WEEKLY_DIGEST_ACTIVE
+    - SMS_ADAPTER_ACTIVE
+    - TELEGRAM_ADAPTER_ACTIVE
+    - WHATSAPP_ADAPTER_ACTIVE
+    - LINE_ADAPTER_ACTIVE
+    - KAKAO_ADAPTER_ACTIVE
+    - VOICE_ADAPTER_ACTIVE
+  optional_rule: Unoffered Public Web, email, API/export, webhook, digest, SMS, Telegram, WhatsApp, LINE, Kakao, and voice are visible as NOT_APPLICABLE/UNCONFIGURED and do not block a core pilot; once promised in the signed offer they become required and must have exact production activation evidence.
+  evidence_rule: FIXTURE_ONLY and NON_PRODUCTION_PREFLIGHT never satisfy production readiness. PRODUCTION_PREFLIGHT may satisfy only path-readiness items; actual billing, cost, value, SLA, margin, and CAC require production facts.
+
+acquisition_activation_retention_loops:
+  acquisition_channels:
+    ORGANIC_SEARCH: public evidence, stable citations, source-status, or methodology pages
+    REFERRAL: newsroom, researcher, civic organization, or existing-user referral
+    PARTNER: documented data-journalism, research, or public-interest partnership
+    EVENT: workshop, conference, or training with a signed campaign receipt
+    CONTENT: reproducible methods, source coverage, or case-study content
+    DIRECT: customer-initiated direct inquiry
+    OUTBOUND: reviewed organization-level outreach with lawful basis and suppression controls
+    PAID_SEARCH: bounded campaign; no sensitive-keyword or person-level audience
+    PAID_SOCIAL: bounded campaign; no source/subject/customer-list matching
+  attribution: current ops.acquisition_source_receipts chain with organization/campaign HMACs and no raw lead, contact, query, cookie, address, handle, or message
+  activation_moments:
+    - first non-empty authorized snapshot is reproducible and limitations are visible
+    - first evidence packet is independently reviewed and receives a responsible terminal outcome
+    - first value receipt is visible with provenance, cost, next action, and recovery path
+  retention_loops:
+    - saved query or cohort -> scheduled source refresh -> changed evidence -> human review -> approved packet/decision/delivery -> receipt -> next scoped watch
+    - correction or counter-evidence -> impact review -> revised packet -> immutable correction receipt -> restored trust
+    - usage/cost/SLA report -> quota or workflow optimization -> lower cost per paid MVW without changing trust gates
+  anti_dark_pattern: Notifications, digests, and messenger delivery require current consent, quiet-time policy, frequency controls, unsubscribe, and truthful delivery state; engagement does not override those gates.
+
+acquisition_attribution_contract:
+  model: SINGLE_SOURCE_100_PERCENT_PER_QUALIFICATION_EPISODE_V1
+  source_order_exactly: [ORGANIC_SEARCH, REFERRAL, PARTNER, EVENT, CONTENT, DIRECT, OUTBOUND, PAID_SEARCH, PAID_SOCIAL, OTHER_REVIEWED, UNKNOWN_SOURCE]
+  acquisition_cohort: accounting calendar month containing qualification_contract.first_qualified_at, keyed by qualification_episode_id, organization_id, SKU, accounting timezone, and metric cutoff
+  acquisition_end_exclusive: qualification_contract.first_qualified_at
+  selection:
+    - Select the current qualification head at cutoff, then only its exact acquisition_source_receipt_id+digest binding; never search for a convenient latest campaign by organization alone.
+    - The bound acquisition receipt must be the unique current non-reversed head at cutoff, match deployment/organization/campaign, be valid at first_qualified_at, and have attributed_at no later than the qualification decision_effective_at.
+    - A null pair, reversed/stale pair, later unbound receipt, cross-episode reuse, invalid interval, changed digest, or ambiguous chain contributes exactly one UNKNOWN_SOURCE episode and sets attribution-dependent cost metrics UNKNOWN.
+    - No fractional, last-click fallback, multi-touch weighting, or operator guess exists in v1. A source correction requires an acquisition-receipt successor and qualification REPLACEMENT binding the new exact digest; first_qualified_at and cohort never move.
+  episode_count_conservation: sum(count for every ten known source kinds) + unknown_source_count = distinct current valid qualification episodes in the exact cohort; every episode contributes exactly one unit and no organization-only join may multiply or drop requalification episodes
+  source_cohort_parity:
+    - Acquisition, configuration, data-ready, activation, fixed retention, pilot-to-paid, churn, CAC, and payback source cuts use the same qualification_episode_id, first_qualified_at cohort, source binding, SKU, timezone, as_of, and cohort input digest.
+    - A channel numerator is always a subset of that channel's exact conserved denominator. Global outcome/revenue/cost numerators, current organization source, cohort-ratio averaging, and reassignment after activation are forbidden.
+    - Portfolio aggregation sums disjoint cohort/source numerators and denominators first; it never averages rates or per-organization CAC/payback ratios.
+  acquisition_cost_window:
+    start: earliest effective captured SALES_CUSTOMER_ACQUISITION source event bound to the campaign and current correction set
+    end: first_qualified_at exclusive
+    post_qualification_policy: A source event effective at or after first_qualified_at is onboarding, customer-success, support, expansion, or another actual category and never first-acquisition CAC. A late invoice may enter CAC only when it corrects a source event whose service/effective interval ended before first_qualified_at; import or invoice date cannot move the economic event across the boundary.
+  amount_conservation:
+    formula: complete_captured_acquisition_amount = exact_sum6(attributed_episode_amounts) + exact_sum6(unattributed_pool_amounts)
+    requirements:
+      - Every effective source cost identity appears exactly once in attributed or unattributed lines under the same currency, FX policy, period, cutoff, and correction-set digest.
+      - Any positive unattributed pool, unknown source amount, missing/stale/reversed receipt, FX gap, or correction ambiguity makes CAC and payback UNKNOWN; the attributed subset is never reported as a lower known value.
+      - Reassigning an amount appends a complete cost-period restatement that removes the predecessor allocation and adds the successor under one conserved source identity; dual-current allocation is forbidden.
+  privacy: Source kind, campaign HMAC/digest, organization role-scoped HMAC, cohort month, and aggregate counts/amounts are the only acquisition dimensions. Raw lead, contact, person, query, URL parameter, cookie, device, address, handle, message, referral text, and cross-session public identity are forbidden.
+
+offer_profile_contract:
+  type: OfferProfileV1
+  additional_properties: false
+  source: signed external offer/contract operating record imported through the typed commercial-contract boundary; a UI checkbox, tariff default, sales note, or capability health is not authority
+  required_fields:
+    schemaVersion: const<1>
+    offerProfileId: uuid
+    offerProfileVersion: bigint[1..max]
+    organizationId: uuid
+    qualificationEpisodeId: uuid
+    sku: const<EVIDENCE_WORKSPACE_ORGANIZATION_V1>
+    contractPeriodId: uuid
+    contractPeriodDigest: sha256
+    tariffVersionId: uuid
+    tariffRecordDigest: sha256
+    capabilityEntries: ordered-array<OfferCapabilityV1>[12]
+    capabilitySetDigest: sha256
+    quotaSetDigest: sha256
+    overagePolicySetDigest: sha256
+    serviceCreditPolicyDigest: sha256
+    effectiveFrom: datetime
+    effectiveUntil: datetime
+    sourceReceiptDigest: sha256
+    signatureDigest: sha256
+    offerProfileDigest: sha256
+  capability_codes_ordered_exactly: [PUBLIC_WEB, VERIFIED_EMAIL, API_EXPORT, SIGNED_WEBHOOK, DAILY_DIGEST, WEEKLY_DIGEST, SMS, TELEGRAM, WHATSAPP, LINE, KAKAO, VOICE]
+  OfferCapabilityV1:
+    additional_properties: false
+    fields:
+      ordinal: int32[1..12]
+      capabilityCode: closed offer capability code
+      offerState: enum<INCLUDED_REQUIRED|NOT_OFFERED>
+      quotaKind: enum<NOT_METERED|API_RECORD_UNIT|DELIVERY_ATTEMPT|DIGEST_DISPATCH|WEBHOOK_DISPATCH>
+      includedQuantity: nullable<decimal-string>
+      overagePolicy: enum<DECLARED_TARIFF_OVERAGE|HARD_LIMIT_NO_OVERAGE|NOT_APPLICABLE>
+      overageUnitPrice: nullable<decimal-string>
+      activationPolicyDigest: nullable<sha256>
+      consentPolicyDigest: nullable<sha256>
+      costPolicyDigest: nullable<sha256>
+      entryDigest: sha256
+    invariants:
+      - ordinal and capabilityCode equal capability_codes_ordered_exactly; every code appears exactly once.
+      - NOT_OFFERED has NOT_APPLICABLE overage, null quantity/prices/policy digests, remains visible, and does not block core readiness.
+      - INCLUDED_REQUIRED has an exact quota/overage shape, current provider/legal/consent/cost activation as applicable, and blocks readiness/sale when evidence is missing, stale, synthetic, fixture, or for another environment.
+      - API_EXPORT may use DECLARED_TARIFF_OVERAGE only when the exact API Record Unit price exists in the bound tariff. Signed webhook, digest, and delivery channel quotas are HARD_LIMIT_NO_OVERAGE in v1. PUBLIC_WEB is NOT_METERED.
+  exact_subset_rule: The twelve entries, not the default template, determine offered capability requirements. Changes append a new signed OfferProfileV1 and compatible contract/tariff period; they never rewrite history or silently enable a channel.
+  credit_rule: Processing credits are a consumption meter settled from reservation to actual. SLA service credits and price reductions are accounting corrections. Neither is an entitlement token, cash, or a substitute for quota/overage terms; their distinct digests are mandatory.
+  sale_rule: A contract is CONFIGURED only when its OfferProfileV1, tariff, deployment configuration, and every INCLUDED_REQUIRED capability activation resolve at the same cutoff. Sales/marketing may not promise a NOT_OFFERED or UNCONFIGURED capability.
+
+metric_defaults:
+  status_values: [KNOWN, UNKNOWN, NOT_APPLICABLE]
+  interval: half-open [start,end)
+  arithmetic: PostgreSQL numeric with ops.round_half_even_numeric_v1; binary float is forbidden
+  rate_rule: denominator zero is NOT_APPLICABLE, never 0% or 100%
+  small_sample_rule: for eligible organization count below 5 show the typed SmallSampleEvidenceV1 and permitted de-identified ordered observations only, set rate/quantile status NOT_APPLICABLE with SAMPLE_TOO_SMALL, and make no automated verdict; at 5 or more show the applicable exact result, and binomial organization rates also show Wilson 95%; automated stop/scale decisions require at least 10 eligible organizations unless an immediate trust hard stop applies
+  freshness_rule: Each value exposes as_of, window, formula version/digest, input-set digest, known/unknown/not-applicable status, unknown reason counts, and latest source timestamp.
+  correction_rule: Results are reproducible as-of results over immutable facts; corrections create a new receipt/input digest and never rewrite historical reported evidence.
+  privacy_rule: Metric dimensions are allowlisted organization HMAC, SKU, cohort month, stage, source kind, and reason code; no public/response person, query, content, token, filename, contact, or session identifier.
+  breach_action_rule: Every metric declares its own breach_action. Contextual metrics use explicit NONE semantics only for a KNOWN, non-breaching value; UNKNOWN and BREACH always name an owner action and cannot be hidden by another healthy metric.
+  result_contract:
+    status: required enum<KNOWN|UNKNOWN|NOT_APPLICABLE>
+    reasonCode: required closed metric-status reason code, never null
+    known: the metric-specific closed result variant is complete and reasonCode is NONE; an exact scalar/rate may be replaced only by the declared KNOWN time-to-event lower-bound variant, while a threshold breach changes thresholdState, issueCode, and breachAction without falsifying status
+    unknown: every decision scalar/rate/quantile is null, reasonCode is the highest-priority non-NONE cause, unknownReasons contains that cause and every additional cause with counts, diagnostic counts/bounds remain in the typed result variant, and issueCode is never NONE
+    not_applicable: every decision scalar/rate/quantile is null, reasonCode is one of DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL, or CAPABILITY_NOT_OFFERED, and typed sample/pending evidence explains why; missing/stale/ambiguous evidence is UNKNOWN instead
+    healthy: a KNOWN PASS or normal NOT_EVALUATED result has issueCode NONE and breachAction NONE; a legitimate NOT_APPLICABLE result also has issueCode NONE and breachAction NONE
+    reason_priority: [TRUST_REVIEW_OPEN, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, RIGHTS_NOT_CURRENT, CONFIGURATION_MISMATCH, SNAPSHOT_EMPTY_OR_UNREPRODUCIBLE, SOURCE_MISSING, SOURCE_PARTIAL, SOURCE_STALE, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, USAGE_UNKNOWN, INVOICE_MEMBERSHIP_GAP, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE, SLA_TELEMETRY_GAP, ATTRIBUTION_UNKNOWN, NONPOSITIVE_CONTRIBUTION, DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL, CAPABILITY_NOT_OFFERED, NONE]
+    breach_action_priority: [CONTAIN_TRUST_INCIDENT, REPAIR_DATA_READINESS, RESTORE_SLA_AND_TELEMETRY, RECONCILE_USAGE_AND_INVOICE, RECONCILE_REVENUE, VERIFY_PAID_PACKET, CLOSE_ATTRIBUTION, CLOSE_COST_AND_FX_GAPS, RESTORE_SUPPORT_CAPACITY, COMPLETE_QUALIFICATION, COMPLETE_CONFIGURATION, RECOVER_VALUE_WORKFLOW, REVIEW_COHORT_LOSS, ADJUST_PRICE_QUOTA_OR_EFFICIENCY, REVIEW_PRODUCT_PAUSE, NONE]
+  catalog_parity_rule: The exact metric key set equals both result_reason_catalog and metric_breach_action_catalog, and every metric has version, formula, population, window, sources, exclusions, owner, data_quality, unknown_handling, threshold, breach_action, and healthy_issue_code fields; generation fails on a missing or extra key.
+
+statistical_result_contract:
+  binomial_rate_metrics_exactly: [BM-FUNNEL-CONFIGURATION-RATE, BM-FUNNEL-DATA-READY-RATE, BM-ACTIVATION-7D-RATE, BM-RETENTION-D29-56-RATE, BM-RETENTION-CHURN-RATE, BM-FUNNEL-PILOT-TO-PAID-RATE, BM-EXPANSION-ELIGIBILITY-RATE, BM-RENEWAL-ELIGIBILITY-RATE]
+  deterministic_ratio_metrics_exactly: [BM-BILLING-RECONCILIATION-COVERAGE, BM-MARGIN-VARIABLE-GROSS-RATE, BM-SLA-AVAILABILITY-RATE]
+  ordered_breakdown_metrics_exactly: [BM-ACQ-CHANNEL-MIX]
+  time_to_event_metrics_exactly: [BM-ACTIVATION-TTFPV-P90]
+  wilson_95_v1:
+    method: WILSON_SCORE_WITHOUT_CONTINUITY_CORRECTION_V1
+    z: '1.959963984540054'
+    exact_formula: >-
+      p=x/n; z2=z*z; denominator=1+z2/n;
+      center=(p+z2/(2*n))/denominator;
+      half_width=(z*sqrt((p*(1-p)+z2/(4*n))/n))/denominator;
+      lower=max(0,center-half_width); upper=min(1,center+half_width)
+    arithmetic: arbitrary-precision decimal for division and correctly rounded square root under formula version 1; serialize lower/upper after one half-even rounding to scale 12
+    requirements: x and n are exact nonnegative int64, x <= n, n >= 5, and the interval binds the same numerator, denominator, cohort, cutoff, and input-set digest as the displayed rate
+    forbidden: normal approximation, Wald interval, continuity correction, binary float, a different z constant, reuse across a changed denominator, or Wilson on financial/minute/completeness ratios
+  small_sample_evidence:
+    threshold: eligibleCount < 5
+    visible: eligibleCount, pendingCount, unknownCount, excludedCount, numeratorCount when disclosure policy permits, maturity horizon, cutoff, and suppression reason
+    hidden: rate, percentile claim, organization/campaign HMAC, exact money, exact acquisition source for a singleton, raw timestamps, or any field that permits identity linkage
+    ordered_duration_exception: OPS-004 may return MetricOrderedObservationSetV1 for BM-ACTIVATION-TTFPV-P90 only to an authorized budgets.manage actor; it contains duration/bound and observation kind without identity, source, money, or wall-clock timestamp. INT-001, public, export, logs, analytics, and notification paths receive counts only below five.
+  status_rules:
+    - SAMPLE_TOO_SMALL is NOT_APPLICABLE, not UNKNOWN, only when every included input is otherwise complete and eligibleCount is 1..4.
+    - Missing, stale, ambiguous, privacy-blocked, or incomplete inputs remain UNKNOWN even when the known subset is below five.
+    - DENOMINATOR_ZERO applies only when eligibleCount is zero and unknownCount is zero; pending or unknown populations use COHORT_NOT_MATURE or UNKNOWN respectively.
+    - eligibleCount 5..9 permits display but thresholdState is NOT_EVALUATED; eligibleCount >=10 permits the declared decision threshold.
+
+result_reason_catalog:
+  BM-ACQ-QUALIFIED-ORG-COUNT: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS], not_applicable: []}
+  BM-ACQ-CHANNEL-MIX: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, ATTRIBUTION_UNKNOWN], not_applicable: [DENOMINATOR_ZERO]}
+  BM-FUNNEL-CONFIGURATION-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, CONFIGURATION_MISMATCH], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-FUNNEL-DATA-READY-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, RIGHTS_NOT_CURRENT, SNAPSHOT_EMPTY_OR_UNREPRODUCIBLE], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-VALUE-PAID-MVW: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE], not_applicable: []}
+  BM-VALUE-PAID-MVW-PER-ACTIVE-ORG: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, INVOICE_MEMBERSHIP_GAP], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-ACTIVATION-7D-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, RIGHTS_NOT_CURRENT, SNAPSHOT_EMPTY_OR_UNREPRODUCIBLE, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-ACTIVATION-TTFPV-P90: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, SNAPSHOT_EMPTY_OR_UNREPRODUCIBLE, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-RETENTION-D29-56-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-RETENTION-AT-RISK-ORG-COUNT: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, SLA_TELEMETRY_GAP], not_applicable: []}
+  BM-RETENTION-CHURN-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT], not_applicable: [DENOMINATOR_ZERO, SAMPLE_TOO_SMALL]}
+  BM-FUNNEL-PILOT-TO-PAID-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, REVENUE_CHAIN_INVALID, INVOICE_MEMBERSHIP_GAP], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-REVENUE-QUALIFIED-ORG-COUNT: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, INVOICE_MEMBERSHIP_GAP, REVENUE_CHAIN_INVALID], not_applicable: []}
+  BM-EXPANSION-ELIGIBILITY-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, SOURCE_PARTIAL, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, RIGHTS_NOT_CURRENT, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, USAGE_UNKNOWN, INVOICE_MEMBERSHIP_GAP, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE, SLA_TELEMETRY_GAP, TRUST_REVIEW_OPEN], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL, CAPABILITY_NOT_OFFERED]}
+  BM-RENEWAL-ELIGIBILITY-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, SOURCE_PARTIAL, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, RIGHTS_NOT_CURRENT, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, USAGE_UNKNOWN, INVOICE_MEMBERSHIP_GAP, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE, SLA_TELEMETRY_GAP, TRUST_REVIEW_OPEN], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-REVENUE-RECOGNIZED-KRW: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, INVOICE_MEMBERSHIP_GAP, REVENUE_CHAIN_INVALID], not_applicable: []}
+  BM-BILLING-RECONCILIATION-COVERAGE: {unknown: [SOURCE_MISSING, SOURCE_STALE, SOURCE_PARTIAL, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, USAGE_UNKNOWN, INVOICE_MEMBERSHIP_GAP], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE]}
+  BM-MARGIN-VARIABLE-GROSS-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE]}
+  BM-MARGIN-CONTRIBUTION-KRW: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE], not_applicable: [COHORT_NOT_MATURE]}
+  BM-COST-PER-PAID-MVW-KRW: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE]}
+  BM-CAC-KRW: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE, ATTRIBUTION_UNKNOWN], not_applicable: [DENOMINATOR_ZERO]}
+  BM-CAC-PAYBACK-MONTHS: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE, ATTRIBUTION_UNKNOWN, NONPOSITIVE_CONTRIBUTION], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL]}
+  BM-SLA-AVAILABILITY-RATE: {unknown: [SOURCE_MISSING, SOURCE_STALE, SOURCE_PARTIAL, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, SLA_TELEMETRY_GAP], not_applicable: [DENOMINATOR_ZERO, CAPABILITY_NOT_OFFERED]}
+  BM-SUPPORT-HOURS-PER-ACTIVATED-ORG: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, COST_CAPTURE_INCOMPLETE], not_applicable: [DENOMINATOR_ZERO, COHORT_NOT_MATURE]}
+  BM-TRUST-HARD-STOP-COUNT: {unknown: [SOURCE_MISSING, SOURCE_STALE, CORRECTION_CHAIN_AMBIGUOUS, TRUST_REVIEW_OPEN], not_applicable: []}
+
+metric_breach_action_catalog:
+  BM-ACQ-QUALIFIED-ORG-COUNT: [NONE, COMPLETE_QUALIFICATION]
+  BM-ACQ-CHANNEL-MIX: [NONE, CLOSE_ATTRIBUTION, REVIEW_COHORT_LOSS]
+  BM-FUNNEL-CONFIGURATION-RATE: [NONE, COMPLETE_CONFIGURATION, REVIEW_COHORT_LOSS]
+  BM-FUNNEL-DATA-READY-RATE: [NONE, REPAIR_DATA_READINESS, REVIEW_COHORT_LOSS]
+  BM-VALUE-PAID-MVW: [NONE, VERIFY_PAID_PACKET, RECOVER_VALUE_WORKFLOW]
+  BM-VALUE-PAID-MVW-PER-ACTIVE-ORG: [NONE, VERIFY_PAID_PACKET]
+  BM-ACTIVATION-7D-RATE: [NONE, REVIEW_COHORT_LOSS, RECOVER_VALUE_WORKFLOW]
+  BM-ACTIVATION-TTFPV-P90: [NONE, REVIEW_COHORT_LOSS]
+  BM-RETENTION-D29-56-RATE: [NONE, RECOVER_VALUE_WORKFLOW, REVIEW_COHORT_LOSS]
+  BM-RETENTION-AT-RISK-ORG-COUNT: [NONE, RECOVER_VALUE_WORKFLOW, REPAIR_DATA_READINESS, RESTORE_SLA_AND_TELEMETRY]
+  BM-RETENTION-CHURN-RATE: [NONE, REVIEW_COHORT_LOSS]
+  BM-FUNNEL-PILOT-TO-PAID-RATE: [NONE, REVIEW_COHORT_LOSS, RECONCILE_USAGE_AND_INVOICE]
+  BM-REVENUE-QUALIFIED-ORG-COUNT: [NONE, RECONCILE_USAGE_AND_INVOICE, VERIFY_PAID_PACKET]
+  BM-EXPANSION-ELIGIBILITY-RATE: [NONE, RECOVER_VALUE_WORKFLOW, RECONCILE_USAGE_AND_INVOICE, CLOSE_COST_AND_FX_GAPS, RESTORE_SUPPORT_CAPACITY, RESTORE_SLA_AND_TELEMETRY, REPAIR_DATA_READINESS, CONTAIN_TRUST_INCIDENT]
+  BM-RENEWAL-ELIGIBILITY-RATE: [NONE, RECOVER_VALUE_WORKFLOW, RECONCILE_USAGE_AND_INVOICE, RECONCILE_REVENUE, CLOSE_COST_AND_FX_GAPS, RESTORE_SUPPORT_CAPACITY, RESTORE_SLA_AND_TELEMETRY, REPAIR_DATA_READINESS, CONTAIN_TRUST_INCIDENT]
+  BM-REVENUE-RECOGNIZED-KRW: [NONE, RECONCILE_REVENUE]
+  BM-BILLING-RECONCILIATION-COVERAGE: [NONE, RECONCILE_USAGE_AND_INVOICE]
+  BM-MARGIN-VARIABLE-GROSS-RATE: [NONE, CLOSE_COST_AND_FX_GAPS, ADJUST_PRICE_QUOTA_OR_EFFICIENCY]
+  BM-MARGIN-CONTRIBUTION-KRW: [NONE, CLOSE_COST_AND_FX_GAPS, REVIEW_PRODUCT_PAUSE]
+  BM-COST-PER-PAID-MVW-KRW: [NONE, CLOSE_COST_AND_FX_GAPS, ADJUST_PRICE_QUOTA_OR_EFFICIENCY]
+  BM-CAC-KRW: [NONE, CLOSE_ATTRIBUTION, CLOSE_COST_AND_FX_GAPS]
+  BM-CAC-PAYBACK-MONTHS: [NONE, CLOSE_ATTRIBUTION, CLOSE_COST_AND_FX_GAPS, ADJUST_PRICE_QUOTA_OR_EFFICIENCY, REVIEW_PRODUCT_PAUSE]
+  BM-SLA-AVAILABILITY-RATE: [NONE, RESTORE_SLA_AND_TELEMETRY]
+  BM-SUPPORT-HOURS-PER-ACTIVATED-ORG: [NONE, RESTORE_SUPPORT_CAPACITY]
+  BM-TRUST-HARD-STOP-COUNT: [NONE, CONTAIN_TRUST_INCIDENT]
+
+metric_dependency_contract:
+  topological_order_exactly:
+    - BM-ACQ-QUALIFIED-ORG-COUNT
+    - BM-ACQ-CHANNEL-MIX
+    - BM-FUNNEL-CONFIGURATION-RATE
+    - BM-FUNNEL-DATA-READY-RATE
+    - BM-VALUE-PAID-MVW
+    - BM-ACTIVATION-7D-RATE
+    - BM-ACTIVATION-TTFPV-P90
+    - BM-RETENTION-D29-56-RATE
+    - BM-RETENTION-AT-RISK-ORG-COUNT
+    - BM-RETENTION-CHURN-RATE
+    - BM-REVENUE-RECOGNIZED-KRW
+    - BM-BILLING-RECONCILIATION-COVERAGE
+    - BM-REVENUE-QUALIFIED-ORG-COUNT
+    - BM-VALUE-PAID-MVW-PER-ACTIVE-ORG
+    - BM-MARGIN-VARIABLE-GROSS-RATE
+    - BM-MARGIN-CONTRIBUTION-KRW
+    - BM-COST-PER-PAID-MVW-KRW
+    - BM-CAC-KRW
+    - BM-CAC-PAYBACK-MONTHS
+    - BM-SLA-AVAILABILITY-RATE
+    - BM-SUPPORT-HOURS-PER-ACTIVATED-ORG
+    - BM-TRUST-HARD-STOP-COUNT
+    - BM-FUNNEL-PILOT-TO-PAID-RATE
+    - BM-EXPANSION-ELIGIBILITY-RATE
+    - BM-RENEWAL-ELIGIBILITY-RATE
+  direct_metric_dependencies:
+    BM-ACQ-QUALIFIED-ORG-COUNT: []
+    BM-ACQ-CHANNEL-MIX: [BM-ACQ-QUALIFIED-ORG-COUNT]
+    BM-FUNNEL-CONFIGURATION-RATE: [BM-ACQ-QUALIFIED-ORG-COUNT]
+    BM-FUNNEL-DATA-READY-RATE: [BM-FUNNEL-CONFIGURATION-RATE]
+    BM-VALUE-PAID-MVW: [BM-FUNNEL-DATA-READY-RATE]
+    BM-ACTIVATION-7D-RATE: [BM-VALUE-PAID-MVW]
+    BM-ACTIVATION-TTFPV-P90: [BM-VALUE-PAID-MVW]
+    BM-RETENTION-D29-56-RATE: [BM-VALUE-PAID-MVW]
+    BM-RETENTION-AT-RISK-ORG-COUNT: [BM-FUNNEL-CONFIGURATION-RATE, BM-FUNNEL-DATA-READY-RATE, BM-VALUE-PAID-MVW, BM-RETENTION-D29-56-RATE]
+    BM-RETENTION-CHURN-RATE: [BM-ACQ-QUALIFIED-ORG-COUNT]
+    BM-REVENUE-RECOGNIZED-KRW: []
+    BM-BILLING-RECONCILIATION-COVERAGE: []
+    BM-REVENUE-QUALIFIED-ORG-COUNT: [BM-VALUE-PAID-MVW, BM-BILLING-RECONCILIATION-COVERAGE]
+    BM-VALUE-PAID-MVW-PER-ACTIVE-ORG: [BM-VALUE-PAID-MVW, BM-REVENUE-QUALIFIED-ORG-COUNT]
+    BM-MARGIN-VARIABLE-GROSS-RATE: [BM-REVENUE-RECOGNIZED-KRW]
+    BM-MARGIN-CONTRIBUTION-KRW: [BM-REVENUE-RECOGNIZED-KRW]
+    BM-COST-PER-PAID-MVW-KRW: [BM-VALUE-PAID-MVW]
+    BM-CAC-KRW: [BM-ACQ-QUALIFIED-ORG-COUNT, BM-ACQ-CHANNEL-MIX]
+    BM-CAC-PAYBACK-MONTHS: [BM-CAC-KRW, BM-MARGIN-CONTRIBUTION-KRW]
+    BM-SLA-AVAILABILITY-RATE: []
+    BM-SUPPORT-HOURS-PER-ACTIVATED-ORG: [BM-VALUE-PAID-MVW]
+    BM-TRUST-HARD-STOP-COUNT: []
+    BM-FUNNEL-PILOT-TO-PAID-RATE: [BM-VALUE-PAID-MVW, BM-REVENUE-RECOGNIZED-KRW, BM-BILLING-RECONCILIATION-COVERAGE]
+    BM-EXPANSION-ELIGIBILITY-RATE: [BM-VALUE-PAID-MVW-PER-ACTIVE-ORG, BM-RETENTION-D29-56-RATE, BM-BILLING-RECONCILIATION-COVERAGE, BM-MARGIN-VARIABLE-GROSS-RATE, BM-SLA-AVAILABILITY-RATE, BM-SUPPORT-HOURS-PER-ACTIVATED-ORG, BM-TRUST-HARD-STOP-COUNT]
+    BM-RENEWAL-ELIGIBILITY-RATE: [BM-VALUE-PAID-MVW-PER-ACTIVE-ORG, BM-RETENTION-D29-56-RATE, BM-RETENTION-CHURN-RATE, BM-BILLING-RECONCILIATION-COVERAGE, BM-MARGIN-VARIABLE-GROSS-RATE, BM-SLA-AVAILABILITY-RATE, BM-SUPPORT-HOURS-PER-ACTIVATED-ORG, BM-TRUST-HARD-STOP-COUNT]
+  acyclic_rule: The dependency key set and topological-order set equal metrics exactly. Every dependency appears earlier than its consumer; cycles, missing nodes, duplicate nodes, and undeclared runtime dependencies fail generation.
+  transitive_input_digest:
+    leaf_binding_order: relation ASC, root identity digest ASC, selected head version ASC, selected head ID ASC
+    dependency_order: direct_metric_dependencies list order, then metricId lexical as a validation tiebreaker
+    formula: Gurine Canonical JSON v1 SHA-256 over metric ID/version, formula/policy/catalog digests, window/timezone/as_of, exact leaf MetricSourceBindingV1 set, exact CorrectionHeadBindingV1 union, direct dependency result digests, and dependency transitive input digests
+    rules:
+      - Direct and transitive source sets are both exposed in evidence export. A derived metric cannot hash only child scalar values or only its own table reads.
+      - Any leaf correction, withdrawal, restatement, adjustment, source-set membership change, or dependency formula change changes every affected descendant inputSetDigest.
+      - Reordering equivalent canonical sets is byte-stable; dropping a zero, withdrawn, excluded, unknown, or correction member is not equivalent and fails lossless reconstruction.
+
+metric_operational_owner_registry:
+  catalog_parity: key set equals metrics exactly; every row has distinct primary/backup functions, escalation function, response target, review cadence, and role-binding requirement
+  rows:
+    BM-ACQ-QUALIFIED-ORG-COUNT: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: WEEKLY}
+    BM-ACQ-CHANNEL-MIX: {primary: PRODUCT_PDM, backup: SALES_CS_FINANCE, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-FUNNEL-CONFIGURATION-RATE: {primary: SALES_CS_FINANCE, backup: SRE, escalation: PRODUCT_PDM, response_target: NEXT_BUSINESS_DAY, cadence: WEEKLY}
+    BM-FUNNEL-DATA-READY-RATE: {primary: DATA_ENGINEERING, backup: PRODUCT_PDM, escalation: TRUST_PRIVACY_LEGAL, response_target: NEXT_BUSINESS_DAY, cadence: WEEKLY}
+    BM-VALUE-PAID-MVW: {primary: PRODUCT_PDM, backup: DATA_ENGINEERING, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: WEEKLY}
+    BM-VALUE-PAID-MVW-PER-ACTIVE-ORG: {primary: PRODUCT_PDM, backup: SALES_CS_FINANCE, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-ACTIVATION-7D-RATE: {primary: PRODUCT_PDM, backup: SALES_CS_FINANCE, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: WEEKLY}
+    BM-ACTIVATION-TTFPV-P90: {primary: PRODUCT_PDM, backup: DATA_ENGINEERING, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: WEEKLY}
+    BM-RETENTION-D29-56-RATE: {primary: PRODUCT_PDM, backup: SALES_CS_FINANCE, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-RETENTION-AT-RISK-ORG-COUNT: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: SRE, response_target: ONE_BUSINESS_DAY, cadence: DAILY}
+    BM-RETENTION-CHURN-RATE: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-FUNNEL-PILOT-TO-PAID-RATE: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-REVENUE-QUALIFIED-ORG-COUNT: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-EXPANSION-ELIGIBILITY-RATE: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: SRE, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-RENEWAL-ELIGIBILITY-RATE: {primary: SALES_CS_FINANCE, backup: TRUST_PRIVACY_LEGAL, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-REVENUE-RECOGNIZED-KRW: {primary: SALES_CS_FINANCE, backup: EXECUTIVE_APPROVER, escalation: TRUST_PRIVACY_LEGAL, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-BILLING-RECONCILIATION-COVERAGE: {primary: SALES_CS_FINANCE, backup: DATA_ENGINEERING, escalation: EXECUTIVE_APPROVER, response_target: ONE_BUSINESS_DAY, cadence: DAILY}
+    BM-MARGIN-VARIABLE-GROSS-RATE: {primary: SALES_CS_FINANCE, backup: SRE, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-MARGIN-CONTRIBUTION-KRW: {primary: SALES_CS_FINANCE, backup: EXECUTIVE_APPROVER, escalation: PRODUCT_PDM, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-COST-PER-PAID-MVW-KRW: {primary: PRODUCT_PDM, backup: SRE, escalation: SALES_CS_FINANCE, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-CAC-KRW: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-CAC-PAYBACK-MONTHS: {primary: SALES_CS_FINANCE, backup: PRODUCT_PDM, escalation: EXECUTIVE_APPROVER, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-SLA-AVAILABILITY-RATE: {primary: SRE, backup: SALES_CS_FINANCE, escalation: EXECUTIVE_APPROVER, response_target: INCIDENT_SEVERITY_SLO, cadence: DAILY}
+    BM-SUPPORT-HOURS-PER-ACTIVATED-ORG: {primary: SALES_CS_FINANCE, backup: SRE, escalation: PRODUCT_PDM, response_target: NEXT_BUSINESS_DAY, cadence: MONTHLY}
+    BM-TRUST-HARD-STOP-COUNT: {primary: TRUST_PRIVACY_LEGAL, backup: EDITORIAL_DUTY, escalation: EXECUTIVE_APPROVER, response_target: IMMEDIATE, cadence: DAILY}
+  binding_rule: Each deployed primary and backup is represented by distinct domain-separated role-binding HMACs under one current owner-binding-set digest. Function labels alone do not prove staffing; missing/stale/same-person bindings make the metric owner state UNKNOWN and block a decision that needs the owner.
+  separation_rule: The same person may cover functions where the base authority permits small-team overlap, but proposer and counted independent approver for pause, hard-stop classification, tariff exception, renewal, expansion, and resume must be distinct at decision time.
+
+metrics:
+  BM-ACQ-QUALIFIED-ORG-COUNT:
+    version: 1
+    unit: organizations
+    decision_use: qualified funnel volume
+    population: qualification episodes whose immutable first_qualified_at falls in the cohort window and whose current qualification head is valid at cutoff
+    window: accounting calendar month by first_qualified_at
+    formula: count_distinct(qualification_episode_id where current_qualification_receipt(cutoff).status = "VALID")
+    sources: [ops.commercial_qualification_receipts, ops.acquisition_source_receipts]
+    exclusions: [reversed qualification, duplicate organization/SKU, lead-only or acquisition-only record]
+    owner: Sales/CS/Finance
+    data_quality: all thirteen ordered qualification criteria, primary/backup role-binding HMACs, decision_effective_at, immutable first_qualified_at, and policy/evidence-set digests validate
+    unknown_handling: missing or stale criterion increments unknown_count and does not enter numerator or an unqualified denominator
+    threshold: planning input; no standalone success target
+    healthy_issue_code: NONE
+    breach_action: NONE for a known contextual count; UNKNOWN assigns SALES_CS_FINANCE to complete qualification evidence before the organization is used by any funnel rate
+  BM-ACQ-CHANNEL-MIX:
+    version: 1
+    unit: organizations_by_source_kind
+    decision_use: privacy-safe channel allocation
+    population: the exact BM-ACQ-QUALIFIED-ORG-COUNT qualification-episode set for one first_qualified_at cohort
+    window: accounting calendar month by first_qualified_at, source fixed by acquisition_attribution_contract at the same cutoff
+    formula: one ordered SourceBreakdownEntryV1 per acquisition_attribution_contract.source_order_exactly; group_count_distinct(qualification_episode_id by conserved source kind)
+    sources: [ops.commercial_qualification_receipts, ops.acquisition_source_receipts]
+    exclusions: [reversed/stale attribution, person-level touchpoint, unqualified organization]
+    owner: Product/PdM and Sales/CS/Finance
+    data_quality: one exact qualification-bound current non-reversed attribution head or explicit UNKNOWN_SOURCE per episode; sum of all ordered counts equals BM-ACQ-QUALIFIED-ORG-COUNT under the same cohort/input digest
+    unknown_handling: unattributed is an explicit UNKNOWN_SOURCE bucket and is never reassigned by guess or excluded from the conserved total; attribution-dependent CAC/payback remain UNKNOWN
+    threshold: no channel is scaled without activation, retention, CAC, and trust evidence
+    healthy_issue_code: NONE
+    breach_action: do not scale or fund an UNKNOWN_SOURCE or weak retained-value channel; assign PRODUCT_PDM and SALES_CS_FINANCE to close attribution and matured-cohort evidence
+  BM-FUNNEL-CONFIGURATION-RATE:
+    version: 1
+    unit: ratio
+    decision_use: onboarding conversion
+    population: qualified qualification episodes whose 14-day configuration observation window has matured
+    window: rolling 90-day QUALIFIED cohorts, observed through qualified_at + 14 days
+    formula: count_distinct(qualification_episode_id with valid CONFIGURED at <= first_qualified_at + 14d) / count_distinct(matured valid QUALIFIED qualification_episode_id)
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.capability_activation_decisions, ops.capability_activation_evidence, ops.sku_readiness_evaluations, ops.sku_readiness_items]
+    exclusions: [qualification reversed before configuration, duplicate deployment, non-production configuration]
+    owner: Sales/CS/Finance and SRE
+    data_quality: exact contract/configuration/activation digests and effective intervals match
+    unknown_handling: missing predecessor or receipt is UNKNOWN in numerator detail and remains in matured denominator
+    threshold: diagnose if below 0.80 with at least 10 eligible organizations
+    healthy_issue_code: NONE
+    breach_action: COMPLETE_CONFIGURATION for each blocked episode and REVIEW_COHORT_LOSS when the known rate is below threshold
+  BM-FUNNEL-DATA-READY-RATE:
+    version: 1
+    unit: ratio
+    decision_use: source onboarding effectiveness
+    population: configured qualification episodes whose 14-day data-readiness observation window has matured
+    window: rolling 90-day CONFIGURED cohorts, observed through configured_at + 14 days
+    formula: count_distinct(qualification_episode_id with valid DATA_READY at <= configured_at + 14d) / count_distinct(matured valid CONFIGURED qualification_episode_id)
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.sku_readiness_evaluations, ops.sku_readiness_items, core.dataset_snapshots]
+    exclusions: [fixture/non-production snapshot, empty snapshot, expired rights/readiness]
+    owner: Data/Engineering and Product/PdM
+    data_quality: readiness evaluation and snapshot/evidence-set digests are current and reproducible
+    unknown_handling: missing coverage/freshness/rights is UNKNOWN and remains in matured denominator
+    threshold: diagnose if below 0.80 with at least 10 eligible organizations
+    healthy_issue_code: NONE
+    breach_action: REPAIR_DATA_READINESS without weakening rights, freshness, snapshot, or limitation gates; REVIEW_COHORT_LOSS when the known rate is below threshold
+  BM-VALUE-PAID-MVW:
+    version: 1
+    unit: verified_workflows
+    decision_use: north-star paid value
+    population: current paid-MVW-eligible organization outcome chains
+    window: accounting calendar month by outcome effective_from
+    formula: count_distinct(root_fact_id where strict_paid_mvw_eligible(current_outcome_head, cutoff))
+    sources: [ops.outcome_facts, ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.sku_readiness_evaluations, ops.sku_readiness_items, core.dataset_snapshots, ops.outbound_delivery_receipts, ops.audit_events]
+    exclusions: [TRIAGED_SIGNAL, REVIEWED_INVESTIGATION, ACCEPTED_PROPOSAL, PUBLICATION, CORRECTION, public scope, inverse head, incomplete proof, AI-only output]
+    owner: Product/PdM
+    data_quality: exact packet/proof/decision/review/terminal receipt and current correction head resolve
+    unknown_handling: unresolved proof/chain/contract is reported as unknown_candidate_count and never counted
+    threshold: at least 1 for activation; at least 2 additional in the retention window
+    healthy_issue_code: NONE
+    breach_action: VERIFY_PAID_PACKET for unknown candidates and RECOVER_VALUE_WORKFLOW when a matured episode has no eligible paid MVW
+  BM-VALUE-PAID-MVW-PER-ACTIVE-ORG:
+    version: 1
+    unit: workflows_per_organization
+    decision_use: depth of recurring value
+    population: revenue-qualified organizations in one immutable qualification cohort during the month
+    cohort_scope: exact qualification cohort month plus qualification_episode_id, organization_id, SKU, accounting timezone, metric window, and as_of cutoff
+    window: accounting calendar month, reported separately by qualification cohort month
+    formula: count_distinct(root_fact_id where strict_paid_mvw_eligible(current_outcome_head, cutoff) and (qualification_episode_id, organization_id) in revenue_qualified_org_set(same_qualification_cohort, same_sku, same_window, cutoff)) / count_distinct(qualification_episode_id in that exact denominator set)
+    aggregation_rule: Portfolio totals may use exact summed cohort numerators divided by exact summed disjoint cohort denominators; averaging cohort ratios, reassigning an organization across episodes, or joining a global MVW numerator to a cohort denominator is forbidden.
+    sources: [ops.outcome_facts, ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.sku_readiness_evaluations, ops.sku_readiness_items, core.dataset_snapshots, ops.outbound_delivery_receipts, ops.audit_events, ops.invoice_facts]
+    exclusions: [non-revenue-qualified organization, public outcome]
+    owner: Product/PdM
+    data_quality: numerator is re-scoped to exactly the denominator's qualification episode/cohort, revenue-qualified organization set, SKU, accounting timezone, accounting window, and cutoff; a global or cross-cohort paid-MVW numerator is forbidden
+    unknown_handling: zero eligible organizations is NOT_APPLICABLE; any incomplete source marks UNKNOWN
+    threshold: trend and cohort diagnostic; no vanity target
+    healthy_issue_code: NONE
+    breach_action: NONE for a known contextual value; UNKNOWN triggers VERIFY_PAID_PACKET and no expansion, renewal, or scale decision may use the ratio
+  BM-ACTIVATION-7D-RATE:
+    version: 1
+    unit: ratio
+    decision_use: qualified pilot activation
+    population: DATA_READY qualification episodes whose 7-day observation window has matured
+    window: rolling 90-day DATA_READY cohorts, observed through data_ready_at + 7 days
+    formula: count_distinct(episode satisfying activation_measurement_contract.seven_day_rate.success) / count_distinct(episode satisfying its maturity rule)
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.sku_readiness_evaluations, ops.sku_readiness_items, core.dataset_snapshots, ops.outcome_facts]
+    exclusions: [data readiness reversed, outcome before data readiness, non-production or inactive-contract outcome]
+    owner: Product/PdM
+    data_quality: projected DATA_READY and FIRST_PAID_VALUE share qualification episode, organization/SKU, cutoff, and monotonic time
+    unknown_handling: matured organization without valid first value or terminal-without-value stays in denominator and is a failure; younger episodes are pending, while ambiguous predecessor is UNKNOWN with reason
+    threshold: at least 0.80 when eligible count is at least 10
+    healthy_issue_code: NONE
+    breach_action: REVIEW_COHORT_LOSS and RECOVER_VALUE_WORKFLOW; commercial_pause applies at its declared consecutive-cohort threshold
+  BM-ACTIVATION-TTFPV-P90:
+    version: 1
+    unit: hours
+    decision_use: activation latency
+    population: every DATA_READY qualification episode in the rolling 90-day cohort whose 336-hour observation has matured or terminated without value; activated-only survivor populations are forbidden
+    window: rolling 90 days by DATA_READY effective_at, evaluated after the activation_measurement_contract 336-hour maturity boundary
+    formula: activation_measurement_contract.p90_objective RESTRICTED_EMPIRICAL_P90_OBJECTIVE_V1 at rank integer_divide(9 * eligibleCount + 9, 10); return exact timely event hours or the typed 336-hour lower-bound breach, never percentile_cont over completers
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.sku_readiness_evaluations, ops.sku_readiness_items, core.dataset_snapshots, ops.outcome_facts]
+    exclusions: [negative interval or ambiguous predecessor is UNKNOWN rather than excluded, corrected-away first value is recomputed, pre-336 active episode is pending rather than excluded]
+    owner: Product/PdM and Data/Engineering
+    data_quality: projected DATA_READY, event/terminal/censor state, and FIRST_PAID_VALUE use immutable sources, one qualification episode, one cutoff, monotonic timestamps, and a complete ordered observation-set digest
+    unknown_handling: fewer than 5 eligible organizations returns SmallSampleEvidenceV1 and an authorized privacy-controlled MetricOrderedObservationSetV1 without a percentile claim; a selected infinite rank returns a KNOWN typed lower-bound breach, not a fabricated finite value
+    threshold: no more than 336 hours
+    healthy_issue_code: NONE
+    breach_action: REVIEW_COHORT_LOSS and remove the slowest evidence-backed configuration/data/value blocker without changing the clock or cohort
+  BM-RETENTION-D29-56-RATE:
+    version: 1
+    unit: ratio
+    decision_use: activated-pilot retention
+    population: activated organizations with as_of >= activation_at + 57 days
+    window: additional paid MVWs in [activation_at + 29d, activation_at + 57d)
+    formula: count_distinct(episode with paid_mvw_count(fixed window) >= 2) / count_distinct(all day-57-matured activated episodes)
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.outcome_facts]
+    exclusions: [the activation workflow itself, duplicate/retry outcome]
+    denominator_rule: early churn, contract end, inactivity, and loss of access remain denominator failures
+    owner: Product/PdM and Sales/CS/Finance
+    data_quality: correction-chain heads are evaluated at the cohort cutoff and organization/SKU match
+    unknown_handling: incomplete outcome chain remains in the fixed denominator and makes the aggregate UNKNOWN; early churn remains a known failure; current trailing-30-day health is reported separately by BM-RETENTION-AT-RISK-ORG-COUNT
+    threshold: at least 0.70 when eligible count is at least 10
+    healthy_issue_code: NONE
+    breach_action: RECOVER_VALUE_WORKFLOW for affected organizations and REVIEW_COHORT_LOSS; commercial_pause applies at its declared consecutive-cohort threshold
+  BM-RETENTION-AT-RISK-ORG-COUNT:
+    version: 1
+    unit: organizations
+    decision_use: customer-success intervention
+    population: every currently qualified non-churned episode from onboarding through retained operation
+    window: point-in-time plus trailing 30 days
+    formula: count_distinct(episode where relationship_health_contract state is ONBOARDING_AT_RISK or POST_ACTIVATION_AT_RISK)
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.outcome_facts, ops.sku_readiness_evaluations, ops.sku_readiness_items, ops.sli_window_receipts]
+    exclusions: [churned episode only; not-yet-configured and not-yet-data-ready episodes are evaluated against explicit onboarding clocks rather than excluded]
+    owner: Sales/CS/Finance and Product/PdM
+    data_quality: each at-risk reason has source receipt, health class, primary and backup owner, first_seen_at, due_at, recovery predicate, and next review time
+    unknown_handling: missing value/readiness/SLA evidence is an explicit at-risk reason, not healthy
+    threshold: every organization has a named recovery owner within one business day
+    healthy_issue_code: NONE
+    breach_action: RECOVER_VALUE_WORKFLOW with one-business-day owner assignment; readiness or SLA unknown uses its specialized remediation first
+  BM-RETENTION-CHURN-RATE:
+    version: 1
+    unit: ratio
+    decision_use: commercial continuation
+    population: qualification episodes with an ACTIVE or SUSPENDED current contract at window start
+    window: accounting calendar month
+    formula: count_distinct(qualification_episode_id with valid CHURNED effective_at in window) / count_distinct(qualification_episode_id active_or_suspended at window_start)
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods]
+    exclusions: [temporary inactivity, at-risk without terminal contract state, replacement contract without a service gap]
+    denominator_rule: early terminal episodes remain churn numerator and fixed-retention denominator when their respective windows mature
+    owner: Sales/CS/Finance
+    data_quality: deterministic as-of contract projection binds terminal state/effective interval and proves absence of an active or suspended replacement
+    unknown_handling: contract gap or ambiguous successor marks organization UNKNOWN, not churned
+    threshold: review every churn; aggregate stop criteria are defined below
+    healthy_issue_code: NONE
+    breach_action: REVIEW_COHORT_LOSS for every churn and require a new qualification episode for re-entry; never backdate or erase historical churn
+  BM-FUNNEL-PILOT-TO-PAID-RATE:
+    version: 1
+    unit: ratio
+    decision_use: commercial conversion
+    population: QUALIFIED pilot qualification episodes whose 60-day observation window has matured
+    window: "[qualified_at, qualified_at + 60d)"
+    formula: count_distinct(qualification_episode_id with positive recognized_revenue and >= 1 strict paid MVW in window) / count_distinct(matured QUALIFIED pilot qualification_episode_id)
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.revenue_facts, ops.outcome_facts]
+    exclusions: [signed-only contract, invoice-only organization, fixture value, reversed revenue]
+    owner: Sales/CS/Finance and Product/PdM
+    data_quality: revenue and value facts share organization/contract/SKU and current chains
+    unknown_handling: missing revenue reconciliation or value proof remains in denominator and is UNKNOWN/failure detail
+    threshold: at least 0.30 when eligible count is at least 10
+    healthy_issue_code: NONE
+    breach_action: REVIEW_COHORT_LOSS and RECONCILE_USAGE_AND_INVOICE; commercial_pause applies at its declared consecutive-cohort threshold
+  BM-REVENUE-QUALIFIED-ORG-COUNT:
+    version: 1
+    unit: organizations
+    decision_use: separate active value-bearing revenue from bookings
+    population: qualification episodes with a current ACTIVE, PROVISIONED contract
+    window: point-in-time with trailing 30-day invoice and value windows
+    formula: count_distinct(qualification_episode_id with reconciled_positive_invoice_trailing_30d and strict_paid_mvw_trailing_30d)
+    sources: [ops.commercial_contract_periods, ops.invoice_facts, ops.invoice_usage_memberships, ops.outcome_facts]
+    exclusions: [signed/unprovisioned/inactive contract, zero/invalid invoice, no paid MVW]
+    owner: Sales/CS/Finance
+    data_quality: current contract, invoice membership, and paid outcome are KNOWN
+    unknown_handling: incomplete invoice/value proof marks UNKNOWN and does not count
+    threshold: reporting denominator; no standalone target
+    healthy_issue_code: NONE
+    breach_action: NONE for a known contextual count; UNKNOWN triggers RECONCILE_USAGE_AND_INVOICE or VERIFY_PAID_PACKET according to the typed reason
+  BM-EXPANSION-ELIGIBILITY-RATE:
+    version: 1
+    unit: ratio
+    decision_use: evidence-backed same-SKU quota, seat-block, SLA, or explicitly offered channel expansion review; never automatic entitlement
+    population: revenue-qualified qualification episodes with two consecutive complete billing months at the monthly as_of cutoff
+    window: trailing 60 days for value/demand plus the two complete accounting months ending before as_of
+    formula: count_distinct(qualification_episode_id where expansion_eligibility(qualification_episode_id, same_cutoff) = "ELIGIBLE") / count_distinct(matured revenue-qualified qualification_episode_id in denominator)
+    eligibility:
+      - current contract is ACTIVE and PROVISIONED with no terminal successor
+      - either strict paid MVW count in trailing 60 days is at least 4 or one nonzero included billable quota has utilization at least 0.80 in each of the two complete months
+      - matured retention is satisfied; an episode not yet retention-mature has at least one strict paid MVW in trailing 30 days
+      - billing reconciliation equals 1.0 and actual variable gross margin meets the applicable PILOT or GENERAL_AVAILABILITY target in both complete months
+      - the current tariff P75 projection for the proposed expanded OfferProfileV1 also meets that same resolved stage target
+      - support is at most 4.0 hours per activated organization in both complete months
+      - required readiness and source rights are current, selected SLA is KNOWN and passing, and trust hard-stop count is zero
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.tariff_versions, ops.usage_window_receipts, ops.usage_facts, ops.invoice_facts, ops.invoice_line_facts, ops.invoice_usage_memberships, ops.outcome_facts, ops.revenue_facts, ops.cost_allocations, ops.fx_rate_facts, ops.sku_readiness_evaluations, ops.sku_readiness_items, ops.sli_window_receipts, ops.incident_events]
+    exclusions: [fewer than two complete billing months, inactive/unprovisioned contract, churned episode, free public use, unoffered capability]
+    owner: Sales/CS/Finance and Product/PdM with SRE readiness review
+    data_quality: every eligibility predicate uses the same organization/SKU, qualification episode, OfferProfileV1, accounting windows, formula catalog, stage-target resolver, and as_of cutoff; actual and P75 values are separately typed and never substituted
+    unknown_handling: if any denominator organization has an unresolved eligibility input, status is UNKNOWN with null rate and typed organization counts; unknown is never forced ineligible or omitted
+    threshold: no aggregate growth target; an expansion offer is allowed only for an individually ELIGIBLE organization
+    healthy_issue_code: NONE
+    breach_action: do not offer or auto-apply expansion; close the typed readiness, reconciliation, margin, support, SLA, or value reason and re-evaluate at a new as_of cutoff
+  BM-RENEWAL-ELIGIBILITY-RATE:
+    version: 1
+    unit: ratio
+    decision_use: evidence-backed contract renewal recommendation; never automatic renewal or cash/revenue claim
+    population: every current non-superseded contract root with period_end in (as_of, as_of + 60 days] at the monthly cutoff, including inactive, blocked, unknown, and not-provisioned roots as typed ineligible/unknown members rather than excluding weak renewals
+    window: forward 60-day contract decision window plus trailing 90-day value/readiness and two complete accounting months
+    formula: count_distinct(contract_root where renewal_eligibility(contract_root, same_cutoff) = "ELIGIBLE") / count_distinct(contract_root in renewal decision window)
+    eligibility:
+      - no CANCELLED/ENDED successor and no unresolved contract-identity gap
+      - at least one strict paid MVW in trailing 30 days and matured retention is satisfied when the episode is at least 57 days old
+      - billing reconciliation equals 1.0 for the latest complete invoice period
+      - actual variable gross margin meets the applicable PILOT or GENERAL_AVAILABILITY target and support is at most 4.0 hours in each of the two complete accounting months
+      - the renewal OfferProfileV1/current tariff P75 projection meets the same resolved stage target
+      - required readiness/source rights are current, selected SLA is KNOWN and passing, and no open trust hard stop or blocking incident exists
+    sources: [ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.tariff_versions, ops.invoice_facts, ops.invoice_line_facts, ops.invoice_usage_memberships, ops.usage_facts, ops.outcome_facts, ops.revenue_facts, ops.cost_allocations, ops.fx_rate_facts, ops.sku_readiness_evaluations, ops.sku_readiness_items, ops.sli_window_receipts, ops.incident_events]
+    exclusions: [contract ending after the forward window, duplicate or superseded contract root]
+    denominator_rule: inactive/unprovisioned, fewer-than-two-month, cancelled, blocked, and unknown roots remain visible typed members of the all-expiring-root denominator
+    owner: Sales/CS/Finance with Product/PdM, SRE, and Trust/Privacy/Legal gate review
+    data_quality: all expiring-root set, contract as-of interval, OfferProfileV1, stage target, separate actual/P75 economics, paid-value correction heads, invoice/revenue/cost periods, readiness, SLA, and incident sets share one cutoff and transitive input-set digest
+    unknown_handling: any unresolved eligibility input makes status UNKNOWN with null rate and typed contract counts; unknown is never treated as eligible, ineligible, churned, or renewed
+    threshold: no aggregate revenue target; renewal may be recommended only for an individually ELIGIBLE contract root
+    healthy_issue_code: NONE
+    breach_action: make no renewal recommendation or automatic mutation; assign the typed blocker owner and re-evaluate before the decision window expires
+  BM-REVENUE-RECOGNIZED-KRW:
+    version: 1
+    unit: KRW
+    decision_use: accounting revenue
+    population: current effective revenue-fact chains for the SKU
+    window: accounting calendar month by recognition interval overlap
+    formula: exact_sum6(current revenue slices assigned by revenue_recognition_contract to the window); point-in-time uses the containing window and over-time uses exact microsecond intersection with deterministic final-slice residual
+    sources: [ops.revenue_facts, ops.accounting_corrections]
+    exclusions: [invoice total, commitment, tax payable, reversed or superseded amount]
+    owner: Sales/CS/Finance
+    data_quality: policy, recognition method, invoice/line membership, source/terminal receipt, currency, interval, ordered allocation/residual set, correction union, and cumulative cap validate
+    unknown_handling: a broken chain or missing recognition input makes the affected amount UNKNOWN and separately disclosed
+    threshold: actual fact, never a target substituted for value
+    healthy_issue_code: NONE
+    breach_action: NONE for a known accounting fact; UNKNOWN blocks revenue, margin, expansion, renewal, and scale claims until Finance appends or validates the exact correction chain
+  BM-BILLING-RECONCILIATION-COVERAGE:
+    version: 1
+    unit: ratio
+    decision_use: invoice completeness
+    population: effective COMPLETE usage facts whose windows fall in a closed invoice period
+    window: accounting calendar month
+    formula: count(effective_usage_fact with exactly_one_valid_invoice_membership) / count(effective_COMPLETE_usage_fact_due_for_reconciliation)
+    sources: [ops.usage_window_receipts, ops.usage_facts, ops.invoice_facts, ops.invoice_line_facts, ops.invoice_usage_memberships]
+    exclusions: [PARTIAL/UNKNOWN measurement from denominator but reported separately, reversed fact, not-yet-due open window]
+    owner: Sales/CS/Finance and Data/Engineering
+    data_quality: receipt->usage->membership chain and line/header conservation are exact
+    unknown_handling: unknown/partial usage has a separate unknown_usage_count and blocks READY; it cannot reduce the denominator by silent filtering
+    threshold: exactly 1.0 after first billing cycle
+    healthy_issue_code: NONE
+    breach_action: RECONCILE_USAGE_AND_INVOICE and block invoice/revenue/readiness claims for the affected period
+  BM-MARGIN-VARIABLE-GROSS-RATE:
+    version: 1
+    unit: ratio
+    decision_use: pricing and quota sustainability
+    population: recognized SKU revenue and eligible variable costs in the same organization/window/currency
+    window: accounting calendar month; P75 projection uses the exact tariff usage cohort
+    formula: (metric("BM-REVENUE-RECOGNIZED-KRW") - eligible_variable_cost) / metric("BM-REVENUE-RECOGNIZED-KRW")
+    sources: [ops.revenue_facts, ops.cost_allocations, ops.fx_rate_facts, ops.tariff_versions]
+    exclusions: [SALES_CUSTOMER_ACQUISITION from variable cost, tax, unclosed period]
+    owner: Sales/CS/Finance and SRE
+    data_quality: cost_completeness_contract source/category matrix is closed, event coverage >= 0.99, direct amount coverage = 1, total amount coverage >= 0.95, every unknown has an upper-bound state, unallocated policy is applied, and FX direction is exact
+    unknown_handling: zero revenue is NOT_APPLICABLE; incomplete cost or FX is UNKNOWN and cannot produce a healthy margin
+    threshold: P75 at least 0.60 pilot and 0.70 general availability
+    healthy_issue_code: NONE
+    breach_action: CLOSE_COST_AND_FX_GAPS for UNKNOWN; ADJUST_PRICE_QUOTA_OR_EFFICIENCY for a known breach without weakening trust/quality gates
+  BM-MARGIN-CONTRIBUTION-KRW:
+    version: 1
+    unit: KRW
+    decision_use: absolute economic contribution
+    population: recognized SKU revenue and all attributable operating variable costs
+    window: accounting calendar month
+    formula: metric("BM-REVENUE-RECOGNIZED-KRW") - eligible_variable_cost
+    sources: [ops.revenue_facts, ops.cost_allocations, ops.fx_rate_facts]
+    exclusions: [SALES_CUSTOMER_ACQUISITION, tax, unclosed period]
+    owner: Sales/CS/Finance
+    data_quality: same complete source/category/amount/upper-bound/unallocated/correction contract as BM-MARGIN-VARIABLE-GROSS-RATE
+    unknown_handling: any material unknown/unallocated cost makes contribution UNKNOWN with known lower/upper components, never an exact claim
+    threshold: must be positive before general-availability scale
+    healthy_issue_code: NONE
+    breach_action: CLOSE_COST_AND_FX_GAPS for UNKNOWN; REVIEW_PRODUCT_PAUSE when known contribution is nonpositive
+  BM-COST-PER-PAID-MVW-KRW:
+    version: 1
+    unit: KRW_per_verified_workflow
+    decision_use: workflow efficiency
+    population: eligible variable cost allocated to paid outcome facts in the month
+    window: accounting calendar month
+    formula: eligible_variable_cost / metric("BM-VALUE-PAID-MVW")
+    sources: [ops.cost_allocations, ops.outcome_facts]
+    exclusions: [public outcomes, sales acquisition, unallocated cost from numerator but disclosed as blocker]
+    owner: Product/PdM and SRE
+    data_quality: every counted outcome and cost line uses current chain and closed period
+    unknown_handling: zero paid MVW is NOT_APPLICABLE; incomplete allocation is UNKNOWN
+    threshold: improve without trust/quality regression; no arbitrary vanity target
+    healthy_issue_code: NONE
+    breach_action: NONE for a known contextual value; UNKNOWN closes allocation gaps, while a worsening trend may adjust efficiency only and never evidence/review/privacy controls
+  BM-CAC-KRW:
+    version: 1
+    unit: KRW
+    decision_use: acquisition efficiency
+    population: distinct valid qualification episodes in one immutable first_qualified_at acquisition cohort plus the complete captured SALES_CUSTOMER_ACQUISITION cost set ending exclusively at each episode's first_qualified_at
+    cohort_scope: exact first_qualified_at cohort month, qualification_episode_id set, source binding set, SKU, reporting currency, accounting timezone, acquisition-end rule, cutoff, FX policy, and correction-set digest
+    window: per-episode acquisition interval ending at first_qualified_at exclusive, aggregated only within the exact cohort_scope
+    formula: if complete captured acquisition set and every episode/source/currency/correction binding are KNOWN and unattributed amount = 0 then exact_sum6(cohort acquisition amounts) / count_distinct(qualified qualification_episode_id); otherwise UNKNOWN
+    aggregation_rule: This is cohort ratio-of-sums CAC per newly qualified episode. Per-organization cost ratios, averaging source/cohort CACs, using activated survivors only, or dividing a global spend total by another cohort is forbidden.
+    sources: [ops.cost_allocations, ops.acquisition_source_receipts, ops.fx_rate_facts]
+    exclusions: [reversed/stale attribution, person-level data, editorial/public-interest activity, unallocated amount]
+    owner: Sales/CS/Finance
+    data_quality: amount conservation, organization/campaign/episode/receipt digest, acquisition-end boundary, complete cohort denominator, post-qualification reclassification, and exact FX bind every line
+    unknown_handling: missing attribution or unallocated acquisition cost makes CAC UNKNOWN, not lower
+    threshold: input to payback; no isolated cheap-CAC target
+    healthy_issue_code: NONE
+    breach_action: close ATTRIBUTION_UNKNOWN and unallocated acquisition cost, pause the affected paid channel, and never impute a lower CAC
+  BM-CAC-PAYBACK-MONTHS:
+    version: 1
+    unit: months
+    decision_use: general-availability scale
+    population: the exact BM-CAC-KRW qualification cohort after every episode has three complete contribution observation months or a terminal contract state; nonactivated and churned episodes remain in the cohort with zero revenue and their actual known costs
+    cohort_scope: exactly BM-CAC-KRW cohort/episode/source/SKU/currency/timezone/acquisition-end/cutoff, with three chronological complete contribution months and the same transitive input digest lineage
+    window: acquisition cohort plus its first three complete post-qualification accounting months under the bound cohort observation policy
+    formula: cohort_cac_per_qualified_episode / (exact_sum6(cohort recognized revenue - cohort eligible variable cost across 3 complete months) / (qualified_episode_count * 3)); both sides are ratio-of-sums over the same episode set
+    aggregation_rule: Never average organization payback, monthly margin percentages, cohort ratios, or activated-survivor contribution. A terminal/no-value episode remains in qualified_episode_count and contributes its actual zero revenue and known cost.
+    sources: [ops.cost_allocations, ops.acquisition_source_receipts, ops.revenue_facts]
+    exclusions: [fewer than 3 complete months, reversed attribution, nonpositive contribution]
+    owner: Sales/CS/Finance
+    data_quality: all three contribution months, every qualification episode, attribution/source cohort, CAC, revenue/cost correction head, FX, currency, and cutoff are KNOWN and identical in scope
+    unknown_handling: fewer than 3 complete months is NOT_APPLICABLE for GA evidence; zero/negative contribution sets status UNKNOWN, reasonCode NONPOSITIVE_CONTRIBUTION, null value, and failed readiness
+    threshold: no more than 12.0 months
+    healthy_issue_code: NONE
+    breach_action: pause GA expansion and the affected paid acquisition channel; CLOSE_COST_AND_FX_GAPS for UNKNOWN or ADJUST_PRICE_QUOTA_OR_EFFICIENCY for a known value above threshold
+  BM-SLA-AVAILABILITY-RATE:
+    version: 1
+    unit: ratio
+    decision_use: SLA compliance and service credit
+    population: contracted critical capability minutes for SLA-selected organizations
+    window: accounting calendar month
+    formula: round12_half_even((eligible_service_minutes - union_unavailable_minutes) / eligible_service_minutes)
+    sources: [ops.sli_window_receipts, ops.commercial_contract_periods, ops.incident_events]
+    exclusions: [only closed policy-allowed announced maintenance up to 4h/month]
+    owner: SRE
+    data_quality: gap-free SLI coverage, exact capability set, incident interval union, policy digest
+    unknown_handling: missing telemetry or target is UNKNOWN and opens an incident; no green SLA claim
+    threshold: exact signed SLA policy target; absent target blocks sale of add-on
+    healthy_issue_code: NONE
+    breach_action: RESTORE_SLA_AND_TELEMETRY, open or update the incident, and append the exact service-credit correction when the signed policy requires it
+  BM-SUPPORT-HOURS-PER-ACTIVATED-ORG:
+    version: 1
+    unit: hours_per_organization_month
+    decision_use: support capacity
+    population: activated organizations with current contract
+    window: accounting calendar month
+    formula: sum(SUPPORT and MATERIAL_CORRECTION_HOUR driver quantities) / count_distinct(activated organization)
+    sources: [ops.cost_allocations, ops.commercial_qualification_receipts, ops.commercial_contract_periods, ops.outcome_facts]
+    exclusions: [sales acquisition time, unrelated public editorial time, fixture effort]
+    owner: Sales/CS/Finance and SRE
+    data_quality: purpose-limited time receipt and allocation rule digest bind every hour
+    unknown_handling: missing expected support receipts makes UNKNOWN; zero hours requires complete capture evidence
+    threshold: no more than 4.0 hours/month
+    healthy_issue_code: NONE
+    breach_action: RESTORE_SUPPORT_CAPACITY; above 8.0 for two months applies commercial_pause while existing contracts remain safely supported
+  BM-TRUST-HARD-STOP-COUNT:
+    version: 1
+    unit: incidents
+    decision_use: non-negotiable continuation gate
+    population: independently validated commercial trust-firewall incidents
+    window: trailing 12 months and lifetime unresolved
+    formula: count_distinct(incident_id where classification in HARD_STOP and not invalidated)
+    sources: [ops.incident_events, ops.audit_events, editorial.conflict_snapshots]
+    exclusions: [unsubstantiated duplicate report, invalidated incident while preserving history]
+    owner: Trust/Privacy/Legal and Editorial duty
+    data_quality: incident classification, evidence, affected scope, owner, containment, and closure review are present
+    unknown_handling: an unresolved suspected hard stop sets metric status UNKNOWN with reasonCode TRUST_REVIEW_OPEN and blocks scale until classified; it is never treated as zero
+    threshold: zero; one confirmed event immediately applies hard_stop_effect
+    healthy_issue_code: NONE
+    breach_action: CONTAIN_TRUST_INCIDENT immediately; no growth, revenue, margin, expansion, or renewal metric can offset it
+
+commercial_stage_target_contract:
+  stages: [PILOT, GENERAL_AVAILABILITY]
+  resolver:
+    PILOT: applies from the first current paid-workspace contract until a current non-reversed GENERAL_AVAILABILITY sku-readiness evaluation is READY at or before cutoff
+    GENERAL_AVAILABILITY: applies only from the exact GA readiness decision_effective_at forward while every mandatory GA item remains current; expiry/blocker returns decision state UNKNOWN/BLOCKED and never silently falls back to the lower pilot target
+    forbidden: date, customer count, revenue, operator flag, route, or current tariff label cannot infer stage
+  targets:
+    PILOT: {p75_variable_gross_margin_min: '0.600000', actual_variable_gross_margin_min: '0.600000'}
+    GENERAL_AVAILABILITY: {p75_variable_gross_margin_min: '0.700000', actual_variable_gross_margin_min: '0.700000'}
+  value_kinds:
+    P75_PROJECTED: versioned tariff usage-assumption distribution, complete cost/FX set, and formula digest; it proves proposed price/quota sustainability, not actual realized margin
+    ACTUAL_CLOSED_MONTH: recognized revenue and complete actual cost for one closed accounting month; it cannot substitute for proposed-offer P75 evidence
+  eligibility_rule: Expansion and renewal require both the declared number of ACTUAL_CLOSED_MONTH results and the applicable P75_PROJECTED result for the exact current/proposed OfferProfileV1. Passing one kind cannot fill the other.
+
+commercial_eligibility_projection_contract:
+  type: CommercialEligibilityProjectionV1
+  additional_properties: false
+  fields:
+    schemaVersion: const<1>
+    projectionKind: enum<EXPANSION|RENEWAL>
+    subjectRootHmac: lowercase HMAC-SHA-256 under the commercial decision domain; never raw contract/customer identity
+    qualificationEpisodeHmac: lowercase HMAC-SHA-256
+    sku: const<EVIDENCE_WORKSPACE_ORGANIZATION_V1>
+    offerProfileId: uuid
+    offerProfileDigest: sha256
+    currentContractRootId: uuid internal-only
+    currentContractHeadDigest: sha256
+    applicableStage: enum<PILOT|GENERAL_AVAILABILITY>
+    stageDecisionDigest: sha256
+    state: enum<ELIGIBLE|INELIGIBLE|UNKNOWN|NOT_MATURE|NOT_APPLICABLE>
+    predicateResults: ordered-array<CommercialEligibilityPredicateV1>[1..64]
+    actualEconomics: ordered-array<CommercialEconomicsWindowV1>[0..2]
+    p75Economics: CommercialP75EconomicsV1
+    primaryReasonCode: closed eligibility reason
+    owner: OperationalOwnerBindingV1
+    nextReviewAt: datetime
+    asOf: datetime
+    formulaDigest: sha256
+    transitiveInputSetDigest: sha256
+    projectionDigest: sha256
+  CommercialEligibilityPredicateV1:
+    additional_properties: false
+    fields: {ordinal: int32, code: closed eligibility predicate, state: 'enum<PASS|FAIL|UNKNOWN|NOT_APPLICABLE>', evidenceDigest: sha256, owner: OperationalOwnerBindingV1, remediationCode: closed-remediation-code}
+  CommercialEconomicsWindowV1:
+    additional_properties: false
+    fields: {window: ClosedMetricWindowV1, kind: 'const<ACTUAL_CLOSED_MONTH>', revenueKrw: nullable-decimal-string, variableCostKrw: nullable-decimal-string, marginRate: nullable-decimal-string, status: 'enum<KNOWN|UNKNOWN>', inputSetDigest: sha256}
+  CommercialP75EconomicsV1:
+    additional_properties: false
+    fields: {kind: 'const<P75_PROJECTED>', tariffVersionId: uuid, tariffDigest: sha256, assumptionDigest: sha256, p75RevenueKrw: nullable-decimal-string, p75VariableCostKrw: nullable-decimal-string, p75MarginRate: nullable-decimal-string, applicableThreshold: decimal-string, status: 'enum<KNOWN|UNKNOWN>', inputSetDigest: sha256}
+  expansion_population: every matured revenue-qualified episode in the declared two-month window; unoffered capability is NOT_APPLICABLE and unknown predicates make the aggregate UNKNOWN
+  renewal_population: set-equal to every current non-superseded contract root ending in (as_of,as_of+60 days]; inactive, unprovisioned, blocked, cancelled, immature, and unknown roots remain typed members rather than disappearing
+  no_mutation_rule: ELIGIBLE is a review recommendation only. Applying an expansion, offer change, tariff, contract renewal, capability activation, or quota change requires its existing typed proposal, independent approval, expected-version fence, execution, and durable receipt.
+
+commercial_control_contract:
+  projection_states: [NORMAL, PAUSE_PROPOSED, PAUSED, HARD_STOP_BLOCKED, RESUME_PROPOSED, ACKNOWLEDGEMENT_PENDING, UNKNOWN]
+  actions: [PAUSE_NEW_GA_SALES, PAUSE_PAID_ACQUISITION, SUSPEND_AFFECTED_PAID_CAPABILITY, RESUME_NEW_GA_SALES, RESUME_PAID_ACQUISITION, REACTIVATE_PAID_CAPABILITY]
+  trigger_rule: A metric threshold, commercial_pause condition, or trust hard stop creates a read-only BusinessControlTriggerV1 projection. Metrics and dashboards never mutate sales, contract, provider, capability, tariff, editorial, or accounting state.
+  BusinessControlTriggerV1:
+    additional_properties: false
+    required_fields: [triggerId, triggerKind, exactMetricResultDigests, triggerPolicyDigest, affectedScopeDigest, requiredActions, state, primaryOwner, backupOwner, firstObservedAt, decisionDueAt, evidenceSetDigest, triggerDigest]
+  proposal:
+    type: BusinessControlProposalV1
+    binds: trigger digest, exact frozen metric/dependency/input digests, affected SKU/offer/capabilities/channels/acquisition sources, requested actions, current kill-switch/capability/contract versions, reason, consequence, existing-customer continuity plan, and expiry
+    proposer: current primary or backup owner binding with capability; proposal alone changes nothing
+  approval:
+    quorum: one authorized approver distinct from proposer plus every specialized gate required by action; trust hard-stop classification/resume requires Trust/Privacy/Legal and an independent executive approver, while commercial pause/resume requires Finance/Product/SRE
+    exact_binding: decision binds proposal ID/version/digest, trigger/evidence digest, action set, expected versions, expiry, and approver role-binding HMAC
+    invalidation: any changed metric input, incident/closure evidence, capability/kill-switch version, affected scope, expiry, or offer/contract digest invalidates the decision
+  execution:
+    product_effect: existing typed kill-switch and capability activation/suspension operations execute with expected-version fence; partial, stale, ambiguous, or unauthorized execution is RECONCILIATION_REQUIRED and never reported PAUSED/RESUMED
+    external_effect: because sales, paid-media buying, cash, and contracting are outside product mutation APIs, a signed CommercialControlImportReceiptV1 records the external system/version/action and a distinct accountable CommercialControlAcknowledgementV1 confirms application
+    atomic_receipt: action execution receipt, resulting kill-switch/capability versions, external import/ack bindings when applicable, audit, and exact trigger/proposal/decision digests are durably linked; missing external acknowledgement leaves ACKNOWLEDGEMENT_PENDING
+  hard_stop:
+    fail_closed_fence: A current independently validated hard-stop incident immediately makes the affected paid capability ineligible at every execution boundary before a human command; no revenue or sample threshold can override it.
+    containment: owner opens the exact suspension/sales-pause proposal immediately and completes approval/execution/import/ack. Failure of the control workflow preserves the fail-closed block and opens an incident.
+  resume:
+    prerequisites: current closure receipt, remedy verification, restored rights/privacy/isolation/reconciliation/readiness, no remaining trigger, fresh metric/input digests, and explicit rollback/recovery evidence
+    same_digest_rule: The resume proposal, every approval, product execution, external import, and acknowledgement bind the same canonical resume evidence-set digest and the exact original pause/hard-stop receipt digest.
+    independence: Resume proposer and final approver are distinct; at least one final approver did not approve the action/evidence that caused the original trigger, and trust resume includes independent Trust/Privacy/Legal review.
+    no_expiry_resume: time passage, metric recovery alone, acknowledgement, contract renewal, or kill-switch expiry cannot resume service without the exact independently approved execution receipt.
+  durable_types:
+    CommercialControlImportReceiptV1: {additional_properties: false, fields: {sourceSystemId: closed configured adapter, sourceRecordIdentityHmac: sha256, sourceVersion: string, action: closed commercial control action, effectiveAt: datetime, sourceRecordDigest: sha256, sourceSignatureDigest: sha256, importReceiptDigest: sha256}}
+    CommercialControlAcknowledgementV1: {additional_properties: false, fields: {importReceiptDigest: sha256, acknowledgedAction: closed commercial control action, observedExternalVersion: string, acknowledgedByRoleBindingHmac: sha256, acknowledgedAt: datetime, evidenceDigest: sha256, acknowledgementDigest: sha256}}
+
+metric_decision_thresholds:
+  scale_candidate:
+    requirements:
+      - BM-ACTIVATION-7D-RATE >= 0.80 with eligible_n >= 10
+      - BM-ACTIVATION-TTFPV-P90 <= 336 hours with eligible_n >= 10
+      - BM-RETENTION-D29-56-RATE >= 0.70 with eligible_n >= 10
+      - BM-FUNNEL-PILOT-TO-PAID-RATE >= 0.30 with eligible_n >= 10
+      - BM-MARGIN-VARIABLE-GROSS-RATE >= applicable stage target for two closed months
+      - BM-BILLING-RECONCILIATION-COVERAGE = 1.0
+      - BM-SUPPORT-HOURS-PER-ACTIVATED-ORG <= 4.0
+      - BM-TRUST-HARD-STOP-COUNT = 0
+      - all mandatory readiness and trust/legal/privacy/quality hard gates are READY
+  improvement_loop:
+    cadence: monthly
+    trigger: any scale requirement misses while no immediate hard stop applies
+    response: keep service truthful, identify the largest funnel/quality/cost loss, assign owner and dated experiment, preserve formula/cohort, and review the next matured cohort
+  commercial_pause:
+    triggers:
+      - activation 7-day rate below 0.50 for two consecutive matured cohorts with eligible_n >= 10 each
+      - retention rate below 0.50 for two consecutive matured cohorts with eligible_n >= 10 each
+      - pilot-to-paid rate below 0.20 for two consecutive matured cohorts with eligible_n >= 10 each
+      - actual variable gross margin below 0.40 for two consecutive closed months or contribution margin <= 0 for one closed month
+      - support hours above 8.0 per activated organization for two consecutive closed months
+      - CAC payback above 18 months for two consecutive eligible cohorts
+    effect: pause new general-availability sales and paid acquisition, honor existing contracts safely, run a dated corrective review, and require independent finance/product/SRE approval to resume
+  product_kill_review:
+    trigger: after at least 20 matured qualified organizations, both activation 7-day rate < 0.50 and retention < 0.50 across two consecutive cohorts despite two decision-documented improvement cycles
+    effect: executive stop/pivot review; do not mask failure by changing cohort, formula, exclusions, free boundary, or trust gates
+
+risk_register:
+  BM-RISK-001-MARKET-JOB-FIT:
+    signal: activation, retention, pilot-to-paid, and paid MVW depth miss together
+    owner: Product/PdM
+    mitigation: interview the exact matured cohort, repair the largest journey loss, and run one versioned experiment without changing the outcome definition
+    escalation: commercial_pause and product_kill_review thresholds above
+  BM-RISK-002-DATA-RIGHTS-QUALITY:
+    signal: source rights, coverage, freshness, parser quality, snapshot reproduction, or exact locator is BLOCKED/UNKNOWN
+    owner: Data/Engineering with Trust/Privacy/Legal
+    mitigation: stop affected ingestion/output, preserve last-known truth, show limitation, repair source/contract/parser, and re-evaluate from an immutable snapshot
+    escalation: no DATA_READY or paid MVW from the affected evidence; production processing without rights is an immediate hard stop
+  BM-RISK-003-AI-PROVENANCE:
+    signal: model/tool revision, source use, citation locator, counter-evidence, or human-review binding is absent or stale
+    owner: AI/Data Engineering and independent reviewer
+    mitigation: abstain, quarantine the run, preserve provider/tool evidence, and require a corrected reviewed packet
+    escalation: zero paid value for the run; repeated material provenance failure blocks the AI capability, not the human evidence workflow
+  BM-RISK-004-BILLING-INTEGRITY:
+    signal: usage receipt gap, invoice membership mismatch, non-half-even amount, duplicate membership, or revenue over-recognition
+    owner: Sales/CS/Finance and Data/Engineering
+    mitigation: block invoice close/revenue claim, append corrections, reconcile exact source sets, and notify affected customer when required
+    escalation: reconciliation below 1.0 blocks post-billing readiness; billing UNKNOWN usage is an immediate hard stop
+  BM-RISK-005-VARIABLE-COST:
+    signal: provider/model/storage/support cost growth, capture below threshold, or margin below stage target
+    owner: SRE and Sales/CS/Finance
+    mitigation: improve workload efficiency, routing, quota, tariff, or support design under current quality/trust gates
+    escalation: margin/support commercial_pause thresholds above; never reduce evidence, privacy, review, or recovery controls
+  BM-RISK-006-ACQUISITION-EFFICIENCY:
+    signal: CAC payback exceeds 12 months, attribution is UNKNOWN, or one paid channel has weak retained-value cohorts
+    owner: Sales/CS/Finance and Product/PdM
+    mitigation: pause the weak channel, preserve privacy-safe attribution, and reallocate only after matured activation/retention evidence
+    escalation: CAC payback above 18 months for two eligible cohorts pauses paid acquisition
+  BM-RISK-007-SUPPORT-OPERABILITY:
+    signal: support exceeds 4 hours per activated organization/month, unresolved at-risk blockers, or missing primary/backup owner
+    owner: Sales/CS and SRE
+    mitigation: remove recurring friction, improve runbooks/self-diagnosis, set truthful capacity, and narrow new onboarding
+    escalation: support above 8 hours for two months pauses new GA sales
+  BM-RISK-008-SLA-RECOVERY:
+    signal: SLA breach, telemetry gap, restore failure, unresolved incident, or missing service-credit evidence
+    owner: SRE
+    mitigation: contain, reconcile, restore, publish truthful status to the customer, append service credit when due, and verify the recovery receipt
+    escalation: affected capability is BLOCKED/UNKNOWN; repeated threshold failure enters commercial pause review
+  BM-RISK-009-INDEPENDENCE-PRIVACY:
+    signal: customer identity reaches editorial priority, cross-deployment access, tenant data reuse, rights bypass, or material conflict nondisclosure
+    owner: Trust/Privacy/Legal and Editorial duty
+    mitigation: immediate containment, access revocation, evidence preservation, independent investigation, notice/remedy, and control revalidation
+    escalation: immediate commercial hard stop regardless of revenue, sample size, or other metrics
+  BM-RISK-010-CONCENTRATION:
+    signal: source, provider, acquisition channel, customer, or funder concentration prevents an independent fallback or creates material influence risk
+    owner: Executive approver with Finance, SRE, and Editorial independence
+    mitigation: show the concentration with counts/intervals, add a tested fallback, diversify only through reviewed channels, and disclose conflicts/funding as required
+    escalation: missing fallback blocks scale; a material independence conflict invokes BM-RISK-009
+
+database_requirements:
+  existing_authoritative_relations:
+    - ops.acquisition_source_receipts
+    - ops.commercial_contract_periods
+    - ops.tariff_versions
+    - ops.usage_window_receipts
+    - ops.usage_facts
+    - ops.discount_decisions
+    - ops.invoice_facts
+    - ops.invoice_line_facts
+    - ops.invoice_usage_memberships
+    - ops.revenue_facts
+    - ops.accounting_corrections
+    - ops.outcome_facts
+    - ops.cost_allocations
+    - ops.sku_readiness_evaluations
+    - ops.sku_readiness_items
+    - ops.sli_window_receipts
+    - ops.incident_events
+    - ops.audit_events
+    - core.dataset_snapshots
+  required_existing_contract_alignments:
+    sku_readiness_catalog:
+      physical_contract_status: CLOSED
+      current_truth: specs/database/addendum/0029-invoice-revenue-sku.yaml#sku_readiness_catalog now names PILOT_ENTRY_READINESS, declares the exact 14/17/18 mandatory counts, exact twelve conditional-offered rows, and 26/29/30 visible item counts. Migration, generated inventory, and runtime subset proof remain release work.
+      closed_contract:
+        mandatory_all_stages_exactly_14: [PAID_WORKSPACE_PROCESSING_ACTIVE, DEPLOYMENT_ISOLATION_PROVEN, OIDC_AND_ROSTER_READY, DATA_STORES_KEYS_QUEUES_ISOLATED, SOURCE_RIGHTS_CONFIGURED, TELEMETRY_ALERTS_RUNBOOK_READY, BACKUP_RESTORE_PROVEN, INCIDENT_OWNERSHIP_READY, CURRENT_CONTRACT_PERIOD, CURRENT_TARIFF_VERSION, BILLING_RECONCILIATION_PATH_READY, COST_CAPTURE_PATH_READY, P75_VARIABLE_GROSS_MARGIN, SUPPORT_CAPACITY]
+        conditional_offered_exactly_12:
+          PUBLIC_WEB_ACTIVE: PUBLIC_WEB
+          VERIFIED_EMAIL_ACTIVE: VERIFIED_EMAIL
+          API_EXPORT_ACTIVE: API_EXPORT
+          SIGNED_WEBHOOK_ACTIVE: SIGNED_WEBHOOK
+          DAILY_DIGEST_ACTIVE: DAILY_DIGEST
+          WEEKLY_DIGEST_ACTIVE: WEEKLY_DIGEST
+          SMS_ADAPTER_ACTIVE: delivery.sms
+          TELEGRAM_ADAPTER_ACTIVE: delivery.telegram
+          WHATSAPP_ADAPTER_ACTIVE: delivery.whatsapp
+          LINE_ADAPTER_ACTIVE: delivery.line
+          KAKAO_ADAPTER_ACTIVE: delivery.kakao
+          VOICE_ADAPTER_ACTIVE: delivery.voice
+        stage_counts:
+          PILOT_ENTRY_READINESS: {mandatory_count: 14, item_count_before_offered_requirement: 26, margin_threshold: 0.600000}
+          POST_FIRST_BILLING_CYCLE: {mandatory_count: 17, item_count_before_offered_requirement: 29, margin_threshold: 0.600000}
+          GENERAL_AVAILABILITY: {mandatory_count: 18, item_count_before_offered_requirement: 30, margin_threshold: 0.700000}
+        count_rule: required_item_count equals stage mandatory_count plus the number of explicitly offered conditional rows; all stage-relevant conditional rows remain visible as NOT_APPLICABLE/UNCONFIGURED so item_count does not depend on the offer.
+        verified_workflow_rule: FIRST_PAID_VERIFIED_WORKFLOW_CYCLE accepts only paid_mvw_contract eligibility, not any terminal outcome fact.
+        production_rule: Post-first-billing actual reconciliation, cost capture, and first paid workflow use production immutable facts; CAC remains GA-only.
+    outcome_terminal_registry:
+      - Every terminal_receipt_kind has one exact physical candidate-key/digest resolver; ORGANIZATION_DECISION cannot remain a symbolic kind.
+      - Paid eligibility additionally validates PaidEvidencePacketV1 and the strict allowed pair; general outcome facts remain useful operational facts but do not become paid MVW.
+    invoice_membership:
+      - Zero-overage included usage receives an immutable reconciliation membership result even though no zero-quantity invoice charge line is created.
+      - Any due PARTIAL/UNKNOWN usage makes the reconciliation status UNKNOWN/BLOCKED rather than shrinking the due population.
+    operation_projection:
+      - Business metric read functions return closed scalar/composite types, formula and input digests, and typed unknown reasons; serde_json::Value or free-form metric maps are forbidden.
+  additive_relation_budget:
+    required_cross_file_relations_exactly: [ops.commercial_qualification_receipts]
+    relation_purpose: one append-only human qualification-episode decision receipt authority; it is the sole business-model relation this contract requests beyond the current physical catalog
+    new_general_lifecycle_relations_forbidden: [ops.commercial_lifecycle_facts, ops.commercial_stage_facts, ops.commercial_stage_events, ops.funnel_stage_facts, ops.customer_lifecycle_events]
+    new_stage_events_exactly: []
+    non_qualified_stage_rule: CONFIGURED, DATA_READY, FIRST_PAID_VALUE, ACTIVATED, RETAINED, AT_RISK, and CHURNED are deterministic read projections over the named existing immutable relations. They are never imported, written, cached as authority, corrected through a stage ledger, or emitted as a general commercial lifecycle event.
+    cache_rule: A materialized/cache representation may exist only as a rebuildable non-authoritative derivative that carries the exact source-set/formula/policy/as_of digest, is denied to qualification/accounting writers, and can be dropped without losing business truth.
+    validator_rule: The required relation set and forbidden relation/event names are checked across database inventory, persistence registry, domain events, API DTOs, migrations, and generated manifests; an alias or generic fact table does not evade the budget.
+  required_new_authority:
+    name: ops.commercial_qualification_receipts
+    cross_file_status: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+    authority_kind: QUALIFICATION_EPISODE_RECEIPT_ONLY
+    reason: Only the human commercial qualification-episode decision is not derivable from current immutable product/economics facts. Every later stage is projected and must not create a general commercial-stage ledger or event stream.
+    migration: 0029_product_economics.sql after ops.accounting_corrections as creation ordinal 21
+    inventory_effect_if_adopted: exactly one active relkind-r qualification receipt relation and zero new commercial-stage domain events; owner, persistence, hold, privilege, global inventory and validator registries are updated atomically in the review-required design
+    mutation: append-only ORIGINAL/REPLACEMENT/REVERSAL receipt chain with one current leaf per deployment/organization/SKU/qualification_episode_id
+    required_fields:
+      id: uuid primary key
+      root_receipt_id: uuid self-FK; equals id for ORIGINAL
+      revision: bigint >= 1
+      receipt_effect: enum<ORIGINAL|REPLACEMENT|REVERSAL>
+      supersedes_receipt_id: nullable uuid self-FK; required after revision 1
+      predecessor_receipt_digest: nullable lowercase sha256; required after revision 1
+      qualification_episode_id: uuid; stable for one qualification receipt chain and never reused after churn
+      deployment_id: uuid equal to immutable deployment configuration
+      organization_id: uuid equal to immutable organization configuration
+      sku: enum<EVIDENCE_WORKSPACE_ORGANIZATION_V1>
+      decision_effective_at: timestamptz for this exact receipt effect
+      first_qualified_at: timestamptz equal to ORIGINAL decision_effective_at and immutable within the episode
+      recurring_job_attested: boolean true for an effective qualification
+      authorized_data_identified: boolean true for an effective qualification
+      authorized_data_feasible: boolean true for an effective qualification
+      economic_buyer_role_bound: boolean true for an effective qualification
+      operational_owner_role_bound: boolean true for an effective qualification
+      independent_reviewer_role_bound: boolean true for an effective qualification
+      source_rights_owner_role_bound: boolean true for an effective qualification
+      incident_support_owner_role_bound: boolean true for an effective qualification
+      pilot_scope_accepted: boolean true for an effective qualification
+      success_metric_accepted: boolean true for an effective qualification
+      budget_authority_accepted: boolean true for an effective qualification
+      support_expectation_accepted: boolean true for an effective qualification
+      trust_terms_accepted: boolean true for an effective qualification
+      role_binding_hmac_key_version: string[1..100]
+      economic_buyer_primary_role_binding_hmac: lowercase HMAC-SHA-256
+      economic_buyer_backup_role_binding_hmac: lowercase HMAC-SHA-256 distinct from primary
+      operational_owner_primary_role_binding_hmac: lowercase HMAC-SHA-256
+      operational_owner_backup_role_binding_hmac: lowercase HMAC-SHA-256 distinct from primary
+      independent_reviewer_primary_role_binding_hmac: lowercase HMAC-SHA-256
+      independent_reviewer_backup_role_binding_hmac: lowercase HMAC-SHA-256 distinct from primary
+      source_rights_owner_primary_role_binding_hmac: lowercase HMAC-SHA-256
+      source_rights_owner_backup_role_binding_hmac: lowercase HMAC-SHA-256 distinct from primary
+      incident_support_owner_primary_role_binding_hmac: lowercase HMAC-SHA-256
+      incident_support_owner_backup_role_binding_hmac: lowercase HMAC-SHA-256 distinct from primary
+      source_system_id: string[1..128] closed configured adapter
+      source_record_identity_hmac: lowercase HMAC-SHA-256
+      acquisition_source_receipt_id: nullable uuid
+      acquisition_source_receipt_digest: nullable lowercase sha256 paired with acquisition_source_receipt_id
+      source_signature_digest: lowercase sha256
+      qualification_policy_version: bigint >= 1
+      qualification_policy_digest: lowercase sha256
+      criterion_set_digest: lowercase sha256 over the exact thirteen code/boolean pairs in qualification_contract ordinal order
+      role_binding_set_digest: lowercase sha256 over the exact five function/primary/backup HMAC triples in qualification_contract ordinal order
+      evidence_set_digest: lowercase sha256 over duplicate-free ordered evidence receipt ID/digest bindings
+      reason_code: enum<QUALIFICATION_ACCEPTED|SOURCE_CORRECTION|SOURCE_REVERSAL>
+      receipt_digest: lowercase sha256 over every immutable business field except recorded_at
+      recorded_at: timestamptz default clock_timestamp()
+    effective_shape:
+      ORIGINAL_OR_REPLACEMENT: all thirteen criteria true, each primary/backup pair present and distinct, reason QUALIFICATION_ACCEPTED or SOURCE_CORRECTION, and exact policy/role/evidence/source digests present
+      REVERSAL: preserves scope/episode/first_qualified_at/source/policy identity, reason SOURCE_REVERSAL, and makes the episode unqualified from decision_effective_at forward without deleting history
+    uniqueness:
+      - [root_receipt_id, revision]
+      - [deployment_id, organization_id, sku, qualification_episode_id, revision]
+      - one successor per supersedes_receipt_id
+      - one active non-reversed qualification episode per deployment/organization/SKU at one as-of instant
+      - one acquisition_source_receipt_id+digest pair may bind at most one ORIGINAL qualification episode; requalification requires a fresh attribution receipt or UNKNOWN_SOURCE
+    as_of_selection: greatest decision_effective_at, revision, id current chain head whose decision_effective_at <= cutoff; a REVERSAL contributes no current qualified episode from that instant while first_qualified_at remains historical cohort truth
+    selection_order: decision_effective_at ASC, revision ASC, id ASC
+    privacy: no name, email, phone, address, handle, free text, raw CRM/contact ID, query, cookie, message, or source/response content
+    write_boundary: typed signed qualification importer only; SERIALIZABLE, fixed lock order, same-identity/same-digest replay, changed-digest conflict, audit and idempotency receipt atomicity; no stage writer and no commercial-stage outbox event
+    mutation_guard: BEFORE UPDATE OR DELETE ops.reject_mutation(); replacement/reversal locks the unique current leaf and appends exactly one successor
+    direct_write_grants: none for every runtime role
+    function_execute: gurine_workflow_worker only; control-api reads projections and never imports mutable CRM assertions
+    select_grants: [gurine_workflow_worker, gurine_control_api, gurine_auditor]
+    denied_roles: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_document_extractor, gurine_scheduler, gurine_identity_api]
+    retention:
+      record_class: COMMERCIAL_ACCOUNTING_FACT
+      schedule: latest effective nonexpired record-class schedule; missing/stale preserves the fact and opens review
+      legal_hold_key: [COMMERCIAL_QUALIFICATION_RECEIPT, id, deployment_id, organization_id]
+      correction: append replacement/reversal; never rewrite or erase a historical qualification receipt
+      source_body: external CRM/contract source bodies follow their own shorter schedule and are not copied into this relation
+  required_read_functions:
+    ops.read_business_stage_projection_v1: deterministically derives all non-QUALIFIED stages for one qualification episode/as_of/policy digest and returns source/input/freshness/unknown digests; it never writes a stage row/event
+    ops.read_paid_mvw_inputs_v1: returns only exact eligible outcome/packet/terminal-receipt bindings; analysis/public/submission roles have no execute
+    ops.read_business_health_projection_v1: deterministic as-of metric projection with formula/input/freshness/unknown digests for control-api
+    ops.read_invoice_membership_v1: returns complete expected-versus-observed usage membership and blockers
+    ops.read_sla_metric_inputs_v1: returns gap-checked contracted capability minute sets and policy target
+    ops.read_cac_metric_inputs_v1: returns the complete captured acquisition-cost set before organization attribution filtering and yields UNKNOWN/null on any unattributed, stale, reversed, FX, or correction gap
+  required_closed_projection:
+    name: PaidEvidencePacketV1
+    additional_properties: false
+    required_fields:
+      schemaVersion: const<1>
+      organizationId: uuid
+      sku: const<EVIDENCE_WORKSPACE_ORGANIZATION_V1>
+      contractPeriodId: uuid
+      contractRecordDigest: sha256
+      datasetSnapshotIds: unique-array<uuid>[1..10000]
+      datasetSnapshotDigests: array<sha256> same length/order as datasetSnapshotIds
+      datasetSnapshotSetDigest: sha256
+      sourceRightsReceiptIds: unique-array<uuid>[1..10000]
+      capabilityActivationReceiptIds: unique-array<uuid>[1..1000]
+      activationSetDigest: sha256
+      extractionLineageDigest: sha256
+      transformationLineageDigest: sha256
+      reproductionInputDigest: sha256
+      comparisonPopulationDigest: sha256
+      exclusionSetDigest: sha256
+      supportingEvidenceSetDigest: sha256
+      contraryEvidenceSetDigest: sha256; empty set has the canonical empty-set digest, never null
+      locatorSetDigest: sha256
+      freshnessDigest: sha256
+      limitationSetDigest: sha256
+      disagreementSetDigest: sha256; empty set has the canonical empty-set digest, never null
+      unknownSetDigest: sha256; empty set has the canonical empty-set digest, never null
+      aiContributed: boolean
+      aiProvenanceDigest: nullable<sha256>; nonnull exactly when aiContributed=true
+      humanDecisionId: uuid
+      humanDecisionDigest: sha256
+      independentReviewDisposition: enum<APPROVED|NOT_REQUIRED_BY_POLICY>
+      independentReviewReceiptId: nullable<uuid>; required when disposition=APPROVED and null otherwise
+      independentReviewDigest: sha256 of the review receipt or exact not-required policy evaluation
+      terminalReceiptKind: enum<OUTBOUND_DELIVERY|ORGANIZATION_DECISION>
+      terminalReceiptId: uuid
+      terminalReceiptVersion: bigint[1..max]
+      terminalReceiptDigest: sha256
+      packetDigest: sha256
+      persistedAt: datetime UTC
+    canonicalization: Gurine Canonical JSON v1 over the exact ordered fields; every member array is duplicate-free and sorted by UUID byte order then digest
+    storage_rule: The immutable packet or its closed scalar binding is persisted before an outcome fact can become paid-MVW eligible; an ad hoc JSON projection or audit text is insufficient.
+  terminal_receipt_registry_requirement:
+    ORGANIZATION_DECISION: resolves one finalized decision cycle through exact action proposal/version, counted action decisions, optional execution receipt chain, packet digest, resulting state, and immutable decision-cycle receipt; ACCEPTED proposal or queued/running execution is rejected
+    OUTBOUND_DELIVERY: resolves one applied ops.outbound_delivery_receipts row in DELIVERED or READ plus its delivery/rendering/authorization/packet binding; retry and callback rows do not create another business identity
+    rule: The registry is closed and database-validated by terminal_receipt_kind; a symbolic kind without one exact physical candidate key and digest mapping blocks migration and paid-MVW evaluation.
+  prohibited_sources:
+    - product analytics as a substitute for qualification, derived-stage, or accounting facts
+    - raw CRM/contact, billing provider payload, search/response/evidence content, token, filename, cookie, or person identity
+    - public editorial projections as commercial identity or revenue inputs
+
+open_cross_file_blockers:
+  - id: BM-XF-001-QUALIFICATION-AUTHORITY
+    status: DESIGN_CLOSED_RUNTIME_OPEN
+    physical_contract_status: CLOSED_AWAITING_INDEPENDENT_REVIEW
+    runtime_status: OPEN
+    owner: Database and product contract owners
+    current_truth: ops.commercial_qualification_receipts is now an explicit 0029 physical contract and source-derived inventory member; its SQL migration, typed importer and runtime proof do not yet exist.
+    required_change: Implement only the closed minimal qualification authority, privilege/retention/idempotency/audit contract and deterministic projections; do not add general stage rows/events.
+    closure_evidence: PostgreSQL catalog/runtime/concurrency tests plus repository round-trip and qualification projection tests
+  - id: BM-XF-002-READINESS-CATALOG
+    status: OPEN
+    physical_contract_status: CLOSED
+    runtime_status: OPEN
+    owner: Database and SKU-readiness owners
+    current_truth: The R3 0029 physical contract now closes PILOT_ENTRY_READINESS and the exact 14/17/18 mandatory, twelve conditional, and 26/29/30 visible sets; migrations, source-derived inventory/digests, evaluator runtime, and every offered-subset tests are not implemented.
+    required_change: Implement the closed R3 catalog in migration/repository/evaluator code, regenerate source-derived digests/counts, and prove every offered subset while keeping unoffered rows visible and nonblocking.
+    closure_evidence: exact catalog set-equality, PostgreSQL readiness evaluation, every offered-subset test, and current validator PASS
+  - id: BM-XF-003-PAID-PACKET-TERMINAL-REGISTRY
+    status: OPEN
+    physical_contract_status: OPEN
+    runtime_status: OPEN
+    owner: Command/event/database and AI-data owners
+    current_truth: PaidEvidencePacketV1 and a physical ORGANIZATION_DECISION terminal resolver are contract requirements but not closed runtime types/candidate-key mappings.
+    required_change: Implement the closed packet, physical terminal registry, exact decision/delivery binding, correction-head eligibility, and strict paid-MVW read path.
+    closure_evidence: closed schemas, FK/candidate-key catalog proof, invalid-pair tests, retries/corrections concurrency tests, and Rust repository/runtime tests
+  - id: BM-XF-004-INVOICE-MEMBERSHIP
+    status: OPEN
+    physical_contract_status: CLOSED
+    registry_and_runtime_status: OPEN
+    owner: Database and Finance/Data owners
+    current_truth: The R3 0029 physical contract now declares ops.invoice_usage_memberships with immutable ORIGINAL/RESTATEMENT chains, ZERO_USAGE and INCLUDED_ALLOWANCE rows without charge lines, BILLED_OVERAGE line binding, current-root exactly-once guards, and ops.read_invoice_membership_v1 over an unfiltered expected meter/window grid. Global inventory, SQL migration, repository/function runtime, and canaries remain absent.
+    required_change: Implement and register the closed physical contract byte-for-byte, make every due partial/unknown/gap block invoice/revenue/readiness, and execute the declared concurrency/property tests.
+    closure_evidence: zero-overage, duplicate, omitted, reversed, partial, unknown, overlapping-window, 64-client close, and correction tests
+  - id: BM-XF-005-SLA
+    status: OPEN
+    physical_contract_status: CLOSED
+    registry_and_runtime_status: OPEN
+    owner: SRE, Database, and Finance owners
+    current_truth: The R3 0029 physical contract now declares explicit tariff offer and contract selection states, signed SLA policy version/digest, target, capability/exclusion/service-credit/measurement digests, exact selected tuple binding, and gap-checked ops.read_sla_metric_inputs_v1 minute inputs. Global inventory, SQL/runtime implementation, incident integration, and service-credit correction execution remain absent.
+    required_change: Implement and register the closed tuple and read function, map due credits to immutable corrections, and execute DST/overlap/gap/maintenance/provider/unknown-target tests.
+    closure_evidence: DST/overlap/gap/maintenance-cap/provider-fault/unknown-target/service-credit PostgreSQL and runtime tests
+  - id: BM-XF-006-REVENUE-INTERVAL-OVERLAP
+    status: OPEN
+    physical_contract_status: CLOSED
+    registry_and_runtime_status: OPEN
+    owner: Database and Finance owners
+    current_truth: The R3 0029 physical contract now declares a domain-separated invoice-line plus recognition-policy advisory lock, deterministic existing-row/correction-leaf lock order, exact half-open overlap predicate, positive correction-adjusted interval selection, adjacency allowance, and atomic reversal/replacement semantics. No SQL migration, function implementation, catalog proof, or concurrency execution exists yet.
+    required_change: Implement the closed SERIALIZABLE exclusion-equivalent guard and prove boundary adjacency, partial/full overlap, correction movement, restore, and phantom-free 64-client behavior.
+    closure_evidence: boundary-adjacent, partial/full overlap, concurrent split, correction, restore, and 64-client tests
+  - id: BM-XF-007-UNATTRIBUTED-CAC
+    status: OPEN
+    physical_contract_status: CLOSED
+    registry_and_runtime_status: OPEN
+    owner: Database and Finance owners
+    current_truth: The R3 0029 physical contract now declares ATTRIBUTED and UNATTRIBUTED acquisition line shapes, a no-organization/no-receipt pool digest for captured unattributed cost, complete-set-first ops.read_cac_metric_inputs_v1 semantics, null CAC plus ATTRIBUTION_UNKNOWN on any gap, and no-lower-subset canaries. No SQL migration, repository/function runtime, or property execution exists yet.
+    required_change: Implement and register the closed cost-allocation shapes/read function and prove missing/stale/reversed attribution, unallocated pool, FX, correction, and no-lower-CAC behavior.
+    closure_evidence: missing/stale/reversed attribution, unallocated pool, FX, correction, and no-lower-CAC property tests
+  - id: BM-XF-008-API-CONTRACTS
+    status: OPEN
+    api_contract_status: OPEN
+    runtime_status: OPEN
+    owner: API and frontend contract owners
+    current_truth: getInternalDashboard, getBudgetOverview, getOperationsOverview, exportCostReport, and searchAuditEvents do not yet expose the closed business response types/dimensions declared here; generated OpenAPI/clients are unchanged.
+    required_change: Extend the existing operations without a new route, close authorization and error semantics, regenerate OpenAPI/clients, and prove formula/digest parity across API/UI/export.
+    closure_evidence: schema set-equality, generated client diff, auth tests, contract/integration tests, and byte-equivalent metric response fixtures
+  - id: BM-XF-009-RUNTIME-AND-EXECUTION-MAPPING
+    status: OPEN
+    mapping_catalog_status: CLOSED
+    runtime_status: OPEN
+    owner: Rust, SvelteKit, QA, and traceability owners
+    current_truth: tests/acceptance/supplemental-executable-mapping.yaml now has exactly one skip_policy FORBIDDEN catalog row for each AC-BUSINESS_MODEL-001..041 ID, but all 41 rows are implementation_status MISSING, tests/integration/acceptance/business_model_addendum.rs and the gurine-acceptance-tests package are absent, and no complete Rust projection/repository, SvelteKit states, browser flow, or production fact path proves the feature.
+    required_change: Implement real PostgreSQL-to-Rust-to-generated-client-to-SvelteKit behavior, all states and exports, create every declared non-skipped test path/ID and make every declared command execute successfully, then freeze its traceability/manifest/digest inputs.
+    closure_evidence: mapped test execution with skip_policy FORBIDDEN, production-data smoke, browser accessibility/responsive evidence, and frozen-digest independent review
+
+screen_operation_mapping:
+  no_new_route_rule: No fourth surface, tenant switcher, sales CRM, checkout, invoice-payment, or entitlement route is created.
+  closed_codes:
+    metric_id: exact sorted keys of metrics in this contract; generation fails on any missing or extra ID
+    breach_action: [NONE, COMPLETE_QUALIFICATION, CLOSE_ATTRIBUTION, REVIEW_COHORT_LOSS, COMPLETE_CONFIGURATION, REPAIR_DATA_READINESS, VERIFY_PAID_PACKET, RECOVER_VALUE_WORKFLOW, RECONCILE_USAGE_AND_INVOICE, RECONCILE_REVENUE, CLOSE_COST_AND_FX_GAPS, ADJUST_PRICE_QUOTA_OR_EFFICIENCY, RESTORE_SUPPORT_CAPACITY, RESTORE_SLA_AND_TELEMETRY, CONTAIN_TRUST_INCIDENT, REVIEW_PRODUCT_PAUSE]
+    breach_action_rule: A metric response selects exactly one code allowed by metric_breach_action_catalog[metricId]. Healthy selects NONE. UNKNOWN selects the code bound to its primary reasonCode; BREACH selects the deterministic highest-priority applicable action. The prose metrics.*.breach_action explains the action and is not serialized as an enum.
+    source_relation: exact sorted union of every metrics.*.sources value in this contract
+    correctable_business_relation: [ops.commercial_qualification_receipts, ops.outcome_facts, ops.acquisition_source_receipts, ops.commercial_contract_periods, ops.usage_window_receipts, ops.usage_facts, ops.discount_decisions, ops.invoice_facts, ops.invoice_line_facts, ops.invoice_usage_memberships, ops.revenue_facts, ops.accounting_corrections, ops.cost_allocations]
+    owner_function: [PRODUCT_PDM, EDITORIAL_DUTY, DATA_ENGINEERING, AI_DATA, SRE, TRUST_PRIVACY_LEGAL, SALES_CS_FINANCE, EXECUTIVE_APPROVER]
+    metric_status_reason: [NONE, SOURCE_MISSING, SOURCE_STALE, SOURCE_PARTIAL, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, CONFIGURATION_MISMATCH, RIGHTS_NOT_CURRENT, SNAPSHOT_EMPTY_OR_UNREPRODUCIBLE, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, USAGE_UNKNOWN, INVOICE_MEMBERSHIP_GAP, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE, SLA_TELEMETRY_GAP, ATTRIBUTION_UNKNOWN, NONPOSITIVE_CONTRIBUTION, TRUST_REVIEW_OPEN, DENOMINATOR_ZERO, COHORT_NOT_MATURE, SAMPLE_TOO_SMALL, CAPABILITY_NOT_OFFERED]
+    metric_unknown_reason: [SOURCE_MISSING, SOURCE_STALE, SOURCE_PARTIAL, CORRECTION_CHAIN_AMBIGUOUS, CONTRACT_NOT_CURRENT, CONFIGURATION_MISMATCH, RIGHTS_NOT_CURRENT, SNAPSHOT_EMPTY_OR_UNREPRODUCIBLE, TERMINAL_RECEIPT_MISSING, PACKET_PROOF_INCOMPLETE, USAGE_UNKNOWN, INVOICE_MEMBERSHIP_GAP, REVENUE_CHAIN_INVALID, COST_CAPTURE_INCOMPLETE, FX_MISSING_OR_STALE, SLA_TELEMETRY_GAP, ATTRIBUTION_UNKNOWN, NONPOSITIVE_CONTRIBUTION, TRUST_REVIEW_OPEN]
+    issue_code: [NONE, ACTIVATION_BELOW_TARGET, RETENTION_BELOW_TARGET, PILOT_CONVERSION_BELOW_TARGET, NO_PAID_VALUE_30D, READINESS_BLOCKED, BILLING_RECONCILIATION_BLOCKED, MARGIN_BELOW_TARGET, CAC_ABOVE_TARGET, SUPPORT_ABOVE_CAPACITY, SLA_UNKNOWN_OR_BREACHED, EXPANSION_NOT_ELIGIBLE, RENEWAL_NOT_ELIGIBLE, TRUST_HARD_STOP, DATA_UNKNOWN]
+    remediation_code: [NO_ACTION_REQUIRED, COMPLETE_QUALIFICATION, CLOSE_ATTRIBUTION, REVIEW_COHORT_LOSS, COMPLETE_CONFIGURATION, REPAIR_DATA_READINESS, VERIFY_PAID_PACKET, RECOVER_VALUE_WORKFLOW, RECONCILE_USAGE_AND_INVOICE, RECONCILE_REVENUE, CLOSE_COST_AND_FX_GAPS, ADJUST_PRICE_QUOTA_OR_EFFICIENCY, RESTORE_SUPPORT_CAPACITY, RESTORE_SLA_AND_TELEMETRY, CONTAIN_TRUST_INCIDENT, REVIEW_PRODUCT_PAUSE]
+    metric_result_kind:
+      BM-ACQ-QUALIFIED-ORG-COUNT: SCALAR
+      BM-ACQ-CHANNEL-MIX: SOURCE_BREAKDOWN
+      BM-FUNNEL-CONFIGURATION-RATE: BINOMIAL_RATE
+      BM-FUNNEL-DATA-READY-RATE: BINOMIAL_RATE
+      BM-VALUE-PAID-MVW: SCALAR
+      BM-VALUE-PAID-MVW-PER-ACTIVE-ORG: DETERMINISTIC_RATIO
+      BM-ACTIVATION-7D-RATE: BINOMIAL_RATE
+      BM-ACTIVATION-TTFPV-P90: TIME_TO_EVENT_P90
+      BM-RETENTION-D29-56-RATE: BINOMIAL_RATE
+      BM-RETENTION-AT-RISK-ORG-COUNT: SCALAR
+      BM-RETENTION-CHURN-RATE: BINOMIAL_RATE
+      BM-FUNNEL-PILOT-TO-PAID-RATE: BINOMIAL_RATE
+      BM-REVENUE-QUALIFIED-ORG-COUNT: SCALAR
+      BM-EXPANSION-ELIGIBILITY-RATE: BINOMIAL_RATE
+      BM-RENEWAL-ELIGIBILITY-RATE: BINOMIAL_RATE
+      BM-REVENUE-RECOGNIZED-KRW: SCALAR
+      BM-BILLING-RECONCILIATION-COVERAGE: DETERMINISTIC_RATIO
+      BM-MARGIN-VARIABLE-GROSS-RATE: DETERMINISTIC_RATIO
+      BM-MARGIN-CONTRIBUTION-KRW: SCALAR
+      BM-COST-PER-PAID-MVW-KRW: DETERMINISTIC_RATIO
+      BM-CAC-KRW: DETERMINISTIC_RATIO
+      BM-CAC-PAYBACK-MONTHS: DETERMINISTIC_RATIO
+      BM-SLA-AVAILABILITY-RATE: DETERMINISTIC_RATIO
+      BM-SUPPORT-HOURS-PER-ACTIVATED-ORG: DETERMINISTIC_RATIO
+      BM-TRUST-HARD-STOP-COUNT: SCALAR
+    metric_result_kind_rule: key set equals metrics exactly and value equals the required BusinessMetricResultV1 discriminator; runtime/OpenAPI/client/UI/export schema generation fails on drift
+    funnel_stage: [QUALIFIED, CONFIGURED, DATA_READY, FIRST_PAID_VALUE, ACTIVATED, RETAINED, AT_RISK, CHURNED]
+    funnel_stage_state: [NOT_STARTED, COMPLETE, LATE, AT_RISK, CHURNED, BLOCKED, UNKNOWN]
+    external_catalog_refs:
+      capability_id: specs/product/owner-addendum-2026-07-14.yaml#authorization_delta
+      sku_readiness_item_blocker_remediation: specs/database/addendum/0029-invoice-revenue-sku.yaml#closed_types
+  closed_response_types:
+    OperationalOwnerBindingV1:
+      additional_properties: false
+      fields: {primaryFunction: closed-owner-function, backupFunction: closed-owner-function, escalationFunction: closed-owner-function, primaryRoleBindingHmac: sha256, backupRoleBindingHmac: sha256, ownerBindingSetDigest: sha256, responseDueAt: datetime, nextReviewAt: datetime}
+      invariants: [primary and backup function/binding pairs are present, primaryRoleBindingHmac differs from backupRoleBindingHmac, bindings are current at asOf, raw person/account/contact identity is absent]
+    SmallSampleEvidenceV1:
+      additional_properties: false
+      fields: {eligibleCount: 'int64[0..4]', numeratorCount: nullable-int64, pendingCount: int64, unknownCount: int64, excludedCount: int64, maturityHorizonHours: nullable-decimal-string, suppressionState: 'enum<COUNTS_ONLY|AUTHORIZED_ORDERED_DURATIONS>', suppressionReason: 'const<SAMPLE_TOO_SMALL>', evidenceDigest: sha256}
+    Wilson95IntervalV1:
+      additional_properties: false
+      fields: {method: 'const<WILSON_SCORE_WITHOUT_CONTINUITY_CORRECTION_V1>', confidenceLevel: 'const<0.95>', z: 'const<1.959963984540054>', successCount: int64, trialCount: int64, lower: decimal-string, upper: decimal-string, scale: 'const<12>', intervalDigest: sha256}
+      invariant: trialCount >= 5, 0 <= successCount <= trialCount, and lower/upper exactly satisfy statistical_result_contract.wilson_95_v1
+    MetricOrderedObservationV1:
+      additional_properties: false
+      fields: {ordinal: 'int64[1..max]', observationKind: 'enum<EVENT|RIGHT_CENSORED|TERMINAL_WITHOUT_EVENT>', durationHours: nullable-decimal-string, lowerBoundHours: nullable-decimal-string, selectedForP90: boolean, observationDigest: sha256}
+      invariants:
+        - EVENT has finite durationHours and null lowerBoundHours.
+        - RIGHT_CENSORED has null durationHours and a finite lowerBoundHours at least 336 for the matured P90 population.
+        - TERMINAL_WITHOUT_EVENT has null durationHours and lowerBoundHours 336 because it is a known objective failure with no later event in the episode.
+        - No identity, source, campaign, money, raw timestamp, contract reference, or content is serialized.
+    MetricOrderedObservationSetV1:
+      additional_properties: false
+      fields: {metricId: 'const<BM-ACTIVATION-TTFPV-P90>', unit: 'const<hours>', ordering: 'const<DURATION_ASC_EVENT_THEN_CENSOR_THEN_TERMINAL_V1>', eligibleCount: int64, eventCount: int64, rightCensoredCount: int64, terminalWithoutEventCount: int64, observations: 'ordered-array<MetricOrderedObservationV1>[0..10000]', visibility: 'enum<AUTHORIZED_INTERNAL|SUPPRESSED_COUNTS_ONLY>', setDigest: sha256}
+      privacy: observations is empty for SUPPRESSED_COUNTS_ONLY, every nonempty set requires budgets.manage and never appears in INT-001/public/export/log/analytics/notification
+    ScalarMetricResultV1:
+      additional_properties: false
+      fields: {kind: 'const<SCALAR>', unit: closed scalar metric unit, value: nullable-decimal-string, resultDigest: sha256}
+    BinomialRateMetricResultV1:
+      additional_properties: false
+      fields: {kind: 'const<BINOMIAL_RATE>', numeratorCount: int64, denominatorCount: int64, rate: nullable-decimal-string, wilson95: nullable<Wilson95IntervalV1>, smallSample: nullable<SmallSampleEvidenceV1>, resultDigest: sha256}
+      invariants:
+        - denominatorCount >= 5 and complete KNOWN input requires rate and Wilson95IntervalV1; denominatorCount 1..4 requires null rate/wilson95 and SmallSampleEvidenceV1.
+        - denominatorCount 0 requires null rate/wilson95 and DENOMINATOR_ZERO or COHORT_NOT_MATURE at the envelope.
+    DeterministicRatioMetricResultV1:
+      additional_properties: false
+      fields: {kind: 'const<DETERMINISTIC_RATIO>', numerator: nullable-decimal-string, denominator: nullable-decimal-string, ratio: nullable-decimal-string, unit: closed deterministic ratio unit, resultDigest: sha256}
+      invariant: Wilson interval is inapplicable; a KNOWN nonzero denominator binds exact numeric numerator/denominator and half-even result
+    SourceBreakdownEntryV1:
+      additional_properties: false
+      fields: {ordinal: 'int32[1..11]', sourceKind: closed acquisition source kind including UNKNOWN_SOURCE, episodeCount: int64, share: nullable-decimal-string, wilson95: nullable<Wilson95IntervalV1>, entryDigest: sha256}
+    SourceBreakdownMetricResultV1:
+      additional_properties: false
+      fields: {kind: 'const<SOURCE_BREAKDOWN>', totalQualifiedEpisodeCount: int64, knownSourceEpisodeCount: int64, unknownSourceEpisodeCount: int64, entries: 'ordered-array<SourceBreakdownEntryV1>[11]', smallSample: nullable<SmallSampleEvidenceV1>, conservationDigest: sha256, resultDigest: sha256}
+      invariants:
+        - Entries exactly follow acquisition_attribution_contract.source_order_exactly and their counts sum to totalQualifiedEpisodeCount.
+        - total below five suppresses shares/Wilson and singleton source detail outside authorized OPS-004; any UNKNOWN_SOURCE makes attribution-dependent decision status UNKNOWN.
+    TimeToEventMetricResultV1:
+      additional_properties: false
+      fields: {kind: 'const<TIME_TO_EVENT_P90>', estimator: 'const<RESTRICTED_EMPIRICAL_P90_OBJECTIVE_V1>', estimateState: 'enum<EXACT|EXCEEDS_OBSERVATION_BOUND|SAMPLE_TOO_SMALL|COHORT_NOT_MATURE|UNKNOWN>', eligibleCount: int64, eventCount: int64, rightCensoredCount: int64, terminalWithoutEventCount: int64, selectedRank: nullable-int64, p90Hours: nullable-decimal-string, lowerBoundHours: nullable-decimal-string, smallSample: nullable<SmallSampleEvidenceV1>, orderedObservationSet: nullable<MetricOrderedObservationSetV1>, resultDigest: sha256}
+      invariants:
+        - EXACT requires finite p90Hours and null lowerBoundHours; EXCEEDS_OBSERVATION_BOUND requires null p90Hours, lowerBoundHours at least 336, status KNOWN, thresholdState BREACH, and non-NONE issue/action.
+        - SAMPLE_TOO_SMALL requires eligibleCount 1..4, null p90/lower bound, SmallSampleEvidenceV1, and NOT_APPLICABLE; COHORT_NOT_MATURE has no threshold claim; UNKNOWN preserves typed diagnostic counts but no decision value.
+    BusinessMetricResultV1:
+      additional_properties: false
+      discriminator: kind
+      one_of: [ScalarMetricResultV1, BinomialRateMetricResultV1, DeterministicRatioMetricResultV1, SourceBreakdownMetricResultV1, TimeToEventMetricResultV1]
+    BusinessMetricValueV1:
+      additional_properties: false
+      fields:
+        metricId: closed enum of the 25 metrics keys in this contract
+        metricVersion: int64[1..max]
+        formulaDigest: sha256
+        policyDigest: sha256
+        inputSetDigest: sha256
+        status: enum<KNOWN|UNKNOWN|NOT_APPLICABLE>
+        reasonCode: closed-business-metric-status-reason
+        resultKind: enum<SCALAR|BINOMIAL_RATE|DETERMINISTIC_RATIO|SOURCE_BREAKDOWN|TIME_TO_EVENT_P90>
+        result: BusinessMetricResultV1 whose discriminator equals resultKind and the exact metric-result-kind registry
+        eligibleCount: int64[0..max]
+        pendingCount: int64[0..max]
+        unknownCount: int64[0..max]
+        unknownReasons: ordered-array<BusinessMetricUnknownReasonV1>[0..64]
+        windowStart: datetime
+        windowEnd: datetime
+        accountingTimezone: IANA-timezone
+        asOf: datetime
+        latestSourceAt: nullable<datetime>
+        freshUntil: nullable<datetime>
+        thresholdState: enum<PASS|BREACH|NOT_EVALUATED|UNKNOWN>
+        issueCode: closed-business-issue
+        breachAction: closed-business-breach-action
+        owner: OperationalOwnerBindingV1
+      invariants:
+        - KNOWN requires reasonCode NONE and a complete exact typed result, except the declared TimeToEvent EXCEEDS_OBSERVATION_BOUND is a known lower-bound breach with no fabricated scalar. unknownCount may be nonzero only for a diagnostic population proven not to alter the decision; otherwise status is UNKNOWN.
+        - UNKNOWN requires every decision value in result null, thresholdState UNKNOWN, a non-NONE reasonCode, unknownCount at least one, nonempty unknownReasons whose first code equals reasonCode, non-NONE issueCode, and a current owner action.
+        - NOT_APPLICABLE requires every decision value null, thresholdState NOT_EVALUATED, reasonCode in DENOMINATOR_ZERO|COHORT_NOT_MATURE|SAMPLE_TOO_SMALL|CAPABILITY_NOT_OFFERED, unknownCount zero, empty unknownReasons, issueCode NONE, breachAction NONE, and the applicable typed sample/pending evidence.
+        - A healthy KNOWN result requires thresholdState PASS|NOT_EVALUATED, issueCode NONE, and breachAction NONE; no metric-specific serializer may omit or weaken these rules.
+    BusinessMetricUnknownReasonV1:
+      additional_properties: false
+      fields: {reasonCode: closed-business-metric-unknown-reason, count: 'int64[1..max]', ownerFunction: closed-owner-function, firstObservedAt: datetime, nextReviewAt: datetime}
+    BusinessFunnelStageV1:
+      additional_properties: false
+      fields: {stage: closed-funnel-stage, state: closed-funnel-stage-state, organizationCount: int64, unknownCount: int64, earliestEnteredAt: nullable<datetime>, latestEnteredAt: nullable<datetime>, evidenceSetDigest: sha256, primaryIssueCode: nullable<closed-business-issue>, ownerFunction: closed-owner-function}
+    BusinessIssueV1:
+      additional_properties: false
+      fields: {issueCode: closed-business-issue, severity: 'enum<INFO|WARNING|BLOCKING|HARD_STOP>', metricId: nullable<closed-business-metric-id>, observedValue: nullable<decimal-string>, thresholdValue: nullable<decimal-string>, status: 'enum<KNOWN|UNKNOWN>', firstObservedAt: datetime, ownerFunction: closed-owner-function, nextActionCode: closed-remediation-code, nextReviewAt: datetime, evidenceDigest: sha256}
+    ReadinessBlockerV1:
+      additional_properties: false
+      fields: {itemCode: closed-sku-readiness-item-code, blockerCode: closed-sku-readiness-blocker-code, remediationCode: closed-sku-readiness-remediation-code, ownerFunction: closed-owner-function, evidenceAsOf: nullable<datetime>, evidenceExpiresAt: nullable<datetime>, evidenceDigest: sha256}
+    TelemetryGapV1:
+      additional_properties: false
+      fields: {capabilityId: closed-capability-id, gapStart: datetime, gapEnd: nullable<datetime>, expectedReceiptCount: int64, observedReceiptCount: int64, incidentId: uuid, ownerFunction: 'const<SRE>', evidenceDigest: sha256}
+    ClosedMetricWindowV1:
+      additional_properties: false
+      fields: {start: datetime, end: datetime, accountingTimezone: IANA-timezone, asOf: datetime}
+      invariant: start < end <= asOf
+    MetricSourceBindingV1:
+      additional_properties: false
+      fields: {metricId: closed-business-metric-id, relation: closed-business-source-relation, sourceRowId: uuid, sourceVersion: int64, sourceDigest: sha256, effectiveAt: datetime, correctionHeadId: nullable<uuid>, included: boolean, exclusionOrUnknownCode: nullable<closed-business-metric-unknown-reason>}
+    CorrectionHeadBindingV1:
+      additional_properties: false
+      fields: {relation: closed-correctable-business-relation, rootId: uuid, headId: uuid, headVersion: int64, normalizedEffect: 'enum<ORIGINAL|REPLACEMENT|REVERSAL|INVERSE|SUPERSEDING|RESTATEMENT|WITHDRAWN|ADJUSTMENT>', sourceEffect: closed relation-specific physical effect, predecessorHeadId: nullable<uuid>, predecessorDigest: nullable<sha256>, effectiveDelta: nullable<decimal-string>, headDigest: sha256, selectedAsOf: datetime}
+      invariant: normalizedEffect maps losslessly under economic_fact_boundary_contract.correction_effect_union; ADJUSTMENT requires nonzero effectiveDelta and every non-original requires predecessor identity/digest
+    BusinessPulseV1:
+      additional_properties: false
+      fields: {asOf: datetime, qualifiedCount: int64, configuredCount: int64, dataReadyCount: int64, activatedCount: int64, atRiskCount: int64, unknownCount: int64, topIssueCode: closed-business-issue, ownerFunction: closed-owner-function, nextReviewAt: datetime}
+      privacy: aggregate counts only; values below 5 use a LESS_THAN_FIVE bucket and never expose organization/campaign identity or money
+    BusinessHealthV1:
+      additional_properties: false
+      fields: {asOf: datetime, specificationVersion: string, metricCatalogDigest: sha256, funnel: 'ordered-array<BusinessFunnelStageV1>[8]', metrics: 'ordered-array<BusinessMetricValueV1>[25]', topIssue: BusinessIssueV1, readinessState: 'enum<READY|BLOCKED|UNKNOWN>', unknownSourceCount: int64, nextReviewAt: datetime}
+    CommercialReadinessAndSlaV1:
+      additional_properties: false
+      fields: {asOf: datetime, profileId: 'const<BM-PILOT-CORE-V1>', readinessEvaluationId: uuid, readinessDigest: sha256, state: 'enum<READY|BLOCKED|UNKNOWN>', blockers: 'ordered-array<ReadinessBlockerV1>', slaMetrics: 'ordered-array<BusinessMetricValueV1>', telemetryGaps: 'ordered-array<TelemetryGapV1>', activeIncidentIds: 'unique-array<uuid>', ownerFunction: closed-owner-function, nextReviewAt: datetime}
+    BusinessMetricEvidenceExportV1:
+      additional_properties: false
+      fields: {schemaVersion: 'const<1>', generatedAt: datetime, requestedWindow: ClosedMetricWindowV1, metricCatalogDigest: sha256, metrics: 'ordered-array<BusinessMetricValueV1>', sourceBindings: 'ordered-array<MetricSourceBindingV1>', correctionHeads: 'ordered-array<CorrectionHeadBindingV1>', exportDigest: sha256}
+      forbidden: [raw CRM/contact identity, customer name, external contract/invoice reference, search/response/evidence content, token, filename, cookie, session identity, generic JSON]
+  healthy_issue_semantics:
+    metric: A KNOWN metric with thresholdState PASS or NOT_EVALUATED has issueCode NONE. A NOT_APPLICABLE metric also has NONE when its reason is an expected empty denominator or immature cohort rather than missing evidence. UNKNOWN always has issueCode DATA_UNKNOWN or its more specific typed issue and never NONE.
+    screen: BusinessHealthV1.topIssue uses issueCode NONE, severity INFO, null metric/value/threshold, status KNOWN, nextActionCode NO_ACTION_REQUIRED, and the current evidence digest only when every required metric is KNOWN or legitimately NOT_APPLICABLE, no threshold is breached, readiness is READY, and no open trust/incident blocker exists.
+    ordering: HARD_STOP before BLOCKING before WARNING before DATA_UNKNOWN before NONE; ties use oldest firstObservedAt then issueCode lexical order.
+  mappings:
+    - screen: INT-001
+      operation: getInternalDashboard
+      view: role-safe BusinessPulseV1 aggregate only when actor also has budgets.manage
+      required_information: [qualified/configured/data-ready/activated counts, at-risk count by reason, freshness, unknown count, next owner]
+      forbidden_information: [organization identity, contract reference, invoice/revenue amount, acquisition campaign, contact data]
+    - screen: OPS-004
+      operation: getBudgetOverview
+      view: BusinessHealthV1
+      required_information: [funnel with cohort denominators, paid MVW, retention, revenue qualification, recognized revenue, reconciliation, margin, cost per paid MVW, CAC/payback, support capacity, formula version/digest, as_of, unknown reasons]
+      ten_second_order: [current commercial state, largest breach/unknown, value/activation, retention, revenue/margin, evidence freshness, next owner/action]
+    - screen: OPS-004
+      operation: exportCostReport
+      view: audited business-metric evidence export
+      required_information: [formula and policy digests, cohort/window, input-set digest, source receipt IDs/digests, correction heads, unknown/exclusion counts, generated_at]
+      export_dimensions: [ORGANIZATION_HMAC, SKU, OUTCOME, COST_CATEGORY, ACQUISITION_SOURCE_KIND, COHORT_MONTH, DAY]
+    - screen: OPS-001
+      operation: getOperationsOverview
+      view: CommercialReadinessAndSlaV1
+      required_information: [pilot readiness blockers, SLA status, telemetry gaps, active incidents, provider/cost dependencies, owner, next review]
+    - screen: AUD-001
+      operation: searchAuditEvents
+      view: qualification, metric policy, reconciliation, correction, readiness, and pause/resume decision receipts
+      required_information: [actor/function, event kind, object HMAC, exact digest, prior/current version, reason, timestamp]
+  states:
+    LOADING: skeleton preserves heading/metric layout and announces loading once
+    EMPTY: explains no eligible cohort and distinguishes NOT_APPLICABLE from zero
+    PARTIAL: renders known values plus a prominent unknown-source count and excluded scope
+    STALE: shows last-known value, cutoff, stale source, consequence, and owner; never green
+    ERROR: preserves request/trace receipt, retry eligibility, and unaffected known sections
+    BLOCKED: names failed readiness/trust/reconciliation gate and remediation owner
+  action_rule: Business panels are read-only evidence views; existing reviewed budget/provider/kill-switch actions keep their own exact operation and approval path. No dashboard click mutates a commercial, editorial, or accounting fact.
+
+operating_cadence:
+  daily: source/data readiness, queue/provider, delivery reconciliation, telemetry gaps, incidents, budget and hard-stop review
+  weekly: qualification/onboarding losses, activation blockers, AI/evidence quality, at-risk organizations, support load, and corrective experiments
+  monthly: matured activation/retention cohorts, invoice membership, recognized revenue, margin, CAC, SLA, churn, trust incidents, and continuation/pause decision
+  quarterly: source rights, restore, accessibility, conflict/funding concentration, pricing policy, free boundary, and product stop/pivot review
+
+acceptance:
+  feature: tests/acceptance/business-model-addendum.feature
+  feature_tag: '@additive-review'
+  contract_status: REVIEW_REQUIRED
+  scenario_count: 41
+  metric_dictionary: implementation-evidence/business-model-metric-dictionary.md
+  required_execution_mapping:
+    path: tests/acceptance/supplemental-executable-mapping.yaml
+    current_status: CATALOG_PRESENT_IMPLEMENTATION_MISSING
+    current_truth: All 41 scenario IDs are present once with skip_policy FORBIDDEN, but each is implementation_status MISSING, the declared tests/integration/acceptance/business_model_addendum.rs path is absent, and the declared gurine-acceptance-tests package/commands are not executable.
+    rule: Every AC-BUSINESS_MODEL scenario requires exactly one skip_policy FORBIDDEN mapping with a present implementation path and an executing command before release freeze.
+  final_tag_rule: '@final is forbidden while any open_cross_file_blockers row is OPEN or the supplemental mapping/runtime evidence is absent.'
+  hard_rules:
+    - Every metric ID in this contract appears exactly once in the dictionary, declares breach_action, and exposes all required evidence fields.
+    - All formulas use the same named metric versions, half-open windows, timezone, correction heads, and half-even arithmetic in API, UI, export, and tests.
+    - No skipped, fixture-only, placeholder, 501, generic JSON, or analytics-only implementation satisfies a production business gate.
+    - A release cannot claim business-model LGTM until database, operation, screen, runtime, and production-evidence mappings above are implemented and independently reviewed on one frozen digest.

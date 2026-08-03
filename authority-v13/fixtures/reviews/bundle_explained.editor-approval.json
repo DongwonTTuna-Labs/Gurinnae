@@ -1,0 +1,17 @@
+{
+  "review_decision_id": "review_decision_fixture_bundle_editor",
+  "case_id": "case_fixture_bundle_explained",
+  "review_snapshot_hash": "2c84934153231ae14b41d047febc3776336a9ac8208cc29666d8b84b05cde1ef",
+  "reviewer": {
+    "actor_type": "HUMAN",
+    "actor_id": "editor_fixture_03",
+    "display_role": "editor"
+  },
+  "reviewer_role": "EDITOR",
+  "decision": "APPROVE",
+  "conditions": [],
+  "reason": "묶음 구성이 확인되어 설명 완료 상태와 공개 문구를 승인했다.",
+  "policy_version": "editorial-1.0.0",
+  "created_at": "2026-02-01T02:00:00Z",
+  "revoked_at": null
+}

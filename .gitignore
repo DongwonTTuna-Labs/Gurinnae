@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+!.env.*.example
+.DS_Store
+/coverage/
+reports/
+artifacts/
+node_modules/
+target/
+apps/*/.svelte-kit/
+apps/*/build/
+playwright-report/
+test-results/

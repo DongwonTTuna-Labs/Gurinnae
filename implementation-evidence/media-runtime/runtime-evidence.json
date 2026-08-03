@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "media-runtime-activation.v1",
+  "authoritySourceSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "builderImage": "debian:bookworm@sha256:30482e873082e906a4908c10529180aefb6f77620aea7404b909829fadc5d168",
+  "ffmpeg": {
+    "version": "8.0.1",
+    "binarySha256": "93a42a60fc6537be5c5b527f4dc2bc2d18b58b534ec68fef666628b2d734a4ff",
+    "ffprobeSha256": "f0ea800ccf6ad3508041277cca34e0a54e99ae770c0ebdf644c5745501a863d8",
+    "sourceSha256": "05ee0b03119b45c0bdb4df654b96802e909e0a752f72e4fe3794f487229e5a41",
+    "buildconfSha256": "cd775760b4cd13b8a982df2705ca201005bfc17b706061944bfe3a5daf9e72f5",
+    "licenseOutputSha256": "a0abd25510978f275a835fce3f90affce1d580efdc7b37edc17b7a57b2e9e9fd",
+    "effectiveLicense": "LGPL-2.1-or-later",
+    "networkProtocols": 0,
+    "externalLibraries": []
+  },
+  "whisperCpp": {
+    "version": "1.9.1",
+    "sourceSha256": "147267177eef7b22ec3d2476dd514d1b12e160e176230b740e3d1bd600118447",
+    "modelId": "whisper-large-v3-turbo-multilingual",
+    "modelSha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+    "modelByteLength": 1624555275,
+    "executableSha256": "8ab140a6f8db16cbdd29f0abb34bb27a53a73d31974d1abcc595b0bfc43795d8",
+    "license": "MIT",
+    "dynamicDependencies": [
+      "libstdc++.so.6",
+      "libm.so.6",
+      "libgcc_s.so.1",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ]
+  },
+  "reproducibility": {
+    "dockerTarget": "media-runtime-build",
+    "dockerTag": "gurine-document-extractor:final",
+    "documentExtractorOciDigest": "sha256:9f33d67998fb1333b93fcf5f190a2e871c3c6595c52a442596fc911de26024ad",
+    "modelAuthorityNote": "The authority commit URL predates the model file; the pinned content SHA-256 is identical and was fetched from the immutable repository main revision after verifying the stated byte length and digest."
+  }
+}

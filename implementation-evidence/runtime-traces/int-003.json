@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "INT-003",
+  "route": "/internal/search",
+  "url": "http://127.0.0.1:29102/internal/search",
+  "observedAt": "2026-07-19T15:35:38.988Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "INT-003",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "query",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "types",
+        "component": "EvidenceLedger",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "results",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "recent",
+        "component": "RevisionTimeline",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 6,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -1,0 +1,354 @@
+[
+  {
+    "connector_id": "alio",
+    "id": "alio-manifest",
+    "method": "GET",
+    "kind": "manifest",
+    "remote_path": "",
+    "pagination": "manifest-documents-array"
+  },
+  {
+    "connector_id": "alio",
+    "id": "alio-document",
+    "method": "GET",
+    "kind": "document",
+    "remote_path": "",
+    "pagination": "manifest-order"
+  },
+  {
+    "connector_id": "audit-results",
+    "id": "audit-results-manifest",
+    "method": "GET",
+    "kind": "manifest",
+    "remote_path": "",
+    "pagination": "manifest-documents-array"
+  },
+  {
+    "connector_id": "audit-results",
+    "id": "audit-result-document",
+    "method": "GET",
+    "kind": "document",
+    "remote_path": "",
+    "pagination": "manifest-order"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-goods-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getCntrctInfoListThng",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-goods-detail",
+    "method": "GET",
+    "kind": "detail",
+    "remote_path": "/getCntrctInfoListThngDetail",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-goods-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getCntrctInfoListThngChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-goods-delete",
+    "method": "GET",
+    "kind": "delete",
+    "remote_path": "/getCntrctInfoListThngDltHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-construction-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getCntrctInfoListCnstwk",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-construction-detail",
+    "method": "GET",
+    "kind": "detail",
+    "remote_path": "/getCntrctInfoListCnstwkDetail",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-construction-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getCntrctInfoListCnstwkChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-construction-delete",
+    "method": "GET",
+    "kind": "delete",
+    "remote_path": "/getCntrctInfoListCnstwkDltHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-service-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getCntrctInfoListServc",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-service-detail",
+    "method": "GET",
+    "kind": "detail",
+    "remote_path": "/getCntrctInfoListServcDetail",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-service-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getCntrctInfoListServcChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-service-delete",
+    "method": "GET",
+    "kind": "delete",
+    "remote_path": "/getCntrctInfoListServcDltHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-foreign-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getCntrctInfoListFrgcpt",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-foreign-detail",
+    "method": "GET",
+    "kind": "detail",
+    "remote_path": "/getCntrctInfoListFrgcptDetail",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-foreign-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getCntrctInfoListFrgcptChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-contracts",
+    "id": "contract-foreign-delete",
+    "method": "GET",
+    "kind": "delete",
+    "remote_path": "/getCntrctInfoListFrgcptDltHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-goods-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getBidPblancListInfoThng",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-goods-search",
+    "method": "GET",
+    "kind": "search",
+    "remote_path": "/getBidPblancListInfoThngPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-goods-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getBidPblancListInfoThngChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-construction-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getBidPblancListInfoCnstwk",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-construction-search",
+    "method": "GET",
+    "kind": "search",
+    "remote_path": "/getBidPblancListInfoCnstwkPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-construction-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getBidPblancListInfoCnstwkChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-service-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getBidPblancListInfoServc",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-service-search",
+    "method": "GET",
+    "kind": "search",
+    "remote_path": "/getBidPblancListInfoServcPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-service-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getBidPblancListInfoServcChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-foreign-list",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/getBidPblancListInfoFrgcpt",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-foreign-search",
+    "method": "GET",
+    "kind": "search",
+    "remote_path": "/getBidPblancListInfoFrgcptPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-foreign-change",
+    "method": "GET",
+    "kind": "change",
+    "remote_path": "/getBidPblancListInfoFrgcptChgHstry",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-goods-base-amount",
+    "method": "GET",
+    "kind": "base_amount",
+    "remote_path": "/getBidPblancListInfoThngBsisAmount",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-construction-base-amount",
+    "method": "GET",
+    "kind": "base_amount",
+    "remote_path": "/getBidPblancListInfoCnstwkBsisAmount",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-service-base-amount",
+    "method": "GET",
+    "kind": "base_amount",
+    "remote_path": "/getBidPblancListInfoServcBsisAmount",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-license-restriction",
+    "method": "GET",
+    "kind": "restriction",
+    "remote_path": "/getBidPblancListInfoLicenseLimit",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-notices",
+    "id": "notice-region-eligibility",
+    "method": "GET",
+    "kind": "eligibility",
+    "remote_path": "/getBidPblancListInfoPrtcptPsblRgn",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "local-finance",
+    "id": "local-finance-disclosures",
+    "method": "GET",
+    "kind": "official-link-entry",
+    "remote_path": "",
+    "pagination": "none"
+  },
+  {
+    "connector_id": "local-finance",
+    "id": "local-finance-subsidies",
+    "method": "GET",
+    "kind": "official-link-entry",
+    "remote_path": "",
+    "pagination": "none"
+  },
+  {
+    "connector_id": "local-finance",
+    "id": "local-finance-statistics",
+    "method": "GET",
+    "kind": "official-link-entry",
+    "remote_path": "",
+    "pagination": "none"
+  },
+  {
+    "connector_id": "open-dart",
+    "id": "dart-corp-code",
+    "method": "GET",
+    "kind": "snapshot-zip-xml",
+    "remote_path": "/corpCode.xml",
+    "pagination": "none"
+  },
+  {
+    "connector_id": "open-dart",
+    "id": "dart-company",
+    "method": "GET",
+    "kind": "detail",
+    "remote_path": "/company.json",
+    "pagination": "none"
+  },
+  {
+    "connector_id": "open-dart",
+    "id": "dart-disclosures",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/list.json",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "open-dart",
+    "id": "dart-financial-statements",
+    "method": "GET",
+    "kind": "list",
+    "remote_path": "/fnlttSinglAcntAll.json",
+    "pagination": "none"
+  }
+]

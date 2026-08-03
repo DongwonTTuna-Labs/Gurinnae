@@ -1,0 +1,1181 @@
+openapi: 3.1.0
+info:
+  title: Gurine Internal Identity Service API
+  version: 13.0.0
+  description: Private Identity API used only by the Review Console BFF. Every call requires a single-use, request-bound Gurine
+    service assertion v1.
+servers:
+- url: http://identity-api:8083
+tags:
+- name: identity-internal
+paths:
+  /internal/v1/oidc/login-transactions:
+    post:
+      operationId: createLoginTransaction
+      summary: Create an anonymous LOGIN state/nonce/PKCE transaction.
+      tags:
+      - identity-internal
+      security:
+      - ServiceAssertion: []
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: true
+        schema: &id001
+          type: string
+          format: uuid
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLoginTransactionRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLoginTransactionResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REQUIRED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_EXPIRED,
+            SERVICE_ASSERTION_AUDIENCE_MISMATCH, SERVICE_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: &id002
+          - SERVICE_ASSERTION_REQUIRED
+          - SERVICE_ASSERTION_INVALID
+          - SERVICE_ASSERTION_EXPIRED
+          - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+          - SERVICE_ASSERTION_REQUEST_MISMATCH
+        '409':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: &id003
+          - SERVICE_ASSERTION_REPLAYED
+        '502':
+          description: OIDC provider failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      x-error-codes:
+      - SERVICE_ASSERTION_REQUIRED
+      - SERVICE_ASSERTION_INVALID
+      - SERVICE_ASSERTION_EXPIRED
+      - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+      - SERVICE_ASSERTION_REQUEST_MISMATCH
+      - SERVICE_ASSERTION_REPLAYED
+  /internal/v1/oidc/login-callbacks:
+    post:
+      operationId: consumeLoginCallback
+      summary: Consume a LOGIN transaction and create an opaque internal session.
+      tags:
+      - identity-internal
+      security:
+      - ServiceAssertion: []
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumeLoginCallbackRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumeLoginCallbackResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REQUIRED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_EXPIRED,
+            SERVICE_ASSERTION_AUDIENCE_MISMATCH, SERVICE_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id002
+        '409':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id003
+        '502':
+          description: OIDC provider failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      x-error-codes:
+      - SERVICE_ASSERTION_REQUIRED
+      - SERVICE_ASSERTION_INVALID
+      - SERVICE_ASSERTION_EXPIRED
+      - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+      - SERVICE_ASSERTION_REQUEST_MISMATCH
+      - SERVICE_ASSERTION_REPLAYED
+  /internal/v1/oidc/step-up-transactions:
+    post:
+      operationId: createStepUpTransaction
+      summary: Create a session- and action-bound STEP_UP transaction.
+      tags:
+      - identity-internal
+      security:
+      - ServiceAssertion: []
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStepUpTransactionRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateStepUpTransactionResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REQUIRED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_EXPIRED,
+            SERVICE_ASSERTION_AUDIENCE_MISMATCH, SERVICE_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id002
+        '409':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id003
+        '502':
+          description: OIDC provider failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      x-error-codes:
+      - SERVICE_ASSERTION_REQUIRED
+      - SERVICE_ASSERTION_INVALID
+      - SERVICE_ASSERTION_EXPIRED
+      - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+      - SERVICE_ASSERTION_REQUEST_MISMATCH
+      - SERVICE_ASSERTION_REPLAYED
+  /internal/v1/oidc/step-up-callbacks:
+    post:
+      operationId: consumeStepUpCallback
+      summary: Consume STEP_UP callback and issue a one-time action proof.
+      tags:
+      - identity-internal
+      security:
+      - ServiceAssertion: []
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumeStepUpCallbackRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsumeStepUpCallbackResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REQUIRED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_EXPIRED,
+            SERVICE_ASSERTION_AUDIENCE_MISMATCH, SERVICE_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id002
+        '409':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id003
+        '502':
+          description: OIDC provider failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      x-error-codes:
+      - SERVICE_ASSERTION_REQUIRED
+      - SERVICE_ASSERTION_INVALID
+      - SERVICE_ASSERTION_EXPIRED
+      - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+      - SERVICE_ASSERTION_REQUEST_MISMATCH
+      - SERVICE_ASSERTION_REPLAYED
+  /internal/v1/sessions/resolve:
+    post:
+      operationId: resolveInternalSession
+      summary: Resolve opaque session state; does not issue an Actor Assertion.
+      tags:
+      - identity-internal
+      security:
+      - ServiceAssertion: []
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveSessionRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveSessionResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REQUIRED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_EXPIRED,
+            SERVICE_ASSERTION_AUDIENCE_MISMATCH, SERVICE_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id002
+        '409':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id003
+        '502':
+          description: OIDC provider failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      x-error-codes: &id004
+      - SERVICE_ASSERTION_REQUIRED
+      - SERVICE_ASSERTION_INVALID
+      - SERVICE_ASSERTION_EXPIRED
+      - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+      - SERVICE_ASSERTION_REQUEST_MISMATCH
+      - SERVICE_ASSERTION_REPLAYED
+  /internal/v1/sessions/revoke:
+    post:
+      operationId: revokeInternalSession
+      summary: Revoke the current opaque session.
+      tags:
+      - identity-internal
+      security:
+      - ServiceAssertion: []
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeSessionRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeSessionResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REQUIRED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_EXPIRED,
+            SERVICE_ASSERTION_AUDIENCE_MISMATCH, SERVICE_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id002
+        '409':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id003
+        '502':
+          description: OIDC provider failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      x-error-codes:
+      - SERVICE_ASSERTION_REQUIRED
+      - SERVICE_ASSERTION_INVALID
+      - SERVICE_ASSERTION_EXPIRED
+      - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+      - SERVICE_ASSERTION_REQUEST_MISMATCH
+      - SERVICE_ASSERTION_REPLAYED
+  /internal/v1/security-management-redirect:
+    post:
+      operationId: getSecurityManagementRedirectInternal
+      summary: Build the configured provider security-management redirect.
+      tags:
+      - identity-internal
+      security:
+      - ServiceAssertion: []
+      parameters:
+      - name: X-Request-ID
+        in: header
+        required: true
+        schema: *id001
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecurityManagementRedirectRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityManagementRedirectResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REQUIRED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_EXPIRED,
+            SERVICE_ASSERTION_AUDIENCE_MISMATCH, SERVICE_ASSERTION_REQUEST_MISMATCH'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id002
+        '409':
+          description: 'Service assertion failure: SERVICE_ASSERTION_REPLAYED'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: *id003
+        '502':
+          description: OIDC provider failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      x-error-codes:
+      - SERVICE_ASSERTION_REQUIRED
+      - SERVICE_ASSERTION_INVALID
+      - SERVICE_ASSERTION_EXPIRED
+      - SERVICE_ASSERTION_AUDIENCE_MISMATCH
+      - SERVICE_ASSERTION_REQUEST_MISMATCH
+      - SERVICE_ASSERTION_REPLAYED
+  /internal/v1/actor-assertions:
+    post:
+      operationId: issueActorAssertion
+      tags:
+      - identity-internal
+      summary: Issue a request-bound actor assertion
+      security:
+      - ServiceAssertion: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueActorAssertionRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueActorAssertionResponse'
+        '400':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '401':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '403':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '409':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '422':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '500':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '502':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+      x-error-codes: *id004
+  /internal/v1/step-up-authorizations/close:
+    post:
+      operationId: closeStepUpAuthorization
+      tags:
+      - identity-internal
+      summary: Close a bounded step-up authorization grant
+      security:
+      - ServiceAssertion: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseStepUpAuthorizationRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloseStepUpAuthorizationResponse'
+        '400':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '401':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '403':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '409':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '422':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+        '500':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '502':
+          description: Problem response
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+          x-error-codes: []
+      x-error-codes: *id004
+components:
+  securitySchemes:
+    ServiceAssertion:
+      type: apiKey
+      in: header
+      name: X-Gurine-Service-Assertion
+      description: gurine-sa-v1 compact HMAC-SHA-256 assertion; request-bound and single-use.
+  schemas:
+    ProblemDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        type: &id007
+          type: string
+          format: uri-reference
+        title: &id005
+          type: string
+        status:
+          type: integer
+        detail: *id005
+        requestId: *id001
+        code: *id005
+      required:
+      - type
+      - title
+      - status
+      - requestId
+      - code
+    RequestContext:
+      type: object
+      additionalProperties: false
+      properties:
+        ipHash: &id006
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        userAgentHash: *id006
+        requestId: *id001
+      required:
+      - ipHash
+      - userAgentHash
+      - requestId
+    ActorIdentity:
+      type: object
+      additionalProperties: false
+      properties:
+        userId: *id001
+        email:
+          type: string
+          format: email
+        displayName: *id005
+        roleCodes:
+          type: array
+          items: *id005
+        capabilities:
+          type: array
+          items: *id005
+      required:
+      - userId
+      - email
+      - displayName
+      - roleCodes
+      - capabilities
+    CreateLoginTransactionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        returnTo: *id007
+        callbackUri: *id007
+        context:
+          $ref: '#/components/schemas/RequestContext'
+      required:
+      - returnTo
+      - callbackUri
+      - context
+    CreateLoginTransactionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        transactionCookieValue: *id005
+        authorizationUrl: *id007
+        expiresAt: &id008
+          type: string
+          format: date-time
+        sameSite:
+          type: string
+          const: Lax
+        httpOnly:
+          type: boolean
+          const: true
+        secure:
+          type: boolean
+        path:
+          type: string
+          const: /auth/callback
+        domainMode:
+          type: string
+          const: HOST_ONLY
+      required:
+      - transactionCookieValue
+      - authorizationUrl
+      - expiresAt
+      - sameSite
+      - httpOnly
+      - secure
+      - path
+      - domainMode
+    ConsumeLoginCallbackRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        transactionCookieValue: *id005
+        code: *id005
+        state: *id005
+        issuer: *id007
+        context:
+          $ref: '#/components/schemas/RequestContext'
+      required:
+      - transactionCookieValue
+      - code
+      - state
+      - context
+    ConsumeLoginCallbackResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken: *id005
+        csrfToken: *id005
+        returnTo: *id007
+        expiresAt: *id008
+        actor:
+          $ref: '#/components/schemas/ActorIdentity'
+        sessionCookiePath:
+          type: string
+          const: /
+        sessionCookieDomainMode:
+          type: string
+          const: HOST_ONLY
+        sessionCookieSameSite:
+          type: string
+          const: Lax
+        csrfStorage:
+          type: string
+          const: SEALED_BFF_SESSION_SYNCHRONIZER
+      required:
+      - opaqueSessionToken
+      - csrfToken
+      - returnTo
+      - expiresAt
+      - actor
+      - sessionCookiePath
+      - sessionCookieDomainMode
+      - sessionCookieSameSite
+      - csrfStorage
+    CreateStepUpTransactionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken: *id005
+        csrfToken: *id005
+        returnTo: *id007
+        callbackUri: *id007
+        context:
+          $ref: '#/components/schemas/RequestContext'
+        actionContext:
+          $ref: '#/components/schemas/ActionAuthorizationContext'
+      required:
+      - opaqueSessionToken
+      - csrfToken
+      - returnTo
+      - callbackUri
+      - context
+      - actionContext
+    CreateStepUpTransactionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        transactionCookieValue: *id005
+        authorizationUrl: *id007
+        expiresAt: *id008
+        sameSite:
+          type: string
+          const: Lax
+        httpOnly:
+          type: boolean
+          const: true
+        secure:
+          type: boolean
+        path:
+          type: string
+          const: /auth/step-up/callback
+        domainMode:
+          type: string
+          const: HOST_ONLY
+      required:
+      - transactionCookieValue
+      - authorizationUrl
+      - expiresAt
+      - sameSite
+      - httpOnly
+      - secure
+      - path
+      - domainMode
+    ConsumeStepUpCallbackRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken: *id005
+        transactionCookieValue: *id005
+        code: *id005
+        state: *id005
+        issuer: *id007
+        context:
+          $ref: '#/components/schemas/RequestContext'
+      required:
+      - opaqueSessionToken
+      - transactionCookieValue
+      - code
+      - state
+      - context
+    ConsumeStepUpCallbackResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        stepUpAuthorizationId:
+          type: string
+          format: uuid
+        stepUpAuthorizationToken:
+          type: string
+          minLength: 43
+          maxLength: 256
+        actionDigest:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        idempotencyKeySha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        returnTo:
+          type: string
+          format: uri-reference
+        expiresAt:
+          type: string
+          format: date-time
+        maxAssertionIssues:
+          type: integer
+          const: 3
+        csrfToken:
+          type: string
+          minLength: 43
+          maxLength: 64
+        authorizationCookiePath:
+          type: string
+          const: /internal
+        authorizationCookieDomainMode:
+          type: string
+          const: HOST_ONLY
+        authorizationCookieSameSite:
+          type: string
+          const: Strict
+      required:
+      - stepUpAuthorizationId
+      - stepUpAuthorizationToken
+      - actionDigest
+      - idempotencyKeySha256
+      - returnTo
+      - expiresAt
+      - maxAssertionIssues
+      - csrfToken
+      - authorizationCookiePath
+      - authorizationCookieDomainMode
+      - authorizationCookieSameSite
+    ResolveSessionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken: *id005
+        context:
+          $ref: '#/components/schemas/RequestContext'
+      required:
+      - opaqueSessionToken
+      - context
+    ResolveSessionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        actor:
+          $ref: '#/components/schemas/ActorIdentity'
+        sessionExpiresAt: *id008
+        stepUpAt:
+          anyOf:
+          - *id008
+          - type: 'null'
+        csrfRotatedAt:
+          type: string
+          format: date-time
+        csrfTokenReturned:
+          type: boolean
+          const: false
+      required:
+      - actor
+      - sessionExpiresAt
+      - stepUpAt
+      - csrfRotatedAt
+      - csrfTokenReturned
+    RevokeSessionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken: *id005
+        reason: *id005
+        context:
+          $ref: '#/components/schemas/RequestContext'
+      required:
+      - opaqueSessionToken
+      - reason
+      - context
+    RevokeSessionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        revoked:
+          type: boolean
+          const: true
+        revokedAt: *id008
+        auditEventId: *id001
+      required:
+      - revoked
+      - revokedAt
+      - auditEventId
+    SecurityManagementRedirectRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken: *id005
+        returnTo: *id007
+        context:
+          $ref: '#/components/schemas/RequestContext'
+      required:
+      - opaqueSessionToken
+      - returnTo
+      - context
+    SecurityManagementRedirectResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        redirectUrl: *id007
+        expiresAt: *id008
+      required:
+      - redirectUrl
+      - expiresAt
+    ServiceAssertionToken:
+      type: string
+      pattern: ^gurine-sa-v1\.[a-f0-9]{16}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+      description: Compact service assertion defined by specs/auth/assertion-contract.yaml.
+    ActorAssertionToken:
+      type: string
+      pattern: ^gurine-aa-v1\.[a-f0-9]{16}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$
+      description: Compact actor assertion defined by specs/auth/assertion-contract.yaml.
+    ActionAuthorizationContext:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId:
+          type: string
+          pattern: ^[A-Za-z][A-Za-z0-9]{1,127}$
+        aggregateType:
+          type: string
+          pattern: ^[a-z][a-z0-9_.-]{0,127}$
+        aggregateId:
+          type: string
+          minLength: 1
+          maxLength: 200
+        expectedVersion:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+        businessPayloadSha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        idempotencyKeySha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      required:
+      - operationId
+      - aggregateType
+      - aggregateId
+      - expectedVersion
+      - businessPayloadSha256
+      - idempotencyKeySha256
+    DownstreamRequestBinding:
+      type: object
+      additionalProperties: false
+      properties:
+        method:
+          type: string
+          enum:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+        normalizedPath:
+          type: string
+          pattern: ^/v1/internal/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+$
+        querySha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        bodySha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        contentType:
+          type: string
+          enum:
+          - ''
+          - application/json
+        requestDigest:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        idempotencyKeySha256:
+          anyOf:
+          - type: string
+            pattern: ^[a-f0-9]{64}$
+          - type: 'null'
+      required:
+      - method
+      - normalizedPath
+      - querySha256
+      - bodySha256
+      - contentType
+      - requestDigest
+      - idempotencyKeySha256
+    IssueActorAssertionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken:
+          type: string
+        downstreamRequest:
+          $ref: '#/components/schemas/DownstreamRequestBinding'
+        operationId:
+          type: string
+          pattern: ^[A-Za-z][A-Za-z0-9]{1,127}$
+        requiredCapability:
+          type: string
+          pattern: ^[a-z][a-z0-9_.-]{0,127}$
+        actionContext:
+          anyOf:
+          - $ref: '#/components/schemas/ActionAuthorizationContext'
+          - type: 'null'
+        actionDigest:
+          anyOf:
+          - type: string
+            pattern: ^[a-f0-9]{64}$
+          - type: 'null'
+        stepUpAuthorizationToken:
+          anyOf:
+          - type: string
+            minLength: 43
+            maxLength: 256
+          - type: 'null'
+        context:
+          $ref: '#/components/schemas/RequestContext'
+        requiredAssuranceLevel:
+          type: string
+          enum:
+          - ACTIVE_SESSION
+          - RECENT_SESSION
+          - STEP_UP
+      required:
+      - opaqueSessionToken
+      - downstreamRequest
+      - operationId
+      - requiredCapability
+      - requiredAssuranceLevel
+      - actionContext
+      - actionDigest
+      - stepUpAuthorizationToken
+      - context
+    IssueActorAssertionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        actor:
+          $ref: '#/components/schemas/ActorIdentity'
+        actorAssertion:
+          $ref: '#/components/schemas/ActorAssertionToken'
+        assertionExpiresAt:
+          type: string
+          format: date-time
+        stepUpAuthorizationId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        remainingAssertionIssues:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 2
+          - type: 'null'
+        assuranceLevel:
+          type: string
+          enum:
+          - ACTIVE_SESSION
+          - RECENT_SESSION
+          - STEP_UP
+      required:
+      - actor
+      - actorAssertion
+      - assertionExpiresAt
+      - stepUpAuthorizationId
+      - remainingAssertionIssues
+      - assuranceLevel
+    CloseStepUpAuthorizationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        opaqueSessionToken:
+          type: string
+        stepUpAuthorizationToken:
+          type: string
+          minLength: 43
+          maxLength: 256
+        actionDigest:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        idempotencyKeySha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        context:
+          $ref: '#/components/schemas/RequestContext'
+      required:
+      - opaqueSessionToken
+      - stepUpAuthorizationToken
+      - actionDigest
+      - idempotencyKeySha256
+      - context
+    CloseStepUpAuthorizationResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        closed:
+          type: boolean
+        closedAt:
+          type: string
+          format: date-time
+      required:
+      - closed
+      - closedAt

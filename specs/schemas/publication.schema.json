@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.gurine.invalid/publication.schema.json",
+  "title": "PublicationRevision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "publication_id",
+    "revision_id",
+    "revision_number",
+    "case_id",
+    "slug",
+    "display_status",
+    "content_hash",
+    "title",
+    "summary",
+    "sections",
+    "claims",
+    "evidence",
+    "subjects",
+    "methodology",
+    "responses",
+    "corrections",
+    "source_freshness",
+    "published_at",
+    "review_summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "publication_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "revision_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "revision_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "supersedes_revision_id": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "case_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 120
+    },
+    "display_status": {
+      "enum": [
+        "PUBLISHED_ANOMALY",
+        "PUBLISHED_EXPLAINED",
+        "OFFICIALLY_CONFIRMED",
+        "CORRECTED",
+        "RETRACTED"
+      ]
+    },
+    "content_hash": {
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section_id", "heading", "blocks"],
+        "properties": {
+          "section_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]+$"
+          },
+          "heading": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "blocks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "enum": [
+                    "PARAGRAPH",
+                    "METRIC",
+                    "TABLE",
+                    "LIMITATION",
+                    "RESPONSE",
+                    "CORRECTION_NOTICE",
+                    "TIMELINE"
+                  ]
+                },
+                "text": {
+                  "type": ["string", "null"],
+                  "maxLength": 10000
+                },
+                "data": {
+                  "type": ["object", "array", "null"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim_id", "claim_type", "text_ko", "evidence_refs"],
+        "properties": {
+          "claim_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "claim_type": {
+            "enum": [
+              "FACT",
+              "CALCULATION",
+              "INFERENCE",
+              "LIMITATION",
+              "OFFICIAL_OUTCOME"
+            ]
+          },
+          "text_ko": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "evidence_refs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "common.schema.json#/$defs/evidence_ref"
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "evidence.schema.json"
+      }
+    },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "id", "display_name"],
+        "properties": {
+          "type": {
+            "enum": ["AGENCY", "SUPPLIER", "CONTRACT"]
+          },
+          "id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "public_url": {
+            "type": ["string", "null"],
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "methodology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_key", "rule_version", "calculation", "limitations"],
+      "properties": {
+        "rule_key": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_]+$"
+        },
+        "rule_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "calculation": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "reproducibility_bundle_url": {
+          "type": ["string", "null"],
+          "format": "uri"
+        }
+      }
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["party", "status", "display_text"],
+        "properties": {
+          "party": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "status": {
+            "enum": [
+              "RECEIVED",
+              "NO_RESPONSE_BY_DEADLINE",
+              "DECLINED",
+              "NOT_REQUIRED"
+            ]
+          },
+          "display_text": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "received_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "correction_id",
+          "severity",
+          "reason_code",
+          "published_at",
+          "summary"
+        ],
+        "properties": {
+          "correction_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "severity": {
+            "enum": ["MINOR", "MATERIAL", "CRITICAL"]
+          },
+          "reason_code": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "source_freshness": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "source_published_at",
+          "retrieved_at",
+          "content_sha256"
+        ],
+        "properties": {
+          "source_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "source_published_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "content_sha256": {
+            "$ref": "common.schema.json#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "published_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "review_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["editor_approval_count", "legal_reviewed", "policy_version"],
+      "properties": {
+        "editor_approval_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "legal_reviewed": {
+          "type": "boolean"
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    }
+  }
+}

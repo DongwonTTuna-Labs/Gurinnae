@@ -1,0 +1,32 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: SHARED_SUPPLIER_IDENTITY
+name: 업체 식별정보 공유
+version: 1.0.0
+required:
+- suppliers
+- contracts
+thresholds:
+  minimum_shared_strong_identifiers: 2
+  minimum_combined_contracts: 3
+  minimum_combined_amount: 50000000
+formula: two distinct suppliers share >=2 strong identifier hashes and contract with same agency
+blockers:
+- REQUIRED_FIELD_MISSING
+- IDENTITY_HASH_MISSING
+- INSUFFICIENT_CONTRACT_CONTEXT
+metamorphic:
+- supplier order irrelevant
+- display values never used
+- one weak shared identifier is insufficient
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/shared_supplier_identity.rs
+reference_evaluator: specs/detection/reference_evaluator.py

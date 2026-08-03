@@ -1,0 +1,162 @@
+{
+  "schema_version": "1.0.0",
+  "contract_id": "contract_fixture_price_target",
+  "source_document_ids": [
+    "srcdoc_fixture_price_target"
+  ],
+  "contract_number": "SYN-PRICE-TARGET",
+  "notice_id": "notice_fixture_price_target",
+  "award_id": "award_fixture_price_target",
+  "agency": {
+    "agency_id": "agency_fixture_saebit",
+    "name": "가상새빛시청",
+    "identity_status": "VERIFIED"
+  },
+  "supplier": {
+    "supplier_id": "supplier_fixture_alpha",
+    "name": "가상알파안전 주식회사",
+    "entity_type": "CORPORATION",
+    "identity_status": "VERIFIED",
+    "business_number_last4": "0001"
+  },
+  "contract_type": "GOODS",
+  "method": "OPEN_COMPETITION",
+  "method_basis": "합성 fixture의 계약 방법 설명",
+  "signed_at": "2025-06-15",
+  "starts_at": "2025-06-15",
+  "ends_at": "2026-05-31",
+  "status": "ACTIVE",
+  "amounts": {
+    "original": {
+      "currency": "KRW",
+      "amount_minor": 24000000,
+      "vat_basis": "INCLUDED"
+    },
+    "current": {
+      "currency": "KRW",
+      "amount_minor": 24000000,
+      "vat_basis": "INCLUDED"
+    }
+  },
+  "line_items": [
+    {
+      "line_item_id": "line_fixture_price_target_1",
+      "line_number": 1,
+      "raw_description": "합성 안전 단말기 S1 단품",
+      "category_code": "SYNTH-SAFETY-DEVICE",
+      "manufacturer": "가상제조사",
+      "model": "S1",
+      "variant": null,
+      "quantity": "10",
+      "unit_code": "EA",
+      "unit_price": {
+        "currency": "KRW",
+        "amount_minor": 2400000,
+        "vat_basis": "INCLUDED"
+      },
+      "total_price": {
+        "currency": "KRW",
+        "amount_minor": 24000000,
+        "vat_basis": "INCLUDED"
+      },
+      "vat_basis": "INCLUDED",
+      "bundle_status": "SINGLE_ITEM",
+      "specification": {
+        "grade": "S1",
+        "certification": "BASIC",
+        "warranty_months": 12,
+        "synthetic": true
+      },
+      "included_services": [],
+      "normalization_confidence": 0.99
+    }
+  ],
+  "field_provenance": {
+    "contract_number": {
+      "source_document_id": "srcdoc_fixture_price_target",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.contractNumber"
+      },
+      "raw_value_hash": "d91022ff41e76b59ec5310ea1168f05a1e888c645b35767a91d868eb40a78c9e",
+      "raw_value_preview": "SYN-PRICE-TARGET",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "agency.name": {
+      "source_document_id": "srcdoc_fixture_price_target",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.agencyName"
+      },
+      "raw_value_hash": "302e36dea45d857582000b01fe942efccff37526046eadbc0d3ef3fef5e95fac",
+      "raw_value_preview": "가상새빛시청",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "supplier.name": {
+      "source_document_id": "srcdoc_fixture_price_target",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.supplierName"
+      },
+      "raw_value_hash": "1c2ded9ecea03c2f0056f5c9c55ec513950f37162b6c853b035759f6fc537e96",
+      "raw_value_preview": "가상알파안전 주식회사",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "amounts.current": {
+      "source_document_id": "srcdoc_fixture_price_target",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.amount"
+      },
+      "raw_value_hash": "556cf7386651e12f6a3fce9e17f564039849e483b50e85acf029aa7cf946a444",
+      "raw_value_preview": "24000000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].quantity": {
+      "source_document_id": "srcdoc_fixture_price_target",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].quantity"
+      },
+      "raw_value_hash": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+      "raw_value_preview": "10",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].unit_price": {
+      "source_document_id": "srcdoc_fixture_price_target",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].unitPrice"
+      },
+      "raw_value_hash": "8a695bf3ea5c736dc240c7271be5baf5e27414229c06fa5ebf772c8c39e4d583",
+      "raw_value_preview": "2400000",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    },
+    "line_items[0].vat_basis": {
+      "source_document_id": "srcdoc_fixture_price_target",
+      "locator": {
+        "type": "API_FIELD",
+        "value": "$.items[0].vatBasis"
+      },
+      "raw_value_hash": "c77a4910d506fabde27cc281a5a48ed9e9a8f75f721eac77918ab30a3181b2be",
+      "raw_value_preview": "INCLUDED",
+      "parser_version": "fixture-parser-1.0.0",
+      "transform_version": "fixture-normalizer-1.0.0",
+      "confidence": 1.0
+    }
+  },
+  "normalization_version": "1.0.0",
+  "normalized_at": "2026-01-15T04:00:00Z"
+}

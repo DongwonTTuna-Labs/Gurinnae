@@ -1,0 +1,204 @@
+schema_version: 2
+specification_version: 13.0.0
+connector_id: open-dart
+authority: https://opendart.fss.or.kr/guide/main.do
+operations:
+- id: dart-corp-code
+  remote_operation: corpCode.xml
+  path: /corpCode.xml
+  kind: snapshot-zip-xml
+  method: GET
+  request_parameters:
+  - name: crtfc_key
+    required: true
+    source: credential
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - corp_code
+  remote_revision:
+    strategy: field-or-content-hash
+    fields:
+    - modify_date
+  response_envelope:
+    format: zip containing CORPCODE.xml
+    items: result.list
+    status: HTTP and XML parsing
+  checkpoint:
+    strategy: snapshot-digest
+    partition: corp-code
+  deletion_semantics: full snapshot reconciliation
+  contract_source: official-open-dart-guide
+  retry:
+    status_020: bounded backoff and quota incident
+    status_010_011_012_013: disable connector or reject request based on code
+    status_800_900: provider incident
+    http_5xx: bounded retry
+    malformed: quarantine raw bytes
+- id: dart-company
+  remote_operation: company.json
+  path: /company.json
+  kind: detail
+  method: GET
+  request_parameters:
+  - name: crtfc_key
+    required: true
+    source: credential
+  - name: corp_code
+    required: true
+    type: string(8)
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - corp_code
+  remote_revision:
+    strategy: content-hash
+    fields: []
+  response_envelope:
+    status: status
+    message: message
+    item: top-level object
+  checkpoint:
+    strategy: per-corp-content-hash
+    partition: company
+  deletion_semantics: corp-code snapshot reconciliation
+  contract_source: official-open-dart-guide
+  retry:
+    status_020: bounded backoff and quota incident
+    status_010_011_012_013: disable connector or reject request based on code
+    status_800_900: provider incident
+    http_5xx: bounded retry
+    malformed: quarantine raw bytes
+- id: dart-disclosures
+  remote_operation: list.json
+  path: /list.json
+  kind: list
+  method: GET
+  request_parameters:
+  - name: crtfc_key
+    required: true
+    source: credential
+  - name: corp_code
+    required: false
+    type: string(8)
+  - name: bgn_de
+    required: true
+    type: yyyyMMdd
+  - name: end_de
+    required: true
+    type: yyyyMMdd
+  - name: last_reprt_at
+    required: false
+    type: enum:Y,N
+  - name: pblntf_ty
+    required: false
+    type: string
+  - name: pblntf_detail_ty
+    required: false
+    type: string
+  - name: corp_cls
+    required: false
+    type: string
+  - name: sort
+    required: false
+    type: enum:date,crp,rpt
+  - name: sort_mth
+    required: false
+    type: enum:asc,desc
+  - name: page_no
+    required: true
+    type: integer
+    default: 1
+  - name: page_count
+    required: true
+    type: integer
+    default: 100
+    maximum: 100
+  pagination:
+    strategy: page-number
+    page_field: page_no
+    size_field: page_count
+    total_field: total_count
+    total_page_field: total_page
+  remote_identity:
+    strategy: field
+    primary_fields:
+    - rcept_no
+  remote_revision:
+    strategy: content-hash
+    fields:
+    - rcept_dt
+  response_envelope:
+    status: status
+    message: message
+    items: list
+    page: page_no
+    page_size: page_count
+    total: total_count
+  checkpoint:
+    strategy: date-window-with-overlap
+    watermark: end_de
+    overlap_days: 2
+    partition: disclosures
+  deletion_semantics: receipt number is immutable; amended disclosures remain separate receipts
+  contract_source: official-open-dart-guide
+  retry:
+    status_020: bounded backoff and quota incident
+    status_010_011_012_013: disable connector or reject request based on code
+    status_800_900: provider incident
+    http_5xx: bounded retry
+    malformed: quarantine raw bytes
+- id: dart-financial-statements
+  remote_operation: fnlttSinglAcntAll.json
+  path: /fnlttSinglAcntAll.json
+  kind: list
+  method: GET
+  request_parameters:
+  - name: crtfc_key
+    required: true
+    source: credential
+  - name: corp_code
+    required: true
+    type: string(8)
+  - name: bsns_year
+    required: true
+    type: yyyy
+  - name: reprt_code
+    required: true
+    type: enum:11011,11012,11013,11014
+  - name: fs_div
+    required: true
+    type: enum:CFS,OFS
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: composite
+    primary_fields:
+    - rcept_no
+    - sj_div
+    - account_id
+    - ord
+    composite_separator: '#'
+  remote_revision:
+    strategy: receipt-and-content-hash
+    fields:
+    - rcept_no
+  response_envelope:
+    status: status
+    message: message
+    items: list
+  checkpoint:
+    strategy: corp-year-report-matrix
+    partition: financial-statements
+  deletion_semantics: new receipt supersedes by business semantics; raw history retained
+  contract_source: official-open-dart-guide
+  retry:
+    status_020: bounded backoff and quota incident
+    status_010_011_012_013: disable connector or reject request based on code
+    status_800_900: provider incident
+    http_5xx: bounded retry
+    malformed: quarantine raw bytes

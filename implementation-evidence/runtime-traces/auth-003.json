@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "AUTH-003",
+  "route": "/auth/access-denied",
+  "url": "http://127.0.0.1:29102/auth/access-denied",
+  "observedAt": "2026-07-19T15:35:37.545Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "AUTH-003",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "message",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "actions",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "reference",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 6,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

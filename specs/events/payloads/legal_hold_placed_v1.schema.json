@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/legal-hold-placed-v1.json",
+  "title": "Legal Hold Placed v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "legalHoldId",
+    "caseId",
+    "reviewSnapshotId",
+    "objectType",
+    "objectId",
+    "scope",
+    "authorityReference",
+    "placedBy",
+    "placedAt",
+    "caseVersion"
+  ],
+  "properties": {
+    "legalHoldId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "caseId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "reviewSnapshotId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "objectType": {
+      "enum": ["CASE", "PUBLICATION", "EVIDENCE", "RESPONSE"]
+    },
+    "objectId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "scope": {
+      "enum": ["RETENTION", "DISCLOSURE", "DELETION", "ALL"]
+    },
+    "affectedIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "authorityReference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "expiresAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "placedBy": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "placedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "caseVersion": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-013",
+  "route": "/methodology",
+  "url": "http://127.0.0.1:29101/methodology",
+  "observedAt": "2026-07-19T15:35:26.540Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-013",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "overview",
+        "component": "LongFormArticle",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "pipeline",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "rules",
+        "component": "DataCollection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "ai",
+        "component": "AccessManagementPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "quality",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "changes",
+        "component": "RevisionTimeline",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

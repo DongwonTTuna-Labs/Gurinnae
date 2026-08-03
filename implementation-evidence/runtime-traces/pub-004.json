@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-004",
+  "route": "/cases/{caseSlug}",
+  "url": "http://127.0.0.1:29101/cases/synthetic-record",
+  "observedAt": "2026-07-19T15:35:23.272Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-004",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "status",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "READY"
+      },
+      {
+        "id": "known",
+        "component": "KnownUnknownResponse",
+        "projectionState": "READY"
+      },
+      {
+        "id": "unknown",
+        "component": "KnownUnknownResponse",
+        "projectionState": "READY"
+      },
+      {
+        "id": "response",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "READY"
+      },
+      {
+        "id": "comparison",
+        "component": "ComparisonWorkbench",
+        "projectionState": "READY"
+      },
+      {
+        "id": "counter",
+        "component": "EvidenceLedger",
+        "projectionState": "READY"
+      },
+      {
+        "id": "evidence",
+        "component": "EvidenceLedger",
+        "projectionState": "READY"
+      },
+      {
+        "id": "timeline",
+        "component": "RevisionTimeline",
+        "projectionState": "READY"
+      },
+      {
+        "id": "revision",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "PARTIAL"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 12,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

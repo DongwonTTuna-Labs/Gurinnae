@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/source-locator-verify-request.json",
+  "title": "SourceLocatorVerifyRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputSnapshotId",
+    "inputSnapshotSha256",
+    "sourceKind",
+    "sourceIdentity",
+    "locator",
+    "expectedSelectedContentSha256",
+    "expectedSupportsSha256",
+    "normalizationVersion"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "source.locator_verify.request.v2"
+    },
+    "runId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "inputSnapshotId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "inputSnapshotSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "sourceKind": {
+      "enum": ["EVIDENCE_SEGMENT", "RUN_TOOL_ARTIFACT"]
+    },
+    "sourceIdentity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "evidenceSegmentId",
+            "sourceDocumentId",
+            "sourceAssetId",
+            "sourceAssetRevision",
+            "sourceContentSha256",
+            "snapshotMemberId",
+            "snapshotMemberDigest"
+          ],
+          "properties": {
+            "kind": {
+              "const": "EVIDENCE_SEGMENT"
+            },
+            "evidenceSegmentId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sourceDocumentId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sourceAssetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sourceAssetRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sourceContentSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "snapshotMemberId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "snapshotMemberDigest": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "researchArtifactId",
+            "assetId",
+            "assetRevision",
+            "artifactSha256",
+            "contentSha256"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RUN_TOOL_ARTIFACT"
+            },
+            "researchArtifactId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "assetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "assetRevision": {
+              "const": 1
+            },
+            "artifactSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "contentSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "locator": {
+      "$ref": "#/$defs/locator"
+    },
+    "expectedSelectedContentSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "expectedSupportsSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "normalizationVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "locatorSha256"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH",
+            "JSON_POINTER",
+            "HTML_CSS_SELECTOR",
+            "API_FIELD",
+            "TEXT_RANGE",
+            "IMAGE_BBOX",
+            "AUDIO_TIME_RANGE",
+            "VIDEO_TIME_RANGE",
+            "VIDEO_REGION_TIME"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "locatorSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

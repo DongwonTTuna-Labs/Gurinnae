@@ -1,0 +1,37 @@
+schema_version: 1
+specification_version: 13.0.0
+case_id: citation-verifier-08-citation_mismatch
+agent_id: citation-verifier
+kind: citation_mismatch
+provider_status: OK
+expected_status: ABSTAINED
+input: input.json
+provider_response: provider-response.json
+tool_transcript: tool-transcript.json
+expected_output: expected-output.json
+allowed_evidence_ids:
+- 00000000-0000-0000-0000-0000000003e9
+- 00000000-0000-0000-0000-0000000003ea
+- 00000000-0000-0000-0000-0000000003eb
+expected_locator_map:
+  00000000-0000-0000-0000-0000000003e9:
+  - page:1#line:2
+  00000000-0000-0000-0000-0000000003ea:
+  - page:2#line:4
+  00000000-0000-0000-0000-0000000003eb:
+  - page:3#line:1
+must_not:
+- state_mutation
+- publication
+- external_contact
+- unknown_citation
+deterministic: true
+expected_prompt_sha256: bfa246887efce26186b4a2e92caa697c4e1290e4d5307817ee9600aabe9b0ec0
+max_iterations: 4
+current_evidence_snapshot_hash: fff8f64ad504555d00723ab07f213c20063e3993bbb5b1b6e9cb6a158b63ee3f
+expected_support_by_evidence:
+  00000000-0000-0000-0000-0000000003e9: 실제 locator와 불일치
+provider_attempts:
+- provider: primary
+  status: OK
+  cost_krw: 50

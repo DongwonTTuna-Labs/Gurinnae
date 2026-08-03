@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-024",
+  "route": "/about/governance",
+  "url": "http://127.0.0.1:29101/about/governance",
+  "observedAt": "2026-07-19T15:35:30.408Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-024",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "structure",
+        "component": "OperationsStatusPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "independence",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "conflicts",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "oversight",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "appeal",
+        "component": "RevisionAndCorrectionPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "records",
+        "component": "RevisionTimeline",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

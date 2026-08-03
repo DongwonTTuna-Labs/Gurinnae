@@ -1,0 +1,381 @@
+schema_version: 3
+specification_version: 13.0.0
+status: FINAL
+dependency_direction:
+- domain <- application/publication-policy
+- application ports <- persistence/connectors/email/object-store/auth/egress adapters
+- services compose crates; business rules do not live in handlers
+- SvelteKit apps consume generated clients only through handwritten server-only wrappers
+members:
+- path: crates/agent-orchestration
+  layer: crate
+  required_modules:
+  - lib.rs
+  - policy.rs
+  - providers.rs
+  - runs.rs
+  - schema_validation.rs
+  - prompt_isolation.rs
+  - cost.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/api-contracts
+  layer: crate
+  required_modules:
+  - lib.rs
+  - common.rs
+  - public/mod.rs
+  - control/mod.rs
+  - submission/mod.rs
+  - problem.rs
+  - openapi.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/application
+  layer: crate
+  required_modules:
+  - lib.rs
+  - ports/mod.rs
+  - commands/mod.rs
+  - queries/mod.rs
+  - services/mod.rs
+  - authorization.rs
+  - transactions.rs
+  - idempotency.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/auth
+  layer: crate
+  required_modules:
+  - lib.rs
+  - oidc.rs
+  - session.rs
+  - csrf.rs
+  - reauth.rs
+  - response_token.rs
+  - assertion/mod.rs
+  - assertion/canonical.rs
+  - assertion/service.rs
+  - assertion/actor.rs
+  - assertion/errors.rs
+  - assertion/replay.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/detection
+  layer: crate
+  required_modules:
+  - lib.rs
+  - engine.rs
+  - rules/mod.rs
+  - cohort.rs
+  - calculation.rs
+  - exclusions.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/domain
+  layer: crate
+  required_modules:
+  - lib.rs
+  - ids.rs
+  - money.rs
+  - time.rs
+  - agency.rs
+  - supplier.rs
+  - contract.rs
+  - signal.rs
+  - case.rs
+  - evidence.rs
+  - claim.rs
+  - response.rs
+  - publication.rs
+  - job.rs
+  - error.rs
+  forbidden_dependencies_or_patterns:
+  - actix-web
+  - sqlx
+  - serde_json::Value
+  - std::env
+  - provider SDK
+- path: crates/email
+  layer: crate
+  required_modules:
+  - lib.rs
+  - port.rs
+  - smtp.rs
+  - templates.rs
+  - outbox.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/identity-resolution
+  layer: crate
+  required_modules:
+  - lib.rs
+  - agency.rs
+  - supplier.rs
+  - aliases.rs
+  - confidence.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/ingestion
+  layer: crate
+  required_modules:
+  - lib.rs
+  - connector.rs
+  - fetch.rs
+  - raw_store.rs
+  - checkpoint.rs
+  - schema_drift.rs
+  - reconcile.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/jobs
+  layer: crate
+  required_modules:
+  - lib.rs
+  - queue.rs
+  - lease.rs
+  - retry.rs
+  - fencing.rs
+  - handlers.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/normalization
+  layer: crate
+  required_modules:
+  - lib.rs
+  - contract.rs
+  - unit.rs
+  - money.rs
+  - provenance.rs
+  - quality.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/object-store
+  layer: crate
+  required_modules:
+  - lib.rs
+  - port.rs
+  - s3.rs
+  - filesystem.rs
+  - quarantine.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/observability
+  layer: crate
+  required_modules:
+  - lib.rs
+  - tracing.rs
+  - metrics.rs
+  - redaction.rs
+  - health.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/persistence-postgres
+  layer: crate
+  required_modules:
+  - lib.rs
+  - pool.rs
+  - transaction.rs
+  - repositories/mod.rs
+  - queries/mod.rs
+  - outbox.rs
+  - jobs.rs
+  - mappers/mod.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/publication-policy
+  layer: crate
+  required_modules:
+  - lib.rs
+  - gates.rs
+  - language.rs
+  - snapshot.rs
+  - correction.rs
+  - retraction.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/source-connectors
+  layer: crate
+  required_modules:
+  - lib.rs
+  - data_go_kr.rs
+  - koneps.rs
+  - local_finance.rs
+  - alio.rs
+  - open_dart.rs
+  - audit_results.rs
+  forbidden_dependencies_or_patterns: []
+- path: crates/test-support
+  layer: crate
+  required_modules:
+  - lib.rs
+  - fixtures.rs
+  - database.rs
+  - actors.rs
+  - clock.rs
+  - http.rs
+  forbidden_dependencies_or_patterns: []
+- path: services/analysis-worker
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/control-api
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - app.rs
+  - routes/mod.rs
+  - middleware/mod.rs
+  - state.rs
+  - config.rs
+  - health.rs
+  - middleware/actor_assertion.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/document-extractor
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/egress-gateway
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/ingest-worker
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/migrator
+  layer: service
+  required_modules:
+  - main.rs
+  - config.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/notification-worker
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/oidc-test-provider
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/projection-worker
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/public-api
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - app.rs
+  - routes/mod.rs
+  - middleware/mod.rs
+  - state.rs
+  - config.rs
+  - health.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/scheduler
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - scheduler.rs
+  - reconciler.rs
+  - config.rs
+  - health.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/submission-api
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - app.rs
+  - routes/mod.rs
+  - middleware/mod.rs
+  - state.rs
+  - config.rs
+  - health.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: services/workflow-worker
+  layer: service
+  required_modules:
+  - main.rs
+  - lib.rs
+  - runner.rs
+  - config.rs
+  - health.rs
+  - handlers/mod.rs
+  - shutdown.rs
+  forbidden_dependencies_or_patterns:
+  - business rules in handlers
+  - direct cross-service database role use
+- path: xtask
+  layer: tool
+  required_modules:
+  - main.rs
+  - openapi.rs
+  - clients.rs
+  - database.rs
+  - fixtures.rs
+  - config.rs
+  - verify.rs
+  forbidden_dependencies_or_patterns: []

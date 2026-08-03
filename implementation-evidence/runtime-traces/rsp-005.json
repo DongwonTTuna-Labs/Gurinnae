@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RSP-005",
+  "route": "/respond/review",
+  "url": "http://127.0.0.1:29103/respond/review",
+  "observedAt": "2026-07-19T15:35:35.620Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RSP-005",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "answers",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "attachments",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "consent",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "authority",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "consequence",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

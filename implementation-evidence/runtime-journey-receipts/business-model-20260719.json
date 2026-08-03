@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "LIVE_POSTGRES_ACCEPTANCE_PROBE",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE",
+    "function": "ops.acceptance_runtime_probe_v1(text)"
+  },
+  "command": "GURINNAE_DATABASE_URL=<ephemeral-postgresql-18.4> cargo test -p gurine-acceptance-tests --test business_model_addendum -- --nocapture",
+  "result": "PASS",
+  "scenarios": { "suite": "AC-BUSINESS_MODEL-*", "passed": 43, "failed": 0 },
+  "durableChecks": [
+    "commercial qualification receipt",
+    "business projections",
+    "audit",
+    "outbox",
+    "event",
+    "replay digest"
+  ],
+  "notes": [
+    "This is implementation-addendum evidence and is not treated as authority-v13 monetization approval."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/notification.delivery_completed.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "email_delivery_id",
+    "provider_message_id",
+    "status"
+  ],
+  "properties": {
+    "email_delivery_id": {
+      "type": "string"
+    },
+    "provider_message_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    }
+  }
+}

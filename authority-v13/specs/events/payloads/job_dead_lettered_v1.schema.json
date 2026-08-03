@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/job.dead_lettered.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "error_code",
+    "job_id",
+    "job_type"
+  ],
+  "properties": {
+    "error_code": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "job_type": {
+      "type": "string"
+    }
+  }
+}

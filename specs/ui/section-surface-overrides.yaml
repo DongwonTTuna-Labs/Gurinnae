@@ -1,0 +1,52 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+rules:
+  - overrides contains exactly the authority sections whose assigned component does not support that screen surface.
+  - semantic_overrides contains only reviewed task-anatomy refinements whose authority component already supports the surface or whose surface override needs a more specific variant.
+  - Screen ID, section ID, semantic order, title and purpose remain unchanged.
+  - The resolved component and variant must exist in the v13 component catalog and support the screen surface.
+  - No other section may use this override mechanism.
+overrides:
+  PUB-012.related: {authority_component: SignalTriagePanel, component: DataCollection, variant: cards, reason: 공개 사건 링크는 내부 triage control 없이 공개 카드 모음으로 표시한다.}
+  PUB-013.ai: {authority_component: AccessManagementPanel, component: StructuredContentSection, variant: bordered, reason: 공개 방법론은 권한 제어가 아니라 AI 역할과 금지 범위를 설명한다.}
+  PUB-019.review: {authority_component: DecisionReviewPanel, component: RevisionTimeline, variant: public, reason: 공개 화면에는 내부 결정 control 대신 공개 가능한 검토 이력만 표시한다.}
+  PUB-021.errors: {authority_component: AgentSuggestionPanel, component: StructuredContentSection, variant: bordered, reason: API 오류 계약은 내부 AI 제안이 아니라 versioned Problem Details 설명이다.}
+  PUB-023.conflicts: {authority_component: DecisionReviewPanel, component: StructuredContentSection, variant: bordered, reason: 이해상충은 승인 control 없이 공개 disclosure와 회피 절차를 설명한다.}
+  PUB-027.review: {authority_component: DecisionReviewPanel, component: CheckAnswers, variant: correction, reason: 정정 요청자는 내부 검토 결정을 하지 않고 제출 전 입력을 확인한다.}
+  PUB-029.email: {authority_component: AgentSuggestionPanel, component: CheckAnswers, variant: subscription, reason: 구독 이메일과 verification 선택을 공개 구독 입력으로 확인한다.}
+  PUB-032.service: {authority_component: AgentSuggestionPanel, component: LongFormArticle, variant: policy, reason: 서비스 조건은 내부 AI 제안이 아니라 versioned 정책 본문이다.}
+  PUB-032.liability: {authority_component: DecisionReviewPanel, component: LongFormArticle, variant: policy, reason: 책임과 한계는 내부 승인 control 없이 공개 정책으로 읽힌다.}
+  RSP-001.identity: {authority_component: CoverageStatement, component: PageHeader, variant: form, reason: 소명 요청 identity와 공개 범위를 response form header에서 확인한다.}
+  RSP-001.security: {authority_component: KnownUnknownResponse, component: SensitiveDataNotice, variant: confidential, reason: phishing 및 token 공유 금지는 response 보안 경고다.}
+  RSP-002.references: {authority_component: EvidenceLedger, component: StructuredContentSection, variant: bordered, reason: response party에는 허용된 공개 claim/evidence 링크만 읽기 전용으로 제공한다.}
+  RSP-002.public-use: {authority_component: CoverageStatement, component: SensitiveDataNotice, variant: privacy, reason: 공개 동의 범위와 선택 결과를 privacy notice로 설명한다.}
+  RSP-003.progress: {authority_component: StatusAndRevisionHeader, component: StepIndicator, variant: linear, reason: 답변 단계와 완료 상태를 response step으로 표시한다.}
+  RSP-003.save: {authority_component: StatusAndRevisionHeader, component: SaveStatus, variant: autosave, reason: 서버가 확인한 draft version과 미저장 변경을 구분한다.}
+  RSP-004.guidance: {authority_component: StatusAndRevisionHeader, component: SensitiveDataNotice, variant: confidential, reason: 파일 형식과 민감정보 주의를 attachment entry 앞에 둔다.}
+  RSP-004.scan: {authority_component: StatusAndRevisionHeader, component: NotificationBanner, variant: warning, reason: 검사 pending clean rejected 상태를 비색상 배너로 알린다.}
+  RSP-004.files: {authority_component: DataCollection, component: FileUploadQueue, variant: response, reason: response attachment의 선택 검사 제거 교체 상태를 전용 queue가 소유한다.}
+  RSP-005.answers: {authority_component: KnownUnknownResponse, component: CheckAnswers, variant: response, reason: 제출 전 질문별 답변과 변경 링크를 확인한다.}
+  RSP-005.attachments: {authority_component: KnownUnknownResponse, component: FileUploadQueue, variant: response, reason: 제출 전 attachment 이름·검사·분류·교체 상태는 전용 파일 queue가 소유한다.}
+  RSP-005.consent: {authority_component: KnownUnknownResponse, component: GuidedFormSection, variant: response, reason: granular publication consent는 설명과 개별 선택을 함께 제공하는 response form이 소유한다.}
+  RSP-005.authority: {authority_component: KnownUnknownResponse, component: GuidedFormSection, variant: response, reason: 조직 대리 제출 권한 attestation은 선택 결과와 법적 효과를 함께 확인하는 response form이 소유한다.}
+  RSP-006.receipt: {authority_component: DataCollection, component: DecisionReceipt, variant: response, reason: 영속 제출 receipt ID와 시각을 새로고침 가능한 receipt로 표시한다.}
+  RSP-006.next: {authority_component: DecisionReviewPanel, component: GuidedFormSection, variant: response, reason: 다음 절차 안내와 별도의 appeal 입력·제출·상태 확인을 내부 검토 control 없이 제공한다.}
+  RSP-007.review: {authority_component: KnownUnknownResponse, component: CheckAnswers, variant: response, reason: 연장 요청은 제출 전 입력과 승인 아님을 확인한다.}
+  RSP-008.status: {authority_component: StatusAndRevisionHeader, component: NotificationBanner, variant: critical, reason: 존재 정보를 누출하지 않는 접근 불가 상태와 다음 행동을 알린다.}
+  CAS-006.lint: {authority_component: LongFormArticle, component: StructuredContentSection, variant: dense, reason: 내부 claim 편집 중 언어 정책 검사는 편집 context의 dense 결과다.}
+  OPS-005.privacy: {authority_component: LongFormArticle, component: SensitiveDataNotice, variant: privacy, reason: provider retention region model-use 정책을 내부 운영 경고로 표시한다.}
+semantic_overrides:
+  RSP-005.consequence: {authority_component: GuidedFormSection, component: GuidedFormSection, variant: response, reason: 최종 제출 효과와 불변 영수증 결과를 response form의 명시적 consequence 영역에서 확인한다.}
+  RSP-006.summary: {authority_component: GuidedFormSection, component: CheckAnswers, variant: response, reason: 접수된 답변·첨부·동의·권한을 수정 불가능한 제출 요약으로 검토한다.}
+  CAS-011.output: {authority_component: StructuredContentSection, component: AgentSuggestionPanel, variant: detail, reason: 에이전트 결과를 raw JSON이 아닌 finding·unknown·next-action 구조로 검토한다.}
+  CAS-011.citations: {authority_component: StructuredContentSection, component: EvidenceLedger, variant: internal, reason: citation을 exact source revision·locator·rights·검증 상태와 함께 표시한다.}
+  CAS-011.safety: {authority_component: StructuredContentSection, component: SensitiveDataNotice, variant: restricted, reason: 모델 사용권·민감정보·금지 자동판정 경계를 결과보다 먼저 경고한다.}
+  CAS-011.decisions: {authority_component: DecisionReviewPanel, component: AgentSuggestionPanel, variant: diff, reason: 제안의 before/after·수신자·내용·비용·위험을 사람 결정 전에 비교한다.}
+  CAS-011.cost: {authority_component: StructuredContentSection, component: MetricWithContext, variant: single, reason: 실제 provider usage·할당 비용·잔여 budget을 근거와 함께 한 지표로 표시한다.}
+  REV-002.matrix: {authority_component: KnownUnknownResponse, component: EvidenceLedger, variant: review, reason: claim별 지지·반대 근거·소명·locator를 검토용 ledger로 교차 확인한다.}
+  REV-002.risks: {authority_component: StructuredContentSection, component: GateChecklist, variant: publication, reason: 게시 blocker·독립성·권리·소명·정책 gate를 결정 전에 체크한다.}
+  REV-002.decision: {authority_component: DecisionReviewPanel, component: DecisionReviewPanel, variant: review, reason: exact snapshot과 사유·결과를 결속한 review 결정 control을 사용한다.}
+  OPS-006.active: {authority_component: StructuredContentSection, component: OperationsStatusPanel, variant: service-health, reason: 현재 kill-switch 범위·만료·owner·복구 조건을 live service 상태로 표시한다.}
+  OPS-006.impact: {authority_component: AccessManagementPanel, component: OperationsStatusPanel, variant: internal-incident, reason: 중지 대상 사용자·작업·fallback·비용·incident 영향을 운영 상태로 비교한다.}
+  OPS-006.approval: {authority_component: DecisionReviewPanel, component: DecisionReviewPanel, variant: review, reason: 직무분리 quorum과 exact action digest에 결속된 승인만 제공한다.}

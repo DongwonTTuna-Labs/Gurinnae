@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-030",
+  "route": "/subscription/manage",
+  "url": "http://127.0.0.1:29101/subscription/manage",
+  "observedAt": "2026-07-19T15:35:32.529Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-030",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "KnownUnknownResponse",
+        "projectionState": "ERROR"
+      },
+      {
+        "id": "topics",
+        "component": "StructuredContentSection",
+        "projectionState": "ERROR"
+      },
+      {
+        "id": "preferences",
+        "component": "StructuredContentSection",
+        "projectionState": "ERROR"
+      },
+      {
+        "id": "delivery",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "ERROR"
+      },
+      {
+        "id": "unsubscribe",
+        "component": "DataCollection",
+        "projectionState": "ERROR"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

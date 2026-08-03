@@ -1,0 +1,63 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rules:
+- API key alone is sufficient only for connectors marked KEY_ONLY_REST.
+- Operator-managed manifests contain official URLs and checksums; they do not invent unofficial APIs.
+- Synthetic structural fixtures can never satisfy production activation.
+connectors:
+- connector_id: koneps-contracts
+  activation_mode: KEY_ONLY_REST
+  credential_or_manifest_inputs:
+  - official base URL
+  - credential/API key
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations
+  failure_behavior: disable-only-this-connector
+- connector_id: koneps-notices
+  activation_mode: KEY_ONLY_REST
+  credential_or_manifest_inputs:
+  - official base URL
+  - credential/API key
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations
+  failure_behavior: disable-only-this-connector
+- connector_id: local-finance
+  activation_mode: OFFICIAL_FIXED_LINK_OR_KEY
+  credential_or_manifest_inputs:
+  - official fixed link or credentialed API selector
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations
+  failure_behavior: disable-only-this-connector
+- connector_id: alio
+  activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+  credential_or_manifest_inputs:
+  - operator-managed manifest URL
+  - manifest signature/checksum
+  - official source authority metadata
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations
+  failure_behavior: disable-only-this-connector
+- connector_id: open-dart
+  activation_mode: KEY_ONLY_REST
+  credential_or_manifest_inputs:
+  - official base URL
+  - credential/API key
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations
+  failure_behavior: disable-only-this-connector
+- connector_id: audit-results
+  activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+  credential_or_manifest_inputs:
+  - operator-managed manifest URL
+  - manifest signature/checksum
+  - official source authority metadata
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations
+  failure_behavior: disable-only-this-connector

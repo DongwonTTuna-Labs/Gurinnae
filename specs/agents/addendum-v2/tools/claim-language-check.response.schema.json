@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/claim-language-check-response.json",
+  "title": "ClaimLanguageCheckResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "checkedTextSha256",
+    "checkedTextUtf16Length",
+    "decision",
+    "findings",
+    "findingLimit",
+    "totalFindings",
+    "truncated",
+    "languageDecisionSha256"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "claim.language_check.response.v2"
+    },
+    "checkedTextSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "checkedTextUtf16Length": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20000
+    },
+    "decision": {
+      "enum": ["PASS", "REVISE", "BLOCK"]
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "findingId",
+          "code",
+          "severity",
+          "startUtf16",
+          "endUtf16",
+          "lengthUtf16",
+          "message",
+          "suggestedReplacement",
+          "citationIds"
+        ],
+        "properties": {
+          "findingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "UNSUPPORTED_CERTAINTY",
+              "CRIME_OR_CORRUPTION_ASSERTION",
+              "NO_RESPONSE_AS_ADMISSION",
+              "MISSING_LIMITATION",
+              "AMBIGUOUS_ACTOR",
+              "UNATTRIBUTED_QUOTE",
+              "PERSONAL_DATA",
+              "INACCESSIBLE_LANGUAGE"
+            ]
+          },
+          "severity": {
+            "enum": ["INFO", "WARNING", "BLOCKING"]
+          },
+          "startUtf16": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endUtf16": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "suggestedReplacement": {
+            "type": ["string", "null"],
+            "maxLength": 2000
+          },
+          "citationIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "lengthUtf16": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "UNSUPPORTED_CERTAINTY",
+                    "CRIME_OR_CORRUPTION_ASSERTION",
+                    "NO_RESPONSE_AS_ADMISSION",
+                    "UNATTRIBUTED_QUOTE",
+                    "PERSONAL_DATA"
+                  ]
+                }
+              },
+              "required": ["code"]
+            },
+            "then": {
+              "properties": {
+                "severity": {
+                  "const": "BLOCKING"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "MISSING_LIMITATION",
+                    "AMBIGUOUS_ACTOR",
+                    "INACCESSIBLE_LANGUAGE"
+                  ]
+                }
+              },
+              "required": ["code"]
+            },
+            "then": {
+              "properties": {
+                "severity": {
+                  "enum": ["INFO", "WARNING"]
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "languageDecisionSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "findingLimit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    },
+    "totalFindings": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "PASS"
+          }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "findings": {
+            "maxItems": 0
+          },
+          "totalFindings": {
+            "const": 0
+          },
+          "truncated": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "REVISE"
+          }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "findings": {
+            "minItems": 1
+          },
+          "truncated": {
+            "const": false
+          }
+        },
+        "not": {
+          "properties": {
+            "findings": {
+              "contains": {
+                "properties": {
+                  "severity": {
+                    "const": "BLOCKING"
+                  }
+                },
+                "required": ["severity"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "BLOCK"
+          }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "findings": {
+            "minItems": 1
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "truncated": {
+                "const": true
+              }
+            }
+          },
+          {
+            "properties": {
+              "findings": {
+                "contains": {
+                  "properties": {
+                    "severity": {
+                      "const": "BLOCKING"
+                    }
+                  },
+                  "required": ["severity"]
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "truncated": {
+            "const": true
+          }
+        },
+        "required": ["truncated"]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": "BLOCK"
+          },
+          "findings": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ],
+  "x-gurinnae-invariants": [
+    "checkedTextSha256 equals the request draftTextSha256 and checkedTextUtf16Length equals the UTF-16 code-unit length of the exact request draftText.",
+    "For every finding, endUtf16 = startUtf16 + lengthUtf16 and endUtf16 does not exceed checkedTextUtf16Length.",
+    "Findings are sorted by (startUtf16,endUtf16,code,findingId), spans are nonempty, and identical spans/codes are rejected.",
+    "findingLimit equals the request maxFindings; totalFindings equals the complete deterministic finding count; truncated is true exactly when totalFindings exceeds the returned findings length.",
+    "Every finding citationId belongs to request.allowedCitationIds; the response may not introduce a citation.",
+    "PASS has no finding, REVISE has findings but no BLOCKING finding, and BLOCK has at least one BLOCKING finding or a truncated result.",
+    "languageDecisionSha256 is RFC8785/JCS SHA-256 over checkedTextSha256, checkedTextUtf16Length, decision, ordered findings, findingLimit, totalFindings, truncated, language policy version/digest, and allowedCitationIds digest."
+  ]
+}

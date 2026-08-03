@@ -1,0 +1,178 @@
+schema_version: 2
+specification_version: 13.0.0
+status: FINAL
+authority: Parser selection, limits and provenance are mandatory.
+formats:
+- id: csv
+  media_types:
+  - text/csv
+  extensions:
+  - csv
+  parser: csv crate
+  version: 1.4.0
+  provenance: CSV_ROW_COLUMN
+  network: false
+- id: xml
+  media_types:
+  - application/xml
+  - text/xml
+  extensions:
+  - xml
+  parser: quick-xml
+  version: 0.41.0
+  provenance: XML_XPATH
+  network: false
+  security:
+  - DTD and entity declarations rejected
+  - external resources disabled
+- id: xlsx
+  media_types:
+  - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+  extensions:
+  - xlsx
+  parser: calamine after ZIP preflight
+  version: 0.35.0
+  provenance: XLSX_CELL
+  network: false
+- id: docx
+  media_types:
+  - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+  extensions:
+  - docx
+  parser: zip + quick-xml
+  version: zip 8.6.0 / quick-xml 0.41.0
+  provenance: DOCX_PARAGRAPH
+  network: false
+- id: hwpx
+  media_types:
+  - application/hwp+zip
+  extensions:
+  - hwpx
+  parser: zip + quick-xml
+  version: zip 8.6.0 / quick-xml 0.41.0
+  provenance: HWPX_XPATH
+  network: false
+- id: pdf-digital
+  media_types:
+  - application/pdf
+  extensions:
+  - pdf
+  parser: pdftotext
+  version: 25.06.0
+  provenance: PAGE_BBOX
+  network: false
+  fallback: pdf-ocr when extracted non-whitespace characters <20/page or >80% pages empty
+- id: pdf-ocr
+  media_types:
+  - application/pdf
+  extensions:
+  - pdf
+  parser: pdftoppm 25.06.0 + tesseract 5.5.0
+  traineddata:
+  - kor
+  - eng
+  provenance: PAGE_BBOX
+  network: false
+  execution: sandboxed child processes; no first-party FFI; TSV output provides word confidence and bbox
+- id: html
+  media_types:
+  - text/html
+  parser: html5ever 0.39.0 static tree + gurinnae-html-v1
+  provenance: HTML_CSS_SELECTOR
+  network: false
+- id: png
+  media_types:
+  - image/png
+  extensions:
+  - png
+  parser: image 0.25.10 png + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: jpeg
+  media_types:
+  - image/jpeg
+  extensions:
+  - jpg
+  - jpeg
+  parser: image 0.25.10 jpeg + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: webp
+  media_types:
+  - image/webp
+  extensions:
+  - webp
+  parser: image 0.25.10 webp + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: tiff
+  media_types:
+  - image/tiff
+  extensions:
+  - tif
+  - tiff
+  parser: image 0.25.10 tiff + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: wav
+  media_types:
+  - audio/wav
+  - audio/x-wav
+  extensions:
+  - wav
+  parser: FFmpeg 8.0.1 gurinnae-ffmpeg-subprocess-media-v1 + whisper.cpp 1.9.1
+  provenance: AUDIO_TIME_RANGE
+  network: false
+  support: BLOCKED_UNTIL_HASH_PINNED_RUNTIME_EVIDENCE
+- id: webm
+  media_types:
+  - video/webm
+  extensions:
+  - webm
+  parser: FFmpeg 8.0.1 gurinnae-ffmpeg-subprocess-media-v1 + whisper.cpp 1.9.1
+  provenance:
+  - VIDEO_TIME_RANGE
+  - VIDEO_REGION_TIME
+  - AUDIO_TIME_RANGE
+  network: false
+  support: BLOCKED_UNTIL_HASH_PINNED_RUNTIME_EVIDENCE
+- id: hwp-binary
+  media_types:
+  - application/x-hwp
+  extensions:
+  - hwp
+  parser: none; magic-byte detector and quarantine only
+  version: policy-v1
+  provenance: ORIGINAL_BYTES_ONLY
+  network: false
+  support: QUARANTINE_UNSUPPORTED
+  rejection_code: BINARY_HWP_UNSUPPORTED_REQUIRES_TRUSTED_CONVERSION
+magic_bytes_required: true
+extension_is_not_authority: true
+output_schema: extraction-result.schema.json
+sandbox: sandbox-contract.yaml
+runtime_bom: runtime-bom.yaml
+normalization:
+  unicode: NFC
+  newlines: LF
+  whitespace: collapse horizontal runs outside table cells; trim block edges
+  stable_block_id: sha256(documentSha256 + NUL + locator + NUL + normalizedText) first 24 hex
+  document_order: source order; table rows before following body block; no layout guessing
+golden_oracle:
+  manifest: fixture-manifest.yaml
+  directory: expected
+  comparison: byte-equivalent canonical JSON after key sorting; no dynamically generated expected data in verification mode
+ooxml_security:
+- reject external relationships
+- reject duplicate ZIP names
+- reject symlink ZIP entries
+- reject traversal and high compression ratio
+- do not resolve external resources
+format_count: 15
+binary_hwp_policy:
+  mode: QUARANTINE_UNSUPPORTED
+  magic: D0CF11E0A1B11AE1
+  rejection_code: BINARY_HWP_UNSUPPORTED_REQUIRES_TRUSTED_CONVERSION
+  required_action: TRUSTED_OFFLINE_CONVERSION_TO_PDF_OR_HWPX
+  automatic_conversion: false
+  provenance: Original and converted SourceDocument hashes must be linked; the original remains immutable.

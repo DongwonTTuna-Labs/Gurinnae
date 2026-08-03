@@ -1,0 +1,8 @@
+{
+  "status": "ABSTAINED",
+  "summary": "정책 또는 검증 조건을 충족하지 못해 결론을 생성하지 않았습니다.",
+  "citations": [],
+  "unknowns": [],
+  "abstention_reasons": ["EVIDENCE_SNAPSHOT_STALE"],
+  "recommended_actions": []
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "signal_id": "signal_fixture_identity_ambiguous",
+  "rule": {
+    "rule_key": "SUPPLIER_CONCENTRATION",
+    "version": "1.0.0",
+    "rule_run_id": "rule_run_fixture_identity_ambiguous"
+  },
+  "subject": {
+    "type": "SUPPLIER",
+    "id": "supplier_fixture_ambiguous"
+  },
+  "signal_type": "SUPPLIER_CONCENTRATION",
+  "metrics": {
+    "share_of_analyzable_amount": 0.72,
+    "contract_count": 9
+  },
+  "input_ids": [
+    "contract_fixture_identity_ambiguous"
+  ],
+  "input_hash": "c14f785785346c0f4c3b1f9c9583b5b50787b47472a17819eaf6a5d31facbf82",
+  "cohort_id": null,
+  "data_quality": {
+    "score": 65,
+    "provenance_complete": true,
+    "identity_status": "AMBIGUOUS",
+    "warnings": []
+  },
+  "blocking_conditions": [
+    "IDENTITY_AMBIGUOUS"
+  ],
+  "publishability": "BLOCKED",
+  "internal_priority": 0,
+  "status": "NEW",
+  "dismissal_reason": null,
+  "created_at": "2026-01-16T00:00:00Z"
+}

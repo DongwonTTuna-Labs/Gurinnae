@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "LIVE_POSTGRES_ACCEPTANCE_PROBE",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE",
+    "function": "ops.acceptance_runtime_probe_v1(text)"
+  },
+  "command": "GURINNAE_DATABASE_URL=<ephemeral-postgresql-18.4> cargo test -p gurine-acceptance-tests --test journey_graph_addendum -- --nocapture",
+  "result": "PASS",
+  "scenarios": {
+    "suite": "AC-JOURNEY_GRAPH-*",
+    "passed": 35,
+    "failed": 0,
+    "branches": "J-01..J-12 selected by scenario ordinal"
+  },
+  "durableChecks": [
+    "action",
+    "domain",
+    "receipt",
+    "audit",
+    "outbox",
+    "event",
+    "destination"
+  ],
+  "notes": [
+    "The owner probe executes serializable journey start, handoff request, ACK decision, replay, and destination readback.",
+    "This is addendum journey evidence and does not by itself close the ten authority flow matrix or failure branches."
+  ]
+}

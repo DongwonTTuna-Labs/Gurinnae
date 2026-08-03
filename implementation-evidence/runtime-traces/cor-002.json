@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "COR-002",
+  "route": "/internal/corrections/{correctionId}",
+  "url": "http://127.0.0.1:29102/internal/corrections/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:47.076Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "COR-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "request",
+        "component": "EvidenceLedger",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "original",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "investigation",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "proposal",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "impact",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "review",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "receipt",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

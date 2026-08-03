@@ -1,0 +1,7 @@
+<script lang="ts">import type { ScreenSectionProps } from "../../index";
+import AuthorityRecordSection from "./AuthorityRecordSection.svelte";
+import ResponseJourneySection from "./ResponseJourneySection.svelte";
+
+let props: ScreenSectionProps = $props();
+</script>
+{#if props.screen.id === "RSP-006"}<ResponseJourneySection {...props} />{:else}<AuthorityRecordSection {...props} kicker="결정 영수증" />{/if}

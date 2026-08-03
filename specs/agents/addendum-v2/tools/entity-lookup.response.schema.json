@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/entity-lookup-response.json",
+  "title": "EntityLookupResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "matches",
+    "resolutionPolicyVersion",
+    "resolutionPolicySha256",
+    "truncated"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "entity.lookup.response.v2"
+    },
+    "matches": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entityId",
+          "entityVersion",
+          "entityKind",
+          "canonicalName",
+          "identityStatus",
+          "matchedIdentifiers",
+          "snapshotMemberId",
+          "snapshotMemberDigest",
+          "fieldProvenance",
+          "sourceUseId",
+          "sourceUseSha256"
+        ],
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entityVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "entityKind": {
+            "enum": ["AGENCY", "SUPPLIER"]
+          },
+          "canonicalName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "identityStatus": {
+            "enum": ["VERIFIED", "PROVISIONAL", "DISPUTED", "SUPERSEDED"]
+          },
+          "matchedIdentifiers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "displayValue", "matchReason"],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "CANONICAL_NAME",
+                    "BUSINESS_REGISTRATION_NUMBER",
+                    "AGENCY_CODE",
+                    "PUBLIC_SLUG",
+                    "VERIFIED_ALIAS"
+                  ]
+                },
+                "displayValue": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "matchReason": {
+                  "enum": ["EXACT", "NORMALIZED_EXACT", "VERIFIED_ALIAS"]
+                }
+              }
+            }
+          },
+          "snapshotMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshotMemberDigest": {
+            "$ref": "#/$defs/sha256"
+          },
+          "fieldProvenance": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "field",
+                "fieldProvenanceId",
+                "sourceDocumentId",
+                "sourceContentSha256",
+                "locatorDigest"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "pattern": "^[a-z][A-Za-z0-9]{0,63}$"
+                },
+                "fieldProvenanceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sourceDocumentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sourceContentSha256": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "locatorDigest": {
+                  "$ref": "#/$defs/sha256"
+                }
+              }
+            }
+          },
+          "sourceUseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "resolutionPolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "resolutionPolicySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "truncated": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

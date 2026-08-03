@@ -1,0 +1,282 @@
+schema_version: 1
+specification_version: 13.0.0
+archetypes:
+- id: EVIDENCE_LANDING
+  purpose: Public or preview record comprehension with evidence-first hierarchy.
+  required_regions:
+  - status_revision
+  - title_summary
+  - known_unknown_response
+  - metrics_with_context
+  - comparison
+  - counter_evidence
+  - evidence
+  - timeline_revision
+  default_state_profile: public-data
+  primary_components:
+  - CorrectionBanner
+  - FreshnessNotice
+  - KnownUnknownResponse
+  - MetricWithContext
+  - ClaimCard
+  - EvidenceCitation
+  - ComparisonTable
+  - DistributionChart
+  - RevisionTimeline
+  rules:
+  - State and critical unknown precede comparison chart.
+  - Correction/retraction cannot be dismissed.
+- id: SEARCH_INDEX
+  purpose: Search/filter and browse a typed collection.
+  required_regions:
+  - scope_coverage
+  - query_filters
+  - selected_filters
+  - result_count
+  - results
+  - pagination
+  - empty_error
+  default_state_profile: collection
+  primary_components:
+  - FilterBar
+  - SearchResultCard
+  - DataTable
+  - Pagination
+  - EmptyState
+  rules:
+  - Filter state is URL-serializable on public routes.
+  - No infinite scroll baseline.
+- id: ENTITY_DETAIL
+  purpose: Identity, coverage, descriptive metrics and related records.
+  required_regions:
+  - identity
+  - coverage
+  - descriptive_metrics
+  - related_records
+  - limitations
+  - history
+  default_state_profile: public-data
+  primary_components:
+  - IdentityBlock
+  - CoverageStatement
+  - MetricWithContext
+  - DataTable
+  rules:
+  - No institution or supplier moral ranking.
+  - Denominator and coverage accompany metrics.
+- id: POLICY
+  purpose: Versioned long-form policy, methodology or disclosure.
+  required_regions:
+  - title_version_effective_date
+  - summary
+  - toc
+  - body
+  - related
+  - change_history_contact
+  default_state_profile: static-content
+  primary_components:
+  - LongFormArticle
+  rules:
+  - Maximum line length 72ch.
+  - Owner, effective date and history required.
+- id: GUIDED_FORM
+  purpose: Safe multi-step submission or configuration.
+  required_regions:
+  - purpose_privacy
+  - progress
+  - logical_step
+  - errors
+  - save_status
+  - check_answers
+  - explicit_submit
+  - receipt
+  default_state_profile: guided-submission
+  primary_components:
+  - StepIndicator
+  - ErrorSummary
+  - FieldError
+  - SaveStatus
+  - CheckAnswers
+  - FileUploadQueue
+  - DecisionReceipt
+  rules:
+  - Save and submit are distinct.
+  - Inputs are preserved after validation errors.
+- id: QUEUE
+  purpose: Operational work selection with filters, age, assignment and next action.
+  required_regions:
+  - scope_sla
+  - views_filters
+  - count
+  - records
+  - assignment
+  - empty_incident
+  default_state_profile: internal-data
+  primary_components:
+  - FilterBar
+  - DataTable
+  - TaskCard
+  - AssignmentControl
+  - EmptyState
+  rules:
+  - Bulk actions are limited to reversible low-risk changes.
+  - Priority reason is explainable.
+- id: WORKSPACE
+  purpose: Task-centered work on a domain aggregate.
+  required_regions:
+  - identity_state_version
+  - global_blockers
+  - task_navigation
+  - task_content
+  - context
+  - save_audit
+  - next_task
+  default_state_profile: workspace
+  primary_components:
+  - PageHeader
+  - CaseTaskRail
+  - ConflictBanner
+  - SaveStatus
+  - TaskCard
+  rules:
+  - Domain state is not patched generically.
+  - Draft conflicts preserve user work.
+- id: DECISION_REVIEW
+  purpose: Review an exact immutable target and submit a reasoned decision.
+  required_regions:
+  - target_snapshot
+  - criteria
+  - evidence_diff
+  - unresolved_blockers
+  - reviewer_independence
+  - reason
+  - decision
+  - receipt
+  default_state_profile: decision
+  primary_components:
+  - GateChecklist
+  - ReasonDialog
+  - ReauthPrompt
+  - DecisionReceipt
+  rules:
+  - Commands follow their declared assurance level; only STEP_UP operations require bounded recent reauthentication.
+  - Stale snapshot decision is rejected.
+- id: OPERATIONS
+  purpose: Diagnose health/SLO/incident and execute bounded runbook actions.
+  required_regions:
+  - health_slo
+  - incident
+  - time_filters
+  - metrics_baselines
+  - affected_objects
+  - safe_action
+  - runbook
+  - history
+  default_state_profile: operations
+  primary_components:
+  - NotificationBanner
+  - MetricWithContext
+  - DataTable
+  - AuditEventList
+  - ReasonDialog
+  rules:
+  - Color is not sole status.
+  - Payloads and credentials are redacted.
+- id: AUTH_SYSTEM
+  purpose: Authentication, authorization and system recovery.
+  required_regions:
+  - situation
+  - impact
+  - next_actions
+  - security_support
+  - draft_state
+  default_state_profile: system
+  primary_components:
+  - NotificationBanner
+  - EnvironmentBanner
+  - ReauthPrompt
+  rules:
+  - Do not leak protected object existence.
+  - Explain whether work is preserved.
+state_profiles:
+  public-data:
+  - initial-loading
+  - refreshing
+  - empty
+  - filtered-empty
+  - partial
+  - stale
+  - error
+  - offline
+  - success
+  collection:
+  - initial-loading
+  - refreshing
+  - empty
+  - filtered-empty
+  - partial
+  - stale
+  - invalid-filter
+  - error
+  static-content:
+  - loading
+  - current
+  - superseded
+  - error
+  guided-submission:
+  - loading
+  - draft
+  - saving
+  - saved
+  - validation-error
+  - server-error
+  - offline
+  - session-expiring
+  - success
+  internal-data:
+  - loading
+  - refreshing
+  - empty
+  - partial
+  - error
+  - unauthorized
+  - forbidden
+  - conflict
+  - degraded
+  workspace:
+  - loading
+  - draft
+  - saving
+  - saved
+  - blocked
+  - conflict
+  - unauthorized
+  - forbidden
+  - error
+  decision:
+  - loading
+  - ready
+  - blocked
+  - stale
+  - reauth-required
+  - conflict
+  - submitting
+  - receipt
+  - partial-failure
+  operations:
+  - loading
+  - healthy
+  - degraded
+  - incident
+  - telemetry-gap
+  - error
+  - forbidden
+  system:
+  - not-found
+  - unauthenticated
+  - forbidden
+  - session-expired
+  - maintenance
+  - degraded
+  - offline
+  - error

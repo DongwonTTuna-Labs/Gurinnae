@@ -1,0 +1,15 @@
+{
+  "run_id": "00000000-0000-0000-0000-000000007536",
+  "case_id": "00000000-0000-0000-0000-00000000ea66",
+  "objective": "skeptic 합성 평가 unknown_evidence",
+  "evidence_snapshot_hash": "b1b6ae3d420f69030724e13de770f96310c246bfc697c6307b2b1bf06e03a1ec",
+  "allowed_evidence_ids": [
+    "00000000-0000-0000-0000-0000000003e9",
+    "00000000-0000-0000-0000-0000000003ea",
+    "00000000-0000-0000-0000-0000000003eb"
+  ],
+  "budget_krw": 1000,
+  "locale": "ko-KR",
+  "known_unknowns": ["설치·인증 비용 포함 여부"],
+  "policy_flags": []
+}

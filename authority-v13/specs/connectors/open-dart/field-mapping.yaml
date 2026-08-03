@@ -1,0 +1,71 @@
+schema_version: 2
+specification_version: 13.0.0
+connector_id: open-dart
+operation_mappings:
+  dart-corp-code:
+  - canonical: supplier.corp_code
+    path: corp_code
+    required: true
+  - canonical: supplier.name
+    path: corp_name
+    required: true
+  - canonical: supplier.stock_code
+    path: stock_code
+    required: false
+  - canonical: source.revision
+    path: modify_date
+    required: true
+  dart-company:
+  - canonical: supplier.corp_code
+    path: corp_code
+    required: true
+  - canonical: supplier.name
+    path: corp_name
+    required: true
+  - canonical: supplier.business_number
+    path: bizr_no
+    sensitive: hash-or-mask
+    required: false
+  - canonical: supplier.address
+    path: adres
+    required: false
+  - canonical: supplier.status
+    path: corp_cls
+    required: false
+  dart-disclosures:
+  - canonical: disclosure.receipt_number
+    path: rcept_no
+    required: true
+  - canonical: supplier.corp_code
+    path: corp_code
+    required: true
+  - canonical: supplier.name
+    path: corp_name
+    required: true
+  - canonical: disclosure.report_name
+    path: report_nm
+    required: true
+  - canonical: disclosure.received_date
+    path: rcept_dt
+    required: true
+  - canonical: disclosure.filer_name
+    path: flr_nm
+    required: false
+  dart-financial-statements:
+  - canonical: financial.receipt_number
+    path: rcept_no
+    required: true
+  - canonical: financial.account_id
+    path: account_id
+    required: true
+  - canonical: financial.account_name
+    path: account_nm
+    required: true
+  - canonical: financial.current_amount
+    path: thstrm_amount
+    required: false
+  - canonical: financial.currency
+    constant: KRW
+    required: true
+unknown_field_policy: preserve in raw metadata
+missing_required_policy: quarantine and incident

@@ -1,0 +1,15 @@
+{
+  "name": "@gurine/api-client-public",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.generated.json",
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.generated.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

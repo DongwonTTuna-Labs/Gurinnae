@@ -1,0 +1,31 @@
+schema_version: 2
+specification_version: 13.0.0
+id: audit-results
+display_name: 감사 결과 공식 공개자료 manifest
+status: FINAL
+source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+official_references:
+- https://www.data.go.kr/
+manifest_url_env: AUDIT_RESULTS_OFFICIAL_MANIFEST_URL
+credential_env: null
+formats:
+- json-manifest
+- pdf
+- xlsx
+- csv
+- xml
+- html-link
+network: egress-gateway-only
+schedule: ops.source_registry
+activation:
+  requires_configured_manifest_or_fixed_link: true
+  requires_https_and_host_allowlist: true
+  requires_manifest_schema_validation: true
+  requires_recorded_response_fingerprint: true
+  requires_terms_review: true
+  failure_mode: connector remains DISABLED
+operations:
+- audit-results-manifest
+- audit-result-document
+activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+operator_responsibility: provide official manifest URL and maintain signed manifest entries

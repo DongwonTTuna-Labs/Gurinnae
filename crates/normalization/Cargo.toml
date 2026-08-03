@@ -1,0 +1,15 @@
+[package]
+name = "gurine-normalization"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+gurine-domain = { path = "../domain" }
+rust_decimal.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+time.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

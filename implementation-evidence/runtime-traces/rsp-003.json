@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RSP-003",
+  "route": "/respond/answer",
+  "url": "http://127.0.0.1:29103/respond/answer",
+  "observedAt": "2026-07-19T15:35:34.935Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RSP-003",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "progress",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "questions",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "statement",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "consent",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "save",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

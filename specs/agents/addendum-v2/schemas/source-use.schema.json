@@ -1,0 +1,601 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/source-use.json",
+  "title": "SourceUseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceUseId",
+    "agentRunId",
+    "providerTurnId",
+    "toolCallId",
+    "parentSourceUseId",
+    "parentSourceUseSha256",
+    "useKind",
+    "sourceKind",
+    "sourceIdentity",
+    "locator",
+    "selectedContentSha256",
+    "classification",
+    "rightsDecision",
+    "providerReceiptId",
+    "occurredAt",
+    "sourceUseSha256"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "source-use.v2"
+    },
+    "sourceUseId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "agentRunId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "providerTurnId": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "toolCallId": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "parentSourceUseId": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "parentSourceUseSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "useKind": {
+      "enum": [
+        "TOOL_QUERY",
+        "TOOL_RESULT",
+        "MODEL_INPUT",
+        "MODEL_OUTPUT_DERIVATION",
+        "CITATION",
+        "PROPOSAL",
+        "HUMAN_PROMOTION"
+      ]
+    },
+    "sourceKind": {
+      "enum": [
+        "EVIDENCE_SEGMENT",
+        "RESPONSE_SNAPSHOT",
+        "DATASET_MEMBER",
+        "RESEARCH_ARTIFACT"
+      ]
+    },
+    "sourceIdentity": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/evidenceSegment"
+        },
+        {
+          "$ref": "#/$defs/responseSnapshot"
+        },
+        {
+          "$ref": "#/$defs/datasetMember"
+        },
+        {
+          "$ref": "#/$defs/researchArtifact"
+        }
+      ]
+    },
+    "locator": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/locator"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "selectedContentSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "classification": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "RESTRICTED",
+        "PERSONAL_DATA",
+        "LEGAL_HOLD"
+      ]
+    },
+    "rightsDecision": {
+      "$ref": "#/$defs/rightsDecision"
+    },
+    "providerReceiptId": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceUseSha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "sourceKind": {
+            "const": "EVIDENCE_SEGMENT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sourceIdentity": {
+            "$ref": "#/$defs/evidenceSegment"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "sourceKind": {
+            "const": "RESPONSE_SNAPSHOT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sourceIdentity": {
+            "$ref": "#/$defs/responseSnapshot"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "sourceKind": {
+            "const": "DATASET_MEMBER"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sourceIdentity": {
+            "$ref": "#/$defs/datasetMember"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "sourceKind": {
+            "const": "RESEARCH_ARTIFACT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sourceIdentity": {
+            "$ref": "#/$defs/researchArtifact"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "useKind": {
+            "enum": ["MODEL_INPUT", "MODEL_OUTPUT_DERIVATION"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "providerTurnId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "providerReceiptId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "useKind": {
+            "enum": [
+              "MODEL_INPUT",
+              "MODEL_OUTPUT_DERIVATION",
+              "CITATION",
+              "PROPOSAL",
+              "HUMAN_PROMOTION"
+            ]
+          }
+        },
+        "required": ["useKind"]
+      },
+      "then": {
+        "properties": {
+          "parentSourceUseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentSourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "parentSourceUseId": {
+            "type": "null"
+          }
+        },
+        "required": ["parentSourceUseId"]
+      },
+      "then": {
+        "properties": {
+          "parentSourceUseSha256": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "parentSourceUseId": {
+            "type": "string"
+          }
+        },
+        "required": ["parentSourceUseId"]
+      },
+      "then": {
+        "properties": {
+          "parentSourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "parentSourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        },
+        "required": ["parentSourceUseSha256"]
+      },
+      "then": {
+        "properties": {
+          "parentSourceUseId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evidenceSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "datasetSnapshotId",
+        "snapshotMemberId",
+        "snapshotMemberDigest",
+        "evidenceSegmentId",
+        "sourceDocumentId",
+        "sourceAssetId",
+        "sourceAssetRevision",
+        "sourceContentSha256"
+      ],
+      "properties": {
+        "kind": {
+          "const": "EVIDENCE_SEGMENT"
+        },
+        "datasetSnapshotId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "snapshotMemberId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "snapshotMemberDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidenceSegmentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceDocumentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceAssetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceAssetRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceContentSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "responseSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "datasetSnapshotId",
+        "snapshotMemberId",
+        "snapshotMemberDigest",
+        "responseId",
+        "responseVersion",
+        "responseContentSha256"
+      ],
+      "properties": {
+        "kind": {
+          "const": "RESPONSE_SNAPSHOT"
+        },
+        "datasetSnapshotId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "snapshotMemberId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "snapshotMemberDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "responseId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "responseVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "responseContentSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "datasetMember": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "datasetSnapshotId",
+        "snapshotMemberId",
+        "snapshotMemberDigest",
+        "objectType",
+        "objectId",
+        "objectVersion",
+        "objectContentSha256"
+      ],
+      "properties": {
+        "kind": {
+          "const": "DATASET_MEMBER"
+        },
+        "datasetSnapshotId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "snapshotMemberId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "snapshotMemberDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "objectType": {
+          "enum": [
+            "AGENCY",
+            "SUPPLIER",
+            "CONTRACT",
+            "CONTRACT_LINE_ITEM",
+            "CONTRACT_CHANGE",
+            "PRICE_OBSERVATION"
+          ]
+        },
+        "objectId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "objectVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "objectContentSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "researchArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "researchArtifactId",
+        "assetId",
+        "assetRevision",
+        "artifactSha256",
+        "contentSha256",
+        "sourceFetchId"
+      ],
+      "properties": {
+        "kind": {
+          "const": "RESEARCH_ARTIFACT"
+        },
+        "researchArtifactId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "assetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "assetRevision": {
+          "const": 1
+        },
+        "artifactSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sourceFetchId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "locatorSha256"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH",
+            "JSON_POINTER",
+            "HTML_CSS_SELECTOR",
+            "API_FIELD",
+            "TEXT_RANGE",
+            "IMAGE_BBOX",
+            "AUDIO_TIME_RANGE",
+            "VIDEO_TIME_RANGE",
+            "VIDEO_REGION_TIME"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "locatorSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "rightsDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decisionId",
+        "decisionVersion",
+        "decisionSha256",
+        "effectiveAt",
+        "expiresAt",
+        "accessRight",
+        "privateStorageRight",
+        "modelEgressRight",
+        "modelUseRight",
+        "derivativeCreationRight",
+        "excerptRight",
+        "redistributionRight",
+        "commercialUseRight",
+        "publicDisplayRight"
+      ],
+      "properties": {
+        "decisionId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "decisionVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decisionSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "effectiveAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "accessRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "privateStorageRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "modelEgressRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "modelUseRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "derivativeCreationRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "excerptRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "redistributionRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "commercialUseRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        },
+        "publicDisplayRight": {
+          "enum": ["ALLOW", "DENY", "UNKNOWN"]
+        }
+      }
+    }
+  },
+  "x-gurinnae-invariants": [
+    "parentSourceUseId and parentSourceUseSha256 are both null or both nonnull and bind a source use in the same agent run.",
+    "MODEL_INPUT, MODEL_OUTPUT_DERIVATION, CITATION, PROPOSAL, and HUMAN_PROMOTION require a parent source use; cycles are rejected.",
+    "A child source use retains the same immutable source identity/revision/content unless a typed derivation changes selected content and records the derived locator/content digest."
+  ],
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["sourceUseSha256"]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "SIG-002",
+  "route": "/internal/signals/{signalId}",
+  "url": "http://127.0.0.1:29102/internal/signals/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:40.017Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "SIG-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "CoverageStatement",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "calculation",
+        "component": "ComparisonWorkbench",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "quality",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "cohort",
+        "component": "ComparisonWorkbench",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "provenance",
+        "component": "EvidenceLedger",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "related",
+        "component": "SignalTriagePanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "ai",
+        "component": "AgentSuggestionPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "decision",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 10,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-012",
+  "route": "/contracts/{contractId}",
+  "url": "http://127.0.0.1:29101/contracts/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:26.227Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-012",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "terms",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "changes",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "procurement",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "provenance",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "related",
+        "component": "SignalTriagePanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "limitations",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 10,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

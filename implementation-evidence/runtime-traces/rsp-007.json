@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RSP-007",
+  "route": "/respond/extension",
+  "url": "http://127.0.0.1:29103/respond/extension",
+  "observedAt": "2026-07-19T15:35:36.246Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RSP-007",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "current",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "request",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "partial",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "review",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

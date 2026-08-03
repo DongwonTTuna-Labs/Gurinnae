@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "ACC-001",
+  "route": "/internal/account",
+  "url": "http://127.0.0.1:29102/internal/account",
+  "observedAt": "2026-07-19T15:35:53.710Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "ACC-001",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "roles",
+        "component": "AccessManagementPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "sessions",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "security",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "notifications",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "access-request",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

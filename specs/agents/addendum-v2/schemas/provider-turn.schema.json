@@ -1,0 +1,672 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/provider-turn.json",
+  "title": "ProviderTurnV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "providerTurnId",
+    "agentRunId",
+    "inputSnapshotSha256",
+    "turnSequence",
+    "attemptSequence",
+    "priorTranscriptSha256",
+    "providerMode",
+    "providerConfigId",
+    "providerCandidateId",
+    "modelId",
+    "modelConfigurationSha256",
+    "routingPolicyVersion",
+    "routingDecisionSha256",
+    "promptId",
+    "promptVersion",
+    "promptSha256",
+    "outputSchemaId",
+    "outputSchemaVersion",
+    "outputSchemaSha256",
+    "classification",
+    "modelUseRightsSha256",
+    "budgetReservationKeySha256",
+    "dispatchKeySha256",
+    "requestSha256",
+    "requestRedacted",
+    "status",
+    "envelope",
+    "responseRedacted",
+    "providerReceipt",
+    "turnTranscriptSha256",
+    "inputUnits",
+    "outputUnits",
+    "latencyMs",
+    "costEventId",
+    "errorCode",
+    "errorSha256",
+    "version",
+    "dispatchedAt",
+    "completedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "provider-turn.v2"
+    },
+    "providerTurnId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "agentRunId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "inputSnapshotSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "turnSequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32
+    },
+    "attemptSequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "priorTranscriptSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "providerMode": {
+      "enum": ["EXTERNAL_APPROVED", "LOCAL_APPROVED", "DETERMINISTIC_DOUBLE"]
+    },
+    "providerConfigId": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "providerCandidateId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "modelId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "modelConfigurationSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "routingPolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "routingDecisionSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "promptId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "promptVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "promptSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "outputSchemaId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "outputSchemaVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "outputSchemaSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "classification": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "RESTRICTED",
+        "PERSONAL_DATA",
+        "LEGAL_HOLD"
+      ]
+    },
+    "modelUseRightsSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "budgetReservationKeySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "dispatchKeySha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "requestSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "requestRedacted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "objectiveSha256",
+        "messageCount",
+        "authorizedSegmentCount",
+        "orderedSourceUseIds",
+        "toolChoice",
+        "maxOutputUnits",
+        "semanticRequestSha256",
+        "redactionReceiptSha256"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "agent-provider-request-redacted.v2"
+        },
+        "objectiveSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "messageCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128
+        },
+        "authorizedSegmentCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "orderedSourceUseIds": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "toolChoice": {
+          "enum": ["AUTO_ALLOWLIST", "FINAL_ONLY", "REQUIRED_ONE_TOOL"]
+        },
+        "maxOutputUnits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 131072
+        },
+        "semanticRequestSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "redactionReceiptSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "DISPATCHED",
+        "COMPLETED",
+        "PROVIDER_FAILED",
+        "RATE_LIMITED",
+        "TIMED_OUT",
+        "CANCELLED",
+        "OUTCOME_UNKNOWN"
+      ]
+    },
+    "envelope": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "payloadSha256"],
+          "properties": {
+            "kind": {
+              "const": "FINAL_OUTPUT"
+            },
+            "payloadSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "callId", "toolId", "argumentsSha256"],
+          "properties": {
+            "kind": {
+              "const": "TOOL_CALL"
+            },
+            "callId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+            },
+            "toolId": {
+              "enum": [
+                "claim.language_check",
+                "contract.find_comparables",
+                "entity.lookup",
+                "evidence.read",
+                "evidence.search",
+                "response.read",
+                "rule.reproduce",
+                "source.fetch",
+                "source.locator_verify"
+              ]
+            },
+            "argumentsSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "responseRedacted": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "finishReason",
+            "envelopeSha256",
+            "safetyCodes",
+            "providerRequestIdHash",
+            "redactionReceiptSha256"
+          ],
+          "properties": {
+            "schemaVersion": {
+              "const": "agent-provider-response-redacted.v2"
+            },
+            "finishReason": {
+              "enum": [
+                "FINAL_OUTPUT",
+                "TOOL_CALL",
+                "CONTENT_BLOCKED",
+                "LENGTH",
+                "STOP",
+                "UNKNOWN"
+              ]
+            },
+            "envelopeSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "safetyCodes": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 32,
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+              }
+            },
+            "providerRequestIdHash": {
+              "$ref": "#/$defs/sha256"
+            },
+            "redactionReceiptSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "providerReceipt": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "provider-receipt.schema.json"
+        }
+      ]
+    },
+    "turnTranscriptSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "inputUnits": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "outputUnits": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "latencyMs": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "costEventId": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "errorCode": {
+      "type": ["string", "null"],
+      "enum": [
+        null,
+        "PROVIDER_REJECTED",
+        "PROVIDER_RATE_LIMITED",
+        "PROVIDER_TIMEOUT",
+        "PROVIDER_CANCELLED",
+        "PROVIDER_OUTCOME_UNKNOWN",
+        "PROVIDER_RECEIPT_INVALID",
+        "PROVIDER_RESPONSE_INVALID"
+      ]
+    },
+    "errorSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "dispatchedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completedAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "providerMode": {
+            "const": "EXTERNAL_APPROVED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "providerConfigId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "classification": {
+            "enum": ["PUBLIC", "INTERNAL"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "DISPATCHED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "envelope": {
+            "type": "null"
+          },
+          "responseRedacted": {
+            "type": "null"
+          },
+          "providerReceipt": {
+            "type": "null"
+          },
+          "turnTranscriptSha256": {
+            "type": "null"
+          },
+          "completedAt": {
+            "type": "null"
+          },
+          "errorCode": {
+            "type": "null"
+          },
+          "errorSha256": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "envelope": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "responseRedacted": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "providerReceipt": {
+            "$ref": "provider-receipt.schema.json"
+          },
+          "turnTranscriptSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": "null"
+          },
+          "errorSha256": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "PROVIDER_FAILED",
+              "RATE_LIMITED",
+              "TIMED_OUT",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "envelope": {
+            "type": "null"
+          },
+          "responseRedacted": {
+            "type": "null"
+          },
+          "providerReceipt": {
+            "$ref": "provider-receipt.schema.json"
+          },
+          "turnTranscriptSha256": {
+            "type": "null"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "errorSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "COMPLETED" },
+          "envelope": {
+            "properties": { "kind": { "const": "FINAL_OUTPUT" } },
+            "required": ["kind"]
+          }
+        },
+        "required": ["status", "envelope"]
+      },
+      "then": {
+        "properties": {
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "ACCEPTED_FINAL" } },
+            "required": ["outcome"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "const": "COMPLETED" },
+          "envelope": {
+            "properties": { "kind": { "const": "TOOL_CALL" } },
+            "required": ["kind"]
+          }
+        },
+        "required": ["status", "envelope"]
+      },
+      "then": {
+        "properties": {
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "ACCEPTED_TOOL_CALL" } },
+            "required": ["outcome"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "RATE_LIMITED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": { "const": "PROVIDER_RATE_LIMITED" },
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "RATE_LIMITED" } },
+            "required": ["outcome"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "OUTCOME_UNKNOWN" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": { "const": "PROVIDER_OUTCOME_UNKNOWN" },
+          "providerReceipt": {
+            "properties": { "outcome": { "const": "OUTCOME_UNKNOWN" } },
+            "required": ["outcome"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "CANCELLED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": { "const": "PROVIDER_CANCELLED" },
+          "providerReceipt": {
+            "properties": {
+              "outcome": {
+                "enum": ["CANCELLED_CONFIRMED", "NO_DISPATCH_CONFIRMED"]
+              }
+            },
+            "required": ["outcome"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "TIMED_OUT" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": {
+            "enum": ["PROVIDER_TIMEOUT", "PROVIDER_OUTCOME_UNKNOWN"]
+          },
+          "providerReceipt": {
+            "properties": {
+              "outcome": {
+                "enum": ["TIMED_OUT_BEFORE_SEND", "OUTCOME_UNKNOWN"]
+              }
+            },
+            "required": ["outcome"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "PROVIDER_FAILED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "errorCode": {
+            "enum": [
+              "PROVIDER_REJECTED",
+              "PROVIDER_RECEIPT_INVALID",
+              "PROVIDER_RESPONSE_INVALID"
+            ]
+          },
+          "providerReceipt": {
+            "properties": {
+              "outcome": { "enum": ["DEFINITIVE_REJECTED", "OUTCOME_UNKNOWN"] }
+            },
+            "required": ["outcome"]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "x-gurinnae-invariants": [
+    "providerReceipt.agentRunId/providerTurnId equal the owning turn and its semanticRequestSha256 equals requestRedacted.semanticRequestSha256; receipt/provider IDs never come from client input.",
+    "dispatchedAt <= completedAt when completedAt exists, latencyMs is derived from monotonic runtime evidence, and timestamps/cost/usage are never synthesized.",
+    "The envelope is exactly one FINAL_OUTPUT or TOOL_CALL; its payload/call digest, responseRedacted.finishReason, receipt outcome, and transcript digest are mutually consistent.",
+    "Every orderedSourceUseId belongs to this run and snapshot, passes rights/classification, and the exact selected bytes or derived segments—not identifiers alone—form the provider semantic request."
+  ]
+}

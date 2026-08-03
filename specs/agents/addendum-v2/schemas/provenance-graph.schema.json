@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/provenance-graph.json",
+  "title": "ProvenanceGraphV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "agentRunId",
+    "rootNodeId",
+    "nodes",
+    "edges",
+    "accessibleRows",
+    "graphSha256",
+    "accessibleRowsSha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "provenance-graph.v2" },
+    "agentRunId": { "type": "string", "format": "uuid" },
+    "rootNodeId": { "type": "string", "format": "uuid" },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nodeId",
+          "nodeType",
+          "label",
+          "state",
+          "objectId",
+          "objectVersion",
+          "objectSha256",
+          "locator",
+          "occurredAt",
+          "href"
+        ],
+        "properties": {
+          "nodeId": { "type": "string", "format": "uuid" },
+          "nodeType": {
+            "enum": [
+              "SOURCE_ASSET",
+              "EXTRACTION",
+              "EVIDENCE_SEGMENT",
+              "SNAPSHOT_MEMBER",
+              "AGENT_RUN",
+              "PROVIDER_TURN",
+              "TOOL_CALL",
+              "SOURCE_USE",
+              "CITATION",
+              "OUTPUT_VALIDATION",
+              "PROPOSAL",
+              "HUMAN_DECISION",
+              "PROMOTION",
+              "MATERIALIZED_TARGET"
+            ]
+          },
+          "label": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "state": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" },
+          "objectId": { "type": "string", "format": "uuid" },
+          "objectVersion": { "type": ["integer", "null"], "minimum": 1 },
+          "objectSha256": { "$ref": "#/$defs/sha256" },
+          "locator": { "type": ["string", "null"], "maxLength": 2048 },
+          "occurredAt": { "type": ["string", "null"], "format": "date-time" },
+          "href": {
+            "type": ["string", "null"],
+            "pattern": "^/",
+            "maxLength": 1024
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "edgeId",
+          "fromNodeId",
+          "toNodeId",
+          "relation",
+          "ordinal",
+          "edgeSha256"
+        ],
+        "properties": {
+          "edgeId": { "type": "string", "format": "uuid" },
+          "fromNodeId": { "type": "string", "format": "uuid" },
+          "toNodeId": { "type": "string", "format": "uuid" },
+          "relation": {
+            "enum": [
+              "EXTRACTED_FROM",
+              "SELECTED_AS",
+              "MEMBER_OF",
+              "INPUT_TO",
+              "DISPATCHED_AS",
+              "CALLED",
+              "USED_SOURCE",
+              "CITED_BY",
+              "VALIDATED_BY",
+              "PROPOSED",
+              "DECIDED_BY",
+              "PROMOTED_TO",
+              "MATERIALIZED_AS",
+              "CONTRADICTS",
+              "SUPPORTS"
+            ]
+          },
+          "ordinal": { "type": "integer", "minimum": 0 },
+          "edgeSha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "accessibleRows": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ordinal",
+          "fromLabel",
+          "relationLabel",
+          "toLabel",
+          "sourceHref",
+          "factSha256"
+        ],
+        "properties": {
+          "ordinal": { "type": "integer", "minimum": 0 },
+          "fromLabel": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "relationLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "toLabel": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "sourceHref": {
+            "type": ["string", "null"],
+            "pattern": "^/",
+            "maxLength": 1024
+          },
+          "factSha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "graphSha256": { "$ref": "#/$defs/sha256" },
+    "accessibleRowsSha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-invariants": [
+    "rootNodeId names exactly one node, every edge endpoint names exactly one node, nodeId/edgeId are unique, and cycles outside explicitly typed derivation history are rejected.",
+    "Nodes and edges are sorted by their declared ordinal/key and graphSha256 is RFC8785/JCS SHA-256 over the exact normalized graph.",
+    "accessibleRows are fact-set-equal and digest-equal to the graph, preserve every material relation and source link, and accessibleRowsSha256 binds their keyboard/screen-reader order.",
+    "Every node is authorized before projection; an inaccessible node, label, count, timing, edge, or locator is omitted before graph construction rather than redacted afterward."
+  ],
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["graphSha256"]
+  }
+}

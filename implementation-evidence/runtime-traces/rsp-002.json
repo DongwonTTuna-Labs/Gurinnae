@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RSP-002",
+  "route": "/respond/overview",
+  "url": "http://127.0.0.1:29103/respond/overview",
+  "observedAt": "2026-07-19T15:35:34.573Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RSP-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "questions",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "references",
+        "component": "EvidenceLedger",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "deadline",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "public-use",
+        "component": "CoverageStatement",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "support",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

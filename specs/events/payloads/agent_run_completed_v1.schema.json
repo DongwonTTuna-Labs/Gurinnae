@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/agent.run_completed.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agent_run_id", "case_id", "output_digest", "status"],
+  "properties": {
+    "agent_run_id": {
+      "type": "string"
+    },
+    "case_id": {
+      "type": "string"
+    },
+    "output_digest": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    }
+  }
+}

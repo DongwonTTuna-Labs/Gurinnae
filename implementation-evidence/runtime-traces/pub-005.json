@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-005",
+  "route": "/cases/{caseSlug}/revisions/{revision}",
+  "url": "http://127.0.0.1:29101/cases/synthetic-record/revisions/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:23.643Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-005",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "revision-banner",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "snapshot",
+        "component": "KnownUnknownResponse",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "diff",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "citation",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

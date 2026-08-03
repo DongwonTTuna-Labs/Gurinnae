@@ -1,0 +1,76 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "PUB-007",
+  title: "기관",
+  route: "/agencies",
+  archetype: "SEARCH_INDEX",
+  sections: [
+    {
+      order: 1,
+      id: "search",
+      title: "기관 검색",
+      component: "UnifiedSearch",
+      purpose: "공식 명칭과 과거 명칭.",
+      test_id: "pub_007__section__search",
+    },
+    {
+      order: 2,
+      id: "filters",
+      title: "지역·유형",
+      component: "UnifiedSearch",
+      purpose: "coverage-aware filter.",
+      test_id: "pub_007__section__filters",
+    },
+    {
+      order: 3,
+      id: "results",
+      title: "기관 목록",
+      component: "CoverageStatement",
+      purpose: "기관 identity·관할·coverage.",
+      test_id: "pub_007__section__results",
+    },
+    {
+      order: 4,
+      id: "coverage",
+      title: "수집 범위",
+      component: "CoverageStatement",
+      purpose: "미포함 기관 설명.",
+      test_id: "pub_007__section__coverage",
+    },
+  ],
+  actions: [
+    {
+      id: "open-agency",
+      label: "기관 보기",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "apply-filter",
+      label: "필터 적용",
+      capability: "none",
+      local_only: true,
+      persistence: "url",
+      interaction_kind: "COMMAND",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "listAgencies",
+      api: "public-api",
+      method: "GET",
+      path: "/v1/agencies",
+      blocking: true,
+      response_schema: "AgenciesPage",
+    },
+  ],
+} as const satisfies ScreenViewModel;

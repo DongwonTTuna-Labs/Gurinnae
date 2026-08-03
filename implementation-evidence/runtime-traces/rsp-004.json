@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RSP-004",
+  "route": "/respond/attachments",
+  "url": "http://127.0.0.1:29103/respond/attachments",
+  "observedAt": "2026-07-19T15:35:35.278Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RSP-004",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "guidance",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "upload",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "metadata",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "scan",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "files",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

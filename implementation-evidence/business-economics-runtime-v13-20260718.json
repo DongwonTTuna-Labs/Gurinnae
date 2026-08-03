@@ -1,0 +1,63 @@
+{
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "migration": "0029_product_economics.sql",
+  "sourceGenerator": "scripts/generate_0029_migration.py",
+  "generatedRelationCount": 24,
+  "generatedRelationOrder": [
+    "ops.fx_rate_facts",
+    "ops.product_events",
+    "ops.outcome_facts",
+    "ops.acquisition_source_receipts",
+    "ops.cost_allocations",
+    "ops.tariff_versions",
+    "ops.commercial_contract_periods",
+    "ops.usage_window_receipts",
+    "ops.usage_facts",
+    "ops.discount_decisions",
+    "ops.invoice_facts",
+    "ops.invoice_line_facts",
+    "ops.invoice_usage_memberships",
+    "ops.revenue_facts",
+    "ops.funding_concentration_snapshots",
+    "editorial.funding_disclosure_revisions",
+    "editorial.funding_disclosure_entries",
+    "ops.sku_readiness_evaluations",
+    "ops.sku_readiness_items",
+    "ops.accounting_corrections",
+    "ops.commercial_qualification_receipts",
+    "ops.offer_profile_capabilities",
+    "ops.paid_evidence_packets",
+    "ops.paid_evidence_packet_members"
+  ],
+  "checks": [
+    {
+      "command": "PostgreSQL 17 ephemeral instance: migrations 0001..0024 then 0029",
+      "result": "PASS",
+      "observed": "24 relations created; transaction committed"
+    },
+    {
+      "command": "PostgreSQL 17 ephemeral instance: migrations 0001..0030",
+      "result": "PASS",
+      "observed": "0029 economics relations and 0030 submission-session compatibility applied"
+    },
+    {
+      "command": "cargo test -p gurine-domain economics::tests",
+      "result": "PASS",
+      "observed": "qualification criteria and paid packet terminal guards"
+    },
+    {
+      "command": "cargo check -p gurine-persistence-postgres -p gurine-control-api",
+      "result": "PASS"
+    },
+    {
+      "command": "scripts/test-runtime-quality.sh",
+      "result": "PASS",
+      "observed": "production Rust forbidden-token scan"
+    }
+  ],
+  "remainingRuntimeGates": [
+    "full typed SECURITY DEFINER write command procedures and idempotency receipts",
+    "0025..0028 migration chain compatibility",
+    "all 41 business acceptance scenarios and live production evidence"
+  ]
+}

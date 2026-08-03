@@ -1,0 +1,30 @@
+[package]
+name = "gurine-identity-api"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+actix-web.workspace = true
+base64.workspace = true
+getrandom.workspace = true
+gurine-api-contracts = { path = "../../crates/api-contracts" }
+gurine-application = { path = "../../crates/application" }
+gurine-auth = { path = "../../crates/auth" }
+gurine-persistence-postgres = { path = "../../crates/persistence-postgres" }
+openidconnect.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+url.workspace = true
+gurine-observability = { path = "../../crates/observability" }
+uuid.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true

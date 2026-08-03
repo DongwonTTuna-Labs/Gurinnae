@@ -1,0 +1,83 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "PUB-028",
+  title: "정정 요청 접수",
+  route: "/correction-request/receipt",
+  archetype: "GUIDED_FORM",
+  sections: [
+    {
+      order: 1,
+      id: "receipt",
+      title: "접수 결과",
+      component: "StatusAndRevisionHeader",
+      purpose: "ID·시각·상태.",
+      test_id: "pub_028__section__receipt",
+    },
+    {
+      order: 2,
+      id: "summary",
+      title: "제출 요약",
+      component: "LongFormArticle",
+      purpose: "민감 본문 최소 표시.",
+      test_id: "pub_028__section__summary",
+    },
+    {
+      order: 3,
+      id: "next",
+      title: "다음 절차",
+      component: "StructuredContentSection",
+      purpose: "SLA·추가자료.",
+      test_id: "pub_028__section__next",
+    },
+    {
+      order: 4,
+      id: "manage",
+      title: "상태 관리",
+      component: "StatusAndRevisionHeader",
+      purpose: "magic link.",
+      test_id: "pub_028__section__manage",
+    },
+  ],
+  actions: [
+    {
+      id: "download-receipt",
+      label: "영수증 저장",
+      capability: "none",
+      interaction_kind: "DOWNLOAD",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "manage-request",
+      label: "요청 상태 보기",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "exchangeCorrectionReceiptToken",
+      api: "submission-api",
+      method: "POST",
+      path: "/v1/submission-session/correction-receipt:exchange",
+      blocking: true,
+      response_schema: "ExchangeSubmissionSessionResult",
+    },
+    {
+      operation_id: "getCorrectionReceipt",
+      api: "submission-api",
+      method: "GET",
+      path: "/v1/correction-receipt",
+      blocking: true,
+      response_schema: "CorrectionReceiptResponse",
+    },
+  ],
+} as const satisfies ScreenViewModel;

@@ -1,0 +1,104 @@
+{
+  "documentSha256": "9be232be5a1657b9de5cf5c9cd4009aa8d01f96aea51269b15aad53c9245d537",
+  "mediaType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "pages": [
+    {
+      "blocks": [],
+      "height": null,
+      "index": 0,
+      "tables": [
+        {
+          "id": "tbl-01a273388b0e4d8aa5de",
+          "locator": {
+            "kind": "XLSX_CELL",
+            "value": "sheet=Contracts;range=A1:D2"
+          },
+          "rows": [
+            [
+              {
+                "column": 1,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=A1"
+                },
+                "row": 1,
+                "text": "contract_id"
+              },
+              {
+                "column": 2,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=B1"
+                },
+                "row": 1,
+                "text": "title"
+              },
+              {
+                "column": 3,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=C1"
+                },
+                "row": 1,
+                "text": "amount"
+              },
+              {
+                "column": 4,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=D1"
+                },
+                "row": 1,
+                "text": "unit"
+              }
+            ],
+            [
+              {
+                "column": 1,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=A2"
+                },
+                "row": 2,
+                "text": "SYN-1"
+              },
+              {
+                "column": 2,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=B2"
+                },
+                "row": 2,
+                "text": "안전장비"
+              },
+              {
+                "column": 3,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=C2"
+                },
+                "row": 2,
+                "text": "480000"
+              },
+              {
+                "column": 4,
+                "locator": {
+                  "kind": "XLSX_CELL",
+                  "value": "sheet=Contracts;cell=D2"
+                },
+                "row": 2,
+                "text": "EA"
+              }
+            ]
+          ]
+        }
+      ],
+      "width": null
+    }
+  ],
+  "parserId": "xlsx",
+  "parserVersion": "0.35.0-reference-v1",
+  "rejectionCode": null,
+  "status": "EXTRACTED",
+  "warnings": []
+}

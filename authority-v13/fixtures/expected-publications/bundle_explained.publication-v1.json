@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.0.0",
+  "publication_id": "publication_fixture_bundle_explained",
+  "revision_id": "publication_revision_fixture_bundle_explained_v1",
+  "revision_number": 1,
+  "supersedes_revision_id": null,
+  "case_id": "case_fixture_bundle_explained",
+  "slug": "synthetic-bundle-explained",
+  "display_status": "PUBLISHED_EXPLAINED",
+  "content_hash": "e3e490530fd1caf3b8ad1b2e4d01a1cc4b240b4b38c993a3f2119d8609d7aa69",
+  "title": "유지보수·교육 포함 사실이 확인돼 가격 차이가 설명된 합성 사례",
+  "summary": "초기 단가 비교에서는 큰 차이가 보였지만 계약이 단품이 아니라 설치·교육·36개월 유지보수를 포함한 패키지라는 사실이 확인됐다. 따라서 단품 cohort와 직접 비교하지 않는다.",
+  "sections": [
+    {
+      "section_id": "explanation",
+      "heading": "무엇이 확인됐나",
+      "blocks": [
+        {
+          "type": "PARAGRAPH",
+          "text": "계약 공개자료에서 묶음 구성이 확인됐다.",
+          "data": null
+        }
+      ]
+    },
+    {
+      "section_id": "lesson",
+      "heading": "탐지 시스템에 반영한 점",
+      "blocks": [
+        {
+          "type": "LIMITATION",
+          "text": "KNOWN_BUNDLE은 단품 가격 cohort에서 제외한다.",
+          "data": {
+            "rule_change_required": false
+          }
+        }
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "claim_fixture_bundle_fact",
+      "claim_type": "FACT",
+      "text_ko": "이 계약은 설치, 교육, 36개월 유지보수를 포함한 합성 패키지다.",
+      "evidence_refs": [
+        {
+          "evidence_id": "evidence_fixture_bundle_contract",
+          "relation": "SUPPORTS"
+        }
+      ]
+    },
+    {
+      "claim_id": "claim_fixture_bundle_status",
+      "claim_type": "OFFICIAL_OUTCOME",
+      "text_ko": "단품 가격 cohort와의 직접 비교는 부적절해 초기 차이가 설명됐다.",
+      "evidence_refs": [
+        {
+          "evidence_id": "evidence_fixture_bundle_response",
+          "relation": "SUPPORTS"
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "evidence_fixture_bundle_contract",
+      "case_id": "case_fixture_bundle_explained",
+      "kind": "OFFICIAL_RECORD",
+      "stance": "CONTEXT",
+      "tier": "A",
+      "verification_status": "VERIFIED",
+      "summary": "합성 계약은 단품이 아니라 설치·교육·36개월 유지보수를 포함한 묶음이다.",
+      "source": {
+        "source_document_id": "srcdoc_fixture_bundle_explained",
+        "locator": {
+          "type": "API_FIELD",
+          "value": "$.items[0]"
+        },
+        "source_url": "https://fixtures.gurine.invalid/bundle_explained",
+        "retrieved_at": "2026-01-15T03:10:00Z",
+        "content_sha256": "43b264090179cab0a7598e55f0f70d1d176a029c7c8b29dd7406b1d1dcab29ea"
+      },
+      "public_excerpt": "설치·교육·36개월 유지보수 포함",
+      "redaction_status": "PUBLIC_APPROVED",
+      "license_status": "REVIEWED_PUBLIC",
+      "created_by": {
+        "actor_type": "SERVICE",
+        "actor_id": "fixture_builder",
+        "display_role": "synthetic fixture"
+      },
+      "created_at": "2026-01-20T00:00:00Z"
+    },
+    {
+      "evidence_id": "evidence_fixture_bundle_response",
+      "case_id": "case_fixture_bundle_explained",
+      "kind": "RESPONSE",
+      "stance": "CONTRADICTS",
+      "tier": "B",
+      "verification_status": "VERIFIED",
+      "summary": "합성 산출내역에서 장비 외 서비스 구성이 확인됐다.",
+      "source": {
+        "source_document_id": "srcdoc_fixture_bundle_explained",
+        "locator": {
+          "type": "API_FIELD",
+          "value": "$.items[0].includedServices"
+        },
+        "source_url": "https://fixtures.gurine.invalid/bundle_explained",
+        "retrieved_at": "2026-01-15T03:10:00Z",
+        "content_sha256": "43b264090179cab0a7598e55f0f70d1d176a029c7c8b29dd7406b1d1dcab29ea"
+      },
+      "public_excerpt": "단품 비교 불가",
+      "redaction_status": "PUBLIC_APPROVED",
+      "license_status": "REVIEWED_PUBLIC",
+      "created_by": {
+        "actor_type": "SERVICE",
+        "actor_id": "fixture_builder",
+        "display_role": "synthetic fixture"
+      },
+      "created_at": "2026-01-20T00:00:00Z"
+    }
+  ],
+  "subjects": [
+    {
+      "type": "AGENCY",
+      "id": "agency_fixture_hangang",
+      "display_name": "가상한강구청",
+      "public_url": "/agencies/agency_fixture_hangang"
+    },
+    {
+      "type": "SUPPLIER",
+      "id": "supplier_fixture_beta",
+      "display_name": "가상베타서비스",
+      "public_url": "/suppliers/supplier_fixture_beta"
+    },
+    {
+      "type": "CONTRACT",
+      "id": "contract_fixture_bundle_explained",
+      "display_name": "SYN-BUNDLE-EXPLAINED",
+      "public_url": "/contracts/contract_fixture_bundle_explained"
+    }
+  ],
+  "methodology": {
+    "rule_key": "PRICE_OUTLIER",
+    "rule_version": "1.0.0",
+    "calculation": {
+      "result": "EXCLUDED_KNOWN_BUNDLE"
+    },
+    "limitations": [
+      "서비스별 독립 가격은 산출하지 않았다."
+    ],
+    "reproducibility_bundle_url": "https://fixtures.gurine.invalid/repro/bundle-explained-v1"
+  },
+  "responses": [
+    {
+      "party": "가상한강구청",
+      "status": "RECEIVED",
+      "display_text": "묶음 구성과 기간을 확인하는 합성 자료를 제출했습니다.",
+      "received_at": "2026-01-27T00:00:00Z"
+    }
+  ],
+  "corrections": [],
+  "source_freshness": [
+    {
+      "source_id": "pps_g2b_contracts",
+      "source_published_at": "2025-07-01T00:00:00Z",
+      "retrieved_at": "2026-01-15T03:10:00Z",
+      "content_sha256": "43b264090179cab0a7598e55f0f70d1d176a029c7c8b29dd7406b1d1dcab29ea"
+    }
+  ],
+  "published_at": "2026-02-02T00:00:00Z",
+  "updated_at": "2026-02-02T00:00:00Z",
+  "review_summary": {
+    "editor_approval_count": 1,
+    "legal_reviewed": false,
+    "policy_version": "editorial-1.0.0"
+  }
+}

@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/output-validation.json",
+  "title": "OutputValidationV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "validationId",
+    "agentRunId",
+    "providerTurnId",
+    "inputSnapshotSha256",
+    "providerOutputSha256",
+    "outputSchemaId",
+    "outputSchemaVersion",
+    "outputSchemaSha256",
+    "validationStatus",
+    "schemaStatus",
+    "citationStatus",
+    "policyStatus",
+    "runTerminalStatus",
+    "outputStatus",
+    "failureCode",
+    "failureDetails",
+    "validatedOutcome",
+    "validatedOutcomeSha256",
+    "citationCount",
+    "proposalCount",
+    "citationSetSha256",
+    "proposalSetSha256",
+    "validationSha256",
+    "validatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "output-validation.v2"
+    },
+    "validationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "agentRunId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "providerTurnId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "inputSnapshotSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "providerOutputSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "outputSchemaId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "outputSchemaVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "outputSchemaSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "validationStatus": {
+      "enum": ["VALID", "INVALID"]
+    },
+    "schemaStatus": {
+      "enum": ["PASS", "FAIL", "NOT_RUN"]
+    },
+    "citationStatus": {
+      "enum": ["PASS", "FAIL", "NOT_RUN"]
+    },
+    "policyStatus": {
+      "enum": ["PASS", "FAIL", "NOT_RUN"]
+    },
+    "runTerminalStatus": {
+      "enum": [
+        "SUCCEEDED",
+        "FAILED",
+        "POLICY_BLOCKED",
+        "BUDGET_BLOCKED",
+        "CANCELLED"
+      ]
+    },
+    "outputStatus": {
+      "enum": [
+        "COMPLETED",
+        "ABSTAINED",
+        "POLICY_BLOCKED",
+        "BUDGET_BLOCKED",
+        "INVALID"
+      ]
+    },
+    "failureCode": {
+      "type": ["string", "null"],
+      "enum": [
+        null,
+        "OUTPUT_SCHEMA_INVALID",
+        "CITATION_MISSING",
+        "CITATION_OUTSIDE_SNAPSHOT",
+        "CITATION_LOCATOR_MISMATCH",
+        "CITATION_CONTENT_HASH_MISMATCH",
+        "CITATION_SOURCE_KIND_INVALID",
+        "RUN_TOOL_ARTIFACT_NOT_OWNED_BY_RUN",
+        "SNAPSHOT_STALE",
+        "PROMPT_INJECTION_DETECTED",
+        "RIGHTS_DENIED",
+        "CLASSIFICATION_DENIED",
+        "SOURCE_USE_MISSING",
+        "SOURCE_USE_RIGHTS_MISMATCH",
+        "PROPOSAL_SCHEMA_INVALID"
+      ]
+    },
+    "failureDetails": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "code", "jsonPointer", "detailSha256"],
+        "properties": {
+          "stage": {
+            "enum": [
+              "JSON_SCHEMA",
+              "SNAPSHOT",
+              "CITATION",
+              "SOURCE_USE",
+              "RIGHTS",
+              "CLASSIFICATION",
+              "POLICY",
+              "PROPOSAL"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+          },
+          "jsonPointer": {
+            "type": "string",
+            "pattern": "^(?:|/(?:[^~/]|~0|~1)*)$",
+            "maxLength": 1024
+          },
+          "detailSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "validatedOutcome": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/outcome"
+        }
+      ]
+    },
+    "validatedOutcomeSha256": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "citationCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "proposalCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "citationSetSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "proposalSetSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "validationSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "validatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "validationStatus": {
+            "const": "VALID"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "schemaStatus": {
+            "const": "PASS"
+          },
+          "citationStatus": {
+            "const": "PASS"
+          },
+          "policyStatus": {
+            "const": "PASS"
+          },
+          "failureCode": {
+            "type": "null"
+          },
+          "failureDetails": {
+            "maxItems": 0
+          },
+          "outputStatus": {
+            "enum": [
+              "COMPLETED",
+              "ABSTAINED",
+              "POLICY_BLOCKED",
+              "BUDGET_BLOCKED"
+            ]
+          },
+          "validatedOutcome": {
+            "$ref": "#/$defs/outcome"
+          },
+          "validatedOutcomeSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "validationStatus": {
+            "const": "INVALID"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "failureCode": {
+            "type": "string"
+          },
+          "failureDetails": {
+            "minItems": 1
+          },
+          "runTerminalStatus": {
+            "const": "FAILED"
+          },
+          "outputStatus": {
+            "const": "INVALID"
+          },
+          "validatedOutcome": {
+            "type": "null"
+          },
+          "validatedOutcomeSha256": {
+            "type": "null"
+          },
+          "citationCount": {
+            "const": 0
+          },
+          "proposalCount": {
+            "const": 0
+          }
+        },
+        "anyOf": [
+          { "properties": { "schemaStatus": { "const": "FAIL" } } },
+          { "properties": { "citationStatus": { "const": "FAIL" } } },
+          { "properties": { "policyStatus": { "const": "FAIL" } } }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "COMPLETED" }
+        },
+        "required": ["validationStatus", "outputStatus"]
+      },
+      "then": {
+        "properties": {
+          "runTerminalStatus": { "const": "SUCCEEDED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "COMPLETED" } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "ABSTAINED" }
+        },
+        "required": ["validationStatus", "outputStatus"]
+      },
+      "then": {
+        "properties": {
+          "runTerminalStatus": { "const": "SUCCEEDED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "ABSTAINED" } }
+          },
+          "proposalCount": { "const": 0 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "POLICY_BLOCKED" }
+        },
+        "required": ["validationStatus", "outputStatus"]
+      },
+      "then": {
+        "properties": {
+          "runTerminalStatus": { "const": "POLICY_BLOCKED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "POLICY_BLOCKED" } }
+          },
+          "proposalCount": { "const": 0 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "validationStatus": { "const": "VALID" },
+          "outputStatus": { "const": "BUDGET_BLOCKED" }
+        },
+        "required": ["validationStatus", "outputStatus"]
+      },
+      "then": {
+        "properties": {
+          "runTerminalStatus": { "const": "BUDGET_BLOCKED" },
+          "validatedOutcome": {
+            "properties": { "status": { "const": "BUDGET_BLOCKED" } }
+          },
+          "proposalCount": { "const": 0 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "status",
+        "answerFirstSummary",
+        "unknowns",
+        "investigationsPerformed",
+        "nextActions",
+        "citationBindings",
+        "proposalBindings"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "agent-validated-outcome.v2"
+        },
+        "status": {
+          "enum": ["COMPLETED", "ABSTAINED", "POLICY_BLOCKED", "BUDGET_BLOCKED"]
+        },
+        "answerFirstSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 6000
+        },
+        "unknowns": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "investigationsPerformed": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["method", "resultSummary", "toolCallIds"],
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "resultSummary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "toolCallIds": {
+                "type": "array",
+                "uniqueItems": true,
+                "maxItems": 32,
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        },
+        "nextActions": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["actionType", "reason", "requiresHumanDecision"],
+            "properties": {
+              "actionType": {
+                "enum": [
+                  "COLLECT_SOURCE",
+                  "VERIFY_EVIDENCE",
+                  "REQUEST_RESPONSE",
+                  "REVIEW_HYPOTHESIS",
+                  "REVIEW_CLAIM",
+                  "REVIEW_COMPARABLE",
+                  "PROMOTE_RESEARCH_ARTIFACT",
+                  "NO_ACTION"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "requiresHumanDecision": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "citationBindings": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["citationId", "citationSha256"],
+            "properties": {
+              "citationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "citationSha256": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        },
+        "proposalBindings": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["proposalId", "payloadSha256"],
+            "properties": {
+              "proposalId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "payloadSha256": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-gurinnae-invariants": [
+    "VALID has a satisfiable nonnull validatedOutcome whose status equals outputStatus; INVALID has no validated outcome and terminates the run as FAILED/INVALID.",
+    "citationCount and proposalCount equal the unique ordered binding counts in validatedOutcome; citationSetSha256 and proposalSetSha256 bind those canonical sets including the empty set.",
+    "validatedOutcomeSha256 is RFC8785/JCS SHA-256 over the exact validatedOutcome and validationSha256 binds every stage status, failure detail, count, set digest, and validated outcome digest.",
+    "ABSTAINED, POLICY_BLOCKED, BUDGET_BLOCKED, and every INVALID validation produce zero proposals; no partial proposal row survives validation failure."
+  ],
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["validationSha256"]
+  }
+}

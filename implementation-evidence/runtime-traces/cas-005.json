@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-005",
+  "route": "/internal/cases/{caseId}/evidence/{evidenceId}",
+  "url": "http://127.0.0.1:29102/internal/cases/80000000-0000-4000-8000-000000000001/evidence/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:41.618Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "CAS-005",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "source",
+        "component": "EvidenceLedger",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "locator",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "content",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "verification",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "relationships",
+        "component": "ClaimWorkbench",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "access",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -1,0 +1,393 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.gurine.invalid/contract.schema.json",
+  "title": "Normalized Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_id",
+    "source_document_ids",
+    "contract_number",
+    "agency",
+    "supplier",
+    "contract_type",
+    "method",
+    "signed_at",
+    "amounts",
+    "line_items",
+    "field_provenance",
+    "normalization_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "contract_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "source_document_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "contract_number": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "notice_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "award_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "agency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agency_id",
+        "name",
+        "identity_status"
+      ],
+      "properties": {
+        "agency_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "identity_status": {
+          "enum": [
+            "VERIFIED",
+            "AMBIGUOUS",
+            "CANDIDATE"
+          ]
+        }
+      }
+    },
+    "supplier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supplier_id",
+        "name",
+        "entity_type",
+        "identity_status"
+      ],
+      "properties": {
+        "supplier_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "entity_type": {
+          "enum": [
+            "CORPORATION",
+            "SOLE_PROPRIETOR",
+            "OTHER",
+            "UNKNOWN"
+          ]
+        },
+        "identity_status": {
+          "enum": [
+            "VERIFIED",
+            "AMBIGUOUS",
+            "CANDIDATE",
+            "UNKNOWN"
+          ]
+        },
+        "business_number_last4": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]{4}$"
+        }
+      }
+    },
+    "contract_type": {
+      "enum": [
+        "GOODS",
+        "SERVICE",
+        "CONSTRUCTION",
+        "FOREIGN",
+        "TECHNICAL_SERVICE",
+        "OTHER"
+      ]
+    },
+    "method": {
+      "enum": [
+        "OPEN_COMPETITION",
+        "LIMITED_COMPETITION",
+        "DESIGNATED_COMPETITION",
+        "SOLE_SOURCE",
+        "FRAMEWORK_CALL_OFF",
+        "UNKNOWN"
+      ]
+    },
+    "method_basis": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 1000
+    },
+    "signed_at": {
+      "type": "string",
+      "format": "date"
+    },
+    "starts_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "ends_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "status": {
+      "enum": [
+        "ANNOUNCED",
+        "AWARDED",
+        "ACTIVE",
+        "COMPLETED",
+        "CANCELLED",
+        "SUPERSEDED",
+        "UNKNOWN"
+      ],
+      "default": "UNKNOWN"
+    },
+    "amounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "original",
+        "current"
+      ],
+      "properties": {
+        "original": {
+          "$ref": "common.schema.json#/$defs/money"
+        },
+        "current": {
+          "$ref": "common.schema.json#/$defs/money"
+        }
+      }
+    },
+    "line_items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "line_item_id",
+          "line_number",
+          "raw_description",
+          "category_code",
+          "quantity",
+          "unit_code",
+          "total_price",
+          "vat_basis",
+          "bundle_status",
+          "specification",
+          "normalization_confidence"
+        ],
+        "properties": {
+          "line_item_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "line_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "raw_description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "category_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "manufacturer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "variant": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+          },
+          "unit_code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_]{1,32}$"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total_price": {
+            "$ref": "common.schema.json#/$defs/money"
+          },
+          "vat_basis": {
+            "enum": [
+              "INCLUDED",
+              "EXCLUDED",
+              "EXEMPT",
+              "MIXED",
+              "UNKNOWN"
+            ]
+          },
+          "bundle_status": {
+            "enum": [
+              "SINGLE_ITEM",
+              "KNOWN_BUNDLE",
+              "UNKNOWN"
+            ]
+          },
+          "specification": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "included_services": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "SHIPPING",
+                "INSTALLATION",
+                "TRAINING",
+                "MAINTENANCE",
+                "WARRANTY",
+                "CUSTOMIZATION",
+                "CERTIFICATION",
+                "OTHER"
+              ]
+            }
+          },
+          "normalization_confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "amendments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "amendment_id",
+          "sequence",
+          "signed_at",
+          "amount_before",
+          "amount_after",
+          "reason_category"
+        ],
+        "properties": {
+          "amendment_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount_before": {
+            "$ref": "common.schema.json#/$defs/money"
+          },
+          "amount_after": {
+            "$ref": "common.schema.json#/$defs/money"
+          },
+          "reason_category": {
+            "enum": [
+              "SCOPE_CHANGE",
+              "PRICE_ADJUSTMENT",
+              "SCHEDULE",
+              "CORRECTION",
+              "EMERGENCY",
+              "UNKNOWN"
+            ]
+          },
+          "reason_raw": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "field_provenance": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/field_provenance"
+      }
+    },
+    "normalization_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "normalized_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+schema_version: 2
+specification_version: 13.0.0
+id: koneps-contracts
+display_name: 나라장터 계약정보
+status: FINAL
+source_kind: OFFICIAL_REST_API
+official_reference: https://www.data.go.kr/data/15129427/openapi.do
+base_url: https://apis.data.go.kr/1230000/ao/CntrctInfoService
+credential_env: DATA_GO_KR_SERVICE_KEY
+formats:
+- json
+- xml
+network: egress-gateway-only
+schedule: ops.source_registry
+activation:
+  requires_credentialed_preflight: true
+  requires_recorded_response_fingerprint: true
+  requires_quota_probe: true
+  requires_terms_review: true
+  no_html_scraping: true
+  failure_mode: connector remains DISABLED; unrelated connectors continue
+operations:
+- contract-goods-list
+- contract-goods-detail
+- contract-goods-change
+- contract-goods-delete
+- contract-construction-list
+- contract-construction-detail
+- contract-construction-change
+- contract-construction-delete
+- contract-service-list
+- contract-service-detail
+- contract-service-change
+- contract-service-delete
+- contract-foreign-list
+- contract-foreign-detail
+- contract-foreign-change
+- contract-foreign-delete
+activation_mode: KEY_ONLY_REST
+operator_responsibility: provide credential/config and pass live preflight

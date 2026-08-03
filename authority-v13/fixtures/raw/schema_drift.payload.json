@@ -1,0 +1,13 @@
+{
+  "fixture": true,
+  "fixture_notice": "합성 schema drift",
+  "items": [
+    {
+      "contractAmount": null,
+      "newAmountObject": {
+        "value": 12000000,
+        "currency": "KRW"
+      }
+    }
+  ]
+}

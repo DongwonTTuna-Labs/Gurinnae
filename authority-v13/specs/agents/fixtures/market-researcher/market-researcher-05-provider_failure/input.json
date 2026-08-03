@@ -1,0 +1,17 @@
+{
+  "run_id": "00000000-0000-0000-0000-000000002715",
+  "case_id": "00000000-0000-0000-0000-000000004e25",
+  "objective": "market-researcher 합성 평가 provider_failure",
+  "evidence_snapshot_hash": "82918aae2a3d96cd4ee8c5dba10376b4d2ec255996e78a26ac1111ef4b4e9af4",
+  "allowed_evidence_ids": [
+    "00000000-0000-0000-0000-0000000003e9",
+    "00000000-0000-0000-0000-0000000003ea",
+    "00000000-0000-0000-0000-0000000003eb"
+  ],
+  "budget_krw": 1000,
+  "locale": "ko-KR",
+  "known_unknowns": [
+    "설치·인증 비용 포함 여부"
+  ],
+  "policy_flags": []
+}

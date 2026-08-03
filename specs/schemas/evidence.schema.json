@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.gurine.invalid/evidence.schema.json",
+  "title": "Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "case_id",
+    "kind",
+    "stance",
+    "tier",
+    "verification_status",
+    "summary",
+    "source",
+    "redaction_status",
+    "license_status",
+    "created_at"
+  ],
+  "properties": {
+    "evidence_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "case_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "kind": {
+      "enum": [
+        "OFFICIAL_RECORD",
+        "SOURCE_FIELD",
+        "PRICE_OBSERVATION",
+        "CALCULATION",
+        "RESPONSE",
+        "OFFICIAL_OUTCOME",
+        "BACKGROUND",
+        "OTHER"
+      ]
+    },
+    "stance": {
+      "enum": ["SUPPORTS", "CONTRADICTS", "CONTEXT", "NEUTRAL"]
+    },
+    "tier": {
+      "enum": ["A", "B", "C", "D", "E", "F"]
+    },
+    "verification_status": {
+      "enum": ["PENDING", "VERIFIED", "REJECTED", "NEEDS_WORK"]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 5000
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_document_id", "locator"],
+      "properties": {
+        "source_document_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "locator": {
+          "$ref": "common.schema.json#/$defs/source_locator"
+        },
+        "source_url": {
+          "type": ["string", "null"],
+          "format": "uri",
+          "maxLength": 2048
+        },
+        "retrieved_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "content_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "public_excerpt": {
+      "type": ["string", "null"],
+      "maxLength": 5000
+    },
+    "redaction_status": {
+      "enum": [
+        "NOT_REVIEWED",
+        "NOT_REQUIRED",
+        "REDACTED",
+        "PUBLIC_APPROVED",
+        "PRIVATE_ONLY"
+      ]
+    },
+    "license_status": {
+      "enum": [
+        "REVIEWED_PUBLIC",
+        "LINK_ONLY",
+        "PRIVATE_USE",
+        "UNKNOWN",
+        "PROHIBITED"
+      ]
+    },
+    "created_by": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/actor_ref"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  }
+}

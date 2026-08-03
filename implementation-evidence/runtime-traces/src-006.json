@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "SRC-006",
+  "route": "/internal/sources/{sourceId}/backfill",
+  "url": "http://127.0.0.1:29102/internal/sources/80000000-0000-4000-8000-000000000001/backfill",
+  "observedAt": "2026-07-19T15:35:49.043Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "SRC-006",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "scope",
+        "component": "CoverageStatement",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "estimate",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "dedupe",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "downstream",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "safety",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "approval",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "progress",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

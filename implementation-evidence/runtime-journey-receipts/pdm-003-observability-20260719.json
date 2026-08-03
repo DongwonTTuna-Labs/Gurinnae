@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "LIVE_POSTGRES_PDM_003_OBSERVABILITY",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "correlationId": "2bd680ad-ba47-49d2-b8e4-f612e6c4e985",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "rows": [
+    {
+      "rowId": "source",
+      "metricSchemaVersion": "v13.source.1",
+      "windowStart": "2026-07-20T20:08:59Z",
+      "windowEnd": "2026-07-20T20:09:59Z",
+      "windowSeconds": 60,
+      "numerator": 0,
+      "denominator": 2,
+      "target": "source run and document counters are queryable",
+      "observed": 0,
+      "status": "KNOWN",
+      "reason": "NONE",
+      "unknownReasons": [],
+      "evidence": {
+        "sourceDocuments": 0,
+        "sourceRuns": 2,
+        "checkpointAgeSeconds": 0,
+        "duplicateCount": 0,
+        "quarantinedCount": 0
+      },
+      "formula": "status in {KNOWN,NOT_APPLICABLE} and numerator >= 0 and denominator >= 0",
+      "pass": true
+    },
+    {
+      "rowId": "parser-normalization",
+      "metricSchemaVersion": "v13.parser.1",
+      "windowStart": "2026-07-20T20:08:59Z",
+      "windowEnd": "2026-07-20T20:09:59Z",
+      "windowSeconds": 60,
+      "numerator": 0,
+      "denominator": 0,
+      "target": "parser relation and provenance counters are readable",
+      "observed": 0,
+      "status": "NOT_APPLICABLE",
+      "reason": "NO_SOURCE_OBSERVATIONS",
+      "unknownReasons": ["NO_SOURCE_OBSERVATIONS"],
+      "evidence": {
+        "sourceDocuments": 0,
+        "replayMismatchCount": 0,
+        "requiredFieldMissing": 0,
+        "unknownUnitCount": 0,
+        "piiSecretLabels": 0
+      },
+      "formula": "status in {KNOWN,NOT_APPLICABLE} and numerator == denominator",
+      "pass": true
+    },
+    {
+      "rowId": "rules-editorial-public",
+      "metricSchemaVersion": "v13.editorial.1",
+      "windowStart": "2026-07-20T20:08:59Z",
+      "windowEnd": "2026-07-20T20:09:59Z",
+      "windowSeconds": 60,
+      "numerator": 4,
+      "denominator": 4,
+      "target": "rule run and publication receipt chain is queryable",
+      "observed": 1,
+      "status": "KNOWN",
+      "reason": "NONE",
+      "unknownReasons": [],
+      "evidence": {
+        "ruleRuns": 4,
+        "journeyReceipts": 20,
+        "publicLatencyMs": 0,
+        "freshnessNotice": "UNKNOWN"
+      },
+      "formula": "status in {KNOWN,NOT_APPLICABLE} and numerator >= 0 and denominator >= 0",
+      "pass": true
+    },
+    {
+      "rowId": "capacity-cost",
+      "metricSchemaVersion": "v13.capacity.1",
+      "windowStart": "2026-07-20T20:08:59Z",
+      "windowEnd": "2026-07-20T20:09:59Z",
+      "windowSeconds": 60,
+      "numerator": 57,
+      "denominator": 69,
+      "target": "audit/outbox/database size counters are bounded and readable",
+      "observed": 38852287,
+      "status": "KNOWN",
+      "reason": "NONE",
+      "evidence": {
+        "auditEvents": 69,
+        "outboxEvents": 57,
+        "providerTurns": 0,
+        "databaseSizeBytes": 38852287,
+        "budgetCapEnforced": true
+      },
+      "formula": "auditEvents >= 0 and outboxEvents >= 0 and providerTurns >= 0 and databaseSizeBytes > 0 and budgetCapEnforced",
+      "pass": true
+    },
+    {
+      "rowId": "incident-recovery",
+      "metricSchemaVersion": "v13.incident.1",
+      "windowStart": "2026-07-20T20:08:59Z",
+      "windowEnd": "2026-07-20T20:09:59Z",
+      "windowSeconds": 60,
+      "numerator": 1,
+      "denominator": 1,
+      "target": "fault is rejected and recovery receipt is readable",
+      "observed": 1,
+      "status": "KNOWN",
+      "reason": "NONE",
+      "evidence": {
+        "injectedFault": "stale-expected-version",
+        "runbookAction": "reject-and-retry",
+        "killSwitchScope": "narrow",
+        "killSwitchId": "b1520159-498f-43e4-bafb-4d2fa9126cc8",
+        "finalState": "INACTIVE",
+        "activeState": "ACTIVE",
+        "forbiddenMutationCount": 0
+      },
+      "formula": "injectedFault == stale-expected-version and forbiddenMutationCount == 0 and linkedFlow.pass",
+      "pass": true
+    }
+  ],
+  "measured": {
+    "ruleRuns": 4,
+    "sourceRuns": 2,
+    "auditEvents": 69,
+    "outboxEvents": 57,
+    "providerTurns": 0,
+    "relationCount": 238,
+    "journeyReceipts": 20,
+    "sourceDocuments": 0,
+    "databaseSizeBytes": 38852287,
+    "postgresqlVersion": "18.4 (Debian 18.4-1.pgdg12+1)"
+  },
+  "piiSecretLabelScan": {
+    "result": "PASS",
+    "labelsFound": []
+  },
+  "incidentRecoveryLinkedFlow": "FLOW-10",
+  "sourceTreeDigest": "8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060",
+  "observedAt": "2026-07-20T20:09:59Z",
+  "pass": true
+}

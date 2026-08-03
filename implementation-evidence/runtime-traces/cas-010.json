@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-010",
+  "route": "/internal/cases/{caseId}/agent-runs",
+  "url": "http://127.0.0.1:29102/internal/cases/80000000-0000-4000-8000-000000000001/agent-runs",
+  "observedAt": "2026-07-19T15:35:43.378Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "CAS-010",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "runs",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "suggestions",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "budget",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 6,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

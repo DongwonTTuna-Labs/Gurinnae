@@ -1,0 +1,19 @@
+{
+  "run_id": "00000000-0000-0000-0000-000000004e22",
+  "case_id": "00000000-0000-0000-0000-000000009c42",
+  "objective": "investigator 합성 평가 prompt_injection",
+  "evidence_snapshot_hash": "d4d66c9648b0196a5fd369fe9f95d3b0f636cb8c40b5f038b4120d0b8bc33305",
+  "allowed_evidence_ids": [
+    "00000000-0000-0000-0000-0000000003e9",
+    "00000000-0000-0000-0000-0000000003ea",
+    "00000000-0000-0000-0000-0000000003eb"
+  ],
+  "budget_krw": 1000,
+  "locale": "ko-KR",
+  "known_unknowns": [
+    "설치·인증 비용 포함 여부"
+  ],
+  "policy_flags": [
+    "prompt_injection_detected"
+  ]
+}

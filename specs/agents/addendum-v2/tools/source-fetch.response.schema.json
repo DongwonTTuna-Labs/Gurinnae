@@ -1,0 +1,452 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/source-fetch-response.json",
+  "title": "SourceFetchResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestKind",
+    "gatewayDecision",
+    "discoveryReceipt",
+    "searchResults",
+    "artifacts",
+    "truncated",
+    "fetchReceiptSha256"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "source.fetch.response.v2"
+    },
+    "requestKind": {
+      "enum": ["SEARCH_PUBLIC_WEB", "FETCH_URL"]
+    },
+    "gatewayDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyVersion",
+        "policySha256",
+        "decision",
+        "decisionCode",
+        "decisionSha256"
+      ],
+      "properties": {
+        "policyVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "policySha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "decision": {
+          "enum": ["ALLOW", "DENY"]
+        },
+        "decisionCode": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        },
+        "decisionSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "discoveryReceipt": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "providerId",
+            "adapterVersion",
+            "providerConfigurationId",
+            "providerConfigurationVersion",
+            "providerConfigurationSha256",
+            "searchRequestSha256",
+            "responseBodySha256",
+            "httpStatus",
+            "resultCount",
+            "usageRequests",
+            "priceScheduleId",
+            "priceScheduleVersion",
+            "priceScheduleSha256",
+            "fxFactId",
+            "fxFactSha256",
+            "costMicrosKrw",
+            "gatewayReceiptSha256",
+            "observedAt",
+            "receiptSha256"
+          ],
+          "properties": {
+            "providerId": {
+              "const": "BRAVE_SEARCH_WEB_V1"
+            },
+            "adapterVersion": {
+              "const": 1
+            },
+            "providerConfigurationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "providerConfigurationVersion": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "providerConfigurationSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "searchRequestSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "responseBodySha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "httpStatus": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 599
+            },
+            "resultCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "usageRequests": {
+              "const": 1
+            },
+            "priceScheduleId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "priceScheduleVersion": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "priceScheduleSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "fxFactId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "fxFactSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "costMicrosKrw": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "gatewayReceiptSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "observedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "receiptSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "searchResults": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rank",
+          "title",
+          "origin",
+          "path",
+          "snippet",
+          "discoveredUrlSha256",
+          "artifactId"
+        ],
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 512
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^/",
+            "maxLength": 2048
+          },
+          "snippet": {
+            "type": ["string", "null"],
+            "maxLength": 1000
+          },
+          "discoveredUrlSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "artifactId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "researchArtifactId",
+          "assetId",
+          "assetRevision",
+          "sourceFetchId",
+          "artifactOrdinal",
+          "fetchOutcome",
+          "sourceAuthority",
+          "finalOrigin",
+          "retrievedAt",
+          "httpStatus",
+          "contentMediaType",
+          "contentSizeBytes",
+          "contentSha256",
+          "artifactSha256",
+          "responseHeadersSha256",
+          "safeHeaders",
+          "redirects",
+          "contentSafetyState",
+          "contentSafetyReceiptSha256",
+          "researchOnly",
+          "sourceUseId",
+          "sourceUseSha256"
+        ],
+        "properties": {
+          "researchArtifactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetRevision": {
+            "const": 1
+          },
+          "sourceFetchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "artifactOrdinal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fetchOutcome": {
+            "enum": ["STORED", "RENDER_REQUIRED", "QUARANTINED"]
+          },
+          "sourceAuthority": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "finalOrigin": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 512
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "httpStatus": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 599
+          },
+          "contentMediaType": {
+            "type": "string",
+            "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"
+          },
+          "contentSizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 26214400
+          },
+          "contentSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "artifactSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "responseHeadersSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "safeHeaders": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "safeValue", "valueSha256"],
+              "properties": {
+                "name": {
+                  "enum": [
+                    "content-type",
+                    "content-length",
+                    "content-language",
+                    "etag",
+                    "last-modified",
+                    "cache-control",
+                    "date",
+                    "location"
+                  ]
+                },
+                "safeValue": {
+                  "type": ["string", "null"],
+                  "maxLength": 512
+                },
+                "valueSha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              }
+            }
+          },
+          "redirects": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ordinal",
+                "status",
+                "fromOrigin",
+                "toOrigin",
+                "dnsDecisionSha256",
+                "policyDecisionSha256"
+              ],
+              "properties": {
+                "ordinal": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5
+                },
+                "status": {
+                  "enum": [301, 302, 303, 307, 308]
+                },
+                "fromOrigin": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "toOrigin": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "dnsDecisionSha256": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "policyDecisionSha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              }
+            }
+          },
+          "contentSafetyState": {
+            "enum": ["CLEAN", "FLAGGED", "QUARANTINED"]
+          },
+          "contentSafetyReceiptSha256": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/sha256"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "researchOnly": {
+            "const": true
+          },
+          "sourceUseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "fetchReceiptSha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "requestKind": {
+            "const": "SEARCH_PUBLIC_WEB"
+          }
+        },
+        "required": ["requestKind"]
+      },
+      "then": {
+        "properties": {
+          "discoveryReceipt": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "artifacts": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "requestKind": {
+            "const": "FETCH_URL"
+          }
+        },
+        "required": ["requestKind"]
+      },
+      "then": {
+        "properties": {
+          "discoveryReceipt": {
+            "type": "null"
+          },
+          "searchResults": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

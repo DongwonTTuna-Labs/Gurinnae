@@ -1,0 +1,977 @@
+schema_version: 1
+proposal_version: 2026-07-14.0029-outcome-cost.v1
+status: REVIEW_REQUIRED
+migration: 0029_product_economics.sql
+authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+physical_relation_registry_ref: specs/database/addendum/0029-commercial-core.yaml#physical_relation_registry
+fragment_creation_order_assertion: [ops.product_events, ops.outcome_facts, ops.acquisition_source_receipts, ops.cost_allocations]
+source_contracts:
+  - DESIGN.md
+  - specs/ui/analytics-events.yaml
+  - specs/product/addendum-event-contracts.yaml
+  - specs/product/addendum-persistence-contracts.yaml
+  - specs/product/owner-addendum-2026-07-14.yaml
+  - implementation-evidence/design-domain-closure.yaml
+
+cross_migration_dependencies:
+  0028_governance_operations.sql:
+    legal_hold_extension:
+      - Replace the base editorial.legal_holds object_type CHECK with a closed superset containing PRODUCT_EVENT, PRODUCT_OUTCOME_FACT and COST_ALLOCATION in addition to the v13 values.
+      - Make case_id and review_snapshot_id nullable only for the three generic object types; a named CHECK keeps both nonnull for CASE, PUBLICATION, EVIDENCE and RESPONSE and both null for the generic types.
+      - Preserve the active object_type plus object_id unique index and append-only release model; do not copy, dual-write or rewrite existing holds.
+      - place, release, retention terminal action and disclosure paths all acquire pg_advisory_xact_lock(hashtextextended('LEGAL_HOLD:' || object_type || ':' || object_id::text, 0)) before reading or writing coverage.
+    restoration_suppression_extension:
+      - PRODUCT_EVENT_PURGED stores SHA-256 canonical deployment_id plus emission_id as subject_scope_digest, source retention decision/receipt and an indefinite terminal suppression.
+      - ops.record_product_event_v1 checks this suppression under the same advisory key before insert, so a purged emission cannot reappear from delayed delivery or restore.
+    adoption_gate: Migration 0029 aborts unless the exact extended CHECKs, advisory-lock contract and suppression reason exist and validate in pg_catalog/runtime probes.
+
+supporting_contracts:
+  analytics_property_presence_v1:
+    universal_required: [screen_id, surface, app_version, specification_version]
+    optional: [viewport_class, success, error_code, internal_object_type, workflow_stage, result_code, duration_bucket, role_category, public_object_type, public_object_id, state, result_count_bucket, filter_category_count, step_id]
+    request_null_rule: Explicit JSON null is rejected; an omitted optional key becomes SQL NULL, so omission and a claimed null value are never conflated.
+    event_rule: The nonnull optional set must be a subset of that event's allowed_properties in specs/ui/analytics-events.yaml; no trigger requires every allowed optional property.
+    public_object_pair: public_object_type and public_object_id are either both omitted or both present.
+  analytics_scalar_catalog_v1:
+    normative_path: specs/ui/analytics-scalar-contract.yaml
+    required_before_migration: true
+    generation_inputs: [specs/ui/analytics-events.yaml, specs/ui/screen-catalog.yaml, specs/ui/state-profile-contracts.yaml, specs/api/error-code-catalog.yaml, implementation-evidence/design-domain-closure.yaml]
+    required_shape:
+      - exactly 233 event_name rows at analytics-events.yaml digest 436c230e2de6edbd10c2d4f4d3f53df91147ad85bab3600cc8b0b945cf25528f
+      - each row has exact consumer screen set, sensitivity, purpose, allowed optional property set, conditionally required set and per-property closed values
+      - error_code values are a subset of the authoritative error catalog; object types are a subset of canonical public/internal object registries
+      - duration, result-count, viewport, role, workflow-stage, result, state and step domains contain explicit bounded enums and no free-text fallback, OTHER or UNKNOWN_STRING
+      - the generated immutable CASE mapping and its SHA-256 are embedded in ops.validate_product_event_v1; migration aborts on source or function digest drift
+    rust_type: gurine_observability::product::AnalyticsScalarCatalogV1
+
+economics_shared_contract_refs:
+  physical_types_rounding_idempotency: specs/database/addendum/0029-commercial-core.yaml
+  public_projection_allowlist: specs/database/addendum/0029-commercial-core.yaml#public_projection_boundary
+  idempotency_scopes:
+    ops.record_product_event_v1: ECONOMICS.RECORD_PRODUCT_EVENT.V1
+    ops.purge_product_event_v1: ECONOMICS.PURGE_PRODUCT_EVENT.V1
+    ops.append_outcome_fact_v1: ECONOMICS.APPEND_OUTCOME_FACT.V1
+    ops.record_acquisition_source_receipt_v1: ECONOMICS.RECORD_ACQUISITION_SOURCE_RECEIPT.V1
+    ops.close_cost_allocation_period_v1: ECONOMICS.CLOSE_COST_ALLOCATION_PERIOD.V1
+  receipt_return_type: ops.economics_mutation_receipt_v1
+
+tables:
+  ops.product_events:
+    creation_order: 2
+    purpose: Privacy-minimized first-party task analytics; never an audit record or an authoritative workflow outcome.
+    object_owner: gurine_migrator
+    mutation_class: LIFECYCLE_GUARDED
+    rust_type: gurine_observability::product::ProductEvent
+    repository: crates/persistence-postgres::product_economics::ProductEventRepository
+    columns:
+      - {name: id, type: uuid, nullable: false, default: gen_random_uuid()}
+      - {name: emission_id, type: uuid, nullable: false, default: null}
+      - {name: event_name, type: text, nullable: false, default: null}
+      - {name: sensitivity, type: text, nullable: false, default: null}
+      - {name: purpose_code, type: text, nullable: false, default: null}
+      - {name: event_catalog_digest, type: "char(64)", nullable: false, default: null}
+      - {name: deployment_id, type: uuid, nullable: false, default: null}
+      - {name: workflow_instance_hmac, type: "char(64)", nullable: false, default: null}
+      - {name: workflow_key_version, type: bigint, nullable: false, default: null}
+      - {name: workflow_started_at, type: timestamptz, nullable: false, default: null}
+      - {name: workflow_expires_at, type: timestamptz, nullable: false, default: null}
+      - {name: occurred_at, type: timestamptz, nullable: false, default: null}
+      - {name: recorded_at, type: timestamptz, nullable: false, default: clock_timestamp()}
+      - {name: record_class, type: text, nullable: false, default: null}
+      - {name: schedule_revision, type: bigint, nullable: false, default: null}
+      - {name: schedule_digest, type: "char(64)", nullable: false, default: null}
+      - {name: retention_deadline, type: timestamptz, nullable: false, default: null}
+      - {name: screen_id, type: text, nullable: false, default: null}
+      - {name: surface, type: text, nullable: false, default: null}
+      - {name: app_version, type: text, nullable: false, default: null}
+      - {name: specification_version, type: text, nullable: false, default: null}
+      - {name: viewport_class, type: text, nullable: true, default: null}
+      - {name: success, type: boolean, nullable: true, default: null}
+      - {name: error_code, type: text, nullable: true, default: null}
+      - {name: internal_object_type, type: text, nullable: true, default: null}
+      - {name: workflow_stage, type: text, nullable: true, default: null}
+      - {name: result_code, type: text, nullable: true, default: null}
+      - {name: duration_bucket, type: text, nullable: true, default: null}
+      - {name: role_category, type: text, nullable: true, default: null}
+      - {name: public_object_type, type: text, nullable: true, default: null}
+      - {name: public_object_id, type: text, nullable: true, default: null}
+      - {name: state, type: text, nullable: true, default: null}
+      - {name: result_count_bucket, type: text, nullable: true, default: null}
+      - {name: filter_category_count, type: smallint, nullable: true, default: null}
+      - {name: step_id, type: text, nullable: true, default: null}
+      - {name: event_digest, type: "char(64)", nullable: false, default: null}
+    primary_key:
+      name: product_events_pkey
+      columns: [id]
+    foreign_keys: []
+    unique_constraints:
+      - {name: product_events_emission_unique, columns: [deployment_id, emission_id]}
+      - {name: product_events_digest_unique, columns: [event_digest]}
+    checks:
+      - name: product_events_catalog_digest_lower_hex
+        expression: "event_catalog_digest ~ '^[0-9a-f]{64}$'"
+      - name: product_events_workflow_hmac_lower_hex
+        expression: "workflow_instance_hmac ~ '^[0-9a-f]{64}$'"
+      - name: product_events_schedule_digest_lower_hex
+        expression: "schedule_digest ~ '^[0-9a-f]{64}$'"
+      - name: product_events_event_digest_lower_hex
+        expression: "event_digest ~ '^[0-9a-f]{64}$'"
+      - name: product_events_event_name_shape
+        expression: "event_name ~ '^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){1,3}$' AND length(event_name) <= 128"
+      - name: product_events_sensitivity_closed
+        expression: "sensitivity IN ('PUBLIC_PRODUCT','INTERNAL_OPERATIONAL','RESPONSE_SENSITIVE_MINIMAL')"
+      - name: product_events_purpose_closed
+        expression: "purpose_code = 'TASK_PROGRESSION_QUALITY_RECOVERY'"
+      - name: product_events_surface_closed
+        expression: "surface IN ('public','internal','response')"
+      - name: product_events_surface_sensitivity_match
+        expression: "(surface = 'public' AND sensitivity = 'PUBLIC_PRODUCT') OR (surface = 'internal' AND sensitivity = 'INTERNAL_OPERATIONAL') OR (surface = 'response' AND sensitivity = 'RESPONSE_SENSITIVE_MINIMAL')"
+      - name: product_events_record_class_match
+        expression: "(sensitivity = 'PUBLIC_PRODUCT' AND record_class = 'PRODUCT_ANALYTICS_PUBLIC') OR (sensitivity = 'INTERNAL_OPERATIONAL' AND record_class = 'PRODUCT_ANALYTICS_INTERNAL') OR (sensitivity = 'RESPONSE_SENSITIVE_MINIMAL' AND record_class = 'PRODUCT_ANALYTICS_RESPONSE')"
+      - name: product_events_schedule_revision_positive
+        expression: "schedule_revision > 0 AND workflow_key_version > 0"
+      - name: product_events_workflow_window
+        expression: "workflow_started_at <= occurred_at AND occurred_at < workflow_expires_at AND ((surface IN ('public','response') AND workflow_expires_at <= workflow_started_at + interval '24 hours') OR (surface = 'internal' AND workflow_expires_at <= workflow_started_at + interval '30 days'))"
+      - name: product_events_retention_deadline_after_record
+        expression: retention_deadline > recorded_at
+      - name: product_events_retention_hard_cap
+        expression: "(sensitivity = 'RESPONSE_SENSITIVE_MINIMAL' AND retention_deadline <= recorded_at + interval '30 days') OR (sensitivity IN ('PUBLIC_PRODUCT','INTERNAL_OPERATIONAL') AND retention_deadline <= recorded_at + interval '90 days')"
+      - name: product_events_screen_id_bounded
+        expression: "screen_id ~ '^[A-Z]{3,4}-[0-9]{3}$' AND length(screen_id) <= 8"
+      - name: product_events_version_strings_bounded
+        expression: "length(app_version) BETWEEN 1 AND 64 AND length(specification_version) BETWEEN 1 AND 64"
+      - name: product_events_code_properties_bounded
+        expression: "(error_code IS NULL OR (error_code ~ '^[A-Z][A-Z0-9_]{0,63}$')) AND (internal_object_type IS NULL OR (internal_object_type ~ '^[A-Z][A-Z0-9_]{0,63}$')) AND (workflow_stage IS NULL OR (workflow_stage ~ '^[A-Z][A-Z0-9_]{0,63}$')) AND (result_code IS NULL OR (result_code ~ '^[A-Z][A-Z0-9_]{0,63}$')) AND (duration_bucket IS NULL OR (duration_bucket ~ '^[A-Z0-9][A-Z0-9_]{0,31}$')) AND (role_category IS NULL OR (role_category ~ '^[A-Z][A-Z0-9_]{0,63}$')) AND (public_object_type IS NULL OR (public_object_type ~ '^[A-Z][A-Z0-9_]{0,63}$')) AND (state IS NULL OR (state ~ '^[A-Z][A-Z0-9_]{0,63}$')) AND (result_count_bucket IS NULL OR (result_count_bucket ~ '^[A-Z0-9][A-Z0-9_]{0,31}$')) AND (step_id IS NULL OR (step_id ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$')) AND (viewport_class IS NULL OR viewport_class IN ('COMPACT','MEDIUM','WIDE','NON_VISUAL'))"
+      - name: product_events_public_object_id_bounded
+        expression: "public_object_id IS NULL OR (length(public_object_id) BETWEEN 1 AND 128 AND public_object_id ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$')"
+      - name: product_events_public_object_pair
+        expression: "(public_object_type IS NULL) = (public_object_id IS NULL)"
+      - name: product_events_filter_count_bounded
+        expression: filter_category_count IS NULL OR filter_category_count BETWEEN 0 AND 64
+    indexes:
+      - {name: product_events_name_time_idx, method: btree, keys: [event_name, "occurred_at DESC", "id DESC"], include: [screen_id, success, result_code], predicate: null}
+      - {name: product_events_screen_time_idx, method: btree, keys: [screen_id, "occurred_at DESC", "id DESC"], include: [event_name, surface], predicate: null}
+      - {name: product_events_retention_idx, method: btree, keys: [record_class, retention_deadline, id], include: [event_digest], predicate: null}
+      - {name: product_events_workflow_idx, method: btree, keys: [workflow_instance_hmac, occurred_at, id], include: [event_name, screen_id, event_digest], predicate: null}
+      - {name: product_events_public_object_idx, method: btree, keys: [public_object_type, public_object_id, "occurred_at DESC", "id DESC"], include: [event_name], predicate: "public_object_id IS NOT NULL"}
+    triggers:
+      - name: product_events_validate_insert
+        timing: BEFORE
+        events: [INSERT]
+        function: ops.validate_product_event_v1()
+        guarantees:
+          - event_name, screen_id, sensitivity and purpose match specs/ui/analytics-events.yaml; every nonnull optional property is an allowed subset and SQL NULL means absent, never an explicit analytics value
+          - screen_id, surface, app_version and specification_version are the universal required properties; the pinned analytics scalar contract supplies every event-specific required, optional, mutually exclusive and allowed-value rule
+          - event_catalog_digest for new rows equals 436c230e2de6edbd10c2d4f4d3f53df91147ad85bab3600cc8b0b945cf25528f
+          - every code and bucket scalar resolves to its closed error, workflow, result, role, viewport or analytics-bucket catalog; bounded strings are not a free-text escape hatch
+          - workflow_instance_hmac is HMAC-SHA-256 of a cryptographically random task-instance nonce under workflow_key_version, is scoped to one declared journey, and is never derived from user, organization, browser, session, response party, object or query identity
+          - workflow key issuance enforces the 24-hour public/response or 30-day internal bound and a terminal or abandoned task never reuses its nonce
+          - before uniqueness or insert, the function acquires the PRODUCT_EVENT legal-hold advisory key and rejects an existing PRODUCT_EVENT_PURGED restoration suppression for canonical deployment_id plus emission_id
+          - public_object_id resolves only to the declared public projection object type
+          - event_digest equals the declared non-self-referential canonical projection and never includes id, event_digest, recorded_at, record_class, schedule_revision, schedule_digest or retention_deadline
+          - schedule revision and deadline resolve from the latest effective nonexpired record-class schedule
+      - name: product_events_reject_update
+        timing: BEFORE
+        events: [UPDATE]
+        function: ops.reject_mutation()
+      - name: product_events_guard_retention_delete
+        timing: BEFORE
+        events: [DELETE]
+        function: ops.guard_product_event_retention_delete_v1()
+        guarantees:
+          - current_user is gurine_migrator through the fixed-search-path SECURITY DEFINER purge function
+          - a locked same-transaction retention execution receipt names id, event_digest, schedule revision and terminal action
+          - retention_deadline has passed and RETENTION or DELETION legal-hold coverage is empty
+    canonical_digest:
+      algorithm: SHA-256 of Gurine Canonical JSON v1
+      ordered_projection:
+        - schemaVersion=1
+        - deployment_id
+        - emission_id
+        - event_name
+        - sensitivity
+        - purpose_code
+        - event_catalog_digest
+        - workflow_instance_hmac
+        - workflow_key_version
+        - workflow_started_at
+        - workflow_expires_at
+        - occurred_at
+        - screen_id
+        - surface
+        - app_version
+        - specification_version
+        - viewport_class
+        - success
+        - error_code
+        - internal_object_type
+        - workflow_stage
+        - result_code
+        - duration_bucket
+        - role_category
+        - public_object_type
+        - public_object_id
+        - state
+        - result_count_bucket
+        - filter_category_count
+        - step_id
+      null_rule: Every optional SQL NULL is encoded as canonical JSON null in the fixed key position; keys are never omitted or reordered.
+      excluded: [id, event_digest, recorded_at, record_class, schedule_revision, schedule_digest, retention_deadline]
+    forbidden_columns:
+      - user_id
+      - organization_id
+      - session_id
+      - cookie_id
+      - email
+      - ip
+      - user_agent
+      - raw_search_query
+      - request_body
+      - response_body
+      - answer_body
+      - correction_body
+      - filename
+      - token
+      - evidence_text
+      - generic_properties_jsonb
+    privileges:
+      gurine_public_api: []
+      gurine_submission_api: []
+      gurine_control_api: []
+      gurine_ingest_worker: []
+      gurine_analysis_worker: []
+      gurine_public_projector: []
+      gurine_notification_worker: []
+      gurine_workflow_worker: [SELECT]
+      gurine_document_extractor: []
+      gurine_scheduler: []
+      gurine_auditor: []
+      gurine_identity_api: []
+    function_privileges:
+      ops.record_product_event_v1:
+        gurine_workflow_worker: [EXECUTE]
+      ops.purge_product_event_v1:
+        gurine_workflow_worker: [EXECUTE]
+    write_boundary:
+      function: ops.record_product_event_v1
+      signature: "ops.record_product_event_v1(uuid,text,char(64),uuid,char(64),bigint,timestamptz,timestamptz,timestamptz,text,text,text,text,jsonb,char(64))"
+      arguments: [emission_id, event_name, event_catalog_digest, deployment_id, workflow_instance_hmac, workflow_key_version, workflow_started_at, workflow_expires_at, occurred_at, screen_id, surface, app_version, specification_version, "properties Json<ProductEventPropertiesV1>", event_digest]
+      returns: ops.economics_mutation_receipt_v1
+      idempotency_scope: ECONOMICS.RECORD_PRODUCT_EVENT.V1
+      owner: gurine_migrator
+      security: SECURITY_DEFINER
+      search_path: [pg_catalog, ops, public, pg_temp]
+      revoke_execute: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_control_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_document_extractor, gurine_scheduler, gurine_auditor, gurine_identity_api]
+      server_owned_columns: recorded_at = clock_timestamp(); sensitivity, purpose_code and record_class derive from event_name; schedule revision/digest/deadline derive from the current schedule; callers cannot override them
+      isolation_guard: READ COMMITTED or stronger; claim deployment_id plus emission_id before insert
+      replay: same event_digest returns stored row; changed digest is FACT_CONFLICT
+      nonblocking: caller isolates collection from the authoritative task transaction and drops only the analytics event on failure
+    purge_boundary:
+      function: ops.purge_product_event_v1
+      signature: "ops.purge_product_event_v1(uuid,char(64),bigint,uuid)"
+      arguments: [event_id, expected_event_digest, expected_schedule_revision, retention_request_id]
+      returns: ops.economics_mutation_receipt_v1
+      idempotency_scope: ECONOMICS.PURGE_PRODUCT_EVENT.V1
+      owner: gurine_migrator
+      security: SECURITY_DEFINER
+      search_path: [pg_catalog, ops, editorial, pg_temp]
+      revoke_execute: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_control_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_document_extractor, gurine_scheduler, gurine_auditor, gurine_identity_api]
+      isolation_guard: SERIALIZABLE; lock the event then acquire the shared legal-hold advisory key before checking coverage
+      atomic_effect: append retention execution receipt, audit, outbox and restoration suppression tombstone, then delete exactly one event
+      replay: suppression tombstone makes a later retry return the stored purge receipt and forbids reinsertion
+    nonblocking_delivery:
+      ordering: enqueue only after the authoritative user-task transaction commits
+      queue: in-memory bounded MPSC dedicated to analytics; capacity 4096; payload is ProductEventPropertiesV1 only
+      full_policy: drop newest analytics item, increment a content-free counter and never block the core task
+      database_pool: dedicated analytics pool with max 4 connections; never shares the authoritative command pool
+      timeouts: "SET LOCAL lock_timeout = '250ms'; outer call statement_timeout = 500ms"
+      retry: at most one same-emission retry inside workflow_expires_at; no body, query, filename, token or contact value is retained
+    rls:
+      enabled: false
+      forced: false
+      reason: No browser, tenant, public, submission or editorial role has direct access; public browsing has no stored cross-event identity.
+    retention:
+      record_class: sensitivity selects PRODUCT_ANALYTICS_PUBLIC, PRODUCT_ANALYTICS_INTERNAL or PRODUCT_ANALYTICS_RESPONSE
+      trigger: retention_deadline reached and a retention worker claims the exact row digest
+      schedule_binding: latest effective nonexpired ops.record_class_schedules revision; missing or stale schedule rejects the analytics write without failing the core user task
+      legal_hold_key: "object_type=PRODUCT_EVENT, object_id=id, affected_digest=event_digest"
+      backup_behavior: Restore applies restoration suppressions and deletes already-expired events before analytics access or projection.
+      terminal_action: DELETE through ops.purge_product_event_v1 only; append retention receipt, audit, outbox and restoration suppression atomically
+    repository_round_trip:
+      insert: Persist all non-default boundary fields and every optional scalar once; no JSONB or free-text property escape hatch.
+      replay: Same deployment_id, emission_id and event_digest returns the stored row; changed digest is FACT_CONFLICT.
+      stable_order: ["occurred_at ASC", "id ASC"]
+      privacy_oracle: Physical catalog contains only the 18 allowlisted property columns plus a bounded random task-instance HMAC; forbidden values cannot be encoded in code-like fields and no user, browser, session or response identity exists.
+      nonblocking_rule: Collection runs in its own bounded transaction; failure or queue loss never rolls back or delays the authoritative command, audit or receipt.
+      test_identity: AC-OA-TABLE-OPS-PRODUCT_EVENTS-CONTRACT
+    event_projection:
+      domain_events: []
+      rule: Product analytics never substitutes for audit or domain outbox events.
+
+  ops.outcome_facts:
+    creation_order: 3
+    purpose: Immutable terminal-receipt facts for Verified Workflow and paid-workflow metrics; page views, drafts, raw signals and unreviewed AI output cannot become facts.
+    object_owner: gurine_migrator
+    mutation_class: IMMUTABLE
+    rust_type: gurine_observability::product::ProductFact
+    repository: crates/persistence-postgres::product_economics::OutcomeFactRepository
+    columns:
+      - {name: id, type: uuid, nullable: false, default: gen_random_uuid()}
+      - {name: fact_contract_version, type: smallint, nullable: false, default: 1}
+      - {name: root_fact_id, type: uuid, nullable: false, default: null}
+      - {name: supersedes_fact_id, type: uuid, nullable: true, default: null}
+      - {name: correction_sequence, type: bigint, nullable: false, default: "1"}
+      - {name: fact_effect, type: text, nullable: false, default: "'ORIGINAL'::text"}
+      - {name: fact_type, type: text, nullable: false, default: null}
+      - {name: scope_kind, type: text, nullable: false, default: null}
+      - {name: deployment_id, type: uuid, nullable: false, default: null}
+      - {name: metric_timezone, type: text, nullable: false, default: null}
+      - {name: metric_policy_digest, type: "char(64)", nullable: false, default: null}
+      - {name: workflow_instance_hmac, type: "char(64)", nullable: false, default: null}
+      - {name: workflow_key_version, type: bigint, nullable: false, default: null}
+      - {name: workflow_proof, type: jsonb, nullable: false, default: null, json_type: gurine_observability::product::VerifiedWorkflowProofV1}
+      - {name: workflow_proof_digest, type: "char(64)", nullable: false, default: null}
+      - {name: milestone_set_digest, type: "char(64)", nullable: false, default: null}
+      - {name: workflow_completed_at, type: timestamptz, nullable: false, default: null}
+      - {name: organization_id, type: uuid, nullable: true, default: null}
+      - {name: subject_scope_digest, type: "char(64)", nullable: false, default: null}
+      - {name: subject_scope_key_version, type: bigint, nullable: false, default: null}
+      - {name: terminal_receipt_kind, type: text, nullable: false, default: null}
+      - {name: terminal_receipt_id, type: uuid, nullable: false, default: null}
+      - {name: terminal_receipt_version, type: bigint, nullable: false, default: null}
+      - {name: terminal_receipt_digest, type: "char(64)", nullable: false, default: null}
+      - {name: paid_packet_id, type: uuid, nullable: true, default: null}
+      - {name: paid_packet_version, type: bigint, nullable: true, default: null}
+      - {name: paid_packet_digest, type: "char(64)", nullable: true, default: null}
+      - {name: paid_subject_kind, type: ops.paid_evidence_subject_kind, nullable: true, default: null}
+      - {name: paid_terminal_receipt_kind, type: ops.paid_terminal_receipt_kind, nullable: true, default: null}
+      - {name: paid_terminal_resulting_state, type: ops.paid_terminal_resulting_state, nullable: true, default: null}
+      - {name: effective_from, type: timestamptz, nullable: false, default: null}
+      - {name: effective_until, type: timestamptz, nullable: true, default: null}
+      - {name: formula_version, type: bigint, nullable: false, default: null}
+      - {name: formula_digest, type: "char(64)", nullable: false, default: null}
+      - {name: correction_reason_code, type: text, nullable: true, default: null}
+      - {name: correction_decision_digest, type: "char(64)", nullable: true, default: null}
+      - {name: correction_receipt_id, type: uuid, nullable: true, default: null}
+      - {name: correction_receipt_digest, type: "char(64)", nullable: true, default: null}
+      - {name: record_class, type: text, nullable: false, default: "'PRODUCT_OUTCOME_FACT'::text"}
+      - {name: schedule_revision, type: bigint, nullable: false, default: null}
+      - {name: schedule_digest, type: "char(64)", nullable: false, default: null}
+      - {name: fact_digest, type: "char(64)", nullable: false, default: null}
+      - {name: recorded_at, type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key:
+      name: outcome_facts_pkey
+      columns: [id]
+    foreign_keys:
+      - {name: outcome_facts_root_fk, columns: [root_fact_id], target: ops.outcome_facts, target_columns: [id], on_delete: RESTRICT, deferrable: true, initially: IMMEDIATE}
+      - {name: outcome_facts_supersedes_fk, columns: [supersedes_fact_id], target: ops.outcome_facts, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+      - {name: outcome_facts_paid_packet_fk, columns: [paid_packet_id, paid_packet_version, paid_packet_digest, organization_id, paid_subject_kind, paid_terminal_receipt_kind, terminal_receipt_id, terminal_receipt_version, terminal_receipt_digest, paid_terminal_resulting_state, effective_from], target: ops.paid_evidence_packets, target_columns: [packet_id, packet_version, packet_digest, organization_id, subject_kind, terminal_receipt_kind, terminal_receipt_id, terminal_receipt_version, terminal_receipt_digest, terminal_resulting_state, terminal_effective_at], on_delete: RESTRICT, deferrable: true, initially: DEFERRED, match: FULL, install_after_parent: true}
+    unique_constraints:
+      - {name: outcome_facts_digest_unique, columns: [fact_digest]}
+      - {name: outcome_facts_root_sequence_unique, columns: [root_fact_id, correction_sequence]}
+      - {name: outcome_facts_invalidation_binding_unique, columns: [id, correction_sequence, fact_digest]}
+      - {name: outcome_facts_paid_binding_unique, columns: [id, fact_digest, organization_id, paid_subject_kind, terminal_receipt_id, terminal_receipt_version, terminal_receipt_digest, paid_terminal_receipt_kind, paid_terminal_resulting_state, effective_from, paid_packet_id, paid_packet_version, paid_packet_digest]}
+    checks:
+      - name: outcome_facts_subject_scope_digest_lower_hex
+        expression: "subject_scope_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_metric_policy_digest_lower_hex
+        expression: "metric_policy_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_workflow_digests_lower_hex
+        expression: "workflow_instance_hmac ~ '^[0-9a-f]{64}$' AND workflow_proof_digest ~ '^[0-9a-f]{64}$' AND milestone_set_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_terminal_receipt_digest_lower_hex
+        expression: "terminal_receipt_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_paid_packet_digest_lower_hex
+        expression: "paid_packet_digest IS NULL OR paid_packet_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_formula_digest_lower_hex
+        expression: "formula_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_correction_decision_digest_lower_hex
+        expression: "correction_decision_digest IS NULL OR correction_decision_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_correction_receipt_digest_lower_hex
+        expression: "correction_receipt_digest IS NULL OR correction_receipt_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_schedule_digest_lower_hex
+        expression: "schedule_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_fact_digest_lower_hex
+        expression: "fact_digest ~ '^[0-9a-f]{64}$'"
+      - name: outcome_facts_sequence_positive
+        expression: correction_sequence > 0
+      - name: outcome_facts_contract_version_shape
+        expression: "(fact_contract_version = 1 AND num_nonnulls(paid_packet_id,paid_packet_version,paid_packet_digest,paid_subject_kind,paid_terminal_receipt_kind,paid_terminal_resulting_state) = 0) OR (fact_contract_version = 2 AND num_nonnulls(paid_packet_id,paid_packet_version,paid_packet_digest,paid_subject_kind,paid_terminal_receipt_kind,paid_terminal_resulting_state) = 6)"
+      - name: outcome_facts_versions_positive
+        expression: "workflow_key_version > 0 AND subject_scope_key_version > 0 AND terminal_receipt_version > 0 AND formula_version > 0 AND schedule_revision > 0"
+      - name: outcome_facts_workflow_proof_object
+        expression: "jsonb_typeof(workflow_proof) = 'object'"
+      - name: outcome_facts_workflow_completion_time
+        expression: workflow_completed_at = effective_from
+      - name: outcome_facts_effect_closed
+        expression: "fact_effect IN ('ORIGINAL','INVERSE','SUPERSEDING')"
+      - name: outcome_facts_type_closed
+        expression: "fact_type IN ('TRIAGED_SIGNAL','REVIEWED_INVESTIGATION','ACCEPTED_PROPOSAL','AUDITED_DELIVERY','COMPLETED_DECISION_CYCLE','PUBLICATION','CORRECTION')"
+      - name: outcome_facts_scope_closed
+        expression: "scope_kind IN ('PUBLIC','ORGANIZATION')"
+      - name: outcome_facts_scope_identity
+        expression: "(scope_kind = 'PUBLIC' AND organization_id IS NULL) OR (scope_kind = 'ORGANIZATION' AND organization_id IS NOT NULL)"
+      - name: outcome_facts_metric_timezone_shape
+        expression: "length(metric_timezone) BETWEEN 1 AND 64 AND (metric_timezone = 'UTC' OR metric_timezone ~ '^[A-Za-z][A-Za-z0-9._+-]*/[A-Za-z0-9._+-]+(/[A-Za-z0-9._+-]+)*$')"
+      - name: outcome_facts_receipt_kind_closed
+        expression: "terminal_receipt_kind IN ('SIGNAL_TRIAGE','REVIEW_DECISION','EXECUTION','OUTBOUND_DELIVERY','ORGANIZATION_DECISION','PUBLICATION','CORRECTION')"
+      - name: outcome_facts_type_receipt_match
+        expression: "(fact_type = 'TRIAGED_SIGNAL' AND terminal_receipt_kind = 'SIGNAL_TRIAGE') OR (fact_type = 'REVIEWED_INVESTIGATION' AND terminal_receipt_kind = 'REVIEW_DECISION') OR (fact_type = 'ACCEPTED_PROPOSAL' AND terminal_receipt_kind = 'EXECUTION') OR (fact_type = 'AUDITED_DELIVERY' AND terminal_receipt_kind = 'OUTBOUND_DELIVERY') OR (fact_type = 'COMPLETED_DECISION_CYCLE' AND terminal_receipt_kind = 'ORGANIZATION_DECISION') OR (fact_type = 'PUBLICATION' AND terminal_receipt_kind = 'PUBLICATION') OR (fact_type = 'CORRECTION' AND terminal_receipt_kind = 'CORRECTION')"
+      - name: outcome_facts_paid_packet_shape
+        expression: "fact_contract_version = 1 OR (paid_packet_version = 2 AND scope_kind = 'ORGANIZATION' AND organization_id IS NOT NULL AND paid_subject_kind::text = fact_type AND paid_terminal_receipt_kind::text = terminal_receipt_kind AND ((paid_subject_kind = 'AUDITED_DELIVERY' AND paid_terminal_receipt_kind = 'OUTBOUND_DELIVERY' AND paid_terminal_resulting_state IN ('DELIVERED','READ')) OR (paid_subject_kind = 'COMPLETED_DECISION_CYCLE' AND paid_terminal_receipt_kind = 'ORGANIZATION_DECISION' AND paid_terminal_resulting_state IN ('REJECTED_FINAL','EFFECT_SUCCEEDED'))))"
+      - name: outcome_facts_effective_interval
+        expression: effective_until IS NULL OR effective_until > effective_from
+      - name: outcome_facts_correction_shape
+        expression: "(fact_effect = 'ORIGINAL' AND root_fact_id = id AND supersedes_fact_id IS NULL AND correction_sequence = 1 AND correction_reason_code IS NULL AND correction_decision_digest IS NULL AND correction_receipt_id IS NULL AND correction_receipt_digest IS NULL) OR (fact_effect IN ('INVERSE','SUPERSEDING') AND root_fact_id <> id AND supersedes_fact_id IS NOT NULL AND correction_sequence > 1 AND correction_reason_code IS NOT NULL AND correction_reason_code ~ '^[A-Z][A-Z0-9_]{0,63}$' AND correction_decision_digest IS NOT NULL AND correction_receipt_id IS NOT NULL AND correction_receipt_digest IS NOT NULL)"
+      - name: outcome_facts_record_class_fixed
+        expression: record_class = 'PRODUCT_OUTCOME_FACT'
+    canonical_version_contract:
+      V1:
+        discriminator: fact_contract_version = 1
+        preimage: OutcomeFactCanonicalV1 exact pre-0029 immutable field order; fact_contract_version and all paid_* columns are excluded so existing fact_digest bytes remain unchanged
+        backfill: every preexisting row receives fact_contract_version=1 and null paid columns without rewriting or recomputing fact_digest
+      V2:
+        discriminator: fact_contract_version = 2
+        preimage: OutcomeFactCanonicalV2 is V1 ordered fields followed by paidPacketId, paidPacketVersion, paidPacketDigest, paidSubjectKind, paidTerminalReceiptKind and paidTerminalResultingState; only recorded_at and fact_digest are excluded
+        creation: only ops.bind_paid_terminal_receipt_v1 may append ORIGINAL V2 and only ops.append_outcome_fact_correction_v2 may append a correction that copies the complete paid tuple byte-for-byte from the locked predecessor
+      selection: ops.read_paid_mvw_inputs_v1 selects only current non-INVERSE V2 heads with an exact reciprocal packet FK; V1 facts remain valid operational outcomes but never paid MVW
+    indexes:
+      - {name: outcome_facts_supersedes_unique, unique: true, method: btree, keys: [supersedes_fact_id], include: [], predicate: "supersedes_fact_id IS NOT NULL"}
+      - {name: outcome_facts_original_receipt_unique, unique: true, method: btree, keys: [deployment_id, terminal_receipt_kind, terminal_receipt_id, formula_version], include: [], predicate: "fact_effect = 'ORIGINAL'"}
+      - {name: outcome_facts_original_workflow_unique, unique: true, method: btree, keys: [deployment_id, workflow_instance_hmac, formula_version], include: [], predicate: "fact_effect = 'ORIGINAL'"}
+      - {name: outcome_facts_window_idx, method: btree, keys: [deployment_id, scope_kind, organization_id, fact_type, effective_from, id], include: [effective_until, root_fact_id, correction_sequence, fact_effect, fact_digest], predicate: null}
+      - {name: outcome_facts_workflow_idx, method: btree, keys: [workflow_instance_hmac, "correction_sequence DESC", id], include: [workflow_proof_digest, milestone_set_digest, fact_effect, fact_digest], predicate: null}
+      - {name: outcome_facts_chain_idx, method: btree, keys: [root_fact_id, "correction_sequence DESC", "id DESC"], include: [fact_effect, fact_type, effective_from, effective_until, fact_digest], predicate: null}
+      - {name: outcome_facts_terminal_receipt_idx, method: btree, keys: [terminal_receipt_kind, terminal_receipt_id, terminal_receipt_version], include: [terminal_receipt_digest, fact_digest], predicate: null}
+      - {name: outcome_facts_metric_idx, method: btree, keys: [fact_type, effective_from, id], include: [deployment_id, scope_kind, organization_id, root_fact_id, correction_sequence], predicate: null}
+    triggers:
+      - name: outcome_facts_validate_insert
+        timing: BEFORE
+        events: [INSERT]
+        function: ops.validate_outcome_fact_v1()
+        guarantees:
+          - the closed terminal receipt kind resolves to exactly one authoritative stored receipt with matching ID, version and digest
+          - page views, drafts, failed jobs, raw signals, fixtures and unreviewed AI output are rejected
+          - metric_timezone exists in pg_timezone_names and metric_policy_digest binds the versioned formula, population, exclusions, timezone, window, owner, freshness, threshold and breach action
+          - workflow_proof decodes only as sqlx::types::Json<VerifiedWorkflowProofV1> with additional fields forbidden and contains no raw object title, query, response, evidence, token, filename, user, session or contact identity
+          - the ordered proof has exactly OBJECT_FOUND, STATE_FRESHNESS_LIMITATION_SEEN, REVISION_EVIDENCE_OR_REPRODUCTION_OPENED and RESPONSIBLE_OUTCOME_COMPLETED milestones for one workflow_instance_hmac
+          - an ORIGINAL proof milestone binds an existing nonexpired product_event ID, event digest, occurred_at and allowed screen/event meaning; times are nondecreasing and the final milestone binds terminal_receipt_id and terminal_receipt_digest
+          - milestone_set_digest is the canonical ordered milestone digest and workflow_proof_digest is Gurine Canonical JSON v1 SHA-256 of the complete proof
+          - absent, expired, cross-workflow, duplicated, reordered or semantically incomplete milestones reject fact creation; analytics loss therefore undercounts and never fabricates a Verified Workflow
+          - PUBLIC subject_scope_digest is deployment-keyed HMAC-SHA-256 of terminal receipt kind and ID, never actor, browser, session or response identity; ORGANIZATION scope is the HMAC of configured organization_id
+          - subject_scope_digest stores no search, response, evidence, token, filename or personal identity content
+          - an INVERSE copies the superseded fact identity, workflow proof, scope, type, terminal receipt, effective interval and formula exactly and therefore does not depend on already-expired product events
+          - a SUPERSEDING fact keeps root, fact type, deployment, metric timezone, workflow instance, scope, subject digest and terminal receipt identity/version/digest fixed; after source product events expire it may copy but not alter workflow proof, while a changed proof requires every source event to remain present and valid
+          - a V1 row has no paid tuple; a V2 ORIGINAL is created only in the packet-finalization transaction, and every V2 INVERSE or SUPERSEDING correction copies packet ID/version/digest, paid subject kind, paid terminal kind and paid resulting state byte-for-byte from the locked predecessor
+          - fact_digest is recomputed using the exact versioned canonical preimage; migration backfill never changes a V1 digest and a V2 preimage includes every paid field
+          - correction_sequence is previous sequence plus one and fact_digest is canonical over every immutable column except recorded_at
+          - record-class schedule binding is current and nonexpired
+          - ORIGINAL validates root_fact_id = NEW.id without querying the not-yet-visible row; INVERSE and SUPERSEDING select the stored root and current head FOR UPDATE
+      - name: outcome_facts_immutable
+        timing: BEFORE
+        events: [UPDATE, DELETE]
+        function: ops.reject_mutation()
+    privileges:
+      gurine_public_api: []
+      gurine_submission_api: []
+      gurine_control_api: [SELECT]
+      gurine_ingest_worker: []
+      gurine_analysis_worker: []
+      gurine_public_projector: []
+      gurine_notification_worker: []
+      gurine_workflow_worker: [SELECT]
+      gurine_document_extractor: []
+      gurine_scheduler: []
+      gurine_auditor: [SELECT]
+      gurine_identity_api: []
+    function_privileges:
+      ops.append_outcome_fact_v1:
+        gurine_workflow_worker: [EXECUTE]
+      ops.read_public_outcome_projection_inputs_v1:
+        gurine_public_projector: []
+      public.project_public_outcome_fact_v2:
+        gurine_public_projector: [EXECUTE]
+    write_boundary:
+      function: ops.append_outcome_fact_v1
+      signature: "ops.append_outcome_fact_v1(jsonb,uuid,char(64))"
+      arguments: ["fact Json<OutcomeFactAppendV1>", "expected_head_id nullable for ORIGINAL", "expected_head_digest nullable for ORIGINAL"]
+      returns: ops.economics_mutation_receipt_v1
+      idempotency_scope: ECONOMICS.APPEND_OUTCOME_FACT.V1
+      paid_internal_helper:
+        function: ops.append_paid_outcome_fact_v2
+        execute_roles: []
+        caller: ops.bind_paid_terminal_receipt_v1 owner context only
+        rule: not an independently callable journey step; it inserts the V2 outcome, audit and product.fact_recorded.v1 outbox inside the packet-binding SERIALIZABLE transaction
+      owner: gurine_migrator
+      security: SECURITY_DEFINER
+      search_path: [pg_catalog, ops, editorial, intake, public, pg_temp]
+      revoke_execute: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_control_api, gurine_ingest_worker, gurine_analysis_worker, gurine_notification_worker, gurine_workflow_worker, gurine_document_extractor, gurine_scheduler, gurine_auditor, gurine_identity_api]
+      payload_rule: jsonb validates as a closed OutcomeFactAppendV1 before any lookup; serde_json::Value, unknown properties and string dispatch are forbidden
+      isolation_guard: current_setting('transaction_isolation') must equal serializable before any lock or insert
+      lock_rule: lock terminal receipt, root and current head in lexical UUID order; ORIGINAL has no stored self-row lookup
+      conflict_mapping: unique violation or serialization failure caused by a stale requested head maps to FACT_CONFLICT; the function never invents or automatically appends a different successor
+    rls:
+      enabled: false
+      forced: false
+      reason: Single-organization physical deployment; no tenant, public, submission or editorial-analysis direct access. Commercial identity is isolated by exact role grants.
+    retention:
+      record_class: PRODUCT_OUTCOME_FACT
+      trigger: schedule review, privacy request or legal-hold evaluation; never age-based in-place mutation
+      schedule_binding: latest effective nonexpired ops.record_class_schedules revision recorded by schedule_revision and schedule_digest
+      legal_hold_key: "object_type=PRODUCT_OUTCOME_FACT, object_id=id, affected_digest=fact_digest, subject_scope_digest=subject_scope_digest"
+      backup_behavior: Restore the entire immutable correction chain, apply restoration suppressions and holds, then materialize only the unique current head.
+      terminal_action: PRESERVE_IMMUTABLE_FACT; corrections append INVERSE or SUPERSEDING rows and never rewrite or delete an original
+    repository_round_trip:
+      append_original: SERIALIZABLE; lock and validate the terminal receipt, insert fact, audit and product.fact_recorded.v1 outbox atomically.
+      append_correction: SERIALIZABLE; lock root and current head, validate decision receipt, append one chain row, audit and product.fact_corrected.v1 outbox atomically.
+      replay: Same original receipt identity or correction identity plus fact_digest returns the stored fact; changed digest is FACT_CONFLICT.
+      current_fact_rule: For each root_fact_id choose exactly the greatest correction_sequence; INVERSE contributes zero and ORIGINAL or SUPERSEDING contributes one Verified Workflow only because the insert function has validated the complete ordered workflow proof.
+      stable_chain_order: ["correction_sequence ASC", "id ASC"]
+      stable_metric_order: ["effective_from ASC", "id ASC"]
+      missing_rule: Missing or ambiguous terminal receipt is an explicit error; never synthesize a fact, zero, scope or effective time.
+      test_identity: AC-OA-TABLE-OPS-OUTCOME_FACTS-CONTRACT
+    event_projection:
+      ORIGINAL:
+        event: product.fact_recorded.v1
+        payload_mapping: {factId: id, factType: fact_type, deploymentId: deployment_id, metricTimezone: metric_timezone, metricPolicyDigest: metric_policy_digest, workflowInstanceHmac: workflow_instance_hmac, workflowProofDigest: workflow_proof_digest, milestoneSetDigest: milestone_set_digest, subjectScopeDigest: subject_scope_digest, terminalReceiptId: terminal_receipt_id, effectiveFrom: effective_from, effectiveUntil: effective_until, formulaVersion: formula_version, factDigest: fact_digest}
+      INVERSE_OR_SUPERSEDING:
+        event: product.fact_corrected.v1
+        payload_mapping: {correctionFactId: id, originalFactId: root_fact_id, inverseOrSuperseding: fact_effect, reasonCode: correction_reason_code, decisionDigest: correction_decision_digest, factDigest: fact_digest}
+
+  ops.acquisition_source_receipts:
+    creation_order: 4
+    purpose: Immutable privacy-minimized attribution receipts proving an organization's acquisition campaign/source without storing lead, contact, message, query, cookie or person-level touchpoint content.
+    object_owner: gurine_migrator
+    mutation_class: IMMUTABLE
+    rust_type: gurine_domain::economics::AcquisitionSourceReceipt
+    repository: crates/persistence-postgres::product_economics::AcquisitionSourceReceiptRepository
+    columns:
+      - {name: id, type: uuid, nullable: false, default: gen_random_uuid()}
+      - {name: root_receipt_id, type: uuid, nullable: false, default: null}
+      - {name: revision, type: bigint, nullable: false, default: null}
+      - {name: receipt_effect, type: text, nullable: false, default: null}
+      - {name: supersedes_receipt_id, type: uuid, nullable: true, default: null}
+      - {name: predecessor_receipt_digest, type: "char(64)", nullable: true, default: null}
+      - {name: deployment_id, type: uuid, nullable: false, default: null}
+      - {name: organization_id, type: uuid, nullable: false, default: null}
+      - {name: source_kind, type: text, nullable: false, default: null}
+      - {name: source_system_id, type: text, nullable: false, default: null}
+      - {name: source_record_identity_hmac, type: "char(64)", nullable: false, default: null}
+      - {name: source_record_hmac_key_version, type: text, nullable: false, default: null}
+      - {name: acquisition_campaign_digest, type: "char(64)", nullable: false, default: null}
+      - {name: organization_binding_digest, type: "char(64)", nullable: false, default: null}
+      - {name: attribution_model_version, type: text, nullable: false, default: null}
+      - {name: attribution_model_digest, type: "char(64)", nullable: false, default: null}
+      - {name: touchpoint_set_digest, type: "char(64)", nullable: false, default: null}
+      - {name: source_record_digest, type: "char(64)", nullable: false, default: null}
+      - {name: source_signature_digest, type: "char(64)", nullable: false, default: null}
+      - {name: valid_from, type: timestamptz, nullable: false, default: null}
+      - {name: valid_until, type: timestamptz, nullable: false, default: null}
+      - {name: attributed_at, type: timestamptz, nullable: false, default: null}
+      - {name: receipt_digest, type: "char(64)", nullable: false, default: null}
+      - {name: created_at, type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key: [id]
+    foreign_keys:
+      - {name: acquisition_source_receipt_root_fk, columns: [root_receipt_id], target: ops.acquisition_source_receipts, target_columns: [id], on_delete: RESTRICT, deferrable: true, initially: IMMEDIATE}
+      - {name: acquisition_source_receipt_supersedes_fk, columns: [supersedes_receipt_id], target: ops.acquisition_source_receipts, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+    unique_constraints:
+      - {name: acquisition_source_receipt_root_revision_uq, columns: [root_receipt_id, revision]}
+      - {name: acquisition_source_receipt_source_revision_uq, columns: [deployment_id, source_system_id, source_record_identity_hmac, revision]}
+      - {name: acquisition_source_receipt_reference_uq, columns: [id, receipt_digest]}
+      - {name: acquisition_source_receipt_digest_uq, columns: [receipt_digest]}
+    checks:
+      - {name: acquisition_source_receipt_revision_ck, expression: "revision > 0"}
+      - name: acquisition_source_receipt_chain_ck
+        expression: "(receipt_effect = 'ORIGINAL' AND revision = 1 AND root_receipt_id = id AND supersedes_receipt_id IS NULL AND predecessor_receipt_digest IS NULL) OR (receipt_effect IN ('REPLACEMENT','REVERSAL') AND revision > 1 AND root_receipt_id <> id AND supersedes_receipt_id IS NOT NULL AND predecessor_receipt_digest IS NOT NULL)"
+      - {name: acquisition_source_receipt_effect_ck, expression: "receipt_effect IN ('ORIGINAL','REPLACEMENT','REVERSAL')"}
+      - {name: acquisition_source_receipt_source_kind_ck, expression: "source_kind IN ('ORGANIC_SEARCH','REFERRAL','DIRECT','PARTNER','EVENT','PAID_SEARCH','PAID_SOCIAL','CONTENT','OUTBOUND','OTHER_REVIEWED')"}
+      - {name: acquisition_source_receipt_source_ck, expression: "source_system_id ~ '^[a-z0-9][a-z0-9._-]{0,127}$' AND length(btrim(source_record_hmac_key_version)) BETWEEN 1 AND 100 AND length(btrim(attribution_model_version)) BETWEEN 1 AND 128"}
+      - {name: acquisition_source_receipt_interval_ck, expression: "valid_from < valid_until AND valid_from <= attributed_at AND attributed_at < valid_until AND attributed_at <= created_at"}
+      - name: acquisition_source_receipt_digest_ck
+        expression: "(predecessor_receipt_digest IS NULL OR predecessor_receipt_digest ~ '^[0-9a-f]{64}$') AND source_record_identity_hmac ~ '^[0-9a-f]{64}$' AND acquisition_campaign_digest ~ '^[0-9a-f]{64}$' AND organization_binding_digest ~ '^[0-9a-f]{64}$' AND attribution_model_digest ~ '^[0-9a-f]{64}$' AND touchpoint_set_digest ~ '^[0-9a-f]{64}$' AND source_record_digest ~ '^[0-9a-f]{64}$' AND source_signature_digest ~ '^[0-9a-f]{64}$' AND receipt_digest ~ '^[0-9a-f]{64}$'"
+    indexes:
+      - {name: acquisition_source_receipt_one_successor_uq, unique: true, method: btree, keys: [supersedes_receipt_id], include: [], predicate: "supersedes_receipt_id IS NOT NULL"}
+      - {name: acquisition_source_receipt_root_history_idx, unique: false, method: btree, keys: [root_receipt_id, revision, id], include: [receipt_effect, receipt_digest], predicate: null}
+      - {name: acquisition_source_receipt_org_campaign_idx, unique: false, method: btree, keys: [deployment_id, organization_id, acquisition_campaign_digest, "attributed_at DESC", id], include: [source_kind, receipt_digest], predicate: null}
+      - {name: acquisition_source_receipt_source_idx, unique: false, method: btree, keys: [source_system_id, source_record_identity_hmac, revision, id], include: [receipt_digest], predicate: null}
+    triggers:
+      - name: acquisition_source_receipt_validate_insert
+        timing: BEFORE
+        events: [INSERT]
+        function: ops.validate_acquisition_source_receipt_v1()
+        guarantees:
+          - deployment and organization equal immutable deployment configuration and organization_binding_digest is recomputed from that scope under the current binding key
+          - configured source trust verifies the detached signature over source_record_digest; campaign, attribution model, bounded validity and duplicate-free touchpoint-set digest are recomputed from a closed adapter result
+          - no raw lead, contact, query, cookie, address, handle, message or person-level touchpoint is accepted by the typed input or present in the physical catalog
+          - ORIGINAL locks the semantic source identity; successor locks the unique current leaf, inherits scope/source/campaign identity, binds predecessor digest, increments revision exactly one and cannot branch
+          - REVERSAL remains historical evidence but is not eligible for a new CAC allocation; a historical cost allocation remains bound to its original receipt and requires a superseding cost period for restatement
+      - {name: acquisition_source_receipt_immutable, timing: BEFORE, events: [UPDATE, DELETE], function: ops.reject_mutation()}
+    privileges:
+      gurine_public_api: []
+      gurine_submission_api: []
+      gurine_control_api: [SELECT]
+      gurine_ingest_worker: []
+      gurine_analysis_worker: []
+      gurine_public_projector: []
+      gurine_notification_worker: []
+      gurine_workflow_worker: [SELECT]
+      gurine_document_extractor: []
+      gurine_scheduler: []
+      gurine_auditor: [SELECT]
+      gurine_identity_api: []
+    function_privileges:
+      ops.record_acquisition_source_receipt_v1:
+        gurine_workflow_worker: [EXECUTE]
+    write_boundary:
+      function: ops.record_acquisition_source_receipt_v1
+      signature: "ops.record_acquisition_source_receipt_v1(ops.acquisition_source_receipt_input_v1,text) RETURNS ops.economics_mutation_receipt_v1"
+      owner: gurine_migrator
+      security: SECURITY_DEFINER
+      search_path: [pg_catalog, ops, pg_temp]
+      revoke_execute: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_control_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_document_extractor, gurine_scheduler, gurine_auditor, gurine_identity_api]
+      isolation_guard: current_setting('transaction_isolation') must equal serializable before any lock or insert
+      idempotency_scope: ECONOMICS.RECORD_ACQUISITION_SOURCE_RECEIPT.V1
+      atomic_writes: [receipt row, audit event, cost.acquisition_source_receipt_recorded.v1 outbox, canonical stored response and receipt]
+    rls: {enabled: false, forced: false, reason: Single-organization private commercial attribution receipt; detection, editorial and public paths have no access.}
+    retention:
+      record_class: COMMERCIAL_ACCOUNTING_FACT
+      trigger: valid_until plus the accounting schedule
+      schedule_binding: latest effective nonexpired ops.record_class_schedules revision for COMMERCIAL_ACCOUNTING_FACT
+      legal_hold_key: "object_type=ACQUISITION_SOURCE_RECEIPT, object_id=id, affected_digest=receipt_digest"
+      backup_behavior: Preserve typed receipt and re-evaluate schedule, suppression and hold union before CAC use; raw CRM/advertising source bodies follow their own shorter schedule.
+      terminal_action: PRESERVE_IMMUTABLE_ACCOUNTING_FACT
+    repository_round_trip:
+      replay: Same idempotency identity and canonical request returns byte-identical stored response; changed request or source identity digest is FACT_CONFLICT with no second row/event/receipt.
+      stable_order: [root_receipt_id, revision ASC, id ASC]
+      test_identity: AC-OA-TABLE-OPS-ACQUISITION-SOURCE-RECEIPTS-CONTRACT
+
+  ops.cost_allocations:
+    creation_order: 5
+    purpose: Immutable period headers and normalized allocation lines for fully loaded cost, explicit unknown/unallocated cost, and correction-by-superseding-period unit economics.
+    object_owner: gurine_migrator
+    mutation_class: IMMUTABLE
+    rust_type: gurine_domain::economics::CostAllocationPeriodRow
+    repository: crates/persistence-postgres::product_economics::CostAllocationRepository
+    columns:
+      - {name: id, type: uuid, nullable: false, default: gen_random_uuid()}
+      - {name: row_kind, type: text, nullable: false, default: null}
+      - {name: period_revision_id, type: uuid, nullable: false, default: null}
+      - {name: period_revision_row_kind, type: text, nullable: false, default: "'PERIOD'::text"}
+      - {name: supersedes_period_revision_id, type: uuid, nullable: true, default: null}
+      - {name: supersedes_period_row_kind, type: text, nullable: true, default: null}
+      - {name: deployment_id, type: uuid, nullable: false, default: null}
+      - {name: accounting_timezone, type: text, nullable: false, default: null}
+      - {name: accounting_policy_digest, type: "char(64)", nullable: false, default: null}
+      - {name: period_start, type: date, nullable: false, default: null}
+      - {name: period_end, type: date, nullable: false, default: null}
+      - {name: currency, type: "char(3)", nullable: false, default: null}
+      - {name: period_version, type: bigint, nullable: false, default: "1"}
+      - {name: line_sequence, type: bigint, nullable: false, default: null}
+      - {name: source_set_digest, type: "char(64)", nullable: true, default: null}
+      - {name: pool_set_digest, type: "char(64)", nullable: true, default: null}
+      - {name: driver_set_digest, type: "char(64)", nullable: true, default: null}
+      - {name: correction_set_digest, type: "char(64)", nullable: true, default: null}
+      - {name: allocation_set_digest, type: "char(64)", nullable: true, default: null}
+      - {name: captured_cost_count, type: bigint, nullable: true, default: null}
+      - {name: expected_cost_count, type: bigint, nullable: true, default: null}
+      - {name: cost_capture_state, type: text, nullable: true, default: null}
+      - {name: cost_capture_coverage, type: "numeric(18,12)", nullable: true, default: null}
+      - {name: direct_eligible_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: direct_allocated_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: captured_cost_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: attributed_cost_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: unallocated_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: direct_coverage, type: "numeric(18,12)", nullable: true, default: null}
+      - {name: total_coverage, type: "numeric(18,12)", nullable: true, default: null}
+      - {name: claim_state, type: text, nullable: true, default: null}
+      - {name: incomplete_reason_set_digest, type: "char(64)", nullable: true, default: null}
+      - {name: unknown_cost_scope_digest, type: "char(64)", nullable: true, default: null}
+      - {name: close_receipt_id, type: uuid, nullable: true, default: null}
+      - {name: close_receipt_digest, type: "char(64)", nullable: true, default: null}
+      - {name: closed_at, type: timestamptz, nullable: true, default: null}
+      - {name: allocation_kind, type: text, nullable: true, default: null}
+      - {name: cost_category, type: text, nullable: true, default: null}
+      - {name: source_cost_event_id, type: uuid, nullable: true, default: null}
+      - {name: source_effective_digest, type: "char(64)", nullable: true, default: null}
+      - {name: source_currency, type: "char(3)", nullable: true, default: null}
+      - {name: source_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: fx_rate_fact_id, type: uuid, nullable: true, default: null}
+      - {name: reporting_source_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: target_kind, type: text, nullable: true, default: null}
+      - {name: job_id, type: uuid, nullable: true, default: null}
+      - {name: agent_run_id, type: uuid, nullable: true, default: null}
+      - {name: case_id, type: uuid, nullable: true, default: null}
+      - {name: organization_id, type: uuid, nullable: true, default: null}
+      - {name: outcome_fact_id, type: uuid, nullable: true, default: null}
+      - {name: acquisition_campaign_digest, type: "char(64)", nullable: true, default: null}
+      - {name: acquisition_source_receipt_id, type: uuid, nullable: true, default: null}
+      - {name: acquisition_source_receipt_digest, type: "char(64)", nullable: true, default: null}
+      - {name: acquisition_attribution_state, type: ops.acquisition_attribution_state, nullable: true, default: null}
+      - {name: unattributed_acquisition_pool_digest, type: "char(64)", nullable: true, default: null}
+      - {name: driver_kind, type: text, nullable: true, default: null}
+      - {name: driver_quantity, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: driver_total_quantity, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: allocation_ratio, type: "numeric(18,12)", nullable: true, default: null}
+      - {name: rounding_adjustment, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: allocated_amount, type: "numeric(24,6)", nullable: true, default: null}
+      - {name: allocation_rule_version, type: bigint, nullable: true, default: null}
+      - {name: allocation_rule_digest, type: "char(64)", nullable: true, default: null}
+      - {name: record_class, type: text, nullable: false, default: "'COMMERCIAL_ACCOUNTING_FACT'::text"}
+      - {name: schedule_revision, type: bigint, nullable: false, default: null}
+      - {name: schedule_digest, type: "char(64)", nullable: false, default: null}
+      - {name: record_digest, type: "char(64)", nullable: false, default: null}
+      - {name: recorded_at, type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key:
+      name: cost_allocations_pkey
+      columns: [id]
+    foreign_keys:
+      - {name: cost_allocations_period_revision_fk, columns: [period_revision_id, period_revision_row_kind], target: ops.cost_allocations, target_columns: [id, row_kind], on_delete: RESTRICT, deferrable: true, initially: IMMEDIATE}
+      - {name: cost_allocations_supersedes_fk, columns: [supersedes_period_revision_id, supersedes_period_row_kind], target: ops.cost_allocations, target_columns: [id, row_kind], on_delete: RESTRICT, deferrable: false}
+      - {name: cost_allocations_source_cost_event_fk, columns: [source_cost_event_id], target: ops.cost_events, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+      - {name: cost_allocations_fx_rate_fact_fk, columns: [fx_rate_fact_id], target: ops.fx_rate_facts, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+      - {name: cost_allocations_job_fk, columns: [job_id], target: ops.jobs, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+      - {name: cost_allocations_agent_run_fk, columns: [agent_run_id], target: ops.agent_runs, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+      - {name: cost_allocations_case_fk, columns: [case_id], target: editorial.cases, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+      - {name: cost_allocations_outcome_fact_fk, columns: [outcome_fact_id], target: ops.outcome_facts, target_columns: [id], on_delete: RESTRICT, deferrable: false}
+      - {name: cost_allocations_acquisition_receipt_fk, columns: [acquisition_source_receipt_id, acquisition_source_receipt_digest], target: ops.acquisition_source_receipts, target_columns: [id, receipt_digest], on_delete: RESTRICT, deferrable: false}
+    unique_constraints:
+      - {name: cost_allocations_record_digest_unique, columns: [record_digest]}
+      - {name: cost_allocations_id_kind_unique, columns: [id, row_kind]}
+      - {name: cost_allocations_period_line_unique, columns: [deployment_id, period_start, period_end, currency, period_version, line_sequence]}
+    checks:
+      - name: cost_allocations_currency_shape
+        expression: "currency ~ '^[A-Z]{3}$' AND (source_currency IS NULL OR source_currency ~ '^[A-Z]{3}$')"
+      - name: cost_allocations_period_interval
+        expression: period_end > period_start
+      - name: cost_allocations_version_positive
+        expression: "period_version > 0 AND schedule_revision > 0"
+      - name: cost_allocations_sequence_nonnegative
+        expression: line_sequence >= 0
+      - name: cost_allocations_row_kind_closed
+        expression: "row_kind IN ('PERIOD','LINE')"
+      - name: cost_allocations_period_reference_kind
+        expression: "period_revision_row_kind = 'PERIOD' AND ((supersedes_period_revision_id IS NULL AND supersedes_period_row_kind IS NULL) OR (supersedes_period_revision_id IS NOT NULL AND supersedes_period_row_kind = 'PERIOD'))"
+      - name: cost_allocations_digest_lower_hex
+        expression: "accounting_policy_digest ~ '^[0-9a-f]{64}$' AND (source_set_digest IS NULL OR source_set_digest ~ '^[0-9a-f]{64}$') AND (pool_set_digest IS NULL OR pool_set_digest ~ '^[0-9a-f]{64}$') AND (driver_set_digest IS NULL OR driver_set_digest ~ '^[0-9a-f]{64}$') AND (correction_set_digest IS NULL OR correction_set_digest ~ '^[0-9a-f]{64}$') AND (allocation_set_digest IS NULL OR allocation_set_digest ~ '^[0-9a-f]{64}$') AND (incomplete_reason_set_digest IS NULL OR incomplete_reason_set_digest ~ '^[0-9a-f]{64}$') AND (unknown_cost_scope_digest IS NULL OR unknown_cost_scope_digest ~ '^[0-9a-f]{64}$') AND (close_receipt_digest IS NULL OR close_receipt_digest ~ '^[0-9a-f]{64}$') AND (source_effective_digest IS NULL OR source_effective_digest ~ '^[0-9a-f]{64}$') AND (acquisition_campaign_digest IS NULL OR acquisition_campaign_digest ~ '^[0-9a-f]{64}$') AND (acquisition_source_receipt_digest IS NULL OR acquisition_source_receipt_digest ~ '^[0-9a-f]{64}$') AND (unattributed_acquisition_pool_digest IS NULL OR unattributed_acquisition_pool_digest ~ '^[0-9a-f]{64}$') AND (allocation_rule_digest IS NULL OR allocation_rule_digest ~ '^[0-9a-f]{64}$') AND schedule_digest ~ '^[0-9a-f]{64}$' AND record_digest ~ '^[0-9a-f]{64}$'"
+      - name: cost_allocations_accounting_timezone_shape
+        expression: "length(accounting_timezone) BETWEEN 1 AND 64 AND (accounting_timezone = 'UTC' OR accounting_timezone ~ '^[A-Za-z][A-Za-z0-9._+-]*/[A-Za-z0-9._+-]+(/[A-Za-z0-9._+-]+)*$')"
+      - name: cost_allocations_period_revision_shape
+        expression: "(row_kind = 'PERIOD' AND period_revision_id = id AND line_sequence = 0 AND ((period_version = 1 AND supersedes_period_revision_id IS NULL) OR (period_version > 1 AND supersedes_period_revision_id IS NOT NULL))) OR (row_kind = 'LINE' AND period_revision_id <> id AND supersedes_period_revision_id IS NULL AND line_sequence > 0)"
+      - name: cost_allocations_period_header_shape
+        expression: "row_kind <> 'PERIOD' OR (source_set_digest IS NOT NULL AND pool_set_digest IS NOT NULL AND driver_set_digest IS NOT NULL AND correction_set_digest IS NOT NULL AND allocation_set_digest IS NOT NULL AND captured_cost_count IS NOT NULL AND captured_cost_count >= 0 AND cost_capture_state IS NOT NULL AND direct_eligible_amount IS NOT NULL AND direct_allocated_amount IS NOT NULL AND captured_cost_amount IS NOT NULL AND attributed_cost_amount IS NOT NULL AND unallocated_amount IS NOT NULL AND direct_coverage IS NOT NULL AND total_coverage IS NOT NULL AND claim_state IS NOT NULL AND close_receipt_id IS NOT NULL AND close_receipt_digest IS NOT NULL AND closed_at IS NOT NULL AND allocation_kind IS NULL AND cost_category IS NULL AND source_cost_event_id IS NULL AND source_effective_digest IS NULL AND source_currency IS NULL AND source_amount IS NULL AND fx_rate_fact_id IS NULL AND reporting_source_amount IS NULL AND target_kind IS NULL AND job_id IS NULL AND agent_run_id IS NULL AND case_id IS NULL AND organization_id IS NULL AND outcome_fact_id IS NULL AND acquisition_campaign_digest IS NULL AND acquisition_source_receipt_id IS NULL AND acquisition_source_receipt_digest IS NULL AND acquisition_attribution_state IS NULL AND unattributed_acquisition_pool_digest IS NULL AND driver_kind IS NULL AND driver_quantity IS NULL AND driver_total_quantity IS NULL AND allocation_ratio IS NULL AND rounding_adjustment IS NULL AND allocated_amount IS NULL AND allocation_rule_version IS NULL AND allocation_rule_digest IS NULL)"
+      - name: cost_allocations_line_shape
+        expression: "row_kind <> 'LINE' OR (source_set_digest IS NULL AND pool_set_digest IS NULL AND driver_set_digest IS NULL AND correction_set_digest IS NULL AND allocation_set_digest IS NULL AND captured_cost_count IS NULL AND expected_cost_count IS NULL AND cost_capture_state IS NULL AND cost_capture_coverage IS NULL AND direct_eligible_amount IS NULL AND direct_allocated_amount IS NULL AND captured_cost_amount IS NULL AND attributed_cost_amount IS NULL AND unallocated_amount IS NULL AND direct_coverage IS NULL AND total_coverage IS NULL AND claim_state IS NULL AND incomplete_reason_set_digest IS NULL AND unknown_cost_scope_digest IS NULL AND close_receipt_id IS NULL AND close_receipt_digest IS NULL AND closed_at IS NULL AND allocation_kind IS NOT NULL AND cost_category IS NOT NULL AND source_cost_event_id IS NOT NULL AND source_effective_digest IS NOT NULL AND source_currency IS NOT NULL AND source_amount IS NOT NULL AND reporting_source_amount IS NOT NULL AND target_kind IS NOT NULL AND driver_kind IS NOT NULL AND rounding_adjustment IS NOT NULL AND allocated_amount IS NOT NULL AND allocation_rule_version IS NOT NULL AND allocation_rule_digest IS NOT NULL)"
+      - name: cost_allocations_capture_state_closed
+        expression: "cost_capture_state IS NULL OR cost_capture_state IN ('MEASURED','UNKNOWN')"
+      - name: cost_allocations_capture_state_shape
+        expression: "row_kind <> 'PERIOD' OR (cost_capture_state = 'MEASURED' AND expected_cost_count IS NOT NULL AND expected_cost_count >= captured_cost_count AND cost_capture_coverage IS NOT NULL AND unknown_cost_scope_digest IS NULL) OR (cost_capture_state = 'UNKNOWN' AND expected_cost_count IS NULL AND cost_capture_coverage IS NULL AND unknown_cost_scope_digest IS NOT NULL)"
+      - name: cost_allocations_capture_coverage_formula
+        expression: "row_kind <> 'PERIOD' OR cost_capture_state <> 'MEASURED' OR (cost_capture_coverage BETWEEN 0 AND 1 AND cost_capture_coverage = CASE WHEN expected_cost_count = 0 THEN 1::numeric ELSE ops.round_half_even_numeric_v1(captured_cost_count::numeric / expected_cost_count::numeric, 12) END)"
+      - name: cost_allocations_header_amounts
+        expression: "row_kind <> 'PERIOD' OR (direct_eligible_amount >= 0 AND direct_allocated_amount >= 0 AND direct_allocated_amount <= direct_eligible_amount AND captured_cost_amount >= 0 AND attributed_cost_amount >= 0 AND unallocated_amount >= 0 AND captured_cost_amount = attributed_cost_amount + unallocated_amount AND direct_coverage BETWEEN 0 AND 1 AND total_coverage BETWEEN 0 AND 1 AND direct_coverage = CASE WHEN direct_eligible_amount = 0 THEN 1::numeric ELSE ops.round_half_even_numeric_v1(direct_allocated_amount / direct_eligible_amount, 12) END AND total_coverage = CASE WHEN captured_cost_amount = 0 THEN 1::numeric ELSE ops.round_half_even_numeric_v1(attributed_cost_amount / captured_cost_amount, 12) END)"
+      - name: cost_allocations_claim_state_closed
+        expression: "claim_state IS NULL OR claim_state IN ('ELIGIBLE','INCOMPLETE','NO_ACTIVITY')"
+      - name: cost_allocations_claim_state_shape
+        expression: "row_kind <> 'PERIOD' OR (claim_state = 'NO_ACTIVITY' AND captured_cost_count = 0 AND expected_cost_count = 0 AND captured_cost_amount = 0 AND direct_eligible_amount = 0 AND cost_capture_state = 'MEASURED' AND cost_capture_coverage = 1 AND direct_coverage = 1 AND total_coverage = 1 AND incomplete_reason_set_digest IS NULL AND unknown_cost_scope_digest IS NULL) OR (claim_state = 'ELIGIBLE' AND captured_cost_amount > 0 AND cost_capture_state = 'MEASURED' AND cost_capture_coverage >= 0.99 AND direct_coverage = 1 AND total_coverage >= 0.95 AND incomplete_reason_set_digest IS NULL AND unknown_cost_scope_digest IS NULL) OR (claim_state = 'INCOMPLETE' AND incomplete_reason_set_digest IS NOT NULL AND (cost_capture_state = 'UNKNOWN' OR cost_capture_coverage < 0.99 OR direct_coverage < 1 OR total_coverage < 0.95))"
+      - name: cost_allocations_allocation_kind_closed
+        expression: "allocation_kind IS NULL OR allocation_kind IN ('DIRECT','SHARED','UNALLOCATED')"
+      - name: cost_allocations_cost_category_closed
+        expression: "cost_category IS NULL OR cost_category IN ('COMPUTE','DATABASE_WAL_BACKUP','STORAGE','EGRESS','MODEL_OCR','SEARCH','DELIVERY','OBSERVABILITY','SUPPORT','HUMAN_REVIEW','LEGAL_SECURITY','SALES_CUSTOMER_ACQUISITION')"
+      - name: cost_allocations_target_kind_closed
+        expression: "target_kind IS NULL OR target_kind IN ('JOB','AGENT_RUN','CASE','ORGANIZATION','OUTCOME_FACT','UNALLOCATED')"
+      - name: cost_allocations_exact_target
+        expression: "row_kind <> 'LINE' OR (target_kind = 'JOB' AND job_id IS NOT NULL AND agent_run_id IS NULL AND case_id IS NULL AND organization_id IS NULL AND outcome_fact_id IS NULL) OR (target_kind = 'AGENT_RUN' AND job_id IS NULL AND agent_run_id IS NOT NULL AND case_id IS NULL AND organization_id IS NULL AND outcome_fact_id IS NULL) OR (target_kind = 'CASE' AND job_id IS NULL AND agent_run_id IS NULL AND case_id IS NOT NULL AND organization_id IS NULL AND outcome_fact_id IS NULL) OR (target_kind = 'ORGANIZATION' AND job_id IS NULL AND agent_run_id IS NULL AND case_id IS NULL AND organization_id IS NOT NULL AND outcome_fact_id IS NULL) OR (target_kind = 'OUTCOME_FACT' AND job_id IS NULL AND agent_run_id IS NULL AND case_id IS NULL AND organization_id IS NULL AND outcome_fact_id IS NOT NULL) OR (target_kind = 'UNALLOCATED' AND job_id IS NULL AND agent_run_id IS NULL AND case_id IS NULL AND organization_id IS NULL AND outcome_fact_id IS NULL)"
+      - name: cost_allocations_acquisition_shape
+        expression: "row_kind <> 'LINE' OR (cost_category = 'SALES_CUSTOMER_ACQUISITION' AND acquisition_attribution_state = 'ATTRIBUTED' AND target_kind = 'ORGANIZATION' AND organization_id IS NOT NULL AND acquisition_campaign_digest IS NOT NULL AND acquisition_source_receipt_id IS NOT NULL AND acquisition_source_receipt_digest IS NOT NULL AND unattributed_acquisition_pool_digest IS NULL) OR (cost_category = 'SALES_CUSTOMER_ACQUISITION' AND acquisition_attribution_state = 'UNATTRIBUTED' AND allocation_kind = 'UNALLOCATED' AND target_kind = 'UNALLOCATED' AND organization_id IS NULL AND acquisition_source_receipt_id IS NULL AND acquisition_source_receipt_digest IS NULL AND unattributed_acquisition_pool_digest IS NOT NULL) OR (cost_category <> 'SALES_CUSTOMER_ACQUISITION' AND acquisition_campaign_digest IS NULL AND acquisition_source_receipt_id IS NULL AND acquisition_source_receipt_digest IS NULL AND acquisition_attribution_state IS NULL AND unattributed_acquisition_pool_digest IS NULL)"
+      - name: cost_allocations_driver_kind_closed
+        expression: "driver_kind IS NULL OR driver_kind IN ('DIRECT_IDENTITY','RAW_RECORD','NORMALIZED_LINE','OCR_PAGE','ANALYSIS_JOB','COHORT_RERUN','EVIDENCE_PACKET','API_RECORD_UNIT','GB_MONTH','DELIVERY_ATTEMPT_1000','SUPPORT_HOUR','MATERIAL_CORRECTION_HOUR','NONE')"
+      - name: cost_allocations_driver_shape
+        expression: "row_kind <> 'LINE' OR (allocation_kind = 'DIRECT' AND target_kind <> 'UNALLOCATED' AND driver_kind = 'DIRECT_IDENTITY' AND driver_quantity IS NULL AND driver_total_quantity IS NULL AND allocation_ratio IS NULL AND rounding_adjustment = 0 AND allocated_amount = reporting_source_amount) OR (allocation_kind = 'SHARED' AND target_kind <> 'UNALLOCATED' AND driver_kind NOT IN ('DIRECT_IDENTITY','NONE') AND driver_quantity IS NOT NULL AND driver_total_quantity IS NOT NULL AND allocation_ratio IS NOT NULL AND driver_quantity > 0 AND driver_total_quantity >= driver_quantity AND allocation_ratio > 0 AND allocation_ratio <= 1 AND allocation_ratio = ops.round_half_even_numeric_v1(driver_quantity / driver_total_quantity, 12) AND allocated_amount = ops.round_half_even_numeric_v1(reporting_source_amount * allocation_ratio, 6) + rounding_adjustment) OR (allocation_kind = 'UNALLOCATED' AND target_kind = 'UNALLOCATED' AND driver_kind = 'NONE' AND driver_quantity IS NULL AND driver_total_quantity IS NULL AND allocation_ratio IS NULL AND rounding_adjustment = 0 AND allocated_amount > 0 AND allocated_amount <= reporting_source_amount)"
+      - name: cost_allocations_line_amounts
+        expression: "row_kind <> 'LINE' OR (source_amount >= 0 AND reporting_source_amount >= 0 AND allocated_amount >= 0 AND abs(rounding_adjustment) <= 0.000001)"
+      - name: cost_allocations_fx_shape
+        expression: "row_kind <> 'LINE' OR (source_currency = currency AND fx_rate_fact_id IS NULL AND reporting_source_amount = source_amount) OR (source_currency <> currency AND fx_rate_fact_id IS NOT NULL)"
+      - name: cost_allocations_allocation_rule_version_positive
+        expression: allocation_rule_version IS NULL OR allocation_rule_version > 0
+      - name: cost_allocations_record_class_fixed
+        expression: record_class = 'COMMERCIAL_ACCOUNTING_FACT'
+    indexes:
+      - {name: cost_allocations_period_revision_fk_idx, method: btree, keys: [period_revision_id, period_revision_row_kind, id], include: [], predicate: null}
+      - {name: cost_allocations_supersedes_fk_idx, method: btree, keys: [supersedes_period_revision_id, supersedes_period_row_kind, id], include: [], predicate: "supersedes_period_revision_id IS NOT NULL"}
+      - {name: cost_allocations_period_header_unique, unique: true, method: btree, keys: [deployment_id, period_start, period_end, currency, period_version], include: [], predicate: "row_kind = 'PERIOD'"}
+      - {name: cost_allocations_supersedes_unique, unique: true, method: btree, keys: [supersedes_period_revision_id], include: [], predicate: "row_kind = 'PERIOD' AND supersedes_period_revision_id IS NOT NULL"}
+      - {name: cost_allocations_close_receipt_id_unique, unique: true, method: btree, keys: [close_receipt_id], include: [], predicate: "row_kind = 'PERIOD'"}
+      - {name: cost_allocations_close_receipt_digest_unique, unique: true, method: btree, keys: [close_receipt_digest], include: [], predicate: "row_kind = 'PERIOD'"}
+      - {name: cost_allocations_period_idx, method: btree, keys: [deployment_id, "period_start DESC", "period_end DESC", currency, "period_version DESC", line_sequence], include: [row_kind, period_revision_id, record_digest], predicate: null}
+      - {name: cost_allocations_period_lines_idx, method: btree, keys: [period_revision_id, line_sequence, id], include: [allocation_kind, cost_category, target_kind, allocated_amount, record_digest], predicate: "row_kind = 'LINE'"}
+      - {name: cost_allocations_source_idx, method: btree, keys: [source_cost_event_id, period_revision_id, line_sequence], include: [source_effective_digest, reporting_source_amount, allocated_amount], predicate: "row_kind = 'LINE'"}
+      - {name: cost_allocations_fx_rate_fk_idx, method: btree, keys: [fx_rate_fact_id, id], include: [source_currency, currency, reporting_source_amount], predicate: "fx_rate_fact_id IS NOT NULL"}
+      - {name: cost_allocations_job_fk_idx, method: btree, keys: [job_id, period_revision_id, id], include: [allocated_amount, currency], predicate: "job_id IS NOT NULL"}
+      - {name: cost_allocations_agent_run_fk_idx, method: btree, keys: [agent_run_id, period_revision_id, id], include: [allocated_amount, currency], predicate: "agent_run_id IS NOT NULL"}
+      - {name: cost_allocations_case_fk_idx, method: btree, keys: [case_id, period_revision_id, id], include: [allocated_amount, currency], predicate: "case_id IS NOT NULL"}
+      - {name: cost_allocations_outcome_idx, method: btree, keys: [outcome_fact_id, "period_start DESC", "period_end DESC", id], include: [allocated_amount, currency, record_digest], predicate: "row_kind = 'LINE' AND outcome_fact_id IS NOT NULL"}
+      - {name: cost_allocations_organization_idx, method: btree, keys: [organization_id, "period_start DESC", "period_end DESC", id], include: [allocated_amount, currency, record_digest], predicate: "row_kind = 'LINE' AND organization_id IS NOT NULL"}
+      - {name: cost_allocations_acquisition_idx, method: btree, keys: [organization_id, acquisition_campaign_digest, "period_start DESC", id], include: [allocated_amount, currency, acquisition_source_receipt_digest], predicate: "row_kind = 'LINE' AND cost_category = 'SALES_CUSTOMER_ACQUISITION'"}
+      - {name: cost_allocations_acquisition_receipt_fk_idx, method: btree, keys: [acquisition_source_receipt_id, acquisition_source_receipt_digest, id], include: [organization_id, acquisition_campaign_digest], predicate: "acquisition_source_receipt_id IS NOT NULL"}
+      - {name: cost_allocations_unattributed_acquisition_idx, method: btree, keys: [unattributed_acquisition_pool_digest, "period_start DESC", "period_end DESC", id], include: [allocated_amount, currency, source_effective_digest], predicate: "row_kind = 'LINE' AND cost_category = 'SALES_CUSTOMER_ACQUISITION' AND acquisition_attribution_state = 'UNATTRIBUTED'"}
+      - {name: cost_allocations_claim_idx, method: btree, keys: [claim_state, "period_end DESC", id], include: [direct_coverage, total_coverage, cost_capture_coverage, close_receipt_digest], predicate: "row_kind = 'PERIOD'"}
+    triggers:
+      - name: cost_allocations_validate_insert
+        timing: BEFORE
+        events: [INSERT]
+        function: ops.validate_cost_allocation_row_v1()
+        guarantees:
+          - period header self-reference and every line reference resolve to one header with identical deployment, period, currency and version
+          - accounting_timezone exists in pg_timezone_names and accounting_policy_digest resolves to the deployment accounting policy; every line matches its header exactly
+          - superseded row is a PERIOD header for the same deployment, accounting timezone, period and currency and period_version increments exactly one
+          - source_cost_event is inside the half-open period formed by local midnights in accounting_timezone and converted to UTC instants; source_effective_digest binds the original cost event plus every applicable immutable correction targeting that cost event or the superseded period and line set
+          - applicable accounting corrections use only LATE_PROVIDER_INVOICE, FX_CORRECTION, USAGE_CORRECTION, TAX_CORRECTION, REFUND, CREDIT or ALLOCATION_CORRECTION and are never applied in place
+          - cross-currency lines reference one exact-direction fx_rate_fact valid for the source time; implicit inverse, cross-rate and stale rate are rejected
+          - OUTCOME_FACT target is the unique current non-INVERSE outcome chain head; no corrected-away fact receives cost
+          - ATTRIBUTED SALES_CUSTOMER_ACQUISITION locks the exact ops.acquisition_source_receipts ID+digest current non-reversed leaf and matches deployment, organization and acquisition_campaign_digest. UNATTRIBUTED acquisition cost is a valid explicit UNALLOCATED line with no organization or receipt, a canonical unattributed_acquisition_pool_digest and its full amount; it is never dropped or assigned to a fake organization.
+          - record_digest equals Gurine Canonical JSON v1 SHA-256 of every immutable row field except recorded_at
+          - record-class schedule binding is current and nonexpired
+      - name: cost_allocations_validate_period_close
+        trigger_kind: CONSTRAINT_TRIGGER
+        timing: AFTER
+        events: [INSERT]
+        deferrable: true
+        initially: DEFERRED
+        for_each: ROW
+        function: ops.validate_cost_allocation_period_v1()
+        guarantees:
+          - line_sequence is gap-free 1..N and allocation_set_digest is the SHA-256 of rows in line_sequence then id order
+          - each effective source cost is represented exactly once across DIRECT, SHARED and explicit UNALLOCATED portions and allocated sums equal the header
+          - source, pool, driver and correction set digests match the locked input sets
+          - missing cost remains cost_capture_state UNKNOWN and never becomes zero
+          - every queued row invocation validates the complete set; only the NEW.row_kind = PERIOD invocation may append the close receipt, audit and cost.allocation_period_closed.v1 outbox
+          - LINE invocation requires its header xmin to equal pg_current_xact_id(), so a later transaction cannot add a line to a closed immutable period
+          - the existing ops.outbox unique key on aggregate_type, aggregate_id, aggregate_version and event_type makes period close emission idempotent
+          - close receipt, audit and cost.allocation_period_closed.v1 outbox are in the same SERIALIZABLE transaction
+      - name: cost_allocations_immutable
+        timing: BEFORE
+        events: [UPDATE, DELETE]
+        function: ops.reject_mutation()
+    privileges:
+      gurine_public_api: []
+      gurine_submission_api: []
+      gurine_control_api: [SELECT]
+      gurine_ingest_worker: []
+      gurine_analysis_worker: []
+      gurine_public_projector: []
+      gurine_notification_worker: []
+      gurine_workflow_worker: [SELECT]
+      gurine_document_extractor: []
+      gurine_scheduler: []
+      gurine_auditor: [SELECT]
+      gurine_identity_api: []
+    function_privileges:
+      ops.close_cost_allocation_period_v1:
+        gurine_workflow_worker: [EXECUTE]
+    write_boundary:
+      function: ops.close_cost_allocation_period_v1
+      signature: "ops.close_cost_allocation_period_v1(jsonb,jsonb,uuid,char(64))"
+      arguments: ["header Json<CostAllocationPeriodHeaderV1>", "ordered_lines Json<Vec<CostAllocationLineV1>>", "expected_predecessor_id nullable for version 1", "expected_predecessor_digest nullable for version 1"]
+      returns: ops.economics_mutation_receipt_v1
+      idempotency_scope: ECONOMICS.CLOSE_COST_ALLOCATION_PERIOD.V1
+      owner: gurine_migrator
+      security: SECURITY_DEFINER
+      search_path: [pg_catalog, ops, editorial, pg_temp]
+      revoke_execute: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_control_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_document_extractor, gurine_scheduler, gurine_auditor, gurine_identity_api]
+      payload_rule: both jsonb arguments validate as closed Rust types before any lookup; unknown properties, duplicate line identities, noncanonical order and serde_json::Value are forbidden
+      isolation_guard: current_setting('transaction_isolation') must equal serializable before any lock or insert
+      lock_rule: lock predecessor header, source cost events, accounting corrections, FX facts and outcome targets in lexical relation then UUID order
+      insertion_rule: PERIOD validates period_revision_id = NEW.id without querying the not-yet-visible row; LINE rows select the same-transaction PERIOD header FOR KEY SHARE
+      conflict_mapping: unique violation or serialization failure caused by a stale requested predecessor/input set maps to FACT_CONFLICT; no automatic successor or changed-input retry is created
+    rls:
+      enabled: false
+      forced: false
+      reason: Single-organization physical deployment; no public, submission or editorial-analysis role can read commercial accounting rows.
+    trust_firewall:
+      - Cost or revenue never feeds detection, case priority, publication, response, correction, rights or approval decisions.
+      - The analysis-worker has zero privilege; only operations/economics/projector/auditor paths read allocations.
+      - UNKNOWN and UNALLOCATED affect margin, price, quota or efficiency only and never weaken evidence, privacy, correction or approval gates.
+      - Attributed customer-acquisition cost is organization-scoped; unattributed acquisition cost is isolated in a digest-bound pool with no organization identity. Both may be used only for CAC UNKNOWN/payback and commercial continuation decisions.
+    retention:
+      record_class: COMMERCIAL_ACCOUNTING_FACT
+      trigger: accounting schedule review, contract closure, privacy request or legal-hold evaluation; never in-place correction
+      schedule_binding: latest effective nonexpired ops.record_class_schedules revision recorded by schedule_revision and schedule_digest
+      legal_hold_key: "object_type=COST_ALLOCATION, object_id=id, affected_digest=record_digest, period=period_start/period_end"
+      backup_behavior: Restore all period revisions and accounting corrections, validate digests, holds and current-head uniqueness, then expose economics projections.
+      terminal_action: PRESERVE_ACCOUNTING_FACT; correction creates immutable accounting correction inputs and a new superseding PERIOD revision with new LINE rows
+    repository_round_trip:
+      close_period: SERIALIZABLE; lock period predecessor, source cost events, corrections and FX facts in lexical primary-key order; insert header then lines and one close receipt/event atomically.
+      replay: Same period identity/version and allocation_set_digest returns the stored header plus lines; changed digest is FACT_CONFLICT.
+      correction: Original rows never change; a new version must point to the unique prior head, bind correction_set_digest and recompute every line and coverage value.
+      stable_order: ["PERIOD header first", "line_sequence ASC", "id ASC"]
+      detail_cardinality: Exactly one PERIOD header plus zero through N ordered LINE rows; missing header, gap, duplicate source portion or aggregate mismatch is COST_ATTRIBUTION_INCOMPLETE.
+      claim_gate: Margin or pricing claims require claim_state ELIGIBLE; UNKNOWN, below 99 percent capture, below 100 percent direct allocation or below 95 percent total allocation returns COST_ATTRIBUTION_INCOMPLETE.
+      no_synthesis: Missing source cost, FX, driver, correction, target, receipt or digest is never zero, current or allocated.
+      test_identity: AC-OA-TABLE-OPS-COST_ALLOCATIONS-CONTRACT
+    event_projection:
+      PERIOD:
+        event: cost.allocation_period_closed.v1
+        payload_mapping: {periodStart: period_start, periodEnd: period_end, accountingTimezone: accounting_timezone, accountingPolicyDigest: accounting_policy_digest, currency: currency, poolSetDigest: pool_set_digest, driverSetDigest: driver_set_digest, allocationSetDigest: allocation_set_digest, directCoverage: direct_coverage, totalCoverage: total_coverage, unallocatedAmount: unallocated_amount, receiptDigest: close_receipt_digest}
+        rule: LINE rows emit no period-close event; one PERIOD row emits exactly one event in the close transaction.
+
+cac_metric_input_contract:
+  function: ops.read_cac_metric_inputs_v1
+  signature: "(date period_start, date period_end, char(3) reporting_currency, char(64) expected_accounting_policy_digest) -> SETOF closed scalar CAC input rows"
+  owner: gurine_migrator
+  security: SECURITY_DEFINER
+  search_path: [pg_catalog, ops, pg_temp]
+  execute_roles: [gurine_workflow_worker, gurine_control_api, gurine_auditor]
+  revoke_execute: [PUBLIC, gurine_public_api, gurine_submission_api, gurine_ingest_worker, gurine_analysis_worker, gurine_public_projector, gurine_notification_worker, gurine_document_extractor, gurine_scheduler, gurine_identity_api]
+  exact_semantics:
+    - Select the unique current cost-allocation PERIOD leaf for every intersecting accounting slice and lock its complete line set, source/correction set and FX facts under one repeatable snapshot.
+    - The complete captured SALES_CUSTOMER_ACQUISITION population includes ATTRIBUTED and UNATTRIBUTED lines. No organization predicate may run before this completeness test.
+    - ATTRIBUTED contributes only when its acquisition receipt is the unique current non-reversed leaf and organization/campaign/digest tuple matches. UNATTRIBUTED contributes its full allocated_amount to unattributed_acquisition_amount without an organization, receipt or fabricated zero UUID.
+    - If capture is UNKNOWN/PARTIAL, any acquisition line is UNATTRIBUTED, a receipt is missing/stale/reversed, an FX fact is missing/stale, or a correction chain is ambiguous, CAC state is UNKNOWN, value is NULL and reason is ATTRIBUTION_UNKNOWN. The function never divides only the attributed subset to report a lower known CAC.
+    - CAC becomes KNOWN only when the complete captured acquisition set is measured and every positive acquisition amount is currently attributed or explicitly reversed by an immutable correction. HALF_EVEN conversion and summation use the exact pinned FX and accounting policies.
+  return_firewall: Returns opaque organization UUID only for a KNOWN attributed member plus amounts, currency, interval and canonical input-set digests; source payload, campaign label, person/contact/query/cookie/message identity and public/editorial data are forbidden.
+  runtime_canaries: [all_attributed_known, one_unattributed_unknown, missing_receipt_unknown, stale_receipt_unknown, reversed_receipt_unknown, explicit_reversal_removed, mixed_currency_exact_fx, missing_fx_unknown, no_fake_organization, no_lower_subset_cac, 64_client_snapshot]
+
+runtime_oracles:
+  catalog:
+    - Exactly ops.product_events, ops.outcome_facts, ops.acquisition_source_receipts and ops.cost_allocations are contributed by this fragment.
+    - All four tables have relkind r and owner gurine_migrator; no sequence object is required for UUID identity.
+    - ops.cost_allocations evidence FKs may target only row_kind PERIOD IDs; product_events are forbidden as SKU-readiness evidence because they are short-lived nonauthoritative analytics.
+  analytics_privacy:
+    - specs/ui/analytics-events.yaml SHA-256 is 436c230e2de6edbd10c2d4f4d3f53df91147ad85bab3600cc8b0b945cf25528f and declares exactly 233 events.
+    - Physical allowed-property columns equal exactly app_version, duration_bucket, error_code, filter_category_count, internal_object_type, public_object_id, public_object_type, result_code, result_count_bucket, role_category, screen_id, specification_version, state, step_id, success, surface, viewport_class and workflow_stage.
+    - Response/search/evidence text, filename, token, email, IP, user-agent, user/session identity and generic JSON payload insertion all fail before storage.
+    - workflow_instance_hmac correlates only one bounded task instance, is never derived from identity or object, and cannot span terminal/abandoned workflows.
+    - SSR plus hydration replay of one emission_id stores exactly one row; changed content under the same emission identity is FACT_CONFLICT.
+    - An analytics database outage leaves public reading, response submission and internal commands successful and creates no prohibited retry payload.
+  outcome_fact_correction:
+    - One deployment, workflow_instance_hmac and formula version creates at most one ORIGINAL fact; the same terminal receipt also cannot seed a second workflow fact.
+    - ORIGINAL creation requires all four ordered Verified Workflow milestones from matching nonexpired product events and the terminal receipt; incomplete analytics undercounts and never creates a partial fact.
+    - A 64-client correction race yields one appended successor and 63 FACT_CONFLICT results; no branch, update or delete occurs.
+    - Current MVW selects one head per root; INVERSE counts zero and ORIGINAL or SUPERSEDING counts one.
+    - Public facts have organization_id NULL; paid organization facts require organization_id and remain inaccessible to public, submission and analysis roles.
+  cost_period_correction:
+    - One source cost is partitioned exactly into attributed plus explicit unallocated amount in the reporting currency.
+    - Different-currency allocation without an exact-direction valid fx_rate_fact fails; inverse or cross-rate synthesis is forbidden.
+    - Missing expected cost produces UNKNOWN with null capture coverage, never zero or healthy.
+    - The first period has version 1; each correction appends exactly one unique successor header and a complete replacement line set.
+    - Original allocation rows reject UPDATE and DELETE for every runtime role and the table owner trigger path.
+    - Pricing/margin eligibility is true only for measured capture at least 0.99, direct coverage exactly 1 and total coverage at least 0.95.
+    - CAC payback first scans the complete captured SALES_CUSTOMER_ACQUISITION set. Any UNATTRIBUTED line, missing/stale/reversed receipt, FX gap or correction ambiguity returns UNKNOWN with null value; only a fully attributed set uses exact current receipts, organization targets, campaign digests and authoritative organization revenue facts.
+    - A captured unattributed acquisition line is accepted only as UNALLOCATED+UNATTRIBUTED with a pool digest, no organization and no acquisition receipt; assigning a fake organization/receipt, omitting the amount or reporting a lower attributed-subset CAC fails.
+  acquisition_receipt:
+    - The physical catalog contains no person/contact/query/cookie/message fields, and the typed input rejects unknown properties before source verification.
+    - One source identity and revision creates one row; 64 same-request clients receive one stored receipt and 63 byte-identical replays while changed requests produce FACT_CONFLICT.
+    - Replacement/reversal races have one successor, historical allocations remain stable, and new allocations reject a non-current or reversed leaf.
+  privileges:
+    - PUBLIC has zero table/function privileges.
+    - gurine_analysis_worker has zero privilege on all four tables, enforcing the commercial/editorial firewall.
+    - Every undeclared runtime privilege is denied after the 0029 final privilege reset.
+    - All four tables grant no direct INSERT. Fixed-search-path record/append/close function EXECUTE is exact, and gurine_public_projector has no raw table SELECT; it may execute only append_outcome_fact_v1 and the allowlisted public outcome read function.
+  retention_and_restore:
+    - An active RETENTION or DELETION hold blocks product-event purge; DISCLOSURE blocks export or projection.
+    - Product events expire no later than 90 days, or 30 days for response-sensitive-minimal, unless exact active hold coverage applies.
+    - Outcome and cost facts preserve originals and use append-only correction; restore validates full chains before current projections become readable.
+  repository_round_trip:
+    - Every required and optional column is inserted with a nondefault boundary value and read through a closed SQLx type without serde_json::Value.
+    - numeric(24,6), numeric(18,12), UUID, date, timestamptz and char(64) values round-trip exactly.
+    - Invalid enum, digest, FK, row shape, stale head, missing source and forbidden mutation each map to a distinct typed repository error.
+    - PostgreSQL 18.4 positive and negative role probes run under every declared runtime role for each table.

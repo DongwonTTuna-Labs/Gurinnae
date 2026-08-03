@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-022",
+  "route": "/about",
+  "url": "http://127.0.0.1:29101/about",
+  "observedAt": "2026-07-19T15:35:29.712Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-022",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "mission",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "non-goals",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "team",
+        "component": "OperationsStatusPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "process",
+        "component": "RevisionAndCorrectionPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "contact",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

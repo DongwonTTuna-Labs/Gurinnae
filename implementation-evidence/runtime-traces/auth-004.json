@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "AUTH-004",
+  "route": "/auth/session-expired",
+  "url": "http://127.0.0.1:29102/auth/session-expired",
+  "observedAt": "2026-07-19T15:35:37.954Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "AUTH-004",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "status",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "draft",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "signin",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "support",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

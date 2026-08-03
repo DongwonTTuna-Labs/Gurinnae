@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/research-artifact.json",
+  "title": "ResearchArtifactV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "assetId",
+    "assetRevision",
+    "sourceFetchId",
+    "agentRunId",
+    "providerTurnId",
+    "toolCallId",
+    "callId",
+    "artifactOrdinal",
+    "inputSnapshotSha256",
+    "requestKind",
+    "requestSha256",
+    "resultSha256",
+    "fetchOutcome",
+    "sourceUrlRedacted",
+    "finalUrlRedacted",
+    "sourceAuthority",
+    "retrievedAt",
+    "httpStatus",
+    "contentMediaType",
+    "contentSizeBytes",
+    "contentSha256",
+    "responseHeadersSha256",
+    "artifactSha256",
+    "objectKeyHash",
+    "safeHeaders",
+    "redirectChain",
+    "classification",
+    "contentSafetyState",
+    "contentSafetyReceiptSha256",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "research-artifact.v2" },
+    "id": { "type": "string", "format": "uuid" },
+    "assetId": { "type": "string", "format": "uuid" },
+    "assetRevision": { "const": 1 },
+    "sourceFetchId": { "type": "string", "format": "uuid" },
+    "agentRunId": { "type": "string", "format": "uuid" },
+    "providerTurnId": { "type": "string", "format": "uuid" },
+    "toolCallId": { "type": "string", "format": "uuid" },
+    "callId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "artifactOrdinal": { "type": "integer", "minimum": 0 },
+    "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "requestKind": { "enum": ["SEARCH_PUBLIC_WEB", "FETCH_URL"] },
+    "requestSha256": { "$ref": "#/$defs/sha256" },
+    "resultSha256": { "$ref": "#/$defs/sha256" },
+    "fetchOutcome": { "enum": ["STORED", "RENDER_REQUIRED", "QUARANTINED"] },
+    "sourceUrlRedacted": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "maxLength": 4096
+    },
+    "finalUrlRedacted": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "maxLength": 4096
+    },
+    "sourceAuthority": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "retrievedAt": { "type": "string", "format": "date-time" },
+    "httpStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "contentMediaType": {
+      "type": "string",
+      "pattern": "^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$"
+    },
+    "contentSizeBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 26214400
+    },
+    "contentSha256": { "$ref": "#/$defs/sha256" },
+    "responseHeadersSha256": { "$ref": "#/$defs/sha256" },
+    "artifactSha256": { "$ref": "#/$defs/sha256" },
+    "objectKeyHash": { "$ref": "#/$defs/sha256" },
+    "safeHeaders": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "valueSha256", "safeValue"],
+        "properties": {
+          "name": {
+            "enum": [
+              "content-type",
+              "content-length",
+              "content-language",
+              "etag",
+              "last-modified",
+              "cache-control",
+              "date",
+              "location"
+            ]
+          },
+          "valueSha256": { "$ref": "#/$defs/sha256" },
+          "safeValue": { "type": ["string", "null"], "maxLength": 512 }
+        }
+      }
+    },
+    "redirectChain": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ordinal",
+          "fromOrigin",
+          "toOrigin",
+          "status",
+          "dnsDecisionSha256",
+          "policyDecisionSha256"
+        ],
+        "properties": {
+          "ordinal": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "fromOrigin": { "type": "string", "format": "uri" },
+          "toOrigin": { "type": "string", "format": "uri" },
+          "status": { "enum": [301, 302, 303, 307, 308] },
+          "dnsDecisionSha256": { "$ref": "#/$defs/sha256" },
+          "policyDecisionSha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "classification": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "RESTRICTED",
+        "PERSONAL_DATA",
+        "LEGAL_HOLD"
+      ]
+    },
+    "contentSafetyState": { "enum": ["CLEAN", "FLAGGED", "QUARANTINED"] },
+    "contentSafetyReceiptSha256": {
+      "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "contentSafetyState": { "enum": ["FLAGGED", "QUARANTINED"] }
+        }
+      },
+      "then": {
+        "properties": {
+          "contentSafetyReceiptSha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "fetchOutcome": { "const": "RENDER_REQUIRED" } }
+      },
+      "then": { "properties": { "contentMediaType": { "const": "text/html" } } }
+    }
+  ],
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-digest-projection": {
+    "algorithm": "RFC8785_JCS_UTF8_SHA256",
+    "excludedRootFields": ["artifactSha256"]
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "assertion_contract": {
+    "all_clause_instances_observed": true,
+    "all_example_rows_observed": true,
+    "assertion_after_success_sentinel_required": true,
+    "assertion_ordinal_set_equality": true,
+    "bare_or_trivial_assertion_forbidden": true,
+    "contract_version": 3,
+    "fixture_only_effect_forbidden": true,
+    "runtime_layer_observation_required": true
+  },
+  "authority_zip_sha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "contract_inputs": [
+    {
+      "path": "tests/acceptance/base-v13.lock.yaml",
+      "sha256": "1f4b82b7e519df64dd46641a21545940dbb0d6f52facc9a0f5618c03b9948c20",
+      "size": 5185
+    },
+    {
+      "path": "tests/acceptance/executable-mapping.yaml",
+      "sha256": "f85a72768d18c12d3111adcb2895661b64d6cbd2b32112467d2526a52319ae83",
+      "size": 143845
+    },
+    {
+      "path": "tests/acceptance/supplemental-executable-mapping.yaml",
+      "sha256": "fc1b75b50cc1c20dd14f634c00725d3fff3cdc4b69acf1ebd9f2abbeabaccf3f",
+      "size": 114015
+    },
+    {
+      "path": "tests/acceptance/effective-execution-registry.yaml",
+      "sha256": "62dcd58c321a0c34ba362e872aa6212a4502f2ec5b80b266524e53ef34acb124",
+      "size": 11746931
+    }
+  ],
+  "execution_contract": {
+    "attempt_count": 1,
+    "contract_version": 3,
+    "exact_discovery_and_selector_required": true,
+    "external_evidence_required": true,
+    "extraction_receipt_schema": "specs/acceptance/extraction-receipt-v1.schema.json",
+    "layer_receipt_schema": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
+    "retry_count": 0,
+    "run_index_schema": "specs/acceptance/run-index-v1.schema.json",
+    "scenario_receipt_schema": "specs/acceptance/execution-receipt-v3.schema.json",
+    "source_tree_evidence_forbidden": true,
+    "zero_or_multiple_selection_is_failure": true
+  },
+  "forbidden_runtime_keys": [
+    "current_status",
+    "execution_receipts",
+    "implementation_status",
+    "implementation_status_counts",
+    "missing_execution_receipt_count",
+    "missing_implementation_count",
+    "release_gate"
+  ],
+  "proof_semantics_members": [
+    {
+      "path": ".config/nextest.toml",
+      "sha256": "d4c422c33dcb61e6fe6fff789e893e7b2776479fbd21c95ed2b7e98691408667",
+      "size": 282
+    },
+    {
+      "path": "Makefile",
+      "sha256": "2f7bbc19f42ee246bd68328f4cb045097200444a3f590ec3dd05d0cc3f724bd8",
+      "size": 10358
+    },
+    {
+      "path": "crates/test-support/Cargo.toml",
+      "sha256": "d9b9196d30bfe3037b6b91553db0b6e4b55439520da6ccf2c6d707bee2446a79",
+      "size": 3912
+    },
+    {
+      "path": "crates/test-support/src/acceptance_observation.rs",
+      "sha256": "61c3a646392e021bcc5b4af0ce991747ac8ecf718ead8e43854fcf4ac5cd67d0",
+      "size": 22469
+    },
+    {
+      "path": "crates/test-support/src/lib.rs",
+      "sha256": "01d1757f70c224ed23109b9699dc765380b851dd7413f2fd8ef2cb4e9b137be1",
+      "size": 240
+    },
+    {
+      "path": "infra/docker/dev/Dockerfile",
+      "sha256": "bd37dee246911386504b1a84be14ff62595ad4e4cd52cd6db2e448f0492830fb",
+      "size": 1321
+    },
+    {
+      "path": "infra/docker/rust-service/Dockerfile",
+      "sha256": "01c6b7c153a1db072edc9a898952ec8132dc97b34b52db8dc5ca7f02c4b896ca",
+      "size": 13999
+    },
+    {
+      "path": "infra/images.lock",
+      "sha256": "5fe4724273d560882d27118d41de9dc20616fac66ef0c05ad8c8e9e1415015d7",
+      "size": 832
+    },
+    {
+      "path": "scripts/create_source_archive.py",
+      "sha256": "e562aa4ea1579eee4dc3593a7b91e0e7ad1d249cc3f6400b0515b76120ab7cf8",
+      "size": 3888
+    },
+    {
+      "path": "scripts/design_bundle_digest.py",
+      "sha256": "30ceacb49f1012519faa0d08fe706dd5c9b1945d2ee1778dea9eab36010cece6",
+      "size": 13966
+    },
+    {
+      "path": "scripts/generate_acceptance_design_registry.py",
+      "sha256": "e58657e278ff37e9949b48d9c95a7916c80a013dbc38a140cb9239c2b2326aeb",
+      "size": 8075
+    },
+    {
+      "path": "scripts/generate_effective_execution_registry.py",
+      "sha256": "f8b480b0e83d1421893acf32e3fd7ea985a98e5e5a97aa95f444e5325e173e9d",
+      "size": 24593
+    },
+    {
+      "path": "scripts/generate_supplemental_execution_mapping.py",
+      "sha256": "9b42f4b150c8d96454bd11851f423d774781149a2203ae062a1a63afb185a1c5",
+      "size": 6473
+    },
+    {
+      "path": "scripts/run_acceptance_assertion_mutations.py",
+      "sha256": "f174f7f42f25ca93c699a2b155ea2dc3fae81c50022bba86e1921dea5e1dd86f",
+      "size": 3474
+    },
+    {
+      "path": "scripts/source_provenance.py",
+      "sha256": "564d5a5ef72d5555809ac5da81a456cdcb173feb6d5fd7cd3bf02ef862af0b21",
+      "size": 11818
+    },
+    {
+      "path": "scripts/validation/acceptance_gherkin.py",
+      "sha256": "ec57b44fb21170afbac109ca0a14f9da02767f1d77adca0c75fe73f0a1ffffae",
+      "size": 8644
+    },
+    {
+      "path": "scripts/validation/effective_acceptance.py",
+      "sha256": "a6266189f7b5c49a19ff2198a9496b4d5f55a470037e02e1b2c0cb80e1d2cbe6",
+      "size": 761
+    },
+    {
+      "path": "scripts/verify_source_archive.py",
+      "sha256": "19d91f03ec806a11a630e58c67a64d7af791852c94505e786cf333e2b00397bf",
+      "size": 4260
+    }
+  ],
+  "registry_kind": "SUPPLEMENTAL_ACCEPTANCE_DESIGN_REGISTRY",
+  "release_policy": {
+    "all_439_scenarios_required": true,
+    "all_runtime_layers_required": true,
+    "archive_and_clean_extraction_binding_required": true,
+    "assertion_mutation_survivor_count": 0,
+    "failed_count": 0,
+    "retried_count": 0,
+    "skipped_count": 0,
+    "source_unchanged_during_evidence_run": true
+  },
+  "runtime_contracts_sha256": "638d9cd14f108b0e44b4c26cb244a55a1e7b4bf3bf42d78059a02704a9f71244",
+  "runtime_state_embedded": false,
+  "scenario_contract": {
+    "background_clause_inheritance_required": true,
+    "effective_feature_count": 40,
+    "effective_scenario_count": 439,
+    "exact_scenario_identity_required": true,
+    "example_row_and_expansion_digest_required": true,
+    "gherkin_example_count": 80,
+    "gherkin_instance_count": 2465,
+    "gherkin_outline_count": 11,
+    "gherkin_scenario_bound_clause_count": 2019,
+    "gherkin_source_step_count": 1645,
+    "scenario_set_sha256": "695ec419c93e97c8095de2d897aecf271ba8f8bf2586b495d734c1c7c8e1cab3"
+  },
+  "schema_version": 2,
+  "schemas": [
+    {
+      "path": "specs/acceptance/execution-receipt-v3.schema.json",
+      "sha256": "ad8fcfbed3aaf0d8a1dcebb153cd7a46e2f79e74367819a04e35b9129c2a93cf",
+      "size": 8550
+    },
+    {
+      "path": "specs/acceptance/extraction-receipt-v1.schema.json",
+      "sha256": "ca98b37be4fb73604213fa10fdcaec69f570528659c05f91ea6715c6a4931fef",
+      "size": 2246
+    },
+    {
+      "path": "specs/acceptance/run-index-v1.schema.json",
+      "sha256": "4d58dc276ea305fde670f88ccc998a6f74fefb79163ea01009cdcc7e78f699d4",
+      "size": 3819
+    },
+    {
+      "path": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
+      "sha256": "01f07ac725232cd43c6cc6253c8b08434678054a91a3728989ab0899a07d8bdb",
+      "size": 11218
+    }
+  ],
+  "specification_version": "13.0.0",
+  "status": "FINAL"
+}

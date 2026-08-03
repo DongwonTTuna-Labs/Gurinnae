@@ -1,0 +1,10 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+behavior: The deterministic provider double returns provider-response.json or the
+  declared provider failure without network access.
+rules:
+- No model call is made.
+- Outputs are validated before policy evaluation.
+- Unknown citations and locator mismatches force abstention.
+- Budget and prompt-injection checks execute before provider output is accepted.

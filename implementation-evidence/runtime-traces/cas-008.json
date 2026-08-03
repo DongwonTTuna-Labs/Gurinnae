@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-008",
+  "route": "/internal/cases/{caseId}/responses",
+  "url": "http://127.0.0.1:29102/internal/cases/80000000-0000-4000-8000-000000000001/responses",
+  "observedAt": "2026-07-19T15:35:42.602Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "CAS-008",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "requests",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "submissions",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "verification",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "public-copy",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "timeline",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

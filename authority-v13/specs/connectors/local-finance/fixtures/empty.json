@@ -1,0 +1,11 @@
+{
+  "fixture_origin": "synthetic-manifest-contract-not-live-evidence",
+  "connector_id": "local-finance",
+  "kind": "empty",
+  "manifest": {
+    "manifest_version": "1",
+    "publisher": "가상 공식자료 공급자",
+    "generated_at": "2026-07-01T00:00:00Z",
+    "documents": []
+  }
+}

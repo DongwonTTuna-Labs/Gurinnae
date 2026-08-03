@@ -1,0 +1,10 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "open-dart",
+  "operation_id": "dart-disclosures",
+  "kind": "quota",
+  "response": {
+    "status": "020",
+    "message": "요청 제한을 초과하였습니다."
+  }
+}

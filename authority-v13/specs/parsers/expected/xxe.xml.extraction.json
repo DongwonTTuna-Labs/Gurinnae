@@ -1,0 +1,10 @@
+{
+  "documentSha256": "be12c8d6048875f33aedff0f77ae8669d3f4b1baba784eb71bbadb9c04023bf3",
+  "mediaType": "application/xml",
+  "pages": [],
+  "parserId": "xml",
+  "parserVersion": "0.41.0-reference-v1",
+  "rejectionCode": "XML_DTD_OR_ENTITY",
+  "status": "REJECTED",
+  "warnings": []
+}

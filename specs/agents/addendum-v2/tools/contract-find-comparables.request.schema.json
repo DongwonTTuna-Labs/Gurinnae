@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/contract-find-comparables-request.json",
+  "title": "ContractFindComparablesRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputSnapshotId",
+    "inputSnapshotSha256",
+    "subjectContractId",
+    "subjectContractVersion",
+    "asOf",
+    "comparisonBasis",
+    "geographyCodes",
+    "procurementCategoryCodes",
+    "awardMethods",
+    "valueBand",
+    "currency",
+    "maxResults"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "contract.find_comparables.request.v2" },
+    "runId": { "type": "string", "format": "uuid" },
+    "inputSnapshotId": { "type": "string", "format": "uuid" },
+    "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "subjectContractId": { "type": "string", "format": "uuid" },
+    "subjectContractVersion": { "type": "integer", "minimum": 1 },
+    "asOf": { "type": "string", "format": "date-time" },
+    "comparisonBasis": {
+      "enum": [
+        "TOTAL_VALUE",
+        "UNIT_PRICE",
+        "QUANTITY_AND_UNIT",
+        "DURATION",
+        "CHANGE_PATTERN"
+      ]
+    },
+    "geographyCodes": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 50,
+      "items": { "type": "string", "pattern": "^[A-Z0-9-]{2,20}$" }
+    },
+    "procurementCategoryCodes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "maxItems": 50,
+      "items": { "type": "string", "pattern": "^[A-Z0-9._-]{1,32}$" }
+    },
+    "awardMethods": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 20,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,31}$" }
+    },
+    "valueBand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimumMinor", "maximumMinor"],
+      "properties": {
+        "minimumMinor": { "type": "integer", "minimum": 0 },
+        "maximumMinor": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "maxResults": { "type": "integer", "minimum": 1, "maximum": 50 }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+}

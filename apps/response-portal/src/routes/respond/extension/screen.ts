@@ -1,0 +1,75 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "RSP-007",
+  title: "기한 연장 요청",
+  route: "/respond/extension",
+  archetype: "GUIDED_FORM",
+  sections: [
+    {
+      order: 1,
+      id: "current",
+      title: "현재 기한",
+      component: "StructuredContentSection",
+      purpose: "timezone.",
+      test_id: "rsp_007__section__current",
+    },
+    {
+      order: 2,
+      id: "request",
+      title: "요청",
+      component: "StructuredContentSection",
+      purpose: "희망일·이유.",
+      test_id: "rsp_007__section__request",
+    },
+    {
+      order: 3,
+      id: "partial",
+      title: "부분 답변",
+      component: "GuidedFormSection",
+      purpose: "가능 여부.",
+      test_id: "rsp_007__section__partial",
+    },
+    {
+      order: 4,
+      id: "review",
+      title: "제출 확인",
+      component: "KnownUnknownResponse",
+      purpose: "승인 아님을 설명.",
+      test_id: "rsp_007__section__review",
+    },
+  ],
+  actions: [
+    {
+      id: "submit-extension",
+      label: "연장 요청 제출",
+      capability: "none",
+      operation_id: "requestResponseExtension",
+      interaction_kind: "COMMAND",
+      assurance_level: "SCOPED_TOKEN",
+      step_up_required: false,
+      confirmation_required: false,
+    },
+    {
+      id: "return",
+      label: "요청으로 돌아가기",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "requestResponseExtension",
+      api: "submission-api",
+      method: "POST",
+      path: "/v1/response-session:request-extension",
+      blocking: true,
+      response_schema: "requestResponseExtensionReceipt",
+    },
+  ],
+} as const satisfies ScreenViewModel;

@@ -1,0 +1,1661 @@
+schema_version: 1
+specification_version: 13.0.0+agent-multimodal.2
+status: REVIEW_REQUIRED
+decision_state: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+title: HTML, image, WAV audio, and WebM video parser additive contract
+scope:
+  authority: DESIGN.md section 8.4
+  additive_format_ids:
+  - html
+  - png
+  - jpeg
+  - webp
+  - tiff
+  - wav
+  - webm
+  additive_format_count: 7
+  additive_format_registry_gate:
+    exact_ordered_ids:
+    - html
+    - png
+    - jpeg
+    - webp
+    - tiff
+    - wav
+    - webm
+    count_must_equal: 7
+    missing_duplicate_or_unknown_id: HARD_FAIL
+  base_v13_formats_remain_required: true
+  effective_format_count: 15
+  audio_and_video: PRODUCTION_RUNTIME_VERIFIED
+global_rules:
+- Magic bytes and decoded structure are authority; filename extension and declared Content-Type are hints only.
+- Every input is immutable, hash-pinned, scanned, rights-bound, and processed with network disabled in the document-extractor
+  sandbox.
+- HTML scripts, styles, forms, active elements, event handlers, external entities, and subresources are never executed or
+  fetched.
+- Image decoding applies dimensions, frame, total-pixel, allocation, wall-time, CPU, and memory limits before OCR.
+- OCR output is untrusted derived text. It retains exact asset revision/hash, pixel locator, engine/traineddata versions,
+  confidence, and warnings.
+- WAV decoding preserves container/sample/channel/duration metadata; silence is recorded as silence and never fabricated as speech.
+- WebM decoding preserves container/stream metadata and executes the visual path even without a usable audio stream; absent audio is explicit and never synthesized.
+- Audio transcript, speaker label, video caption, visual observation, and table observation are untrusted derived proposals. Speaker labels require parser evidence; VLM observations additionally require current model-use rights and provider/classification activation.
+- A fixture is an input and expected oracle only. Production and acceptance invoke the same Rust parser/OCR runtime and persistence
+  path; returning fixture output by name or digest is forbidden.
+runtime_bom_additive:
+  rust_crates:
+  - name: html5ever
+    version: 0.39.0
+    package_sha256: 46a1761807faccc9a19e86944bbf40610014066306f96edcdedc2fb714bcb7b8
+    rust_version_minimum: 1.71.0
+    features: []
+    purpose: standards-conforming nonexecuting HTML tokenizer/tree builder
+  - name: image
+    version: 0.25.10
+    package_sha256: 85ab80394333c02fe689eaf900ab500fbd0c2213da414687ebf995a65d5a6104
+    rust_version_minimum: 1.88.0
+    default_features: false
+    features:
+    - png
+    - jpeg
+    - webp
+    - tiff
+    purpose: bounded safe image decode and pixel normalization
+  external_tools:
+  - name: tesseract
+    version: 5.5.0
+    invocation: tokio::process child; TSV output; no first-party FFI
+    languages:
+    - kor
+    - eng
+    traineddata_authority: specs/parsers/runtime-bom.yaml
+  - name: ffmpeg
+    version: 8.0.1
+    adapter_id: gurinnae-ffmpeg-subprocess-media-v1
+    purpose: bounded local WAV and WebM probe/decode through ffprobe and ffmpeg child processes
+    official_source:
+      url: https://ffmpeg.org/releases/ffmpeg-8.0.1.tar.xz
+      sha256: 05ee0b03119b45c0bdb4df654b96802e909e0a752f72e4fe3794f487229e5a41
+      signature_or_hash_policy: HTTPS is transport only; the exact lowercase SHA-256 is the source identity and mismatch is a build hard failure.
+    license_policy:
+      effective_license: LGPL-2.1-or-later
+      gpl_components: FORBIDDEN
+      version3_components: FORBIDDEN
+      nonfree_components: FORBIDDEN
+      external_codec_libraries: FORBIDDEN
+      acceptance_evidence:
+      - exact configure command and ffmpeg -buildconf output
+      - ffmpeg -L output and SPDX license identifiers for every shipped component
+      - SBOM showing no package or component with GPL, AGPL, LGPL-3.0-only, LGPL-3.0-or-later, or nonfree effective terms
+    build_contract:
+      configure_flags_exact_order:
+      - --disable-everything
+      - --disable-autodetect
+      - --disable-network
+      - --disable-gpl
+      - --disable-version3
+      - --disable-nonfree
+      - --disable-doc
+      - --disable-debug
+      - --disable-devices
+      - --disable-avdevice
+      - --enable-small
+      - --enable-static
+      - --disable-shared
+      - --enable-ffmpeg
+      - --enable-ffprobe
+      - --enable-protocol=pipe
+      - --enable-demuxer=matroska,wav
+      - --enable-decoder=opus,pcm_s16le,vorbis,vp8
+      - --enable-parser=opus,vorbis,vp8
+      - --enable-encoder=pcm_s16le,rawvideo
+      - --enable-muxer=rawvideo,s16le
+      - --enable-swresample
+      - --enable-swscale
+      enabled_component_inventory_exact:
+        programs: [ffmpeg, ffprobe]
+        protocols: [pipe]
+        demuxers: [matroska, wav]
+        decoders: [opus, pcm_s16le, vorbis, vp8]
+        parsers: [opus, vorbis, vp8]
+        output_only_encoders: [pcm_s16le, rawvideo]
+        output_only_muxers: [rawvideo, s16le]
+        conversion_libraries: [swresample, swscale]
+      extra_protocol_demuxer_decoder_parser_encoder_muxer_or_external_library: ACTIVATION_HARD_FAIL
+      native_codec_only: true
+      network_protocol_count: 0
+    codec_matrix_exact:
+    - input_format_id: wav
+      container: RIFF_WAVE
+      demuxer: wav
+      stream_cardinality: exactly one audio stream and zero video, subtitle, data, or attachment streams
+      accepted_input_codecs:
+      - codec: PCM_S16LE
+        ffmpeg_decoder: pcm_s16le
+        wave_format_tag: '0x0001'
+        bits_per_sample: 16
+        sample_format: signed little-endian integer
+      canonical_decode_output: interleaved PCM_S16LE at the source sample rate and source channel count
+    - input_format_id: webm
+      container: WEBM
+      demuxer: matroska
+      stream_cardinality: exactly one VP8 video stream, zero or one supported audio stream, and zero subtitle, data, or attachment streams
+      accepted_video_codecs:
+      - codec: VP8
+        codec_id: V_VP8
+        ffmpeg_decoder: vp8
+        canonical_decode_output: packed RGB24 in coded presentation order
+      accepted_audio_codecs:
+      - codec: OPUS
+        codec_id: A_OPUS
+        ffmpeg_decoder: opus
+        canonical_decode_output: interleaved PCM_S16LE at the decoded source sample rate and channel count
+      - codec: VORBIS
+        codec_id: A_VORBIS
+        ffmpeg_decoder: vorbis
+        canonical_decode_output: interleaved PCM_S16LE at the decoded source sample rate and channel count
+    invocation_contract:
+      executable_resolution: absolute paths baked into the hash-pinned document-extractor image; PATH lookup is forbidden
+      probe_argv_exact: [ffprobe, -v, error, -nostdin, -protocol_whitelist, pipe, -show_error, -show_format, -show_streams, -show_frames, -of, 'json=compact=1', 'pipe:0']
+      wav_decode_argv_exact: [ffmpeg, -v, error, -nostdin, -threads, '1', -protocol_whitelist, pipe, -i, 'pipe:0', -map, '0:a:0', -c:a, pcm_s16le, -f, s16le, 'pipe:1']
+      webm_video_decode_argv_exact: [ffmpeg, -v, error, -nostdin, -threads, '1', -protocol_whitelist, pipe, -i, 'pipe:0', -map, '0:v:0', -fps_mode, passthrough, -pix_fmt, rgb24, -f, rawvideo, 'pipe:1']
+      webm_audio_decode_argv_exact: [ffmpeg, -v, error, -nostdin, -threads, '1', -protocol_whitelist, pipe, -i, 'pipe:0', -map, '0:a:0', -c:a, pcm_s16le, -f, s16le, 'pipe:1']
+      immutable_input_rule: The already SHA-256-verified bytes are replayed from bounded memory to each stdin; URLs, filenames, concat manifests, playlists, devices, and child-opened input paths are forbidden.
+      environment_allowlist: {LC_ALL: C, TZ: UTC}
+      stdin_stdout_stderr: stdin closes after exact input bytes; stdout and stderr have precomputed byte ceilings; any extra byte, truncation, nonzero exit, signal, timeout, cancellation, or malformed probe JSON fails closed.
+      process_lifecycle: Spawn in a new process group, close inherited descriptors, and kill plus reap the complete group on timeout, cancellation, or output-limit breach.
+  - name: whisper.cpp
+    version: 1.9.1
+    commit: f049fff95a089aa9969deb009cdd4892b3e74916
+    adapter_id: gurinnae-whisper-cpp-subprocess-asr-v1
+    purpose: mandatory local Korean/English transcription for every supported non-silent WAV or WebM audio stream
+    source:
+      url: https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v1.9.1.tar.gz
+      sha256: 147267177eef7b22ec3d2476dd514d1b12e160e176230b740e3d1bd600118447
+      release_binary_reference_sha256: f3bf3b4369a99b54665b0f19b88483b30de27f25963b0414235dea03198515c5
+      rule: Build from the pinned source commit in the document-extractor image; the upstream release binary hash is an independent provenance reference and is not copied into production.
+    license: MIT
+    model:
+      model_id: whisper-large-v3-turbo-multilingual
+      format: ggml
+      url: https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin
+      byte_length: 1624555275
+      sha256: 1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69
+      license: MIT
+      languages: [ko, en]
+      redistribution_and_model_card_receipt: mandatory before image admission
+    build_contract:
+      cpu_only: true
+      network: disabled
+      shared_library_install: forbidden
+      gpu_and_accelerator_backends: forbidden
+      first_party_ffi: forbidden
+      executable: /opt/gurinnae/bin/whisper-cli
+      executable_sha256: mandatory final-image evidence
+      dynamic_dependency_inventory: exact final-image evidence; unlisted shared object is a hard failure
+    input_contract:
+      source: canonical FFmpeg decoded PCM_S16LE
+      conversion: one channel is preserved; multi-channel audio is mixed to mono with checked signed integer sum divided toward zero by channel count, then encoded as 16 kHz PCM_S16LE RIFF/WAVE with exact generated-byte digest
+      path: /work/asr/input.wav inside a fresh per-job tmpfs owned only by the non-root child UID
+      model_path: /opt/gurinnae/models/ggml-large-v3-turbo.bin read-only
+      forbidden: [source URL, original filename, prompt, prior transcript, speaker identity, network, ambient environment, writable model]
+    invocation_argv_exact:
+      - /opt/gurinnae/bin/whisper-cli
+      - --model
+      - /opt/gurinnae/models/ggml-large-v3-turbo.bin
+      - --file
+      - /work/asr/input.wav
+      - --threads
+      - '1'
+      - --processors
+      - '1'
+      - --best-of
+      - '1'
+      - --beam-size
+      - '1'
+      - --temperature
+      - '0.00'
+      - --temperature-inc
+      - '0.00'
+      - --no-fallback
+      - --output-json-full
+      - --output-file
+      - /work/asr/output
+      - --no-prints
+      - --language
+      - auto
+      - --no-gpu
+      - --no-flash-attn
+      - --suppress-nst
+    output_contract:
+      path: /work/asr/output.json
+      max_bytes: 16777216
+      language_rule: detected language must be ko or en; any other language returns UNSUPPORTED_LANGUAGE with zero transcript segment
+      timestamp_rule: token and segment time is converted to half-open integer milliseconds with checked arithmetic and clipped only when it exactly equals decoded duration
+      text_rule: UTF-8, NFC, LF, no translation, no prompt completion, no special-token text; empty normalized text on non-silent input is LOW_CONFIDENCE
+      confidence_rule: Parse the exact JSON numeric lexemes as bounded decimal rationals; segment confidence basis points is round-half-even of the duration-weighted mean token probability times 10000. A segment below 5500 is withheld as LOW_CONFIDENCE and cannot become searchable text.
+      speaker_rule: speakerLabel and speakerConfidence remain null; channel position and model text are not diarization evidence
+      digest_rule: ASR receipt binds input asset/revision/content digest, generated WAV digest, executable/model/config digests, exact argv, language, ordered segment locator/text/confidence digests, start/end times and terminal state
+    process_lifecycle: same new-process-group, descriptor closure, environment allowlist, bounded stdout/stderr, timeout, cancellation, kill and complete reap contract as FFmpeg; zero network/syscall capability and zero inherited credentials
+  media_runtime_activation:
+    decision_id: AI-R3-MULTIMODAL-FFMPEG-ADAPTER
+    state: FINAL
+    selected_adapter: gurinnae-ffmpeg-subprocess-media-v1 using FFmpeg 8.0.1 ffprobe and ffmpeg child processes
+    runtime_support_state: ACTIVE
+    reason: Hash-pinned FFmpeg, ffprobe, whisper.cpp, model, SBOM and production document-extractor image evidence are recorded under implementation-evidence/media-runtime/runtime-evidence.json.
+    implementation_boundary: Existing Rust document-extractor adapter and sandbox boundary only; production Python, first-party unsafe or FFI, network-capable child processes, path or URL input, dynamic codec discovery, and implicit external-model fallback are forbidden.
+    open_implementation_evidence:
+      state: FINAL
+      required_artifacts:
+      - artifact: ffmpeg and ffprobe binary SHA-256 values
+        value: 93a42a60fc6537be5c5b527f4dc2bc2d18b58b534ec68fef666628b2d734a4ff
+      - artifact: canonical configure command and captured ffmpeg -buildconf output SHA-256
+        value: cd775760b4cd13b8a982df2705ca201005bfc17b706061944bfe3a5daf9e72f5
+      - artifact: SPDX-2.3 JSON SBOM covering source, builder image, compiler, libc, binaries, and shipped runtime files
+        value: 272afdc14f04c18a52b0168cda7a564cc9bfddf69d89ebf484eab4cfc036911e
+      - artifact: machine-verifiable license inventory and ffmpeg -L output SHA-256
+        value: a0abd25510978f275a835fce3f90affce1d580efdc7b37edc17b7a57b2e9e9fd
+      - artifact: document-extractor image vulnerability and forbidden-license scan receipt SHA-256
+        value: 1b7568c599a067ab989eb42eada8094e69a2f14ae317a553646cc57852591339
+      final_document_extractor_oci_digest:
+        mandatory: true
+        state: FINAL
+        value: sha256:9f33d67998fb1333b93fcf5f190a2e871c3c6595c52a442596fc911de26024ad
+        required_pattern: '^sha256:[0-9a-f]{64}$'
+        mutable_tag_is_evidence: false
+      evidence_rule: Null, missing, mutable-tag-only, mismatched, or self-asserted evidence keeps runtime support and production readiness blocked.
+    required_before_support_claim:
+    - All OPEN_IMPLEMENTATION artifacts above are non-null, hash-verified, mutually consistent, and bound to the same final document-extractor OCI digest.
+    - Image preflight proves the exact program/component inventory, build flags, LGPL-2.1-or-later effective license, and absence of GPL, version3, nonfree, external codec library, file/device, and network surfaces.
+    - Real non-fixture and embedded-golden execution through the same production parser, repository, locator, rights, timeout, cancellation, and resource-limit path.
+    - Every deterministic metadata, locator, concurrency, cancellation, negative fixture, and no-network gate in this file passes against the final OCI digest.
+    - The pinned whisper.cpp adapter and model are installed and hash-verified; every supported non-silent stream must produce timestamped ko/en transcript segments or one explicit UNSUPPORTED_LANGUAGE, LOW_CONFIDENCE, NON_SPEECH or POLICY_BLOCKED abstention with zero fabricated text.
+    - VLM caption/table/visual observation remains disabled until model_use rights, provider/classification activation, exact model/config digest, proposal-only output, and local source-use receipt are all implemented.
+  pinning: Cargo.lock checksum, package source checksum, external binary SHA-256 and --version, exact component inventory, exact build flags, SBOM and license receipt SHA-256, traineddata SHA-256, and final document-extractor OCI digest are verified before parsing; drift is a hard failure.
+media_determinism_contract:
+  arithmetic:
+    integer_only: true
+    overflow_behavior: reject before allocation or subprocess spawn
+    time_rescale: Convert signed FFmpeg timestamp ticks using the probed positive rational time_base with checked integer arithmetic; start milliseconds use floor toward negative infinity and end milliseconds use ceiling, then require start >= 0 and end > start.
+    decimal_metadata: Locale-independent decimal strings are parsed as exact rationals; NaN, infinity, exponent notation, negative duration, zero denominator, or overflow is CORRUPT_AUDIO or CORRUPT_VIDEO by media kind.
+  exact_format_rules:
+  - format_id: html
+    metadata: document title, BCP-47 language or null, node count, and ignored active-content count from the bounded html5ever tree only
+    locator: stable lowercase DOM element path with one-based nth-of-type for every step; source id and class attributes never affect identity
+  - format_id: png
+    metadata: IHDR geometry, one still frame, decoded color model, and applied orientation transform
+    locator: half-open integer IMAGE_BBOX after the applied orientation transform
+  - format_id: jpeg
+    metadata: SOF geometry, one still frame, decoded color model, and the single accepted EXIF orientation transform
+    locator: half-open integer IMAGE_BBOX in the oriented image
+  - format_id: webp
+    metadata: RIFF/VP8, VP8L, or nonanimated VP8X canvas geometry and exactly one decoded frame
+    locator: half-open integer IMAGE_BBOX in the decoded still image
+  - format_id: tiff
+    metadata: first and only IFD geometry, decoded color model, and the single accepted orientation transform
+    locator: half-open integer IMAGE_BBOX in the oriented single-page image
+  - format_id: wav
+    metadata: RIFF_WAVE, PCM_S16LE, exact fmt sample rate/channel count, and durationMs as floor(sampleCount * 1000 / sampleRateHz); exactly one fmt chunk and one data chunk are required, and a nonintegral final sample is CORRUPT_AUDIO
+    locator: AUDIO_TIME_RANGE derived only from half-open decoded sample indexes using the exact sample rate and the shared integer time rescale rule
+  - format_id: webm
+    metadata: WEBM, VP8 geometry, exact stream codec IDs, decoded frame count, durationMs as the maximum checked end timestamp of decoded video frames and supported decoded audio samples, and frameRateMilliHz as floor(decodedFrameCount * 1000000 / durationMs)
+    locator: Decode frames in presentation order, scale each to 64x64 RGB24 with the pinned integer bilinear scaler, and calculate floor(sum(abs(current-prior channel byte))*10000/(64*64*3*255)). The first frame starts shot 1. A later frame starts a shot only when score >= 1800 and at least 500 ms has elapsed from the current shot start; otherwise it stays in the shot. A boundary is that frame's presentation timestamp. Each nonempty half-open shot ends at the next boundary or durationMs. The representative frame has presentation timestamp closest to the shot midpoint, with earlier timestamp then lower decode ordinal as ties. Emit one VIDEO_TIME_RANGE per shot and run OCR on every representative frame; VIDEO_REGION_TIME uses that shot range and oriented RGB24 pixel bounds.
+  ordering_and_hashes:
+    video_frame_end: Use a positive packet/frame duration; otherwise use the next greater presentation timestamp; the final frame requires a positive WebM DefaultDuration or BlockDuration, and absence or disagreement is CORRUPT_VIDEO.
+    frame_order: ascending presentation timestamp, then ascending decode ordinal; missing, duplicate-with-conflicting-payload, decreasing, or negative timestamps are CORRUPT_VIDEO
+    segment_order: ascending locator start, then locator kind, then normalized text SHA-256
+    extraction_sha256: SHA-256 of RFC 8785 canonical JSON for the closed result with extractionSha256 omitted
+    parser_version_binding:
+      prefix: ffmpeg-8.0.1+gurinnae-ffmpeg-subprocess-media-v1+
+      suffix: lowercase SHA-256 of RFC 8785 canonical JSON containing configure_flags_exact_order and enabled_component_inventory_exact
+      concatenation: prefix immediately followed by the 64-character suffix with no delimiter
+  transcript_and_caption_state:
+    silence_rule: SILENCE_CONFIRMED if and only if every decoded PCM_S16LE sample in every supported audio channel equals zero; otherwise NON_SILENT_UNCLASSIFIED. Neither state is speech evidence.
+    wav_transcript: all-zero input yields NOT_APPLICABLE_SILENCE and zero transcript; every supported non-silent input invokes the pinned whisper.cpp adapter and yields TRANSCRIBED or one typed UNSUPPORTED_LANGUAGE, LOW_CONFIDENCE, NON_SPEECH or POLICY_BLOCKED abstention
+    webm_audio: absent audio yields NOT_APPLICABLE_NO_AUDIO, all-zero decoded audio yields NOT_APPLICABLE_SILENCE, and every supported non-silent audio stream follows the same mandatory whisper.cpp path as WAV
+    diarization: NOT_ACTIVATED; speakerLabel and speakerConfidence are null until a separately reviewed positive diarization adapter and corpus are activated
+    vlm: OpenAiResponsesVlmAdapterV1 is the selected optional proposal-only adapter. It starts UNCONFIGURED and may run only for current model-use rights plus an activated exact provider/model/config/region/retention/price receipt; otherwise VLM state is NOT_ACTIVATED or POLICY_BLOCKED while deterministic shots, keyframe OCR and ASR remain available. VLM output can never replace structural extraction, OCR, transcript, Evidence or a human decision.
+    fabricated_text_or_speaker: HARD_FAIL
+semantic_media_activation:
+  asr:
+    adapter_id: gurinnae-whisper-cpp-subprocess-asr-v1
+    initial_state: REQUIRED_NOT_IMPLEMENTED
+    activation_state_after_evidence: ACTIVE
+    required_evidence:
+      - source, executable, model, model-card, license, configuration and final OCI digests are exact and mutually bound
+      - non-silent ko/en corpus reaches the declared text/confidence/timestamp oracle through the production subprocess and repository path
+      - silence, non-speech, unsupported language, low confidence, timeout, malformed output and cancellation produce typed abstention with zero fabricated segment
+      - two identical runs in each final supported CPU image produce byte-identical normalized segment and receipt bytes
+    support_rule: WAV/WebM support cannot be claimed while a supported non-silent input returns NOT_ACTIVATED
+  diarization:
+    adapter_id: null
+    initial_state: NOT_ACTIVATED
+    safe_output: speakerLabel and speakerConfidence null
+    future_gate: a new reviewed adapter/model/config/source corpus must prove speaker segments; channel number, voice appearance and language-model inference are forbidden substitutes
+  vlm:
+    adapter_id: OpenAiResponsesVlmAdapterV1
+    provider_id: OPENAI_RESPONSES_API
+    endpoint: https://api.openai.com/v1/responses
+    initial_state: UNCONFIGURED
+    model_selection: one exact non-alias model ID and immutable provider configuration ID/version/digest supplied by the activated model-provider registry; latest, rolling alias and silent fallback are forbidden
+    request:
+      inputs: immutable representative-frame PNG bytes, shot time/region locator, keyframe OCR, optional verified transcript segment, source/content/parser/rights/source-use digests and a closed instruction/schema digest
+      forbidden: [original filename, person identity, hidden prompt, unrestricted prior chat, nonselected frames, endpoint credentials, browser state]
+      maximum_frames_per_request: 20
+      output_schema: MediaVisualProposalV1 additionalProperties=false with ordered proposal-only caption, visibleText, tableObservation, visualObservation, uncertainty, citation locators and confidence basis points
+    activation_required:
+      - current model_use and model_egress rights for every frame and transcript segment
+      - PUBLIC or explicitly approved INTERNAL classification; RESTRICTED, PERSONAL_DATA and LEGAL_HOLD are forbidden
+      - exact provider/model/config/region/retention/training/price/FX/cost-reservation and live-preflight receipts
+      - provider response schema validation, local source-use/citation validation and zero raw-provider-payload persistence
+    terminal_states: [PROPOSED,NOT_ACTIVATED,POLICY_BLOCKED,LOW_CONFIDENCE,PROVIDER_UNAVAILABLE,RECONCILIATION_REQUIRED]
+    authority_rule: only PROPOSED stores untrusted MediaVisualProposalV1 rows; it creates no Evidence, claim, fact, action authorization or external effect
+media_activation_negative_gates:
+  readiness_hard_failures:
+  - FFmpeg source SHA-256, binary SHA-256, version, build flags, enabled inventory, SBOM, license receipt, or final OCI digest is missing or mismatched.
+  - Any protocol other than pipe, any device, any extra demuxer/decoder/parser/encoder/muxer, any external codec library, or any network surface is enabled.
+  - Effective licensing is not LGPL-2.1-or-later or any GPL, version3, nonfree, or unclassified shipped component is present.
+  - The Rust adapter can pass a URL, path, filename, playlist, concat manifest, device, inherited descriptor, proxy variable, or credential to the child.
+  - The final OCI digest is a mutable tag, does not match ^sha256:[0-9a-f]{64}$, or is not the image used by all acceptance receipts.
+  document_failure_rules:
+  - Probe and decode disagree on stream count, codec, geometry, sample rate, channels, duration, frame count, timestamp order, or consumed input digest; fail closed with zero partial persistence.
+  - Unsupported WAV codec is AUDIO_CODEC_UNSUPPORTED; malformed RIFF, fmt, data, block alignment, sample count, or chunk bounds is CORRUPT_AUDIO.
+  - Unsupported WebM video codec is VIDEO_CODEC_UNSUPPORTED; unsupported WebM audio codec is AUDIO_CODEC_UNSUPPORTED; extra streams are VIDEO_STREAM_LIMIT; malformed EBML, timestamps, lacing, dimensions, or frame extents is CORRUPT_VIDEO.
+  - Child timeout is TIMEOUT; output/allocation/dimension/sample/frame/duration limits use their exact existing typed limit rejection; nonzero child exit is accepted only when deterministically mapped from validated probe/input facts to one such typed code.
+  - Every rejection, kill, cancellation, malformed child output, or digest disagreement persists no segment, shot, table, link, source-use, or Evidence row and leaves no live child process.
+sandbox_additive:
+  network: none
+  filesystem: read-only single input plus empty writable tmpfs; no object-store credentials in the child
+  process:
+    uid: non-root
+    no_new_privileges: true
+    max_children: 4
+    socket_mount_ptrace: denied
+  limits:
+    input_bytes: 104857600
+    image_width_px: 30000
+    image_height_px: 30000
+    image_total_pixels: 250000000
+    animated_frames: 1
+    decoded_rgba_bytes: 1000000000
+    html_nodes: 1000000
+    html_depth: 256
+    html_text_bytes: 52428800
+    html_attributes_per_element: 256
+    html_attribute_bytes: 1048576
+    audio_duration_ms: 7200000
+    audio_channels: 8
+    audio_sample_rate_hz: 192000
+    audio_decoded_samples: 2764800000
+    video_duration_ms: 7200000
+    video_width_px: 7680
+    video_height_px: 4320
+    video_frame_rate_millihz: 120000
+    video_decoded_frames: 216000
+    video_streams: 16
+    wall_seconds: 60
+    cpu_seconds: 45
+    memory_bytes: 1073741824
+    file_descriptors: 64
+  rejections:
+  - ACTIVE_IMAGE_UNSUPPORTED
+  - AUDIO_CHANNEL_LIMIT
+  - AUDIO_CODEC_UNSUPPORTED
+  - AUDIO_DURATION_LIMIT
+  - AUDIO_SAMPLE_LIMIT
+  - AUDIO_SAMPLE_RATE_LIMIT
+  - CORRUPT_AUDIO
+  - CORRUPT_VIDEO
+  - DECODE_ALLOCATION_LIMIT
+  - HTML_DEPTH_LIMIT
+  - HTML_NODE_LIMIT
+  - HTML_TEXT_LIMIT
+  - IMAGE_DIMENSION_LIMIT
+  - IMAGE_PIXEL_LIMIT
+  - MALFORMED_HTML
+  - MALFORMED_IMAGE
+  - SIZE_LIMIT
+  - TIMEOUT
+  - UNSUPPORTED_MEDIA_TYPE
+  - VIDEO_CODEC_UNSUPPORTED
+  - VIDEO_DIMENSION_LIMIT
+  - VIDEO_DURATION_LIMIT
+  - VIDEO_FRAME_LIMIT
+  - VIDEO_FRAME_RATE_LIMIT
+  - VIDEO_STREAM_LIMIT
+closed_output_contracts:
+  MultimodalExtractionResultV2:
+    additional_properties: false
+    required:
+    - schemaVersion
+    - documentSha256
+    - mediaType
+    - parserId
+    - parserVersion
+    - status
+    - metadata
+    - segments
+    - shots
+    - tables
+    - links
+    - warnings
+    - rejectionCode
+    - extractionSha256
+    fields:
+      schemaVersion:
+        const: multimodal-extraction-result.v2
+      status:
+      - EXTRACTED
+      - REJECTED
+      - FAILED
+      metadata: closed MediaMetadataV2
+      segments: ordered ExtractionSegmentV2[]
+      shots: ordered ExtractionShotV1[]
+      tables: ordered ExtractionTableV2[]
+      links: ordered HtmlLinkV1[]
+      warnings: sorted unique closed warning codes
+  MediaMetadataV2:
+    discriminator: mediaKind
+    variants:
+      HTML:
+        required:
+        - documentTitle
+        - language
+        - nodeCount
+        - activeContentCount
+      IMAGE:
+        required:
+        - widthPx
+        - heightPx
+        - frameCount
+        - colorModel
+        - orientationApplied
+      AUDIO:
+        required:
+        - container
+        - codec
+        - sampleRateHz
+        - channelCount
+        - durationMs
+        - silenceState
+        - transcriptState
+      VIDEO:
+        required:
+        - container
+        - durationMs
+        - widthPx
+        - heightPx
+        - frameRateMilliHz
+        - videoCodec
+        - frameCount
+        - audioStreamState
+        - audioCodec
+        - transcriptState
+  ExtractionSegmentV2:
+    additional_properties: false
+    required:
+    - segmentId
+    - kind
+    - text
+    - normalizedTextSha256
+    - locator
+    - confidenceBasisPoints
+    - language
+    - sourceAssetId
+    - sourceAssetRevision
+    - sourceContentSha256
+    - extractionVersion
+    kinds:
+    - HTML_HEADING
+    - HTML_PARAGRAPH
+    - HTML_LIST_ITEM
+    - HTML_TABLE_CELL
+    - HTML_LINK_TEXT
+    - OCR_LINE
+    - OCR_WORD
+    - AUDIO_TRANSCRIPT
+    - VIDEO_SHOT
+    - VIDEO_CAPTION
+    - VIDEO_TRANSCRIPT
+  ExtractionShotV1:
+    additional_properties: false
+    required:
+    - shotId
+    - locator
+    - decodedFrameCount
+    - representativeFrameSha256
+    - sourceAssetId
+    - sourceAssetRevision
+    - sourceContentSha256
+    - extractionVersion
+    - confidenceBasisPoints
+  LocatorV2:
+    additional_properties: false
+    variants:
+      HTML_CSS_SELECTOR:
+        value: stable lowercase DOM path with nth-of-type; dynamic id/class values are not authority
+      IMAGE_BBOX:
+        value: pixel:x=<int>,y=<int>,w=<positive-int>,h=<positive-int>; half-open within decoded oriented image
+      AUDIO_TIME_RANGE:
+        value: time-ms:start=<nonnegative-int>,end=<greater-int>; half-open within decoded stream duration
+      VIDEO_TIME_RANGE:
+        value: time-ms:start=<nonnegative-int>,end=<greater-int>; half-open within decoded container duration
+      VIDEO_REGION_TIME:
+        value: time-ms:start=<nonnegative-int>,end=<greater-int>;pixel:x=<int>,y=<int>,w=<positive-int>,h=<positive-int>; both half-open and in bounds for the decoded frame geometry
+formats:
+- id: html
+  media_types:
+  - text/html
+  extensions:
+  - html
+  - htm
+  magic_or_structure: leading optional BOM/whitespace followed by HTML doctype/tag or successful HTML5 parse under declared
+    byte limit
+  parser: html5ever 0.39.0 + gurinnae-html-v1
+  provenance: HTML_CSS_SELECTOR
+  network: false
+  extraction:
+  - visible DOM text in document order
+  - heading/paragraph/list/table/link typed segments
+  - same-origin and absolute HTTPS link metadata without fetching
+  ignored:
+  - script
+  - style
+  - template
+  - noscript active fallback
+  - form controls
+  - event-handler attributes
+  - javascript/data/blob URLs
+  - subresources
+- id: png
+  media_types:
+  - image/png
+  extensions:
+  - png
+  magic_hex: 89504e470d0a1a0a
+  parser: image 0.25.10 png + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: jpeg
+  media_types:
+  - image/jpeg
+  extensions:
+  - jpg
+  - jpeg
+  magic_hex: ffd8ff
+  parser: image 0.25.10 jpeg + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: webp
+  media_types:
+  - image/webp
+  extensions:
+  - webp
+  magic_rule: RIFF size WEBP with one supported still-image VP8/VP8L/VP8X payload and no animation flag
+  parser: image 0.25.10 webp + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: tiff
+  media_types:
+  - image/tiff
+  extensions:
+  - tif
+  - tiff
+  magic_hex_any:
+  - 49492a00
+  - 4d4d002a
+  parser: image 0.25.10 tiff + tesseract 5.5.0
+  provenance: IMAGE_BBOX
+  network: false
+- id: wav
+  media_types:
+  - audio/wav
+  - audio/x-wav
+  extensions:
+  - wav
+  magic_rule: RIFF little-endian size followed by WAVE and one supported fmt chunk; declared chunk bounds must fit exact bytes and overlapping/duplicate authority chunks are rejected
+  parser: FFmpeg 8.0.1 gurinnae-ffmpeg-subprocess-media-v1, wav demuxer and native pcm_s16le decoder
+  implementation_state: DESIGN_COMPLETE_OPEN_IMPLEMENTATION_SUPPORT_CLAIM_FORBIDDEN
+  required_capabilities:
+  - bounded RIFF/WAVE PCM metadata and sample decode
+  - silence/non-speech decision with receipt
+  - timestamped transcript only when an approved transcription capability is activated
+  - speaker label only with positive diarization evidence; otherwise null
+  provenance: AUDIO_TIME_RANGE
+  network: false
+- id: webm
+  media_types:
+  - video/webm
+  extensions:
+  - webm
+  magic_rule: EBML header and DocType webm with bounded Segment/Track/Cluster elements; stream codec and dimensions/duration are validated before frame allocation
+  parser: FFmpeg 8.0.1 gurinnae-ffmpeg-subprocess-media-v1, matroska demuxer and native VP8/Opus/Vorbis decoders
+  implementation_state: DESIGN_COMPLETE_OPEN_IMPLEMENTATION_SUPPORT_CLAIM_FORBIDDEN
+  required_capabilities:
+  - bounded WebM container/track metadata and visual frame decode
+  - timestamped visual shots for a usable declared video stream
+  - explicit ABSENT, SILENT, UNSUPPORTED, or DECODED audioStreamState
+  - timestamped transcript only when usable audio and an approved transcription capability exist
+  - proposal-only VLM captions/regions only behind model-use rights and provider/classification activation
+  provenance:
+  - VIDEO_TIME_RANGE
+  - VIDEO_REGION_TIME
+  - AUDIO_TIME_RANGE
+  network: false
+capability_fixture_matrix:
+- format_id: html
+  parser_capabilities: [STATIC_DOM_TEXT, TYPED_TABLE, SAFE_LINK_METADATA, ACTIVE_CONTENT_IGNORED]
+  locator_kinds: [HTML_CSS_SELECTOR]
+  positive_fixture_ids: [multimodal-html-contract-42]
+  negative_fixture_ids: [negative-html-active-fetch, negative-html-depth-limit]
+  runtime_requirement: html5ever exact pin plus gurinnae-html-v1 implementation and closed-output round-trip
+- format_id: png
+  parser_capabilities: [BOUNDED_STILL_DECODE, OCR_LINE, OCR_WORD]
+  locator_kinds: [IMAGE_BBOX]
+  positive_fixture_ids: [multimodal-png-contract-42]
+  negative_fixture_ids: [negative-png-truncated, negative-png-pixel-limit]
+  runtime_requirement: image png feature, tesseract and exact traineddata pins
+- format_id: jpeg
+  parser_capabilities: [BOUNDED_STILL_DECODE, ORIENTATION_APPLIED, OCR_LINE, OCR_WORD]
+  locator_kinds: [IMAGE_BBOX]
+  positive_fixture_ids: [multimodal-jpeg-contract-42]
+  negative_fixture_ids: [negative-jpeg-truncated, negative-jpeg-dimension-limit]
+  runtime_requirement: image jpeg feature, tesseract and exact traineddata pins
+- format_id: webp
+  parser_capabilities: [BOUNDED_STILL_DECODE, OCR_LINE, OCR_WORD]
+  locator_kinds: [IMAGE_BBOX]
+  positive_fixture_ids: [multimodal-webp-contract-42]
+  negative_fixture_ids: [negative-webp-animated, negative-webp-truncated]
+  runtime_requirement: image webp feature, tesseract and exact traineddata pins; animation rejected
+- format_id: tiff
+  parser_capabilities: [BOUNDED_SINGLE_PAGE_DECODE, OCR_LINE, OCR_WORD]
+  locator_kinds: [IMAGE_BBOX]
+  positive_fixture_ids: [multimodal-tiff-contract-42]
+  negative_fixture_ids: [negative-tiff-multipage, negative-tiff-ifd-loop]
+  runtime_requirement: image tiff feature, tesseract and exact traineddata pins; multipage rejected until separately authorized
+- format_id: wav
+  parser_capabilities: [BOUNDED_PCM_METADATA, BOUNDED_PCM_DECODE, SILENCE_STATE, MANDATORY_TIMESTAMPED_TRANSCRIPT_FOR_NON_SILENT]
+  locator_kinds: [AUDIO_TIME_RANGE]
+  positive_fixture_ids: [multimodal-wav-silence-250ms]
+  negative_fixture_ids: [negative-wav-truncated, negative-wav-duration-limit]
+  runtime_requirement: The selected FFmpeg adapter design is complete, but every OPEN_IMPLEMENTATION artifact and production-path acceptance gate must close before any support claim.
+- format_id: webm
+  parser_capabilities: [BOUNDED_CONTAINER_METADATA, BOUNDED_VISUAL_DECODE, DETERMINISTIC_VIDEO_SHOTS, KEYFRAME_OCR, EXPLICIT_AUDIO_STREAM_STATE, MANDATORY_TIMESTAMPED_TRANSCRIPT_FOR_NON_SILENT, ACTIVATION_GATED_VLM_PROPOSAL]
+  locator_kinds: [VIDEO_TIME_RANGE, VIDEO_REGION_TIME, AUDIO_TIME_RANGE]
+  positive_fixture_ids: [multimodal-webm-blue-1s-no-audio]
+  negative_fixture_ids: [negative-webm-truncated, negative-webm-video-codec]
+  runtime_requirement: The selected FFmpeg and whisper.cpp adapter designs are complete, but every OPEN_IMPLEMENTATION artifact and production-path acceptance gate must close before any support claim; deterministic shots and keyframe OCR are unconditional, while VLM additionally requires exact rights/provider activation.
+normalization:
+  unicode: NFC
+  newlines: LF
+  html_whitespace: collapse horizontal runs outside pre/code/table cells; preserve semantic block boundaries
+  ocr_text: TSV word order by page, line, word; join words with one space and lines with LF; negative-confidence nonwords
+    discarded
+  stable_segment_id: first 24 hex of SHA-256(documentSha256 + NUL + locatorKind + NUL + locatorValue + NUL + normalizedText)
+  confidence: integer basis points 0..10000; missing confidence is null and never synthesized
+  orientation: apply only format-declared orientation before dimensions, OCR, and bbox; persist applied transform
+  audio_time: integer milliseconds, half-open, monotonic, in decoded stream bounds; no wall-clock inference
+  video_time: integer milliseconds, half-open, monotonic, in decoded container bounds; shot boundaries are deterministic for a pinned adapter/config
+  speaker_label: null unless the pinned parser records positive diarization evidence and confidence; channel number alone is not a person label
+golden_oracle:
+  fixture_count: 7
+  transport: Each source embeds exact bytes as base64. Verification strips ASCII whitespace, decodes into a fresh empty directory,
+    verifies byte_length and sha256, then invokes the production parser.
+  expected_rule: Compare every exact field and declared bounded field. Undeclared output fields, extra warnings, missing locators,
+    name/digest shortcuts, or fixture-specific branches fail.
+  production_rule: No production code may import this YAML, fixture IDs, expected text, or fixture hashes. Only the test harness
+    materializes the embedded bytes.
+fixtures:
+- fixture_id: multimodal-html-contract-42
+  filename: embedded-valid-contract-42.html
+  format_id: html
+  media_type: text/html
+  source:
+    encoding: BASE64_WHITESPACE_IGNORED
+    byte_length: 536
+    sha256: 884b12358c6bbf1a140fa3deb829840a3721d995642e7c930669d1d00d24100b
+    payload_base64: |-
+      PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj48aGVhZD48bWV0YSBjaGFyc2V0PSJ1dGYt
+      OCI+PHRpdGxlPkd1cmlubmFlIENhc2UgNDI8L3RpdGxlPjwvaGVhZD48Ym9keT48bWFpbj48aDE+
+      R1VSSU5OQUUgQ0FTRSA0MjwvaDE+PHA+QWdlbmN5IEFscGhhIGF3YXJkZWQgQ29udHJhY3QgQy00
+      MiBvbiAyMDI2LTA3LTE1LjwvcD48dGFibGU+PGNhcHRpb24+Q29udHJhY3QgdmFsdWVzPC9jYXB0
+      aW9uPjx0aGVhZD48dHI+PHRoPkl0ZW08L3RoPjx0aD5BbW91bnQgS1JXPC90aD48L3RyPjwvdGhl
+      YWQ+PHRib2R5Pjx0cj48dGQ+QmFzZWxpbmU8L3RkPjx0ZD4xMDAwMDAwPC90ZD48L3RyPjx0cj48
+      dGQ+QXdhcmQ8L3RkPjx0ZD4xMjUwMDAwPC90ZD48L3RyPjwvdGJvZHk+PC90YWJsZT48YSBocmVm
+      PSJodHRwczovL2V4YW1wbGUuaW52YWxpZC9jb250cmFjdHMvQy00MiI+T2ZmaWNpYWwgcmVjb3Jk
+      PC9hPjxzY3JpcHQ+dGhyb3cgbmV3IEVycm9yKCdtdXN0IG5ldmVyIGV4ZWN1dGUnKTwvc2NyaXB0
+      PjwvbWFpbj48L2JvZHk+PC9odG1sPgo=
+  expected_extraction:
+    status: EXTRACTED
+    parser_id: html-static
+    parser_version: html5ever-0.39.0+gurinnae-html-v1
+    media_type: text/html
+    document_title: Gurinnae Case 42
+    language: en
+    normalized_text: "GURINNAE CASE 42\nAgency Alpha awarded Contract C-42 on 2026-07-15.\nContract values\nItem\tAmount KRW\n\
+      Baseline\t1000000\nAward\t1250000\nOfficial record"
+    blocks:
+    - kind: HEADING
+      text: GURINNAE CASE 42
+      locator:
+        kind: HTML_CSS_SELECTOR
+        value: html > body > main > h1:nth-of-type(1)
+    - kind: PARAGRAPH
+      text: Agency Alpha awarded Contract C-42 on 2026-07-15.
+      locator:
+        kind: HTML_CSS_SELECTOR
+        value: html > body > main > p:nth-of-type(1)
+    tables:
+    - caption: Contract values
+      locator:
+        kind: HTML_CSS_SELECTOR
+        value: html > body > main > table:nth-of-type(1)
+      rows:
+      - - Item
+        - Amount KRW
+      - - Baseline
+        - '1000000'
+      - - Award
+        - '1250000'
+    links:
+    - text: Official record
+      absolute_url: https://example.invalid/contracts/C-42
+      locator:
+        kind: HTML_CSS_SELECTOR
+        value: html > body > main > a:nth-of-type(1)
+    executed_script_count: 0
+    fetched_subresource_count: 0
+    warnings:
+    - ACTIVE_CONTENT_IGNORED
+    rejection_code: null
+    comparison:
+      exact: all declared expected fields after NFC/LF normalization
+- fixture_id: multimodal-png-contract-42
+  filename: embedded-contract-42.png
+  format_id: png
+  media_type: image/png
+  source:
+    encoding: BASE64_WHITESPACE_IGNORED
+    byte_length: 2312
+    sha256: 4f0873b7fb9629985caca2d4da065f906ab432ce38fd6b8af5c54dd10fc14822
+    payload_base64: |-
+      iVBORw0KGgoAAAANSUhEUgAAAkQAAABkCAYAAABn0y9FAAAIvUlEQVR4AezbC3JbNwwFUN1sqfvf
+      QbsmNZ6MJ4lNWKbE9yNPp0piiA8EDlkXk5F//Hu73b0YuAPugDvgDrgD7sDKd+DHzT8ECBAgQGB6
+      AQ0S+FrAQPS1j3cJECBAgACBBQQMRAscshYJrCCgRwIECLwi8Gkg+ud+v3kxcAfcAXfAHXAH3IGZ
+      78DH4enTQPRxga8JnENAFQQIECBAYDsBA9F2tjITIECAAAECFxE4zUB0ES9lEiBAgAABAhMKGIgm
+      PFQtESBAgMBpBRR2UgED0UkPRlkECBAgQIDAfgIGov2s7USAwAoCeiRA4JICBqJLHpuiCRAgQIAA
+      gZECBqKRmnKtIKBHAgQIEJhQwEA04aFqiQABAgQIEOgTMBB99PI1AQIECBAgsJyAgWi5I9cwAQIE
+      CBC43Rj8LWAg+tvDVwQIECBAgMCCAgaiBQ9dywQIrCCgRwIEegQMRD1a1hIgQIAAAQJTChiIpjxW
+      Ta0goEcCBAgQGCdgIBpnKRMBAgQIECBwUQED0WkPTmEECBAgQIDAXgIGor2k7UOAAAECBAh8FjhJ
+      xEB0koNQBgECBAgQIHCcgIHoOHs7EyBAYAUBPRK4hICB6BLHpEgCBAgQIEBgSwED0Za6chNYQUCP
+      BAgQmEDAQDTBIWqBAAECBAgQeE3AQPSa3wpP65EAAQIECEwvYCCa/og1SIAAAQIECDwS+HF7tGLQ
+      +0luyeuv3nKS9p69ear1SV/+pL0+GROv6qziyZh9k748vfVU63vjSbvOKk/St77KU8WTMfmTdp6k
+      L17VWcWTvvzJmPVVPVvHkzH1J+08vfUn7TxJX7x332p90rdv0rf+qH2Tdp1VPUfFk2PqTNr7Jn3x
+      o9ze9/U3RO8SfidAgACBqQU0R+ArAQPRVzreI0CAAAECBJYQMBAtccyaJLCCgB4JECDwvICB6Hk7
+      TxIgQIAAAQKTCBiIJjnIFdrQIwECBAgQ2Epg+ECUtD9Vfr/fbyNeSTv/VkB75R1h85Yj6fN5e6bn
+      VXn05HhbW+Wp4klfX1WeUfHkmHqS9r5vpiNeSTt/r9uIWr7K0VtP7/qk7fBVTSPeq+pMtq0naec/
+      qp7Ksqqnild5RsWrfbeOJ33nNaqepL3vKM+knX9U/Y/yDB+IHm1Yv+8dAgQIECBAgMAxAgaiY9zt
+      SoAAAQKrCuj7lAIGolMei6IIECBAgACBPQUMRHtq24sAgRUE9EiAwAUFDEQXPDQlEyBAgAABAmMF
+      LjcQVZ9mH8si29kEqnNPDviphJ84Z6vnZ0n+JUBgMoGk/f2t+v6zdftH7bt1X+/5LzcQvRfudwIE
+      CBAgQIDAKAED0WdJEQIECBAgQGAxAQPRYgeuXQIECBAg8EvAr38KGIj+1PBnAgQIECBAYEkBA9GS
+      x65pAgRWENAjAQLfFzh8IEran6JP+uLfb/mcK5O+fpP2+tl/CuDj6VX9Jm2fj8+P/vqoepJ2v0lf
+      fJRH0rdv0l4/qp5Z8yRtt6Qv3uvTe8+Tbeup6k/69k3a66v84s8JJG3n6l49t0v/U4cPRP0le4IA
+      gV8CfiVAgACBUQIGolGS8hAgQIAAAQKXFTAQnfjolEaAAAECBAjsI2Ag2sfZLgQIECBAgEBb4BRR
+      A9EpjkERBAgQIECAwJEChw9E1afKq/iRWFvu3dtv7/otaz9j7rP5bF1Plb83Puose/et1o+qZ9Y8
+      lVtvfJRPue/9fut5L2n/FFJvnT17frW2d9+t1yd9Pkl7fdKOj6o/aeevrEft+2yewweiZwv3HAEC
+      BAgQIEBglICBaJSkPATWFdA5AQIELi9gILr8EWqAAAECBAgQeFXAQPSq4ArP65EAAQIECEwuYCCa
+      /IC1R4AAAQIECDwWeBuIHq+y4jCB6tP4SfvT+4cVamMCBAgQGCpQff+v4tXm1foqXuWp4kn7/0ej
+      8lf7jo4biEaLykeAAAECJxVQFoFawEBU23iHAAECBAgQWETAQLTIQWuTwAoCeiRAgMCzAgaiZ+U8
+      R4AAAQIECEwjYCCa5ihXaESPBAgQIEBgG4HhA1H1qfKk/Sn0pC9e5a94qvVJ375Je32Vv6pnVLza
+      N2nXWe2btNcn7fjWear84tcSSNr3JxkT31qj97+v5Bp9jXJLxvSbtPNU/r31J+38yZh4bz1XX5+0
+      3aq+kvb6pC9e5R8dHz4QvVKgZwkQIECAAAECRwgYiI5QtycBAgQIrCyg9xMKGIhOeChKIkCAAAEC
+      BPYVMBDt6203AgRWENAjAQKXEzAQXe7IFEyAAAECBAiMFthtIKp+aqA3Pgqgd99qfW89o/JU+/bm
+      r9ZvHR9Vf5Wnild9da6vlnfHZ62n6mtUvBt60AOj6q/yVGX2rq/yVPHe/NX6UfGqzio+at/ePFU9
+      R8Wr+kfVU+XfOj6q/kd5dhuIHhXifQIECBAgQIDAUQIGopa8GAECBAgQILCUgIFoqePWLAECBAgQ
+      +C3gT78FDES/LfyJAAECBAgQWFTAQLTowWubAIEVBPRIgMB3BQxE35WyjgABAgQIEJhWwEA07dFq
+      bAUBPRIgQIDAGAED0RhHWQgQIECAAIELCxiITn14iiNAgAABAgT2EDAQ7aFsDwIECBAgQKAWOME7
+      BqITHIISCBAgQIAAgWMFDETH+tudAAECKwjokcDpBQxEpz8iBRIgQIAAAQJbCxiIthaWn8AKAnok
+      QIDAxQUMRBc/QOUTIECAAAECrwsYiF43XCGDHgkQIECAwNQCBqKpj1dzBAgQIECAwHcEfg1E31lp
+      DQECBAgQIEBgUgED0aQHqy0CBAgQ+CwgQqASMBBVMuIECBAgQIDAMgIGomWOWqMEVhDQIwECBJ4T
+      MBA95+YpAgQIECBAYCIBA9FEh7lCK3okQIAAAQJbCHwaiP5Lbl4M3AF3wB1wB9wBd2DmO/BxqPo0
+      EH1csO/XdiNAgAABAgQI7C9gINrf3I4ECBAgsLqA/k8nYCA63ZEoiAABAgQIENhb4H8AAAD//4sG
+      14YAAAAGSURBVAMAWjmP0u2ubcsAAAAASUVORK5CYII=
+  expected_extraction:
+    status: EXTRACTED
+    parser_id: image-ocr
+    parser_version: image-0.25.10+tesseract-5.5.0-kor+eng+gurinnae-image-v1
+    media_type: image/png
+    width_px: 580
+    height_px: 100
+    frame_count: 1
+    normalized_text: GURINNAE CASE 42
+    lines:
+    - text: GURINNAE CASE 42
+      locator:
+        kind: IMAGE_BBOX
+        value: pixel:x=20,y=30,w=534,h=42
+      words:
+      - text: GURINNAE
+        bbox: pixel:x=20,y=30,w=282,h=42
+      - text: CASE
+        bbox: pixel:x=326,y=30,w=138,h=42
+      - text: '42'
+        bbox: pixel:x=488,y=30,w=66,h=42
+      minimum_confidence_basis_points: 7000
+    tables: []
+    warnings: []
+    rejection_code: null
+    comparison:
+      exact_fields:
+      - status
+      - parser_id
+      - parser_version
+      - media_type
+      - width_px
+      - height_px
+      - frame_count
+      - normalized_text
+      - lines[].text
+      - lines[].locator
+      - lines[].words
+      - tables
+      - warnings
+      - rejection_code
+      bounded_fields:
+        lines[].confidence_basis_points:
+          minimum: 7000
+          maximum: 10000
+- fixture_id: multimodal-jpeg-contract-42
+  filename: embedded-contract-42.jpg
+  format_id: jpeg
+  media_type: image/jpeg
+  source:
+    encoding: BASE64_WHITESPACE_IGNORED
+    byte_length: 9368
+    sha256: 95ba1fa5396067cd482dae5988cb8042ec8cd04f8b92db172a694f704d2f1ac3
+    payload_base64: |-
+      /9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC
+      IFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAA
+      AADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlk
+      ZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAA
+      ABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAA
+      AAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAA
+      AABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEA
+      AAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAA
+      ACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAMCAgICAgMCAgIDAwMD
+      BAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMD
+      AwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ
+      EBAQEBD/wAARCABkAkQDASIAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAkIBwYK/8QAShAA
+      AAEHBwUOAwUIAwEBAAAAAAECAwQHERMFBggSFBUWCRlnpuQXGCEiIyUyOEdXhYa11DM0xSdBRWjE
+      JCg5QmJjZJQpNUYmYf/EABkBAQEAAwEAAAAAAAAAAAAAAAAHBQgJBv/EAC8RAQAAAgoBAQgDAQEA
+      AAAAAAACAwUGFRdTVKGj0dIBBAcRNTaBg7KzEiFBMVH/2gAMAwEAAhEDEQA/APHUT6J++fxT/wDf
+      Yaw1Yfwq2Wi0R/7yOpVgf/r633O4dA5p/T3qttgZJ/tS8D/XCgY8vRNE+j9T6OCbNg98Xn3/AO+f
+      /fPj/PK7+0H2g1joOsfqfQeg9T/CVB/D3eP4S/Pu98uGLz/cUPnz/wB8+fP9+U/M0/p71W2wM0/p
+      71W2wUDAZGwqPw9YuXjL1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71
+      W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0
+      /p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbld
+      E/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635
+      vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L
+      1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D
+      1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDAL
+      Co/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2w
+      UDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p7
+      1W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM
+      0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71
+      W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0
+      /p71W2wM0/p71W2wUDALCo/D1i5L1635vbldE/M0/p71W2wM0/p71W2wUDALCo/D1i5L1635vbld
+      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
+      AAAAAAAAAAAAAAAAAAAAAAAH/9k=
+  expected_extraction:
+    status: EXTRACTED
+    parser_id: image-ocr
+    parser_version: image-0.25.10+tesseract-5.5.0-kor+eng+gurinnae-image-v1
+    media_type: image/jpeg
+    width_px: 580
+    height_px: 100
+    frame_count: 1
+    normalized_text: GURINNAE CASE 42
+    lines:
+    - text: GURINNAE CASE 42
+      locator:
+        kind: IMAGE_BBOX
+        value: pixel:x=20,y=30,w=534,h=42
+      words:
+      - text: GURINNAE
+        bbox: pixel:x=20,y=30,w=282,h=42
+      - text: CASE
+        bbox: pixel:x=326,y=30,w=138,h=42
+      - text: '42'
+        bbox: pixel:x=488,y=30,w=66,h=42
+      minimum_confidence_basis_points: 7000
+    tables: []
+    warnings: []
+    rejection_code: null
+    comparison:
+      exact_fields:
+      - status
+      - parser_id
+      - parser_version
+      - media_type
+      - width_px
+      - height_px
+      - frame_count
+      - normalized_text
+      - lines[].text
+      - lines[].locator
+      - lines[].words
+      - tables
+      - warnings
+      - rejection_code
+      bounded_fields:
+        lines[].confidence_basis_points:
+          minimum: 7000
+          maximum: 10000
+- fixture_id: multimodal-webp-contract-42
+  filename: embedded-contract-42.webp
+  format_id: webp
+  media_type: image/webp
+  source:
+    encoding: BASE64_WHITESPACE_IGNORED
+    byte_length: 2008
+    sha256: 523ffd84d767988bf01151e98db599155de03bf3aca688b1ae9cdc850e436e50
+    payload_base64: |-
+      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
+      tw8+rabTo/8TQAAAAA==
+  expected_extraction:
+    status: EXTRACTED
+    parser_id: image-ocr
+    parser_version: image-0.25.10+tesseract-5.5.0-kor+eng+gurinnae-image-v1
+    media_type: image/webp
+    width_px: 580
+    height_px: 100
+    frame_count: 1
+    normalized_text: GURINNAE CASE 42
+    lines:
+    - text: GURINNAE CASE 42
+      locator:
+        kind: IMAGE_BBOX
+        value: pixel:x=20,y=30,w=534,h=42
+      words:
+      - text: GURINNAE
+        bbox: pixel:x=20,y=30,w=282,h=42
+      - text: CASE
+        bbox: pixel:x=326,y=30,w=138,h=42
+      - text: '42'
+        bbox: pixel:x=488,y=30,w=66,h=42
+      minimum_confidence_basis_points: 7000
+    tables: []
+    warnings: []
+    rejection_code: null
+    comparison:
+      exact_fields:
+      - status
+      - parser_id
+      - parser_version
+      - media_type
+      - width_px
+      - height_px
+      - frame_count
+      - normalized_text
+      - lines[].text
+      - lines[].locator
+      - lines[].words
+      - tables
+      - warnings
+      - rejection_code
+      bounded_fields:
+        lines[].confidence_basis_points:
+          minimum: 7000
+          maximum: 10000
+- fixture_id: multimodal-tiff-contract-42
+  filename: embedded-contract-42.tiff
+  format_id: tiff
+  media_type: image/tiff
+  source:
+    encoding: BASE64_WHITESPACE_IGNORED
+    byte_length: 7422
+    sha256: cbd866ad0dc9cdbf079a904906e862835118b195fdd0bd121e7001fcfd9f7f82
+    payload_base64: |-
+      SUkqAAgAAAAJAAABBAABAAAARAIAAAEBBAABAAAAZAAAAAIBAwABAAAAAQAAAAMBAwABAAAAAQAA
+      AAYBAwABAAAAAAAAABEBBAABAAAAegAAABYBBAABAAAAZAAAABcBBAABAAAAhBwAABwBAwABAAAA
+      AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///AA/AAA/A////AA/////A/AAA/A
+      /AAA/AA///AA/////AAAAA////AA///AAA////A/////AAAAAA/AAAA///AAAAAAAAAAP//wAPwA
+      APwP///wAP////wPwAAPwPwAAPwAP//wAP////wAAAAP///wAP//wAAP///wP////wAAAAAPwAAA
+      P//wAAAAAAAAAD//8AD8AAD8D///8AD////8D8AAD8D8AAD8AD//8AD////8AAAAD///8AD//8AA
+      D///8D////8AAAAAD8AAAD//8AAAAAAAAAA///AA/AAA/A////AA/////A/AAA/A/AAA/AA///AA
+      /////AAAAA////AA///AAA////A/////AAAAAA/AAAA///AAAAAAAAAAP//wAPwAAPwP///wAP//
+      //wPwAAPwPwAAPwAP//wAP////wAAAAP///wAP//wAAP///wP////wAAAAAPwAAAP//wAAAAAAAA
+      AD//8AD8AAD8D///8AD////8D8AAD8D8AAD8AD//8AD////8AAAAD///8AD//8AAD///8D////8A
+      AAAAD8AAAD//8AAAAAAAAA/AAA/A/AAA/A/AAA/AAA/AAA//AA/A//AA/A/AAA/A/AAAAAAAA/AA
+      AAA/AAA/A/AAAAA/AAAAAAAAA//AAA/AAA/AAAAAAAAPwAAPwPwAAPwPwAAPwAAPwAAP/wAPwP/w
+      APwPwAAPwPwAAAAAAAPwAAAAPwAAPwPwAAAAPwAAAAAAAAP/wAAPwAAPwAAAAAAAD8AAD8D8AAD8
+      D8AAD8AAD8AAD/8AD8D/8AD8D8AAD8D8AAAAAAAD8AAAAD8AAD8D8AAAAD8AAAAAAAAD/8AAD8AA
+      D8AAAAAAAA/AAA/A/AAA/A/AAA/AAA/AAA//AA/A//AA/A/AAA/A/AAAAAAAA/AAAAA/AAA/A/AA
+      AAA/AAAAAAAAA//AAA/AAA/AAAAAAAAPwAAPwPwAAPwPwAAPwAAPwAAP/wAPwP/wAPwPwAAPwPwA
+      AAAAAAPwAAAAPwAAPwPwAAAAPwAAAAAAAAP/wAAPwAAPwAAAAAAAD8AAD8D8AAD8D8AAD8AAD8AA
+      D/8AD8D/8AD8D8AAD8D8AAAAAAAD8AAAAD8AAD8D8AAAAD8AAAAAAAAD/8AAD8AAD8AAAAAAAA/A
+      AAAA/AAA/A/AAA/AAA/AAA/A/A/A/A/A/A/AAA/A/AAAAAAAA/AAAAA/AAA/A/AAAAA/AAAAAAAA
+      /A/AAAAAAA/AAAAAAAAPwAAAAPwAAPwPwAAPwAAPwAAPwPwPwPwPwPwPwAAPwPwAAAAAAAPwAAAA
+      PwAAPwPwAAAAPwAAAAAAAPwPwAAAAAAPwAAAAAAAD8AAAAD8AAD8D8AAD8AAD8AAD8D8D8D8D8D8
+      D8AAD8D8AAAAAAAD8AAAAD8AAD8D8AAAAD8AAAAAAAD8D8AAAAAAD8AAAAAAAA/AAAAA/AAA/A/A
+      AA/AAA/AAA/A/A/A/A/A/A/AAA/A/AAAAAAAA/AAAAA/AAA/A/AAAAA/AAAAAAAA/A/AAAAAAA/A
+      AAAAAAAPwAAAAPwAAPwPwAAPwAAPwAAPwPwPwPwPwPwPwAAPwPwAAAAAAAPwAAAAPwAAPwPwAAAA
+      PwAAAAAAAPwPwAAAAAAPwAAAAAAAD8AAAAD8AAD8D8AAD8AAD8AAD8D8D8D8D8D8D8AAD8D8AAAA
+      AAAD8AAAAD8AAD8D8AAAAD8AAAAAAAD8D8AAAAAAD8AAAAAAAA/A///A/AAA/A////AAAA/AAA/A
+      A//A/AA//A/////A////AAAAA/AAAAA/////AA///AA////AAAAA/A/AAAAAA/AAAAAAAAAPwP//
+      wPwAAPwP///wAAAPwAAPwAP/wPwAP/wP////wP///wAAAAPwAAAAP////wAP//wAP///wAAAAPwP
+      wAAAAAPwAAAAAAAAD8D//8D8AAD8D///8AAAD8AAD8AD/8D8AD/8D////8D///8AAAAD8AAAAD//
+      //8AD//8AD///8AAAAD8D8AAAAAD8AAAAAAAAA/A///A/AAA/A////AAAA/AAA/AA//A/AA//A//
+      ///A////AAAAA/AAAAA/////AA///AA////AAAAA/A/AAAAAA/AAAAAAAAAPwP//wPwAAPwP///w
+      AAAPwAAPwAP/wPwAP/wP////wP///wAAAAPwAAAAP////wAP//wAP///wAAAAPwPwAAAAAPwAAAA
+      AAAAD8D//8D8AAD8D///8AAAD8AAD8AD/8D8AD/8D////8D///8AAAAD8AAAAD////8AD//8AD//
+      /8AAAAD8D8AAAAAD8AAAAAAAAA/AAA/A/AAA/A/A/AAAAA/AAA/AAA/A/AAA/A/AAA/A/AAAAAAA
+      A/AAAAA/AAA/AAAAA/A/AAAAAAAA/////AAA/AAAAAAAAAAPwAAPwPwAAPwPwPwAAAAPwAAPwAAP
+      wPwAAPwPwAAPwPwAAAAAAAPwAAAAPwAAPwAAAAPwPwAAAAAAAP////wAAPwAAAAAAAAAD8AAD8D8
+      AAD8D8D8AAAAD8AAD8AAD8D8AAD8D8AAD8D8AAAAAAAD8AAAAD8AAD8AAAAD8D8AAAAAAAD////8
+      AAD8AAAAAAAAAA/AAA/A/AAA/A/A/AAAAA/AAA/AAA/A/AAA/A/AAA/A/AAAAAAAA/AAAAA/AAA/
+      AAAAA/A/AAAAAAAA/////AAA/AAAAAAAAAAPwAAPwPwAAPwPwPwAAAAPwAAPwAAPwPwAAPwPwAAP
+      wPwAAAAAAAPwAAAAPwAAPwAAAAPwPwAAAAAAAP////wAAPwAAAAAAAAAD8AAD8D8AAD8D8D8AAAA
+      D8AAD8AAD8D8AAD8D8AAD8D8AAAAAAAD8AAAAD8AAD8AAAAD8D8AAAAAAAD////8AAD8AAAAAAAA
+      AA/AAA/A/AAA/A/AA/AAAA/AAA/AAA/A/AAA/A/AAA/A/AAAAAAAA/AAAAA/AAA/AAAAA/A/AAAA
+      AAAAAA/AAAA/AAAAAAAAAAAPwAAPwPwAAPwPwAPwAAAPwAAPwAAPwPwAAPwPwAAPwPwAAAAAAAPw
+      AAAAPwAAPwAAAAPwPwAAAAAAAAAPwAAAPwAAAAAAAAAAD8AAD8D8AAD8D8AD8AAAD8AAD8AAD8D8
+      AAD8D8AAD8D8AAAAAAAD8AAAAD8AAD8AAAAD8D8AAAAAAAAAD8AAAD8AAAAAAAAAAA/AAA/A/AAA
+      /A/AA/AAAA/AAA/AAA/A/AAA/A/AAA/A/AAAAAAAA/AAAAA/AAA/AAAAA/A/AAAAAAAAAA/AAAA/
+      AAAAAAAAAAAPwAAPwPwAAPwPwAPwAAAPwAAPwAAPwPwAAPwPwAAPwPwAAAAAAAPwAAAAPwAAPwAA
+      AAPwPwAAAAAAAAAPwAAAPwAAAAAAAAAAD8AAD8D8AAD8D8AD8AAAD8AAD8AAD8D8AAD8D8AAD8D8
+      AAAAAAAD8AAAAD8AAD8AAAAD8D8AAAAAAAAAD8AAAD8AAAAAAAAAAAA///AAA///AA/AAA/A////
+      /A/AAA/A/AAA/A/AAA/A/////AAAAA////A/AAA/A////AA/////AAAAAA/AAA/////AAAAAAAAA
+      P//wAAP//wAPwAAPwP////wPwAAPwPwAAPwPwAAPwP////wAAAAP///wPwAAPwP///wAP////wAA
+      AAAPwAAP////wAAAAAAAAD//8AAD//8AD8AAD8D////8D8AAD8D8AAD8D8AAD8D////8AAAAD///
+      8D8AAD8D///8AD////8AAAAAD8AAD////8AAAAAAAAA///AAA///AA/AAA/A/////A/AAA/A/AAA
+      /A/AAA/A/////AAAAA////A/AAA/A////AA/////AAAAAA/AAA/////AAAAAAAAAP//wAAP//wAP
+      wAAPwP////wPwAAPwPwAAPwPwAAPwP////wAAAAP///wPwAAPwP///wAP////wAAAAAPwAAP////
+      wAAAAAAAAD//8AAD//8AD8AAD8D////8D8AAD8D8AAD8D8AAD8D////8AAAAD///8D8AAD8D///8
+      AD////8AAAAAD8AAD////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAA
+  expected_extraction:
+    status: EXTRACTED
+    parser_id: image-ocr
+    parser_version: image-0.25.10+tesseract-5.5.0-kor+eng+gurinnae-image-v1
+    media_type: image/tiff
+    width_px: 580
+    height_px: 100
+    frame_count: 1
+    normalized_text: GURINNAE CASE 42
+    lines:
+    - text: GURINNAE CASE 42
+      locator:
+        kind: IMAGE_BBOX
+        value: pixel:x=20,y=30,w=534,h=42
+      words:
+      - text: GURINNAE
+        bbox: pixel:x=20,y=30,w=282,h=42
+      - text: CASE
+        bbox: pixel:x=326,y=30,w=138,h=42
+      - text: '42'
+        bbox: pixel:x=488,y=30,w=66,h=42
+      minimum_confidence_basis_points: 7000
+    tables: []
+    warnings: []
+    rejection_code: null
+    comparison:
+      exact_fields:
+      - status
+      - parser_id
+      - parser_version
+      - media_type
+      - width_px
+      - height_px
+      - frame_count
+      - normalized_text
+      - lines[].text
+      - lines[].locator
+      - lines[].words
+      - tables
+      - warnings
+      - rejection_code
+      bounded_fields:
+        lines[].confidence_basis_points:
+          minimum: 7000
+          maximum: 10000
+- fixture_id: multimodal-wav-silence-250ms
+  filename: embedded-silence-250ms.wav
+  format_id: wav
+  media_type: audio/wav
+  source:
+    encoding: BASE64_WHITESPACE_IGNORED
+    generation: deterministic synthetic PCM silence; 16000 Hz mono signed 16-bit little-endian, 250 ms, no copyrighted or personal content
+    byte_length: 8044
+    sha256: 59460d5690616336b990fc7b1629428e3bd825e422da84469d2c8c8ecfaff43b
+    payload_base64: |-
+      UklGRmQfAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YUAfAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAA==
+  expected_extraction:
+    runtime_gate: media_runtime_activation must be closed and exact parser identity/version pins must be recorded before this oracle may pass
+    status: EXTRACTED
+    parser_id_binding: activated WAV adapter exact ID
+    parser_version_binding: activated WAV adapter/config exact digest
+    media_type: audio/wav
+    metadata:
+      media_kind: AUDIO
+      container: RIFF_WAVE
+      codec: PCM_S16LE
+      sample_rate_hz: 16000
+      channel_count: 1
+      duration_ms: 250
+      silence_state: SILENCE_CONFIRMED
+      transcript_state: NOT_APPLICABLE_SILENCE
+    normalized_text: ''
+    segments: []
+    shots: []
+    tables: []
+    links: []
+    warnings: [SILENCE_CONFIRMED]
+    rejection_code: null
+    comparison:
+      exact: every declared field, parser identity/version through the activated runtime binding, and zero fabricated transcript/speaker
+- fixture_id: multimodal-webm-blue-1s-no-audio
+  filename: embedded-blue-1s-no-audio.webm
+  format_id: webm
+  media_type: video/webm
+  source:
+    encoding: BASE64_WHITESPACE_IGNORED
+    generation: deterministic synthetic 64x48 blue frames at 2 fps for 1 second with no audio stream, no copyrighted or personal content
+    byte_length: 526
+    sha256: 1733ad845899ae60e9e8cc8f86d3212dc04990db3af42d5d1eb639b7cda73bec
+    payload_base64: |-
+      GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAHeEU2bdLpNu4tT
+      q4QVSalmU6yBoU27i1OrhBZUrmtTrIHGTbuMU6uEElTDZ1OsggETTbuMU6uEHFO7a1OsggHI7AEA
+      AAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmoCrXsYMPQkBNgIRMYXZm
+      V0GETGF2ZkSJiECPQAAAAAAAFlSua8iuAQAAAAAAAD/XgQFzxYgAAAAAAAAAAZyBACK1nIN1bmSI
+      gQCGhVZfVlA4g4EBI+ODhB3NZQDgkLCBQLqBMJqBAlWwhFW5gQESVMNn0HNzzWPAi2PFiAAAAAAA
+      AAABZ8iYRaOHRU5DT0RFUkSHi0xhdmMgbGlidnB4Z8ihRaOIRFVSQVRJT05Eh5MwMDowMDowMS4w
+      MDAwMDAwMDAAH0O2ddvngQCjvoEAAIBQAwCdASpAADAAAEcIhYWIhYSIAgICdaoD+AIHCOD99CbP
+      LgD+/qV0//PTNeYP8nP/rK/mV/Mr/d2Ao5aBAfQA0QEAARAQABgAGFgv9AAIjAAAHFO7a5G7j7OB
+      ALeK94EB8YIBaPCBAw==
+  expected_extraction:
+    runtime_gate: media_runtime_activation must be closed and exact parser identity/version pins must be recorded before this oracle may pass
+    status: EXTRACTED
+    parser_id_binding: activated WebM adapter exact ID
+    parser_version_binding: activated WebM adapter/config exact digest
+    media_type: video/webm
+    metadata:
+      media_kind: VIDEO
+      container: WEBM
+      duration_ms: 1000
+      width_px: 64
+      height_px: 48
+      frame_rate_millihz: 2000
+      video_codec: VP8
+      frame_count: 2
+      audio_stream_state: ABSENT
+      audio_codec: null
+      transcript_state: NOT_APPLICABLE_NO_AUDIO
+    normalized_text: ''
+    segments: []
+    shots:
+    - locator:
+        kind: VIDEO_TIME_RANGE
+        value: time-ms:start=0,end=1000
+      decoded_frame_count: 2
+      dominant_rgb_bounds:
+        red: {minimum: 12, maximum: 36}
+        green: {minimum: 52, maximum: 78}
+        blue: {minimum: 82, maximum: 110}
+    tables: []
+    links: []
+    warnings: [AUDIO_STREAM_ABSENT]
+    rejection_code: null
+    comparison:
+      exact_fields: [status, media_type, metadata, normalized_text, segments, 'shots[].locator', 'shots[].decoded_frame_count', tables, links, warnings, rejection_code]
+      bounded_fields: ['shots[].dominant_rgb_bounds']
+negative_fixture_manifest:
+  execution_rule: Each mutation is applied byte-for-byte to its named embedded positive source in a fresh directory, its mutated SHA-256 is recorded by the harness, and the production parser must return the exact outcome with zero partial segment/shot/table/link/evidence rows.
+  fixtures:
+  - {fixture_id: negative-html-active-fetch, source_fixture_id: multimodal-html-contract-42, mutation: retain embedded script and absolute HTTPS link while network namespace has no route, expected_status: EXTRACTED, expected_warning: ACTIVE_CONTENT_IGNORED, expected_external_requests: 0}
+  - {fixture_id: negative-html-depth-limit, source_fixture_id: multimodal-html-contract-42, mutation: replace body with 257 deterministic nested div elements, expected_status: REJECTED, expected_rejection: HTML_DEPTH_LIMIT}
+  - {fixture_id: negative-png-truncated, source_fixture_id: multimodal-png-contract-42, mutation: remove final 13 bytes, expected_status: REJECTED, expected_rejection: MALFORMED_IMAGE}
+  - {fixture_id: negative-png-pixel-limit, source_fixture_id: multimodal-png-contract-42, mutation: rewrite IHDR width/height beyond image_total_pixels and recompute only IHDR CRC, expected_status: REJECTED, expected_rejection: IMAGE_PIXEL_LIMIT}
+  - {fixture_id: negative-jpeg-truncated, source_fixture_id: multimodal-jpeg-contract-42, mutation: remove final EOI marker, expected_status: REJECTED, expected_rejection: MALFORMED_IMAGE}
+  - {fixture_id: negative-jpeg-dimension-limit, source_fixture_id: multimodal-jpeg-contract-42, mutation: rewrite SOF dimensions to 30001x100 without adding scan bytes, expected_status: REJECTED, expected_rejection: IMAGE_DIMENSION_LIMIT}
+  - {fixture_id: negative-webp-animated, source_fixture_id: multimodal-webp-contract-42, mutation: set VP8X animation flag with a structurally valid ANIM/ANMF shell, expected_status: REJECTED, expected_rejection: ACTIVE_IMAGE_UNSUPPORTED}
+  - {fixture_id: negative-webp-truncated, source_fixture_id: multimodal-webp-contract-42, mutation: remove final 9 bytes without rewriting RIFF size, expected_status: REJECTED, expected_rejection: MALFORMED_IMAGE}
+  - {fixture_id: negative-tiff-multipage, source_fixture_id: multimodal-tiff-contract-42, mutation: append a second valid IFD and link the first next-IFD offset, expected_status: REJECTED, expected_rejection: ACTIVE_IMAGE_UNSUPPORTED}
+  - {fixture_id: negative-tiff-ifd-loop, source_fixture_id: multimodal-tiff-contract-42, mutation: set next-IFD offset to the first IFD offset, expected_status: REJECTED, expected_rejection: MALFORMED_IMAGE}
+  - {fixture_id: negative-wav-truncated, source_fixture_id: multimodal-wav-silence-250ms, mutation: remove the final PCM byte without rewriting RIFF/data sizes, expected_status: REJECTED, expected_rejection: CORRUPT_AUDIO}
+  - {fixture_id: negative-wav-duration-limit, source_fixture_id: multimodal-wav-silence-250ms, mutation: construct a bounded sparse-test RIFF declaration whose sample count exceeds audio_duration_ms before allocation, expected_status: REJECTED, expected_rejection: AUDIO_DURATION_LIMIT}
+  - {fixture_id: negative-webm-truncated, source_fixture_id: multimodal-webm-blue-1s-no-audio, mutation: remove the final 17 bytes from the Cluster, expected_status: REJECTED, expected_rejection: CORRUPT_VIDEO}
+  - {fixture_id: negative-webm-video-codec, source_fixture_id: multimodal-webm-blue-1s-no-audio, mutation: replace the V_VP8 CodecID bytes with same-length unsupported V_BAD, expected_status: REJECTED, expected_rejection: VIDEO_CODEC_UNSUPPORTED}
+runtime_acceptance:
+- All seven embedded byte payloads pass base64, byte length, SHA-256, magic/structure, real decoder, extraction, closed output
+  decode, and expected oracle comparison; WAV/WebM cannot pass until every OPEN_IMPLEMENTATION artifact is bound to and verified against the exact final OCI digest.
+- Before any WAV/WebM test is counted, image preflight verifies the FFmpeg 8.0.1 source and binary hashes, exact configure flags and enabled component inventory, LGPL-2.1-or-later license-only result, SPDX SBOM, and network protocol count zero.
+- The same immutable WAV/WebM bytes are probed and decoded only through bounded pipe stdin; seccomp or network-namespace evidence records zero socket/connect/DNS activity, and timeout/cancellation tests prove complete child-group kill and reap.
+- Each image format is decoded independently; transcoding one fixture into another before parser selection is forbidden.
+- Every negative_fixture_manifest entry runs against the production adapter. Corrupt/truncated/unsupported/limit media fails with
+  the exact typed rejection and zero partial segments, shots, tables, links, source uses, or Evidence.
+- HTML script in the golden fixture is not executed, no subresource is requested, the active content warning is present, and
+  the table/link locators reopen the exact source bytes.
+- PNG/JPEG/WebP/TIFF normalized text is exact; word and line locators are in bounds; confidence below the oracle floor fails
+  rather than being replaced.
+- WAV silence yields exact metadata, SILENCE_CONFIRMED and zero transcript/speaker. Every supported non-silent WAV/WebM
+  invokes the pinned whisper.cpp path and yields either timestamped ko/en transcript segments or one typed abstention with zero
+  fabricated text. WebM without audio still yields deterministic visual shots, representative-keyframe OCR and explicit
+  AUDIO_STREAM_ABSENT.
+- VLM and future diarization run only after their separate activation gates. VLM output remains proposal-only and every result
+  carries region/time locators, confidence, source/parser/model/config/rights/source-use/provider receipt digests. Speaker stays
+  null until positive diarization evidence exists.
+- The document-extractor repository stores the exact input, extraction, segment, locator, parser, traineddata, rights, and
+  scan digests; deleting any required field makes the round-trip test fail.
+semantic_acceptance_fixtures:
+  source_rule: Fixtures are generated from checked-in lossless source specifications by a hash-pinned offline fixture builder, then exact media bytes and expected semantic manifests are checked into the source tree; production code cannot read fixture IDs or expected output.
+  required:
+    - id: multimodal-wav-ko-en-speech
+      content: one Korean sentence followed by one English sentence with 500 ms digital silence between them; no names or real entities
+      oracle: TRANSCRIBED, both language spans searchable, half-open timestamps in decoded bounds, confidence >= 5500, model/config/input/output digest parity, speaker null, identical rerun bytes
+    - id: multimodal-wav-two-voices
+      content: two synthetic voices alternate short non-identifying Korean and English sentences without overlapping speech
+      oracle: both utterances are timestamped and searchable; while diarization is NOT_ACTIVATED every speaker label/confidence is null and no voice identity is inferred; a future activated diarization adapter must use this same source with a separately pinned speaker-segment oracle
+    - id: multimodal-wav-nonspeech-low-confidence
+      content: deterministic tones and bounded noise without speech
+      oracle: NON_SPEECH or LOW_CONFIDENCE, zero transcript text/segments, one ASR receipt, zero Evidence/proposal
+    - id: multimodal-webm-three-shots-narrated
+      content: three >= 700 ms synthetic scenes with distinct colors/shapes, visible Korean/English labels and non-silent narration
+      oracle: exactly three deterministic shot ranges, one representative frame and OCR set per shot, timestamped transcript, region/time locators, structural and ASR digest stability; VLM is PROPOSED only when activated and otherwise explicit NOT_ACTIVATED/POLICY_BLOCKED
+    - id: multimodal-media-rights-denied
+      content: the same three-shot bytes with model_use denied
+      oracle: structural shots/OCR/ASR follow their own allowed rights, VLM provider calls zero, state POLICY_BLOCKED, VLM proposal/Evidence zero
+    - id: multimodal-media-provider-ambiguous
+      content: activated VLM request whose provider accepts then the connection closes
+      oracle: no fallback, one reservation, RECONCILIATION_REQUIRED, zero duplicated request or proposal until authenticated reconciliation
+  executable_ids: [AC-AI_MULTIMODAL_ADDENDUM-021,AC-AI_MULTIMODAL_ADDENDUM-022,AC-AI_MULTIMODAL_ADDENDUM-023,AC-AI_MULTIMODAL_ADDENDUM-024,AC-AI_MULTIMODAL_ADDENDUM-025,AC-AI_MULTIMODAL_ADDENDUM-026]
+integration_updates_required:
+- Add exactly the seven locked format IDs to parser-catalog.yaml; copy existing exact HTML/image pins and the verified FFmpeg adapter contract. Binary/SBOM/license/build/preflight receipts and the final OCI digest are bound above.
+- Extend extraction-result.schema.json and Rust/SQLx types with the closed v2 metadata, segment, locator, warning, and digest
+  fields.
+- Extend reference_harness.py or replace it with an equivalent non-production harness that materializes and validates these
+  embedded fixtures while still invoking production binaries.
+- Register seven additive fixture/scenario IDs and fourteen negative fixture IDs in acceptance catalog, executable mapping, traceability, MANIFEST, and the aggregate
+  hard gate.

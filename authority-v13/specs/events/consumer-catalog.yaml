@@ -1,0 +1,67 @@
+schema_version: 2
+specification_version: 13.0.0
+status: FINAL
+terminal_observability_events:
+- job.dead_lettered.v1
+- notification.delivery_completed.v1
+consumers:
+- id: analysis-worker
+  accepted_event_types:
+  - workflow.rule_activation_applied.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: document-extractor
+  accepted_event_types:
+  - source.document_stored.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: ingest-worker
+  accepted_event_types:
+  - source.document_parsed.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: notification-worker
+  accepted_event_types:
+  - attachment.scan_completed.v1
+  - intake.contact_received.v1
+  - notification.correction_received.v1
+  - notification.correction_resolved.v1
+  - notification.publication_created.v1
+  - notification.response_extension_requested.v1
+  - notification.response_request_delivery_requested.v1
+  - notification.response_submitted.v1
+  - notification.subscription_verification_requested.v1
+  - notification.user_invitation_requested.v1
+  - projection.publication_applied.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: projection-worker
+  accepted_event_types:
+  - projection.publication_access_changed.v1
+  - projection.publication_revision_created.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: scheduler
+  accepted_event_types:
+  - workflow.rule_activation_applied.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: workflow-worker
+  accepted_event_types:
+  - agent.run_completed.v1
+  - attachment.correction_scan_requested.v1
+  - attachment.response_scan_requested.v1
+  - audit.export_requested.v1
+  - detection.signal_created.v1
+  - export.dataset_requested.v1
+  - source.schema_drift_detected.v1
+  - workflow.response_submitted.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation

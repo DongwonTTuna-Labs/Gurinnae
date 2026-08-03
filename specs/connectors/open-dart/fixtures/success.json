@@ -1,0 +1,20 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "open-dart",
+  "operation_id": "dart-company",
+  "kind": "success",
+  "response": {
+    "status": "000",
+    "message": "정상",
+    "corp_code": "00126380",
+    "corp_name": "가상회사",
+    "corp_name_eng": "Synthetic Co.",
+    "stock_name": "",
+    "stock_code": "",
+    "ceo_nm": "가상대표",
+    "corp_cls": "E",
+    "jurir_no": "0000000000000",
+    "bizr_no": "0000000000",
+    "adres": "가상 주소"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-032",
+  "route": "/terms",
+  "url": "http://127.0.0.1:29101/terms",
+  "observedAt": "2026-07-19T15:35:33.253Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-032",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "service",
+        "component": "AgentSuggestionPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "content",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "data",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "prohibited",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "liability",
+        "component": "DecisionReviewPanel",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "changes",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

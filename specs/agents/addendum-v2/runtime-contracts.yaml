@@ -1,0 +1,285 @@
+schema_version: 1
+specification_version: 13.0.0+agent-multimodal.1
+status: REVIEW_REQUIRED
+decision_state: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+implementation_state: OPEN_IMPLEMENTATION
+
+ownership:
+  orchestrator: analysis-worker
+  dispatcher: AgentToolDispatcher
+  provider_port: crates/agent-orchestration::provider::AgentProvider
+  tool_port: crates/agent-orchestration::tool::AgentTool
+  persistence: crates/persistence-postgres
+  browser_consumer: review-console BFF
+
+effective_agent_dispatch_registry:
+  authority_rule: The effective registry is the set-equal overlay of these five rows on specs/agents/agent-catalog.yaml; a base v1 schema pointer, missing row, additional row, changed allowlist, or unpinned prompt/output schema is a startup and release failure.
+  rows:
+    - agent_id: market-researcher
+      prompt: {path: specs/agents/market-researcher/prompt.md, sha256: d6cd7cff54efab4febf4673694b585cc74e74498b3820df7844887cca05f2c11, version: 13.0.0+agent-multimodal.1}
+      output: {type: MarketResearchOutputV2, path: specs/agents/addendum-v2/schemas/market-research-output.schema.json, schema_version: market-research-output.v2}
+      allowed_tools: [evidence.search, source.fetch, contract.find_comparables]
+      allowed_proposal_kinds: [COMPARABLE]
+      bounds: {max_provider_turns: 12, max_tool_calls: 11, max_micros_krw: 3000000000}
+    - agent_id: investigator
+      prompt: {path: specs/agents/investigator/prompt.md, sha256: e7654bb7abf2cad997118ac649544ea20ef23ba1e7b5598df7ec45d54a9322f6, version: 13.0.0+agent-multimodal.1}
+      output: {type: InvestigatorOutputV2, path: specs/agents/addendum-v2/schemas/investigator-output.schema.json, schema_version: investigator-output.v2}
+      allowed_tools: [evidence.search, evidence.read, contract.find_comparables, entity.lookup]
+      allowed_proposal_kinds: [HYPOTHESIS, TASK]
+      bounds: {max_provider_turns: 16, max_tool_calls: 15, max_micros_krw: 5000000000}
+    - agent_id: skeptic
+      prompt: {path: specs/agents/skeptic/prompt.md, sha256: 15f1a488f35bbd342e2d9ce8a8635cf7e720fccf459d7c46ee32faf3a6d4a9ef, version: 13.0.0+agent-multimodal.1}
+      output: {type: SkepticOutputV2, path: specs/agents/addendum-v2/schemas/skeptic-output.schema.json, schema_version: skeptic-output.v2}
+      allowed_tools: [evidence.search, evidence.read, rule.reproduce]
+      allowed_proposal_kinds: []
+      bounds: {max_provider_turns: 12, max_tool_calls: 11, max_micros_krw: 3000000000}
+    - agent_id: claim-drafter
+      prompt: {path: specs/agents/claim-drafter/prompt.md, sha256: 302357154a51844bdf976a324640632d88d781cd14a0af6d309aa6deaf97c512, version: 13.0.0+agent-multimodal.1}
+      output: {type: ClaimDraftOutputV2, path: specs/agents/addendum-v2/schemas/claim-draft-output.schema.json, schema_version: claim-draft-output.v2}
+      allowed_tools: [evidence.read, response.read, claim.language_check]
+      allowed_proposal_kinds: [CLAIM, COMMUNICATION]
+      bounds: {max_provider_turns: 8, max_tool_calls: 7, max_micros_krw: 2000000000}
+    - agent_id: citation-verifier
+      prompt: {path: specs/agents/citation-verifier/prompt.md, sha256: a97a37302de9e5a230f1f33ca580ddab49bb93b1ed899de72c275d7770c53492, version: 13.0.0+agent-multimodal.1}
+      output: {type: CitationVerificationOutputV2, path: specs/agents/addendum-v2/schemas/citation-verification-output.schema.json, schema_version: citation-verification-output.v2}
+      allowed_tools: [evidence.read, source.locator_verify]
+      allowed_proposal_kinds: []
+      bounds: {max_provider_turns: 10, max_tool_calls: 9, max_micros_krw: 2000000000}
+  runtime_binding:
+    - startAgentRun resolves exactly one row and stores the prompt path/version/hash, output type/path/schema hash, ordered tool allowlist hash, and all three bounds in AgentRunV2 before QUEUED is visible.
+    - The dispatcher compares the stored row to the current effective registry before every claim. Drift is POLICY_BLOCKED before egress; an already possible effect enters RECONCILIATION_REQUIRED.
+    - FINAL_OUTPUT is decoded only by the selected row's schema. Cross-agent output, generic JSON, partial array salvage, provider-selected schema, or base v1 output is invalid and creates zero proposals.
+    - The ordered allowed_proposal_kinds rows are exact; their union is HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION. nextActions never become proposals implicitly.
+
+effective_tool_adapter_registry:
+  set_rule: Exactly nine rows are generated from schema-index.yaml and overlaid on specs/agents/tool-catalog.yaml; adapter ID, component, network mode, schema paths/digests, timeout, max results, and receipt kind are immutable dispatch inputs.
+  rows:
+    - {tool_id: claim.language_check, adapter_id: ClaimLanguageCheckPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: contract.find_comparables, adapter_id: ContractFindComparablesPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: entity.lookup, adapter_id: EntityLookupPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: evidence.read, adapter_id: EvidenceReadPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: evidence.search, adapter_id: EvidenceSearchPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: response.read, adapter_id: ResponseReadPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: rule.reproduce, adapter_id: RuleReproducePostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: source.fetch, adapter_id: SourceFetchEgressGatewayAdapterV2, component: analysis-worker, network: EGRESS_GATEWAY_ONLY, transaction: CLAIM_THEN_EXTERNAL_THEN_PERSIST, receipt_kind: EGRESS_GATEWAY}
+    - {tool_id: source.locator_verify, adapter_id: SourceLocatorVerifyPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+  internal_receipt_rule: POSTGRES_SNAPSHOT receipts bind transaction snapshot identity hash, exact request/result/schema hashes, row/source-use set hash, claim generation, latency, policy-zero cost, and terminal time; transaction IDs, SQL, inaccessible counts, and raw text are not exposed.
+  egress_receipt_rule: source.fetch alone binds the gateway request/decision/fetch receipt, redirect/DNS/policy chain, immutable object write, scan result, ResearchArtifact identity, source-use rows, metered cost, and replay key; an HTTP status or search-provider payload is never a receipt.
+
+dispatcher_transaction_protocol:
+  claim:
+    isolation: SERIALIZABLE
+    lock_order: [ops.agent_runs, current effective registry row, budget ledger, ops.agent_provider_turns]
+    statements: Verify expected run version/status/control/snapshot/transcript/deadline/bounds; calculate worst-case cost from the activated price schedule; reserve once; insert one DISPATCHED ProviderTurnV2 plus ordered MODEL_INPUT source uses and claim receipt; commit before network I/O.
+    serialization_retry: Allowed only before any provider or gateway byte may have been sent and reuses the same semantic turn identity.
+  provider_dispatch:
+    database_transaction: none
+    rule: Send exact stored canonical semantic request with the stored provider idempotency key through the activated provider adapter. Never hold a database lock across egress.
+  provider_observation:
+    isolation: SERIALIZABLE
+    statements: Lock run/turn/reservation; validate and store ProviderReceiptV2 and the exactly-one FINAL_OUTPUT or TOOL_CALL envelope; settle or retain reservation from locally verified price/usage evidence; transition or create reconciliation receipt atomically.
+    ambiguity: Any possible send without definitive authenticated outcome stores OUTCOME_UNKNOWN, RUNNING/RECONCILIATION_REQUIRED, and no transcript advance.
+  tool_claim:
+    isolation: SERIALIZABLE
+    statements: Validate the selected agent allowlist and exact request schema before `(agentRunId,callId)` claim; insert ToolCallV2 with adapter receipt state CLAIMED and a bounded lease; no tool executes before commit.
+  tool_result:
+    isolation: SERIALIZABLE
+    statements: Lock run/turn/call/lease; validate the same tool's response schema and adapter receipt; insert exact source uses/artifacts, response validation, verified cost, and next transcript digest; complete one call/turn and increment bounds once.
+    crash_rule: Replay uses the same call ID, request hash, claim generation and adapter replay key; changed bytes conflict and an unknown egress outcome reconciles rather than executes again.
+  final_output:
+    isolation: SERIALIZABLE
+    statements: Lock run/turn/snapshot/source-use/receipt; validate the selected agent schema then citation, rights, classification and proposal policy; insert one OutputValidationV2 and zero-or-more AgentProposalV2/citations; advance transcript, settle budget, audit/outbox and terminal receipt atomically.
+    failure_rule: Any validation failure inserts one INVALID validation, zero proposals, no partial salvage, and a FAILED or POLICY_BLOCKED terminal receipt according to the typed failure.
+  cancellation_reconciliation:
+    schema: schemas/agent-run-control-receipt.schema.json
+    rule: cancelAgentRun and reconcileAgentRun append the exact typed control receipt under expected-version CAS; elapsed time, worker restart, mutable job state, operator opinion, or an unauthenticated provider payload is never terminal proof.
+
+run_lifecycle:
+  searchable_statuses: [QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED, BUDGET_BLOCKED, POLICY_BLOCKED]
+  control_states: [NONE, ACTIVE, CANCEL_REQUESTED, RECONCILIATION_REQUIRED, SETTLED]
+  initial: {status: QUEUED, control_state: NONE}
+  terminal_statuses: [SUCCEEDED, FAILED, CANCELLED, BUDGET_BLOCKED, POLICY_BLOCKED]
+  edges:
+    - {actor: analysis-worker, from: QUEUED/NONE, to: RUNNING/ACTIVE, guard: ready-snapshot-prompt-schema-rights-policy-and-initial-budget-reservation, receipt: AgentRunStartedReceiptV2}
+    - {actor: analysis-worker, from: RUNNING/ACTIVE, to: RUNNING/ACTIVE, guard: one-successful-tool-result-extends-transcript-and-next-turn-fits-all-bounds, receipt: AgentTurnAdvancedReceiptV2}
+    - {actor: analysis-worker, from: RUNNING/ACTIVE, to: SUCCEEDED/SETTLED, guard: final-output-valid-or-authority-abstention-valid-and-all-reservations-terminal, receipt: AgentRunTerminalReceiptV2}
+    - {actor: analysis-worker, from: RUNNING/ACTIVE, to: FAILED/SETTLED, guard: definitive-schema-provider-or-internal-failure-and-no-possible-egress-outcome, receipt: AgentRunTerminalReceiptV2}
+    - {actor: analysis-worker, from: QUEUED/NONE, to: BUDGET_BLOCKED/SETTLED, guard: initial-worst-case-reservation-denied-before-dispatch, receipt: AgentRunTerminalReceiptV2}
+    - {actor: analysis-worker, from: QUEUED/NONE|RUNNING/ACTIVE, to: POLICY_BLOCKED/SETTLED, guard: rights-classification-capability-or-kill-switch-denial-with-no-possible-provider-effect, receipt: AgentRunTerminalReceiptV2}
+    - {operation: cancelAgentRun, from: QUEUED/NONE, to: CANCELLED/SETTLED, guard: no-provider-or-egress-claim, receipt: AgentRunCancellationReceiptV2}
+    - {operation: cancelAgentRun, from: RUNNING/ACTIVE|RUNNING/RECONCILIATION_REQUIRED, to: RUNNING/CANCEL_REQUESTED, guard: a-provider-or-egress-claim-may-exist, receipt: AgentRunCancellationRequestedReceiptV2}
+    - {actor: reconciliation-worker, from: RUNNING/CANCEL_REQUESTED|RUNNING/RECONCILIATION_REQUIRED, to: CANCELLED/SETTLED, guard: authenticated-proof-of-no-accepted-effect-and-all-reservations-released, receipt: AgentRunReconciliationReceiptV2}
+    - {actor: reconciliation-worker, from: RUNNING/RECONCILIATION_REQUIRED, to: RUNNING/ACTIVE, guard: authenticated-definitive-safe-retry-and-no-cancellation-request-exists, receipt: AgentRunReconciliationReceiptV2}
+    - {actor: reconciliation-worker, from: RUNNING/CANCEL_REQUESTED|RUNNING/RECONCILIATION_REQUIRED, to: SUCCEEDED/SETTLED|FAILED/SETTLED, guard: authenticated-terminal-provider-proof-and-budget-settlement, receipt: AgentRunReconciliationReceiptV2}
+    - {actor: analysis-worker, from: RUNNING/ACTIVE, to: RUNNING/RECONCILIATION_REQUIRED, guard: timeout-disconnect-or-unknown-outcome-after-egress-claim, receipt: AgentRunReconciliationRequiredReceiptV2}
+  invariants:
+    - The seven searchable statuses remain wire and database authority; cancel/reconcile is a separate derived control state backed by immutable control receipts.
+    - A cancel request never labels a run CANCELLED while an external attempt may have been accepted.
+    - A terminal run has controlState SETTLED, no open provider/tool claim, and every budget reservation SETTLED or RELEASED.
+    - SUCCEEDED includes a validated explicit abstention with zero proposals; the UI labels abstention, never success with a conclusion.
+    - Retry never changes input snapshot, prompt/schema digest, prior transcript, request digest, provider idempotency key, or source-use bindings.
+
+multi_turn_protocol:
+  provider_envelope_exactly_one: [FINAL_OUTPUT, TOOL_CALL]
+  sequence:
+    - Lock the run by expected version and reject terminal, cancel-requested, or reconciliation-required work.
+    - Verify the READY AGENT_CASE snapshot and initial/prior transcript digest.
+    - Verify max provider turns, max tool calls, wall deadline, and remaining micro-KRW budget.
+    - Select one activated provider candidate without silent model downgrade.
+    - Reserve worst-case cost atomically before any external request.
+    - Insert the DISPATCHED ProviderTurn and immutable source-use join rows in one transaction.
+    - Dispatch with the stored provider idempotency key and persist an authenticated ProviderReceipt.
+    - For TOOL_CALL, validate agent allowlist and the exact tool request schema before claiming `(runId, callId)`.
+    - Persist the typed tool result, response validation, research artifacts, source uses, actual cost, and transcript digest atomically.
+    - For FINAL_OUTPUT, run agent-specific schema, citation, snapshot, rights, classification, and policy validation before any proposal insert.
+  transcript_digest:
+    algorithm: SHA-256 over RFC8785_JCS_UTF8
+    turn_1_prior: agent_runs.initial_transcript_sha256
+    successful_tool_turn: '{priorTranscriptSha256,providerTurnDigest,toolCallDigest,toolResultDigest,orderedSourceUseDigests}'
+    final_turn: '{priorTranscriptSha256,providerTurnDigest,providerReceiptDigest,outputPayloadSha256}'
+    fallback_rule: Attempts for the same turn share prior transcript, request digest, prompt/schema, budget key, and semantic request; only candidate/attempt/receipt fields differ.
+  bounds:
+    max_provider_turns: min(agent catalog max_iterations, run.maxProviderTurns)
+    max_tool_calls: run.maxToolCalls
+    one_tool_call_per_provider_turn: true
+    max_wall_seconds: 900
+    tool_timeout_ms: tool catalog exact value, never greater than remaining run deadline
+    provider_timeout_ms: 120000
+  exhaustion:
+    iteration: validated ABSTAINED with reason ITERATION_LIMIT_REACHED and zero proposals
+    budget_before_dispatch: BUDGET_BLOCKED with zero dispatch
+    budget_after_unknown_attempt: RECONCILIATION_REQUIRED until usage/charge proof is terminal
+
+cancellation_and_reconciliation:
+  request_types:
+    CancelAgentRunRequestV2:
+      additional_properties: false
+      required: [schemaVersion, runId, expectedVersion, reasonCode, reason]
+      fields:
+        schemaVersion: const cancel-agent-run.request.v2
+        runId: uuid equal to path runId
+        expectedVersion: int64 >= 1
+        reasonCode: USER_REQUEST|OBJECTIVE_CHANGED|SOURCE_INVALIDATED|COST_STOP|POLICY_STOP
+        reason: UTF-8 1..2000 bytes; persisted only as a redacted display value plus reason digest under the audit policy
+      header_binding: Idempotency-Key is required and the actor assertion binds the exact method, path, content type, request bytes, operation ID, capability and key.
+    ReconcileAgentRunRequestV2:
+      additional_properties: false
+      required: [schemaVersion, runId, expectedVersion, reconciliationEvidenceId, reconciliationEvidenceSha256, affectedProviderTurnId, affectedToolCallId]
+      fields:
+        schemaVersion: const reconcile-agent-run.request.v2
+        runId: uuid equal to path runId
+        expectedVersion: int64 >= 1
+        reconciliationEvidenceId: uuid resolving to one immutable authenticated adapter lookup/usage/no-dispatch evidence row
+        reconciliationEvidenceSha256: lowercase SHA-256 bound by candidate key to that row
+        affectedProviderTurnId: nullable uuid; exactly the possibly affected turn
+        affectedToolCallId: nullable uuid; nonnull only for a possibly affected tool attempt and bound to the turn/run
+      caller_binding: reconciliation-worker service assertion, exact job fence, operation ID, method/path/body/content type and Idempotency-Key; browser actor assertions and operator-supplied raw proof are rejected.
+  cancel_operation:
+    id: cancelAgentRun
+    capability: cases.investigate
+    assurance: ACTIVE_SESSION
+    request_exact: [schemaVersion, runId, expectedVersion, reasonCode, reason]
+    idempotency_authority: request-bound Idempotency-Key header, never a body field
+  reconcile_operation:
+    id: reconcileAgentRun
+    actor: reconciliation-worker only
+    human_override: forbidden
+    proof_kinds: [PROVIDER_LOOKUP, IDEMPOTENCY_LOOKUP, TOOL_ADAPTER_LOOKUP, COST_USAGE_RECEIPT, DEFINITIVE_NO_DISPATCH]
+  durable_receipt_fields:
+    - schemaVersion
+    - receiptId
+    - runId
+    - aggregateVersion
+    - priorStatus
+    - priorControlState
+    - nextStatus
+    - nextControlState
+    - affectedProviderTurnId
+    - affectedToolCallId
+    - reconciliationEvidenceId
+    - reconciliationEvidenceSha256
+    - proofKind
+    - proofSha256
+    - budgetDisposition
+    - budgetResolutionSetSha256
+    - actorKind
+    - actorId
+    - reasonCode
+    - reasonSha256
+    - priorReceiptId
+    - priorReceiptSha256
+    - commandBinding
+    - auditEventId
+    - occurredAt
+    - receiptSha256
+  event:
+    type: agent.run_control_changed.v2
+    additional_properties: false
+    required: [runId,aggregateVersion,priorStatus,priorControlState,nextStatus,nextControlState,affectedProviderTurnId,affectedToolCallId,reconciliationEvidenceId,reconciliationEvidenceSha256,proofKind,proofSha256,budgetDisposition,budgetResolutionSetSha256,actorKind,actorId,reasonCode,reasonSha256,occurredAt,receiptSha256]
+    producer: control-api for accepted cancel; reconciliation-worker through control-api-private for reconciliation; analysis-worker for effect ambiguity or terminal output
+    consumers: [agent-run-projector, operations-projector, audit-indexer]
+    replay: outbox identity is receiptId; a consumer claims `(consumer,eventId)`, compares aggregateVersion and receiptSha256, applies once, and treats a version gap as reconciliation rather than out-of-order overwrite
+  ambiguity_rule: Bounded retries may refresh authenticated proof, but elapsed time is never proof of failure or cancellation.
+
+output_materialization:
+  validation_order: [JSON_SCHEMA, SNAPSHOT_MEMBERSHIP, LOCATOR_AND_CONTENT_HASH, SOURCE_USE_AND_RIGHTS, CLASSIFICATION, POLICY, PROPOSAL_SCHEMA]
+  atomic_success: output validation, zero-or-more proposals, every citation, audit event, and outbox event commit in one transaction
+  atomic_failure: any failure commits one INVALID validation and zero proposals
+  proposal_types: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION]
+  target_mapping:
+    HYPOTHESIS: ACTION_PROPOSAL_DRAFT
+    CLAIM: ACTION_PROPOSAL_DRAFT
+    TASK: ACTION_PROPOSAL_DRAFT
+    COMPARABLE: ACTION_PROPOSAL_DRAFT
+    COMMUNICATION: ACTION_PROPOSAL_DRAFT
+  acceptance_guard: Human command binds proposal ID/version/payload digest, case expected version, current citation validation, reason, and idempotency key; it creates exactly one ops.action_proposals DRAFT with the matching typed detail and creates zero domain target, authorization, attempt or external effect. Only submitActionDecision after the ordinary approval/execution gates may materialize the typed effect.
+  communication_payload_contract:
+    schema: CommunicationProposalPayloadV1
+    path: specs/agents/addendum-v2/schemas/communication-proposal-payload.schema.json
+    shared_ref_rule: ClaimDraftOutputV2.communicationDraft.payload and AgentProposalV2 COMMUNICATION payload reference this exact schema ID; the materializer copies its RFC8785 JCS bytes without field translation and proves equal SHA-256 before inserting the ActionProposal DRAFT
+    recipient_binding: [subjectId, endpointId, endpointVersion, endpointDigest]
+    channel_source: specs/database/addendum/0027-communication-consent-delivery.yaml#closed_types.ops.communication_channel
+    purpose_source: specs/database/addendum/0027-communication-consent-delivery.yaml#closed_types.ops.communication_purpose
+    forbidden_ai_authority: [consent, suppression, provider configuration, price, budget, rendering, delivery, authorization, attempt, receipt]
+    owner_reload_rule: the approval/execution owner reloads every forbidden authority and the exact endpoint revision immediately before preview, approval and effect; stale endpoint version or digest creates zero ActionProposal and zero effect
+
+persistence_requirements:
+  existing_relations:
+    - ops.agent_runs
+    - ops.agent_suggestions
+    - ops.agent_provider_turns
+    - ops.agent_tool_calls
+    - ops.agent_output_validations
+    - ops.agent_proposal_citations
+    - raw.research_artifacts
+    - raw.asset_rights_decisions
+  additive_relational_contracts_required:
+    - relation: ops.agent_run_control_receipts
+      purpose: append-only cancel/reconcile/control-state authority; deriving cancellation from mutable jobs or logs is forbidden
+      unique_keys: [[receipt_id], [run_id, aggregate_version], [run_id, receipt_digest]]
+    - relation: ops.agent_source_uses
+      purpose: one immutable row per exact source revision and use; joins run, parent use, turn/tool, rights decision, classification, purpose, and provider receipt
+      unique_keys: [[source_use_id], [agent_run_id, source_use_sha256]]
+      self_foreign_key: "[agent_run_id, parent_source_use_id, parent_source_use_sha256] -> ops.agent_source_uses(agent_run_id, source_use_id, source_use_sha256)"
+    - relation: raw.research_artifact_promotions
+      purpose: human promotion receipt linking artifact revision to created SourceDocument, EvidenceSegment, and Evidence revisions
+      unique_keys: [[promotion_id], [research_artifact_id, artifact_sha256, idempotency_key_sha256], [evidence_id, evidence_version]]
+  existing_relation_alters_required:
+    - relation: ops.agent_proposal_citations
+      add_columns: [source_use_id, source_use_sha256]
+      foreign_key: "[agent_run_id, source_use_id, source_use_sha256] -> ops.agent_source_uses(agent_run_id, source_use_id, source_use_sha256)"
+      rule: A citation points directly to its immutable CITATION source-use row; an extra opaque JSON ID array or generic join table is forbidden.
+  canonical_columns: Every schemaVersion, version, digest, source identity, rights decision identity, status, receipt identity, and timestamp is stored, selected, and round-tripped; no repository synthesis.
+
+runtime_acceptance:
+  - All five agents complete a valid multi-turn run through their actual allowlisted adapters and exact prompt/output schemas.
+  - Every one of nine tools rejects another tool's request and response shape.
+  - Budget at boundary-1 permits a call; boundary denies before dispatch; unknown usage enters reconciliation and never double-reserves.
+  - Cancellation before claim is terminal; cancellation after possible dispatch remains requested until authenticated proof.
+  - Crash after provider acceptance and before local completion replays the same idempotency key and persists one turn/result/cost.
+  - Schema, stale snapshot, outside member, locator mismatch, content mismatch, rights denial, and prompt injection each create zero proposals.
+  - Database removal of any required typed field makes repository decode or a named constraint test fail; defaults cannot mask it.
+  - The effective operation/resource/command/state/event/OpenAPI registries contain exactly promoteResearchArtifactToEvidence, cancelAgentRun and reconcileAgentRun with the authority rows, and removing any one import fails generation before build.
+  - Each of the five agent-specific FINAL_OUTPUT schemas accepts its own positive corpus, rejects the other four outputs, and materializes only the proposal draft kinds declared for that agent.
+  - Every ToolCallV2 round-trips its exact adapter receipt; POSTGRES_SNAPSHOT and EGRESS_GATEWAY receipts are mutually exclusive and source.fetch cannot be dispatched by an internal adapter.
+  - Acceptance scenario IDs AC-AI_MULTIMODAL_ADDENDUM-001 through -026 are discovered exactly once and emit current PostgreSQL, service, parser, provider-double/non-fixture provider-boundary, and browser receipts; zero receipt, skip, pending, only, ignored or fixture-selected production behavior fails verify-final.

@@ -1,0 +1,406 @@
+{
+  "specificationVersion": "13.0.0",
+  "result": "PASS",
+  "postgresqlVersion": "18.4",
+  "migrationCount": 24,
+  "migrationTreeSha256": "46ad9b928da7e571786ca9134a7c05ebf848948d08aad401437de594cabec71d",
+  "catalogCounts": {
+    "tables": 107,
+    "functions": 72,
+    "triggers": 37,
+    "policies": 5
+  },
+  "concurrencyContractCount": 64,
+  "concurrencyCatalogResolved": 64,
+  "concurrencyContractSha256": "ba538061648af57f01bc0ea4e2bd526dbdd11e6254485de9e07a7e70091ee9bd",
+  "expandedAssertionCount": 133,
+  "testCount": 69,
+  "tests": [
+    {
+      "name": "clean-migration-apply",
+      "result": "PASS",
+      "migrationCount": 24,
+      "migrationTreeSha256": "46ad9b928da7e571786ca9134a7c05ebf848948d08aad401437de594cabec71d"
+    },
+    {
+      "name": "postgres-version",
+      "result": "PASS",
+      "version": "18.4"
+    },
+    {
+      "name": "extension-schema-isolation",
+      "result": "PASS",
+      "extensions": [
+        {
+          "extname": "citext",
+          "nspname": "extensions"
+        },
+        {
+          "extname": "pg_trgm",
+          "nspname": "extensions"
+        },
+        {
+          "extname": "pgcrypto",
+          "nspname": "extensions"
+        }
+      ]
+    },
+    {
+      "name": "security-definer-search-path",
+      "result": "PASS",
+      "functionCount": 68
+    },
+    {
+      "name": "active-catalog-object-counts",
+      "result": "PASS",
+      "tables": 107,
+      "functions": 72,
+      "triggers": 37,
+      "policies": 5
+    },
+    {
+      "name": "legacy-step-up-proof-objects-removed",
+      "result": "PASS"
+    },
+    {
+      "name": "concurrency-contract-catalog-resolution",
+      "result": "PASS",
+      "contractCount": 64,
+      "concurrencyContractSha256": "ba538061648af57f01bc0ea4e2bd526dbdd11e6254485de9e07a7e70091ee9bd"
+    },
+    {
+      "name": "routine-signature-resolution",
+      "result": "PASS",
+      "procedure": "ops.append_audit_event(text,text,text,uuid,text,text,text,text,ops.audit_outcome,text,uuid,jsonb)",
+      "identity_execute": true
+    },
+    {
+      "name": "audit-runtime-chain",
+      "result": "PASS",
+      "firstAudit": "68d17fd9-069d-4aa1-83b6-acdce5ce4ad8",
+      "secondAudit": "dc35301c-5efb-428d-8f3d-98e8ba801dd0",
+      "headHash": "eeeacd6b597afcb039cb074ecbfa8239716af15cfbaf60644b5ead44f60b70cb"
+    },
+    {
+      "name": "audit-event-mutation-rejected",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table audit_events"
+    },
+    {
+      "name": "source-document-valid-lifecycle-transition",
+      "result": "PASS"
+    },
+    {
+      "name": "source-document-invalid-lifecycle-rejected",
+      "result": "PASS",
+      "sqlstate": "23514",
+      "message": "invalid_source_document_transition: PARSED -> FETCHED"
+    },
+    {
+      "name": "rule-run-valid-terminal-transition",
+      "result": "PASS"
+    },
+    {
+      "name": "rule-run-terminal-mutation-rejected",
+      "result": "PASS",
+      "sqlstate": "55000",
+      "message": "terminal_rule_run_immutable"
+    },
+    {
+      "name": "review-snapshot-mutation-rejected",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table review_snapshots"
+    },
+    {
+      "name": "public-role-private-schema-denied",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for schema editorial"
+    },
+    {
+      "name": "public-role-write-denied",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table cases"
+    },
+    {
+      "name": "identity-role-editorial-denied",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for schema editorial"
+    },
+    {
+      "name": "submission-direct-write-denied",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table response_submissions"
+    },
+    {
+      "name": "default-privilege-denied:gurine_public_api",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for schema ops"
+    },
+    {
+      "name": "default-privilege-denied:gurine_submission_api",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_control_api",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_identity_api",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_ingest_worker",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_analysis_worker",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_public_projector",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_notification_worker",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_workflow_worker",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_document_extractor",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_scheduler",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "default-privilege-denied:gurine_auditor",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for table ungranted_canary"
+    },
+    {
+      "name": "response-draft-create-from-zero",
+      "result": "PASS",
+      "draftId": "fa92d7b4-0261-44a6-9efe-907e8e66c934",
+      "version": 1
+    },
+    {
+      "name": "response-draft-nonzero-create-rejected",
+      "result": "PASS",
+      "sqlstate": "40001",
+      "message": "response_draft_version_conflict"
+    },
+    {
+      "name": "single-response-submission",
+      "result": "PASS",
+      "submissionId": "16dc9f96-00a7-4209-bbdf-2f766b7db901",
+      "status": "SUBMITTED",
+      "version": "2",
+      "token_revoked": true,
+      "submission_count": 1
+    },
+    {
+      "name": "duplicate-response-submit-rejected",
+      "result": "PASS",
+      "sqlstate": "28000",
+      "message": "invalid_or_unverified_response_token"
+    },
+    {
+      "name": "response-submission-unique-constraint",
+      "result": "PASS",
+      "sqlstate": "23505",
+      "message": "duplicate key value violates unique constraint \"response_submissions_one_per_request\""
+    },
+    {
+      "name": "closed-response-request-rejected",
+      "result": "PASS",
+      "sqlstate": "55000",
+      "message": "response_request_closed"
+    },
+    {
+      "name": "expired-response-request-rejected",
+      "result": "PASS",
+      "sqlstate": "22023",
+      "message": "response_request_expired"
+    },
+    {
+      "name": "security-definer-search-path-hijack-resistant",
+      "result": "PASS"
+    },
+    {
+      "name": "audit-export-role-lifecycle",
+      "result": "PASS",
+      "auditExportId": "772834bb-5982-45b0-b74a-5cd2c201efe0"
+    },
+    {
+      "name": "legal-hold-place-concurrency",
+      "result": "PASS",
+      "caseId": "4b7cb8f0-6a19-4a6d-8416-6cea29ec8cd1",
+      "reviewSnapshotId": "0efd277e-265e-4b75-99e5-a367c4dc732a",
+      "legalHoldId": "8033c210-39ff-423e-832b-c71ddafc90ab"
+    },
+    {
+      "name": "legal-hold-immutable-after-placement",
+      "result": "PASS"
+    },
+    {
+      "name": "csrf-hash-rotation",
+      "result": "PASS"
+    },
+    {
+      "name": "stale-csrf-rotation-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "step-up-authorization-three-assertion-issues",
+      "result": "PASS",
+      "authorizationId": "1e4f937d-8869-47e9-801b-65afc021f01f"
+    },
+    {
+      "name": "step-up-authorization-fourth-issue-rejected",
+      "result": "PASS",
+      "sqlstate": "28000",
+      "message": "invalid_or_exhausted_step_up_authorization"
+    },
+    {
+      "name": "step-up-authorization-closed",
+      "result": "PASS"
+    },
+    {
+      "name": "control-api-step-up-authorization-claim-denied",
+      "result": "PASS",
+      "sqlstate": "42501",
+      "message": "permission denied for function claim_step_up_authorization"
+    },
+    {
+      "name": "schema-mapping-approve-concurrency",
+      "result": "PASS"
+    },
+    {
+      "name": "schema-mapping-reject-concurrency",
+      "result": "PASS"
+    },
+    {
+      "name": "queue-and-source-primary-key-concurrency",
+      "result": "PASS"
+    },
+    {
+      "name": "service-assertion-replay-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "actor-assertion-replay-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "submission-service-assertion-replay-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "response-magic-token-replay-rejected",
+      "result": "PASS",
+      "sqlstate": "28000",
+      "message": "response_magic_token_invalid"
+    },
+    {
+      "name": "response-magic-token-exchange",
+      "result": "PASS"
+    },
+    {
+      "name": "response-pending-session-reuse-rejected",
+      "result": "PASS",
+      "sqlstate": "28000",
+      "message": "response_pending_session_invalid"
+    },
+    {
+      "name": "response-session-promotion",
+      "result": "PASS"
+    },
+    {
+      "name": "response-scoped-draft-and-attachment",
+      "result": "PASS"
+    },
+    {
+      "name": "response-attachment-cross-session-idor-rejected",
+      "result": "PASS",
+      "sqlstate": "P0002",
+      "message": "response_attachment_not_found"
+    },
+    {
+      "name": "response-active-session-reuse-rejected",
+      "result": "PASS",
+      "sqlstate": "28000",
+      "message": "submission_session_invalid_expired_or_out_of_scope"
+    },
+    {
+      "name": "response-session-submit-and-receipt",
+      "result": "PASS"
+    },
+    {
+      "name": "correction-draft-session-reuse-rejected",
+      "result": "PASS",
+      "sqlstate": "28000",
+      "message": "submission_session_invalid_expired_or_out_of_scope"
+    },
+    {
+      "name": "correction-session-atomic-submit-and-receipt",
+      "result": "PASS"
+    },
+    {
+      "name": "correction-attachment-cross-session-idor-rejected",
+      "result": "PASS",
+      "sqlstate": "P0002",
+      "message": "correction_attachment_not_found"
+    },
+    {
+      "name": "subscription-session-reuse-rejected",
+      "result": "PASS",
+      "sqlstate": "28000",
+      "message": "submission_session_invalid_expired_or_out_of_scope"
+    },
+    {
+      "name": "subscription-session-lifecycle",
+      "result": "PASS"
+    },
+    {
+      "name": "submission-session-least-privilege",
+      "result": "PASS"
+    },
+    {
+      "name": "runtime-roles-no-superuser-or-bypassrls",
+      "result": "PASS",
+      "roleCount": 13
+    }
+  ]
+}

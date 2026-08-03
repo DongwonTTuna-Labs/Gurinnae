@@ -1,0 +1,2723 @@
+schema_version: 1
+specification_version: 13.0.0-procurement-addendum
+status: REVIEW_REQUIRED
+implementation_state: OPEN_IMPLEMENTATION
+purpose: >-
+  Close the procurement-domain facts, identity decisions, detection explanation,
+  signal triage, response-request scope, and filter/export bindings that the v13
+  base contracts leave implicit. This file is additive and does not weaken any
+  base invariant or authorize a new upstream source by implication.
+
+authority:
+  sole_pack_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+  base_contracts:
+    - specs/domain/state-machines.yaml
+    - specs/api/operation-contracts.yaml
+    - specs/application/command-semantics.yaml
+    - specs/api/operation-persistence.yaml
+    - specs/api/resource-schemas.yaml
+    - specs/database/migrations/0002_raw_and_core.sql
+    - specs/database/migrations/0003_editorial_and_intake.sql
+    - specs/database/addendum/0025-evidence-snapshots-search.yaml
+    - specs/connectors/koneps-notices/field-mapping.yaml
+    - specs/connectors/koneps-contracts/field-mapping.yaml
+    - specs/detection/rule-evaluation-catalog.yaml
+    - specs/product/owner-addendum-2026-07-14.yaml
+    - DESIGN.md
+  source_mapping_addendum: specs/connectors/addendum-koneps-mapping.yaml
+  executable_acceptance: tests/acceptance/procurement-domain-addendum.feature
+
+normative_language:
+  must: required for implementation and verification
+  must_not: prohibited in source, runtime, projection, and copy
+  unknown: an explicit domain state; never zero, false, empty, or absence by inference
+  revision: an immutable fact version with an exact predecessor and content digest
+
+scope_guardrails:
+  - A signal is an observation that a deterministic rule matched; it is never a finding of wrongdoing.
+  - Missing source coverage, an incomplete revision chain, or material identity ambiguity is BLOCKED, not NO_SIGNAL.
+  - A supplier name, address, phone number, representative name, or shared hash never causes an automatic merge.
+  - A source record is never overwritten. Correction, deletion, merge, split, and supersession append immutable history.
+  - Award means only the exact official outcome represented by its source basis. A contract-conclusion record cannot be described as a complete bid-evaluation history.
+  - BidderParticipation is never inferred from a notice watcher, contract party list, award winner, contract count, or absence of other parties.
+  - Relationship, ownership, control, and management assertions require revision-fixed verified evidence and a human verification decision.
+  - Public copy exposes source limits, contrary material, subject responses, and identity uncertainty with the observation.
+  - Generic JSON, free-form maps, opaque fallback renderers, and synthetic identifiers or timestamps are forbidden.
+
+canonicalization:
+  algorithm: GURINE_CANONICAL_JSON_V1
+  digest: lowercase SHA-256 over canonical UTF-8 bytes
+  rules:
+    - Object schemas below have additionalProperties false and all required fields are present, including nullable fields.
+    - UUID sets are duplicate-free and sorted by UUID bytes; enum sets use the declared enum order; digests are lowercase hex.
+    - Revision and evidence arrays use their explicit ordinal and are never reordered by display label.
+    - Decimal values use non-exponent canonical decimal strings with no leading plus sign or insignificant trailing zeroes.
+    - Human text is UTF-8 NFC, contains no NUL, and is included by digest rather than truncated or normalized for identity.
+
+closed_enums:
+  procurement_object_type:
+    - PROCUREMENT_NOTICE
+    - AWARD
+    - BIDDER_PARTICIPATION
+    - PROCUREMENT_CONTRACT
+    - CONTRACT_AMENDMENT
+  revision_state: [ACTIVE, CANCELLED, DELETED, SUPERSEDED, CORRECTED]
+  effective_time_status: [KNOWN, UNKNOWN]
+  effective_time_precision: [DATE, MINUTE, SECOND]
+  business_type: [GOODS, CONSTRUCTION, SERVICE, FOREIGN]
+  identity_status: [UNVERIFIED, CANDIDATE, VERIFIED, AMBIGUOUS, CONFLICTED, REJECTED]
+  coverage_status: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]
+  verification_status: [PENDING, VERIFIED, REJECTED, CONFLICTED, SUPERSEDED]
+  rule_outcome: [SIGNAL, NO_SIGNAL, BLOCKED]
+  triage_decision: [DISMISS, NEEDS_DATA, MARK_DUPLICATE, PROMOTE_TO_CASE, LINK_TO_CASE]
+
+schemas:
+  SourceRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - sourceId
+      - connectorId
+      - operationId
+      - sourceDocumentId
+      - sourceAssetId
+      - sourceAssetRevision
+      - sourceContentSha256
+      - externalId
+      - externalRevision
+      - parsedRecordId
+      - recordIndex
+      - recordDigest
+      - retrievedAt
+      - mappingVersion
+      - mappingEffectiveFrom
+    properties:
+      sourceId: {type: string, minLength: 1, maxLength: 100}
+      connectorId: {type: string, minLength: 1, maxLength: 100}
+      operationId: {type: string, minLength: 1, maxLength: 160}
+      sourceDocumentId: {type: string, format: uuid}
+      sourceAssetId: {type: string, format: uuid}
+      sourceAssetRevision: {type: integer, minimum: 1}
+      sourceContentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+      externalId: {type: string, minLength: 1, maxLength: 500}
+      externalRevision: {type: string, minLength: 1, maxLength: 500}
+      parsedRecordId: {type: string, format: uuid}
+      recordIndex: {type: integer, minimum: 0}
+      recordDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      retrievedAt: {type: string, format: date-time}
+      mappingVersion: {type: string, minLength: 1, maxLength: 100}
+      mappingEffectiveFrom: {type: string, format: date-time}
+
+  SourceFieldLocatorV1:
+    type: object
+    additionalProperties: false
+    required:
+      - fieldPath
+      - sourceDocumentId
+      - sourceAssetId
+      - sourceAssetRevision
+      - sourceContentSha256
+      - locatorKind
+      - locatorValue
+      - locatorDigest
+      - rawValueSha256
+      - parserVersion
+      - transformationVersion
+    properties:
+      fieldPath: {type: string, minLength: 1, maxLength: 300}
+      sourceDocumentId: {type: string, format: uuid}
+      sourceAssetId: {type: string, format: uuid}
+      sourceAssetRevision: {type: integer, minimum: 1}
+      sourceContentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+      locatorKind:
+        type: string
+        enum: [JSON_POINTER, XML_XPATH, API_FIELD]
+      locatorValue: {type: string, minLength: 1, maxLength: 2000}
+      locatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      rawValueSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+      parserVersion: {type: string, minLength: 1, maxLength: 100}
+      transformationVersion: {type: [string, 'null'], minLength: 1, maxLength: 100}
+
+  RevisionIdentityV1:
+    type: object
+    additionalProperties: false
+    required:
+      - revisionId
+      - rootId
+      - revision
+      - recordDigest
+      - predecessorRevisionId
+      - predecessorRecordDigest
+      - supersedesRevisionId
+      - state
+    properties:
+      revisionId: {type: string, format: uuid}
+      rootId: {type: string, format: uuid}
+      revision: {type: integer, minimum: 1}
+      recordDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      predecessorRevisionId: {type: [string, 'null'], format: uuid}
+      predecessorRecordDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      supersedesRevisionId: {type: [string, 'null'], format: uuid}
+      state:
+        type: string
+        enum: [ACTIVE, CANCELLED, DELETED, SUPERSEDED, CORRECTED]
+
+  RevisionRefV1:
+    type: object
+    additionalProperties: false
+    required: [objectType, rootId, revisionId, revision, recordDigest]
+    properties:
+      objectType:
+        type: string
+        enum: [PROCUREMENT_NOTICE, AWARD, BIDDER_PARTICIPATION, PROCUREMENT_CONTRACT, CONTRACT_AMENDMENT]
+      rootId: {type: string, format: uuid}
+      revisionId: {type: string, format: uuid}
+      revision: {type: integer, minimum: 1}
+      recordDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  EffectiveTimeV1:
+    type: object
+    additionalProperties: false
+    required: [status, value, precision, sourceField, sourceTimezone]
+    properties:
+      status:
+        type: string
+        enum: [KNOWN, UNKNOWN]
+      value:
+        type: [string, 'null']
+        pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}([T ][0-9]{2}:[0-9]{2}(:[0-9]{2})?)?([+-][0-9]{2}:[0-9]{2}|Z)?$'
+      precision:
+        type: [string, 'null']
+        enum: [DATE, MINUTE, SECOND, null]
+      sourceField: {type: [string, 'null'], minLength: 1, maxLength: 100}
+      sourceTimezone: {type: [string, 'null'], enum: [Asia/Seoul, UTC, null]}
+
+  MoneyV1:
+    type: object
+    additionalProperties: false
+    required: [amount, currency, vatBasis]
+    properties:
+      amount: {type: string, pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      currency: {type: string, pattern: '^[A-Z]{3}$'}
+      vatBasis:
+        type: string
+        enum: [INCLUDED, EXCLUDED, UNKNOWN]
+
+  CanonicalEntityRefV1:
+    type: object
+    additionalProperties: false
+    required: [entityType, entityId, entityRevision, identityDigest, identityStatus]
+    properties:
+      entityType: {type: string, enum: [AGENCY, SUPPLIER]}
+      entityId: {type: string, format: uuid}
+      entityRevision: {type: integer, minimum: 1}
+      identityDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      identityStatus:
+        type: string
+        enum: [UNVERIFIED, CANDIDATE, VERIFIED, AMBIGUOUS, CONFLICTED, REJECTED]
+
+  SupplierPartyRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - candidateId
+      - candidateRevision
+      - candidateDigest
+      - canonicalSupplier
+      - identityStatus
+    properties:
+      candidateId: {type: string, format: uuid}
+      candidateRevision: {type: integer, minimum: 1}
+      candidateDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      canonicalSupplier:
+        anyOf:
+          - {$ref: '#/schemas/CanonicalEntityRefV1'}
+          - {type: 'null'}
+      identityStatus:
+        type: string
+        enum: [UNVERIFIED, CANDIDATE, VERIFIED, AMBIGUOUS, CONFLICTED, REJECTED]
+
+  NoticeRevisionIdentityRefV1:
+    type: object
+    additionalProperties: false
+    required: [noticeRevision, externalNoticeId, noticeNumber, noticeOrder]
+    properties:
+      noticeRevision: {$ref: '#/schemas/RevisionRefV1'}
+      externalNoticeId: {type: string, minLength: 3, maxLength: 500}
+      noticeNumber: {type: string, minLength: 1, maxLength: 200}
+      noticeOrder: {type: string, minLength: 1, maxLength: 50}
+
+  KonepsMappingActivationReceiptV1:
+    type: object
+    additionalProperties: false
+    required:
+      - activationReceiptId
+      - connectorIds
+      - mappingVersion
+      - mappingContractDigest
+      - supersededMappingContractDigest
+      - preflightRunIds
+      - fixtureManifestDigest
+      - activatedBy
+      - effectiveFrom
+      - receiptDigest
+    properties:
+      activationReceiptId: {type: string, format: uuid}
+      connectorIds:
+        type: array
+        minItems: 2
+        maxItems: 2
+        uniqueItems: true
+        items: {type: string, enum: [koneps-notices, koneps-contracts]}
+      mappingVersion: {const: koneps-procurement-revision-v1}
+      mappingContractDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      supersededMappingContractDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      preflightRunIds:
+        type: array
+        minItems: 33
+        maxItems: 33
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      fixtureManifestDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      activatedBy: {type: string, format: uuid}
+      effectiveFrom: {type: string, format: date-time}
+      receiptDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  ProcurementObjectRevisionFactRefV1:
+    type: object
+    additionalProperties: false
+    required: [factKind, revision]
+    properties:
+      factKind: {const: PROCUREMENT_OBJECT_REVISION}
+      revision: {$ref: '#/schemas/RevisionRefV1'}
+
+  ContractLineItemRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - contractRevision
+      - lineItemId
+      - lineItemRevision
+      - lineItemDigest
+      - lineOrdinal
+      - sourceLocatorDigest
+    properties:
+      factKind: {const: CONTRACT_LINE_ITEM_REVISION}
+      contractRevision: {$ref: '#/schemas/RevisionRefV1'}
+      lineItemId: {type: string, format: uuid}
+      lineItemRevision: {type: integer, minimum: 1}
+      lineItemDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      lineOrdinal: {type: integer, minimum: 0}
+      sourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  ProcurementContractLineItemComponentV1:
+    type: object
+    additionalProperties: false
+    required:
+      - componentId
+      - componentRevision
+      - componentDigest
+      - componentOrdinal
+      - description
+      - quantity
+      - normalizedUnit
+      - allocatedAmount
+      - currency
+      - sourceLocatorDigest
+      - coverageStatus
+      - limitations
+    properties:
+      componentId: {type: string, format: uuid}
+      componentRevision: {type: integer, minimum: 1}
+      componentDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      componentOrdinal: {type: integer, minimum: 0}
+      description: {type: string, minLength: 1, maxLength: 4000}
+      quantity: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      normalizedUnit: {type: [string, 'null'], minLength: 1, maxLength: 64}
+      allocatedAmount: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+      sourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      limitations:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+
+  ProcurementContractLineItemRevisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - lineItemId
+      - lineItemRootId
+      - lineItemRevision
+      - lineItemDigest
+      - predecessorLineItemRevisionId
+      - predecessorLineItemDigest
+      - contractRevision
+      - source
+      - normalizationRunId
+      - effectiveTime
+      - externalLineItemId
+      - lineOrdinal
+      - description
+      - categoryCode
+      - manufacturer
+      - model
+      - quantity
+      - sourceUnit
+      - normalizedQuantity
+      - normalizedUnit
+      - unitConversionFactor
+      - unitConversionPolicyVersion
+      - unitConversionPolicyDigest
+      - unitConversionEvidenceDigest
+      - currency
+      - unitPrice
+      - totalPrice
+      - vatBasis
+      - vatRate
+      - vatAmount
+      - shippingAmount
+      - installationAmount
+      - maintenanceAmount
+      - warrantyMonths
+      - bundleState
+      - components
+      - componentCount
+      - componentSetDigest
+      - sourceLocator
+      - fieldProvenance
+      - coverageStatus
+      - limitations
+    properties:
+      lineItemId: {type: string, format: uuid}
+      lineItemRootId: {type: string, format: uuid}
+      lineItemRevision: {type: integer, minimum: 1}
+      lineItemDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      predecessorLineItemRevisionId: {type: [string, 'null'], format: uuid}
+      predecessorLineItemDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      contractRevision: {$ref: '#/schemas/RevisionRefV1'}
+      source: {$ref: '#/schemas/SourceRevisionRefV1'}
+      normalizationRunId: {type: string, format: uuid}
+      effectiveTime: {$ref: '#/schemas/EffectiveTimeV1'}
+      externalLineItemId: {type: [string, 'null'], minLength: 1, maxLength: 500}
+      lineOrdinal: {type: integer, minimum: 0}
+      description: {type: string, minLength: 1, maxLength: 10000}
+      categoryCode: {type: [string, 'null'], minLength: 1, maxLength: 200}
+      manufacturer: {type: [string, 'null'], minLength: 1, maxLength: 500}
+      model: {type: [string, 'null'], minLength: 1, maxLength: 500}
+      quantity: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      sourceUnit: {type: [string, 'null'], minLength: 1, maxLength: 200}
+      normalizedQuantity: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      normalizedUnit: {type: [string, 'null'], minLength: 1, maxLength: 64}
+      unitConversionFactor: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      unitConversionPolicyVersion: {type: [string, 'null'], minLength: 1, maxLength: 100}
+      unitConversionPolicyDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      unitConversionEvidenceDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+      unitPrice: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      totalPrice: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      vatBasis: {type: string, enum: [INCLUDED, EXCLUDED, EXEMPT, UNKNOWN]}
+      vatRate: {type: [string, 'null'], pattern: '^(0(\.[0-9]+)?|1(\.0+)?)$'}
+      vatAmount: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      shippingAmount: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      installationAmount: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      maintenanceAmount: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      warrantyMonths: {type: [integer, 'null'], minimum: 0}
+      bundleState: {type: string, enum: [NOT_BUNDLE, COMPLETE, PARTIAL, UNKNOWN]}
+      components:
+        type: array
+        maxItems: 1000
+        items: {$ref: '#/schemas/ProcurementContractLineItemComponentV1'}
+      componentCount: {type: integer, minimum: 0, maximum: 1000}
+      componentSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      sourceLocator: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      fieldProvenance:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      limitations:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+    allOf:
+      - if:
+          properties: {bundleState: {const: NOT_BUNDLE}}
+          required: [bundleState]
+        then:
+          properties: {components: {maxItems: 0}, componentCount: {const: 0}}
+      - if:
+          properties: {bundleState: {const: COMPLETE}}
+          required: [bundleState]
+        then:
+          properties: {components: {minItems: 1}, componentCount: {minimum: 1}}
+
+  UnitNormalizationRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - unitFactId
+      - unitFactRevision
+      - unitFactDigest
+      - lineItemId
+      - lineItemRevision
+      - lineItemDigest
+      - normalizedUnitCode
+      - sourceLocatorDigest
+    properties:
+      factKind: {const: UNIT_NORMALIZATION_REVISION}
+      unitFactId: {type: string, format: uuid}
+      unitFactRevision: {type: integer, minimum: 1}
+      unitFactDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      lineItemId: {type: string, format: uuid}
+      lineItemRevision: {type: integer, minimum: 1}
+      lineItemDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      normalizedUnitCode: {type: string, minLength: 1, maxLength: 64}
+      sourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  VatBasisRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - vatFactId
+      - vatFactRevision
+      - vatFactDigest
+      - lineItemId
+      - lineItemRevision
+      - lineItemDigest
+      - vatBasis
+      - sourceLocatorDigest
+    properties:
+      factKind: {const: VAT_BASIS_REVISION}
+      vatFactId: {type: string, format: uuid}
+      vatFactRevision: {type: integer, minimum: 1}
+      vatFactDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      lineItemId: {type: string, format: uuid}
+      lineItemRevision: {type: integer, minimum: 1}
+      lineItemDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      vatBasis: {type: string, enum: [INCLUDED, EXCLUDED, EXEMPT, UNKNOWN]}
+      sourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  BundleCompositionRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - bundleFactId
+      - bundleFactRevision
+      - bundleFactDigest
+      - lineItemId
+      - lineItemRevision
+      - lineItemDigest
+      - componentCount
+      - componentSetDigest
+      - coverageStatus
+      - sourceLocatorDigests
+    properties:
+      factKind: {const: BUNDLE_COMPOSITION_REVISION}
+      bundleFactId: {type: string, format: uuid}
+      bundleFactRevision: {type: integer, minimum: 1}
+      bundleFactDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      lineItemId: {type: string, format: uuid}
+      lineItemRevision: {type: integer, minimum: 1}
+      lineItemDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      componentCount: {type: integer, minimum: 0}
+      componentSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      sourceLocatorDigests:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  SupplierCandidateRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - candidateId
+      - candidateRevision
+      - candidateDigest
+      - identityStatus
+      - nameSourceLocatorDigest
+    properties:
+      factKind: {const: SUPPLIER_CANDIDATE_REVISION}
+      candidateId: {type: string, format: uuid}
+      candidateRevision: {type: integer, minimum: 1}
+      candidateDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      identityStatus: {type: string, enum: [UNVERIFIED, CANDIDATE, VERIFIED, AMBIGUOUS, CONFLICTED, REJECTED]}
+      nameSourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  SupplierIdentifierRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - identifierFactId
+      - identifierFactRevision
+      - identifierFactDigest
+      - candidateId
+      - candidateRevision
+      - candidateDigest
+      - scheme
+      - verificationStatus
+      - sourceLocatorDigest
+    properties:
+      factKind: {const: SUPPLIER_IDENTIFIER_REVISION}
+      identifierFactId: {type: string, format: uuid}
+      identifierFactRevision: {type: integer, minimum: 1}
+      identifierFactDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      candidateId: {type: string, format: uuid}
+      candidateRevision: {type: integer, minimum: 1}
+      candidateDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      scheme: {type: string, enum: [KOREAN_BUSINESS_NUMBER, OPEN_DART_CORP_CODE, KONEPS_PARTY_KEY]}
+      verificationStatus: {type: string, enum: [UNVERIFIED, VERIFIED, REJECTED]}
+      sourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  SupplierIncorporationRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - incorporationFactId
+      - incorporationFactRevision
+      - incorporationFactDigest
+      - candidateId
+      - candidateRevision
+      - candidateDigest
+      - incorporatedOn
+      - precision
+      - verificationStatus
+      - sourceLocatorDigest
+    properties:
+      factKind: {const: SUPPLIER_INCORPORATION_REVISION}
+      incorporationFactId: {type: string, format: uuid}
+      incorporationFactRevision: {type: integer, minimum: 1}
+      incorporationFactDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      candidateId: {type: string, format: uuid}
+      candidateRevision: {type: integer, minimum: 1}
+      candidateDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      incorporatedOn: {type: string, format: date}
+      precision: {const: DATE}
+      verificationStatus: {type: string, enum: [PENDING, VERIFIED, REJECTED, CONFLICTED, SUPERSEDED]}
+      sourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  SupplierRelationshipRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - assertionId
+      - assertionRevision
+      - assertionDigest
+      - relationshipKind
+      - subjectIdentityKeyDigest
+      - objectIdentityKeyDigest
+      - verificationStatus
+      - evidenceLocatorSetDigest
+    properties:
+      factKind: {const: SUPPLIER_RELATIONSHIP_REVISION}
+      assertionId: {type: string, format: uuid}
+      assertionRevision: {type: integer, minimum: 1}
+      assertionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      relationshipKind: {type: string, enum: [OWNERSHIP, BENEFICIAL_OWNERSHIP, CONTROL, MANAGEMENT_ROLE, LEGAL_REPRESENTATIVE, CONTRACTUAL_RELATIONSHIP]}
+      subjectIdentityKeyDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      objectIdentityKeyDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      verificationStatus: {type: string, enum: [PENDING, VERIFIED, REJECTED, CONFLICTED, SUPERSEDED]}
+      evidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  NoticeSpecificationDetailRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - factKind
+      - noticeRevision
+      - specificationDetailId
+      - specificationDetailRevision
+      - specificationDetailDigest
+      - sectionOrdinal
+      - textDigest
+      - sourceLocatorDigest
+      - coverageStatus
+    properties:
+      factKind: {const: NOTICE_SPECIFICATION_DETAIL_REVISION}
+      noticeRevision: {$ref: '#/schemas/RevisionRefV1'}
+      specificationDetailId: {type: string, format: uuid}
+      specificationDetailRevision: {type: integer, minimum: 1}
+      specificationDetailDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      sectionOrdinal: {type: integer, minimum: 0}
+      textDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      sourceLocatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+
+  ProcurementNoticeRevisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - identity
+      - source
+      - normalizationRunId
+      - effectiveTime
+      - externalNoticeId
+      - noticeNumber
+      - noticeOrder
+      - title
+      - businessType
+      - agency
+      - procurementMethod
+      - publishedAt
+      - closesAt
+      - estimatedAmount
+      - cancellationReason
+      - fieldProvenance
+      - coverageStatus
+      - limitations
+    properties:
+      identity: {$ref: '#/schemas/RevisionIdentityV1'}
+      source: {$ref: '#/schemas/SourceRevisionRefV1'}
+      normalizationRunId: {type: string, format: uuid}
+      effectiveTime: {$ref: '#/schemas/EffectiveTimeV1'}
+      externalNoticeId: {type: string, minLength: 1, maxLength: 500}
+      noticeNumber: {type: string, minLength: 1, maxLength: 200}
+      noticeOrder: {type: string, minLength: 1, maxLength: 50}
+      title: {type: string, minLength: 1, maxLength: 2000}
+      businessType: {type: string, enum: [GOODS, CONSTRUCTION, SERVICE, FOREIGN]}
+      agency: {$ref: '#/schemas/CanonicalEntityRefV1'}
+      procurementMethod: {type: [string, 'null'], minLength: 1, maxLength: 300}
+      publishedAt: {type: [string, 'null'], format: date-time}
+      closesAt: {type: [string, 'null'], format: date-time}
+      estimatedAmount:
+        anyOf:
+          - {$ref: '#/schemas/MoneyV1'}
+          - {type: 'null'}
+      cancellationReason: {type: [string, 'null'], minLength: 1, maxLength: 4000}
+      fieldProvenance:
+        type: array
+        minItems: 1
+        maxItems: 500
+        items: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      limitations:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+
+  AwardRevisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - identity
+      - source
+      - normalizationRunId
+      - effectiveTime
+      - externalAwardId
+      - noticeRevision
+      - noticeIdentity
+      - awardBasis
+      - awardedAt
+      - awardedAmount
+      - winners
+      - fieldProvenance
+      - coverageStatus
+      - limitations
+    properties:
+      identity: {$ref: '#/schemas/RevisionIdentityV1'}
+      source: {$ref: '#/schemas/SourceRevisionRefV1'}
+      normalizationRunId: {type: string, format: uuid}
+      effectiveTime: {$ref: '#/schemas/EffectiveTimeV1'}
+      externalAwardId: {type: string, minLength: 1, maxLength: 500}
+      noticeRevision: {$ref: '#/schemas/RevisionRefV1'}
+      noticeIdentity: {$ref: '#/schemas/NoticeRevisionIdentityRefV1'}
+      awardBasis:
+        type: string
+        enum: [OFFICIAL_AWARD_RESULT, CONTRACT_CONCLUSION]
+      awardedAt:
+        anyOf:
+          - {type: string, format: date}
+          - {type: string, format: date-time}
+          - {type: 'null'}
+      awardedAmount:
+        anyOf:
+          - {$ref: '#/schemas/MoneyV1'}
+          - {type: 'null'}
+      winners:
+        type: array
+        minItems: 1
+        maxItems: 100
+        items: {$ref: '#/schemas/SupplierPartyRefV1'}
+      fieldProvenance:
+        type: array
+        minItems: 1
+        maxItems: 500
+        items: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      limitations:
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+
+  BidderParticipationRevisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - identity
+      - source
+      - normalizationRunId
+      - effectiveTime
+      - externalParticipationId
+      - noticeRevision
+      - supplier
+      - participationStatus
+      - submittedAt
+      - bidAmount
+      - rank
+      - invalidReason
+      - fieldProvenance
+      - coverageStatus
+      - limitations
+    properties:
+      identity: {$ref: '#/schemas/RevisionIdentityV1'}
+      source: {$ref: '#/schemas/SourceRevisionRefV1'}
+      normalizationRunId: {type: string, format: uuid}
+      effectiveTime: {$ref: '#/schemas/EffectiveTimeV1'}
+      externalParticipationId: {type: string, minLength: 1, maxLength: 500}
+      noticeRevision: {$ref: '#/schemas/RevisionRefV1'}
+      supplier: {$ref: '#/schemas/SupplierPartyRefV1'}
+      participationStatus:
+        type: string
+        enum: [SUBMITTED, VALID, INVALID, WITHDRAWN, AWARDED, NOT_AWARDED, UNKNOWN]
+      submittedAt: {type: [string, 'null'], format: date-time}
+      bidAmount:
+        anyOf:
+          - {$ref: '#/schemas/MoneyV1'}
+          - {type: 'null'}
+      rank: {type: [integer, 'null'], minimum: 1}
+      invalidReason: {type: [string, 'null'], minLength: 1, maxLength: 2000}
+      fieldProvenance:
+        type: array
+        minItems: 1
+        maxItems: 500
+        items: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      limitations:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+
+  ProcurementContractRevisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - identity
+      - source
+      - normalizationRunId
+      - effectiveTime
+      - externalContractId
+      - contractNumber
+      - title
+      - businessType
+      - agency
+      - suppliers
+      - noticeRevision
+      - awardRevision
+      - contractStatus
+      - procurementMethod
+      - signedAt
+      - startsAt
+      - endsAt
+      - originalAmount
+      - currentAmount
+      - currency
+      - fieldProvenance
+      - coverageStatus
+      - limitations
+    properties:
+      identity: {$ref: '#/schemas/RevisionIdentityV1'}
+      source: {$ref: '#/schemas/SourceRevisionRefV1'}
+      normalizationRunId: {type: string, format: uuid}
+      effectiveTime: {$ref: '#/schemas/EffectiveTimeV1'}
+      externalContractId: {type: string, minLength: 1, maxLength: 500}
+      contractNumber: {type: [string, 'null'], minLength: 1, maxLength: 300}
+      title: {type: string, minLength: 1, maxLength: 2000}
+      businessType: {type: string, enum: [GOODS, CONSTRUCTION, SERVICE, FOREIGN]}
+      agency: {$ref: '#/schemas/CanonicalEntityRefV1'}
+      suppliers:
+        type: array
+        maxItems: 100
+        items: {$ref: '#/schemas/SupplierPartyRefV1'}
+      noticeRevision:
+        anyOf:
+          - {$ref: '#/schemas/RevisionRefV1'}
+          - {type: 'null'}
+      awardRevision:
+        anyOf:
+          - {$ref: '#/schemas/RevisionRefV1'}
+          - {type: 'null'}
+      contractStatus:
+        type: string
+        enum: [ANNOUNCED, AWARDED, ACTIVE, COMPLETED, CANCELLED, SUPERSEDED, UNKNOWN]
+      procurementMethod: {type: [string, 'null'], minLength: 1, maxLength: 300}
+      signedAt: {type: [string, 'null'], format: date}
+      startsAt: {type: [string, 'null'], format: date}
+      endsAt: {type: [string, 'null'], format: date}
+      originalAmount:
+        anyOf:
+          - {$ref: '#/schemas/MoneyV1'}
+          - {type: 'null'}
+      currentAmount:
+        anyOf:
+          - {$ref: '#/schemas/MoneyV1'}
+          - {type: 'null'}
+      currency: {type: string, pattern: '^[A-Z]{3}$'}
+      fieldProvenance:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      coverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      limitations:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+
+  ContractAmendmentRevisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - identity
+      - source
+      - normalizationRunId
+      - effectiveTime
+      - externalAmendmentId
+      - amendmentSequence
+      - contractBefore
+      - contractAfter
+      - amendmentKind
+      - changedAt
+      - previousAmount
+      - newAmount
+      - previousEndAt
+      - newEndAt
+      - reason
+      - fieldProvenance
+      - historyCoverageStatus
+      - limitations
+    properties:
+      identity: {$ref: '#/schemas/RevisionIdentityV1'}
+      source: {$ref: '#/schemas/SourceRevisionRefV1'}
+      normalizationRunId: {type: string, format: uuid}
+      effectiveTime: {$ref: '#/schemas/EffectiveTimeV1'}
+      externalAmendmentId: {type: string, minLength: 1, maxLength: 500}
+      amendmentSequence: {type: integer, minimum: 1}
+      contractBefore: {$ref: '#/schemas/RevisionRefV1'}
+      contractAfter: {$ref: '#/schemas/RevisionRefV1'}
+      amendmentKind:
+        type: string
+        enum: [AMOUNT, TERM, SCOPE, PARTY, METHOD, CANCELLATION, MULTIPLE, UNKNOWN]
+      changedAt: {type: [string, 'null'], format: date-time}
+      previousAmount:
+        anyOf:
+          - {$ref: '#/schemas/MoneyV1'}
+          - {type: 'null'}
+      newAmount:
+        anyOf:
+          - {$ref: '#/schemas/MoneyV1'}
+          - {type: 'null'}
+      previousEndAt: {type: [string, 'null'], format: date}
+      newEndAt: {type: [string, 'null'], format: date}
+      reason: {type: [string, 'null'], minLength: 1, maxLength: 10000}
+      fieldProvenance:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      historyCoverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      limitations:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+
+  SupplierIdentifierFactV1:
+    type: object
+    additionalProperties: false
+    required: [scheme, valueHmac, displayValue, verificationStatus, sourceLocator]
+    properties:
+      scheme:
+        type: string
+        enum: [KOREAN_BUSINESS_NUMBER, OPEN_DART_CORP_CODE, KONEPS_PARTY_KEY]
+      valueHmac: {type: string, pattern: '^[0-9a-f]{64}$'}
+      displayValue: {type: [string, 'null'], minLength: 1, maxLength: 100}
+      verificationStatus:
+        type: string
+        enum: [UNVERIFIED, VERIFIED, REJECTED]
+      sourceLocator: {$ref: '#/schemas/SourceFieldLocatorV1'}
+
+  SupplierIdentityCandidateV1:
+    type: object
+    additionalProperties: false
+    required:
+      - candidateId
+      - candidateRevision
+      - candidateDigest
+      - predecessorCandidateDigest
+      - source
+      - normalizedName
+      - nameSourceLocator
+      - identifiers
+      - identityStatus
+      - canonicalSupplierId
+      - resolutionDecisionDigest
+      - createdAt
+    properties:
+      candidateId: {type: string, format: uuid}
+      candidateRevision: {type: integer, minimum: 1}
+      candidateDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      predecessorCandidateDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      source: {$ref: '#/schemas/SourceRevisionRefV1'}
+      normalizedName: {type: string, minLength: 1, maxLength: 500}
+      nameSourceLocator: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      identifiers:
+        type: array
+        maxItems: 32
+        items: {$ref: '#/schemas/SupplierIdentifierFactV1'}
+      identityStatus:
+        type: string
+        enum: [UNVERIFIED, CANDIDATE, VERIFIED, AMBIGUOUS, CONFLICTED, REJECTED]
+      canonicalSupplierId: {type: [string, 'null'], format: uuid}
+      resolutionDecisionDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      createdAt: {type: string, format: date-time}
+
+  SupplierIdentityResolutionDecisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - decisionId
+      - decisionSequence
+      - action
+      - candidateRefs
+      - fromCanonicalSupplierIds
+      - toCanonicalSupplierIds
+      - evidenceLocators
+      - expectedCandidateSetDigest
+      - priorDecisionDigest
+      - decisionDigest
+      - actorUserId
+      - reasonCode
+      - reason
+      - decidedAt
+      - impactAssessmentTaskId
+      - impactOwnerUserId
+      - impactDueAt
+      - affectedPublicRevisionIds
+    properties:
+      decisionId: {type: string, format: uuid}
+      decisionSequence: {type: integer, minimum: 1}
+      action:
+        type: string
+        enum: [MERGE, SPLIT, KEEP_SEPARATE, MARK_AMBIGUOUS]
+      candidateRefs:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/SupplierPartyRefV1'}
+      fromCanonicalSupplierIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      toCanonicalSupplierIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      evidenceLocators:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      expectedCandidateSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      priorDecisionDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      decisionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      actorUserId: {type: string, format: uuid}
+      reasonCode:
+        type: string
+        enum: [AUTHORITATIVE_IDENTIFIER_MATCH, AUTHORITATIVE_IDENTIFIER_CONFLICT, SOURCE_CORRECTION, FALSE_MERGE, INSUFFICIENT_EVIDENCE]
+      reason: {type: string, minLength: 1, maxLength: 10000}
+      decidedAt: {type: string, format: date-time}
+      impactAssessmentTaskId: {type: [string, 'null'], format: uuid}
+      impactOwnerUserId: {type: [string, 'null'], format: uuid}
+      impactDueAt: {type: [string, 'null'], format: date-time}
+      affectedPublicRevisionIds:
+        type: array
+        maxItems: 10000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+
+  AssertionPartyV1:
+    type: object
+    additionalProperties: false
+    required:
+      - partyKind
+      - supplierCandidateId
+      - supplierCandidateRevision
+      - supplierCandidateDigest
+      - canonicalSupplierId
+      - identityKeyDigest
+      - identityStatus
+    properties:
+      partyKind:
+        type: string
+        enum: [SUPPLIER, ORGANIZATION, NATURAL_PERSON]
+      supplierCandidateId: {type: [string, 'null'], format: uuid}
+      supplierCandidateRevision: {type: [integer, 'null'], minimum: 1}
+      supplierCandidateDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      canonicalSupplierId: {type: [string, 'null'], format: uuid}
+      identityKeyDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      identityStatus:
+        type: string
+        enum: [UNVERIFIED, CANDIDATE, VERIFIED, AMBIGUOUS, CONFLICTED, REJECTED]
+
+  SupplierRelationshipAssertionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - assertionId
+      - assertionRevision
+      - assertionDigest
+      - predecessorAssertionDigest
+      - relationshipKind
+      - subject
+      - object
+      - ownershipPercent
+      - managementRole
+      - validFrom
+      - validTo
+      - validityCoverageStatus
+      - verificationStatus
+      - evidenceLocators
+      - counterAssertionIds
+      - verifiedBy
+      - verifiedAt
+      - verificationReason
+      - publicUseStatus
+    properties:
+      assertionId: {type: string, format: uuid}
+      assertionRevision: {type: integer, minimum: 1}
+      assertionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      predecessorAssertionDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      relationshipKind:
+        type: string
+        enum: [OWNERSHIP, BENEFICIAL_OWNERSHIP, CONTROL, MANAGEMENT_ROLE, LEGAL_REPRESENTATIVE, CONTRACTUAL_RELATIONSHIP]
+      subject: {$ref: '#/schemas/AssertionPartyV1'}
+      object: {$ref: '#/schemas/AssertionPartyV1'}
+      ownershipPercent: {type: [string, 'null'], pattern: '^(0(\.[0-9]{1,4})?|[1-9][0-9]?(\.[0-9]{1,4})?|100(\.0{1,4})?)$'}
+      managementRole: {type: [string, 'null'], minLength: 1, maxLength: 500}
+      validFrom: {type: [string, 'null'], format: date}
+      validTo: {type: [string, 'null'], format: date}
+      validityCoverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      verificationStatus: {type: string, enum: [PENDING, VERIFIED, REJECTED, CONFLICTED, SUPERSEDED]}
+      evidenceLocators:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/EvidenceLocatorRefV1'}
+      counterAssertionIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      verifiedBy: {type: [string, 'null'], format: uuid}
+      verifiedAt: {type: [string, 'null'], format: date-time}
+      verificationReason: {type: [string, 'null'], minLength: 1, maxLength: 10000}
+      publicUseStatus:
+        type: string
+        enum: [NOT_REVIEWED, APPROVED, DENIED]
+
+  SupplierIdentityResolutionRequestV1:
+    type: object
+    additionalProperties: false
+    required:
+      - action
+      - candidateRefs
+      - expectedCandidateSetDigest
+      - expectedPriorDecisionDigest
+      - fromCanonicalSupplierIds
+      - toCanonicalSupplierIds
+      - evidenceLocators
+      - expectedEvidenceLocatorSetDigest
+      - expectedPublicImpactSetDigest
+      - impactOwnerUserId
+      - impactDueAt
+      - reasonCode
+      - reason
+    properties:
+      action:
+        type: string
+        enum: [MERGE, SPLIT, KEEP_SEPARATE, MARK_AMBIGUOUS]
+      candidateRefs:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/SupplierPartyRefV1'}
+      expectedCandidateSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      expectedPriorDecisionDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      fromCanonicalSupplierIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      toCanonicalSupplierIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      evidenceLocators:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/EvidenceLocatorRefV1'}
+      expectedEvidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      expectedPublicImpactSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      impactOwnerUserId: {type: [string, 'null'], format: uuid}
+      impactDueAt: {type: [string, 'null'], format: date-time}
+      reasonCode:
+        type: string
+        enum: [AUTHORITATIVE_IDENTIFIER_MATCH, AUTHORITATIVE_IDENTIFIER_CONFLICT, SOURCE_CORRECTION, FALSE_MERGE, INSUFFICIENT_EVIDENCE]
+      reason: {type: string, minLength: 1, maxLength: 10000}
+
+  SupplierIdentityResolutionCandidateReceiptRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - ordinal
+      - candidateId
+      - candidateRevision
+      - candidateDigest
+      - candidateSourceLocator
+      - identifierFacts
+    properties:
+      ordinal: {type: integer, minimum: 0}
+      candidateId: {type: string, format: uuid}
+      candidateRevision: {type: integer, minimum: 1}
+      candidateDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      candidateSourceLocator: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      identifierFacts:
+        type: array
+        maxItems: 32
+        items: {$ref: '#/schemas/SupplierIdentifierFactV1'}
+
+  SupplierIdentityResolutionReceiptV1:
+    type: object
+    additionalProperties: false
+    required:
+      - decisionId
+      - decisionSequence
+      - action
+      - candidateRefs
+      - candidateSetDigest
+      - evidenceLocators
+      - evidenceLocatorSetDigest
+      - publicImpactSetDigest
+      - fromCanonicalSupplierIds
+      - toCanonicalSupplierIds
+      - priorDecisionDigest
+      - decisionDigest
+      - actorUserId
+      - reasonCode
+      - reason
+      - impactAssessmentTaskId
+      - impactOwnerUserId
+      - impactDueAt
+      - affectedPublicRevisionIds
+      - auditEventId
+      - outboxEventIds
+      - acceptedAt
+    properties:
+      decisionId: {type: string, format: uuid}
+      decisionSequence: {type: integer, minimum: 1}
+      action: {type: string, enum: [MERGE, SPLIT, KEEP_SEPARATE, MARK_AMBIGUOUS]}
+      candidateRefs:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/SupplierIdentityResolutionCandidateReceiptRefV1'}
+      candidateSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      evidenceLocators:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/EvidenceLocatorRefV1'}
+      evidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      publicImpactSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      fromCanonicalSupplierIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      toCanonicalSupplierIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      priorDecisionDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      decisionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      actorUserId: {type: string, format: uuid}
+      reasonCode:
+        type: string
+        enum: [AUTHORITATIVE_IDENTIFIER_MATCH, AUTHORITATIVE_IDENTIFIER_CONFLICT, SOURCE_CORRECTION, FALSE_MERGE, INSUFFICIENT_EVIDENCE]
+      reason: {type: string, minLength: 1, maxLength: 10000}
+      impactAssessmentTaskId: {type: [string, 'null'], format: uuid}
+      impactOwnerUserId: {type: [string, 'null'], format: uuid}
+      impactDueAt: {type: [string, 'null'], format: date-time}
+      affectedPublicRevisionIds:
+        type: array
+        maxItems: 10000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      auditEventId: {type: string, format: uuid}
+      outboxEventIds:
+        type: array
+        minItems: 1
+        maxItems: 10
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      acceptedAt: {type: string, format: date-time}
+
+  CreateSupplierRelationshipAssertionRequestV1:
+    type: object
+    additionalProperties: false
+    required:
+      - relationshipKind
+      - subject
+      - object
+      - ownershipPercent
+      - managementRole
+      - validFrom
+      - validTo
+      - validityCoverageStatus
+      - evidenceLocators
+      - expectedEvidenceLocatorSetDigest
+      - reason
+    properties:
+      relationshipKind:
+        type: string
+        enum: [OWNERSHIP, BENEFICIAL_OWNERSHIP, CONTROL, MANAGEMENT_ROLE, LEGAL_REPRESENTATIVE, CONTRACTUAL_RELATIONSHIP]
+      subject: {$ref: '#/schemas/AssertionPartyV1'}
+      object: {$ref: '#/schemas/AssertionPartyV1'}
+      ownershipPercent: {type: [string, 'null'], pattern: '^(0(\.[0-9]{1,4})?|[1-9][0-9]?(\.[0-9]{1,4})?|100(\.0{1,4})?)$'}
+      managementRole: {type: [string, 'null'], minLength: 1, maxLength: 500}
+      validFrom: {type: [string, 'null'], format: date}
+      validTo: {type: [string, 'null'], format: date}
+      validityCoverageStatus: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      evidenceLocators:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/EvidenceLocatorRefV1'}
+      expectedEvidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      reason: {type: string, minLength: 1, maxLength: 10000}
+
+  DecideSupplierRelationshipAssertionRequestV1:
+    type: object
+    additionalProperties: false
+    required:
+      - assertionId
+      - expectedAssertionRevision
+      - expectedAssertionDigest
+      - expectedEvidenceLocatorSetDigest
+      - decision
+      - counterAssertionIds
+      - reasonCode
+      - reason
+    properties:
+      assertionId: {type: string, format: uuid}
+      expectedAssertionRevision: {type: integer, minimum: 1}
+      expectedAssertionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      expectedEvidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      decision:
+        type: string
+        enum: [VERIFY, REJECT, MARK_CONFLICT, SUPERSEDE]
+      counterAssertionIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      reasonCode:
+        type: string
+        enum: [EVIDENCE_CONFIRMED, EVIDENCE_INSUFFICIENT, EVIDENCE_CONTRADICTED, SOURCE_CORRECTED, ASSERTION_SUPERSEDED]
+      reason: {type: string, minLength: 1, maxLength: 10000}
+
+  SupplierRelationshipAssertionReceiptV1:
+    type: object
+    additionalProperties: false
+    required:
+      - assertionId
+      - assertionRevision
+      - assertionDigest
+      - verificationStatus
+      - evidenceLocatorSetDigest
+      - verifiedBy
+      - verifiedAt
+      - auditEventId
+      - outboxEventIds
+      - acceptedAt
+    properties:
+      assertionId: {type: string, format: uuid}
+      assertionRevision: {type: integer, minimum: 1}
+      assertionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      verificationStatus: {type: string, enum: [PENDING, VERIFIED, REJECTED, CONFLICTED, SUPERSEDED]}
+      evidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      verifiedBy: {type: [string, 'null'], format: uuid}
+      verifiedAt: {type: [string, 'null'], format: date-time}
+      auditEventId: {type: string, format: uuid}
+      outboxEventIds:
+        type: array
+        minItems: 1
+        maxItems: 10
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      acceptedAt: {type: string, format: date-time}
+
+  RuleFactRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required: [ordinal, fact, role, included, exclusionReason]
+    properties:
+      ordinal: {type: integer, minimum: 0}
+      fact:
+        oneOf:
+          - {$ref: '#/schemas/ProcurementObjectRevisionFactRefV1'}
+          - {$ref: '#/schemas/ContractLineItemRevisionRefV1'}
+          - {$ref: '#/schemas/UnitNormalizationRevisionRefV1'}
+          - {$ref: '#/schemas/VatBasisRevisionRefV1'}
+          - {$ref: '#/schemas/BundleCompositionRevisionRefV1'}
+          - {$ref: '#/schemas/SupplierCandidateRevisionRefV1'}
+          - {$ref: '#/schemas/SupplierIdentifierRevisionRefV1'}
+          - {$ref: '#/schemas/SupplierIncorporationRevisionRefV1'}
+          - {$ref: '#/schemas/SupplierRelationshipRevisionRefV1'}
+          - {$ref: '#/schemas/NoticeSpecificationDetailRevisionRefV1'}
+      role:
+        type: string
+        enum: [TARGET, COHORT, DENOMINATOR, CONTEXT, COUNTER_EVIDENCE]
+      included: {type: boolean}
+      exclusionReason: {type: [string, 'null'], minLength: 1, maxLength: 1000}
+
+  ProcurementRuleBlockerCodeV1:
+    type: string
+    enum:
+      - IDENTITY_AMBIGUOUS
+      - SOURCE_COVERAGE_INCOMPLETE
+      - SOURCE_STALE_OR_UNAVAILABLE
+      - EFFECTIVE_TIME_UNKNOWN
+      - REVISION_CHAIN_INCOMPLETE
+      - COUNTER_EVIDENCE_REVIEW_INCOMPLETE
+      - COUNTER_EVIDENCE_SEARCH_BLOCKED
+      - BIDDER_PARTICIPATION_COVERAGE_UNAVAILABLE
+      - MATERIAL_FACT_NOT_TYPED
+      - SPECIFICATION_COVERAGE_INCOMPLETE
+      - SUPPLIER_INCORPORATION_UNVERIFIED
+      - UNIT_OR_VAT_BASIS_UNKNOWN
+      - BUNDLE_CONTENTS_UNKNOWN
+      - RELATIONSHIP_EVIDENCE_UNVERIFIED
+
+  CounterEvidenceSearchScopeV1:
+    type: object
+    additionalProperties: false
+    required:
+      - searchScopeId
+      - inputSnapshotId
+      - asOf
+      - windowStart
+      - windowEnd
+      - sourceIds
+      - repositoryIds
+      - queryDigests
+      - inclusionCriteria
+      - exclusionCriteria
+      - scopeDigest
+    properties:
+      searchScopeId: {type: string, format: uuid}
+      inputSnapshotId: {type: string, format: uuid}
+      asOf: {type: string, format: date-time}
+      windowStart: {type: [string, 'null'], format: date-time}
+      windowEnd: {type: [string, 'null'], format: date-time}
+      sourceIds:
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 100}
+      repositoryIds:
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 200}
+      queryDigests:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, pattern: '^[0-9a-f]{64}$'}
+      inclusionCriteria:
+        type: array
+        minItems: 1
+        maxItems: 100
+        items: {type: string, minLength: 1, maxLength: 1000}
+      exclusionCriteria:
+        type: array
+        maxItems: 100
+        items: {type: string, minLength: 1, maxLength: 1000}
+      scopeDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  CounterEvidenceSearchReceiptV1:
+    type: object
+    additionalProperties: false
+    required:
+      - searchReceiptId
+      - searchScopeId
+      - scopeDigest
+      - status
+      - sourceRunIds
+      - searchedRepositoryIds
+      - queryDigests
+      - candidateCount
+      - acceptedCount
+      - counterEvidenceSetDigest
+      - blockers
+      - actorKind
+      - actorId
+      - startedAt
+      - completedAt
+      - receiptDigest
+    properties:
+      searchReceiptId: {type: string, format: uuid}
+      searchScopeId: {type: string, format: uuid}
+      scopeDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      status: {type: string, enum: [COMPLETE, PARTIAL, NOT_STARTED, BLOCKED]}
+      sourceRunIds:
+        type: array
+        maxItems: 10000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      searchedRepositoryIds:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 200}
+      queryDigests:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, pattern: '^[0-9a-f]{64}$'}
+      candidateCount: {type: integer, minimum: 0}
+      acceptedCount: {type: integer, minimum: 0}
+      counterEvidenceSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      blockers:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {$ref: '#/schemas/ProcurementRuleBlockerCodeV1'}
+      actorKind: {type: string, enum: [AGENT, HUMAN, HYBRID]}
+      actorId: {type: string, minLength: 1, maxLength: 200}
+      startedAt: {type: string, format: date-time}
+      completedAt: {type: [string, 'null'], format: date-time}
+      receiptDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+    allOf:
+      - if:
+          properties: {status: {const: COMPLETE}}
+          required: [status]
+        then:
+          properties:
+            completedAt: {type: string, format: date-time}
+            blockers: {maxItems: 0}
+      - if:
+          properties: {status: {enum: [PARTIAL, BLOCKED]}}
+          required: [status]
+        then:
+          properties:
+            blockers: {minItems: 1}
+
+  CoverageSummaryV1:
+    type: object
+    additionalProperties: false
+    required:
+      - status
+      - windowStart
+      - windowEnd
+      - expectedRecordCount
+      - observedRecordCount
+      - missingRecordCount
+      - sourceIds
+      - latestSourcePublishedAt
+      - latestRetrievedAt
+      - freshnessStatus
+      - counterEvidenceSearchScope
+      - counterEvidenceSearchReceipt
+      - limitations
+      - coverageDigest
+    properties:
+      status: {type: string, enum: [COMPLETE, PARTIAL, UNKNOWN, NOT_AVAILABLE]}
+      windowStart: {type: [string, 'null'], format: date-time}
+      windowEnd: {type: [string, 'null'], format: date-time}
+      expectedRecordCount: {type: [integer, 'null'], minimum: 0}
+      observedRecordCount: {type: integer, minimum: 0}
+      missingRecordCount: {type: [integer, 'null'], minimum: 0}
+      sourceIds:
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 100}
+      latestSourcePublishedAt: {type: [string, 'null'], format: date-time}
+      latestRetrievedAt: {type: string, format: date-time}
+      freshnessStatus:
+        type: string
+        enum: [CURRENT, STALE, UNKNOWN, SOURCE_UNAVAILABLE]
+      counterEvidenceSearchScope: {$ref: '#/schemas/CounterEvidenceSearchScopeV1'}
+      counterEvidenceSearchReceipt: {$ref: '#/schemas/CounterEvidenceSearchReceiptV1'}
+      limitations:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+      coverageDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  CounterEvidenceRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - ordinal
+      - kind
+      - evidenceId
+      - evidenceVersion
+      - evidenceDigest
+      - locator
+      - searchReceiptDigest
+      - effect
+      - verificationStatus
+      - summary
+    properties:
+      ordinal: {type: integer, minimum: 0}
+      kind:
+        type: string
+        enum: [DOCUMENTED_EXCEPTION, SUBJECT_RESPONSE, SOURCE_CORRECTION, SCOPE_EXPLANATION, COMPARABILITY_LIMIT, LEGAL_OR_POLICY_CONTEXT]
+      evidenceId: {type: string, format: uuid}
+      evidenceVersion: {type: integer, minimum: 1}
+      evidenceDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      locator: {$ref: '#/schemas/SourceFieldLocatorV1'}
+      searchReceiptDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      effect:
+        type: string
+        enum: [WEAKENS, REFUTES, LIMITS, CONTEXT_ONLY]
+      verificationStatus:
+        type: string
+        enum: [PENDING, VERIFIED, REJECTED, NEEDS_WORK]
+      summary: {type: string, minLength: 1, maxLength: 2000}
+
+  IdentityQualityV1:
+    type: object
+    additionalProperties: false
+    required:
+      - status
+      - candidateIds
+      - canonicalSupplierIds
+      - decisionDigests
+      - ambiguityReasons
+      - identitySetDigest
+    properties:
+      status:
+        type: string
+        enum: [UNVERIFIED, CANDIDATE, VERIFIED, AMBIGUOUS, CONFLICTED, REJECTED]
+      candidateIds:
+        type: array
+        maxItems: 10000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      canonicalSupplierIds:
+        type: array
+        maxItems: 10000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      decisionDigests:
+        type: array
+        maxItems: 10000
+        uniqueItems: true
+        items: {type: string, pattern: '^[0-9a-f]{64}$'}
+      ambiguityReasons:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+      identitySetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  RuleMetricV1:
+    type: object
+    additionalProperties: false
+    required: [name, value, unit, precision, sourceFactOrdinals]
+    properties:
+      name: {type: string, minLength: 1, maxLength: 200}
+      value: {type: string, minLength: 1, maxLength: 200}
+      unit: {type: string, minLength: 1, maxLength: 50}
+      precision: {type: integer, minimum: 0, maximum: 12}
+      sourceFactOrdinals:
+        type: array
+        minItems: 1
+        maxItems: 10000
+        uniqueItems: true
+        items: {type: integer, minimum: 0}
+
+  ProcurementSignalExplanationV1:
+    type: object
+    additionalProperties: false
+    required:
+      - ruleId
+      - ruleVersion
+      - outcome
+      - ordinaryLanguageTitle
+      - ordinaryLanguageSummary
+      - nonConclusion
+      - inputSnapshotId
+      - inputFactRefs
+      - metrics
+      - cohortDefinition
+      - coverage
+      - identityQuality
+      - counterEvidenceSearchStatus
+      - counterEvidence
+      - unknowns
+      - blockers
+      - calculationDigest
+      - explanationDigest
+    properties:
+      ruleId:
+        type: string
+        enum:
+          - PRICE_OUTLIER
+          - CONTRACT_SPLITTING_PATTERN
+          - REPEATED_SINGLE_SOURCE
+          - SUPPLIER_CONCENTRATION
+          - LOW_BID_COMPETITION
+          - RESTRICTIVE_SPECIFICATION
+          - CONTRACT_AMENDMENT_ESCALATION
+          - YEAR_END_SPENDING_SPIKE
+          - NEW_SUPPLIER_DEPENDENCE
+          - SHARED_SUPPLIER_IDENTITY
+      ruleVersion: {type: string, pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'}
+      outcome: {type: string, enum: [SIGNAL, NO_SIGNAL, BLOCKED]}
+      ordinaryLanguageTitle: {type: string, minLength: 1, maxLength: 200}
+      ordinaryLanguageSummary: {type: string, minLength: 1, maxLength: 2000}
+      nonConclusion: {type: string, minLength: 1, maxLength: 1000}
+      inputSnapshotId: {type: string, format: uuid}
+      inputFactRefs:
+        type: array
+        minItems: 1
+        maxItems: 100000
+        items: {$ref: '#/schemas/RuleFactRevisionRefV1'}
+      metrics:
+        type: array
+        maxItems: 1000
+        items: {$ref: '#/schemas/RuleMetricV1'}
+      cohortDefinition: {type: string, minLength: 1, maxLength: 4000}
+      coverage: {$ref: '#/schemas/CoverageSummaryV1'}
+      identityQuality: {$ref: '#/schemas/IdentityQualityV1'}
+      counterEvidenceSearchStatus:
+        type: string
+        enum: [COMPLETE, PARTIAL, NOT_STARTED, BLOCKED]
+      counterEvidence:
+        type: array
+        maxItems: 10000
+        items: {$ref: '#/schemas/CounterEvidenceRefV1'}
+      unknowns:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 1000}
+      blockers:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {$ref: '#/schemas/ProcurementRuleBlockerCodeV1'}
+      calculationDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      explanationDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+    allOf:
+      - if:
+          properties: {outcome: {const: BLOCKED}}
+          required: [outcome]
+        then:
+          properties:
+            blockers: {minItems: 1}
+      - if:
+          properties: {outcome: {enum: [SIGNAL, NO_SIGNAL]}}
+          required: [outcome]
+        then:
+          properties:
+            blockers: {maxItems: 0}
+
+  TriageTaskV1:
+    type: object
+    additionalProperties: false
+    required: [taskType, title, ownerUserId, dueAt, reasonCode, reason, evidenceGapCodes]
+    properties:
+      taskType:
+        type: string
+        enum: [INVESTIGATE_SIGNAL, COLLECT_MISSING_DATA, VERIFY_IDENTITY, REVIEW_COUNTER_EVIDENCE, CONTACT_SUBJECT]
+      title: {type: string, minLength: 1, maxLength: 500}
+      ownerUserId: {type: string, format: uuid}
+      dueAt: {type: string, format: date-time}
+      reasonCode:
+        type: string
+        enum: [RULE_MATCH_REQUIRES_INVESTIGATION, DATA_COVERAGE_GAP, IDENTITY_AMBIGUITY, COUNTER_EVIDENCE_REVIEW, RIGHT_OF_REPLY]
+      reason: {type: string, minLength: 1, maxLength: 4000}
+      evidenceGapCodes:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 100}
+
+  NewCaseTargetV1:
+    type: object
+    additionalProperties: false
+    required: [kind, title, investigationQuestion, priority]
+    properties:
+      kind: {const: NEW_CASE}
+      title: {type: string, minLength: 1, maxLength: 500}
+      investigationQuestion: {type: string, minLength: 1, maxLength: 2000}
+      priority: {type: string, enum: [LOW, NORMAL, HIGH, URGENT]}
+
+  ExistingCaseTargetV1:
+    type: object
+    additionalProperties: false
+    required: [kind, caseId, expectedCaseVersion]
+    properties:
+      kind: {const: EXISTING_CASE}
+      caseId: {type: string, format: uuid}
+      expectedCaseVersion: {type: integer, minimum: 1}
+
+  SignalTriageDecisionV1:
+    type: object
+    additionalProperties: false
+    required:
+      - signalId
+      - expectedSignalVersion
+      - decision
+      - target
+      - task
+      - duplicateSignalId
+      - reasonCode
+      - reason
+      - expectedExplanationDigest
+    properties:
+      signalId: {type: string, format: uuid}
+      expectedSignalVersion: {type: integer, minimum: 1}
+      decision:
+        type: string
+        enum: [DISMISS, NEEDS_DATA, MARK_DUPLICATE, PROMOTE_TO_CASE, LINK_TO_CASE]
+      target:
+        anyOf:
+          - {$ref: '#/schemas/NewCaseTargetV1'}
+          - {$ref: '#/schemas/ExistingCaseTargetV1'}
+          - {type: 'null'}
+      task:
+        anyOf:
+          - {$ref: '#/schemas/TriageTaskV1'}
+          - {type: 'null'}
+      duplicateSignalId: {type: [string, 'null'], format: uuid}
+      reasonCode:
+        type: string
+        enum: [NOT_MATERIAL, EXPLAINED_BY_SOURCE, INSUFFICIENT_COVERAGE, IDENTITY_AMBIGUOUS, DUPLICATE_SIGNAL, INVESTIGATION_WARRANTED, LINK_TO_EXISTING_INVESTIGATION]
+      reason: {type: string, minLength: 1, maxLength: 4000}
+      expectedExplanationDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  SignalTriageReceiptV1:
+    type: object
+    additionalProperties: false
+    required:
+      - receiptId
+      - signalId
+      - signalVersion
+      - decision
+      - caseId
+      - caseVersion
+      - taskId
+      - taskOwnerUserId
+      - taskDueAt
+      - decisionDigest
+      - auditEventId
+      - outboxEventIds
+      - acceptedAt
+    properties:
+      receiptId: {type: string, format: uuid}
+      signalId: {type: string, format: uuid}
+      signalVersion: {type: integer, minimum: 1}
+      decision: {type: string, enum: [DISMISS, NEEDS_DATA, MARK_DUPLICATE, PROMOTE_TO_CASE, LINK_TO_CASE]}
+      caseId: {type: [string, 'null'], format: uuid}
+      caseVersion: {type: [integer, 'null'], minimum: 1}
+      taskId: {type: [string, 'null'], format: uuid}
+      taskOwnerUserId: {type: [string, 'null'], format: uuid}
+      taskDueAt: {type: [string, 'null'], format: date-time}
+      decisionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      auditEventId: {type: string, format: uuid}
+      outboxEventIds:
+        type: array
+        minItems: 1
+        maxItems: 10
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      acceptedAt: {type: string, format: date-time}
+
+  EvidenceLocatorRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - evidenceId
+      - evidenceVersion
+      - evidenceDigest
+      - sourceDocumentId
+      - sourceAssetId
+      - sourceAssetRevision
+      - sourceContentSha256
+      - locatorKind
+      - locatorValue
+      - locatorDigest
+    properties:
+      evidenceId: {type: string, format: uuid}
+      evidenceVersion: {type: integer, minimum: 1}
+      evidenceDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      sourceDocumentId: {type: string, format: uuid}
+      sourceAssetId: {type: string, format: uuid}
+      sourceAssetRevision: {type: integer, minimum: 1}
+      sourceContentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+      locatorKind:
+        type: string
+        enum: [PAGE_BBOX, XLSX_CELL, CSV_ROW_COLUMN, XML_XPATH, DOCX_PARAGRAPH, HWPX_XPATH, JSON_POINTER, HTML_CSS_SELECTOR, API_FIELD, TEXT_RANGE]
+      locatorValue: {type: string, minLength: 1, maxLength: 4000}
+      locatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  OrderedEvidenceLocatorRefV1:
+    type: object
+    additionalProperties: false
+    required: [ordinal, locator]
+    properties:
+      ordinal: {type: integer, minimum: 0}
+      locator: {$ref: '#/schemas/EvidenceLocatorRefV1'}
+
+  ResponseRequestEvidencePointerV1:
+    type: object
+    additionalProperties: false
+    required: [claimOrdinal, evidenceOrdinal, locatorDigest]
+    properties:
+      claimOrdinal: {type: integer, minimum: 0}
+      evidenceOrdinal: {type: integer, minimum: 0}
+      locatorDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+
+  ResponseRequestQuestionV1:
+    type: object
+    additionalProperties: false
+    required: [ordinal, questionId, text, claimOrdinals, evidencePointers]
+    properties:
+      ordinal: {type: integer, minimum: 0}
+      questionId: {type: string, format: uuid}
+      text: {type: string, minLength: 1, maxLength: 4000}
+      claimOrdinals:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: integer, minimum: 0}
+      evidencePointers:
+        type: array
+        minItems: 1
+        maxItems: 10000
+        items: {$ref: '#/schemas/ResponseRequestEvidencePointerV1'}
+
+  RequestedPublicationScopeMemberV1:
+    type: object
+    additionalProperties: false
+    required: [ordinal, claimOrdinals, responseUse, destination, excerptPolicy]
+    properties:
+      ordinal: {type: integer, minimum: 0}
+      claimOrdinals:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: integer, minimum: 0}
+      responseUse:
+        type: string
+        enum: [REQUEST_PRIVATE_RESPONSE, QUOTE_PUBLIC_RESPONSE, SUMMARIZE_PUBLIC_RESPONSE, PUBLISH_FULL_RESPONSE]
+      destination:
+        type: string
+        enum: [CASE_REVIEW, PUBLIC_ARTICLE, PUBLIC_DATASET]
+      excerptPolicy:
+        type: string
+        enum: [NONE, SUBJECT_APPROVAL_REQUIRED, EDITORIAL_REVIEW_REQUIRED]
+
+  PublicClaimRevisionRefV1:
+    type: object
+    additionalProperties: false
+    required:
+      - ordinal
+      - caseId
+      - claimId
+      - claimRevision
+      - claimDigest
+      - reviewSnapshotId
+      - publicCandidateRevision
+      - publicationRevision
+      - requestedResponseRole
+      - evidenceLocators
+    properties:
+      ordinal: {type: integer, minimum: 0}
+      caseId: {type: string, format: uuid}
+      claimId: {type: string, format: uuid}
+      claimRevision: {type: integer, minimum: 1}
+      claimDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      reviewSnapshotId: {type: string, format: uuid}
+      publicCandidateRevision: {type: integer, minimum: 1}
+      publicationRevision: {type: [integer, 'null'], minimum: 1}
+      requestedResponseRole:
+        type: string
+        enum: [CONFIRM, DISPUTE, EXPLAIN, PROVIDE_MISSING_INFORMATION]
+      evidenceLocators:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/OrderedEvidenceLocatorRefV1'}
+
+  ResponseRequestScopeV1:
+    type: object
+    additionalProperties: false
+    required:
+      - caseId
+      - expectedCaseVersion
+      - claims
+      - questions
+      - requestedPublicationScope
+      - claimSetDigest
+      - evidenceLocatorSetDigest
+      - questionSetDigest
+      - requestedPublicationScopeDigest
+      - subjectPartyType
+      - subjectEntityId
+      - subjectEntityRevision
+      - subjectIdentityDigest
+      - subjectDisplayName
+      - dueAt
+      - scopeDigest
+    properties:
+      caseId: {type: string, format: uuid}
+      expectedCaseVersion: {type: integer, minimum: 1}
+      claims:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/PublicClaimRevisionRefV1'}
+      questions:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/ResponseRequestQuestionV1'}
+      requestedPublicationScope:
+        type: array
+        minItems: 1
+        maxItems: 1000
+        items: {$ref: '#/schemas/RequestedPublicationScopeMemberV1'}
+      claimSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      evidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      questionSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      requestedPublicationScopeDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      subjectPartyType: {type: string, enum: [AGENCY, SUPPLIER, OTHER]}
+      subjectEntityId: {type: [string, 'null'], format: uuid}
+      subjectEntityRevision: {type: [integer, 'null'], minimum: 1}
+      subjectIdentityDigest: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+      subjectDisplayName: {type: [string, 'null'], minLength: 1, maxLength: 500}
+      dueAt: {type: string, format: date-time}
+      scopeDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+    allOf:
+      - if:
+          properties: {subjectPartyType: {enum: [AGENCY, SUPPLIER]}}
+          required: [subjectPartyType]
+        then:
+          properties:
+            subjectEntityId: {type: string, format: uuid}
+            subjectEntityRevision: {type: integer, minimum: 1}
+            subjectIdentityDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+            subjectDisplayName: {type: 'null'}
+      - if:
+          properties: {subjectPartyType: {const: OTHER}}
+          required: [subjectPartyType]
+        then:
+          properties:
+            subjectEntityId: {type: 'null'}
+            subjectEntityRevision: {type: 'null'}
+            subjectIdentityDigest: {type: 'null'}
+            subjectDisplayName: {type: string, minLength: 1, maxLength: 500}
+
+  ResponseRequestBindingReceiptV1:
+    type: object
+    additionalProperties: false
+    required:
+      - responseRequestId
+      - responseRequestVersion
+      - scopeDigest
+      - claimSetDigest
+      - evidenceLocatorSetDigest
+      - questionSetDigest
+      - requestedPublicationScopeDigest
+      - deliveryActionContentDigest
+      - auditEventId
+      - outboxEventIds
+      - acceptedAt
+    properties:
+      responseRequestId: {type: string, format: uuid}
+      responseRequestVersion: {type: integer, minimum: 1}
+      scopeDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      claimSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      evidenceLocatorSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      questionSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      requestedPublicationScopeDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      deliveryActionContentDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      auditEventId: {type: string, format: uuid}
+      outboxEventIds:
+        type: array
+        minItems: 1
+        maxItems: 10
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      acceptedAt: {type: string, format: date-time}
+
+  ProcurementContractFilterV1:
+    type: object
+    additionalProperties: false
+    required:
+      - query
+      - agencyIds
+      - supplierIds
+      - contractStatuses
+      - procurementMethods
+      - signedFrom
+      - signedTo
+      - amountMin
+      - amountMax
+      - sort
+    properties:
+      query: {type: [string, 'null'], minLength: 1, maxLength: 512}
+      agencyIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      supplierIds:
+        type: array
+        maxItems: 1000
+        uniqueItems: true
+        items: {type: string, format: uuid}
+      contractStatuses:
+        type: array
+        maxItems: 7
+        uniqueItems: true
+        items: {type: string, enum: [ANNOUNCED, AWARDED, ACTIVE, COMPLETED, CANCELLED, SUPERSEDED, UNKNOWN]}
+      procurementMethods:
+        type: array
+        maxItems: 100
+        uniqueItems: true
+        items: {type: string, minLength: 1, maxLength: 300}
+      signedFrom: {type: [string, 'null'], format: date}
+      signedTo: {type: [string, 'null'], format: date}
+      amountMin: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      amountMax: {type: [string, 'null'], pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'}
+      sort:
+        type: string
+        enum: [SIGNED_DESC, AMOUNT_DESC, AMOUNT_ASC, TITLE_ASC]
+
+  ProcurementQuerySnapshotV1:
+    type: object
+    additionalProperties: false
+    required:
+      - snapshotId
+      - datasetId
+      - filters
+      - filterDigest
+      - projectionGeneration
+      - projectionWatermark
+      - visibilityAsOf
+      - memberCount
+      - memberSetDigest
+      - expiresAt
+    properties:
+      snapshotId: {type: string, format: uuid}
+      datasetId: {const: PUBLIC_CONTRACTS}
+      filters: {$ref: '#/schemas/ProcurementContractFilterV1'}
+      filterDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      projectionGeneration: {type: string, format: uuid}
+      projectionWatermark: {type: integer, minimum: 0}
+      visibilityAsOf: {type: string, format: date-time}
+      memberCount: {type: integer, minimum: 0}
+      memberSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      expiresAt: {type: string, format: date-time}
+
+  ProcurementExportRequestBindingV1:
+    type: object
+    additionalProperties: false
+    required: [snapshotId, filterDigest, memberSetDigest, format]
+    properties:
+      snapshotId: {type: string, format: uuid}
+      filterDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      memberSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      format: {type: string, enum: [CSV, JSONL, PARQUET]}
+
+  ProcurementExportReceiptV1:
+    type: object
+    additionalProperties: false
+    required:
+      - exportId
+      - snapshotId
+      - filterDigest
+      - memberCount
+      - memberSetDigest
+      - format
+      - mediaType
+      - byteLength
+      - contentSha256
+      - rightsDecisionDigest
+      - generatedAt
+      - expiresAt
+    properties:
+      exportId: {type: string, format: uuid}
+      snapshotId: {type: string, format: uuid}
+      filterDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      memberCount: {type: integer, minimum: 0}
+      memberSetDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      format: {type: string, enum: [CSV, JSONL, PARQUET]}
+      mediaType: {type: string, enum: [text/csv, application/x-ndjson, application/vnd.apache.parquet]}
+      byteLength: {type: integer, minimum: 0}
+      contentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+      rightsDecisionDigest: {type: string, pattern: '^[0-9a-f]{64}$'}
+      generatedAt: {type: string, format: date-time}
+      expiresAt: {type: string, format: date-time}
+
+schema_invariants:
+  revision_chain:
+    - Revision 1 has null predecessorRevisionId, predecessorRecordDigest, and supersedesRevisionId.
+    - Every later revision points to revision minus one of the same root and carries that row's exact recordDigest in predecessorRecordDigest.
+    - supersedesRevisionId equals predecessorRevisionId for a normal change, correction, cancellation, deletion, or tombstone.
+    - A duplicate source revision and recordDigest is an idempotent replay; the same source identity with different bytes is a conflict and quarantines the record.
+    - Effective ordering uses known source effective time, then source revision token, then recordDigest only as a deterministic tie-breaker; a tie-breaker never invents business time.
+    - EffectiveTime UNKNOWN is allowed for preservation but blocks time-window, amendment-order, bidder-count, and current-state rules.
+  cross_object_linkage:
+    - AwardRevision.noticeRevision.objectType is PROCUREMENT_NOTICE.
+    - AwardRevision.noticeIdentity.noticeRevision is byte-equal to noticeRevision, and externalNoticeId is escaped(noticeNumber) plus hash plus escaped(noticeOrder); both bidNtceNo and bidNtceOrd are mandatory source fields.
+    - BidderParticipationRevision.noticeRevision.objectType is PROCUREMENT_NOTICE.
+    - ProcurementContractRevision notice and award refs, when present, are PROCUREMENT_NOTICE and AWARD respectively.
+    - ContractAmendment contractBefore and contractAfter are PROCUREMENT_CONTRACT refs for the same root; after.revision equals before.revision plus one.
+    - An amendment sequence equals contractAfter.revision minus one and cannot skip a predecessor.
+    - Missing or ambiguous notice/award linkage remains null with a limitation and cannot be guessed from title, amount, date, or party name.
+  supplier_identity:
+    - Every source party first becomes a SupplierIdentityCandidate; canonicalSupplier is nullable until a recorded decision proves the binding.
+    - SupplierPartyRef identityStatus VERIFIED requires a non-null canonicalSupplier with the same VERIFIED status; every other status is ineligible for rule grouping or public relationship projection.
+    - MERGE has at least two source candidates and exactly one target canonical supplier.
+    - SPLIT has exactly one prior canonical supplier and at least two target canonical suppliers, plus a non-null impact task owner and due date.
+    - KEEP_SEPARATE and MARK_AMBIGUOUS do not reparent historical rows.
+    - A split never rewrites a public revision. Every affected public revision creates correction-impact work before any new projection is approved.
+    - Name-only, address-only, representative-only, phone-only, or one weak shared identifier evidence cannot yield VERIFIED.
+    - SupplierIdentityResolutionReceipt candidateRefs ordinals are contiguous from zero and reproduce every candidate ID/revision/digest, candidate source locator, and identifier fact used by the decision.
+    - Receipt candidateSetDigest, evidenceLocatorSetDigest, priorDecisionDigest, actorUserId, reasonCode, and reason equal the immutable decision row exactly; a digest-only receipt is invalid.
+  supplier_assertions:
+    - OWNERSHIP and BENEFICIAL_OWNERSHIP require ownershipPercent; all other kinds require null ownershipPercent.
+    - MANAGEMENT_ROLE requires managementRole; every other kind requires null managementRole.
+    - VERIFIED requires both parties VERIFIED, at least one locator for a VERIFIED evidence revision, verifiedBy, verifiedAt, verificationReason, and no unresolved counter assertion.
+    - Conflicting current assertions are both retained and the current status is CONFLICTED; neither is usable by a rule or public claim.
+    - publicUseStatus APPROVED requires a separate exact-revision editorial/publication decision; domain verification alone never authorizes publication.
+    - CreateSupplierRelationshipAssertionRequestV1 always creates PENDING; it cannot supply server-generated verification fields.
+    - VERIFY requires the exact current assertion and evidence-locator set digests and an actor independent from the assertion author; stale or same-author decisions have zero effects.
+  signal_explanation:
+    - inputFactRefs ordinals are contiguous from zero and the included/excluded partition is exact for the locked input snapshot.
+    - Every inputFactRef uses exactly one closed typed fact variant. Line item, unit, VAT basis, bundle composition, supplier candidate, supplier identifier, incorporation, relationship, and notice specification facts cannot be represented by a generic procurement revision or free-form map.
+    - A SIGNAL or NO_SIGNAL requires COMPLETE rule-specific material coverage, CURRENT freshness, COMPLETE counter-evidence search, and VERIFIED identities for every grouping or subject identity.
+    - PARTIAL, UNKNOWN, NOT_AVAILABLE, STALE, SOURCE_UNAVAILABLE, AMBIGUOUS, CONFLICTED, or UNVERIFIED produces BLOCKED with at least one typed blocker.
+    - An empty counterEvidence array is valid only when counterEvidenceSearchStatus is COMPLETE and coverage records the searched scope; it never means no contrary material exists outside the scope.
+    - coverage.counterEvidenceSearchScope and coverage.counterEvidenceSearchReceipt bind the same scope ID/digest, repositories, queries and input snapshot; counterEvidenceSearchStatus equals the receipt status and every CounterEvidenceRef carries that receipt digest.
+    - BLOCKED has at least one closed ProcurementRuleBlockerCodeV1. SIGNAL and NO_SIGNAL have an empty blocker array; unknown blocker strings are rejected.
+    - ordinaryLanguageSummary describes observed records and calculation only. nonConclusion explicitly states that the result does not establish illegality, corruption, intent, favoritism, or fault.
+    - explanationDigest covers every field except itself and equals the signal row's immutable explanation digest.
+  triage:
+    - PROMOTE_TO_CASE requires NewCaseTargetV1 and a non-null task owned by a user with a future dueAt.
+    - LINK_TO_CASE requires ExistingCaseTargetV1 and a non-null task; the case and signal link are inserted atomically with the decision and task.
+    - NEEDS_DATA requires a COLLECT_MISSING_DATA or VERIFY_IDENTITY task and null target.
+    - MARK_DUPLICATE requires duplicateSignalId and null target and task.
+    - DISMISS requires null target, task, and duplicateSignalId and a bounded non-conclusory reason.
+    - A receipt for PROMOTE_TO_CASE or LINK_TO_CASE requires non-null caseId, caseVersion, taskId, taskOwnerUserId, and taskDueAt.
+    - No branch may update the signal without its case/link/task/audit/outbox effects; rollback is all-or-nothing.
+  response_request:
+    - claims are sorted by ordinal, ordinals are contiguous from zero, and every claim belongs to caseId and the locked review snapshot.
+    - Each claim binds its exact claim revision/digest and at least one exact evidence revision/source locator/digest; evidence locator ordinals are contiguous from zero within each claim.
+    - questions and requestedPublicationScope are material ordered arrays with contiguous zero-based ordinals. Every referenced claim/evidence ordinal exists, and no duplicate question ID or claim/evidence pointer is allowed.
+    - questionSetDigest is recomputed from the complete ordered questions. requestedPublicationScopeDigest is recomputed from the complete ordered publication-scope members; neither digest may stand in for omitted source members.
+    - AGENCY and SUPPLIER subjects require non-null exact entity ID/revision/identity digest and null display name. OTHER requires null entity fields and a non-empty display name.
+    - publicationRevision is null only for a not-yet-published public candidate; otherwise it is the exact immutable publication revision containing the claim.
+    - scopeDigest covers case/version, ordered claim refs, ordered evidence locators, questions, requested publication scope, subject, and dueAt.
+    - Send, delivery, response session, submission, excerpt decision, appeal, correction, and publication all carry the same scopeDigest or an explicitly linked superseding scope digest.
+    - A stale claim, changed evidence locator, cross-case evidence, incomplete locator, or digest mismatch rejects the command with zero request, delivery, audit-success, or outbox rows.
+  filter_export:
+    - Omitted filter arrays normalize to empty arrays meaning all authorized values; present empty and omitted are the same canonical value.
+    - Filter arrays are mathematical sets and canonicalized by the declared enum or UUID order; duplicates and unknown values are INVALID_PARAMETER.
+    - signedFrom after signedTo and amountMin greater than amountMax are INVALID_PARAMETER.
+    - filterDigest covers datasetId, the complete canonical ProcurementContractFilterV1, and sort; cursor, page limit, format, email, and abuse proof are excluded.
+    - listContracts returns the snapshotId, filterDigest, projection generation/watermark, visibilityAsOf, memberCount, and memberSetDigest used for the result.
+    - downloadContracts and createDatasetExport accept ProcurementExportRequestBindingV1 and require exact equality with the locked unexpired snapshot before any bytes or job row is created.
+    - Export receipt filterDigest, memberCount, and memberSetDigest equal the query snapshot exactly. A changed filter, changed snapshot, current-data rerun, or visibility drift is a typed conflict, never a silent export of another set.
+
+logical_relations:
+  - relation: core.procurement_notice_revisions
+    schema: ProcurementNoticeRevisionV1
+    primary_key: [revision_id]
+    candidate_keys:
+      - [root_id, revision]
+      - [source_document_id, parsed_record_id, mapping_version, record_digest]
+      - [revision_id, root_id, revision, record_digest]
+    mutability: append_only
+  - relation: core.procurement_award_revisions
+    schema: AwardRevisionV1
+    primary_key: [revision_id]
+    candidate_keys:
+      - [root_id, revision]
+      - [revision_id, root_id, revision, record_digest]
+    mutability: append_only
+  - relation: core.procurement_bidder_participation_revisions
+    schema: BidderParticipationRevisionV1
+    primary_key: [revision_id]
+    candidate_keys:
+      - [root_id, revision]
+      - [notice_root_id, candidate_id, external_participation_id, revision]
+      - [revision_id, root_id, revision, record_digest]
+    mutability: append_only
+  - relation: core.procurement_contract_revisions
+    schema: ProcurementContractRevisionV1
+    primary_key: [revision_id]
+    candidate_keys:
+      - [root_id, revision]
+      - [source_id, external_contract_id, revision]
+      - [revision_id, root_id, revision, record_digest]
+    mutability: append_only
+  - relation: core.procurement_contract_amendment_revisions
+    schema: ContractAmendmentRevisionV1
+    primary_key: [revision_id]
+    candidate_keys:
+      - [root_id, revision]
+      - [contract_root_id, amendment_sequence]
+      - [revision_id, root_id, revision, record_digest]
+    mutability: append_only
+  - relation: core.supplier_identity_candidates
+    schema: SupplierIdentityCandidateV1
+    primary_key: [candidate_id, candidate_revision]
+    candidate_keys:
+      - [candidate_id, candidate_revision, candidate_digest]
+      - [source_document_id, source_locator_digest, candidate_revision]
+    mutability: append_only
+  - relation: core.supplier_identity_resolution_decisions
+    schema: SupplierIdentityResolutionDecisionV1
+    primary_key: [decision_id]
+    candidate_keys:
+      - [decision_sequence, expected_candidate_set_digest]
+      - [decision_id, decision_digest]
+    mutability: append_only
+  - relation: core.supplier_relationship_assertions
+    schema: SupplierRelationshipAssertionV1
+    primary_key: [assertion_id, assertion_revision]
+    candidate_keys:
+      - [assertion_id, assertion_revision, assertion_digest]
+      - [relationship_kind, subject_identity_key_digest, object_identity_key_digest, valid_from, assertion_revision]
+    mutability: append_only
+  - relation: core.procurement_query_snapshots
+    schema: ProcurementQuerySnapshotV1
+    primary_key: [snapshot_id]
+    candidate_keys:
+      - [snapshot_id, filter_digest, member_set_digest]
+      - [dataset_id, filter_digest, projection_generation, projection_watermark, visibility_as_of]
+    mutability: immutable
+
+logical_foreign_keys:
+  - id: procurement_source_revision_document_fk
+    from: every procurement revision [source_document_id, source_asset_id, source_asset_revision, source_content_sha256]
+    to: raw.source_documents [id, asset_id, asset_revision, content_sha256]
+    on_delete: RESTRICT
+  - id: procurement_source_revision_parsed_record_fk
+    from: every procurement revision [parsed_record_id, source_document_id, record_digest]
+    to: raw.parsed_records [id, source_document_id, payload_sha256]
+    on_delete: RESTRICT
+  - id: procurement_normalization_run_fk
+    from: every procurement revision [normalization_run_id, source_document_id, revision_id, revision, record_digest]
+    to: core.normalization_runs [id, source_document_id, output_object_id, output_object_version, output_payload_sha256]
+    on_delete: RESTRICT
+  - id: procurement_revision_predecessor_fk
+    from: each revision after one [root_id, predecessor_revision_id, revision_minus_one, predecessor_record_digest]
+    to: same relation [root_id, revision_id, revision, record_digest]
+    on_delete: RESTRICT
+  - id: award_notice_revision_fk
+    from: core.procurement_award_revisions [notice_root_id, notice_revision_id, notice_revision, notice_record_digest]
+    to: core.procurement_notice_revisions [root_id, revision_id, revision, record_digest]
+    on_delete: RESTRICT
+  - id: bidder_notice_revision_fk
+    from: core.procurement_bidder_participation_revisions [notice_root_id, notice_revision_id, notice_revision, notice_record_digest]
+    to: core.procurement_notice_revisions [root_id, revision_id, revision, record_digest]
+    on_delete: RESTRICT
+  - id: procurement_supplier_candidate_fk
+    from: award, bidder, and contract party refs [candidate_id, candidate_revision, candidate_digest]
+    to: core.supplier_identity_candidates [candidate_id, candidate_revision, candidate_digest]
+    on_delete: RESTRICT
+  - id: contract_notice_revision_fk
+    from: core.procurement_contract_revisions [notice_root_id, notice_revision_id, notice_revision, notice_record_digest]
+    to: core.procurement_notice_revisions [root_id, revision_id, revision, record_digest]
+    nullable_as_tuple: true
+    on_delete: RESTRICT
+  - id: contract_award_revision_fk
+    from: core.procurement_contract_revisions [award_root_id, award_revision_id, award_revision, award_record_digest]
+    to: core.procurement_award_revisions [root_id, revision_id, revision, record_digest]
+    nullable_as_tuple: true
+    on_delete: RESTRICT
+  - id: amendment_contract_before_fk
+    from: core.procurement_contract_amendment_revisions [contract_root_id, contract_before_revision_id, contract_before_revision, contract_before_digest]
+    to: core.procurement_contract_revisions [root_id, revision_id, revision, record_digest]
+    on_delete: RESTRICT
+  - id: amendment_contract_after_fk
+    from: core.procurement_contract_amendment_revisions [contract_root_id, contract_after_revision_id, contract_after_revision, contract_after_digest]
+    to: core.procurement_contract_revisions [root_id, revision_id, revision, record_digest]
+    on_delete: RESTRICT
+  - id: identity_decision_candidate_fk
+    from: core.supplier_identity_resolution_decision_members [candidate_id, candidate_revision, candidate_digest]
+    to: core.supplier_identity_candidates [candidate_id, candidate_revision, candidate_digest]
+    on_delete: RESTRICT
+  - id: relationship_assertion_evidence_fk
+    from: core.supplier_relationship_assertion_evidence [evidence_id, evidence_version, evidence_digest, source_document_id, source_asset_id, source_asset_revision, locator_digest]
+    to: exact editorial evidence revision and raw source locator candidate keys
+    on_delete: RESTRICT
+  - id: response_request_claim_revision_fk
+    from: editorial.response_request_claim_scopes [case_id, claim_id, claim_revision, claim_digest, review_snapshot_id]
+    to: exact immutable editorial claim revision and review snapshot candidate key
+    on_delete: RESTRICT
+  - id: response_request_evidence_locator_fk
+    from: editorial.response_request_evidence_scopes [evidence_id, evidence_version, evidence_digest, source_document_id, source_asset_id, source_asset_revision, source_content_sha256, locator_digest]
+    to: exact immutable evidence revision and source locator candidate key
+    on_delete: RESTRICT
+  - id: procurement_export_snapshot_fk
+    from: intake.dataset_export_requests and public download receipt [snapshot_id, filter_digest, member_set_digest]
+    to: core.procurement_query_snapshots [snapshot_id, filter_digest, member_set_digest]
+    on_delete: RESTRICT
+
+physical_integration_needs:
+  - Extend core.normalization_runs.output_object_type with the five procurement object types only after physical tables and exact output candidate keys exist.
+  - Preserve core.contracts and core.contract_changes as legacy projections; they are not immutable revision authority after this addendum is implemented.
+  - Add concrete tables for every logical relation, decision member, assertion evidence, response scope member, and query snapshot member; opaque JSONB is not a substitute.
+  - Add immutable/update-delete rejection triggers, exact predecessor constraints, deferred cross-revision constraints, RLS/privileges, repository mappings, and PostgreSQL concurrency tests.
+  - Add source-derived catalog totals only after the physical migration exists; do not preserve an old magic count by hiding a relation in JSONB.
+
+schema_validation_contract:
+  dialect: https://json-schema.org/draft/2020-12/schema
+  inventory:
+    source: keys(schemas)
+    minimum_schema_count: 42
+    count_rule: derive at validation time; a hand-written exact total is forbidden
+  mandatory_per_schema_tests:
+    meta_schema:
+      test_id_formula: schema name plus META
+      assertion: Draft 2020-12 meta-schema validation succeeds with unknown keywords rejected by the contract linter.
+    reference_resolution:
+      test_id_formula: schema name plus REF
+      assertion: Every local reference resolves within this document and every reference branch can be reached from a root instance.
+    positive:
+      test_id_formula: schema name plus POSITIVE
+      assertion: One minimal canonical instance and every conditional branch validate after format checking is enabled.
+    negative_missing_required:
+      test_id_formula: schema name plus NEGATIVE_MISSING_REQUIRED
+      assertion: Removing each required property one at a time is rejected at the exact JSON pointer.
+    negative_additional_property:
+      test_id_formula: schema name plus NEGATIVE_ADDITIONAL_PROPERTY
+      assertion: Adding one unknown member to every object schema is rejected at that object boundary.
+    negative_closed_value:
+      test_id_formula: schema name plus NEGATIVE_CLOSED_VALUE
+      assertion: Unknown enum, wrong const, malformed digest, invalid UUID/date/time, duplicate set member, and out-of-range ordinal are rejected where applicable.
+  cross_schema_tests:
+    - RuleFactRevisionRefV1 rejects generic maps and accepts each of its ten typed fact variants exactly once.
+    - ProcurementSignalExplanationV1 rejects BLOCKED with no blocker, unknown blockers, and SIGNAL or NO_SIGNAL with a blocker.
+    - ResponseRequestScopeV1 rejects missing ordered question/publication members, ordinal gaps, and every invalid subject conditional branch.
+    - SupplierIdentityResolutionReceiptV1 rejects a digest-only receipt without exact candidate/locator/actor/reason/prior-decision material.
+    - KonepsMappingActivationReceiptV1 rejects any mapping contract digest unequal to the active connector addendum binding.
+  executable_status: OPEN_IMPLEMENTATION
+  required_artifact: tests/integration/acceptance/procurement_domain_schema_contract.rs
+  completion_gate: >-
+    The validator must report the source-derived schema count and one META, REF,
+    POSITIVE, NEGATIVE_MISSING_REQUIRED, NEGATIVE_ADDITIONAL_PROPERTY and
+    NEGATIVE_CLOSED_VALUE result per applicable schema with zero skip, xfail or
+    fixture-only substitutions before this contract can become FINAL.
+
+implementation_closure:
+  runtime:
+    status: OPEN_IMPLEMENTATION
+    required: Rust normalizers, typed rule snapshot builder, deterministic digest verifier, decision handlers and immutable receipt repositories
+  api:
+    status: OPEN_IMPLEMENTATION
+    required: effective request/response schemas and operations for identity, relationship, triage, response scope, list snapshot and export binding
+  database:
+    status: OPEN_IMPLEMENTATION
+    required: concrete PostgreSQL relations, exact candidate/foreign keys, append-only triggers, RLS/privileges, concurrency and replay tests
+  ui:
+    status: OPEN_IMPLEMENTATION
+    required: typed source/revision/coverage/counter-evidence/uncertainty/next-action surfaces without generic JSON fallback
+  acceptance_runner:
+    status: OPEN_IMPLEMENTATION
+    required: executable bindings for AC-PROCUREMENT-DOMAIN-001 through AC-PROCUREMENT-DOMAIN-020 plus the schema validation contract
+  closure_rule: >-
+    REVIEW_REQUIRED remains mandatory while any layer is OPEN_IMPLEMENTATION.
+    This contract design is not runtime, API, database, UI, fixture or hard-gate
+    completion evidence.
+
+detection_rule_closure:
+  exact_rule_ids:
+    - PRICE_OUTLIER
+    - CONTRACT_SPLITTING_PATTERN
+    - REPEATED_SINGLE_SOURCE
+    - SUPPLIER_CONCENTRATION
+    - LOW_BID_COMPETITION
+    - RESTRICTIVE_SPECIFICATION
+    - CONTRACT_AMENDMENT_ESCALATION
+    - YEAR_END_SPENDING_SPIKE
+    - NEW_SUPPLIER_DEPENDENCE
+    - SHARED_SUPPLIER_IDENTITY
+  common_output_schema: ProcurementSignalExplanationV1
+  common_required_blockers:
+    identity: IDENTITY_AMBIGUOUS
+    coverage: SOURCE_COVERAGE_INCOMPLETE
+    freshness: SOURCE_STALE_OR_UNAVAILABLE
+    effective_time: EFFECTIVE_TIME_UNKNOWN
+    revision_chain: REVISION_CHAIN_INCOMPLETE
+    counter_evidence: COUNTER_EVIDENCE_REVIEW_INCOMPLETE
+  rules:
+    PRICE_OUTLIER:
+      ordinary_language_title: 비슷한 조건의 관측값보다 높은 가격
+      required_fact_types: [PROCUREMENT_CONTRACT]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [unit, quantity, VAT basis, bundle contents, shipping, installation, maintenance, warranty, date window, comparable inclusion and exclusion]
+      counter_evidence_kinds: [COMPARABILITY_LIMIT, SCOPE_EXPLANATION, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+    CONTRACT_SPLITTING_PATTERN:
+      ordinary_language_title: 짧은 기간에 나뉘어 체결된 비슷한 계약
+      required_fact_types: [PROCUREMENT_NOTICE, PROCUREMENT_CONTRACT, CONTRACT_AMENDMENT]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [complete window, category, method, threshold version, cancellations, superseded contracts, amendment chain]
+      counter_evidence_kinds: [SCOPE_EXPLANATION, LEGAL_OR_POLICY_CONTEXT, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+    REPEATED_SINGLE_SOURCE:
+      ordinary_language_title: 같은 기관과 업체 사이의 반복 수의계약 관측
+      required_fact_types: [PROCUREMENT_CONTRACT, CONTRACT_AMENDMENT]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [complete window, procurement method, category, amount, distinct contract date, cancellation and correction]
+      counter_evidence_kinds: [LEGAL_OR_POLICY_CONTEXT, SCOPE_EXPLANATION, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+    SUPPLIER_CONCENTRATION:
+      ordinary_language_title: 관측 범위에서 한 업체에 집중된 계약 금액
+      required_fact_types: [PROCUREMENT_CONTRACT, CONTRACT_AMENDMENT]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [complete denominator, comparable category, period, currency, cancellation, supplier merge and split history]
+      counter_evidence_kinds: [COMPARABILITY_LIMIT, SCOPE_EXPLANATION, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+    LOW_BID_COMPETITION:
+      ordinary_language_title: 경쟁 절차에서 유효 입찰자가 적게 관측됨
+      required_fact_types: [PROCUREMENT_NOTICE, BIDDER_PARTICIPATION, AWARD]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [complete participant set, validation status, withdrawal, emergency basis, notice revision, award revision]
+      counter_evidence_kinds: [LEGAL_OR_POLICY_CONTEXT, SCOPE_EXPLANATION, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+      source_gap_rule: Missing exact BidderParticipation mapping is BIDDER_PARTICIPATION_COVERAGE_UNAVAILABLE and always BLOCKED.
+    RESTRICTIVE_SPECIFICATION:
+      ordinary_language_title: 특정 상표·모델 조건과 낮은 입찰 참여가 함께 관측됨
+      required_fact_types: [PROCUREMENT_NOTICE, BIDDER_PARTICIPATION]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [complete specification text, equivalent language, justification, participant set, notice revision]
+      counter_evidence_kinds: [SCOPE_EXPLANATION, LEGAL_OR_POLICY_CONTEXT, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+    CONTRACT_AMENDMENT_ESCALATION:
+      ordinary_language_title: 최초 계약 뒤 금액·기간이 크게 변경됨
+      required_fact_types: [PROCUREMENT_CONTRACT, CONTRACT_AMENDMENT]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [revision one, every amendment, previous and new amount, currency, scope reason, cancellation]
+      counter_evidence_kinds: [SCOPE_EXPLANATION, LEGAL_OR_POLICY_CONTEXT, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+    YEAR_END_SPENDING_SPIKE:
+      ordinary_language_title: 관측 연도의 연말 집행 비중이 높음
+      required_fact_types: [PROCUREMENT_CONTRACT, CONTRACT_AMENDMENT]
+      required_identity_roles: [AGENCY]
+      material_coverage: [all twelve months, fiscal timezone, cancelled and corrected contracts, currency, denominator]
+      counter_evidence_kinds: [SCOPE_EXPLANATION, LEGAL_OR_POLICY_CONTEXT, SOURCE_CORRECTION]
+    NEW_SUPPLIER_DEPENDENCE:
+      ordinary_language_title: 설립 초기 업체와 특정 기관의 계약 비중이 높음
+      required_fact_types: [PROCUREMENT_CONTRACT, CONTRACT_AMENDMENT]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [verified incorporation date, complete public spend denominator, amendment chain, supplier merge and split history]
+      counter_evidence_kinds: [COMPARABILITY_LIMIT, SCOPE_EXPLANATION, SUBJECT_RESPONSE, SOURCE_CORRECTION]
+    SHARED_SUPPLIER_IDENTITY:
+      ordinary_language_title: 서로 다른 업체 후보에서 검증된 식별정보가 겹침
+      required_fact_types: [PROCUREMENT_CONTRACT]
+      required_identity_roles: [AGENCY, SUPPLIER]
+      material_coverage: [two distinct verified candidates, strong identifier provenance, complete contract context, merge and split history]
+      counter_evidence_kinds: [SOURCE_CORRECTION, COMPARABILITY_LIMIT, SUBJECT_RESPONSE]
+  set_equality:
+    - exact_rule_ids equals keys(rules).
+    - Every rule has one ordinary-language title, required fact types, identity roles, material coverage list, and counter-evidence kind list.
+    - Every persisted signal validates ProcurementSignalExplanationV1 and binds one immutable input snapshot before insertion.
+
+operation_needs:
+  existing_operations:
+    getSignalTriageView:
+      additive_response_fields:
+        explanation: ProcurementSignalExplanationV1
+        sourceRevisionChain: array<RevisionRefV1>
+        identityDecisionHistory: array<SupplierIdentityResolutionDecisionV1>
+      rule: Generic RuleExplanation, string explanation, and opaque calculation do not satisfy the effective response.
+    triageSignal:
+      transport_compatibility:
+        investigate: PROMOTE_TO_CASE
+        dismiss: DISMISS
+        duplicate: MARK_DUPLICATE
+        needs_data: NEEDS_DATA
+      additive_request_fields:
+        decisionDetail: SignalTriageDecisionV1
+      success_schema: SignalTriageReceiptV1
+      transaction_branches:
+        PROMOTE_TO_CASE: lock signal and explanation snapshot; insert case, case-signal link, owned task, triage decision, audit, outbox, and receipt atomically
+        NEEDS_DATA: lock signal; insert owned data task, update signal, audit, outbox, and receipt atomically
+        DISMISS: lock signal; update status, insert decision, audit, outbox, and receipt atomically
+        MARK_DUPLICATE: lock both signals in UUID order; insert duplicate relation, update signal, audit, outbox, and receipt atomically
+      incompatibility_rule: Base decision and decisionDetail.decision must map exactly; mismatch is INVALID_PARAMETER.
+    linkSignalToCase:
+      domain_decision: LINK_TO_CASE
+      additive_request_fields:
+        target: ExistingCaseTargetV1
+        task: TriageTaskV1
+        reasonCode: enum<LINK_TO_EXISTING_INVESTIGATION>
+        expectedExplanationDigest: sha256
+      success_schema: SignalTriageReceiptV1
+      transaction: lock signal and case in stable order; insert link, owned task, decision, audit, outbox, and receipt atomically
+    getContract:
+      additive_response_fields:
+        noticeRevision: nullable<RevisionRefV1>
+        awardRevision: nullable<RevisionRefV1>
+        currentContractRevision: RevisionRefV1
+        amendmentRevisions: array<RevisionRefV1>
+        identityQuality: IdentityQualityV1
+        coverage: CoverageSummaryV1
+      rule: Public projection exposes only approved identifiers and never hides incomplete award, participant, identity, or amendment coverage.
+    listContracts:
+      canonical_request_schema: ProcurementContractFilterV1
+      additive_response_fields:
+        querySnapshot: ProcurementQuerySnapshotV1
+      rule: appliedFilters is byte-equivalent to querySnapshot.filters after canonicalization.
+    downloadContracts:
+      additive_request_fields:
+        filters: ProcurementContractFilterV1
+        exportBinding: ProcurementExportRequestBindingV1
+      success_metadata_schema: ProcurementExportReceiptV1
+      rule: All list filter dimensions are accepted; the legacy four-filter subset cannot silently widen the export.
+    createDatasetExport:
+      when: datasetId equals PUBLIC_CONTRACTS
+      additive_request_fields:
+        filters: ProcurementContractFilterV1
+        exportBinding: ProcurementExportRequestBindingV1
+      success_metadata_schema: ProcurementExportReceiptV1
+      rule: Generic DatasetExportFilters cannot substitute for the procurement filter or snapshot binding.
+    getResponseRequestComposer:
+      additive_response_fields:
+        responseScope: ResponseRequestScopeV1
+      rule: Composer shows exact claim revisions, evidence locators, counter-evidence, subject scope, and resulting scope digest before send.
+    saveResponseRequestDraft:
+      additive_request_fields:
+        responseScope: ResponseRequestScopeV1
+      success_schema: ResponseRequestBindingReceiptV1
+      rule: Every scope-changing save appends a draft revision and a new scope digest; it never mutates a sent request.
+    createResponseRequest:
+      additive_request_fields:
+        responseScope: ResponseRequestScopeV1
+      success_schema: ResponseRequestBindingReceiptV1
+      transaction: lock case, exact claims, exact evidence revisions and locators, scope, subject endpoint and idempotency row; validate set digests; insert request, scope members, delivery proposal binding, audit, outbox and receipt atomically
+  required_new_operations:
+    recordSupplierIdentityResolution:
+      reason: AC-ENTITY_RESOLUTION-003 and AC-ENTITY_RESOLUTION-004 have no base command capable of recording append-only merge/split history.
+      request_schema: SupplierIdentityResolutionRequestV1
+      success_schema: SupplierIdentityResolutionReceiptV1
+      catalog_rule: Add to canonical operation, command, persistence, event, authorization, UI action, and acceptance inventories together; derive counts from source.
+    recordSupplierRelationshipAssertion:
+      reason: Verified ownership, control, management, representative, and contractual facts cannot be encoded as a generic evidence link.
+      request_schema: CreateSupplierRelationshipAssertionRequestV1
+      success_schema: SupplierRelationshipAssertionReceiptV1
+      catalog_rule: Add to canonical inventories together; creation starts PENDING and cannot claim VERIFIED.
+    decideSupplierRelationshipAssertion:
+      reason: Verification is an independent human decision over an exact assertion/evidence digest.
+      request_schema: DecideSupplierRelationshipAssertionRequestV1
+      success_schema: SupplierRelationshipAssertionReceiptV1
+      catalog_rule: Add to canonical inventories together with independence and version-conflict gates.
+  internal_job_needs:
+    normalizeKonepsProcurementRevision:
+      input: SourceRevisionRefV1
+      outputs:
+        - ProcurementNoticeRevisionV1
+        - AwardRevisionV1
+        - BidderParticipationRevisionV1
+        - ProcurementContractRevisionV1
+        - ContractAmendmentRevisionV1
+      rule: Output variants are operation-allowlisted by the KONEPS mapping addendum; unsupported variants return a typed blocked receipt with zero domain rows.
+    evaluateProcurementRule:
+      input: immutable DatasetSnapshot plus exact rule version
+      output: ProcurementSignalExplanationV1
+      rule: Insert a signal only after schema validation, source/identity/coverage fences, deterministic replay, and explanation digest equality pass.
+
+receipt_contracts:
+  identity_resolution:
+    schema: SupplierIdentityResolutionReceiptV1
+    immutable: true
+  relationship_assertion:
+    schema: SupplierRelationshipAssertionReceiptV1
+    immutable: true
+  signal_triage:
+    schema: SignalTriageReceiptV1
+    immutable: true
+  response_request:
+    schema: ResponseRequestBindingReceiptV1
+    immutable: true
+  procurement_export:
+    schema: ProcurementExportReceiptV1
+    immutable: true
+
+acceptance_bindings:
+  feature: tests/acceptance/procurement-domain-addendum.feature
+  scenario_ids:
+    - AC-PROCUREMENT-DOMAIN-001
+    - AC-PROCUREMENT-DOMAIN-002
+    - AC-PROCUREMENT-DOMAIN-003
+    - AC-PROCUREMENT-DOMAIN-004
+    - AC-PROCUREMENT-DOMAIN-005
+    - AC-PROCUREMENT-DOMAIN-006
+    - AC-PROCUREMENT-DOMAIN-007
+    - AC-PROCUREMENT-DOMAIN-008
+    - AC-PROCUREMENT-DOMAIN-009
+    - AC-PROCUREMENT-DOMAIN-010
+    - AC-PROCUREMENT-DOMAIN-011
+    - AC-PROCUREMENT-DOMAIN-012
+    - AC-PROCUREMENT-DOMAIN-013
+    - AC-PROCUREMENT-DOMAIN-014
+    - AC-PROCUREMENT-DOMAIN-015
+    - AC-PROCUREMENT-DOMAIN-016
+    - AC-PROCUREMENT-DOMAIN-017
+    - AC-PROCUREMENT-DOMAIN-018
+    - AC-PROCUREMENT-DOMAIN-019
+    - AC-PROCUREMENT-DOMAIN-020
+  closure:
+    - Every scenario ID appears exactly once in the feature.
+    - The ten-rule outline executes once for every exact detection rule ID and validates ordinary explanation, coverage, counter-evidence, identity, and safe-copy fences.
+    - PostgreSQL integration, API contract, Rust domain, Svelte view-model, and E2E mappings must all point to these same IDs before the hard gate is green.

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-006",
+  "route": "/internal/cases/{caseId}/claims",
+  "url": "http://127.0.0.1:29102/internal/cases/80000000-0000-4000-8000-000000000001/claims",
+  "observedAt": "2026-07-19T15:35:41.939Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "CAS-006",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "summary",
+        "component": "ClaimWorkbench",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "claims",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "editor",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "lint",
+        "component": "LongFormArticle",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "relationships",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

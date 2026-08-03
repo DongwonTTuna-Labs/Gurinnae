@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RULE-004",
+  "route": "/internal/rules/{ruleId}/versions/{version}/activation",
+  "url": "http://127.0.0.1:29102/internal/rules/80000000-0000-4000-8000-000000000001/versions/80000000-0000-4000-8000-000000000001/activation",
+  "observedAt": "2026-07-19T15:35:50.234Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RULE-004",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "target",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "gates",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "impact",
+        "component": "SignalTriagePanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "schedule",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "rollback",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "approval",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "receipt",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

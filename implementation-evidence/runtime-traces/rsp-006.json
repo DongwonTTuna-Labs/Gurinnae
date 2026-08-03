@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RSP-006",
+  "route": "/respond/receipt",
+  "url": "http://127.0.0.1:29103/respond/receipt",
+  "observedAt": "2026-07-19T15:35:35.935Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RSP-006",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "receipt",
+        "component": "DataCollection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "summary",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "next",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "download",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

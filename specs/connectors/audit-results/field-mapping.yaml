@@ -1,0 +1,35 @@
+schema_version: 2
+specification_version: 13.0.0
+connector_id: audit-results
+manifest_mapping:
+- canonical: source.external_id
+  path: external_id
+  required: true
+- canonical: source.revision
+  paths:
+  - revision
+  - sha256
+  required: true
+- canonical: document.title
+  path: title
+  required: true
+- canonical: document.url
+  path: url
+  required: true
+- canonical: document.published_at
+  path: published_at
+  required: true
+- canonical: document.content_type
+  path: content_type
+  required: true
+- canonical: agency.name
+  path: agency_name
+  required: false
+- canonical: document.category
+  path: category
+  required: false
+- canonical: source.deleted
+  path: deleted
+  required: false
+unknown_field_policy: reject unknown top-level and document fields; preserve source bytes separately
+missing_required_policy: reject manifest and open incident

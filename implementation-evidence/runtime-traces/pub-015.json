@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-015",
+  "route": "/coverage",
+  "url": "http://127.0.0.1:29101/coverage",
+  "observedAt": "2026-07-19T15:35:27.214Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-015",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "summary",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "sources",
+        "component": "CoverageStatement",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "gaps",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "latency",
+        "component": "StructuredContentSection",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "changes",
+        "component": "CoverageStatement",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

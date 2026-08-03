@@ -1,0 +1,26 @@
+import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+import adapter from "svelte-adapter-bun";
+
+export default {
+  preprocess: vitePreprocess(),
+  kit: {
+    adapter: adapter(),
+    env: { publicPrefix: "GURINE_BROWSER_" },
+    csp: {
+      mode: "auto",
+      directives: {
+        "default-src": ["self"],
+        "base-uri": ["none"],
+        "connect-src": ["self", "https://challenges.cloudflare.com"],
+        "font-src": ["self"],
+        "form-action": ["self"],
+        "frame-ancestors": ["none"],
+        "img-src": ["self", "data:"],
+        "object-src": ["none"],
+        "frame-src": ["https://challenges.cloudflare.com"],
+        "script-src": ["self", "https://challenges.cloudflare.com"],
+        "style-src": ["self", "unsafe-inline"],
+      },
+    },
+  },
+};

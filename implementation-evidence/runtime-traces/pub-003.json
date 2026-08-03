@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "PUB-003",
+  "route": "/cases",
+  "url": "http://127.0.0.1:29101/cases",
+  "observedAt": "2026-07-19T15:35:22.901Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "PUB-003",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "scope",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "filters",
+        "component": "UnifiedSearch",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "results",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "EMPTY"
+      },
+      {
+        "id": "pagination",
+        "component": "DataCollection",
+        "projectionState": "EMPTY"
+      }
+    ],
+    "errorSummary": false,
+    "focusTargets": 7,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

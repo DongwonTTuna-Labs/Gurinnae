@@ -1,0 +1,86 @@
+import type { ScreenViewModel } from "@gurine/ui";
+
+export const screen = {
+  id: "PUB-018",
+  title: "정정·철회",
+  route: "/corrections",
+  archetype: "SEARCH_INDEX",
+  sections: [
+    {
+      order: 1,
+      id: "principle",
+      title: "정정 정책",
+      component: "RevisionAndCorrectionPanel",
+      purpose: "오류를 숨기지 않는 원칙.",
+      test_id: "pub_018__section__principle",
+    },
+    {
+      order: 2,
+      id: "filters",
+      title: "필터",
+      component: "UnifiedSearch",
+      purpose: "유형·기간·영향.",
+      test_id: "pub_018__section__filters",
+    },
+    {
+      order: 3,
+      id: "records",
+      title: "정정 목록",
+      component: "RevisionAndCorrectionPanel",
+      purpose: "대상·before/after·reason·date.",
+      test_id: "pub_018__section__records",
+    },
+    {
+      order: 4,
+      id: "feed",
+      title: "구독·feed",
+      component: "RevisionAndCorrectionPanel",
+      purpose: "정정 알림.",
+      test_id: "pub_018__section__feed",
+    },
+  ],
+  actions: [
+    {
+      id: "open-correction",
+      label: "정정 상세",
+      capability: "none",
+      interaction_kind: "NAVIGATION",
+      assurance_level: "NONE",
+      step_up_required: false,
+      confirmation_required: false,
+      local_only: true,
+    },
+    {
+      id: "subscribe",
+      label: "정정 알림 구독",
+      capability: "none",
+      operation_id: "createSubscription",
+      preset: {
+        scope_type: "CORRECTIONS",
+      },
+      interaction_kind: "COMMAND",
+      assurance_level: "ANONYMOUS_PROOF",
+      step_up_required: false,
+      confirmation_required: false,
+    },
+  ],
+  states: ["loading", "success", "empty", "partial", "stale", "error"],
+  dataOperations: [
+    {
+      operation_id: "listCorrections",
+      api: "public-api",
+      method: "GET",
+      path: "/v1/corrections",
+      blocking: true,
+      response_schema: "CorrectionsPage",
+    },
+    {
+      operation_id: "createSubscription",
+      api: "submission-api",
+      method: "POST",
+      path: "/v1/subscription-session",
+      blocking: false,
+      response_schema: "createSubscriptionReceipt",
+    },
+  ],
+} as const satisfies ScreenViewModel;

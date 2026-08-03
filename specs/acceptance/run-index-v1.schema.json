@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/specs/acceptance/run-index-v1.schema.json",
+  "title": "Gurinnae immutable acceptance run index v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "index_kind",
+    "run_id",
+    "status",
+    "started_at",
+    "completed_at",
+    "bindings",
+    "counts",
+    "scenario_sets",
+    "receipts",
+    "aggregate_sha256"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "index_kind": { "const": "ACCEPTANCE_RUN_INDEX" },
+    "run_id": { "$ref": "#/$defs/run_id" },
+    "status": { "const": "PASSED" },
+    "started_at": { "$ref": "#/$defs/timestamp" },
+    "completed_at": { "$ref": "#/$defs/timestamp" },
+    "bindings": { "$ref": "#/$defs/bindings" },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_scenarios",
+        "supplemental_scenarios",
+        "effective_scenarios",
+        "passed",
+        "failed",
+        "skipped",
+        "retried"
+      ],
+      "properties": {
+        "base_scenarios": { "const": 271 },
+        "supplemental_scenarios": { "const": 168 },
+        "effective_scenarios": { "const": 439 },
+        "passed": { "const": 439 },
+        "failed": { "const": 0 },
+        "skipped": { "const": 0 },
+        "retried": { "const": 0 }
+      }
+    },
+    "scenario_sets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_sha256", "supplemental_sha256", "effective_sha256"],
+      "properties": {
+        "base_sha256": { "$ref": "#/$defs/sha256" },
+        "supplemental_sha256": { "$ref": "#/$defs/sha256" },
+        "effective_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "minItems": 439,
+      "maxItems": 439,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/receipt_entry" }
+    },
+    "aggregate_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$"
+    },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_zip_sha256",
+        "design_bundle_sha256",
+        "member_manifest_sha256",
+        "effective_registry_sha256",
+        "source_commit",
+        "source_tree_sha256",
+        "archive_sha256",
+        "extraction_receipt_sha256"
+      ],
+      "properties": {
+        "authority_zip_sha256": { "$ref": "#/$defs/sha256" },
+        "design_bundle_sha256": { "$ref": "#/$defs/sha256" },
+        "member_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "effective_registry_sha256": { "$ref": "#/$defs/sha256" },
+        "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "source_tree_sha256": { "$ref": "#/$defs/sha256" },
+        "archive_sha256": { "$ref": "#/$defs/sha256" },
+        "extraction_receipt_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "receipt_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario_id", "origin", "path", "sha256", "size"],
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "pattern": "^AC-[A-Z0-9_]+(?:-[A-Z0-9_]+)*-[0-9]{3}$"
+        },
+        "origin": { "enum": ["BASE_V13", "SUPPLEMENTAL_V1"] },
+        "path": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

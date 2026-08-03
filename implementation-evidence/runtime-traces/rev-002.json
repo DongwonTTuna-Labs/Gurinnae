@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "REV-002",
+  "route": "/internal/review/{snapshotId}",
+  "url": "http://127.0.0.1:29102/internal/review/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-19T15:35:46.116Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "REV-002",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "preview",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "matrix",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "diff",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "risks",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "decision",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 9,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0.0",
+  "signal_id": "signal_fixture_bundle_unknown",
+  "rule": {
+    "rule_key": "PRICE_OUTLIER",
+    "version": "1.0.0",
+    "rule_run_id": "rule_run_fixture_bundle_unknown"
+  },
+  "subject": {
+    "type": "LINE_ITEM",
+    "id": "line_fixture_bundle_unknown_1"
+  },
+  "signal_type": "PRICE_OUTLIER",
+  "metrics": {
+    "target_unit_price_krw": 2300000,
+    "provisional_median_krw": 480000,
+    "provisional_ratio": 4.7917,
+    "cohort_size": 12
+  },
+  "input_ids": [
+    "line_fixture_bundle_unknown_1",
+    "line_fixture_price_cmp_01_1",
+    "line_fixture_price_cmp_02_1",
+    "line_fixture_price_cmp_03_1",
+    "line_fixture_price_cmp_04_1",
+    "line_fixture_price_cmp_05_1",
+    "line_fixture_price_cmp_06_1",
+    "line_fixture_price_cmp_07_1",
+    "line_fixture_price_cmp_08_1",
+    "line_fixture_price_cmp_09_1",
+    "line_fixture_price_cmp_10_1",
+    "line_fixture_price_cmp_11_1",
+    "line_fixture_price_cmp_12_1"
+  ],
+  "input_hash": "9c56a958c95c037761f227295d62d1705a455f9e6138f046db65aaa94f004a23",
+  "cohort_id": "cohort_fixture_bundle_unknown",
+  "data_quality": {
+    "score": 65,
+    "provenance_complete": true,
+    "identity_status": "VERIFIED",
+    "warnings": [
+      "bundle composition unresolved"
+    ]
+  },
+  "blocking_conditions": [
+    "BUNDLE_UNKNOWN"
+  ],
+  "publishability": "BLOCKED",
+  "internal_priority": 0,
+  "status": "NEW",
+  "dismissal_reason": null,
+  "created_at": "2026-01-16T00:00:00Z"
+}

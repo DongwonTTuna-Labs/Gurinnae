@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/editorial.response_materialized.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "responseSubmissionId",
+    "responseRequestId",
+    "editorialResponseId",
+    "submissionReceiptVersion",
+    "submissionReceiptDigest",
+    "ownedIntakeReceiptDigest",
+    "materializedAt",
+    "resultDigest"
+  ],
+  "properties": {
+    "responseSubmissionId": { "type": "string", "format": "uuid" },
+    "responseRequestId": { "type": "string", "format": "uuid" },
+    "editorialResponseId": { "type": "string", "format": "uuid" },
+    "submissionReceiptVersion": { "type": "integer", "minimum": 1 },
+    "submissionReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ownedIntakeReceiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "materializedAt": { "type": "string", "format": "date-time" },
+    "resultDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

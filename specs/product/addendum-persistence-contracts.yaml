@@ -1,0 +1,3064 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+counts:
+  base_tables: 107
+  additive_tables: 128
+  final_active_tables: 235
+  migrations: 30
+rules:
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029 and the reviewed submission hardening is migration 0030.
+- Runtime roles never own schema objects and receive only declared table/view/function grants.
+- Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
+- Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
+- JSONB payload columns are sqlx::types::Json<ClosedRustType>; serde_json::Value and string dispatch are forbidden.
+- The statement-level source for every additive external command, private application command, base-operation atomic extension and private callback operation is specs/product/addendum-command-semantics.yaml; inventories are source-derived rather than frozen numeric counts.
+- Query, command and callback persistence inventories are source-derived and exact set-equal to their authority registries; route-only, template-only
+  and generic repository fallbacks are forbidden.
+- One effect_owner and atomic_transition_group owns every command mutation. A worker may continue a durable attempt but cannot rematerialize a
+  business effect owned by the initiating command.
+migration_ownership:
+  0025_evidence_snapshots_and_search.sql:
+  - core.normalization_runs
+  - raw.evidence_segments
+  - core.dataset_snapshots
+  - core.dataset_snapshot_members
+  - core.dataset_snapshot_member_sources
+  - ops.agent_provider_turns
+  - ops.agent_tool_calls
+  - raw.research_artifacts
+  - raw.asset_rights_decisions
+  - ops.agent_reconciliation_evidence
+  - ops.agent_run_control_receipts
+  - ops.agent_source_uses
+  - ops.agent_output_validations
+  - ops.agent_proposal_citations
+  - raw.research_artifact_promotions
+  - public.search_documents
+  - ops.search_documents
+  - raw.source_page_receipts
+  - core.procurement_notice_revisions
+  - core.procurement_award_revisions
+  - core.procurement_award_winner_revisions
+  - core.procurement_bidder_participation_revisions
+  - core.procurement_contract_revisions
+  - core.procurement_contract_supplier_revisions
+  - core.procurement_contract_amendment_revisions
+  - core.procurement_contract_line_item_revisions
+  - core.procurement_contract_line_item_components
+  - core.supplier_identity_candidates
+  - core.supplier_identity_resolution_decisions
+  - core.supplier_identity_resolution_decision_members
+  - core.supplier_relationship_assertions
+  - core.supplier_relationship_assertion_evidence
+  - core.procurement_query_snapshots
+  - core.procurement_query_snapshot_members
+  - editorial.response_request_claim_scopes
+  - editorial.response_request_evidence_scopes
+  0026_agent_action_approval.sql:
+  - ops.action_proposals
+  - ops.action_proposal_versions
+  - ops.action_review_assignments
+  - ops.action_decisions
+  - ops.in_flight_effects
+  - ops.budget_reservations
+  - ops.budget_reservation_ledger_entries
+  - ops.execution_authorizations
+  - ops.execution_attempts
+  - ops.execution_receipts
+  - ops.action_approval_hypothesis_details
+  - ops.action_approval_claim_details
+  - ops.action_approval_task_details
+  - ops.action_approval_comparable_details
+  - ops.action_approval_communication_details
+  - ops.action_approval_publication_details
+  - ops.action_approval_retraction_details
+  - ops.action_approval_rule_activation_details
+  - ops.action_approval_role_grant_details
+  - ops.action_approval_kill_switch_details
+  - ops.action_approval_communication_authorization_details
+  - ops.action_approval_asset_rights_details
+  - ops.action_approval_retention_schedule_details
+  - ops.action_approval_funding_disclosure_details
+  - ops.action_approval_capability_activation_details
+  - ops.action_approval_response_policy_calendar_details
+  - ops.action_approval_commercial_control_details
+  0027_communication_consent_delivery.sql:
+  - intake.communication_subjects
+  - intake.communication_endpoints
+  - intake.communication_endpoint_verifications
+  - intake.communication_endpoint_link_events
+  - intake.communication_authorization_events
+  - intake.communication_preferences
+  - intake.communication_suppressions
+  - intake.communication_opt_out_receipts
+  - ops.communication_provider_configs
+  - ops.communication_provider_preflight_receipts
+  - ops.communication_intents
+  - ops.communication_renderings
+  - ops.outbound_delivery_attempts
+  - ops.communication_callback_events
+  - ops.communication_reconciliation_decisions
+  - ops.outbound_delivery_receipts
+  - editorial.response_request_sent_receipts
+  - ops.business_calendar_versions
+  - editorial.response_delivery_clock_decisions
+  - editorial.response_extension_decisions
+  - intake.appeals
+  - intake.appeal_decisions
+  0028_governance_operations.sql:
+  - ops.legal_hold_target_anchors
+  - editorial.conflict_declarations
+  - editorial.conflict_snapshots
+  - ops.capability_activation_decisions
+  - ops.capability_activation_evidence
+  - ops.record_class_schedules
+  - ops.retention_request_decisions
+  - ops.retention_execution_receipts
+  - ops.restoration_suppressions
+  - editorial.legal_hold_releases
+  - ops.incident_events
+  - editorial.publication_gate_decisions
+  - editorial.publication_gate_claim_evidence
+  - editorial.publication_gate_review_bindings
+  - editorial.publication_gate_blockers
+  - ops.sli_window_receipts
+  - ops.journey_instances
+  - ops.journey_handoffs
+  - ops.journey_transition_receipts
+  0029_product_economics.sql:
+  - ops.fx_rate_facts
+  - ops.product_events
+  - ops.outcome_facts
+  - ops.acquisition_source_receipts
+  - ops.cost_allocations
+  - ops.tariff_versions
+  - ops.commercial_contract_periods
+  - ops.usage_window_receipts
+  - ops.usage_facts
+  - ops.discount_decisions
+  - ops.invoice_facts
+  - ops.invoice_line_facts
+  - ops.invoice_usage_memberships
+  - ops.revenue_facts
+  - ops.funding_concentration_snapshots
+  - editorial.funding_disclosure_revisions
+  - editorial.funding_disclosure_entries
+  - ops.sku_readiness_evaluations
+  - ops.sku_readiness_items
+  - ops.accounting_corrections
+  - ops.commercial_qualification_receipts
+  - ops.offer_profile_capabilities
+  - ops.paid_evidence_packets
+  - ops.paid_evidence_packet_members
+  0030_v13_submission_session_hardening.sql: []
+canonical_existing_relations:
+- ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
+- ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.
+- ops.incidents is the physical rename target of existing ops.source_incidents and is not counted as additive.
+renames:
+- physical_from: ops.email_deliveries
+  physical_to: ops.outbound_deliveries
+  compatibility_view: ops.email_deliveries
+  view_predicate: channel = 'SMTP_EMAIL'
+  check_option: LOCAL
+  grants: preserve v13 column and role grants
+  dual_write: forbidden
+- physical_from: ops.source_incidents
+  physical_to: ops.incidents
+  compatibility_view: ops.source_incidents
+  view_predicate: source_id IS NOT NULL
+  check_option: LOCAL
+  grants: preserve v13 column and role grants
+  dual_write: forbidden
+counting_rule: pg_class.relkind='r' base tables only; compatibility views do not change active-table count
+legal_hold_release:
+  original_relation: editorial.legal_holds
+  release_relation: editorial.legal_hold_releases
+  privileges:
+    gurine_control_api:
+      editorial.legal_holds:
+      - SELECT
+      - INSERT
+      editorial.legal_hold_releases:
+      - SELECT
+      - INSERT
+    revoked:
+    - UPDATE
+    - DELETE
+  coverage_atoms:
+  - RETENTION
+  - DELETION
+  - DISCLOSURE
+  affected_set: affected_ids when nonempty else singleton object_id
+  active_formula: original scope-atom x affected-ID cells minus union of valid release cells; effects of all holds are union
+  expiry_effect: review task/event only; never releases coverage
+  release_constraints:
+  - release cells are a nonempty subset of current active coverage
+  - a cell cannot be released twice
+  - expected release sequence and case version are locked
+  - placer and releaser differ and the approval receipt is current
+  transaction: SERIALIZABLE
+  statements:
+  - lock case row exactly one by caseId and expectedCaseVersion
+  - lock original hold exactly one and select all release rows ordered by sequence
+  - verify prior active coverage digest
+  - insert one append-only release row with next sequence
+  - insert audit, legal.hold_released.v1 outbox and immutable command receipt
+  - commit and return the stored receipt
+transaction_templates:
+  typed_query:
+    isolation: READ_COMMITTED
+    statements:
+    - authorize actor/session and scope
+    - validate closed filters and cursor
+    - execute one typed repository query
+    - map stored rows without synthesis
+    cardinality: page queries return 0..limit rows; detail queries return exactly 1 or RESOURCE_NOT_FOUND
+  optimistic_command:
+    isolation: READ_COMMITTED
+    statements:
+    - claim idempotency key
+    - lock aggregate by ID
+    - verify expected version and digest
+    - apply typed transition
+    - insert audit
+    - insert outbox events
+    - insert receipt
+    - commit
+    cardinality: aggregate update exactly 1; every declared event and receipt exactly 1; zero maps NOT_FOUND or VERSION_CONFLICT after existence
+      check
+  serializable_decision:
+    isolation: SERIALIZABLE
+    statements:
+    - claim idempotency key
+    - lock aggregate graph in declared order
+    - re-evaluate policy and conflicts in SQL
+    - apply one transition
+    - insert audit
+    - outbox and receipt
+    - commit
+    cardinality: one terminal winner; serialization retry is internal bounded database retry and never repeats an external effect
+  append_only_fact:
+    isolation: SERIALIZABLE
+    statements:
+    - verify signed import or terminal receipt
+    - compute canonical fact identity
+    - insert immutable fact
+    - insert audit and outbox
+    - commit
+    cardinality: same identity/digest returns existing fact; changed digest is FACT_CONFLICT
+  external_effect_request:
+    isolation: SERIALIZABLE
+    statements:
+    - lock authorization and generation
+    - recheck policy rights consent suppression switch and budget
+    - insert attempt before egress
+    - commit durable claimed state
+    - execute through adapter
+    - append observed receipt in a new transaction
+    cardinality: one provider idempotency key per delivery/execution generation; ambiguous outcome must be RECONCILIATION_REQUIRED
+operation_transactions:
+  listActionApprovalQueue: typed_query
+  createActionProposal: optimistic_command
+  getActionProposal: typed_query
+  updateActionDraft: serializable_decision
+  previewActionDraft: optimistic_command
+  submitActionForReview: serializable_decision
+  claimActionReview: serializable_decision
+  submitActionDecision: serializable_decision
+  getActionExecutionReceipt: typed_query
+  cancelActionExecution: serializable_decision
+  retryActionExecution: serializable_decision
+  releaseLegalHold: custom legal_hold_release
+  createResponseAppeal: serializable_decision
+  getResponseAppeal: typed_query
+  getCommunicationDeliveryReceipt: typed_query
+  reconcileCommunicationDelivery: serializable_decision
+  cancelCommunicationDelivery: serializable_decision
+  getIncident: typed_query
+  triageIncident: optimistic_command
+  containIncident: optimistic_command
+  startIncidentRecovery: optimistic_command
+  resolveIncident: serializable_decision
+  closeIncidentPostmortem: serializable_decision
+  listResponseAppeals: typed_query
+  getResponseAppealWorkspace: typed_query
+  transitionResponseAppeal: serializable_decision
+  decideResponseExtension: serializable_decision
+  listRetentionRequests: typed_query
+  getRetentionRequest: typed_query
+  transitionRetentionRequest: serializable_decision
+  listRecordClassSchedules: typed_query
+  requestCommunicationEndpointLink: serializable_decision
+  verifyCommunicationEndpointLink: serializable_decision
+  unlinkCommunicationEndpoint: serializable_decision
+  createPrivacyRequest: serializable_decision
+  exchangePrivacyRequestReceiptToken: serializable_decision
+  getPrivacyRequest: typed_query
+  declareConflict: serializable_decision
+  withdrawConflict: serializable_decision
+  withdrawActionProposal: serializable_decision
+  withdrawActionDecision: serializable_decision
+  promoteResearchArtifactToEvidence: serializable_decision
+  cancelAgentRun: serializable_decision
+  decideJourneyHandoff: serializable_decision
+  recordSupplierIdentityResolution: serializable_decision
+  recordSupplierRelationshipAssertion: serializable_decision
+  decideSupplierRelationshipAssertion: serializable_decision
+private_control_service_transactions:
+  reconcileAgentRun: serializable_decision
+worker_transactions:
+  snapshot_producer:
+    isolation: REPEATABLE_READ
+    statements:
+    - insert or reuse BUILDING producer digest
+    - materialize typed members and member-source joins
+    - verify ordered member digest
+    - transition exactly one row to READY
+    - insert dataset.snapshot_created.v1
+    cardinality: same active producer digest at most one; READY immutable; FAILED retry creates new generation
+  publication_gate:
+    isolation: SERIALIZABLE
+    statements:
+    - lock case and target snapshot
+    - recompute every gate in SQL
+    - insert decision and typed blocker rows
+    - on PASS insert publication revision and projection event
+    - insert audit/outbox/receipt
+    cardinality: BLOCKED inserts zero publication rows; PASS inserts exactly one immutable revision
+  communication_dispatch:
+    template: external_effect_request
+    logical_intent_unique:
+    - deployment_id
+    - logical_intent_digest
+    delivery_unique:
+    - intent_digest
+    - endpoint_id
+    - endpoint_version
+    - channel
+    - locale
+    - template_id
+    - template_revision
+    - rendered_sha256
+  connector_completion:
+    isolation: READ_COMMITTED
+    statements:
+    - persist raw page before parse
+    - insert immutable page receipt
+    - reconcile exact item set
+    - on complete lock checkpoint by expected version and advance once
+    cardinality: every ordinal exactly once; missing duplicate extra or total drift prevents success
+  accounting_fact_import:
+    template: append_only_fact
+    signed_inputs:
+    - tariff
+    - contract period
+    - discount
+    - invoice
+    - revenue
+    - FX
+    - accounting correction
+  conflict_expiry:
+    isolation: SERIALIZABLE
+    effect_owner: scheduler.conflict-expiry-worker
+    atomic_transition_group: gurine.worker.conflictExpiry.v1
+    idempotency_identity: declaration_id + declaration_sequence + declaration_digest + expires_at
+    lock_order:
+      - editorial.conflict_declarations(id)
+      - editorial.conflict_declarations(subject_actor_id,target_type,target_id,conflict_type,declaration_sequence DESC,id)
+      - ops.audit_events chain head
+      - ops.outbox
+    statements:
+    - lock the candidate declaration and latest series head; a non-head, superseded, withdrawn or not-yet-expired candidate is a durable no-op
+    - derive ConflictExpiryReceiptV1 digest from immutable declaration identity/digest, policy digest, expiresAt and transaction expiredAt
+    - insert exactly one CONFLICT_DECLARATION_EXPIRED audit and governance.conflict_expired.v1 outbox row under the idempotency identity
+    - commit before dispatch; consumers claim ops.inbox and never rewrite the immutable declaration
+    cardinality: one audit plus one outbox for a newly expired current head; exact replay or stale scheduled work writes zero
+exact_persistence_registry:
+  source_sets:
+    queries: specs/product/addendum-operation-contracts.yaml#operations[kind=QUERY]
+    external_commands: specs/product/addendum-command-semantics.yaml#external_commands
+    private_application_commands: specs/product/addendum-command-semantics.yaml#private_application_commands
+    base_operation_atomic_extensions: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions
+    private_callbacks: specs/product/addendum-command-semantics.yaml#private_callback_operations
+    private_control_service: specs/product/addendum-command-semantics.yaml#private_control_service_commands
+  counts:
+    queries: derived len(query_persistence)
+    external_commands: derived len(external_command_persistence)
+    private_application_commands: derived len(private_application_command_persistence)
+    base_operation_atomic_extensions: derived len(base_operation_atomic_extension_persistence)
+    private_callback_operations: derived len(private_callback_persistence)
+    private_control_service: derived len(private_control_service_persistence)
+  query_persistence:
+    listActionApprovalQueue:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/action-proposals
+      isolation: READ_COMMITTED
+      authorization:
+        capability: actions.read
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.action_review_assignments
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: 0..limit
+      ordering: due_at ASC,proposal_id ASC or updated_at DESC,proposal_id DESC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_CURSOR
+      - ACTOR_ASSERTION_REQUIRED
+      - ACTOR_ASSERTION_INVALID
+      - CAPABILITY_DENIED
+      - INTERNAL_ERROR
+    getActionProposal:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/action-proposals/{proposalId}
+      isolation: READ_COMMITTED
+      authorization:
+        capability: actions.read
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.action_review_assignments
+      - ops.action_decisions
+      - ops.in_flight_effects
+      - ops.execution_authorizations
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one graph or RESOURCE_NOT_FOUND
+      ordering: version,slot,decision,generation order; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - INVALID_PARAMETER
+      - ACTOR_ASSERTION_REQUIRED
+      - CAPABILITY_DENIED
+      - RESOURCE_NOT_FOUND
+      - INTERNAL_ERROR
+    getActionExecutionReceipt:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/action-executions/{executionId}/receipt
+      isolation: READ_COMMITTED
+      authorization:
+        capability: actions.read
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.in_flight_effects
+      - ops.execution_authorizations
+      - ops.execution_attempts
+      - ops.execution_receipts
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one effect and complete chain or RESOURCE_NOT_FOUND/EXECUTION_RECEIPT_INCOMPLETE
+      ordering: generation ASC,receipt_sequence ASC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - CAPABILITY_DENIED
+      - RESOURCE_NOT_FOUND
+      - EXECUTION_RECEIPT_INCOMPLETE
+      - INTERNAL_ERROR
+    getResponseAppeal:
+      operation_kind: QUERY
+      api: submission-api
+      method: GET
+      path: /v1/response-receipt/appeals/{appealId}
+      isolation: READ_COMMITTED
+      authorization:
+        capability: null
+        authorization: APPEAL_STATUS derived session
+        assurance: SCOPED_TOKEN
+        predicate: require ACTIVE APPEAL_STATUS, exact BFF issuer, scope_id=:appealId and stored appeal-to-response-submission-to-response-request
+          composite before existence-sensitive lookup
+      relations:
+      - intake.submission_sessions
+      - intake.appeals
+      - intake.appeal_decisions
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one scoped appeal or non-enumerating RESOURCE_NOT_FOUND
+      ordering: decision_sequence ASC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - SCOPED_SESSION_REQUIRED
+      - RESOURCE_NOT_FOUND
+      - APPEAL_SCOPE_INVALID
+      - INTERNAL_ERROR
+    getCommunicationDeliveryReceipt:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/communication-deliveries/{deliveryId}/receipt
+      isolation: READ_COMMITTED
+      authorization:
+        capability: communications.read
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.communication_callback_events
+      - ops.communication_reconciliation_decisions
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one delivery and complete chain or RESOURCE_NOT_FOUND/DELIVERY_RECEIPT_INCOMPLETE
+      ordering: attempt_ordinal,receipt_sequence,observed_at,id; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - CAPABILITY_DENIED
+      - RESOURCE_NOT_FOUND
+      - DELIVERY_RECEIPT_INCOMPLETE
+      - INTERNAL_ERROR
+    getIncident:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/incidents/{incidentId}
+      isolation: READ_COMMITTED
+      authorization:
+        capability: incidents.read
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.incidents
+      - ops.incident_events
+      - ops.sli_window_receipts
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one incident or RESOURCE_NOT_FOUND
+      ordering: incident version ASC; SLI window_end DESC,id; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - CAPABILITY_DENIED
+      - RESOURCE_NOT_FOUND
+      - INTERNAL_ERROR
+    listResponseAppeals:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/queries/list-response-appeals
+      isolation: READ_COMMITTED
+      authorization:
+        capability: responses.review
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - intake.appeals
+      - intake.appeal_decisions
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: 0..limit
+      ordering: due_at ASC,id ASC or created_at DESC,id DESC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_CURSOR
+      - CAPABILITY_DENIED
+      - INTERNAL_ERROR
+    getResponseAppealWorkspace:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/queries/get-response-appeal-workspace
+      isolation: READ_COMMITTED
+      authorization:
+        capability: responses.review
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - intake.appeals
+      - intake.appeal_decisions
+      - editorial.response_requests
+      - editorial.response_delivery_clock_decisions
+      - ops.outbound_delivery_receipts
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one authorized workspace or RESOURCE_NOT_FOUND
+      ordering: decision_sequence and evidence receipt sequence ASC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - INVALID_PARAMETER
+      - CAPABILITY_DENIED
+      - RESOURCE_NOT_FOUND
+      - INTERNAL_ERROR
+    listRetentionRequests:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/queries/list-retention-requests
+      isolation: READ_COMMITTED
+      authorization:
+        capability: privacy.requests.manage
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.retention_requests
+      - ops.retention_request_decisions
+      - ops.legal_hold_target_anchors
+      - editorial.legal_holds
+      - editorial.legal_hold_releases
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: 0..limit with derived hold flag
+      ordering: due_at ASC,id ASC or created_at DESC,id DESC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_CURSOR
+      - CAPABILITY_DENIED
+      - INTERNAL_ERROR
+    getRetentionRequest:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/queries/get-retention-request
+      isolation: READ_COMMITTED
+      authorization:
+        capability: privacy.requests.manage
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.retention_requests
+      - ops.retention_request_decisions
+      - ops.retention_execution_receipts
+      - ops.legal_hold_target_anchors
+      - editorial.legal_holds
+      - editorial.legal_hold_releases
+      - ops.record_class_schedules
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one authorized workspace or RESOURCE_NOT_FOUND
+      ordering: decision_version ASC; retention receipt completed_at DESC,execution_generation DESC,id DESC; hold/release sequence ASC; authenticated
+        cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - INVALID_PARAMETER
+      - CAPABILITY_DENIED
+      - RESOURCE_NOT_FOUND
+      - INTERNAL_ERROR
+    listRecordClassSchedules:
+      operation_kind: QUERY
+      api: control-api
+      method: GET
+      path: /v1/internal/queries/list-record-class-schedules
+      isolation: READ_COMMITTED
+      authorization:
+        capability: retention.policy.manage
+        authorization: null
+        assurance: ACTIVE_SESSION
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - ops.record_class_schedules
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: 0..limit
+      ordering: record_class ASC,effective_at DESC,revision DESC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_CURSOR
+      - CAPABILITY_DENIED
+      - INTERNAL_ERROR
+    getPrivacyRequest:
+      operation_kind: QUERY
+      api: submission-api
+      method: GET
+      path: /v1/privacy-request-receipt
+      isolation: READ_COMMITTED
+      authorization:
+        capability: null
+        authorization: privacy-request-receipt-session
+        assurance: SCOPED_TOKEN
+        predicate: authorize actor/session and persisted object scope before existence-sensitive lookup
+      relations:
+      - intake.submission_sessions
+      - ops.retention_requests
+      - ops.retention_request_decisions
+      statements:
+      - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+      - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+      - SELECT typed projection/join [declared cardinality]
+      - MAP stored rows to closed response without synthesized values [declared cardinality]
+      cardinality: exactly-one PRIVACY_REQUEST_RECEIPT-scoped request or non-enumerating RESOURCE_NOT_FOUND
+      ordering: decision_version ASC; authenticated cursor binds filters/sort/asOf where paged
+      writes: zero including idempotency, audit and outbox
+      errors:
+      - SCOPED_SESSION_REQUIRED
+      - RESOURCE_NOT_FOUND
+      - INTERNAL_ERROR
+  external_command_persistence:
+    createActionProposal:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.createActionProposal
+      operation_kind: COMMAND
+      isolation: READ_COMMITTED
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      statement_count: 8
+      relations:
+      - ops.idempotency_keys
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.createActionProposal
+      atomic_transition_group: gurine.command.createActionProposal.v1
+      state_disposition: action_proposal.NONE->DRAFT
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.createActionProposal
+      outbox:
+        events:
+        - action.proposal_created.v1
+        cardinality:
+          action.proposal_created.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionProposalReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INVALID_PARAMETER
+      - ACTION_KIND_MISMATCH
+      - TARGET_NOT_FOUND
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    updateActionDraft:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.updateActionDraft
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.action_proposals(id)
+      - ops.action_proposal_versions(proposal_id,version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.updateActionDraft
+      atomic_transition_group: gurine.command.updateActionDraft.v1
+      state_disposition: action_proposal.DRAFT->SUPERSEDED plus new DRAFT version
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.updateActionDraft
+      outbox:
+        events:
+        - action.proposal_updated.v1
+        cardinality:
+          action.proposal_updated.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionProposalReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INVALID_PARAMETER
+      - ACTION_PROPOSAL_STALE
+      - ACTION_DIGEST_MISMATCH
+      - ACTION_DECISION_CLOSED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    previewActionDraft:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.previewActionDraft
+      operation_kind: COMMAND
+      isolation: READ_COMMITTED
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.action_proposals(id)
+      - ops.action_proposal_versions(proposal_id,version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.previewActionDraft
+      atomic_transition_group: gurine.command.previewActionDraft.v1
+      state_disposition: NON_STATE_MUTATION preview fact append on DRAFT
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.previewActionDraft
+      outbox:
+        events:
+        - action.proposal_updated.v1
+        cardinality:
+          action.proposal_updated.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionPreviewReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - ACTION_PROPOSAL_STALE
+      - ACTION_DIGEST_MISMATCH
+      - ACTION_POLICY_BLOCKED
+      - CAPABILITY_UNCONFIGURED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    submitActionForReview:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.submitActionForReview
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.action_proposals(id)
+      - ops.action_proposal_versions(proposal_id,version)
+      - ops.action_review_assignments(proposal_id,proposal_version,slot_ordinal,assignment_generation,id)
+      statement_count: 10
+      relations:
+      - ops.idempotency_keys
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.action_review_assignments
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.submitActionForReview
+      atomic_transition_group: gurine.command.submitActionForReview.v1
+      state_disposition: action_proposal.DRAFT->PENDING_QUORUM plus assignments.NONE->ASSIGNED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.submitActionForReview
+      outbox:
+        events:
+        - action.review_requested.v1
+        cardinality:
+          action.review_requested.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionReviewRequestedReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - ACTION_PROPOSAL_STALE
+      - ACTION_DIGEST_MISMATCH
+      - ACTION_PREVIEW_STALE
+      - ACTION_POLICY_BLOCKED
+      - ACTION_QUORUM_UNAVAILABLE
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    claimActionReview:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.claimActionReview
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.action_proposals(id)
+      - ops.action_proposal_versions(proposal_id,version)
+      - ops.action_review_assignments(id)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.action_review_assignments
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.claimActionReview
+      atomic_transition_group: gurine.command.claimActionReview.v1
+      state_disposition: action_review_assignment.ASSIGNED->IN_PROGRESS
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.claimActionReview
+      outbox:
+        events:
+        - action.review_claimed.v1
+        cardinality:
+          action.review_claimed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionReviewClaimedReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - ACTION_PROPOSAL_STALE
+      - ACTION_ASSIGNMENT_STALE
+      - ACTION_DIGEST_MISMATCH
+      - ACTION_REVIEW_ALREADY_CLAIMED
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    submitActionDecision:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.submitActionDecision
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.action_proposals(id)
+      - ops.action_proposal_versions(proposal_id,version)
+      - ops.action_review_assignments(proposal_id,proposal_version,slot_ordinal,assignment_generation,id)
+      - ops.action_decisions(proposal_id,proposal_version,created_at,id)
+      - ops.in_flight_effects(id)
+      - ops.execution_authorizations(execution_id,generation)
+      - ops.budget_limits(scope,id)
+      - ops.budget_reservations(id)
+      - ops.budget_reservation_ledger_entries(scope,window,id)
+      - ops.execution_attempts(execution_id,generation)
+      statement_count: 19
+      relations:
+      - ops.idempotency_keys
+      - ops.action_proposals
+      - ops.action_proposal_versions
+      - ops.action_review_assignments
+      - ops.action_decisions
+      - ops.in_flight_effects
+      - ops.budget_reservations
+      - ops.budget_reservation_ledger_entries
+      - ops.execution_authorizations
+      - ops.execution_attempts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.submitActionDecision.final-approve
+      atomic_transition_group: gurine.command.submitActionDecision.v1
+      state_disposition: assignment terminalization plus proposal quorum transition plus atomic effect creation
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.submitActionDecision
+      outbox:
+        events:
+        - action.decision_recorded.v1
+        - action.execution_authorized.v1
+        - operations.effect_policy_blocked.v1
+        cardinality:
+          action.decision_recorded.v1: exactly-one
+          action.execution_authorized.v1: one iff final APPROVE and all fences pass
+          operations.effect_policy_blocked.v1: one iff final APPROVE and a current fence blocks
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionDecisionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - ACTION_KIND_MISMATCH
+      - ACTION_PROPOSAL_STALE
+      - ACTION_ASSIGNMENT_STALE
+      - ACTION_DIGEST_MISMATCH
+      - ACTION_DECISION_CLOSED
+      - ACTION_CONFLICT_UNRESOLVED
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    cancelActionExecution:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.cancelActionExecution
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.in_flight_effects(id)
+      - ops.execution_authorizations(execution_id,generation)
+      - ops.execution_attempts(execution_id,generation)
+      - ops.execution_receipts(execution_id,receipt_sequence)
+      statement_count: 10
+      relations:
+      - ops.idempotency_keys
+      - ops.in_flight_effects
+      - ops.execution_authorizations
+      - ops.execution_attempts
+      - ops.execution_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.cancelActionExecution
+      atomic_transition_group: gurine.command.cancelActionExecution.v1
+      state_disposition: action_execution pre-dispatch->CANCELLED; possible-effect->CANCEL_REQUESTED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.cancelActionExecution
+      outbox:
+        events:
+        - action.execution_cancel_requested.v1
+        cardinality:
+          action.execution_cancel_requested.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionExecutionMutationReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - EXECUTION_FENCE_STALE
+      - EXECUTION_STATE_INVALID
+      - EXECUTION_ALREADY_TERMINAL
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    retryActionExecution:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.retryActionExecution
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.in_flight_effects(id)
+      - ops.execution_authorizations(execution_id,generation)
+      - ops.execution_attempts(execution_id,generation)
+      - ops.execution_receipts(execution_id,receipt_sequence)
+      - ops.budget_limits(scope,id)
+      - ops.budget_reservations(id)
+      statement_count: 12
+      relations:
+      - ops.idempotency_keys
+      - ops.in_flight_effects
+      - ops.execution_attempts
+      - ops.execution_receipts
+      - ops.execution_authorizations
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.retryActionExecution
+      atomic_transition_group: gurine.command.retryActionExecution.v1
+      state_disposition: action_execution.RETRYABLE_FAILED|POLICY_BLOCKED->QUEUED new generation
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.retryActionExecution
+      outbox:
+        events:
+        - action.execution_retry_requested.v1
+        cardinality:
+          action.execution_retry_requested.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ActionExecutionMutationReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - EXECUTION_FENCE_STALE
+      - EXECUTION_RETRY_UNSAFE
+      - EXECUTION_ATTEMPT_LIMIT
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    releaseLegalHold:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.releaseLegalHold
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - editorial.cases(id)
+      - ops.legal_hold_target_anchors(target_kind,target_id,target_version)
+      - editorial.legal_holds(id)
+      - editorial.legal_hold_releases(hold_id,release_sequence)
+      statement_count: 10
+      relations:
+      - ops.idempotency_keys
+      - editorial.cases
+      - ops.legal_hold_target_anchors
+      - editorial.legal_holds
+      - editorial.legal_hold_releases
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.releaseLegalHold
+      atomic_transition_group: gurine.command.releaseLegalHold.v1
+      state_disposition: legal_hold_coverage.ACTIVE|PARTIAL->PARTIAL|FULL
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.releaseLegalHold
+      outbox:
+        events:
+        - legal.hold_released.v1
+        cardinality:
+          legal.hold_released.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: LegalHoldReleaseReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - LEGAL_HOLD_NOT_FOUND
+      - LEGAL_HOLD_RELEASE_STALE
+      - LEGAL_HOLD_SCOPE_INVALID
+      - LEGAL_HOLD_ALREADY_RELEASED
+      - CONFLICT_UNRESOLVED
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    createResponseAppeal:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.createResponseAppeal
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - intake.submission_sessions(id)
+      - editorial.response_requests(id)
+      - editorial.response_delivery_clock_decisions(response_request_id)
+      - intake.appeals(response_request_id)
+      statement_count: 12
+      relations:
+      - ops.idempotency_keys
+      - intake.submission_sessions
+      - editorial.response_requests
+      - editorial.response_delivery_clock_decisions
+      - intake.appeals
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: submission-api.createResponseAppeal
+      atomic_transition_group: gurine.command.createResponseAppeal.v1
+      state_disposition: response_appeal.NONE->RECEIVED plus scoped_session.APPEAL_CREATE ACTIVE->CONSUMED plus APPEAL_STATUS NONE->ACTIVE
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.createResponseAppeal
+      outbox:
+        events:
+        - response.appeal_created.v1
+        cardinality:
+          response.appeal_created.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ResponseAppealReceiptV1
+        contract: external-command-receipt-v1
+        session_secrets: forbidden; response stores issuance/rotation receipt digest and exact safe response bytes only
+      errors:
+      - SCOPED_SESSION_REQUIRED
+      - APPEAL_SCOPE_INVALID
+      - APPEAL_WINDOW_CLOSED
+      - VERSION_CONFLICT
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    reconcileCommunicationDelivery:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.reconcileCommunicationDelivery
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.outbound_deliveries(id)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      - ops.communication_callback_events(delivery_id,observed_at,id)
+      - ops.communication_provider_preflight_receipts(provider_config_id,provider_config_version,id)
+      - ops.communication_reconciliation_decisions(delivery_id,decision_sequence)
+      statement_count: 12
+      relations:
+      - ops.idempotency_keys
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.communication_callback_events
+      - ops.communication_provider_preflight_receipts
+      - ops.communication_reconciliation_decisions
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.reconcileCommunicationDelivery
+      atomic_transition_group: gurine.command.reconcileCommunicationDelivery.v1
+      state_disposition: outbound_delivery.RECONCILIATION_REQUIRED mapped by request resolution
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.reconcileCommunicationDelivery
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        cardinality:
+          communication.delivery_receipt_recorded.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: CommunicationDeliveryMutationReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - DELIVERY_VERSION_CONFLICT
+      - DELIVERY_RECONCILIATION_EVIDENCE_INVALID
+      - DELIVERY_STATE_INVALID
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    cancelCommunicationDelivery:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.cancelCommunicationDelivery
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.outbound_deliveries(id)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.cancelCommunicationDelivery
+      atomic_transition_group: gurine.command.cancelCommunicationDelivery.v1
+      state_disposition: outbound_delivery conditional transition; post-dispatch same-state cancel request
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.cancelCommunicationDelivery
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        cardinality:
+          communication.delivery_receipt_recorded.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: CommunicationDeliveryMutationReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - DELIVERY_VERSION_CONFLICT
+      - DELIVERY_STATE_INVALID
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    triageIncident:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.triageIncident
+      operation_kind: COMMAND
+      isolation: READ_COMMITTED
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.incidents(id)
+      - ops.incident_events(incident_id,version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.incidents
+      - ops.incident_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.triageIncident
+      atomic_transition_group: gurine.command.triageIncident.v1
+      state_disposition: incident.DETECTED->TRIAGED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.triageIncident
+      outbox:
+        events:
+        - incident.state_changed.v1
+        cardinality:
+          incident.state_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: IncidentTransitionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INCIDENT_VERSION_CONFLICT
+      - INCIDENT_STATE_INVALID
+      - INCIDENT_COMMANDER_REQUIRED
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    containIncident:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.containIncident
+      operation_kind: COMMAND
+      isolation: READ_COMMITTED
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.incidents(id)
+      - ops.incident_events(incident_id,version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.incidents
+      - ops.incident_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.containIncident
+      atomic_transition_group: gurine.command.containIncident.v1
+      state_disposition: incident.TRIAGED->CONTAINED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.containIncident
+      outbox:
+        events:
+        - incident.state_changed.v1
+        cardinality:
+          incident.state_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: IncidentTransitionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INCIDENT_VERSION_CONFLICT
+      - INCIDENT_STATE_INVALID
+      - INCIDENT_CONTAINMENT_INCOMPLETE
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    startIncidentRecovery:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.startIncidentRecovery
+      operation_kind: COMMAND
+      isolation: READ_COMMITTED
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.incidents(id)
+      - ops.incident_events(incident_id,version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.incidents
+      - ops.incident_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.startIncidentRecovery
+      atomic_transition_group: gurine.command.startIncidentRecovery.v1
+      state_disposition: incident.CONTAINED->RECOVERING
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.startIncidentRecovery
+      outbox:
+        events:
+        - incident.state_changed.v1
+        cardinality:
+          incident.state_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: IncidentTransitionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INCIDENT_VERSION_CONFLICT
+      - INCIDENT_STATE_INVALID
+      - CAPABILITY_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    resolveIncident:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.resolveIncident
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.incidents(id)
+      - ops.incident_events(incident_id,version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.incidents
+      - ops.incident_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.resolveIncident
+      atomic_transition_group: gurine.command.resolveIncident.v1
+      state_disposition: incident.RECOVERING->RESOLVED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.resolveIncident
+      outbox:
+        events:
+        - incident.state_changed.v1
+        cardinality:
+          incident.state_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: IncidentTransitionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INCIDENT_VERSION_CONFLICT
+      - INCIDENT_STATE_INVALID
+      - INCIDENT_RESOLUTION_BLOCKED
+      - RECENT_AUTH_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    closeIncidentPostmortem:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.closeIncidentPostmortem
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.incidents(id)
+      - ops.incident_events(incident_id,version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - ops.incidents
+      - ops.incident_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.closeIncidentPostmortem
+      atomic_transition_group: gurine.command.closeIncidentPostmortem.v1
+      state_disposition: incident.RESOLVED->POSTMORTEM_CLOSED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.closeIncidentPostmortem
+      outbox:
+        events:
+        - incident.state_changed.v1
+        cardinality:
+          incident.state_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: IncidentTransitionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INCIDENT_VERSION_CONFLICT
+      - INCIDENT_STATE_INVALID
+      - INCIDENT_POSTMORTEM_INCOMPLETE
+      - RECENT_AUTH_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    transitionResponseAppeal:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.transitionResponseAppeal
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - intake.appeals(id)
+      - intake.appeal_decisions(appeal_id,decision_sequence)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - intake.appeals
+      - intake.appeal_decisions
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.transitionResponseAppeal
+      atomic_transition_group: gurine.command.transitionResponseAppeal.v1
+      state_disposition: response_appeal declared edge
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.transitionResponseAppeal
+      outbox:
+        events:
+        - response.appeal_decision_recorded.v1
+        cardinality:
+          response.appeal_decision_recorded.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ResponseAppealDecisionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - APPEAL_VERSION_CONFLICT
+      - APPEAL_STATE_INVALID
+      - APPEAL_SCOPE_INVALID
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    decideResponseExtension:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.decideResponseExtension
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - intake.response_extension_requests(id)
+      - editorial.response_delivery_clock_decisions(response_request_id)
+      - ops.business_calendar_versions(id)
+      - editorial.response_extension_decisions(extension_request_id,decision_version)
+      statement_count: 9
+      relations:
+      - ops.idempotency_keys
+      - intake.response_extension_requests
+      - editorial.response_delivery_clock_decisions
+      - ops.business_calendar_versions
+      - editorial.response_extension_decisions
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.decideResponseExtension
+      atomic_transition_group: gurine.command.decideResponseExtension.v1
+      state_disposition: response_extension.SUBMITTED->APPROVED|REJECTED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.decideResponseExtension
+      outbox:
+        events:
+        - response.extension_decided.v1
+        cardinality:
+          response.extension_decided.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: ResponseExtensionDecisionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - EXTENSION_VERSION_CONFLICT
+      - EXTENSION_STATE_INVALID
+      - BUSINESS_CALENDAR_STALE
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    transitionRetentionRequest:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.transitionRetentionRequest
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.retention_requests(id)
+      - ops.retention_request_decisions(retention_request_id,decision_version)
+      - ops.legal_hold_target_anchors(target_kind,target_id,target_version)
+      - editorial.legal_holds(id)
+      - editorial.legal_hold_releases(hold_id,release_sequence)
+      - ops.retention_execution_receipts(retention_request_id,completed_at DESC,execution_generation DESC,id DESC)
+      statement_count: 13
+      relations:
+      - ops.idempotency_keys
+      - ops.retention_requests
+      - ops.retention_request_decisions
+      - ops.legal_hold_target_anchors
+      - editorial.legal_holds
+      - editorial.legal_hold_releases
+      - ops.retention_execution_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: control-api.transitionRetentionRequest
+      atomic_transition_group: gurine.command.transitionRetentionRequest.v1
+      state_disposition: privacy_request declared edge
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.transitionRetentionRequest
+      outbox:
+        events:
+        - privacy.request_decision_recorded.v1
+        cardinality:
+          privacy.request_decision_recorded.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: RetentionRequestDecisionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - RETENTION_VERSION_CONFLICT
+      - RETENTION_STATE_INVALID
+      - LEGAL_HOLD_ACTIVE
+      - RETENTION_COMPLETION_INCOMPLETE
+      - STEP_UP_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    requestCommunicationEndpointLink:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.requestCommunicationEndpointLink
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - intake.submission_sessions(id)
+      - intake.communication_subjects(id)
+      - intake.communication_endpoints(subject_id,endpoint_hmac)
+      - intake.communication_endpoint_verifications(id)
+      statement_count: 14
+      relations:
+      - ops.idempotency_keys
+      - intake.submission_sessions
+      - intake.communication_subjects
+      - intake.communication_endpoints
+      - intake.communication_endpoint_verifications
+      - intake.communication_endpoint_link_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: submission-api.requestCommunicationEndpointLink
+      atomic_transition_group: gurine.command.requestCommunicationEndpointLink.v1
+      state_disposition: communication_endpoint.NONE->PENDING_VERIFICATION plus scoped_session.COMMUNICATION_PROFILE ACTIVE->REVOKED and replacement
+        NONE->ACTIVE
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.requestCommunicationEndpointLink
+      outbox:
+        events:
+        - communication.authorization_changed.v1
+        cardinality:
+          communication.authorization_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: CommunicationEndpointLinkRequestedReceiptV1
+        contract: external-command-receipt-v1
+        session_secrets: forbidden; response stores issuance/rotation receipt digest and exact safe response bytes only
+      errors:
+      - SCOPED_SESSION_REQUIRED
+      - ENDPOINT_TYPE_UNSUPPORTED
+      - ENDPOINT_ALREADY_LINKED
+      - CONSENT_INVALID
+      - ABUSE_PROOF_INVALID
+      - VERSION_CONFLICT
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    verifyCommunicationEndpointLink:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.verifyCommunicationEndpointLink
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - intake.submission_sessions(id)
+      - intake.communication_subjects(id)
+      - intake.communication_endpoints(id)
+      - intake.communication_endpoint_verifications(id)
+      statement_count: 15
+      relations:
+      - ops.idempotency_keys
+      - intake.submission_sessions
+      - intake.communication_subjects
+      - intake.communication_endpoints
+      - intake.communication_endpoint_verifications
+      - intake.communication_endpoint_link_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: submission-api.verifyCommunicationEndpointLink
+      atomic_transition_group: gurine.command.verifyCommunicationEndpointLink.v1
+      state_disposition: communication_endpoint.PENDING_VERIFICATION->ACTIVE plus scoped_session.COMMUNICATION_PROFILE ACTIVE->REVOKED and replacement
+        NONE->ACTIVE
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.verifyCommunicationEndpointLink
+      outbox:
+        events:
+        - communication.authorization_changed.v1
+        cardinality:
+          communication.authorization_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: CommunicationEndpointVerifiedReceiptV1
+        contract: external-command-receipt-v1
+        session_secrets: forbidden; response stores issuance/rotation receipt digest and exact safe response bytes only
+      errors:
+      - SCOPED_SESSION_REQUIRED
+      - ENDPOINT_CHALLENGE_INVALID
+      - ENDPOINT_CHALLENGE_EXPIRED
+      - ENDPOINT_PROOF_INVALID
+      - VERSION_CONFLICT
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    unlinkCommunicationEndpoint:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.unlinkCommunicationEndpoint
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - intake.submission_sessions(id)
+      - intake.communication_subjects(id)
+      - intake.communication_endpoints(id)
+      - intake.communication_authorization_events(endpoint_id,effective_at,id)
+      statement_count: 15
+      relations:
+      - ops.idempotency_keys
+      - intake.submission_sessions
+      - intake.communication_subjects
+      - intake.communication_endpoints
+      - intake.communication_authorization_events
+      - intake.communication_endpoint_link_events
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: submission-api.unlinkCommunicationEndpoint
+      atomic_transition_group: gurine.command.unlinkCommunicationEndpoint.v1
+      state_disposition: communication_endpoint.ACTIVE|BOUNCED|SUPPRESSED->REVOKED plus scoped_session.COMMUNICATION_PROFILE ACTIVE->REVOKED and
+        replacement NONE->ACTIVE
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.unlinkCommunicationEndpoint
+      outbox:
+        events:
+        - communication.authorization_changed.v1
+        cardinality:
+          communication.authorization_changed.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: CommunicationEndpointUnlinkedReceiptV1
+        contract: external-command-receipt-v1
+        session_secrets: forbidden; response stores issuance/rotation receipt digest and exact safe response bytes only
+      errors:
+      - SCOPED_SESSION_REQUIRED
+      - ENDPOINT_NOT_FOUND
+      - ENDPOINT_VERSION_CONFLICT
+      - VERSION_CONFLICT
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    createPrivacyRequest:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.createPrivacyRequest
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - ops.retention_requests(subject_scope_digest,created_at,id)
+      statement_count: 8
+      relations:
+      - ops.idempotency_keys
+      - ops.retention_requests
+      - intake.privacy_request_receipt_tokens
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: submission-api.createPrivacyRequest
+      atomic_transition_group: gurine.command.createPrivacyRequest.v1
+      state_disposition: privacy_request.NONE->RECEIVED
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.createPrivacyRequest
+      outbox:
+        events:
+        - privacy.request_created.v1
+        cardinality:
+          privacy.request_created.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: PrivacyRequestReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - INVALID_PARAMETER
+      - IDENTITY_PROOF_INVALID
+      - PRIVACY_SCOPE_INVALID
+      - ABUSE_PROOF_INVALID
+      - RATE_LIMITED
+      - IDEMPOTENCY_CONFLICT
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    exchangePrivacyRequestReceiptToken:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.exchangePrivacyRequestReceiptToken
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - intake.privacy_request_receipt_tokens(token_hmac)
+      - ops.retention_requests(id)
+      - intake.submission_sessions(id)
+      statement_count: 8
+      relations:
+      - ops.idempotency_keys
+      - intake.privacy_request_receipt_tokens
+      - ops.retention_requests
+      - intake.submission_sessions
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: submission-api.exchangePrivacyRequestReceiptToken
+      atomic_transition_group: gurine.command.exchangePrivacyRequestReceiptToken.v1
+      state_disposition: NON_DOMAIN_STATE_MUTATION token.FRESH->CONSUMED plus session.NONE->ACTIVE
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        exact_replay_writes: 0
+        changed_replay: IDEMPOTENCY_CONFLICT
+      audit:
+        relation: ops.audit_events
+        new_success_rows: 1
+        exact_replay_rows: 0
+        action: command.exchangePrivacyRequestReceiptToken
+      outbox:
+        events:
+        - identity.session_created.v1
+        cardinality:
+          identity.session_created.v1: exactly-one
+        payload_source: specs/product/addendum-event-contracts.yaml
+      receipt:
+        schema: PrivacyRequestSessionReceiptV1
+        contract: external-command-receipt-v1
+      errors:
+      - TOKEN_INVALID
+      - TOKEN_EXPIRED
+      - TOKEN_REPLAYED
+      - ABUSE_PROOF_INVALID
+      - RATE_LIMITED
+      - INTERNAL_ERROR
+      repository_result: enforce every bracketed cardinality; zero or duplicate maps through exact errors, never synthetic success
+    declareConflict:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.declareConflict
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - conflict semantic advisory lock(subject_actor_id,target_type,target_id,conflict_type)
+      - concrete target row by target-specific candidate key
+      - editorial.conflict_declarations(subject_actor_id,target_type,target_id,conflict_type,declaration_sequence DESC,id)
+      - ops.audit_events chain head
+      - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.idempotency_keys, editorial.conflict_declarations, ops.audit_events, ops.outbox]
+      target_relation_dispatch: exact import of specs/database/addendum/0028-governance-operations.yaml#polymorphic_target_bindings.conflict_target; every variant relation/candidate key/version/digest is locked and caller scalars are comparison-only
+      effect_owner: control-api.declareConflict
+      atomic_transition_group: gurine.command.declareConflict.v1
+      state_disposition: conflict_declaration.NONE|ACTIVE->ACTIVE_NEW_APPEND_ONLY_FACT
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.declareConflict}
+      outbox: {events: [governance.conflict_declared.v1], cardinality: {governance.conflict_declared.v1: exactly-one}, payload_source: specs/product/addendum-event-contracts.yaml}
+      receipt: {schema: ConflictDeclarationReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, TARGET_NOT_FOUND, CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: call editorial.record_conflict_declaration through its exact typed signature; exact replay returns one stored receipt, changed bytes or stale prior sequence writes zero
+    withdrawConflict:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.withdrawConflict
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.idempotency_keys(scope,key_hash)
+      - editorial.conflict_declarations(id)
+      - conflict semantic advisory lock(subject_actor_id,target_type,target_id,conflict_type)
+      - editorial.conflict_declarations(subject_actor_id,target_type,target_id,conflict_type,declaration_sequence DESC,id)
+      - dependent current assignments/decisions ordered by aggregate id
+      - ops.audit_events chain head
+      - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.idempotency_keys, editorial.conflict_declarations, ops.action_review_assignments, ops.action_decisions, editorial.review_decisions, ops.audit_events, ops.outbox]
+      effect_owner: control-api.withdrawConflict
+      atomic_transition_group: gurine.command.withdrawConflict.v1
+      state_disposition: conflict_declaration.ACTIVE->WITHDRAWN_BY_APPEND_ONLY_ABSENT_FACT
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.withdrawConflict}
+      outbox: {events: [governance.conflict_withdrawn.v1], cardinality: {governance.conflict_withdrawn.v1: exactly-one}, payload_source: specs/product/addendum-event-contracts.yaml}
+      receipt: {schema: ConflictDeclarationReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, CONFLICT_DECLARATION_STALE, CONFLICT_POLICY_STALE, CONFLICT_WITHDRAWAL_FORBIDDEN, CONFLICT_DEPENDENCY_ACTIVE, CAPABILITY_DENIED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: use editorial.record_conflict_declaration to append sequence+1 ABSENT/NOT_APPLICABLE fact; never UPDATE or DELETE the prior declaration
+    withdrawActionProposal:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.withdrawActionProposal
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.idempotency_keys(scope,key_hash)
+        - ops.action_proposals(id)
+        - ops.action_proposal_versions(proposal_id,version)
+        - ops.action_review_assignments(proposal_id,proposal_version,slot_ordinal,assignment_generation,id)
+        - ops.action_decisions(proposal_id,proposal_version,created_at,id)
+        - ops.in_flight_effects(action_proposal_id,proposal_version,id)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.idempotency_keys, ops.action_proposals, ops.action_proposal_versions, ops.action_review_assignments, ops.action_decisions, ops.in_flight_effects, ops.audit_events, ops.outbox]
+      effect_owner: control-api.withdrawActionProposal
+      atomic_transition_group: gurine.command.withdrawActionProposal.v1
+      state_disposition: DRAFT|PENDING_QUORUM->WITHDRAWN and every current live assignment->CANCELLED
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.withdrawActionProposal}
+      outbox: {events: [action.proposal_withdrawn.v1], cardinality: {action.proposal_withdrawn.v1: exactly-one}, payload_source: specs/product/addendum-event-contracts.yaml}
+      receipt: {schema: ActionProposalReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, ACTION_PROPOSAL_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: lock the complete proposal graph; final authorization wins; exact withdrawal preserves all prior decisions and returns only after audit/outbox/idempotency receipt commit
+    withdrawActionDecision:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.withdrawActionDecision
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.idempotency_keys(scope,key_hash)
+        - ops.action_proposals(id)
+        - ops.action_proposal_versions(proposal_id,version)
+        - ops.action_review_assignments(proposal_id,proposal_version,slot_ordinal,assignment_generation,id)
+        - ops.action_decisions(proposal_id,proposal_version,created_at,id)
+        - ops.in_flight_effects(action_proposal_id,proposal_version,id)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.idempotency_keys, ops.action_proposals, ops.action_proposal_versions, ops.action_review_assignments, ops.action_decisions, ops.in_flight_effects, ops.audit_events, ops.outbox]
+      effect_owner: control-api.withdrawActionDecision
+      atomic_transition_group: gurine.command.withdrawActionDecision.v1
+      state_disposition: append one APPROVAL_WITHDRAWAL and one same-slot generation+1 ASSIGNED or VACANT row; original approval and assignment remain immutable
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.withdrawActionDecision}
+      outbox: {events: [action.decision_withdrawn.v1], cardinality: {action.decision_withdrawn.v1: exactly-one}, payload_source: specs/product/addendum-event-contracts.yaml}
+      receipt: {schema: ActionDecisionReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, ACTION_PROPOSAL_STALE, ACTION_ASSIGNMENT_STALE, ACTION_DIGEST_MISMATCH, ACTION_DECISION_CLOSED, STEP_UP_REQUIRED, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: one full self-FK withdrawal fact and one new assignment generation commit with proposal/audit/outbox/idempotency receipt; final quorum race loser writes zero
+    promoteResearchArtifactToEvidence:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.promoteResearchArtifactToEvidence
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.idempotency_keys(scope,key_hash)
+        - editorial.cases(id)
+        - raw.research_artifacts(id,artifact_sha256)
+        - raw.asset_rights_decisions(asset_id,decision_version)
+        - raw.research_artifact_promotions(research_artifact_id,artifact_sha256,promotion_digest)
+        - raw.source_documents(id,revision)
+        - raw.evidence_segments(source_document_id,source_document_revision,ordinal,id)
+        - ops.agent_source_uses(agent_run_id,use_ordinal)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.idempotency_keys, editorial.cases, raw.research_artifacts, raw.asset_rights_decisions, raw.research_artifact_promotions, raw.source_documents, raw.evidence_segments, ops.agent_source_uses, ops.audit_events, ops.outbox]
+      effect_owner: control-api.promoteResearchArtifactToEvidence
+      atomic_transition_group: gurine.command.promoteResearchArtifactToEvidence.v1
+      state_disposition: immutable research artifact plus one revision-fixed authoritative Evidence graph
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, source: HTTP Idempotency-Key header only, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.promoteResearchArtifactToEvidence}
+      outbox: {events: [research.artifact_promoted.v1, evidence.segment_created.v1], cardinality: {research.artifact_promoted.v1: exactly-one, evidence.segment_created.v1: exactly selected segment count}, payload_source: specs/product/addendum-event-contracts.yaml}
+      receipt: {schema: PromoteResearchArtifactReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_REQUEST, ACTOR_ASSERTION_INVALID, CAPABILITY_DENIED, RESOURCE_NOT_FOUND, VERSION_CONFLICT, IDEMPOTENCY_CONFLICT, ARTIFACT_NOT_CLEAN, RIGHTS_DENIED, LOCATOR_MISMATCH, CONTENT_HASH_MISMATCH, VALIDATION_FAILED, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+      repository_result: re-extract pinned bytes and commit all source-document/segment/promotion/source-use/case/audit/outbox rows or zero; no partial Evidence
+    cancelAgentRun:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.cancelAgentRun
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.idempotency_keys(scope,key_hash)
+        - ops.agent_runs(id)
+        - ops.agent_provider_turns(agent_run_id,turn_ordinal,id)
+        - ops.agent_tool_calls(agent_run_id,call_id)
+        - ops.agent_reconciliation_evidence(agent_run_id,evidence_id)
+        - ops.agent_run_control_receipts(agent_run_id,aggregate_version,id)
+        - ops.budget_reservations(job_id,attempt,id)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.idempotency_keys, ops.agent_runs, ops.agent_provider_turns, ops.agent_tool_calls, ops.agent_reconciliation_evidence, ops.agent_run_control_receipts, ops.budget_reservations, ops.audit_events, ops.outbox]
+      effect_owner: control-api.cancelAgentRun
+      atomic_transition_group: gurine.command.cancelAgentRun.v2
+      state_disposition: definitive pre-dispatch->CANCELLED/SETTLED; possible effect->CANCEL_REQUESTED
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, source: HTTP Idempotency-Key header, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.cancelAgentRun}
+      outbox: {events: [agent.run_control_changed.v2], cardinality: {agent.run_control_changed.v2: exactly-one}, payload_source: specs/product/addendum-event-contracts.yaml}
+      receipt: {schema: AgentRunControlReceiptV2, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, AGENT_RUN_STATE_INVALID, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: elapsed time never proves cancellation; complete provider/tool/reconciliation graph determines the one control receipt and budget disposition before commit
+    decideJourneyHandoff:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.decideJourneyHandoff
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      entry_boundaries:
+        external_actor_http: {transport_profile: CONTROL_COMMAND, session_user: gurine_control_api, assertion_type: ACTOR, attempt_wrapper: ops.consume_journey_handoff_assertion_attempt_v1}
+        internal_service_workflow: {transport_profile: JOURNEY_WORKFLOW_DB_COMMAND, session_user: gurine_workflow_worker, assertion_type: SERVICE, canonical_target: ops.consume_journey_handoff_assertion_attempt_v1->ops.prepare_journey_handoff_decision_v1->ops.decide_journey_handoff_v1->ops.finalize_journey_handoff_decision_response_v1}
+        mutual_exclusion: selected before any assertion replay-guard or business relation access; both paths converge only after exact semantic request and stable business-hash parity
+      lock_order:
+        - immutable committed assertion replay-guard plus ASSERTION_ATTEMPT_CONSUMED audit proof lookup
+        - ops.idempotency_keys(scope,key_hash)
+        - non-locking immutable handoff lookup solely to discover journey_instance_id
+        - ops.journey_instances(id)
+        - ops.journey_handoffs(id,journey_instance_id,generation)
+        - compiled domain adapter rows in registered relation and primary-key order
+        - ops.journey_transition_receipts(journey_instance_id,sequence)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.assertion_replay_guard read-proof, ops.idempotency_keys, ops.journey_instances, ops.journey_handoffs, binding-specific domain relations, ops.journey_transition_receipts, ops.audit_events, ops.outbox]
+      effect_owner: control-api.decideJourneyHandoff
+      atomic_transition_group: gurine.command.decideJourneyHandoff.v1
+      state_disposition: terminal old PENDING_ACK to ACKNOWLEDGED or DECLINED; optional compiled DECLINE replacement inserts generation+1 and performs a second parent/receipt transition to final WAITING_ACK
+      compound_branches: [decline_with_replacement, expiry_with_replacement, supersession_with_replacement, terminal_outcome_with_cancellation]
+      success_contract: {decision_receipt: required-old-terminal-step, replacement: nullable-complete-generation-plus-one-request, final_parent: required-authoritative-post-command-head}
+      decision_reason_shape:
+        discriminator: decision
+        closed_decline_reason_codes: [CAPABILITY_UNAVAILABLE, OBJECT_SCOPE_MISMATCH, CONFLICT_OF_INTEREST, WORKLOAD_CAPACITY, DEPENDENCY_BLOCKED, SUBJECT_INVALID, OWNER_UNAVAILABLE, POLICY_BLOCKED, RECEIVER_DECLINED]
+        branches:
+          ACKNOWLEDGE: {reasonCode: MUST_BE_NULL, reason: MUST_BE_NULL, reasonDigest: MUST_BE_NULL, reasonEncrypted: MUST_BE_NULL}
+          DECLINE: {reasonCode: REQUIRED_CLOSED_DECLINE_REASON_CODE, reason: REQUIRED_VALID_UNICODE_NUL_FREE_NFC_NON_WHITESPACE_1_TO_4000, reasonDigest: REQUIRED_SHA256_OF_EXACT_NFC_UTF8_BYTES, reasonEncrypted: REQUIRED_NEW_CLAIM_ONLY_RANDOMIZED_CIPHERTEXT}
+      write_ownership:
+        attempt_consume: [ops.assertion_replay_guard, ops.audit_events#ASSERTION_ATTEMPT_CONSUMED]
+        prepare: [ops.idempotency_keys]
+        apply: [binding-specific domain relations, ops.journey_instances, ops.journey_handoffs, ops.journey_transition_receipts, ops.audit_events#command, ops.outbox]
+        finalize: [ops.idempotency_keys]
+        apply_forbidden: [ops.idempotency_keys, ops.assertion_replay_guard]
+      transaction_identity:
+        attempt_columns: [ops.assertion_replay_guard.attempt_transaction_xid8, ops.audit_events.attempt_transaction_xid8]
+        attempt_predicate: both immutable rows are MVCC-visible, non-null and equal; their xid8 differs from Transaction-B pg_current_xact_id(); each producer bound it to server-side pg_current_xact_id() in Transaction A
+        claim_column: ops.idempotency_keys.claim_transaction_xid8
+        claim_predicate: BOUND_V1 NEW stores server-only pg_current_xact_id(); apply and finalize require equality with Transaction B's top-level xid under ordinary, SAVEPOINT and nested SAVEPOINT execution
+        forbidden: [xmin, hard pg_xact_status committed predicate, caller xid input, legacy xid backfill]
+        legacy: all legacy xid8 values remain NULL and are never proof
+      relation_access_registry:
+        prepare: {owner_claim: exactly-once, owner_replay: exactly-once-iff-FINAL_AVAILABLE, direct_ops_idempotency_keys: zero}
+        apply: {direct_ops_idempotency_keys: exactly-one schema-qualified SELECT INTO STRICT of complete prepared-NEW tuple, direct_dml: zero, helper_calls: zero, owner_calls: zero}
+        finalize: {pre_finalize_direct_read: exactly-one schema-qualified SELECT INTO STRICT FOR UPDATE of complete tuple, owner_finalize: exactly-once, owner_replay: zero, post_finalize_direct_readback: exactly-one complete tuple, equality: status/schema/media/header bytes/body bytes/digests/resource/receipt/audit/outbox/completed values plus preserved claim xid; JSON reserialization forbidden}
+      idempotency:
+        relation: ops.idempotency_keys
+        contract: external-command-idempotency-v1
+        key_sources: {external_actor_http: 'SHA256(UTF8(raw HTTP Idempotency-Key header))', internal_service_workflow: exact authenticated workload envelope idempotencyKeySha256}
+        stable_business_identity: seven-field business hash excluding transport request and assertion-attempt identity
+        non_substitution: key hash, transport request ID, wire request digest and business request hash are distinct fields and cannot substitute for one another
+        authorization_attempt: fresh JTI replay-guard plus immutable attempt audit before the business transaction, with equal non-null persisted attempt_transaction_xid8 values from a distinct top-level transaction
+        exact_replay_business_writes: 0
+        changed_business_replay: IDEMPOTENCY_CONFLICT
+      update_relations: ops.journey_handoffs includes one old UPDATE and a conditional new row; ops.journey_instances, ops.journey_transition_receipts, ops.audit_events and ops.outbox each include a conditional second ordered row for the replacement step
+      cardinality:
+        no_replacement: {journey_instance_updates: 1, old_handoff_updates: 1, new_handoffs: 0, transition_receipts: 1, audits: 1, outbox: 1, finalized_receipts: 1}
+        with_replacement: {journey_instance_updates: 2, old_handoff_updates: 1, new_handoffs: 1, transition_receipts: 2, audits: 2, outbox: 2, finalized_receipts: 1}
+        domain_adapter_effect: exact compiled binding cardinality
+        exact_replay: {authorization_attempt_writes: [ops.assertion_replay_guard, ops.audit_events#ASSERTION_ATTEMPT_CONSUMED], business_writes: 0, response: byte-identical-finalized}
+      audit: {relation: ops.audit_events, new_success_rows: one-or-two by replacement branch, exact_replay_command_rows: 0, exact_replay_authorization_attempt_rows: 1, action: command.decideJourneyHandoff, authorization_action: ASSERTION_ATTEMPT_CONSUMED}
+      outbox: {events: [journey.handoff_decided.v1, journey.handoff_requested.v1], cardinality: {journey.handoff_decided.v1: exactly-one, journey.handoff_requested.v1: zero-or-one iff replacement}, payload_source: specs/product/addendum-event-contracts.yaml}
+      receipt: {schema: JourneyHandoffDecisionReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, ACTOR_ASSERTION_INVALID, ACTOR_ASSERTION_REPLAYED, SERVICE_ASSERTION_INVALID, SERVICE_ASSERTION_REPLAYED, RESOURCE_NOT_FOUND, CAPABILITY_DENIED, HANDOFF_RECEIVER_MISMATCH, HANDOFF_STATE_INVALID, HANDOFF_BINDING_MISMATCH, VERSION_CONFLICT, HANDOFF_EXPIRED, JOURNEY_TERMINAL, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: one SERIALIZABLE transaction calls typed prepare; FINAL_REPLAY returns stored status/media/header/body before encryption or domain lookup, while NEW alone persists claim_transaction_xid8, encrypts, applies the typed decisionReceipt nullable replacement and finalParent, calls owner-finalize once, and directly reads back the complete exact response tuple; success requires receipt/head parity and persisted byte equality before commit, with no replay-owner call, xmin proof or hard pg_xact_status predicate; wrong receiver stale version stale digest expiry terminal state and changed business replay write zero protected business rows
+    recordSupplierIdentityResolution:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.recordSupplierIdentityResolution
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order: [ops.idempotency_keys(scope,key_hash), core.supplier_identity_candidates(candidate_id,candidate_revision), core.supplier_identity_resolution_decisions(decision_id), ops.audit_events, ops.outbox]
+      relations: [ops.idempotency_keys, core.supplier_identity_candidates, core.supplier_identity_resolution_decisions, core.supplier_identity_resolution_decision_members, ops.audit_events, ops.outbox]
+      effect_owner: identity-api.supplier-identity-resolution
+      atomic_transition_group: gurine.command.recordSupplierIdentityResolution.v1
+      state_disposition: supplier_identity_candidate.CANDIDATE->resolution_decision.APPENDED
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.recordSupplierIdentityResolution}
+      outbox: {events: [supplier.identity_resolution_recorded.v1], cardinality: {supplier.identity_resolution_recorded.v1: exactly-one}}
+      receipt: {schema: SupplierIdentityResolutionReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+    recordSupplierRelationshipAssertion:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.recordSupplierRelationshipAssertion
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order: [ops.idempotency_keys(scope,key_hash), core.supplier_relationship_assertions(assertion_id), core.supplier_relationship_assertion_evidence(assertion_id), ops.audit_events, ops.outbox]
+      relations: [ops.idempotency_keys, core.supplier_relationship_assertions, core.supplier_relationship_assertion_evidence, ops.audit_events, ops.outbox]
+      effect_owner: identity-api.supplier-relationship-assertion
+      atomic_transition_group: gurine.command.recordSupplierRelationshipAssertion.v1
+      state_disposition: supplier_relationship_assertion.NONE->PENDING
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.recordSupplierRelationshipAssertion}
+      outbox: {events: [supplier.relationship_assertion_created.v1], cardinality: {supplier.relationship_assertion_created.v1: exactly-one}}
+      receipt: {schema: SupplierRelationshipAssertionReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+    decideSupplierRelationshipAssertion:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#external_commands.decideSupplierRelationshipAssertion
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order: [ops.idempotency_keys(scope,key_hash), core.supplier_relationship_assertions(assertion_id), core.supplier_relationship_assertion_evidence(assertion_id), ops.audit_events, ops.outbox]
+      relations: [ops.idempotency_keys, core.supplier_relationship_assertions, core.supplier_relationship_assertion_evidence, ops.audit_events, ops.outbox]
+      effect_owner: identity-api.supplier-relationship-decision
+      atomic_transition_group: gurine.command.decideSupplierRelationshipAssertion.v1
+      state_disposition: supplier_relationship_assertion.PENDING->VERIFIED|REJECTED|CONFLICTED|SUPERSEDED
+      idempotency: {relation: ops.idempotency_keys, contract: external-command-idempotency-v1, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      audit: {relation: ops.audit_events, new_success_rows: 1, exact_replay_rows: 0, action: command.decideSupplierRelationshipAssertion}
+      outbox: {events: [supplier.relationship_assertion_decided.v1], cardinality: {supplier.relationship_assertion_decided.v1: exactly-one}}
+      receipt: {schema: SupplierRelationshipAssertionReceiptV1, contract: external-command-receipt-v1}
+      errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  private_callback_persistence:
+    acceptSmtpDsn:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.acceptSmtpDsn
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.communication_callback_events(provider_config_id,replay_key_digest,id)
+      - ops.communication_provider_configs(id)
+      - ops.outbound_deliveries(id ascending)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 12
+      relations:
+      - ops.communication_provider_configs
+      - ops.communication_callback_events
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: gurine.callback.acceptSmtpDsn.request.v1
+      state_disposition: request evidence append plus zero or more monotonic outbound_delivery transitions
+      idempotency:
+        scope: provider_config_id + replay_key_digest; provider_request_identity_hmac is an additional changed-body conflict fence when present
+        request_digest: SHA256(exact received bytes plus signed method/URL/query/header subset)
+        exact_replay: same provider revision, replay key and callback request digest decrypts and returns stored acknowledgement status/headers/body
+          byte-for-byte before delivery locks; zero second request/receipt/domain/audit/outbox write
+        changed_replay: CALLBACK_REPLAY_CONFLICT and zero writes
+        multi_item: one append-only request row owns one ordinal-complete CommunicationCallbackNormalizedItemSetV1; each matched item may bind
+          at most one outbound receipt by callback request ID and item ordinal/digest
+      audit:
+        action: callback.acceptSmtpDsn
+        classification: RESTRICTED
+        redaction: HMAC/digest references only
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        condition: APPLIED item changes canonical delivery state
+        out_of_order_unbound: zero domain outbox
+      receipt:
+        schema: CommunicationCallbackReceiptV1
+        storage: ops.communication_callback_events acknowledgement_http_status/content_type/headers/body_ciphertext/body_sha256/body_length/digest
+          plus bound outbound receipt item ordinals
+        results:
+        - APPLIED
+        - DUPLICATE
+        - RECORDED_OUT_OF_ORDER
+        - QUARANTINED_UNBOUND
+      errors:
+      - INVALID_REQUEST
+      - UNSUPPORTED_MEDIA_TYPE
+      - PAYLOAD_TOO_LARGE
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_AUTHENTICATION_INVALID
+      - CALLBACK_FRESHNESS_INVALID
+      - CALLBACK_EVENT_ID_REQUIRED
+      - CALLBACK_CORRELATION_REQUIRED
+      - CALLBACK_BINDING_MISMATCH
+      - CALLBACK_REPLAY_CONFLICT
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+    receiveTelegramWebhook:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.receiveTelegramWebhook
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.communication_callback_events(provider_config_id,replay_key_digest,id)
+      - ops.communication_provider_configs(id)
+      - ops.outbound_deliveries(id ascending)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 12
+      relations:
+      - ops.communication_provider_configs
+      - ops.communication_callback_events
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: gurine.callback.receiveTelegramWebhook.request.v1
+      state_disposition: request evidence append plus zero or more monotonic outbound_delivery transitions
+      idempotency:
+        scope: provider_config_id + replay_key_digest; provider_request_identity_hmac is an additional changed-body conflict fence when present
+        request_digest: SHA256(exact received bytes plus signed method/URL/query/header subset)
+        exact_replay: same provider revision, replay key and callback request digest decrypts and returns stored acknowledgement status/headers/body
+          byte-for-byte before delivery locks; zero second request/receipt/domain/audit/outbox write
+        changed_replay: CALLBACK_REPLAY_CONFLICT and zero writes
+        multi_item: one append-only request row owns one ordinal-complete CommunicationCallbackNormalizedItemSetV1; each matched item may bind
+          at most one outbound receipt by callback request ID and item ordinal/digest
+      audit:
+        action: callback.receiveTelegramWebhook
+        classification: RESTRICTED
+        redaction: HMAC/digest references only
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        condition: APPLIED item changes canonical delivery state
+        out_of_order_unbound: zero domain outbox
+      receipt:
+        schema: CommunicationCallbackReceiptV1
+        storage: ops.communication_callback_events acknowledgement_http_status/content_type/headers/body_ciphertext/body_sha256/body_length/digest
+          plus bound outbound receipt item ordinals
+        results:
+        - APPLIED
+        - DUPLICATE
+        - RECORDED_OUT_OF_ORDER
+        - QUARANTINED_UNBOUND
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_REQUEST
+      - UNSUPPORTED_MEDIA_TYPE
+      - PAYLOAD_TOO_LARGE
+      - CALLBACK_INTEGRATION_NOT_FOUND
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_AUTHENTICATION_INVALID
+      - CALLBACK_FRESHNESS_INVALID
+      - CALLBACK_EVENT_ID_REQUIRED
+      - CALLBACK_CORRELATION_REQUIRED
+      - CALLBACK_BINDING_MISMATCH
+      - CALLBACK_REPLAY_CONFLICT
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+    verifyWhatsAppWebhook:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.verifyWhatsAppWebhook
+      operation_kind: QUERY
+      isolation: READ_COMMITTED
+      lock_order: []
+      statement_count: 1
+      relations:
+      - ops.communication_provider_configs
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: NONE_READ_ONLY
+      state_disposition: READ_ONLY authenticated challenge echo
+      idempotency:
+        mode: SAFE_READ
+        replay: same authenticated query returns same challenge without state
+      audit:
+        rows: zero
+        failure_observability: redacted bounded metric only
+      outbox:
+        events: []
+        cardinality: zero
+      receipt:
+        schema: WhatsAppWebhookVerificationChallengeV1
+        storage: not persisted
+      errors:
+      - INVALID_PARAMETER
+      - CALLBACK_INTEGRATION_NOT_FOUND
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_VERIFY_TOKEN_INVALID
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+    receiveWhatsAppWebhook:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.receiveWhatsAppWebhook
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.communication_callback_events(provider_config_id,replay_key_digest,id)
+      - ops.communication_provider_configs(id)
+      - ops.outbound_deliveries(id ascending)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 12
+      relations:
+      - ops.communication_provider_configs
+      - ops.communication_callback_events
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: gurine.callback.receiveWhatsAppWebhook.request.v1
+      state_disposition: request evidence append plus zero or more monotonic outbound_delivery transitions
+      idempotency:
+        scope: provider_config_id + replay_key_digest; provider_request_identity_hmac is an additional changed-body conflict fence when present
+        request_digest: SHA256(exact received bytes plus signed method/URL/query/header subset)
+        exact_replay: same provider revision, replay key and callback request digest decrypts and returns stored acknowledgement status/headers/body
+          byte-for-byte before delivery locks; zero second request/receipt/domain/audit/outbox write
+        changed_replay: CALLBACK_REPLAY_CONFLICT and zero writes
+        multi_item: one append-only request row owns one ordinal-complete CommunicationCallbackNormalizedItemSetV1; each matched item may bind
+          at most one outbound receipt by callback request ID and item ordinal/digest
+      audit:
+        action: callback.receiveWhatsAppWebhook
+        classification: RESTRICTED
+        redaction: HMAC/digest references only
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        condition: APPLIED item changes canonical delivery state
+        out_of_order_unbound: zero domain outbox
+      receipt:
+        schema: CommunicationCallbackReceiptV1
+        storage: ops.communication_callback_events acknowledgement_http_status/content_type/headers/body_ciphertext/body_sha256/body_length/digest
+          plus bound outbound receipt item ordinals
+        results:
+        - APPLIED
+        - DUPLICATE
+        - RECORDED_OUT_OF_ORDER
+        - QUARANTINED_UNBOUND
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_REQUEST
+      - UNSUPPORTED_MEDIA_TYPE
+      - PAYLOAD_TOO_LARGE
+      - CALLBACK_INTEGRATION_NOT_FOUND
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_AUTHENTICATION_INVALID
+      - CALLBACK_FRESHNESS_INVALID
+      - CALLBACK_EVENT_ID_REQUIRED
+      - CALLBACK_CORRELATION_REQUIRED
+      - CALLBACK_BINDING_MISMATCH
+      - CALLBACK_REPLAY_CONFLICT
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+    receiveLineWebhook:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.receiveLineWebhook
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.communication_callback_events(provider_config_id,replay_key_digest,id)
+      - ops.communication_provider_configs(id)
+      - ops.outbound_deliveries(id ascending)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 12
+      relations:
+      - ops.communication_provider_configs
+      - ops.communication_callback_events
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: gurine.callback.receiveLineWebhook.request.v1
+      state_disposition: request evidence append plus zero or more monotonic outbound_delivery transitions
+      idempotency:
+        scope: provider_config_id + replay_key_digest; provider_request_identity_hmac is an additional changed-body conflict fence when present
+        request_digest: SHA256(exact received bytes plus signed method/URL/query/header subset)
+        exact_replay: same provider revision, replay key and callback request digest decrypts and returns stored acknowledgement status/headers/body
+          byte-for-byte before delivery locks; zero second request/receipt/domain/audit/outbox write
+        changed_replay: CALLBACK_REPLAY_CONFLICT and zero writes
+        multi_item: one append-only request row owns one ordinal-complete CommunicationCallbackNormalizedItemSetV1; each matched item may bind
+          at most one outbound receipt by callback request ID and item ordinal/digest
+      audit:
+        action: callback.receiveLineWebhook
+        classification: RESTRICTED
+        redaction: HMAC/digest references only
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        condition: APPLIED item changes canonical delivery state
+        out_of_order_unbound: zero domain outbox
+      receipt:
+        schema: CommunicationCallbackReceiptV1
+        storage: ops.communication_callback_events acknowledgement_http_status/content_type/headers/body_ciphertext/body_sha256/body_length/digest
+          plus bound outbound receipt item ordinals
+        results:
+        - APPLIED
+        - DUPLICATE
+        - RECORDED_OUT_OF_ORDER
+        - QUARANTINED_UNBOUND
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_REQUEST
+      - UNSUPPORTED_MEDIA_TYPE
+      - PAYLOAD_TOO_LARGE
+      - CALLBACK_INTEGRATION_NOT_FOUND
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_AUTHENTICATION_INVALID
+      - CALLBACK_FRESHNESS_INVALID
+      - CALLBACK_EVENT_ID_REQUIRED
+      - CALLBACK_CORRELATION_REQUIRED
+      - CALLBACK_BINDING_MISMATCH
+      - CALLBACK_REPLAY_CONFLICT
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+    receiveSolapiSmsCallback:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.receiveSolapiSmsCallback
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.communication_callback_events(provider_config_id,replay_key_digest,id)
+      - ops.communication_provider_configs(id)
+      - ops.outbound_deliveries(id ascending)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 12
+      relations:
+      - ops.communication_provider_configs
+      - ops.communication_callback_events
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: gurine.callback.receiveSolapiSmsCallback.request.v1
+      state_disposition: request evidence append plus zero or more monotonic outbound_delivery transitions
+      idempotency:
+        scope: provider_config_id + replay_key_digest; provider_request_identity_hmac is an additional changed-body conflict fence when present
+        request_digest: SHA256(exact received bytes plus signed method/URL/query/header subset)
+        exact_replay: same provider revision, replay key and callback request digest decrypts and returns stored acknowledgement status/headers/body
+          byte-for-byte before delivery locks; zero second request/receipt/domain/audit/outbox write
+        changed_replay: CALLBACK_REPLAY_CONFLICT and zero writes
+        multi_item: one append-only request row owns one ordinal-complete CommunicationCallbackNormalizedItemSetV1; each matched item may bind
+          at most one outbound receipt by callback request ID and item ordinal/digest
+      audit:
+        action: callback.receiveSolapiSmsCallback
+        classification: RESTRICTED
+        redaction: HMAC/digest references only
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        condition: APPLIED item changes canonical delivery state
+        out_of_order_unbound: zero domain outbox
+      receipt:
+        schema: CommunicationCallbackReceiptV1
+        storage: ops.communication_callback_events acknowledgement_http_status/content_type/headers/body_ciphertext/body_sha256/body_length/digest
+          plus bound outbound receipt item ordinals
+        results:
+        - APPLIED
+        - DUPLICATE
+        - RECORDED_OUT_OF_ORDER
+        - QUARANTINED_UNBOUND
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_REQUEST
+      - UNSUPPORTED_MEDIA_TYPE
+      - PAYLOAD_TOO_LARGE
+      - CALLBACK_INTEGRATION_NOT_FOUND
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_AUTHENTICATION_INVALID
+      - CALLBACK_FRESHNESS_INVALID
+      - CALLBACK_EVENT_ID_REQUIRED
+      - CALLBACK_CORRELATION_REQUIRED
+      - CALLBACK_BINDING_MISMATCH
+      - CALLBACK_REPLAY_CONFLICT
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+    receiveSolapiKakaoCallback:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.receiveSolapiKakaoCallback
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.communication_callback_events(provider_config_id,replay_key_digest,id)
+      - ops.communication_provider_configs(id)
+      - ops.outbound_deliveries(id ascending)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 12
+      relations:
+      - ops.communication_provider_configs
+      - ops.communication_callback_events
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: gurine.callback.receiveSolapiKakaoCallback.request.v1
+      state_disposition: request evidence append plus zero or more monotonic outbound_delivery transitions
+      idempotency:
+        scope: provider_config_id + replay_key_digest; provider_request_identity_hmac is an additional changed-body conflict fence when present
+        request_digest: SHA256(exact received bytes plus signed method/URL/query/header subset)
+        exact_replay: same provider revision, replay key and callback request digest decrypts and returns stored acknowledgement status/headers/body
+          byte-for-byte before delivery locks; zero second request/receipt/domain/audit/outbox write
+        changed_replay: CALLBACK_REPLAY_CONFLICT and zero writes
+        multi_item: one append-only request row owns one ordinal-complete CommunicationCallbackNormalizedItemSetV1; each matched item may bind
+          at most one outbound receipt by callback request ID and item ordinal/digest
+      audit:
+        action: callback.receiveSolapiKakaoCallback
+        classification: RESTRICTED
+        redaction: HMAC/digest references only
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        condition: APPLIED item changes canonical delivery state
+        out_of_order_unbound: zero domain outbox
+      receipt:
+        schema: CommunicationCallbackReceiptV1
+        storage: ops.communication_callback_events acknowledgement_http_status/content_type/headers/body_ciphertext/body_sha256/body_length/digest
+          plus bound outbound receipt item ordinals
+        results:
+        - APPLIED
+        - DUPLICATE
+        - RECORDED_OUT_OF_ORDER
+        - QUARANTINED_UNBOUND
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_REQUEST
+      - UNSUPPORTED_MEDIA_TYPE
+      - PAYLOAD_TOO_LARGE
+      - CALLBACK_INTEGRATION_NOT_FOUND
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_AUTHENTICATION_INVALID
+      - CALLBACK_FRESHNESS_INVALID
+      - CALLBACK_EVENT_ID_REQUIRED
+      - CALLBACK_CORRELATION_REQUIRED
+      - CALLBACK_BINDING_MISMATCH
+      - CALLBACK_REPLAY_CONFLICT
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+    receiveTwilioVoiceCallback:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_callback_operations.receiveTwilioVoiceCallback
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+      - ops.communication_callback_events(provider_config_id,replay_key_digest,id)
+      - ops.communication_provider_configs(id)
+      - ops.outbound_deliveries(id ascending)
+      - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal)
+      - ops.outbound_delivery_receipts(delivery_id,receipt_sequence)
+      statement_count: 12
+      relations:
+      - ops.communication_provider_configs
+      - ops.communication_callback_events
+      - ops.outbound_deliveries
+      - ops.outbound_delivery_attempts
+      - ops.outbound_delivery_receipts
+      - ops.audit_events
+      - ops.outbox
+      effect_owner: notification-worker.callback-gateway
+      atomic_transition_group: gurine.callback.receiveTwilioVoiceCallback.request.v1
+      state_disposition: request evidence append plus zero or more monotonic outbound_delivery transitions
+      idempotency:
+        scope: provider_config_id + replay_key_digest; provider_request_identity_hmac is an additional changed-body conflict fence when present
+        request_digest: SHA256(exact received bytes plus signed method/URL/query/header subset)
+        exact_replay: same provider revision, replay key and callback request digest decrypts and returns stored acknowledgement status/headers/body
+          byte-for-byte before delivery locks; zero second request/receipt/domain/audit/outbox write
+        changed_replay: CALLBACK_REPLAY_CONFLICT and zero writes
+        multi_item: one append-only request row owns one ordinal-complete CommunicationCallbackNormalizedItemSetV1; each matched item may bind
+          at most one outbound receipt by callback request ID and item ordinal/digest
+      audit:
+        action: callback.receiveTwilioVoiceCallback
+        classification: RESTRICTED
+        redaction: HMAC/digest references only
+      outbox:
+        events:
+        - communication.delivery_receipt_recorded.v1
+        condition: APPLIED item changes canonical delivery state
+        out_of_order_unbound: zero domain outbox
+      receipt:
+        schema: CommunicationCallbackReceiptV1
+        storage: ops.communication_callback_events acknowledgement_http_status/content_type/headers/body_ciphertext/body_sha256/body_length/digest
+          plus bound outbound receipt item ordinals
+        results:
+        - APPLIED
+        - DUPLICATE
+        - RECORDED_OUT_OF_ORDER
+        - QUARANTINED_UNBOUND
+      errors:
+      - INVALID_PARAMETER
+      - INVALID_REQUEST
+      - UNSUPPORTED_MEDIA_TYPE
+      - PAYLOAD_TOO_LARGE
+      - CALLBACK_INTEGRATION_NOT_FOUND
+      - CALLBACK_INTEGRATION_UNAVAILABLE
+      - CALLBACK_AUTHENTICATION_REQUIRED
+      - CALLBACK_AUTHENTICATION_INVALID
+      - CALLBACK_FRESHNESS_INVALID
+      - CALLBACK_EVENT_ID_REQUIRED
+      - CALLBACK_CORRELATION_REQUIRED
+      - CALLBACK_BINDING_MISMATCH
+      - CALLBACK_REPLAY_CONFLICT
+      - RATE_LIMITED
+      - STORAGE_FAILURE
+      - INTERNAL_ERROR
+      repository_result: read-only verification writes zero; mutation enforces request and ordered-item cardinality and returns stored receipt
+        only after commit
+  private_control_service_persistence:
+    reconcileAgentRun:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_control_service_commands.reconcileAgentRun
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.idempotency_keys(scope,key_hash)
+        - ops.agent_runs(id)
+        - ops.agent_provider_turns(agent_run_id,turn_ordinal,id)
+        - ops.agent_tool_calls(agent_run_id,call_id)
+        - ops.agent_reconciliation_evidence(agent_run_id,evidence_id,evidence_sha256)
+        - ops.agent_run_control_receipts(agent_run_id,aggregate_version,id)
+        - ops.budget_reservations(id)
+        - ops.budget_reservation_ledger_entries(reservation_id,sequence)
+        - ops.audit_events chain head
+        - ops.outbox
+      relations: [ops.idempotency_keys, ops.agent_runs, ops.agent_provider_turns, ops.agent_tool_calls, ops.agent_reconciliation_evidence, ops.agent_run_control_receipts, ops.budget_reservations, ops.budget_reservation_ledger_entries, ops.audit_events, ops.outbox]
+      authorization: request-bound reconciliation-worker service assertion and current job fence; browser and human assertions are forbidden
+      evidence_rule: exact run-bound reconciliation evidence ID+digest and target composite are locked; stale, cross-run, ambiguous or caller-only proof writes zero
+      effect_owner: control-api-private.reconcileAgentRun
+      atomic_transition_group: gurine.private.reconcileAgentRun.v2
+      outbox: {events: [agent.run_control_changed.v2], cardinality: {agent.run_control_changed.v2: exactly-one}}
+      receipt: {schema: AgentRunControlReceiptV2, storage: ops.agent_run_control_receipts plus finalized ops.idempotency_keys response bytes}
+      repository_result: safe retry only from RECONCILIATION_REQUIRED; recovered result is reused, CANCEL_REQUESTED never returns directly to ACTIVE, and exact replay dispatches nothing
+
+  private_action_executor_persistence_contract:
+    isolation: SERIALIZABLE
+    common_lock_prefix: [ops.idempotency_keys(scope,key_hash), ops.in_flight_effects(id), ops.execution_authorizations(execution_id,generation), ops.execution_attempts(execution_id,generation)]
+    common_lock_suffix: [ops.audit_events chain head, ops.outbox, ops.execution_receipts(execution_id,receipt_sequence)]
+    cardinality: exactly one current authorization, exactly one typed target effect, one audit, declared outbox set and one gapless execution receipt; exact replay writes zero
+    repository_result: validate the approved target digest, call one typed routine, append the definitive or reconciliation-required receipt, and finalize response bytes before commit; no network I/O in transaction
+
+  private_application_command_persistence:
+    private.RecordOutboundDeliveryObservation:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.RecordOutboundDeliveryObservation']"
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.outbound_deliveries(id)
+        - ops.outbound_delivery_attempts(delivery_id,attempt_ordinal,id) when source_kind is PROVIDER_RESPONSE
+        - ops.communication_callback_events(id) when source_kind is PROVIDER_CALLBACK
+        - ops.communication_reconciliation_decisions(id) when source_kind is PROVIDER_POLL or RECONCILIATION_DECISION
+        - ops.outbound_delivery_receipts(delivery_id,receipt_sequence,id)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.outbound_deliveries, ops.outbound_delivery_attempts, ops.communication_callback_events, ops.communication_reconciliation_decisions, ops.outbound_delivery_receipts, ops.audit_events, ops.outbox]
+      effect_owner: notification-worker.communication-gateway
+      atomic_transition_group: gurine.private.recordOutboundDeliveryObservation.v1
+      state_disposition: outbound_delivery exact monotonic observation with synchronous provider evidence capped at PROVIDER_ACCEPTED
+      idempotency: {identity: [delivery_id, observation_key_digest], exact_replay_writes: 0, changed_replay: DELIVERY_OBSERVATION_CONFLICT}
+      cardinality: {receipt: exactly-one-new-or-exact-replay, delivery_update: zero-or-one, audit: exactly-one-new, outbox: zero-or-one, exact_replay: zero writes}
+      audit: {relation: ops.audit_events, action: OUTBOUND_DELIVERY_OBSERVATION_RECORDED, new_observation_rows: 1, exact_replay_rows: 0}
+      outbox: {events: [communication.delivery_receipt_recorded.v1], cardinality: {applied_state_change: exactly-one, stale_stored: zero, exact_replay: zero}}
+      procedure: ops.record_outbound_delivery_observation_v1
+      receipt: {schema: OutboundDeliveryObservationReceiptV1, storage: ops.outbound_delivery_receipts, exact_identity: [id, delivery_id, receipt_sequence, receipt_digest, resulting_state, applied, observed_at]}
+      errors: [RESOURCE_NOT_FOUND, DELIVERY_VERSION_CONFLICT, DELIVERY_OBSERVATION_INVALID, DELIVERY_OBSERVATION_CONFLICT, DELIVERY_RECONCILIATION_REQUIRED, INTERNAL_ERROR]
+      repository_result: the database derives observed_at from transaction time or an immutable callback poll or reconciliation receipt and returns only after the observation receipt audit and optional applied outbox commit
+    materializeResponseRequestSent:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_application_commands.materializeResponseRequestSent
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.inbox(consumer,event_id)
+        - editorial.response_requests(id)
+        - ops.communication_intents(id)
+        - ops.communication_renderings(id)
+        - intake.response_access_tokens(id)
+        - intake.communication_endpoint_link_events(endpoint_id,endpoint_version)
+        - ops.communication_provider_preflight_receipts(id)
+        - ops.outbound_deliveries(id)
+        - ops.outbound_delivery_receipts(delivery_id,receipt_sequence,id)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.inbox, editorial.response_requests, ops.communication_intents, ops.communication_renderings, intake.response_access_tokens, intake.communication_endpoint_link_events, ops.communication_provider_preflight_receipts, ops.outbound_deliveries, ops.outbound_delivery_receipts, ops.audit_events, ops.outbox]
+      effect_owner: workflow-worker.response-request-materializer
+      atomic_transition_group: gurine.private.materializeResponseRequestSent.v1
+      state_disposition: response_request.DRAFT->SENT
+      idempotency: {relation: ops.inbox, identity: [consumer, event_id], exact_replay_writes: 0, changed_replay: EVENT_REPLAY_CONFLICT}
+      cardinality:
+        APPLIED_SENT: {request_update: exactly-one, delivery_composite: exactly-one, audit: exactly-one, outbox: exactly-one, sent_receipt: exactly-one, inbox_terminal_result: exactly-one}
+        NO_OP_ALREADY_SENT: {request_update: zero, audit: zero, outbox: zero, sent_receipt: zero, inbox_terminal_result: exactly-one}
+        NO_OP_NONQUALIFYING: {request_update: zero, audit: zero, outbox: zero, sent_receipt: zero, inbox_terminal_result: exactly-one}
+        exact_replay: {all_writes: zero, result: byte-identical stored union}
+      audit: {relation: ops.audit_events, action: RESPONSE_REQUEST_SENT, APPLIED_SENT_rows: 1, no_op_rows: 0, exact_replay_rows: 0}
+      outbox: {events: [response.request_sent.v1], cardinality: {APPLIED_SENT: exactly-one, NO_OP_ALREADY_SENT: zero, NO_OP_NONQUALIFYING: zero, exact_replay: zero}}
+      receipt: {schema: ResponseRequestSentMaterializationResultV1, applied_receipt: ResponseRequestSentReceiptV1, storage: ops.inbox completed handler result plus applied-only editorial.response_request_sent_receipts and editorial.response_requests immutable sent composite}
+      errors: [RESOURCE_NOT_FOUND, RESPONSE_REQUEST_VERSION_CONFLICT, RESPONSE_REQUEST_STATE_INVALID, RESPONSE_DELIVERY_BINDING_INVALID, EVENT_REPLAY_CONFLICT, INTERNAL_ERROR]
+      repository_result: one typed transaction owns DRAFT to SENT; communication.delivery_receipt_recorded.v1 replay alone cannot infer or repeat the transition
+    materializeResponseSubmissionIntake:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#private_application_commands.materializeResponseSubmissionIntake
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.inbox(consumer,event_id)
+        - ops.outbox(id)
+        - intake.response_submissions(id)
+        - editorial.response_requests(id)
+        - editorial.cases(id)
+        - editorial.responses(submission_id)
+        - ops.audit_events chain head
+        - ops.outbox
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.inbox, ops.outbox, intake.response_submissions, editorial.response_requests, editorial.cases, editorial.responses, ops.audit_events]
+      effect_owner: workflow-worker.response-submission-materializer
+      atomic_transition_group: gurine.private.materializeResponseSubmissionIntake.v1
+      state_disposition: response_submission.IMMUTABLE->OWNED_INTAKE_MATERIALIZED
+      idempotency: {relation: ops.inbox, identity: [consumer, event_id], exact_replay_writes: 0, changed_replay: EVENT_REPLAY_CONFLICT, distinct_byte_equal_event: NO_OP_ALREADY_MATERIALIZED}
+      cardinality:
+        APPLIED: {editorial_response: exactly-one, submission_pointer_update: exactly-one, reciprocal_foreign_keys: exactly-two, audit: exactly-one, outbox: exactly-one, inbox_terminal_result: exactly-one}
+        NO_OP_ALREADY_MATERIALIZED: {domain: zero, audit: zero, outbox: zero, inbox_terminal_result: exactly-one}
+        exact_replay: {all_writes: zero, result: byte-identical stored union}
+      audit: {relation: ops.audit_events, action: RESPONSE_SUBMISSION_MATERIALIZED, applied_rows: 1, no_op_rows: 0, exact_replay_rows: 0}
+      outbox: {events: [editorial.response_materialized.v1], cardinality: {APPLIED: exactly-one, NO_OP_ALREADY_MATERIALIZED: zero, exact_replay: zero}}
+      procedure: editorial.materialize_response_submission_intake_v1
+      receipt: {schema: ResponseSubmissionMaterializationResultV1, storage: ops.inbox terminal result plus reciprocal intake.response_submissions and editorial.responses bindings}
+      errors: [RESOURCE_NOT_FOUND, EVENT_REPLAY_CONFLICT, EVENT_EFFECT_CONFLICT, RESPONSE_SUBMISSION_BINDING_INVALID, INTERNAL_ERROR]
+      repository_result: APPLIED commits the reciprocal response/submission graph with inbox result; exact existing graph stores only NO_OP_ALREADY_MATERIALIZED; one-sided or changed binding rolls back every write
+    private.PublishRetraction:
+      semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.PublishRetraction']"
+      operation_kind: COMMAND
+      isolation: SERIALIZABLE
+      lock_order:
+        - ops.in_flight_effects(id)
+        - ops.execution_authorizations(execution_id,generation)
+        - ops.execution_attempts(execution_id,generation)
+        - editorial.cases(id)
+        - editorial.retraction_drafts(id)
+        - editorial.review_snapshots(id)
+        - editorial.publication_previews(id)
+        - editorial.publication_gate_decisions(case_id,decision_sequence,id)
+        - editorial.publication_revisions(case_id,revision DESC,id)
+        - ops.audit_events chain head
+        - ops.outbox
+        - ops.execution_receipts(execution_id,receipt_sequence)
+      statement_count: derived len(command-semantics transaction.statements)
+      relations: [ops.in_flight_effects, ops.execution_authorizations, ops.execution_attempts, editorial.cases, editorial.retraction_drafts, editorial.review_snapshots, editorial.publication_previews, editorial.publication_gate_decisions, editorial.publication_revisions, ops.audit_events, ops.outbox, ops.execution_receipts]
+      effect_owner: action-execution-worker.retraction-executor
+      atomic_transition_group: gurine.private.PublishRetraction.v1
+      state_disposition: publication.PUBLISHED_*|CORRECTED|TEMPORARILY_RESTRICTED->RETRACTED
+      idempotency: {identity: [execution_id, generation, execution_digest], unique_result: one immutable publication revision and execution receipt, exact_replay_writes: 0, changed_replay: IDEMPOTENCY_CONFLICT}
+      cardinality: {gate: exactly-one, revision: exactly-one, case: exactly-one, audit: exactly-one, domain_outbox: exactly-one, projection_outbox: exactly-one, execution_receipt: exactly-one, exact_replay: zero writes}
+      audit: {relation: ops.audit_events, action: PUBLICATION_RETRACTED, new_success_rows: 1, exact_replay_rows: 0}
+      outbox: {events: [publication.revision_created.v1, projection.publication_revision_created.v1], cardinality: {publication.revision_created.v1: exactly-one, projection.publication_revision_created.v1: exactly-one}}
+      receipt: {schema: RetractionExecutionReceiptV1, storage: ops.execution_receipts and immutable publication revision candidate key}
+      errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, PUBLICATION_GATE_BLOCKED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+      repository_result: execution may become SUCCEEDED only in the same transaction that commits the tombstone revision, projection outbox and complete receipt
+    private.CreateTaskFromApprovedAction: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateTaskFromApprovedAction']", contract: private_action_executor_persistence_contract, target_relations: [ops.tasks], procedure: ops.create_task_from_approved_action_v1, receipt: TaskExecutionReceiptV1}
+    private.MaterializeComparableCandidate: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.MaterializeComparableCandidate']", contract: private_action_executor_persistence_contract, target_relations: [core.procurement_comparable_candidate_revisions], procedure: core.materialize_procurement_comparable_candidate_v1, receipt: ComparableExecutionReceiptV1}
+    private.DispatchCommunicationIntent: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.DispatchCommunicationIntent']", contract: private_action_executor_persistence_contract, target_relations: [ops.communication_intents, ops.communication_renderings, ops.outbound_deliveries], procedure: ops.dispatch_approved_communication_intent_v1, receipt: CommunicationDispatchAuthorizationReceiptV1}
+    private.ApplyKillSwitchCommand: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ApplyKillSwitchCommand']", contract: private_action_executor_persistence_contract, target_relations: [ops.kill_switches], procedure: ops.apply_approved_kill_switch_command_v1, receipt: KillSwitchExecutionReceiptV1}
+    private.RecordCommunicationAuthorizationDecision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.RecordCommunicationAuthorizationDecision']", contract: private_action_executor_persistence_contract, target_relations: [intake.communication_authorization_events], procedure: intake.record_approved_communication_authorization_v1, receipt: CommunicationAuthorizationDecisionReceiptV1}
+    private.ReviseAssetRightsDecision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ReviseAssetRightsDecision']", contract: private_action_executor_persistence_contract, target_relations: [raw.asset_rights_decisions], procedure: raw.revise_approved_asset_rights_decision_v1, receipt: AssetRightsDecisionReceiptV1}
+    private.CreateRecordClassScheduleRevision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateRecordClassScheduleRevision']", contract: private_action_executor_persistence_contract, target_relations: [ops.record_class_schedules], procedure: ops.create_approved_record_class_schedule_revision_v1, receipt: RecordClassScheduleReceiptV1}
+    private.PublishFundingDisclosureRevision: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.PublishFundingDisclosureRevision']", contract: private_action_executor_persistence_contract, target_relations: [editorial.funding_disclosure_revisions, editorial.funding_disclosure_entries], procedure: editorial.publish_approved_funding_disclosure_revision_v1, receipt: FundingDisclosureExecutionReceiptV1}
+    private.DecideCapabilityActivation: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.DecideCapabilityActivation']", contract: private_action_executor_persistence_contract, target_relations: [ops.capability_activation_decisions, ops.capability_activation_evidence], procedure: ops.decide_approved_capability_activation_v1, receipt: CapabilityActivationDecisionReceiptV1}
+    private.CreateBusinessCalendarVersion: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.CreateBusinessCalendarVersion']", contract: private_action_executor_persistence_contract, target_relations: [ops.business_calendar_versions], procedure: ops.create_approved_business_calendar_version_v1, receipt: BusinessCalendarVersionReceiptV1}
+    private.ApplyCommercialControl: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.ApplyCommercialControl']", contract: private_action_executor_persistence_contract, target_relations: [ops.commercial_control_executions, ops.commercial_control_execution_items, ops.commercial_control_import_receipts, ops.commercial_control_acknowledgements], procedure: ops.apply_approved_commercial_control_v1, receipt: CommercialControlExecutionReceiptV1}
+    private.MaterializePaidEvidencePacket: {semantics_ref: "specs/product/addendum-command-semantics.yaml#private_application_commands['private.MaterializePaidEvidencePacket']", isolation: SERIALIZABLE, authorization: workflow-worker service identity plus claimed ops.inbox event and exact qualification contract subject plus ten typed immutable member candidate keys, target_relations: [ops.paid_evidence_packets, ops.paid_evidence_packet_members], procedure: ops.materialize_paid_evidence_packet_subject_v1, digest_rule: PostgreSQL resolves the ten source candidate keys and recomputes packetSubjectDigest before comparing expectedPacketSubjectDigest, receipt: PaidEvidencePacketMaterializationReceiptV1, exact_replay_writes: 0, outbox: [product.paid_evidence_packet_subject_persisted.v1]}
+  base_operation_atomic_extension_persistence:
+    submitResponse:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.submitResponse
+      existing_source: specs/api/operation-persistence.yaml#operations[operation_id=submitResponse]
+      required_replacement: retain the existing session/draft/request/submission owner transaction but replace token-bearing v1 payload admission with the persisted token-free eight-field v2 payload and three atomic v2 outbox rows
+      effect_owner: submission-api.submitResponse
+      atomic_transition_group: gurine.command.submitResponse.v2
+      relations: [intake.submission_sessions, intake.response_drafts, editorial.response_requests, intake.response_submissions, ops.audit_events, ops.outbox]
+      cardinality: {submission: exactly-one, draft_terminalization: exactly-one, request_terminalization: exactly-one, session_revocation: exactly-one, audit: exactly-one, outbox: exactly-three, receipt: exactly-one, exact_replay: zero writes}
+    resolveCorrectionRequest:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.resolveCorrectionRequest
+      existing_source: specs/api/operation-persistence.yaml#operations[operation_id=resolveCorrectionRequest]
+      required_replacement: the RESOLVED branch replaces the shallow READ COMMITTED update with the declared SERIALIZABLE correction+publication graph; non-publishing terminal branches retain one typed transaction
+      effect_owner: control-api.resolveCorrectionRequest
+      atomic_transition_group: gurine.command.resolveCorrectionRequest.publish.v1
+      relations: [ops.idempotency_keys, editorial.corrections, editorial.cases, editorial.publication_previews, editorial.publication_gate_decisions, editorial.publication_revisions, ops.tasks, ops.audit_events, ops.outbox]
+      cardinality: {correction: exactly-one, gate: exactly-one, revision: exactly-one, case: exactly-one, task: zero-or-one, audit: exactly-one, outbox: exactly-three, receipt: exactly-one}
+    placeTemporaryRestriction:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.placeTemporaryRestriction
+      existing_source: specs/api/operation-persistence.yaml#operations[operation_id=placeTemporaryRestriction]
+      required_replacement: replace READ COMMITTED and unbound access-decision insert with a SERIALIZABLE exact cause/prior-state overlay and stored response transaction
+      effect_owner: control-api.placeTemporaryRestriction
+      atomic_transition_group: gurine.command.placeTemporaryRestriction.v1
+      relations: [ops.idempotency_keys, editorial.cases, editorial.publication_revisions, editorial.publication_access_decisions, ops.audit_events, ops.outbox, cause-specific immutable decision relation]
+      cardinality: {access_decision: exactly-one, publication_revision_mutation: zero, audit: exactly-one, outbox: exactly-two, receipt: exactly-one}
+    publishCase:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.publishCase
+      existing_source: specs/api/operation-persistence.yaml#operations[operation_id=publishCase]
+      required_extension: add RESTORE_ACCESS branch; normal publish and restore remain discriminated, both SERIALIZABLE, and only restore accepts TEMPORARILY_RESTRICTED source state
+      effect_owner: control-api.publishCase
+      atomic_transition_group: gurine.command.publishCase.restore.v1
+      relations: [ops.idempotency_keys, editorial.cases, editorial.publication_access_decisions, cause-specific release receipt relation, editorial.review_snapshots, editorial.publication_previews, editorial.publication_gate_decisions, editorial.publication_revisions, ops.audit_events, ops.outbox]
+      cardinality: {gate: exactly-one, revision: exactly-one, case: exactly-one, audit: exactly-one, outbox: exactly-two, receipt: exactly-one}
+    placeLegalHold:
+      semantics_ref: specs/product/addendum-command-semantics.yaml#base_operation_atomic_extensions.placeLegalHold
+      existing_source: specs/api/operation-persistence.yaml#operations[operation_id=placeLegalHold]
+      required_replacement: replace case-shaped conditional update with editorial.place_legal_hold closed target-union procedure; case mutation is conditional only for case-governed variants
+      effect_owner: control-api.placeLegalHold
+      atomic_transition_group: gurine.command.placeLegalHold.v2
+      relations: [ops.idempotency_keys, target-specific concrete relation, editorial.cases, editorial.review_snapshots, editorial.conflict_snapshots, ops.legal_hold_target_anchors, editorial.legal_holds, ops.audit_events, ops.outbox]
+      cardinality: {target: exactly-one, anchor: exactly-one logical, hold: exactly-one new success, audit: exactly-one, outbox: exactly-one, receipt: exactly-one, exact_replay: zero writes}
+  set_equality_assertions:
+  - query persistence equals all additive QUERY IDs derived from addendum-operation-contracts
+  - external command persistence equals all additive COMMAND IDs derived from addendum-command-semantics
+  - private application command persistence equals all owner-addendum private application command IDs
+  - base operation atomic extension persistence equals all owner-addendum base extension IDs
+  - private callback persistence equals all private callback IDs including the read-only verification query
+  - query plus command persistence equals all additive external operations, with cardinality derived from source sets rather than numeric literals
+  - every command copies effect owner, atomic group, lock order, statements, cardinality, idempotency, audit, outbox, receipt and exact errors
+    from command semantics
+cross_file_physical_dependencies:
+  required_relations_not_yet_in_migration_ownership:
+  - intake.privacy_request_receipt_tokens
+  - intake.communication_endpoint_versions
+  - ops.communication_provider_config_versions
+  satisfied_derived_session_contract: specs/submission/addendum-derived-session-boundary.yaml plus the 0027 intake.submission_sessions additive
+    columns persist APPEAL_CREATE, APPEAL_STATUS and COMMUNICATION_PROFILE scope, lineage, version, SHA-256 token, issuance, rotation, expiry
+    and revocation without widening RESPONSE_RECEIPT.
+  remaining_required_session_contract: PRIVACY_REQUEST_RECEIPT still requires an exact persistence relation/procedure or an authority decision
+    to use a closed intake.submission_sessions extension; it is not covered by the appeal/profile overlay.
+  failure_mode: fail validation and migration generation until every relation, column, key, grant, retention and repository contract exists; no
+    JSONB fallback or RESPONSE_RECEIPT mutation reuse
+  retention_location_shape:
+    current_physical_source: ops.retention_execution_receipts.location_counts as sqlx::types::Json<RetentionLocationCountV1Array>
+    lock_identity:
+    - retention_request_id
+    - completed_at DESC
+    - execution_generation DESC
+    - id DESC
+    rule: location_ordinal is not a physical column and is forbidden in SQL; per-location values are decoded only through the closed array validator
+      and their canonical order/digest.
+    required_if_row_level_location_mutation_is_introduced: add a normalized immutable child relation with an explicit ordinal, composite FK, grants,
+      retention and repository round-trip before any SQL may lock or address one location independently.
+  lifecycle_contract_physical_closure:
+    response_request_sent:
+      required: editorial.response_requests typed sent-binding columns/candidate key, immutable endpoint/provider version ledgers, exact delivery receipt composite and one workflow-worker mutation function matching private application persistence
+      failure: DRAFT to SENT remains unavailable; status cannot be inferred from mutable heads or event presence
+    conflict_commands:
+      required: editorial.record_conflict_declaration exact signature must accept both PRESENT/UNKNOWN declaration and ABSENT withdrawal shapes, claim/finalize stored idempotency bytes, and emit the selected closed event exactly once
+      failure: declareConflict and withdrawConflict remain unavailable; direct table INSERT is forbidden
+    correction_publication:
+      required: resolveCorrectionRequest typed function and base persistence row must implement the SERIALIZABLE correction+gate+publication graph and immutable receipt candidate keys
+      failure: RESOLVED cannot map to PUBLISHED and cannot return success after only updating editorial.corrections
+    restriction_restoration:
+      required: publication access decision stores cause kind/id/digest, preserved prior state, release receipt linkage and immutable overlay digest; publishCase restoration accepts only an exact released cause and full fresh gate
+      failure: restriction or restoration returns a typed unavailable/gate error without changing public projection
+    retraction:
+      required: private.PublishRetraction typed workflow function plus publication/execution composite candidate keys and exact receipt chain
+      failure: RETRACTION execution stays POLICY_BLOCKED or fails typed; an event consumer cannot synthesize success
+    noncase_hold:
+      required: base placeLegalHold request/OpenAPI/persistence imports LegalHoldTargetBindingV1 and editorial.place_legal_hold exact procedure already declared by 0028
+      failure: non-case target request is rejected rather than coerced into a synthetic case
+    set_equality: every required item above must have migration columns/keys/grants/procedure, Rust repository and PostgreSQL concurrency/negative tests before status FINAL
+derived_session_persistence_overlay:
+  normative_source: specs/submission/addendum-derived-session-boundary.yaml
+  relation: intake.submission_sessions
+  additive_columns:
+  - parent_session_id
+  - scope_binding_digest
+  - issuance_receipt_digest
+  - rotation_sequence
+  status_values:
+  - ACTIVE
+  - CONSUMED
+  - REVOKED
+  - EXPIRED
+  token_storage: lowercase SHA-256 only; raw 32-byte base64url-no-padding values exist only in the BFF sealed cookie boundary
+  common_replay_order:
+  - Authenticate request-bound BFF assertion and compute operationId+bffIssuer+sessionTokenHash+idempotencyKeyHash plus exact request digest.
+  - Lock ops.idempotency_keys and finalized encrypted response bytes before checking ACTIVE session state.
+  - Same finalized digest returns exact status, safe headers and response bytes after consume/rotation with zero second domain, session, audit
+    or outbox effect.
+  - Changed digest returns IDEMPOTENCY_CONFLICT; different token, issuer, operation or key cannot retrieve another replay.
+  - A new claim alone locks the ACTIVE session/domain graph, mutates, consumes or rotates, writes audit/outbox/receipt, stores exact response
+    bytes and finalizes atomically.
+  private_bff_broker_operations:
+    issueCommunicationProfileSession:
+      lock_order:
+      - ops.idempotency_keys
+      - eligible parent intake.submission_sessions
+      - exact origin row
+      - intake.communication_subjects
+      - prior same-scope COMMUNICATION_PROFILE child
+      - ops.audit_events chain head
+      cardinality: one exact subject, zero-or-one prior child revoked, one new ACTIVE child, one issuance receipt and one finalized response
+      parent_kinds:
+      - SUBSCRIPTION_MANAGEMENT
+      - RESPONSE_RECEIPT
+      - CORRECTION_RECEIPT
+    issueResponseAppealCreateSession:
+      lock_order:
+      - ops.idempotency_keys
+      - RESPONSE_RECEIPT parent
+      - response submission
+      - response request
+      - prior same-scope APPEAL_CREATE child
+      - ops.audit_events chain head
+      cardinality: one exact submission/request/receipt composite, one ACTIVE APPEAL_CREATE child, one issuance receipt and one finalized response
+      parent_kinds:
+      - RESPONSE_RECEIPT
+    rotateResponseAppealStatusSession:
+      lock_order:
+      - ops.idempotency_keys
+      - RESPONSE_RECEIPT parent
+      - response submission
+      - response request
+      - exact appeal
+      - prior APPEAL_STATUS child
+      - ops.audit_events chain head
+      cardinality: one exact appeal composite, zero-or-one prior status child revoked, one replacement ACTIVE child, one issuance receipt and
+        one finalized response
+      parent_kinds:
+      - RESPONSE_RECEIPT
+  operation_mutations:
+    createResponseAppeal:
+      session: APPEAL_CREATE ACTIVE->CONSUMED and APPEAL_STATUS NONE->ACTIVE
+      atomic_group: appeal insert, audit, response.appeal_created.v1 outbox, appeal receipt, session consume/issue, token-free issuance receipt
+        and finalized exact response bytes
+    requestCommunicationEndpointLink:
+      session: COMMUNICATION_PROFILE ACTIVE->REVOKED and replacement NONE->ACTIVE under identical subject/origin scope
+    verifyCommunicationEndpointLink:
+      session: endpoint challenge consumed plus COMMUNICATION_PROFILE ACTIVE->REVOKED and replacement NONE->ACTIVE under identical subject/origin
+        scope
+    unlinkCommunicationEndpoint:
+      session: endpoint/authorization revocations plus COMMUNICATION_PROFILE ACTIVE->REVOKED and replacement NONE->ACTIVE under identical subject/origin
+        scope
+  cookie_profiles:
+    appeal:
+      name: gurine_response_appeal_session
+      path: /respond/receipt/appeal
+      kinds:
+      - APPEAL_CREATE
+      - APPEAL_STATUS
+    communication_profile:
+      name: gurine_communication_profile_session
+      path: /communication-profile
+      kinds:
+      - COMMUNICATION_PROFILE
+    defaults:
+      host_only: true
+      httpOnly: true
+      sameSite: Lax
+      secure_in_production: true
+  redaction: X-Gurine-Next-Submission-Session and all raw/hashed session credentials are absent from domain events, audit details, errors, logs,
+    traces, metrics, analytics, URLs and browser storage.

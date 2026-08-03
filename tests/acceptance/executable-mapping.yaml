@@ -1,0 +1,2715 @@
+schema_version: 2
+specification_version: 13.0.0
+status: FINAL
+scenario_count: 271
+scenarios:
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-001
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Heading and landmark order follows the information hierarchy
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-002
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Keyboard users can operate drawers and dialogs
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-003
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Form errors provide summary and field association
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-004
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Data visualization has an equivalent table or text
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-005
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Two hundred percent zoom preserves core task completion
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-006
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Compact layout preserves primary information
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-007
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Dynamic status announcements are restrained
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ACCESSIBILITY_RESPONSIVE-008
+  feature_file: tests/acceptance/accessibility-responsive.feature
+  scenario_title: Reduced motion preference is respected
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/accessibility-responsive.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/accessibility-responsive.spec.ts --grep AC-ACCESSIBILITY_RESPONSIVE-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-001
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: Audit logs and analytics are separate records
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-002
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: Response content is never an analytics property
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-003
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: Correction content is never an analytics property
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-004
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: Public search text is minimized
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-005
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: SSR and browser do not double-count a page view
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-006
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: Every event has purpose and consumer
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-007
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: Response Portal has zero third-party collection
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ANALYTICS_PRIVACY-008
+  feature_file: tests/acceptance/analytics-privacy.feature
+  scenario_title: Analytics failure is nonblocking
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/analytics-privacy.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/analytics-privacy.spec.ts --grep AC-ANALYTICS_PRIVACY-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-001
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: axum dependency는 workspace 어디에도 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-002
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: production Python runtime은 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-003
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: domain crate는 Actix에 의존하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-004
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: domain crate는 SQLx에 의존하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-005
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: domain crate는 Utoipa에 의존하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-006
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: public API는 editorial write capability를 링크하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-007
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: public API DB role은 private schema를 읽지 못한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-008
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: public API DB role은 public schema를 쓸 수 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-009
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: public API에는 공개 write operation이 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-010
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: public web은 control client를 import하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-011
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: control client는 server-only다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-011
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-012
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: services는 composition root다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-012
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-013
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: Cargo workspace의 모든 member가 물리적으로 존재한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-013
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ARCHITECTURE_BOUNDARIES-014
+  feature_file: tests/acceptance/architecture-boundaries.feature
+  scenario_title: Placeholder implementation marker는 production release를 차단한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/architecture_boundaries.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test architecture_boundaries -- AC-ARCHITECTURE_BOUNDARIES-014
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-BUDGET_AND_KILL_SWITCH-001
+  feature_file: tests/acceptance/budget-and-kill-switch.feature
+  scenario_title: 100% 일일 모델 예산에서 선택적 AI 작업을 시작하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/budget_and_kill_switch.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test budget_and_kill_switch -- AC-BUDGET_AND_KILL_SWITCH-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-BUDGET_AND_KILL_SWITCH-002
+  feature_file: tests/acceptance/budget-and-kill-switch.feature
+  scenario_title: 이미 실행 중인 task도 비용 상한을 넘지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/budget_and_kill_switch.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test budget_and_kill_switch -- AC-BUDGET_AND_KILL_SWITCH-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-BUDGET_AND_KILL_SWITCH-003
+  feature_file: tests/acceptance/budget-and-kill-switch.feature
+  scenario_title: source kill switch는 해당 source fetch만 중단한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/budget_and_kill_switch.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test budget_and_kill_switch -- AC-BUDGET_AND_KILL_SWITCH-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-BUDGET_AND_KILL_SWITCH-004
+  feature_file: tests/acceptance/budget-and-kill-switch.feature
+  scenario_title: publication kill switch는 background consumer에도 적용된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/budget_and_kill_switch.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test budget_and_kill_switch -- AC-BUDGET_AND_KILL_SWITCH-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-BUDGET_AND_KILL_SWITCH-005
+  feature_file: tests/acceptance/budget-and-kill-switch.feature
+  scenario_title: kill switch 변경은 감사된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/budget_and_kill_switch.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test budget_and_kill_switch -- AC-BUDGET_AND_KILL_SWITCH-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CASE_LIFECYCLE-001
+  feature_file: tests/acceptance/case-lifecycle.feature
+  scenario_title: 허용된 조사 흐름
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/case_lifecycle.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test case_lifecycle -- AC-CASE_LIFECYCLE-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CASE_LIFECYCLE-002
+  feature_file: tests/acceptance/case-lifecycle.feature
+  scenario_title: 정의되지 않은 전이를 거부한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/case_lifecycle.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test case_lifecycle -- AC-CASE_LIFECYCLE-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CASE_LIFECYCLE-003
+  feature_file: tests/acceptance/case-lifecycle.feature
+  scenario_title: stale client의 변경을 거부한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/case_lifecycle.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test case_lifecycle -- AC-CASE_LIFECYCLE-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CASE_LIFECYCLE-004
+  feature_file: tests/acceptance/case-lifecycle.feature
+  scenario_title: 종료된 데이터 오류 사건을 새 공식 문서로 다시 연다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/case_lifecycle.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test case_lifecycle -- AC-CASE_LIFECYCLE-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CASE_LIFECYCLE-005
+  feature_file: tests/acceptance/case-lifecycle.feature
+  scenario_title: 공개 후 수정은 direct edit가 아니라 correction review로 들어간다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/case_lifecycle.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test case_lifecycle -- AC-CASE_LIFECYCLE-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CASE_LIFECYCLE-006
+  feature_file: tests/acceptance/case-lifecycle.feature
+  scenario_title: DB direct mutation을 권한으로 차단한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/case_lifecycle.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test case_lifecycle -- AC-CASE_LIFECYCLE-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CODE_QUALITY_AND_IDIOMS-001
+  feature_file: tests/acceptance/code-quality-and-idioms.feature
+  scenario_title: First-party Rust forbids unsafe code at compile time
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/code_quality_and_idioms.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test code_quality_and_idioms -- AC-CODE_QUALITY_AND_IDIOMS-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CODE_QUALITY_AND_IDIOMS-002
+  feature_file: tests/acceptance/code-quality-and-idioms.feature
+  scenario_title: Production Rust avoids panic-based control flow
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/code_quality_and_idioms.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test code_quality_and_idioms -- AC-CODE_QUALITY_AND_IDIOMS-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CODE_QUALITY_AND_IDIOMS-003
+  feature_file: tests/acceptance/code-quality-and-idioms.feature
+  scenario_title: Actix handlers have one transport responsibility
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/code_quality_and_idioms.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test code_quality_and_idioms -- AC-CODE_QUALITY_AND_IDIOMS-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CODE_QUALITY_AND_IDIOMS-004
+  feature_file: tests/acceptance/code-quality-and-idioms.feature
+  scenario_title: SvelteKit code uses Svelte-native data and mutation flows
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/code_quality_and_idioms.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test code_quality_and_idioms -- AC-CODE_QUALITY_AND_IDIOMS-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CODE_QUALITY_AND_IDIOMS-005
+  feature_file: tests/acceptance/code-quality-and-idioms.feature
+  scenario_title: Files and functions remain bounded
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/code_quality_and_idioms.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test code_quality_and_idioms -- AC-CODE_QUALITY_AND_IDIOMS-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CODE_QUALITY_AND_IDIOMS-006
+  feature_file: tests/acceptance/code-quality-and-idioms.feature
+  scenario_title: YAGNI prevents speculative frameworks
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/code_quality_and_idioms.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test code_quality_and_idioms -- AC-CODE_QUALITY_AND_IDIOMS-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-COPY_SAFETY-001
+  feature_file: tests/acceptance/copy-safety.feature
+  scenario_title: 자체 범죄 단정 표현을 차단한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/copy_safety.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test copy_safety -- AC-COPY_SAFETY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-COPY_SAFETY-002
+  feature_file: tests/acceptance/copy-safety.feature
+  scenario_title: 가격 차이를 정확한 조건과 함께 표현한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/copy_safety.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test copy_safety -- AC-COPY_SAFETY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-COPY_SAFETY-003
+  feature_file: tests/acceptance/copy-safety.feature
+  scenario_title: 기관 사례 0건을 청렴으로 표현하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/copy_safety.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test copy_safety -- AC-COPY_SAFETY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-COPY_SAFETY-004
+  feature_file: tests/acceptance/copy-safety.feature
+  scenario_title: 공식 결과는 attribution 범위를 갖는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/copy_safety.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test copy_safety -- AC-COPY_SAFETY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CORRECTION_HISTORY-001
+  feature_file: tests/acceptance/correction-history.feature
+  scenario_title: minor correction은 새 revision을 만든다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/correction_history.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test correction_history -- AC-CORRECTION_HISTORY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CORRECTION_HISTORY-002
+  feature_file: tests/acceptance/correction-history.feature
+  scenario_title: material correction은 결론 영향을 설명한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/correction_history.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test correction_history -- AC-CORRECTION_HISTORY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CORRECTION_HISTORY-003
+  feature_file: tests/acceptance/correction-history.feature
+  scenario_title: 철회 URL은 이력 없는 404가 아니다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/correction_history.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test correction_history -- AC-CORRECTION_HISTORY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-CORRECTION_HISTORY-004
+  feature_file: tests/acceptance/correction-history.feature
+  scenario_title: correction cache purge
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/correction_history.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test correction_history -- AC-CORRECTION_HISTORY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-001
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: Rust toolchain is exactly pinned
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-002
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: PostgreSQL image is exactly pinned
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-003
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: Bun and core frontend tools are exactly pinned
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-004
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: SQLx runtime and TLS features use the 0.9 contract
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-005
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: SQLx CLI upstream lock exception is narrowly compensated
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-006
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: Generated tool version drift is rejected
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-007
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: Clean bootstrap resolves the same dependency graph
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-008
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: Unreviewed core dependency change is blocked
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DEPENDENCY_PINNING-009
+  feature_file: tests/acceptance/dependency-pinning.feature
+  scenario_title: Security and document-processing dependencies are exact direct pins
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/dependency_pinning.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test dependency_pinning -- AC-DEPENDENCY_PINNING-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-001
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: Docker image에 latest tag가 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-002
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: DB-only profile은 PostgreSQL만 시작한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-003
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: full profile은 migration 순서를 지킨다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-004
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: control API port는 기본 공개되지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-005
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: runtime container는 root가 아니다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-006
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: image layer에 secret이 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-007
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: test database는 격리된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-008
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: public API health와 readiness가 구분된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-009
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: full Compose public route가 작동한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-010
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: 모든 long-running container가 SIGTERM을 처리한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-011
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: test Compose는 전체 서비스 토폴로지를 격리한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-011
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-012
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: Docker context는 민감한 로컬 상태를 제외한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-012
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-013
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: PostgreSQL 18은 새 volume root를 사용한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-013
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-014
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: PostgreSQL 18 test tmpfs도 새 root를 사용한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-014
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-DOCKER_DEVELOPMENT-015
+  feature_file: tests/acceptance/docker-development.feature
+  scenario_title: PostgreSQL container 재생성 후 데이터가 보존된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/docker_development.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test docker_development -- AC-DOCKER_DEVELOPMENT-015
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ENTITY_RESOLUTION-001
+  feature_file: tests/acceptance/entity-resolution.feature
+  scenario_title: 상호명만 같은 업체를 자동 merge하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/entity_resolution.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test entity_resolution -- AC-ENTITY_RESOLUTION-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ENTITY_RESOLUTION-002
+  feature_file: tests/acceptance/entity-resolution.feature
+  scenario_title: ambiguous supplier concentration은 공개 후보가 아니다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/entity_resolution.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test entity_resolution -- AC-ENTITY_RESOLUTION-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ENTITY_RESOLUTION-003
+  feature_file: tests/acceptance/entity-resolution.feature
+  scenario_title: authoritative identifier로 merge를 승인한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/entity_resolution.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test entity_resolution -- AC-ENTITY_RESOLUTION-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ENTITY_RESOLUTION-004
+  feature_file: tests/acceptance/entity-resolution.feature
+  scenario_title: 잘못된 merge를 되돌리면 영향 평가가 열린다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/entity_resolution.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test entity_resolution -- AC-ENTITY_RESOLUTION-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-EVENTING-001
+  feature_file: tests/acceptance/eventing.feature
+  scenario_title: 상태 변경과 outbox는 원자적이다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/eventing.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test eventing -- AC-EVENTING-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-EVENTING-002
+  feature_file: tests/acceptance/eventing.feature
+  scenario_title: consumer crash 뒤 같은 이벤트를 다시 받는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/eventing.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test eventing -- AC-EVENTING-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-EVENTING-003
+  feature_file: tests/acceptance/eventing.feature
+  scenario_title: aggregate version이 역행한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/eventing.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test eventing -- AC-EVENTING-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-EVENTING-004
+  feature_file: tests/acceptance/eventing.feature
+  scenario_title: aggregate version gap을 reconciliation한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/eventing.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test eventing -- AC-EVENTING-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-EVENTING-005
+  feature_file: tests/acceptance/eventing.feature
+  scenario_title: malformed restricted event는 redacted DLQ로 간다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/eventing.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test eventing -- AC-EVENTING-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-FINAL_DELIVERY-001
+  feature_file: tests/acceptance/final-delivery.feature
+  scenario_title: No required capability is deferred
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/final_delivery.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test final_delivery -- AC-FINAL_DELIVERY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-FINAL_DELIVERY-002
+  feature_file: tests/acceptance/final-delivery.feature
+  scenario_title: All products are present
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/final_delivery.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test final_delivery -- AC-FINAL_DELIVERY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-FINAL_DELIVERY-003
+  feature_file: tests/acceptance/final-delivery.feature
+  scenario_title: Development works without external provider keys
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/final_delivery.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test final_delivery -- AC-FINAL_DELIVERY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-FINAL_DELIVERY-004
+  feature_file: tests/acceptance/final-delivery.feature
+  scenario_title: Production requires only documented deployment inputs
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/final_delivery.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test final_delivery -- AC-FINAL_DELIVERY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-FINAL_DELIVERY-005
+  feature_file: tests/acceptance/final-delivery.feature
+  scenario_title: Partial success cannot be reported as complete
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/final_delivery.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test final_delivery -- AC-FINAL_DELIVERY-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-001
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: 같은 원본을 두 번 수집한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-002
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: 같은 idempotency key에 다른 content는 충돌이다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-003
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: page 저장 후 checkpoint 전 crash에서 복구한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-004
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: raw replay는 네트워크 없이 동일 normalized output을 만든다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-005
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: lease가 만료된 worker의 결과는 fencing으로 거부한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-006
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: Document extraction is provenance-preserving and sandboxed
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-007
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: Malicious or excessive documents fail closed
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-008
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: Every parser fixture has an exact golden extraction result
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INGESTION_IDEMPOTENCY-009
+  feature_file: tests/acceptance/ingestion-idempotency.feature
+  scenario_title: Legacy binary HWP is quarantined for trusted offline conversion
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/ingestion_idempotency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test ingestion_idempotency -- AC-INGESTION_IDEMPOTENCY-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-001
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: Signal triage shows deterministic information before AI suggestions
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-002
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: Triage decision records a bounded disposition
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-003
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: Case overview exposes next task and blockers
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-004
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: Concurrent save preserves the local draft
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-005
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: Agent output cannot become machine truth automatically
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-006
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: Independent review enforces separation of duties
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-007
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: Stale approval cannot publish changed content
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-INTERNAL_WORKSPACE-008
+  feature_file: tests/acceptance/internal-workspace.feature
+  scenario_title: High-impact operation always shows a receipt
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/internal_workspace.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test internal_workspace -- AC-INTERNAL_WORKSPACE-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-001
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Anonymous login start creates the transaction it later consumes
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-002
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Login callback consumes a single-use transaction
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-003
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Step-up start is bound to the current session and action
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-004
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Step-up callback issues a bounded action authorization
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-005
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Development Compose passes every scoped runtime variable
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-006
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Every versioned command uses the exact expected-version predicate
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-007
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Session resolution never issues a request-unbound Actor Assertion
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-008
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Every Control request receives an exact request-bound Actor Assertion
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-009
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: A STEP_UP command can be retried safely after a lost response
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-010
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Raw step-up authorization never crosses the Control API boundary
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-011
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Internal session cookie has one canonical opaque-token payload
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-011
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-012
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Interaction confirmation and authentication assurance are separate contracts
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-012
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-013
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Legal hold uses a dedicated step-up command
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-013
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OIDC_COMPOSE_CONCURRENCY-014
+  feature_file: tests/acceptance/oidc-compose-concurrency.feature
+  scenario_title: Audit export is an asynchronous audited step-up command
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/oidc_compose_concurrency.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test oidc_compose_concurrency -- AC-OIDC_COMPOSE_CONCURRENCY-014
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-001
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: OpenAPI 생성은 데이터베이스 없이 성공한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-002
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: public과 control spec은 별도 파일이다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-003
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: 모든 operation ID가 명시적이고 고유하다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-004
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: public spec에 internal path가 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-005
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: control spec에 public entity read surface가 섞이지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-006
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: public schema에는 editorial private field가 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-007
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: clean OpenAPI 재생성은 diff가 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-008
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: TypeScript public client는 public spec만 사용한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-009
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: TypeScript control client는 control spec만 사용한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-010
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: clean client 재생성은 diff가 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-011
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: generated 파일 직접 수정은 검출된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-011
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-OPENAPI_CODEGEN-012
+  feature_file: tests/acceptance/openapi-codegen.feature
+  scenario_title: breaking contract change는 보고 없이 병합되지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/openapi_codegen.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test openapi_codegen -- AC-OPENAPI_CODEGEN-012
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRICE_COMPARABILITY-001
+  feature_file: tests/acceptance/price-comparability.feature
+  scenario_title: 정확한 비교군으로 가격 이상 신호를 만든다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/price_comparability.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test price_comparability -- AC-PRICE_COMPARABILITY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRICE_COMPARABILITY-002
+  feature_file: tests/acceptance/price-comparability.feature
+  scenario_title: known bundle은 단품 cohort에서 제외한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/price_comparability.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test price_comparability -- AC-PRICE_COMPARABILITY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRICE_COMPARABILITY-003
+  feature_file: tests/acceptance/price-comparability.feature
+  scenario_title: bundle이 불명확하면 ratio가 커도 차단한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/price_comparability.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test price_comparability -- AC-PRICE_COMPARABILITY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRICE_COMPARABILITY-004
+  feature_file: tests/acceptance/price-comparability.feature
+  scenario_title: SET과 EA를 환산 근거 없이 비교하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/price_comparability.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test price_comparability -- AC-PRICE_COMPARABILITY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRICE_COMPARABILITY-005
+  feature_file: tests/acceptance/price-comparability.feature
+  scenario_title: VAT unknown을 기본값으로 바꾸지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/price_comparability.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test price_comparability -- AC-PRICE_COMPARABILITY-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRICE_COMPARABILITY-006
+  feature_file: tests/acceptance/price-comparability.feature
+  scenario_title: 취소 계약은 가격·지출 cohort에서 제외한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/price_comparability.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test price_comparability -- AC-PRICE_COMPARABILITY-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRICE_COMPARABILITY-007
+  feature_file: tests/acceptance/price-comparability.feature
+  scenario_title: 작은 표본은 높은 ratio만으로 eligible이 아니다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/price_comparability.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test price_comparability -- AC-PRICE_COMPARABILITY-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-001
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Public Web is anonymous-read by default
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-002
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Review Console requires the internal identity boundary
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-003
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Response Portal uses a distinct token-scoped surface
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-004
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Surface navigation follows user jobs rather than database tables
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-005
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Combined application deployment is rejected
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-006
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Combined API client generation is rejected
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-007
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Unknown routes are not invented by implementation
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCT_STRUCTURE-008
+  feature_file: tests/acceptance/product-structure.feature
+  scenario_title: Product hierarchy cannot be changed for visual convenience
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/product_structure.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test product_structure -- AC-PRODUCT_STRUCTURE-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCTION_READINESS-001
+  feature_file: tests/acceptance/production-readiness.feature
+  scenario_title: Clean database deployment is deterministic
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/production_readiness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test production_readiness -- AC-PRODUCTION_READINESS-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCTION_READINESS-002
+  feature_file: tests/acceptance/production-readiness.feature
+  scenario_title: Restart preserves durable state
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/production_readiness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test production_readiness -- AC-PRODUCTION_READINESS-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCTION_READINESS-003
+  feature_file: tests/acceptance/production-readiness.feature
+  scenario_title: Backup restore is rehearsed
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/production_readiness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test production_readiness -- AC-PRODUCTION_READINESS-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCTION_READINESS-004
+  feature_file: tests/acceptance/production-readiness.feature
+  scenario_title: Graceful shutdown protects work
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/production_readiness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test production_readiness -- AC-PRODUCTION_READINESS-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCTION_READINESS-005
+  feature_file: tests/acceptance/production-readiness.feature
+  scenario_title: Service health distinguishes dependency failure
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/production_readiness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test production_readiness -- AC-PRODUCTION_READINESS-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PRODUCTION_READINESS-006
+  feature_file: tests/acceptance/production-readiness.feature
+  scenario_title: PostgreSQL runtime verification leaves the authority tree byte-identical
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/production_readiness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test production_readiness -- AC-PRODUCTION_READINESS-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROMPT_INJECTION-001
+  feature_file: tests/acceptance/prompt-injection.feature
+  scenario_title: raw document가 정책 무시와 즉시 게시를 지시한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/prompt_injection.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test prompt_injection -- AC-PROMPT_INJECTION-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROMPT_INJECTION-002
+  feature_file: tests/acceptance/prompt-injection.feature
+  scenario_title: 문서가 secret 또는 private URL 읽기를 지시한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/prompt_injection.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test prompt_injection -- AC-PROMPT_INJECTION-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROMPT_INJECTION-003
+  feature_file: tests/acceptance/prompt-injection.feature
+  scenario_title: citation처럼 보이는 공격 문자열을 evidence ID로 수락하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/prompt_injection.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test prompt_injection -- AC-PROMPT_INJECTION-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROMPT_INJECTION-004
+  feature_file: tests/acceptance/prompt-injection.feature
+  scenario_title: 소명 첨부의 HTML/스크립트를 실행하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/prompt_injection.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test prompt_injection -- AC-PROMPT_INJECTION-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROMPT_INJECTION-006
+  feature_file: tests/acceptance/prompt-injection.feature
+  scenario_title: Authenticated encryption rejects tamper and cross-context copy
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/prompt_injection.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test prompt_injection -- AC-PROMPT_INJECTION-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROVENANCE-001
+  feature_file: tests/acceptance/provenance.feature
+  scenario_title: raw payload hash를 검증하고 보존한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/provenance.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test provenance -- AC-PROVENANCE-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROVENANCE-002
+  feature_file: tests/acceptance/provenance.feature
+  scenario_title: 정규화 핵심 필드마다 원본 locator가 있다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/provenance.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test provenance -- AC-PROVENANCE-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROVENANCE-003
+  feature_file: tests/acceptance/provenance.feature
+  scenario_title: signal의 입력과 규칙을 재현한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/provenance.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test provenance -- AC-PROVENANCE-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROVENANCE-004
+  feature_file: tests/acceptance/provenance.feature
+  scenario_title: 존재하지 않는 evidence ref를 거부한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/provenance.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test provenance -- AC-PROVENANCE-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROVENANCE-005
+  feature_file: tests/acceptance/provenance.feature
+  scenario_title: evidence가 locator를 갖지 않으면 public claim을 지지할 수 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/provenance.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test provenance -- AC-PROVENANCE-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PROVENANCE-006
+  feature_file: tests/acceptance/provenance.feature
+  scenario_title: publication이 source freshness와 hash를 포함한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/provenance.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test provenance -- AC-PROVENANCE-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-001
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: Case detail begins with state and limits
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-002
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: Price ratio is not presented as corruption probability
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-003
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: No response is described as an observation only
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-004
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: Explained and corrected records remain discoverable
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-005
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: Institution and supplier pages avoid rankings
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-006
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: Evidence can be traced from claim to source locator
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-007
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: Retraction dominates old conclusions
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_COMPREHENSION-008
+  feature_file: tests/acceptance/public-comprehension.feature
+  scenario_title: Empty results do not imply integrity
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/public-comprehension.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/public-comprehension.spec.ts --grep AC-PUBLIC_COMPREHENSION-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_PRIVATE_BOUNDARY-001
+  feature_file: tests/acceptance/public-private-boundary.feature
+  scenario_title: public DB role은 editorial schema를 읽지 못한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/public_private_boundary.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test public_private_boundary -- AC-PUBLIC_PRIVATE_BOUNDARY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_PRIVATE_BOUNDARY-002
+  feature_file: tests/acceptance/public-private-boundary.feature
+  scenario_title: private field는 public API에 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/public_private_boundary.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test public_private_boundary -- AC-PUBLIC_PRIVATE_BOUNDARY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_PRIVATE_BOUNDARY-003
+  feature_file: tests/acceptance/public-private-boundary.feature
+  scenario_title: public ID로 unpublished 존재를 추측할 수 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/public_private_boundary.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test public_private_boundary -- AC-PUBLIC_PRIVATE_BOUNDARY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLIC_PRIVATE_BOUNDARY-004
+  feature_file: tests/acceptance/public-private-boundary.feature
+  scenario_title: response portal에 third-party tracking이 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/public_private_boundary.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test public_private_boundary -- AC-PUBLIC_PRIVATE_BOUNDARY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-001
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: 권한 있는 인간 편집자의 정확한 snapshot 승인으로 공개한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-002
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: 인간 승인이 없으면 공개하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-003
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: 사람이 아닌 actor의 승인은 인정하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-004
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: 승인 후 claim이 변경되면 승인도 stale이다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-005
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: approval이 revoke되면 공개하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-006
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: legal review가 필요한 사건은 editor 승인만으로 공개하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-007
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: response requirement가 미완료면 공개하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-008
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: unresolved blocking condition이 있으면 공개하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-PUBLICATION_GATE-009
+  feature_file: tests/acceptance/publication-gate.feature
+  scenario_title: publication kill switch가 활성화되면 모든 approval이 있어도 공개하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/publication_gate.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test publication_gate -- AC-PUBLICATION_GATE-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-001
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Opening a valid token shows the exact request scope
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-002
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Token is exchanged and removed from the visible URL
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-003
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Draft is not mistaken for submission
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-004
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Attachment remains quarantined until validation succeeds
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-005
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Public-use consent is granular and independent
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-006
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Final submission produces an immutable receipt
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-007
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Expired or invalid token reveals no case details
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_PORTAL_EXPERIENCE-008
+  feature_file: tests/acceptance/response-portal-experience.feature
+  scenario_title: Third-party analytics and chat are absent
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/response-portal-experience.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/response-portal-experience.spec.ts --grep AC-RESPONSE_PORTAL_EXPERIENCE-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_RIGHTS-001
+  feature_file: tests/acceptance/response-rights.feature
+  scenario_title: response request는 정확한 질문과 기한을 포함한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/response_rights.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test response_rights -- AC-RESPONSE_RIGHTS-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_RIGHTS-002
+  feature_file: tests/acceptance/response-rights.feature
+  scenario_title: token은 URL에서 session으로 교환하고 재사용할 수 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/response_rights.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test response_rights -- AC-RESPONSE_RIGHTS-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_RIGHTS-003
+  feature_file: tests/acceptance/response-rights.feature
+  scenario_title: 첨부는 검사 전 열리지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/response_rights.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test response_rights -- AC-RESPONSE_RIGHTS-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_RIGHTS-004
+  feature_file: tests/acceptance/response-rights.feature
+  scenario_title: public consent와 내부 검토 동의를 구분한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/response_rights.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test response_rights -- AC-RESPONSE_RIGHTS-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_RIGHTS-005
+  feature_file: tests/acceptance/response-rights.feature
+  scenario_title: 무응답을 죄의 인정으로 표현하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/response_rights.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test response_rights -- AC-RESPONSE_RIGHTS-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RESPONSE_RIGHTS-006
+  feature_file: tests/acceptance/response-rights.feature
+  scenario_title: material response가 늦게 도착하면 correction review를 연다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/response_rights.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test response_rights -- AC-RESPONSE_RIGHTS-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ROUTE_OPERATION_COMPLETENESS-001
+  feature_file: tests/acceptance/route-operation-completeness.feature
+  scenario_title: All 94 screen routes render
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/route_operation_completeness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test route_operation_completeness -- AC-ROUTE_OPERATION_COMPLETENESS-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ROUTE_OPERATION_COMPLETENESS-002
+  feature_file: tests/acceptance/route-operation-completeness.feature
+  scenario_title: All HTTP operations are exposed exactly once
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/route_operation_completeness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test route_operation_completeness -- AC-ROUTE_OPERATION_COMPLETENESS-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ROUTE_OPERATION_COMPLETENESS-003
+  feature_file: tests/acceptance/route-operation-completeness.feature
+  scenario_title: Identity flows are implemented
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/route_operation_completeness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test route_operation_completeness -- AC-ROUTE_OPERATION_COMPLETENESS-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-ROUTE_OPERATION_COMPLETENESS-004
+  feature_file: tests/acceptance/route-operation-completeness.feature
+  scenario_title: Screen and operation traceability is complete
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/route_operation_completeness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test route_operation_completeness -- AC-ROUTE_OPERATION_COMPLETENESS-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RUNTIME_CONFIGURATION-001
+  feature_file: tests/acceptance/runtime-configuration.feature
+  scenario_title: Every runtime variable is cataloged
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/runtime_configuration.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test runtime_configuration -- AC-RUNTIME_CONFIGURATION-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RUNTIME_CONFIGURATION-002
+  feature_file: tests/acceptance/runtime-configuration.feature
+  scenario_title: Production rejects placeholder secrets
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/runtime_configuration.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test runtime_configuration -- AC-RUNTIME_CONFIGURATION-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RUNTIME_CONFIGURATION-003
+  feature_file: tests/acceptance/runtime-configuration.feature
+  scenario_title: Missing source key is isolated
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/runtime_configuration.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test runtime_configuration -- AC-RUNTIME_CONFIGURATION-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RUNTIME_CONFIGURATION-004
+  feature_file: tests/acceptance/runtime-configuration.feature
+  scenario_title: Missing foundational crypto key is fatal
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/runtime_configuration.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test runtime_configuration -- AC-RUNTIME_CONFIGURATION-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-RUNTIME_CONFIGURATION-005
+  feature_file: tests/acceptance/runtime-configuration.feature
+  scenario_title: Secrets never reach logs or public diagnostics
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/runtime_configuration.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test runtime_configuration -- AC-RUNTIME_CONFIGURATION-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCHEMA_DRIFT-001
+  feature_file: tests/acceptance/schema-drift.feature
+  scenario_title: optional additive field는 경고와 함께 처리한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/schema_drift.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test schema_drift -- AC-SCHEMA_DRIFT-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCHEMA_DRIFT-002
+  feature_file: tests/acceptance/schema-drift.feature
+  scenario_title: required amount field가 사라지면 격리한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/schema_drift.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test schema_drift -- AC-SCHEMA_DRIFT-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCHEMA_DRIFT-003
+  feature_file: tests/acceptance/schema-drift.feature
+  scenario_title: 이전 정상 public data에는 stale 표시를 한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/schema_drift.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test schema_drift -- AC-SCHEMA_DRIFT-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCHEMA_DRIFT-004
+  feature_file: tests/acceptance/schema-drift.feature
+  scenario_title: 새 parser activation 전 raw replay dry-run을 비교한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/schema_drift.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test schema_drift -- AC-SCHEMA_DRIFT-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-001
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Screen inventory has unique stable identifiers and routes
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-002
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Every screen is required in the single final delivery
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-003
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: A screen answers a user job before listing UI components
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-004
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Every screen data dependency is final and ready
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-005
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Operation exists on exactly the matching API
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-006
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Every screen has a final human-readable sheet
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-007
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Screen actions require known capabilities and guards
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-008
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Every declared component is final
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-009
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Every analytics event is bidirectionally mapped
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SCREEN_CONTRACTS-010
+  feature_file: tests/acceptance/screen-contracts.feature
+  scenario_title: Compact layout preserves semantic order
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/screen-contracts.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/screen-contracts.spec.ts --grep AC-SCREEN_CONTRACTS-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SOURCE_FRESHNESS-001
+  feature_file: tests/acceptance/source-freshness.feature
+  scenario_title: freshness SLO를 충족한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/source_freshness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test source_freshness -- AC-SOURCE_FRESHNESS-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SOURCE_FRESHNESS-002
+  feature_file: tests/acceptance/source-freshness.feature
+  scenario_title: source가 stale이면 기존 page에 banner가 보인다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/source_freshness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test source_freshness -- AC-SOURCE_FRESHNESS-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SOURCE_FRESHNESS-003
+  feature_file: tests/acceptance/source-freshness.feature
+  scenario_title: stale source로 새로운 사실 주장을 자동 공개하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/source_freshness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test source_freshness -- AC-SOURCE_FRESHNESS-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SOURCE_FRESHNESS-004
+  feature_file: tests/acceptance/source-freshness.feature
+  scenario_title: source 복구 후 stale banner를 검증 뒤 제거한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/source_freshness.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test source_freshness -- AC-SOURCE_FRESHNESS-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-001
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: 정확한 PostgreSQL 버전에서 migration한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-002
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: API startup은 migration을 실행하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-003
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: one-shot migrator 실패는 서비스 시작을 막는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-004
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: SQLx offline build가 성공한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-005
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: stale SQLx metadata는 실패한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-006
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: optimistic concurrency가 stale write를 거부한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-007
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: idempotency key 재생은 같은 결과를 돌려준다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-008
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: idempotency key payload 충돌은 거부한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-009
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: domain mutation과 outbox는 원자적이다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-010
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: 잃어버린 lease worker는 완료를 기록하지 못한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-011
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: duplicate outbox delivery는 한 번만 적용된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-011
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-012
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: 금액은 부동소수점으로 저장되지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-012
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-013
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: PostgreSQL 18 container path 계약이 machine spec과 일치한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-013
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SQLX_POSTGRES-014
+  feature_file: tests/acceptance/sqlx-postgres.feature
+  scenario_title: SQLx CLI install exception은 query 검증을 약화하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/integration/acceptance/sqlx_postgres.rs
+  command: cargo nextest run -p gurine-acceptance-tests --test sqlx_postgres -- AC-SQLX_POSTGRES-014
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-001
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Browser cannot call Submission API directly
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-002
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Every Submission OpenAPI security requirement resolves
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-003
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Raw bearer tokens never enter Submission API URLs
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-004
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Response magic token becomes a pending scoped session
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-005
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: OTP promotes response access by rotating the session
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-006
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Response submission terminalizes the active session
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-007
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Correction draft supports upload preview and atomic submit
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-008
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Subscription creation is anonymous but abuse controlled
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-009
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Verification and management links create scoped subscription sessions
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-010
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Contact and export creation are BFF asserted and abuse controlled
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-011
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Scoped sessions cannot cross records or kinds
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-011
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-012
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Submission API role cannot mutate investigation or publication state
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-012
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-013
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Submission logs redact every credential
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-013
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-014
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: BFF service assertions are request bound and single use
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-014
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SUBMISSION_BOUNDARY-015
+  feature_file: tests/acceptance/submission-boundary.feature
+  scenario_title: Browser session cookies are encrypted and CSRF protected
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/submission-boundary.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/submission-boundary.spec.ts --grep AC-SUBMISSION_BOUNDARY-015
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-001
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: public case는 production SSR로 렌더링된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-001
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-002
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: public server load는 generated public client를 사용한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-002
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-003
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: review mutation은 server action을 통과한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-003
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-004
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: control token은 browser에 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-004
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-005
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: stale version conflict를 덮어쓰지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-005
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-006
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: SSR cookie가 안전한 속성을 가진다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-006
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-007
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: 신뢰하지 않는 forwarded header를 사용하지 않는다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-007
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-008
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: correction 상태는 접근 가능하게 표시된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-008
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-009
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: Bun production runtime은 graceful shutdown한다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-009
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-010
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: hydration mismatch가 없다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-010
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-011
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: adapter peer range 밖의 TypeScript는 compatibility matrix로 검증된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-011
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log
+- scenario_id: AC-SVELTEKIT_SSR-012
+  feature_file: tests/acceptance/sveltekit-ssr.feature
+  scenario_title: Node fallback은 검출된다
+  skip_policy: FORBIDDEN
+  implementation_test_path: tests/e2e/acceptance/sveltekit-ssr.spec.ts
+  command: bunx playwright test tests/e2e/acceptance/sveltekit-ssr.spec.ts --grep AC-SVELTEKIT_SSR-012
+  environment: full synthetic Docker Compose stack with PostgreSQL 18.4
+  required_evidence:
+  - exit code 0
+  - scenario-specific assertion log

@@ -1,0 +1,19 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+python:
+  implementation: CPython
+  supported_version: '3.13'
+  verified_patch: 3.13.5
+installer:
+  command: python -m pip install --require-hashes -r requirements-spec.txt
+  lock_input: requirements-spec.in
+  lock_file: requirements-spec.txt
+  resolver: uv pip compile
+  hashes_required: true
+clean_environment_contract:
+- create virtualenv outside authority tree
+- upgrade pip only before locked install
+- install with --require-hashes
+- run validator twice in independent clean virtualenvs
+- compare pip freeze and validator result

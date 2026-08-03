@@ -1,0 +1,45 @@
+schema_version: 3
+specification_version: 13.0.0
+status: FINAL
+services:
+- analysis-worker
+- clamav
+- control-api
+- document-extractor
+- egress-gateway
+- identity-api
+- ingest-worker
+- migrator
+- notification-worker
+- oidc-test-provider
+- otel-collector
+- postgres
+- projection-worker
+- public-api
+- public-web
+- response-portal
+- review-console
+- scheduler
+- submission-api
+- workflow-worker
+ingress:
+  public-web: public HTTPS
+  response-portal: public HTTPS with anti-abuse rate limits
+  review-console: private/VPN or identity-aware HTTPS
+  public-api: public HTTPS
+  submission-api: public only through bounded routes/BFF
+  control-api: no public ingress
+  identity-api: private only; reached through Review Console BFF
+egress: All external network traffic is mediated by egress-gateway channels.
+storage:
+  postgresql: PostgreSQL 18.4-compatible managed or dedicated service
+  object_store: versioned encrypted S3-compatible buckets
+  backup: encrypted PITR plus object-version backup with restore rehearsal
+slo:
+  public_api_cached_p95_ms: 300
+  public_api_uncached_p95_ms: 800
+  control_query_p95_ms: 1500
+  command_ack_p95_ms: 2000
+  ssr_ttfb_p95_ms: 800
+  public_lcp_p75_ms: 2500
+  cls_max: 0.1

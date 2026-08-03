@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "RSP-001",
+  "route": "/respond/access",
+  "url": "http://127.0.0.1:29103/respond/access",
+  "observedAt": "2026-07-19T15:35:34.262Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "RSP-001",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "identity",
+        "component": "CoverageStatement",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "security",
+        "component": "KnownUnknownResponse",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "deadline",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "process",
+        "component": "GuidedFormSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "verification",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/claim-draft-output.json",
+  "title": "ClaimDraftOutputV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "outcome",
+    "summary",
+    "investigationsPerformed",
+    "citations",
+    "unknowns",
+    "nextActions",
+    "abstentionReasons",
+    "claims",
+    "communications"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "claim-draft-output.v2" },
+    "outcome": { "enum": ["COMPLETED", "ABSTAINED"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 6000 },
+    "investigationsPerformed": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/investigation" }
+    },
+    "citations": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1000,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/citation" }
+    },
+    "unknowns": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonemptyText" }
+    },
+    "nextActions": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nextAction" }
+    },
+    "abstentionReasons": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 11,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/abstentionReason" }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/claimDraft" }
+    },
+    "communications": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/communicationDraft" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "outcome": { "const": "COMPLETED" } },
+        "required": ["outcome"]
+      },
+      "then": { "properties": { "abstentionReasons": { "maxItems": 0 } } }
+    },
+    {
+      "if": {
+        "properties": { "outcome": { "const": "ABSTAINED" } },
+        "required": ["outcome"]
+      },
+      "then": {
+        "properties": {
+          "abstentionReasons": { "minItems": 1 },
+          "claims": { "maxItems": 0 },
+          "communications": { "maxItems": 0 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nonemptyText": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "locatorSha256"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH",
+            "JSON_POINTER",
+            "HTML_CSS_SELECTOR",
+            "API_FIELD",
+            "TEXT_RANGE",
+            "IMAGE_BBOX",
+            "AUDIO_TIME_RANGE",
+            "VIDEO_TIME_RANGE",
+            "VIDEO_REGION_TIME"
+          ]
+        },
+        "value": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "locatorSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "citationId",
+        "sourceUseSha256",
+        "locator",
+        "selectedContentSha256",
+        "supports",
+        "supportsSha256"
+      ],
+      "properties": {
+        "citationId": { "type": "string", "format": "uuid" },
+        "sourceUseSha256": { "$ref": "#/$defs/sha256" },
+        "locator": { "$ref": "#/$defs/locator" },
+        "selectedContentSha256": { "$ref": "#/$defs/sha256" },
+        "supports": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "supportsSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "investigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["toolId", "objective", "resultSummary", "toolResultSha256"],
+      "properties": {
+        "toolId": {
+          "enum": ["evidence.read", "response.read", "claim.language_check"]
+        },
+        "objective": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "resultSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "toolResultSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "nextAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actionType",
+        "reason",
+        "targetDescription",
+        "requiresHumanDecision"
+      ],
+      "properties": {
+        "actionType": {
+          "enum": [
+            "COLLECT_SOURCE",
+            "VERIFY_EVIDENCE",
+            "REQUEST_RESPONSE",
+            "REVIEW_CLAIM",
+            "REVIEW_COMMUNICATION",
+            "PROMOTE_RESEARCH_ARTIFACT",
+            "NO_ACTION"
+          ]
+        },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "targetDescription": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "requiresHumanDecision": { "type": "boolean" }
+      }
+    },
+    "abstentionReason": {
+      "enum": [
+        "UNTRUSTED_INSTRUCTION_DETECTED",
+        "CITATION_REQUIRED",
+        "BUDGET_EXHAUSTED",
+        "PROVIDER_UNAVAILABLE",
+        "EVIDENCE_OUTSIDE_SNAPSHOT",
+        "TOOL_NOT_ALLOWED",
+        "CITATION_LOCATOR_MISMATCH",
+        "EVIDENCE_SNAPSHOT_STALE",
+        "ITERATION_LIMIT_REACHED",
+        "INSUFFICIENT_EVIDENCE",
+        "TOOL_RESULT_INCOMPLETE"
+      ]
+    },
+    "citationIndexes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 0, "maximum": 999 }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonemptyText" }
+    },
+    "claimDraft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposalKind",
+        "proposalState",
+        "claimType",
+        "text",
+        "citationIndexes",
+        "limitations",
+        "responseContext",
+        "languageCheckResponseSha256"
+      ],
+      "properties": {
+        "proposalKind": { "const": "CLAIM" },
+        "proposalState": { "const": "PROPOSAL_ONLY" },
+        "claimType": {
+          "enum": ["FACT", "ASSESSMENT", "CONTEXT", "LIMITATION"]
+        },
+        "text": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "citationIndexes": { "$ref": "#/$defs/citationIndexes" },
+        "limitations": { "$ref": "#/$defs/limitations" },
+        "responseContext": {
+          "enum": [
+            "NO_REQUEST",
+            "REQUESTED_NO_RESPONSE",
+            "RESPONSE_RECEIVED",
+            "RESPONSE_DISPUTES_CLAIM"
+          ]
+        },
+        "languageCheckResponseSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "communicationDraft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposalState", "payload", "languageCheckResponseSha256"],
+      "properties": {
+        "proposalState": { "const": "PROPOSAL_ONLY" },
+        "payload": {
+          "$ref": "https://gurinnae.invalid/schemas/agents/v2/communication-proposal-payload.json"
+        },
+        "languageCheckResponseSha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

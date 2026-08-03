@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.gurine.invalid/source-document.schema.json",
+  "title": "SourceDocument",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_document_id",
+    "source_id",
+    "remote_record_id",
+    "content_sha256",
+    "retrieved_at",
+    "raw_object",
+    "processing_status",
+    "schema_fingerprint",
+    "record_status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "source_document_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "source_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "remote_record_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "remote_version": {
+      "type": ["string", "null"],
+      "maxLength": 128
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "maxLength": 2048
+    },
+    "published_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "effective_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "retrieved_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "content_sha256": {
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "schema_fingerprint": {
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "raw_object": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_object_id",
+        "byte_size",
+        "mime_detected",
+        "storage_class",
+        "malware_scan_status"
+      ],
+      "properties": {
+        "raw_object_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "mime_declared": {
+          "type": ["string", "null"],
+          "maxLength": 128
+        },
+        "mime_detected": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "storage_class": {
+          "enum": [
+            "RAW_PRIVATE",
+            "EDITORIAL_PRIVATE",
+            "QUARANTINE",
+            "PUBLIC_SANITIZED"
+          ]
+        },
+        "malware_scan_status": {
+          "enum": ["NOT_REQUIRED", "PENDING", "CLEAN", "INFECTED", "ERROR"]
+        }
+      }
+    },
+    "license_status": {
+      "enum": ["REVIEWED", "RESTRICTED", "UNKNOWN", "PROHIBITED"]
+    },
+    "contains_personal_data": {
+      "enum": ["NO", "POSSIBLE", "YES"]
+    },
+    "fetch_attempt_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "processing_status": {
+      "enum": ["DISCOVERED", "FETCHED", "PARSED", "QUARANTINED", "REJECTED"]
+    },
+    "record_status": {
+      "enum": ["CURRENT", "SUPERSEDED", "DELETED_UPSTREAM"]
+    }
+  }
+}

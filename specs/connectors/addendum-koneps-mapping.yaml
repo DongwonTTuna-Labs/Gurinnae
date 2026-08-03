@@ -1,0 +1,911 @@
+schema_version: 1
+specification_version: 13.0.0-procurement-addendum
+status: REVIEW_REQUIRED
+implementation_state: OPEN_IMPLEMENTATION
+purpose: >-
+  Make the existing v13 KONEPS notice and contract connectors produce exact,
+  revision-linked procurement facts without inventing award, bidder, supplier,
+  amount, time, or deletion semantics that the upstream record does not provide.
+
+authority:
+  sole_pack_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+  domain_contract: specs/domain/addendum-procurement-domain.yaml
+  base_connectors:
+    koneps-notices:
+      connector: specs/connectors/koneps-notices/connector.yaml
+      operations: specs/connectors/koneps-notices/operations.yaml
+      field_mapping: specs/connectors/koneps-notices/field-mapping.yaml
+      official_reference: https://www.data.go.kr/data/15129394/openapi.do
+    koneps-contracts:
+      connector: specs/connectors/koneps-contracts/connector.yaml
+      operations: specs/connectors/koneps-contracts/operations.yaml
+      field_mapping: specs/connectors/koneps-contracts/field-mapping.yaml
+      official_reference: https://www.data.go.kr/data/15129427/openapi.do
+  rule: >-
+    The URLs identify the already-declared upstream contracts. This addendum does
+    not authorize scraping, a seventh connector, a new credential, or an
+    undeclared remote operation.
+
+mapping_version:
+  id: koneps-procurement-revision-v1
+  state: PENDING_APPROVAL
+  implementation_state: OPEN_IMPLEMENTATION
+  contract_digest: __MAPPING_CONTRACT_DIGEST_PENDING__
+  contract_digest_algorithm: >-
+    lowercase SHA-256 of GURINE_CANONICAL_JSON_V1 over this complete YAML
+    document after removing only mapping_version.contract_digest
+  activation_receipt_schema: specs/domain/addendum-procurement-domain.yaml#/schemas/KonepsMappingActivationReceiptV1
+  activation_receipt_state: MISSING
+  effective_from_source: exact approved schema-mapping activation receipt
+  activation_requirements:
+    - Every enabled base operation passes credentialed preflight with a recorded response fingerprint.
+    - Every required path below is observed with its declared type or the operation remains disabled.
+    - JSON and XML representations of the same synthetic/live-authorized sample normalize to the same record digest.
+    - Mapping version, mapping contract digest, activation receipt ID/digest, effectiveFrom, and superseded mapping digest are persisted.
+    - Replaying historical raw bytes uses the mapping version selected explicitly by the replay request; it never uses a mutable current mapping implicitly.
+  forbidden_activation_claims:
+    - A structural synthetic fixture does not prove a production field path.
+    - Connector health does not prove notice, award, bidder, contract, amendment, or identity coverage.
+    - A source timestamp is not the mapping effectiveFrom and a mapping effectiveFrom is not a procurement event time.
+  activation_binding:
+    - The receipt mappingVersion equals id and mappingContractDigest equals contract_digest byte-for-byte.
+    - The receipt has exactly one successful credentialed preflight run for every one of the 33 base operations.
+    - fixtureManifestDigest equals the frozen deterministic fixture manifest digest and every required fixture entry is FROZEN.
+    - effectiveFrom is supplied by the approval receipt; source event, retrieval, file mtime, commit, or fixture time cannot substitute.
+    - State remains PENDING_APPROVAL and normalization emits zero domain rows while activation_receipt_state is MISSING or invalid.
+
+record_envelopes:
+  json:
+    header_result_code: /response/header/resultCode
+    header_result_message: /response/header/resultMsg
+    item_shapes:
+      - /response/body/items/{index}
+      - /response/body/items/item/{index}
+    locator_kind: JSON_POINTER
+  xml:
+    header_result_code: /response/header/resultCode
+    header_result_message: /response/header/resultMsg
+    item_shape: /response/body/items/item[{one_based_index}]
+    locator_kind: XML_XPATH
+  invariants:
+    - Exactly one declared item shape is selected for a response and recorded in parser metadata.
+    - Record index is zero-based in ParsedRecord and converts to one-based XML predicates only in the locator.
+    - resultCode other than the base connector's success code produces zero normalized facts and follows the existing error policy.
+    - Unknown fields remain in immutable raw bytes; no unknown field enters a typed fact until a later approved mapping version names it.
+
+operation_sets:
+  notice_primary:
+    - notice-goods-list
+    - notice-goods-search
+    - notice-goods-change
+    - notice-construction-list
+    - notice-construction-search
+    - notice-construction-change
+    - notice-service-list
+    - notice-service-search
+    - notice-service-change
+    - notice-foreign-list
+    - notice-foreign-search
+    - notice-foreign-change
+  notice_supplemental:
+    - notice-goods-base-amount
+    - notice-construction-base-amount
+    - notice-service-base-amount
+    - notice-license-restriction
+    - notice-region-eligibility
+  contract_primary:
+    - contract-goods-list
+    - contract-goods-change
+    - contract-goods-delete
+    - contract-construction-list
+    - contract-construction-change
+    - contract-construction-delete
+    - contract-service-list
+    - contract-service-change
+    - contract-service-delete
+    - contract-foreign-list
+    - contract-foreign-change
+    - contract-foreign-delete
+  contract_detail:
+    - contract-goods-detail
+    - contract-construction-detail
+    - contract-service-detail
+    - contract-foreign-detail
+  all_notice_operations:
+    - notice-goods-list
+    - notice-goods-search
+    - notice-goods-change
+    - notice-construction-list
+    - notice-construction-search
+    - notice-construction-change
+    - notice-service-list
+    - notice-service-search
+    - notice-service-change
+    - notice-foreign-list
+    - notice-foreign-search
+    - notice-foreign-change
+    - notice-goods-base-amount
+    - notice-construction-base-amount
+    - notice-service-base-amount
+    - notice-license-restriction
+    - notice-region-eligibility
+  all_contract_operations:
+    - contract-goods-list
+    - contract-goods-detail
+    - contract-goods-change
+    - contract-goods-delete
+    - contract-construction-list
+    - contract-construction-detail
+    - contract-construction-change
+    - contract-construction-delete
+    - contract-service-list
+    - contract-service-detail
+    - contract-service-change
+    - contract-service-delete
+    - contract-foreign-list
+    - contract-foreign-detail
+    - contract-foreign-change
+    - contract-foreign-delete
+  set_equality:
+    - all_notice_operations equals the 17 IDs in specs/connectors/koneps-notices/operations.yaml.
+    - all_contract_operations equals the 16 IDs in specs/connectors/koneps-contracts/operations.yaml.
+    - notice_primary and notice_supplemental are a disjoint exact partition of all_notice_operations.
+    - contract_primary and contract_detail are a disjoint exact partition of all_contract_operations.
+
+domain_output_allowlist:
+  ProcurementNoticeRevisionV1:
+    operations: notice_primary
+    emit_when: all identity and required business fields validate
+  AwardRevisionV1:
+    operations:
+      - contract-goods-list
+      - contract-goods-change
+      - contract-construction-list
+      - contract-construction-change
+      - contract-service-list
+      - contract-service-change
+      - contract-foreign-list
+      - contract-foreign-change
+    emit_when: >-
+      an exact notice revision is resolved, an exact contract conclusion number
+      or contract identity exists, at least one supplier party is structurally
+      mapped without parsing an opaque corpList, and the conclusion date is known
+    award_basis: CONTRACT_CONCLUSION
+    mandatory_limitation: >-
+      This fact proves only a contracted party and contract-conclusion record; it
+      does not prove the complete award evaluation, losing bidders, bid rank, or
+      participant count.
+  BidderParticipationRevisionV1:
+    operations: []
+    emit_when: never under the two base connectors
+    coverage_status: NOT_AVAILABLE
+    blocker: BIDDER_PARTICIPATION_COVERAGE_UNAVAILABLE
+    reason: >-
+      Notice records and contracted-party fields do not enumerate every bidder,
+      submission, validation, withdrawal, rank, or losing outcome. Inferring a
+      participant from an award winner or contract party is prohibited.
+  ProcurementContractRevisionV1:
+    operations: contract_primary
+    emit_when: external contract identity, title for non-delete records, and agency identity validate
+  ContractAmendmentRevisionV1:
+    operations:
+      - contract-goods-change
+      - contract-construction-change
+      - contract-service-change
+      - contract-foreign-change
+    emit_when: exact predecessor and resulting contract revisions are both present and the change order is reproducible
+  detail_operation_rule: >-
+    contract_detail operations produce typed line-item/field-provenance members
+    bound to an exact ProcurementContractRevisionV1. They never create an
+    independent contract, award, amendment, or bidder record.
+  supplemental_notice_rule: >-
+    notice_supplemental operations produce typed source observations bound to an
+    exact notice revision. They never overwrite a notice revision or create a new
+    notice solely because a base amount, license restriction, or region record
+    arrived.
+
+common_normalization:
+  strings:
+    trim: Unicode whitespace at both ends only
+    empty: null before required-field validation
+    unicode: NFC
+    forbidden: [NUL, unpaired-surrogate]
+  identifiers:
+    preserve_leading_zeroes: true
+    case_normalization: none unless the source field contract declares it
+    composition_separator: '#'
+    escaping: each component uses UTF-8 percent encoding for literal percent and hash before composition
+  booleans:
+    accepted_true: [Y]
+    accepted_false: [N]
+    any_other_value: INVALID_SOURCE_VALUE
+  numbers:
+    accepted_lexeme: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'
+    separators: prohibited
+    exponent: prohibited
+    negative_money: prohibited
+  dates:
+    timezone_for_naive_values: Asia/Seoul
+    formats_by_declared_precision:
+      DATE: [yyyyMMdd, yyyy-MM-dd]
+      MINUTE: [yyyyMMddHHmm, yyyy-MM-dd HH:mm]
+      SECOND: [yyyyMMddHHmmss, yyyy-MM-dd HH:mm:ss]
+    invalid_or_ambiguous: EFFECTIVE_TIME_UNKNOWN
+    rule: Date-only values remain dates; a midnight instant is never synthesized.
+  money:
+    domestic_operations: [goods, construction, service]
+    domestic_default_currency: KRW
+    foreign_currency_paths: [thtmCntrctAmtCrncy, totCntrctAmtCrncy, cntrctAmtCrncy]
+    unknown_currency_rule: >-
+      For foreign operations an amount without an exact currency field is not
+      normalized as MoneyV1. The raw amount remains provenance and coverage is
+      PARTIAL with CURRENCY_UNKNOWN.
+    vat_basis: UNKNOWN unless an exact mapped source field states otherwise
+  provenance:
+    every_material_field: required
+    locator_digest: >-
+      SHA256(GURINE_CANONICAL_JSON_V1 of sourceAssetId,
+      sourceAssetRevision, sourceContentSha256, media type, item shape, record
+      index, source field, and rawValueSha256)
+    transformation_version: koneps-procurement-revision-v1
+
+source_revision_identity:
+  koneps-notices:
+    external_id:
+      required_paths: [bidNtceNo, bidNtceOrd]
+      value: escaped(bidNtceNo) + '#' + escaped(bidNtceOrd)
+    external_revision:
+      selection: first non-empty in declared order
+      paths: [bidNtceChgOrd, chgDt, rgstDt]
+      fallback: lowercase record content SHA-256
+    duplicate_key: [connectorId, externalId, externalRevision, recordDigest]
+    conflict_key: [connectorId, externalId, externalRevision]
+  koneps-contracts:
+    external_id:
+      selection: first non-empty in declared order
+      paths: [untyCntrctNo, cntrctNo]
+      required: true
+    external_revision:
+      selection: first non-empty in the operation-kind-specific declared order
+      paths_by_operation_kind:
+        list: [cntrctChgOrd, chgDt, rgstDt]
+        detail: [cntrctChgOrd, chgDt, rgstDt]
+        change: [cntrctChgOrd, chgDt, rgstDt]
+        delete: [dltDt, chgDt, rgstDt]
+      fallback: lowercase record content SHA-256
+    duplicate_key: [connectorId, externalId, externalRevision, recordDigest]
+    conflict_key: [connectorId, externalId, externalRevision]
+  rules:
+    - Exact duplicate keys are idempotent and return the first normalization receipt.
+    - A conflict key with a different recordDigest is quarantined as SOURCE_REVISION_CONFLICT.
+    - A content-hash fallback is an observed source-revision token, not a business effective date.
+    - RecordDigest covers the complete closed parsed record plus source document/content identity and mapping version.
+
+effective_time_mappings:
+  notice-list-or-search:
+    operations:
+      - notice-goods-list
+      - notice-goods-search
+      - notice-construction-list
+      - notice-construction-search
+      - notice-service-list
+      - notice-service-search
+      - notice-foreign-list
+      - notice-foreign-search
+    selection: first valid non-empty in declared order
+    paths: [bidNtceDt, rgstDt]
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  notice-change:
+    operations:
+      - notice-goods-change
+      - notice-construction-change
+      - notice-service-change
+      - notice-foreign-change
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  notice-goods-base-amount:
+    operations: [notice-goods-base-amount]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  notice-construction-base-amount:
+    operations: [notice-construction-base-amount]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  notice-service-base-amount:
+    operations: [notice-service-base-amount]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  notice-license-restriction:
+    operations: [notice-license-restriction]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  notice-region-eligibility:
+    operations: [notice-region-eligibility]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  contract-list:
+    operations:
+      - contract-goods-list
+      - contract-construction-list
+      - contract-service-list
+      - contract-foreign-list
+    selection: first valid non-empty in declared order
+    paths: [rgstDt]
+    business_dates_not_revision_time: [cntrctCnclsDate, cntrctDt, cntrctDate]
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  contract-goods-detail:
+    operations: [contract-goods-detail]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  contract-construction-detail:
+    operations: [contract-construction-detail]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  contract-service-detail:
+    operations: [contract-service-detail]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  contract-foreign-detail:
+    operations: [contract-foreign-detail]
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    precision_by_accepted_lexeme: {yyyyMMddHHmm: MINUTE, yyyyMMddHHmmss: SECOND}
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  contract-change:
+    operations:
+      - contract-goods-change
+      - contract-construction-change
+      - contract-service-change
+      - contract-foreign-change
+    selection: first valid non-empty in declared order
+    paths: [chgDt, rgstDt]
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  contract-delete:
+    operations:
+      - contract-goods-delete
+      - contract-construction-delete
+      - contract-service-delete
+      - contract-foreign-delete
+    selection: first valid non-empty in declared order
+    paths: [dltDt, chgDt, rgstDt]
+    no_value: {status: UNKNOWN, blocker: EFFECTIVE_TIME_UNKNOWN}
+  award-contract-conclusion:
+    operations:
+      - contract-goods-list
+      - contract-goods-change
+      - contract-construction-list
+      - contract-construction-change
+      - contract-service-list
+      - contract-service-change
+      - contract-foreign-list
+      - contract-foreign-change
+    selection: first valid non-empty in declared order
+    paths: [cntrctCnclsDate, cntrctDt, cntrctDate]
+    precision: DATE
+    no_value: {emit: false, blocker: AWARD_EFFECTIVE_DATE_UNKNOWN}
+  rules:
+    - retrievedAt is observation time only and is never a fallback business effective time.
+    - Checkpoint watermark is fetch orchestration state and is never a record effective time.
+    - A later mapping activation does not rewrite a source event time.
+    - As-of selection chooses the greatest known effective time not after asOf, then the declared external revision order, then recordDigest only to resolve a source tie.
+
+field_mappings:
+  ProcurementNoticeRevisionV1:
+    operation_scope: notice_primary
+    required:
+      externalNoticeId:
+        source_paths: [bidNtceNo, bidNtceOrd]
+        transform: escaped composition with hash separator
+      noticeNumber:
+        source_paths: [bidNtceNo]
+        transform: common string normalization
+      noticeOrder:
+        source_paths: [bidNtceOrd]
+        transform: common string normalization preserving leading zeroes
+      title:
+        source_paths: [bidNtceNm]
+        transform: common string normalization
+      businessType:
+        source: operation.business_type
+        map: {goods: GOODS, construction: CONSTRUCTION, service: SERVICE, foreign: FOREIGN}
+      agency.canonicalName:
+        selection: first non-empty in declared order
+        source_paths: [ntceInsttNm, dminsttNm]
+        transform: agency candidate normalization; canonical agency binding requires verified identifier or human decision
+    optional:
+      agency.identifier:
+        selection: first non-empty in declared order
+        source_paths: [ntceInsttCd, dminsttCd]
+      publishedAt: {source_paths: [bidNtceDt]}
+      closesAt: {source_paths: [bidClseDt]}
+      estimatedAmount:
+        selection: first non-empty in declared order
+        source_paths: [asignBdgtAmt, presmptPrce]
+        money_rule: domestic business types use KRW; foreign requires an exact currency path or remains null
+      procurementMethod:
+        source_paths: []
+        value: null
+        limitation: PROCUREMENT_METHOD_NOT_MAPPED_BY_BASE_NOTICE_CONTRACT
+      cancellationReason:
+        source_paths: []
+        value: null
+    state_rules:
+      - No notice delete operation exists in the base connector; absence from a page or reconciliation never creates DELETED.
+      - A change record appends a new revision. It never updates the prior notice row.
+      - Supplemental records can contribute provenance only after exact notice external identity and revision/as-of resolution.
+
+  SupplierIdentityCandidateV1:
+    operation_scope:
+      - contract-goods-list
+      - contract-goods-change
+      - contract-construction-list
+      - contract-construction-change
+      - contract-service-list
+      - contract-service-change
+      - contract-foreign-list
+      - contract-foreign-change
+    name:
+      selection: first structurally singular non-empty in declared order
+      source_paths: [corpNm, cntrctCorpNm]
+      required_for_candidate: true
+    identifiers:
+      business_number:
+        selection: first non-empty in declared order
+        source_paths: [bizno, corpBizno]
+        storage: HMAC-SHA256 with the configured supplier-identifier key; raw value is never stored in domain/audit/log/analytics
+        scheme: KOREAN_BUSINESS_NUMBER
+        verification_status: UNVERIFIED until exact source and checksum/authority checks pass
+    opaque_party_list:
+      source_path: corpList
+      behavior: preserve raw bytes and locator only
+      forbidden: [delimiter_guess, regex_split, one-name-assumption, winner-count-inference, bidder-count-inference]
+      blocker: KONEPS_CORP_LIST_PARSER_NOT_PINNED
+    candidate_identity:
+      formula: SHA256(GURINE_CANONICAL_JSON_V1 of connectorId, sourceDocumentId, recordIndex, name locator digest, sorted identifier HMACs)
+      initial_status: CANDIDATE when a name exists; UNVERIFIED when only an opaque list exists and no candidate row is emitted
+
+  AwardRevisionV1:
+    operation_scope: domain_output_allowlist.AwardRevisionV1.operations
+    required:
+      externalAwardId:
+        selection: first non-empty in declared order
+        source_paths: [dcsnCntrctNo, untyCntrctNo, cntrctNo]
+      noticeRevision:
+        notice_number:
+          selection: first non-empty in declared order
+          source_paths: [bidNtceNo, ntceNo]
+        notice_order:
+          source_paths: [bidNtceOrd]
+          required: true
+        external_notice_id:
+          formula: escaped(notice_number) + '#' + escaped(bidNtceOrd)
+        resolution: >-
+          Resolve exactly one notice root by the complete external notice identity
+          (notice number plus bidNtceOrd), then select the greatest known revision
+          effective not after the contract-conclusion date. Missing bidNtceOrd,
+          number-only matches, multiple roots, unknown effective time, or digest
+          conflict suppresses Award output with zero Award rows.
+      noticeIdentity:
+        noticeNumber: selected noticeRevision.notice_number
+        noticeOrder: exact bidNtceOrd
+        externalNoticeId: selected noticeRevision.external_notice_id
+        noticeRevision: byte-equal to AwardRevisionV1.noticeRevision
+      awardBasis:
+        constant: CONTRACT_CONCLUSION
+      awardedAt:
+        selection: first valid non-empty in declared order
+        source_paths: [cntrctCnclsDate, cntrctDt, cntrctDate]
+      winners:
+        source: structurally mapped SupplierIdentityCandidateV1 rows from the same record
+        minimum: 1
+    optional:
+      awardedAmount:
+        selection: first non-empty in declared order
+        source_paths: [thtmCntrctAmt, totCntrctAmt, cntrctAmt]
+        money_rule: common money normalization
+    coverage:
+      status: PARTIAL
+      mandatory_limitations:
+        - CONTRACT_CONCLUSION_IS_NOT_COMPLETE_AWARD_EVALUATION
+        - LOSING_BIDDERS_AND_RANKS_NOT_AVAILABLE
+
+  BidderParticipationRevisionV1:
+    operation_scope: []
+    exact_mapping_status: NOT_AVAILABLE
+    output_rows: 0
+    blocker: BIDDER_PARTICIPATION_COVERAGE_UNAVAILABLE
+    prohibited_inferences:
+      - Treating a notice as one bidder.
+      - Treating every contract party as an independent bidder.
+      - Treating the award winner as the complete bidder set.
+      - Deriving valid bidder count from supplier count, contract count, or missing rows.
+      - Treating no mapped records as zero bidders or no competition.
+    future_change_rule: >-
+      A future authority revision must name an official operation, exact request and
+      response schema, effective dates, participant identity, status/rank semantics,
+      credential/rights activation, fixtures, counts, and hard gates together. This
+      addendum does not pre-authorize that feature.
+
+  ProcurementContractRevisionV1:
+    operation_scope: contract_primary
+    required_non_delete:
+      externalContractId:
+        selection: first non-empty in declared order
+        source_paths: [untyCntrctNo, cntrctNo]
+      title:
+        source_paths: [cntrctNm]
+      businessType:
+        source: operation.business_type
+        map: {goods: GOODS, construction: CONSTRUCTION, service: SERVICE, foreign: FOREIGN}
+      agency.canonicalName:
+        selection: first non-empty in declared order
+        source_paths: [cntrctInsttNm, dminsttNm]
+    optional:
+      contractNumber:
+        selection: first non-empty in declared order
+        source_paths: [dcsnCntrctNo, untyCntrctNo, cntrctNo]
+      agency.identifier:
+        selection: first non-empty in declared order
+        source_paths: [cntrctInsttCd, dminsttCd]
+      suppliers:
+        source: SupplierIdentityCandidateV1 rows from the same record
+        empty_behavior: allowed with coverage PARTIAL and SUPPLIER_IDENTITY_NOT_STRUCTURED
+      noticeRevision:
+        notice_number:
+          selection: first non-empty in declared order
+          source_paths: [bidNtceNo, ntceNo]
+        notice_order:
+          source_paths: [bidNtceOrd]
+        external_notice_id:
+          formula: escaped(notice_number) + '#' + escaped(bidNtceOrd)
+        resolution: >-
+          exact unique root by number plus bidNtceOrd and exact revision as-of the
+          contract revision effective time; missing order, number-only ambiguity,
+          or unknown as-of selection remains null with a limitation
+      awardRevision:
+        source: AwardRevisionV1 emitted from the same source record
+        null_behavior: allowed with AWARD_NOT_STRUCTURED
+      procurementMethod:
+        source_paths: [cntrctCnclsMthdNm]
+      signedAt:
+        selection: first valid non-empty in declared order
+        source_paths: [cntrctCnclsDate, cntrctDt, cntrctDate]
+      startsAt:
+        source_paths: [cbgnDate, wbgnDate]
+      endsAt:
+        selection: first valid non-empty in declared order
+        source_paths: [ttalCcmpltDate, ttalScmpltDate, thtmCcmpltDate, thtmScmpltDate]
+      currentAmount:
+        selection: first non-empty in declared order
+        source_paths: [thtmCntrctAmt, totCntrctAmt, cntrctAmt]
+        money_rule: common money normalization
+      originalAmount:
+        source: earliest proven complete revision currentAmount
+        null_behavior: null unless revision one and complete history are proven
+      currency:
+        source: selected MoneyV1 currency; XXX only when every amount is null and currency is unknown
+    delete_mapping:
+      operations:
+        - contract-goods-delete
+        - contract-construction-delete
+        - contract-service-delete
+        - contract-foreign-delete
+      state: DELETED
+      required_fields: [externalContractId, effectiveTime]
+      preserved_fields: exact prior revision values plus deletion source provenance
+      forbidden: creating an empty contract, deleting prior bytes, or treating list absence as deletion
+    revision_rules:
+      - List, change, and delete records append revisions under one root selected only by connectorId plus externalContractId.
+      - Same title, party, amount, or date cannot join roots.
+      - A change with no exact predecessor is preserved as an orphan source record but emits no amendment and blocks complete-history rules.
+
+  ContractAmendmentRevisionV1:
+    operation_scope:
+      - contract-goods-change
+      - contract-construction-change
+      - contract-service-change
+      - contract-foreign-change
+    required:
+      externalAmendmentId:
+        formula: SHA256(GURINE_CANONICAL_JSON_V1 of connectorId, externalContractId, externalRevision, recordDigest)
+      contractBefore:
+        source: exact predecessor ProcurementContractRevisionV1
+      contractAfter:
+        source: ProcurementContractRevisionV1 emitted from the same change record
+      amendmentSequence:
+        source: contractAfter.revision minus one
+      changedAt:
+        selection: first valid non-empty in declared order
+        source_paths: [chgDt, rgstDt]
+    derived_from_exact_adjacent_revisions:
+      previousAmount: contractBefore.currentAmount
+      newAmount: contractAfter.currentAmount
+      previousEndAt: contractBefore.endsAt
+      newEndAt: contractAfter.endsAt
+    optional:
+      reason:
+        source_paths: [baseDtls]
+      amendmentKind:
+        derivation: compare closed material fields between before and after; multiple changed families yields MULTIPLE; no provable family yields UNKNOWN
+    completeness:
+      COMPLETE_requires:
+        - revision one is present
+        - every source change between revision one and current is present exactly once
+        - every revision has known effective time or a provider revision order that proves adjacency
+        - each adjacent digest and source locator validates
+      otherwise: PARTIAL with REVISION_CHAIN_INCOMPLETE
+
+detail_field_mappings:
+  contract-goods-detail:
+    target: exact ProcurementContractRevisionV1 plus line item
+    fields:
+      classification: [prdctClsfcNo, prdctIdntNo, prdctClsfcNoNm]
+      description: [krnPrdctNm]
+      unitPrice: [qtyUprcAmt]
+      quantity: [prdctQty]
+      totalPrice: [prdctAmt]
+      deliveryCondition: [dlvryCndtnCd, dlvryCndtnNm]
+      deliveryDays: [dlvrDaynum]
+      deliveryDeadline: [dlvrTmlmt]
+  contract-foreign-detail:
+    target: exact ProcurementContractRevisionV1 plus line item
+    fields:
+      classification: [adiPrdctClsfcNo, prdctClsfcNo, prdctIdntNo, prdctClsfcNoNm]
+      description: [krnPrdctNm]
+      unitPrice: [qtyUprcAmt]
+      quantity: [prdctQty]
+      totalPrice: [prdctAmt]
+      currency: [prdctAmtCrncy]
+      deliveryCondition: [dlvryCndtnCd, dlvryCndtnNm]
+      deliveryDays: [dlvrDaynum]
+      deliveryDeadline: [dlvrTmlmt]
+  contract-construction-detail:
+    target: exact ProcurementContractRevisionV1 plus typed construction detail
+    rule: Only fields explicitly present in the approved live preflight schema are mapped; no goods-field alias is reused by name similarity.
+  contract-service-detail:
+    target: exact ProcurementContractRevisionV1 plus typed service detail
+    rule: Only fields explicitly present in the approved live preflight schema are mapped; no goods-field alias is reused by name similarity.
+  common_rules:
+    - A detail record resolves contract root only by exact contract external identity.
+    - If multiple contract revisions are eligible, source detail chgDt/rgstDt selects exact as-of revision; unknown or ambiguous selection quarantines the detail.
+    - Quantity, unit price, total, VAT, currency, delivery, and classification remain separate fields with separate locators.
+
+identity_and_assertion_boundaries:
+  koneps_supplier_candidates:
+    - KONEPS party data creates candidates, not verified canonical suppliers.
+    - A verified business-number HMAC can support a human merge decision only when the raw source and authority checks are themselves verified.
+    - Opaque corpList, shared representative text, or same normalized name cannot support automatic merge, relationship, ownership, or management assertions.
+  assertions:
+    - The two KONEPS connectors do not directly map ownership, beneficial ownership, control, management role, or legal representative assertions in this version.
+    - Such assertions may be created only through the domain assertion operation with exact verified evidence locators and human decision receipts.
+    - No KONEPS field name or contracted-party relationship is re-labelled as ownership or control.
+
+rule_input_fences:
+  PRICE_OUTLIER:
+    requires: exact contract/line-item revisions, unit, VAT, bundle and comparable coverage
+  CONTRACT_SPLITTING_PATTERN:
+    requires: complete contract window and verified supplier identity history
+  REPEATED_SINGLE_SOURCE:
+    requires: complete method/date/amount window and verified supplier identity history
+  SUPPLIER_CONCENTRATION:
+    requires: complete denominator and merge/split history
+  LOW_BID_COMPETITION:
+    outcome_without_other_authorized_source: BLOCKED
+    blocker: BIDDER_PARTICIPATION_COVERAGE_UNAVAILABLE
+  RESTRICTIVE_SPECIFICATION:
+    outcome_without_complete specification and bidder source: BLOCKED
+    blocker: BIDDER_PARTICIPATION_COVERAGE_UNAVAILABLE
+  CONTRACT_AMENDMENT_ESCALATION:
+    requires: complete adjacent contract/amendment chain and known currency
+  YEAR_END_SPENDING_SPIKE:
+    requires: complete twelve-month contract/correction coverage in Asia/Seoul
+  NEW_SUPPLIER_DEPENDENCE:
+    requires: verified supplier identity, verified incorporation date from an authorized source, and complete denominator
+  SHARED_SUPPLIER_IDENTITY:
+    requires: two distinct verified candidates, strong identifier provenance, and complete contract context
+  universal_rule: A missing fence produces BLOCKED with a typed reason; it never produces NO_SIGNAL or a zero metric.
+
+deletion_and_reconciliation:
+  notice:
+    explicit_delete_operation: false
+    absence_behavior: no state change
+  contract:
+    explicit_delete_operations:
+      - contract-goods-delete
+      - contract-construction-delete
+      - contract-service-delete
+      - contract-foreign-delete
+    effect: append DELETED tombstone revision linked to the exact prior digest
+  reconciliation:
+    - Pagination must complete with one stable source-run identity before absence is evaluated.
+    - An interrupted, quota-limited, schema-drifted, or partially paginated run has UNKNOWN coverage and cannot produce tombstones.
+    - A tombstone never deletes raw bytes, prior normalized revisions, evidence, snapshots, signals, cases, responses, or publications.
+    - A deletion affecting a public revision creates correction-impact work; it does not silently update public projection.
+
+receipts:
+  normalization_receipt:
+    required_fields:
+      - connectorId
+      - operationId
+      - sourceDocumentId
+      - sourceAssetId
+      - sourceAssetRevision
+      - sourceContentSha256
+      - parsedRecordId
+      - recordIndex
+      - externalId
+      - externalRevision
+      - recordDigest
+      - mappingVersion
+      - mappingEffectiveFrom
+      - outputObjectType
+      - outputRevisionId
+      - outputRevision
+      - outputRecordDigest
+      - fieldProvenanceSetDigest
+      - coverageStatus
+      - blockers
+      - terminalAuditEventId
+      - receiptDigest
+    exact_replay: returns the first stored receipt byte-for-byte
+    changed_bytes: SOURCE_REVISION_CONFLICT with zero output rows
+  blocked_receipt:
+    required_fields:
+      - all input/source identities from normalization_receipt
+      - requestedOutputObjectType
+      - blockers
+      - zeroOutputRows
+      - terminalAuditEventId
+      - receiptDigest
+    invariant: zeroOutputRows is the literal integer zero and no output ID/revision is synthesized.
+
+deterministic_fixture_manifest:
+  status: OPEN_IMPLEMENTATION
+  manifest_digest: null
+  digest_algorithm: >-
+    lowercase SHA-256 of GURINE_CANONICAL_JSON_V1 over the ordered frozen entry
+    objects, excluding status and manifest_digest
+  entry_order: fixtureId ascending by UTF-8 bytes
+  frozen_entry_required_fields:
+    - fixtureId
+    - connectorId
+    - operationId
+    - representation
+    - sourcePath
+    - sourceBytesSha256
+    - mappingContractDigest
+    - expectedParserEnvelopeDigest
+    - expectedRecordDigest
+    - expectedOutputKind
+    - expectedOutputCount
+    - expectedBlockers
+  entries:
+    - fixtureId: KONEPS-CONTRACT-CHANGE-JSON-V1
+      connectorId: koneps-contracts
+      operationId: contract-goods-change
+      representation: JSON
+      sourcePath: specs/connectors/koneps-contracts/fixtures/change.json
+      sourceBytesSha256: 589fb14bbf8b457ab79402b20f7a1541bd91dc3623c3e1a657cc3ba1f99c4cfd
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: adjacent contract revision plus amendment or typed REVISION_CHAIN_INCOMPLETE blocked receipt
+    - fixtureId: KONEPS-CONTRACT-DELETE-JSON-V1
+      connectorId: koneps-contracts
+      operationId: contract-goods-delete
+      representation: JSON
+      sourcePath: specs/connectors/koneps-contracts/fixtures/delete.json
+      sourceBytesSha256: 6c93f13f836798338422f6352710f61dafe2bd1349a6f1ec94e8ed941f563814
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: exact-prior-digest DELETED tombstone or typed missing-predecessor blocked receipt
+    - fixtureId: KONEPS-CONTRACT-SUCCESS-JSON-V1
+      connectorId: koneps-contracts
+      operationId: contract-goods-list
+      representation: JSON
+      sourcePath: specs/connectors/koneps-contracts/fixtures/success.json
+      sourceBytesSha256: bb96bf7da1f307f9c0b6050d2c26a2944910bb4b2dc706e0f3a0ff2c65fadc32
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: exact immutable contract revision; Award only if number plus bidNtceOrd resolve exactly
+    - fixtureId: KONEPS-CONTRACT-SUCCESS-XML-V1
+      connectorId: koneps-contracts
+      operationId: contract-goods-list
+      representation: XML
+      sourcePath: tests/fixtures/procurement/koneps-contracts-success.xml
+      sourceBytesSha256: null
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: byte-different source envelope with field projection and record digest equal to KONEPS-CONTRACT-SUCCESS-JSON-V1
+    - fixtureId: KONEPS-NOTICE-CHANGE-JSON-V1
+      connectorId: koneps-notices
+      operationId: notice-goods-change
+      representation: JSON
+      sourcePath: specs/connectors/koneps-notices/fixtures/change.json
+      sourceBytesSha256: 41d584857c338f6549412385b4a8ba5ba9f5cafa816f035f6d35db40de2f2644
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: immutable notice revision retaining bidNtceNo plus bidNtceOrd identity
+    - fixtureId: KONEPS-NOTICE-DELETE-NEGATIVE-JSON-V1
+      connectorId: koneps-notices
+      operationId: notice-goods-change
+      representation: JSON
+      sourcePath: specs/connectors/koneps-notices/fixtures/delete.json
+      sourceBytesSha256: 1c1fc86d1bc2f2c7fc5df7790d9b57d5dd29538ede131570db5077d8d0a897ac
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: zero notice tombstones because no notice delete operation is authorized
+    - fixtureId: KONEPS-NOTICE-SUCCESS-JSON-V1
+      connectorId: koneps-notices
+      operationId: notice-goods-list
+      representation: JSON
+      sourcePath: specs/connectors/koneps-notices/fixtures/success.json
+      sourceBytesSha256: fe2d5719937bdbbdb69b3b08d7e17f2791b3e4f94b0b19fb5a6925a3f05b3a68
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: exact immutable notice revision keyed by bidNtceNo plus bidNtceOrd
+    - fixtureId: KONEPS-NOTICE-SUCCESS-XML-V1
+      connectorId: koneps-notices
+      operationId: notice-goods-list
+      representation: XML
+      sourcePath: tests/fixtures/procurement/koneps-notices-success.xml
+      sourceBytesSha256: null
+      freezeStatus: OPEN_IMPLEMENTATION
+      requiredOutcome: byte-different source envelope with field projection and record digest equal to KONEPS-NOTICE-SUCCESS-JSON-V1
+  freeze_gate:
+    - Every sourcePath exists and sourceBytesSha256 equals its exact bytes; null is forbidden in FROZEN state.
+    - JSON/XML equivalence compares the closed parsed record projection after envelope decoding while preserving each raw source digest separately.
+    - Change and delete fixtures pin exact predecessor/output digests, output counts, audit receipt digest and replay result.
+    - The same bytes replay byte-identically; one-byte mutation returns SOURCE_REVISION_CONFLICT and zero output rows.
+    - Mapping activation is forbidden until every entry is FROZEN and manifest_digest is non-null and reproducible.
+
+acceptance_bindings:
+  - AC-PROCUREMENT-DOMAIN-001
+  - AC-PROCUREMENT-DOMAIN-002
+  - AC-PROCUREMENT-DOMAIN-003
+  - AC-PROCUREMENT-DOMAIN-004
+  - AC-PROCUREMENT-DOMAIN-005
+  - AC-PROCUREMENT-DOMAIN-006
+  - AC-PROCUREMENT-DOMAIN-007
+  - AC-PROCUREMENT-DOMAIN-008
+  - AC-PROCUREMENT-DOMAIN-009
+  - AC-PROCUREMENT-DOMAIN-010
+  - AC-PROCUREMENT-DOMAIN-011
+  - AC-PROCUREMENT-DOMAIN-012
+  - AC-PROCUREMENT-DOMAIN-013
+  - AC-PROCUREMENT-DOMAIN-014
+  - AC-PROCUREMENT-DOMAIN-015
+  - AC-PROCUREMENT-DOMAIN-016
+  - AC-PROCUREMENT-DOMAIN-017
+  - AC-PROCUREMENT-DOMAIN-018
+  - AC-PROCUREMENT-DOMAIN-019
+  - AC-PROCUREMENT-DOMAIN-020
+
+acceptance_binding_invariants:
+  expected_feature: tests/acceptance/procurement-domain-addendum.feature
+  exact_count: 20
+  exact_order: AC-PROCUREMENT-DOMAIN-001 through AC-PROCUREMENT-DOMAIN-020 ascending
+  stability_rule: Existing IDs, scenario titles, order and semantic ownership are immutable; strengthening steps does not allocate or renumber an ID.
+  set_equality:
+    - acceptance_bindings equals the domain addendum scenario_ids.
+    - acceptance_bindings equals every scenario-id marker in expected_feature exactly once.
+    - Every binding has one executable Rust acceptance test with the same zero-padded suffix before status can become FINAL.
+
+verification_requirements:
+  - Parse this file and both base operation catalogs with duplicate-key rejection.
+  - Prove operation set equality and disjoint partitions.
+  - Prove effective_time_mappings partitions all 17 notice and all 16 contract operations exactly once, including each of the five supplemental notice and four contract detail operations.
+  - Prove every domain output points to a schema in specs/domain/addendum-procurement-domain.yaml.
+  - Run JSON and XML golden fixtures for every operation class, including missing field, malformed date, duplicate replay, changed-byte conflict, partial page, quota, opaque corpList, delete, and orphan change.
+  - Recompute mapping_version.contract_digest after removing only that field, validate the exact activation receipt binding, then recompute the frozen fixture manifest digest.
+  - Prove BidderParticipation output count is zero for every base KONEPS fixture and both dependent rules are BLOCKED, never NO_SIGNAL.
+  - Prove no raw supplier identifier, corpList, provider key, URL token, or contact value appears in domain rows, receipts, logs, metrics, traces, audit detail, or public projection.

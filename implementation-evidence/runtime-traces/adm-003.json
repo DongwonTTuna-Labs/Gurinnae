@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "ADM-003",
+  "route": "/internal/admin/roles",
+  "url": "http://127.0.0.1:29102/internal/admin/roles",
+  "observedAt": "2026-07-19T15:35:53.406Z",
+  "ssrStatus": 200,
+  "observation": {
+    "screenId": "ADM-003",
+    "headingCount": 1,
+    "sections": [
+      {
+        "id": "catalog",
+        "component": "StatusAndRevisionHeader",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "capabilities",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "conflicts",
+        "component": "AccessManagementPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "grants",
+        "component": "StructuredContentSection",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "review",
+        "component": "DecisionReviewPanel",
+        "projectionState": "BLOCKED"
+      },
+      {
+        "id": "history",
+        "component": "RevisionTimeline",
+        "projectionState": "BLOCKED"
+      }
+    ],
+    "errorSummary": true,
+    "focusTargets": 8,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

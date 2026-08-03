@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 4,
+  "evidenceKind": "LIVE_POSTGRES_KILL_SWITCH_FLOW",
+  "authorityZipSha256": "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+  "flowId": "FLOW-10",
+  "flowName": "INCIDENT_KILL_SWITCH",
+  "operationId": "activateKillSwitch",
+  "correlationId": "2bd680ad-ba47-49d2-b8e4-f612e6c4e985",
+  "postgres": {
+    "image": "postgres:18.4-bookworm",
+    "migrationCount": 30,
+    "isolation": "SERIALIZABLE"
+  },
+  "normal": {
+    "pass": true,
+    "scope": "narrow",
+    "finalState": "INACTIVE",
+    "incidentId": "5c453dcd-7eed-4877-8072-12af081d7cc5",
+    "operations": ["activateKillSwitch", "deactivateKillSwitch"],
+    "staleError": "40001:kill_switch_version_conflict",
+    "activeState": "ACTIVE",
+    "expiryBound": true,
+    "sodVerified": true,
+    "finalVersion": 3,
+    "killSwitchId": "b1520159-498f-43e4-bafb-4d2fa9126cc8",
+    "activateReceipt": {
+      "links": [],
+      "status": "COMPLETED",
+      "incident": {
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "detected": true,
+        "severity": "MINOR",
+        "incidentId": "5c453dcd-7eed-4877-8072-12af081d7cc5"
+      },
+      "requestId": "a37a71a2-e1e7-4823-b109-4ca517d73b82",
+      "acceptedAt": "2026-07-20T20:09:58.665619+00:00",
+      "killSwitch": {
+        "id": "b1520159-498f-43e4-bafb-4d2fa9126cc8",
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "state": "ACTIVE",
+        "reason": "pdm verified incident",
+        "version": 2,
+        "expiresAt": "2026-07-20T20:24:58.664655+00:00",
+        "activatedAt": "2026-07-20T20:09:58.665619+00:00",
+        "deactivatedAt": null
+      },
+      "aggregateId": "b1520159-498f-43e4-bafb-4d2fa9126cc8",
+      "operationId": "activateKillSwitch",
+      "auditEventId": "7306ba2e-41c5-4940-ae7c-6ee1c5a1c5cb",
+      "receiptDigest": "d8524c95d3b97735e58243b7a37059d1d8fde117c498639e9bc7c879805ece29",
+      "emittedEventIds": ["4f5983c7-6a39-4691-baaa-3cfef9100687"],
+      "aggregateVersion": 2,
+      "separationOfDuty": {
+        "distinct": true,
+        "required": false,
+        "operatorId": "d72b9190-dd35-4daa-9895-8dce1c4141c0",
+        "secondApproverId": null
+      }
+    },
+    "incidentDetected": true,
+    "deactivateReceipt": {
+      "links": [],
+      "status": "COMPLETED",
+      "incident": {
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "detected": true,
+        "severity": null,
+        "incidentId": "5c453dcd-7eed-4877-8072-12af081d7cc5"
+      },
+      "requestId": "bbdf3d21-e79c-4e9d-9edf-1a8693f1b4da",
+      "acceptedAt": "2026-07-20T20:09:58.696615+00:00",
+      "killSwitch": {
+        "id": "b1520159-498f-43e4-bafb-4d2fa9126cc8",
+        "scope": {
+          "breadth": "NARROW",
+          "channel": "AI"
+        },
+        "state": "INACTIVE",
+        "reason": "pdm recovery verified",
+        "version": 3,
+        "expiresAt": "2026-07-20T20:24:58.664655+00:00",
+        "activatedAt": "2026-07-20T20:09:58.665619+00:00",
+        "deactivatedAt": "2026-07-20T20:09:58.696615+00:00"
+      },
+      "aggregateId": "b1520159-498f-43e4-bafb-4d2fa9126cc8",
+      "operationId": "deactivateKillSwitch",
+      "auditEventId": "7ea0d32a-6b99-460e-a5e5-d817107bd591",
+      "receiptDigest": "cbfe92fd73d6cd1eaf09b6cb9b3b3d5cd4c8e31a96f97a46835b87701c4f64c8",
+      "emittedEventIds": ["3a69e567-8372-4bcc-a93e-9e2695595c4c"],
+      "aggregateVersion": 3,
+      "separationOfDuty": {
+        "distinct": true,
+        "required": false,
+        "operatorId": "b10c8c3b-9d4e-460d-a99a-01cbb294420d",
+        "secondApproverId": null
+      }
+    }
+  },
+  "negative": {
+    "branch": "stale-expected-version",
+    "expectedError": "40001:kill_switch_version_conflict",
+    "observedError": "40001:kill_switch_version_conflict",
+    "forbiddenMutationCount": 0,
+    "pass": true
+  },
+  "sourceTreeDigest": "8bae4389de93f5875b24815b12572e086a0d4b3607acd77b563454088a45c060",
+  "pass": true
+}

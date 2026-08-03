@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "gurine.screen-runtime-trace.v1",
+  "screenId": "CAS-011",
+  "route": "/internal/cases/80000000-0000-4000-8000-000000000001/agent-runs/80000000-0000-4000-8000-000000000001",
+  "observedAt": "2026-07-20T15:37:33.719Z",
+  "observation": {
+    "authenticated": true,
+    "screenId": "CAS-011",
+    "errorSummary": false,
+    "sections": [
+      {
+        "id": "identity",
+        "projectionState": "READY"
+      },
+      {
+        "id": "inputs",
+        "projectionState": "READY"
+      },
+      {
+        "id": "model",
+        "projectionState": "READY"
+      },
+      {
+        "id": "output",
+        "projectionState": "READY"
+      },
+      {
+        "id": "citations",
+        "projectionState": "READY"
+      },
+      {
+        "id": "safety",
+        "projectionState": "READY"
+      },
+      {
+        "id": "decisions",
+        "projectionState": "READY"
+      },
+      {
+        "id": "cost",
+        "projectionState": "READY"
+      },
+      {
+        "id": "page-actions",
+        "projectionState": null
+      }
+    ],
+    "visualizations": 1,
+    "accessibleProvenanceRows": 1,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "case_id",
+    "objective",
+    "evidence_snapshot_hash",
+    "allowed_evidence_ids",
+    "budget_krw",
+    "locale"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "case_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "evidence_snapshot_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "allowed_evidence_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "budget_krw": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "locale": {
+      "enum": ["ko-KR", "en-US"]
+    },
+    "known_unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "policy_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

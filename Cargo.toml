@@ -1,0 +1,89 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/agent-orchestration",
+  "crates/api-contracts",
+  "crates/application",
+  "crates/auth",
+  "crates/detection",
+  "crates/domain",
+  "crates/email",
+  "crates/identity-resolution",
+  "crates/ingestion",
+  "crates/jobs",
+  "crates/normalization",
+  "crates/object-store",
+  "crates/observability",
+  "crates/persistence-postgres",
+  "crates/publication-policy",
+  "crates/source-connectors",
+  "crates/test-support",
+  "services/analysis-worker",
+  "services/control-api",
+  "services/document-extractor",
+  "services/egress-gateway",
+  "services/ingest-worker",
+  "services/migrator",
+  "services/notification-worker",
+  "services/oidc-test-provider",
+  "services/projection-worker",
+  "services/public-api",
+  "services/scheduler",
+  "services/submission-api",
+  "services/workflow-worker",
+  "xtask",
+  "services/identity-api",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+rust-version = "1.97"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.dependencies]
+actix-web = "=4.14.0"
+arrow-array = "=59.1.0"
+arrow-schema = "=59.1.0"
+base64 = "=0.22.1"
+bytes = "=1.12.1"
+chacha20poly1305 = "=0.11.0"
+chrono = "=0.4.44"
+croner = "=3.0.1"
+calamine = "=0.35.0"
+csv = "=1.4.0"
+html5ever = "=0.39.0"
+image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "webp", "tiff"] }
+getrandom = "=0.4.3"
+hmac = "=0.12.1"
+lettre = { version = "=0.11.22", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
+object_store = { version = "=0.14.0", features = ["aws"] }
+parquet = { version = "=59.1.0", default-features = false, features = ["arrow", "snap"] }
+openidconnect = { version = "=4.0.1", default-features = false, features = ["reqwest", "rustls-tls"] }
+reqwest = { version = "=0.12.23", default-features = false, features = ["rustls-tls", "http2", "json", "stream", "gzip", "brotli"] }
+quick-xml = "=0.41.0"
+rust_decimal = { version = "=1.37.2", features = ["serde-with-str"] }
+secrecy = { version = "=0.10.3", features = ["serde"] }
+serde = { version = "=1.0.221", features = ["derive"] }
+serde_json = "=1.0.143"
+sha2 = "=0.10.9"
+sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls-ring-webpki", "postgres", "uuid", "time", "json", "rust_decimal", "migrate", "macros"] }
+subtle = "=2.6.0"
+thiserror = "=2.0.18"
+tendril = "=0.5.1"
+time = { version = "=0.3.47", features = ["serde", "formatting", "parsing"] }
+tokio = { version = "=1.47.1", features = ["macros", "rt-multi-thread", "signal", "time", "sync", "fs", "process", "net", "io-util"] }
+tracing = "=0.1.41"
+tracing-subscriber = { version = "=0.3.20", features = ["env-filter", "json"] }
+unicode-normalization = "=0.1.24"
+url = "=2.5.7"
+utoipa = { version = "=5.5.0", features = ["actix_extras", "uuid", "time", "decimal", "openapi_extensions"] }
+uuid = { version = "=1.18.1", features = ["v4", "serde"] }
+zeroize = "=1.9.0"
+zip = "=8.6.0"
+
+[patch.crates-io]
+subtle = { path = "vendor/subtle-2.6.0" }

@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/evidence-search-response.json",
+  "title": "EvidenceSearchResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "queryDigest",
+    "hits",
+    "nextCursor",
+    "truncated",
+    "rankingPolicyVersion",
+    "rankingPolicySha256"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "evidence.search.response.v2"
+    },
+    "queryDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "hits": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rank",
+          "evidenceId",
+          "evidenceVersion",
+          "evidenceSegmentId",
+          "snapshotMemberId",
+          "snapshotMemberDigest",
+          "title",
+          "excerpt",
+          "locator",
+          "selectedContentSha256",
+          "matchReason",
+          "verificationStatus",
+          "classification",
+          "sourceAuthority",
+          "sourceRetrievedAt",
+          "sourceUseId",
+          "sourceUseSha256"
+        ],
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "evidenceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidenceVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "evidenceSegmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshotMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshotMemberDigest": {
+            "$ref": "#/$defs/sha256"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "excerpt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "locator": {
+            "$ref": "#/$defs/locator"
+          },
+          "selectedContentSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "matchReason": {
+            "enum": [
+              "EXACT_IDENTIFIER",
+              "EXACT_TITLE",
+              "EXACT_PHRASE",
+              "CONJUNCTIVE_TEXT",
+              "LOCATOR_MATCH"
+            ]
+          },
+          "verificationStatus": {
+            "enum": ["PENDING", "VERIFIED", "REJECTED", "NEEDS_WORK"]
+          },
+          "classification": {
+            "enum": ["PUBLIC", "INTERNAL", "RESTRICTED"]
+          },
+          "sourceAuthority": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "sourceRetrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sourceUseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceUseSha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "nextCursor": {
+      "type": ["string", "null"],
+      "maxLength": 2048
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "rankingPolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "rankingPolicySha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "locatorSha256"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PAGE_BBOX",
+            "XLSX_CELL",
+            "CSV_ROW_COLUMN",
+            "XML_XPATH",
+            "DOCX_PARAGRAPH",
+            "HWPX_XPATH",
+            "JSON_POINTER",
+            "HTML_CSS_SELECTOR",
+            "API_FIELD",
+            "TEXT_RANGE",
+            "IMAGE_BBOX",
+            "AUDIO_TIME_RANGE",
+            "VIDEO_TIME_RANGE",
+            "VIDEO_REGION_TIME"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "locatorSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

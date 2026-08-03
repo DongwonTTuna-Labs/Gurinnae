@@ -1,0 +1,32 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: SUPPLIER_CONCENTRATION
+name: 업체 집중도
+version: 1.0.0
+required:
+- contracts
+- minimum_total_spend
+thresholds:
+  supplier_share_gte: '0.6000'
+  minimum_supplier_contracts: 3
+  minimum_total_spend: 100000000
+formula: top supplier spend / total comparable agency-category spend
+blockers:
+- REQUIRED_FIELD_MISSING
+- INSUFFICIENT_TOTAL_SPEND
+- IDENTITY_AMBIGUOUS
+metamorphic:
+- input order does not change result
+- duplicate contract id ignored
+- unresolved supplier identity blocks
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/supplier_concentration.rs
+reference_evaluator: specs/detection/reference_evaluator.py

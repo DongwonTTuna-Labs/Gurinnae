@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/contract-find-comparables-response.json",
+  "title": "ContractFindComparablesResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "subjectContract",
+    "comparables",
+    "selectionPolicyVersion",
+    "selectionPolicySha256",
+    "truncated"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "contract.find_comparables.response.v2" },
+    "subjectContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractId",
+        "version",
+        "snapshotMemberId",
+        "snapshotMemberDigest"
+      ],
+      "properties": {
+        "contractId": { "type": "string", "format": "uuid" },
+        "version": { "type": "integer", "minimum": 1 },
+        "snapshotMemberId": { "type": "string", "format": "uuid" },
+        "snapshotMemberDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "comparables": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractId",
+          "contractVersion",
+          "snapshotMemberId",
+          "snapshotMemberDigest",
+          "title",
+          "agencyName",
+          "supplierName",
+          "amountMinor",
+          "currency",
+          "comparisonReasons",
+          "materialDifferences",
+          "sourceUseId",
+          "sourceUseSha256"
+        ],
+        "properties": {
+          "contractId": { "type": "string", "format": "uuid" },
+          "contractVersion": { "type": "integer", "minimum": 1 },
+          "snapshotMemberId": { "type": "string", "format": "uuid" },
+          "snapshotMemberDigest": { "$ref": "#/$defs/sha256" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "agencyName": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "supplierName": { "type": ["string", "null"], "maxLength": 255 },
+          "amountMinor": { "type": ["integer", "null"], "minimum": 0 },
+          "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+          "comparisonReasons": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "SAME_CATEGORY",
+                "SAME_UNIT",
+                "SAME_GEOGRAPHY",
+                "SAME_AWARD_METHOD",
+                "SIMILAR_VALUE",
+                "SIMILAR_DURATION",
+                "SIMILAR_CHANGE_PATTERN"
+              ]
+            }
+          },
+          "materialDifferences": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": { "type": "string", "minLength": 1, "maxLength": 1000 }
+          },
+          "sourceUseId": { "type": "string", "format": "uuid" },
+          "sourceUseSha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "selectionPolicyVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "selectionPolicySha256": { "$ref": "#/$defs/sha256" },
+    "truncated": { "type": "boolean" }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+}

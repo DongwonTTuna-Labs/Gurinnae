@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/response.submitted.v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "responseSubmissionId",
+    "responseRequestId",
+    "responseRequestVersion",
+    "responseRequestBindingDigest",
+    "submissionSha256",
+    "receiptVersion",
+    "receiptDigest",
+    "submittedAt"
+  ],
+  "properties": {
+    "responseSubmissionId": { "type": "string", "format": "uuid" },
+    "responseRequestId": { "type": "string", "format": "uuid" },
+    "responseRequestVersion": { "type": "integer", "minimum": 1 },
+    "responseRequestBindingDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "submissionSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "receiptVersion": { "type": "integer", "minimum": 1 },
+    "receiptDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "submittedAt": { "type": "string", "format": "date-time" }
+  }
+}

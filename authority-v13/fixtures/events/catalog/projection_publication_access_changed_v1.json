@@ -1,0 +1,27 @@
+{
+  "event_id": "event:060",
+  "event_type": "projection.publication_access_changed.v1",
+  "event_version": 1,
+  "occurred_at": "2026-07-11T00:00:00Z",
+  "aggregate_type": "SYNTHETIC",
+  "aggregate_id": "aggregate:060",
+  "aggregate_version": 1,
+  "trace_id": "synthetic-trace-060",
+  "causation_id": null,
+  "correlation_id": null,
+  "actor": null,
+  "payload": {
+    "actor_id": "synthetic",
+    "occurred_at": "2026-07-11T00:00:00Z",
+    "operation_id": "synthetic",
+    "publication_id": "synthetic",
+    "request_id": "synthetic"
+  },
+  "recorded_at": "2026-07-11T00:00:00Z",
+  "idempotency_key": "synthetic-idempotency-060",
+  "producer": {
+    "service": "synthetic-validator",
+    "instance_id": "spec"
+  },
+  "classification": "INTERNAL"
+}

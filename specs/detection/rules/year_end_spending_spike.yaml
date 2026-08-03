@@ -1,0 +1,32 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: YEAR_END_SPENDING_SPIKE
+name: 연말 집행 집중
+version: 1.0.0
+required:
+- monthly_spend
+- monthly_contract_count
+thresholds:
+  december_share_gte: '0.2500'
+  december_to_prior_median_gte: '3.0000'
+  minimum_annual_contracts: 10
+formula: December spend / annual spend and December / median(Jan-Nov)
+blockers:
+- REQUIRED_FIELD_MISSING
+- INCOMPLETE_YEAR
+- INSUFFICIENT_CONTRACTS
+metamorphic:
+- contract ordering irrelevant
+- all-zero prior months block ratio
+- same annual total alone does not determine signal
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/year_end_spending_spike.rs
+reference_evaluator: specs/detection/reference_evaluator.py

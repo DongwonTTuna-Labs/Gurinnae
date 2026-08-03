@@ -1,0 +1,36 @@
+{
+  "status": "COMPLETED",
+  "summary": "합성 근거 snapshot에 한정된 검증 결과입니다.",
+  "citations": [
+    {
+      "evidence_id": "00000000-0000-0000-0000-0000000f423f",
+      "locator": "page:1",
+      "supports": "허용되지 않은 근거"
+    }
+  ],
+  "unknowns": [
+    "설치·인증 비용 포함 여부"
+  ],
+  "abstention_reasons": [],
+  "recommended_actions": [
+    {
+      "action_type": "VERIFY_DOCUMENT",
+      "reason": "비교 가능성을 바꿀 수 있는 포함 비용을 확인한다.",
+      "target": "detailed-cost-breakdown"
+    }
+  ],
+  "hypotheses": [
+    {
+      "statement": "비교 가능한 계약 대비 표시 단가가 높을 가능성이 있다.",
+      "supporting_evidence_ids": [
+        "00000000-0000-0000-0000-0000000003e9"
+      ],
+      "contradicting_evidence_ids": [
+        "00000000-0000-0000-0000-0000000003ea"
+      ],
+      "unknowns": [
+        "추가 인증 비용"
+      ]
+    }
+  ]
+}

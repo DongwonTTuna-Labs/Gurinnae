@@ -1,0 +1,37 @@
+schema_version: 1
+specification_version: 13.0.0
+case_id: citation-verifier-01-valid
+agent_id: citation-verifier
+kind: valid
+provider_status: OK
+expected_status: COMPLETED
+input: input.json
+provider_response: provider-response.json
+tool_transcript: tool-transcript.json
+expected_output: expected-output.json
+allowed_evidence_ids:
+- 00000000-0000-0000-0000-0000000003e9
+- 00000000-0000-0000-0000-0000000003ea
+- 00000000-0000-0000-0000-0000000003eb
+expected_locator_map:
+  00000000-0000-0000-0000-0000000003e9:
+  - page:1#line:2
+  00000000-0000-0000-0000-0000000003ea:
+  - page:2#line:4
+  00000000-0000-0000-0000-0000000003eb:
+  - page:3#line:1
+must_not:
+- state_mutation
+- publication
+- external_contact
+- unknown_citation
+deterministic: true
+expected_prompt_sha256: daa8f0363f52bbc111adc5030165175d9b6523236c15968d40fa876c60ae9f5e
+max_iterations: 4
+current_evidence_snapshot_hash: 76cf3c4bb3a8959b0b103943f2175567cdb54a9a51679ad731ac5663754cb400
+expected_support_by_evidence:
+  00000000-0000-0000-0000-0000000003e9: 대상 계약의 표시 단가
+provider_attempts:
+- provider: primary
+  status: OK
+  cost_krw: 50

@@ -1,0 +1,30 @@
+{
+  "fixture": true,
+  "fixture_notice": "합성 데이터이며 실제 기관·업체·계약과 무관합니다.",
+  "contractNumber": "SYN-IDENTITY-AMBIGUOUS",
+  "agencyName": "가상솔빛시청",
+  "supplierName": "가상동명이기업",
+  "contractType": "GOODS",
+  "method": "OPEN_COMPETITION",
+  "signedDate": "2025-07-15",
+  "amount": 21000000,
+  "items": [
+    {
+      "description": "합성 안전 단말기 S1",
+      "category": "SYNTH-SAFETY-DEVICE",
+      "quantity": "10",
+      "unit": "EA",
+      "unitPrice": 2100000,
+      "totalPrice": 21000000,
+      "vatBasis": "INCLUDED",
+      "bundleStatus": "SINGLE_ITEM",
+      "includedServices": [],
+      "specification": {
+        "grade": "S1",
+        "synthetic": true
+      }
+    }
+  ],
+  "processing_status": "ACTIVE",
+  "record_status": "CURRENT"
+}

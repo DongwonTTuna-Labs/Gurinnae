@@ -1,0 +1,285 @@
+schema_version: 1
+specification_version: 13.1.0-owner-addendum
+status: REVIEW_REQUIRED
+authority:
+  archive_path: /home/dongwonttuna/.codex/attachments/29aa0c62-686a-450b-84aa-944e5cb7d47a/gurine-codex-authority-pack-v13.0.0-20260712.zip
+  archive_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+  extends_without_replacing: specs/submission/session-boundary.yaml
+  database_contract: specs/database/addendum/0027-communication-consent-delivery.yaml
+
+purpose: Close the appeal and communication-profile session boundary without widening RESPONSE_RECEIPT or any other v13 parent session.
+
+base_invariants:
+  browser_direct_submission_api_access: false
+  bff_callers: [public-web, response-portal]
+  bff_authentication: Gurine Service Assertion v1, request-bound and single-use
+  opaque_token:
+    random_bytes: 32
+    encoding: base64url-no-padding
+    database_storage: lowercase SHA-256 only
+    browser_storage: authenticated-encrypted BFF cookie only
+    forbidden: [URL, query, DOM, client storage, audit, outbox, log, trace, metric, analytics, error]
+  csrf: same-origin BFF synchronizer token; never sent to Submission API
+  next_session_rotation_header:
+    name: X-Gurine-Next-Submission-Session
+    value: fresh 32-byte base64url-no-padding opaque token generated server-side by the BFF
+    required_for: [createResponseAppeal, requestCommunicationEndpointLink, verifyCommunicationEndpointLink, unlinkCommunicationEndpoint]
+    binding: included in the request body/header digest of the request-bound service assertion and idempotency request digest
+    storage: only its lowercase SHA-256 enters PostgreSQL; successful response causes the BFF to seal it in the appropriate child cookie
+    forbidden: [browser request, OpenAPI public example, log, trace, audit, outbox, receipt, error]
+  unavailable_error:
+    code: SCOPED_SESSION_REQUIRED
+    uniform_for: [unknown-token, wrong-issuer, wrong-kind, wrong-scope, expired, consumed, revoked, lineage-mismatch, cross-object]
+    response_equivalence: same HTTP status, RFC9457 type, safe body fields, cache headers and observability class
+  parent_non_widening:
+    RESPONSE_RECEIPT: [getResponseReceipt]
+    SUBSCRIPTION_MANAGEMENT: [getSubscription, updateSubscription, unsubscribe]
+    CORRECTION_RECEIPT: [getCorrectionReceipt]
+    rule: Deriving a child inserts a new session row. It never changes the parent's session_kind, scope_type, scope_id or allowed operation set.
+
+derived_session_storage:
+  relation: intake.submission_sessions
+  required_columns: [parent_session_id, scope_binding_digest, issuance_receipt_digest, rotation_sequence]
+  lineage_digest: RFC8785_JCS(DerivedSubmissionSessionBindingV1{sessionKind,scopeType,scopeId,parentSessionId,parentSessionVersion,parentScopeBindingDigest,bffIssuer,issuedAt,absoluteExpiresAt,rotationSequence}) lowercase SHA-256
+  constraints:
+    - Derived rows have one nonnull parent, a positive rotation sequence and lowercase SHA-256 scope/issuance digests.
+    - APPEAL_CREATE uses RESPONSE_SUBMISSION scope, APPEAL_STATUS uses APPEAL scope and COMMUNICATION_PROFILE uses COMMUNICATION_SUBJECT scope.
+    - A child issuer equals its parent issuer and is one of public-web or response-portal.
+    - expires_at is no later than issued_at plus the child TTL and no later than any parent or domain window that bounds it.
+    - token_hash remains globally unique; scope binding is immutable; status/version follow the existing closed session lifecycle.
+
+session_kinds:
+  APPEAL_CREATE:
+    ttl_seconds: 900
+    scope_type: RESPONSE_SUBMISSION
+    mode: ONE_SHOT_COMMAND
+    allowed_operations: [createResponseAppeal]
+    eligible_parent_kinds: [RESPONSE_RECEIPT]
+    scope_binding: ResponseAppealCreateScopeV1{responseSubmissionId,responseRequestId,receiptVersion,receiptDigest}
+    terminal_success: consume this session and issue APPEAL_STATUS atomically
+  APPEAL_STATUS:
+    ttl_seconds: 1800
+    scope_type: APPEAL
+    mode: READ_ONLY_ROTATING
+    allowed_operations: [getResponseAppeal]
+    eligible_parent_kinds: [APPEAL_CREATE, RESPONSE_RECEIPT]
+    scope_binding: ResponseAppealStatusScopeV1{appealId,responseSubmissionId,responseRequestId,appealReceiptDigest}
+    reentry: only after the RESPONSE_RECEIPT composite proof is re-established; revoke the prior status child for the same appeal when rotation commits
+  COMMUNICATION_PROFILE:
+    ttl_seconds: 1800
+    scope_type: COMMUNICATION_SUBJECT
+    mode: ROTATING_SCOPED_COMMAND
+    allowed_operations: [requestCommunicationEndpointLink, verifyCommunicationEndpointLink, unlinkCommunicationEndpoint]
+    eligible_parent_kinds: [SUBSCRIPTION_MANAGEMENT, RESPONSE_RECEIPT, CORRECTION_RECEIPT]
+    origin_derivation:
+      SUBSCRIPTION_MANAGEMENT: CommunicationOriginSubscriptionV1{originObjectType=SUBSCRIPTION,originObjectId=parent.scopeId,originObjectVersion=1}
+      RESPONSE_RECEIPT: CommunicationOriginResponseV1{originObjectType=RESPONSE_REQUEST,originObjectId=responseSubmission.responseRequestId,originObjectVersion=1,responseRequestBindingDigest}
+      CORRECTION_RECEIPT: CommunicationOriginCorrectionV1{originObjectType=CORRECTION_REQUEST,originObjectId=parent.scopeId,originObjectVersion=1}
+    scope_binding: CommunicationProfileScopeV1{communicationSubjectId,originObjectType,originObjectId,originObjectVersion,originBindingDigest,profileVersion,profileDigest}
+    rotation: every successful profile mutation rotates the child token under the same subject scope; changed subject or origin is forbidden
+
+private_bff_session_broker:
+  ingress: Submission API private service network only
+  common_security:
+    - exact request-bound X-Gurine-Service-Assertion
+    - X-Gurine-Submission-Session carries the eligible parent opaque token
+    - Origin and browser cookies are not accepted by Submission API
+    - Cache-Control no-store and no raw token in access/error logging
+  operations:
+    issueCommunicationProfileSession:
+      method: POST
+      path: /private/v1/submission-sessions/communication-profile:issue
+      parent_kinds: [SUBSCRIPTION_MANAGEMENT, RESPONSE_RECEIPT, CORRECTION_RECEIPT]
+      request_schema: IssueCommunicationProfileSessionRequestV1
+      response_schema: IssueCommunicationProfileSessionReceiptV1
+      procedure: intake.issue_communication_profile_session
+    issueResponseAppealCreateSession:
+      method: POST
+      path: /private/v1/submission-sessions/response-appeal:create
+      parent_kinds: [RESPONSE_RECEIPT]
+      request_schema: IssueResponseAppealCreateSessionRequestV1
+      response_schema: IssueResponseAppealCreateSessionReceiptV1
+      procedure: intake.issue_response_appeal_create_session
+    rotateResponseAppealStatusSession:
+      method: POST
+      path: /private/v1/submission-sessions/response-appeal-status:rotate
+      parent_kinds: [RESPONSE_RECEIPT]
+      request_schema: RotateResponseAppealStatusSessionRequestV1
+      response_schema: RotateResponseAppealStatusSessionReceiptV1
+      procedure: intake.rotate_response_appeal_status_session
+
+closed_schemas:
+  common_fields:
+    newOpaqueSessionToken: {type: secret-base64url-no-padding, decoded_bytes: 32, required: true, redaction: full}
+    expectedParentSessionVersion: {type: int64, minimum: 1, required: true}
+    absoluteExpiresAt: {type: RFC3339-timestamptz, required: true}
+    idempotencyKey: {transport: Idempotency-Key header, type: UUID, required: true}
+  IssueCommunicationProfileSessionRequestV1:
+    additionalProperties: false
+    required: [newOpaqueSessionToken, expectedParentSessionVersion, absoluteExpiresAt]
+    fields: [newOpaqueSessionToken, expectedParentSessionVersion, absoluteExpiresAt]
+  IssueCommunicationProfileSessionReceiptV1:
+    additionalProperties: false
+    required: [sessionKind, scopeType, subjectId, profileVersion, profileDigest, sessionVersion, absoluteExpiresAt, issuanceReceiptDigest]
+    constants: {sessionKind: COMMUNICATION_PROFILE, scopeType: COMMUNICATION_SUBJECT}
+  IssueResponseAppealCreateSessionRequestV1:
+    additionalProperties: false
+    required: [newOpaqueSessionToken, expectedParentSessionVersion, expectedReceiptVersion, expectedReceiptDigest, absoluteExpiresAt]
+    fields:
+      expectedReceiptVersion: {type: int64, minimum: 1}
+      expectedReceiptDigest: {type: lowercase-sha256}
+  IssueResponseAppealCreateSessionReceiptV1:
+    additionalProperties: false
+    required: [sessionKind, scopeType, responseSubmissionId, responseRequestId, receiptVersion, receiptDigest, sessionVersion, absoluteExpiresAt, issuanceReceiptDigest]
+    constants: {sessionKind: APPEAL_CREATE, scopeType: RESPONSE_SUBMISSION}
+  RotateResponseAppealStatusSessionRequestV1:
+    additionalProperties: false
+    required: [appealId, newOpaqueSessionToken, expectedParentSessionVersion, absoluteExpiresAt]
+    fields: {appealId: uuid}
+  RotateResponseAppealStatusSessionReceiptV1:
+    additionalProperties: false
+    required: [sessionKind, scopeType, appealId, responseSubmissionId, responseRequestId, appealReceiptDigest, sessionVersion, absoluteExpiresAt, issuanceReceiptDigest]
+    constants: {sessionKind: APPEAL_STATUS, scopeType: APPEAL}
+  DerivedCommandStoredResponseV1:
+    additionalProperties: false
+    required: [operationId, bffIssuer, sessionTokenHash, idempotencyKeyHash, requestDigest, claimGeneration, terminalDisposition, httpStatus, contentType, responseHeaderBytes, responseBodyBytes, responseDigest, receiptId, receiptDigest, finalizedAt]
+    constants: {terminalDisposition: RESPONSE_FINAL}
+    private_fields: [sessionTokenHash, idempotencyKeyHash, responseHeaderBytes, responseBodyBytes]
+    replay_source: exact stored responseHeaderBytes and responseBodyBytes; response_body JSONB is compatibility-only and is never serialized for replay
+    maximum_response_body_bytes: 1048576
+
+database_idempotency_boundary:
+  relation: ops.idempotency_keys
+  direct_acl:
+    PUBLIC: []
+    all_runtime_roles: []
+    table_and_column_rule: SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER and COPY paths are revoked at both table and per-column level; base control/submission/identity grants are not inherited after 0027
+  only_access_functions:
+    - ops.claim_idempotency_v1(ops.idempotency_claim_v1) RETURNS ops.idempotency_claim_receipt_v1
+    - ops.finalize_idempotency_response_v1(ops.idempotency_finalize_v1) RETURNS ops.idempotency_finalize_receipt_v1
+    - ops.replay_idempotency_response_v1(ops.idempotency_replay_v1) RETURNS ops.idempotency_replay_receipt_v1
+  function_contract:
+    owner: gurine_migrator
+    security_definer: true
+    search_path: [pg_catalog, ops]
+    caller_identity: session_user matched to an embedded exact operation-scope registry; prefixes, regexes, caller role parameters and current_user-as-caller are forbidden
+    execute_roles: [gurine_submission_api, gurine_control_api, gurine_identity_api]
+    public_and_other_roles: []
+    response_projection: replay returns only disposition/generation/status/schema/media/safe-header bytes/body bytes/response digest/receipt ID+digest/completed time after exact caller/scope/operation/request/issuer/session/generation binding
+    never_returned: [scope, keyHash, requestHash, bffIssuer, sessionTokenHash, storageFormat, terminalDisposition, tombstoneDigest, compatibilityResponseBody, resourceType, resourceId, auditEventId, outboxId]
+    proconfig_oracle: pg_proc.proconfig is exactly the one-element text array ["search_path=pg_catalog, ops"]; pg_temp, caller-writable schemas, role changes, row_security changes and any additional setting fail the gate
+  row_lifecycle:
+    claim_tuple:
+      required_for_every_derived_row: [operation_id, bff_issuer, session_token_hash, claim_generation]
+      insertion: NEW stores all four fields and leaves terminal_disposition, terminalized_at, tombstone_digest and every terminal-response field NULL
+      check_rule: This tuple is independent of the nullable terminal tuple; the retired num_nonnulls(...)=0-or-13 shape is forbidden because a valid three-field claim fails SQLSTATE 23514.
+    terminal_response_tuple:
+      fields: [response_status, response_body, response_schema, response_media_type, response_header_bytes, response_body_bytes, response_digest, receipt_id, receipt_digest, audit_event_id, outbox_id, completed_at]
+      finalize_edge: only ops.finalize_idempotency_response_v1 may change every field from NULL to non-NULL while setting terminal_disposition=RESPONSE_FINAL and terminalized_at=completed_at in the same generation-fenced update
+      partial_tuple: forbidden by named CHECK plus the boundary transition trigger
+    expired_reclaim:
+      eligible_only_when: storage_format=BOUND_V1, terminal_disposition IS NULL, every terminal field is NULL and expires_at is not later than clock_timestamp()
+      result: lock the row, replace the complete claim binding, increment claim_generation once and return RECLAIMED_EXPIRED
+      stale_finalizer: expected_claim_generation mismatch is IDEMPOTENCY_STALE_CLAIM with zero mutation
+      terminal_rule: RESPONSE_FINAL, any legacy disposition and any tombstone remain terminal after expires_at and are never reclaimed
+    terminal_tombstone:
+      creation: legal-hold-aware owner retention only; response bytes/correlation IDs are cleared and a nonreversible tombstone digest remains
+      result: uniform IDEMPOTENCY_TERMINAL_UNAVAILABLE with no bytes or existence detail; never executable or reclaimable
+  pre_cutover_legacy_policy:
+    fence: quiesce every old direct-DML application revision, wait for all of its transactions to end without forced termination, revoke table/column ACLs, lock the relation and classify one exhaustive primary-key snapshot
+    classes:
+      LEGACY_FINAL_COMPAT: completed, unexpired, exact known non-derived scope; backfill deterministic PostgreSQL-18.4 JSON compatibility bytes/digest and allow only the exact mapped caller/request to replay with an explicit legacy disposition
+      LEGACY_EXPIRED_TOMBSTONE: completed but expired or unknown-scope; clear bytes and never reuse the key
+      LEGACY_AMBIGUOUS_TOMBSTONE: response fields both NULL after drain; the old split claim/complete path cannot prove absence of an effect, so reconciliation replaces retry
+      LEGACY_CORRUPT_TOMBSTONE: status/body partial or invalid; clear replay payload and fail closed
+    derived_exclusion: No legacy class may use a SUBMISSION_DERIVED scope or acquire BFF/session binding; the three derived session kinds start only as BOUND_V1 rows after cutover.
+    order: add nullable columns and NOT VALID checks, classify set-equal rows, make format/generation NOT NULL, install transition trigger, validate checks, create exact functions, grant exact EXECUTE/TYPE USAGE, run PostgreSQL 18.4 canary, then admit only the new function-using application revision
+  derived_response_safety:
+    allowed_schemas: [IssueCommunicationProfileSessionReceiptV1, IssueResponseAppealCreateSessionReceiptV1, RotateResponseAppealStatusSessionReceiptV1, ResponseAppealReceiptV1, CommunicationEndpointLinkRequestedReceiptV1, CommunicationEndpointVerifiedReceiptV1, CommunicationEndpointUnlinkedReceiptV1]
+    forbidden_recursive_fields: [opaqueSessionToken, nextOpaqueSessionToken, sessionToken, tokenHash, sessionTokenHash, idempotencyKey, idempotencyKeyHash, csrfToken, cookie, setCookie, authorization]
+    allowed_headers: [content-type, cache-control, etag, idempotency-replayed]
+    forbidden_headers: [set-cookie, authorization, location, x-gurine-submission-session, x-gurine-next-submission-session]
+    finalize_rule: unsafe schema/header/body fails before completed_at and leaves no partial tuple; BFF cookie rotation uses its already-owned fresh token outside stored response bytes
+
+issuance_transactions:
+  common_lock_order: [ops.idempotency_keys, intake.submission_sessions parent, parent scope row, intake.communication_subjects or intake.appeals, intake.submission_sessions prior child, ops.audit_events chain head]
+  communication_profile:
+    - Claim the broker operation's idempotency key and exact request digest.
+    - Lock and validate one ACTIVE eligible parent with expected version, issuer and expiry.
+    - Resolve exactly one origin row and stable binding; resolve or insert exactly one matching communication subject without merging origins.
+    - Revoke a prior active COMMUNICATION_PROFILE child only when its scope binding is identical.
+    - Insert the child row and immutable issuance receipt; finalize broker response; commit.
+  appeal_create:
+    - Lock RESPONSE_RECEIPT, response submission and response request; match expected receipt version/digest against the stored composite candidate key.
+    - Insert APPEAL_CREATE without consuming or widening RESPONSE_RECEIPT; finalize issuance response; commit.
+  appeal_status_rotation:
+    - Lock RESPONSE_RECEIPT, response submission, response request and exact appeal composite.
+    - Revoke the prior active APPEAL_STATUS child for only that appeal, insert the replacement and finalize the response atomically.
+
+one_shot_idempotent_replay:
+  scope_identity: [operationId, bffIssuer, sessionTokenHash, idempotencyKeyHash]
+  generation_fence: claim returns claimGeneration; finalize and replay require the same generation
+  request_digest: lowercase SHA-256 of exact method, path, canonical query, content type and body bytes
+  ordering:
+    - Authenticate the request-bound BFF assertion and compute the scope identity/request digest.
+    - Lock the idempotency/stored-response claim before validating ACTIVE session status.
+    - RESPONSE_FINAL plus the same request digest and generation returns the stored HTTP status, safe headers and exact response bytes through ops.replay_idempotency_response_v1 immediately, even if APPEAL_CREATE is CONSUMED, COMMUNICATION_PROFILE was rotated or the incomplete-claim lease has elapsed.
+    - An unexpired changed digest returns IDEMPOTENCY_CONFLICT with a before/after physical-row digest proving zero mutation. IN_PROGRESS never repeats a possible effect.
+    - An expired incomplete BOUND_V1 row may return RECLAIMED_EXPIRED only after incrementing generation under lock; a prior-generation worker cannot finalize it. RESPONSE_FINAL and every tombstone are terminal and never reclaimed.
+    - Only NEW or RECLAIMED_EXPIRED locks the ACTIVE session and domain graph, performs mutation, consumes/rotates session, writes audit/outbox/receipt, stores the complete exact response tuple and finalizes the claim in one transaction.
+  replay_forbidden_when: token hash, issuer, operation or idempotency key differs; those requests pass through normal non-leaking session validation and cannot retrieve another session's response
+  direct_sql_forbidden: application repositories and all 31 derived/domain boundary signatures use the claim/finalize/replay functions; they never SELECT/INSERT/UPDATE/DELETE/COPY ops.idempotency_keys directly
+
+cookie_profiles:
+  appeal:
+    name: gurine_response_appeal_session
+    path: /respond/receipt/appeal
+    session_kinds: [APPEAL_CREATE, APPEAL_STATUS]
+  communication_profile:
+    name: gurine_communication_profile_session
+    path: /communication-profile
+    session_kinds: [COMMUNICATION_PROFILE]
+  defaults: {domain: absent-host-only, httpOnly: true, secureInProduction: true, sameSite: Lax, envelope: specs/cryptography/submission-session-cookie-envelope.yaml, payload: specs/cryptography/submission-session-cookie-payload.schema.json}
+  rotation: BFF seals the already-generated new token only after a successful broker/domain receipt; failure retains the prior usable cookie unless the server receipt says it was terminally consumed
+
+operation_authorization_overlay:
+  createResponseAppeal: {auth: bff-service-assertion-and-scoped-submission-session, required_session_kind: APPEAL_CREATE, scope_type: RESPONSE_SUBMISSION, successful_rotation: APPEAL_STATUS}
+  getResponseAppeal: {auth: bff-service-assertion-and-scoped-submission-session, required_session_kind: APPEAL_STATUS, scope_type: APPEAL}
+  requestCommunicationEndpointLink: {auth: bff-service-assertion-and-scoped-submission-session, required_session_kind: COMMUNICATION_PROFILE, scope_type: COMMUNICATION_SUBJECT, successful_rotation: COMMUNICATION_PROFILE}
+  verifyCommunicationEndpointLink: {auth: bff-service-assertion-and-scoped-submission-session-and-one-time-endpoint-proof, required_session_kind: COMMUNICATION_PROFILE, scope_type: COMMUNICATION_SUBJECT, successful_rotation: COMMUNICATION_PROFILE}
+  unlinkCommunicationEndpoint: {auth: bff-service-assertion-and-scoped-submission-session, required_session_kind: COMMUNICATION_PROFILE, scope_type: COMMUNICATION_SUBJECT, successful_rotation: COMMUNICATION_PROFILE}
+
+acceptance:
+  executable_required:
+    - RESPONSE_RECEIPT still authorizes only getResponseReceipt and receives 403-equivalent scoped-unavailable for createResponseAppeal/getResponseAppeal.
+    - APPEAL_CREATE creates only for its bound response submission/request/receipt composite, is consumed on success and cannot query status.
+    - APPEAL_STATUS reads only its bound appeal and cannot create or enumerate another appeal.
+    - COMMUNICATION_PROFILE resolves only its origin-bound subject; a valid token plus another subject/endpoint/challenge is indistinguishable from an invalid token.
+    - Parent expiry/revocation prevents new child issuance; an already issued child follows its own absolute expiry but every mutation rechecks the current domain authorization and suppression fences.
+    - Sixty-four concurrent issue attempts with one token/idempotency/request create one child and one receipt; changed request yields one conflict and no second child.
+    - Sixty-four concurrent createResponseAppeal calls create one appeal, consume one APPEAL_CREATE, issue one APPEAL_STATUS and return byte-identical stored responses.
+    - Replay after one-shot consumption or profile rotation returns stored bytes before domain locks; a different key/token/issuer/request never receives those bytes.
+    - A NEW derived claim succeeds on PostgreSQL 18.4 with all four claim fields present and every terminal field NULL; no retired 0-or-13 cardinality CHECK produces SQLSTATE 23514.
+    - Finalize populates the complete terminal tuple once, and replay after APPEAL_CREATE consumption returns byte-identical headers/body/digests for the same generation with zero second session/domain/audit/outbox mutation.
+    - The same unexpired key with changed request bytes returns IDEMPOTENCY_CONFLICT and a full-row before/after digest plus xmin/count prove zero mutation.
+    - An expired incomplete BOUND_V1 row is reclaimed once with generation+1; the stale generation cannot finalize, while finalized/legacy/tombstoned rows remain terminal and cannot be reclaimed.
+    - >-
+      The migration canary seeds all legacy shapes: only an unexpired completed known non-derived row yields LEGACY_FINAL_COMPAT; expired/unknown, incomplete-after-drain and partial rows are immutable non-replayable tombstones.
+    - Cookies are host-only, path-scoped, sealed and rotated; raw tokens are absent from URLs, HTML, logs, audit, outbox and telemetry fixtures.
+    - PostgreSQL ACL inspection proves PUBLIC and nonlisted roles have zero EXECUTE and gurine_submission_api has zero direct table writes.
+    - PostgreSQL 18.4 has_table_privilege and has_column_privilege matrices prove submission, control, identity and every other runtime role have zero direct ops.idempotency_keys privilege, including residual column ACLs.
+    - Direct SELECT/INSERT/UPDATE/COPY/CTE/RETURNING attempts under submission, control and identity fail SQLSTATE 42501 while exact registered claim/finalize/replay calls succeed.
+    - Cross-role, cross-operation, cross-issuer, cross-session and changed-request replay returns no response bytes or row-existence signal; same binding returns the exact stored bytes once without mutation.
+    - Finalize rejects token/cookie/verifier JSON fields and Set-Cookie/session headers, and canary verifier/response bytes appear in no view, publication, generated row, audit, outbox, log, trace, metric or error.
+    - Search-path trap objects cannot intercept the three SECURITY DEFINER functions; pg_proc ownership, exact one-element ["search_path=pg_catalog, ops"] proconfig, proacl and exact regprocedure signatures match the database contract.
+
+canonical_import_requirements:
+  - specs/submission/session-boundary.yaml must add the three kinds, two cookie profiles and the broker operations while preserving all existing session definitions byte-semantically.
+  - specs/api/operation-contracts.yaml and specs/product/addendum-operation-contracts.yaml must use the exact required_session_kind labels above.
+  - Submission OpenAPI and generated clients must expose the three private BFF broker operations and no browser security scheme.
+  - specs/cryptography/submission-session-cookie-payload.schema.json must admit the three new sessionKind values without changing required fields or envelope cryptography.
+  - command/persistence/event contracts must adopt the replay ordering and token-free receipt/event payloads.
+  - db migration 0027 must implement the staged legacy classification, claim/terminal CHECK split, transition trigger, generation-fenced functions, ACL reset and the exact PostgreSQL 18.4 canary before this overlay can become FINAL.
+  - crates/persistence-postgres/src/idempotency.rs and all direct callers must replace raw table claim/complete/release SQL with the exact generation-fenced functions; failure rolls back the enclosing transaction instead of committing an incomplete claim and later releasing it. The legacy release operation is removed.
+  - Base privilege matrices and migrations remain historical input, but 0027 must explicitly revoke their control/submission/identity table-wide grants and must not regrant safe-looking columns.
+  - acceptance and runtime migration tests must implement every executable_required case before this overlay may become FINAL.
