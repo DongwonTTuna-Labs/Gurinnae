@@ -206,7 +206,7 @@ fn validate_legacy_source_bindings(
     if state.config.environment == "production"
         && claim.snapshot_contract == ClaimedSnapshotContract::V1
     {
-        let _ = ordered_source_use_bindings(&evidence)?;
+        let _ = ordered_source_use_bindings(evidence)?;
     }
     Ok(())
 }
@@ -219,7 +219,7 @@ fn resolve_claimed_snapshot(claim: &ClaimedAgentRun, evidence: &Value) -> Result
     // change after dispatch and falsely report a stale snapshot.
     Ok(match claim.snapshot_contract {
         ClaimedSnapshotContract::V1 => {
-            let snapshot_evidence = evidence_without_source_uses(&evidence)?;
+            let snapshot_evidence = evidence_without_source_uses(evidence)?;
             // AGENT_CASE snapshot identity is the immutable selected evidence
             // graph for legacy runs. The objective is independently bound in
             // the provider request and is intentionally excluded.

@@ -1,9 +1,9 @@
 #[derive(Clone, Copy)]
 enum PageNoticeAuthority {
-    PublicationCollection,
-    OperationalCollection,
-    SearchCollection,
-    RedistributionCollection,
+    Publication,
+    Operational,
+    Search,
+    Redistribution,
 }
 
 fn page_with_notice_seo(
@@ -32,11 +32,11 @@ fn page_seo_description(
     let mut notices = BTreeMap::<String, u8>::new();
     if items.is_empty() {
         let (order, notice) = match authority {
-            PageNoticeAuthority::PublicationCollection | PageNoticeAuthority::SearchCollection => {
+            PageNoticeAuthority::Publication | PageNoticeAuthority::Search => {
                 (0, EMPTY_PUBLICATION_NOTICE)
             }
-            PageNoticeAuthority::OperationalCollection => (10, OPERATIONAL_INTERPRETATION_NOTICE),
-            PageNoticeAuthority::RedistributionCollection => (30, PUBLIC_REDISTRIBUTION_NOTICE),
+            PageNoticeAuthority::Operational => (10, OPERATIONAL_INTERPRETATION_NOTICE),
+            PageNoticeAuthority::Redistribution => (30, PUBLIC_REDISTRIBUTION_NOTICE),
         };
         insert_page_notice(&mut notices, order, notice);
     }
@@ -60,14 +60,14 @@ fn collect_page_item_notice(
     notices: &mut BTreeMap<String, u8>,
 ) -> Result<(), ServiceError> {
     match authority {
-        PageNoticeAuthority::PublicationCollection => {
+        PageNoticeAuthority::Publication => {
             collect_publication_page_notice(item, notices)
         }
-        PageNoticeAuthority::OperationalCollection => {
+        PageNoticeAuthority::Operational => {
             collect_operational_page_notice(item, notices)
         }
-        PageNoticeAuthority::SearchCollection => collect_search_page_notice(item, notices),
-        PageNoticeAuthority::RedistributionCollection => {
+        PageNoticeAuthority::Search => collect_search_page_notice(item, notices),
+        PageNoticeAuthority::Redistribution => {
             let notice =
                 exact_page_notice(item, "redistributionNotice", PUBLIC_REDISTRIBUTION_NOTICE)?;
             insert_page_notice(notices, 30, notice);

@@ -285,19 +285,18 @@ impl ReviewTierChain {
         initial: OfficialUnreviewedTier,
         promoted: Option<HumanPromotedTier>,
     ) -> Result<Self, ResearchArtifactError> {
-        if let Some(current) = &promoted {
-            if current.binding != initial.binding
+        if let Some(current) = &promoted
+            && (current.binding != initial.binding
                 || current.predecessor_receipt_sha256 != initial.receipt_sha256
                 || current.source_locator_digest != initial.source_locator_digest
                 || current.official_source_registry_digest
                     != initial.official_source_registry_digest
                 || current.created_at < initial.created_at
-                || current.promotion.reviewed_at > current.created_at
-            {
-                return Err(ResearchArtifactError::InvalidReviewChain(
-                    "promotion does not bind the initial receipt",
-                ));
-            }
+                || current.promotion.reviewed_at > current.created_at)
+        {
+            return Err(ResearchArtifactError::InvalidReviewChain(
+                "promotion does not bind the initial receipt",
+            ));
         }
         Ok(Self { initial, promoted })
     }

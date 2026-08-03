@@ -42,6 +42,10 @@ pub struct PrivacyResponseCalendar {
 }
 
 impl PrivacyResponseCalendar {
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "calendar construction binds the complete authority, validity window, and day-set contract"
+    )]
     pub fn try_new(
         calendar_version_id: Uuid,
         calendar_digest: PrivacyDigest,

@@ -42,7 +42,7 @@ fn assert_invalid(envelope: &Value, field: &str) {
         Err(Failure::Terminal("INVALID_EVENT_PAYLOAD", detail)) => {
             assert!(detail.contains(field), "unexpected detail: {detail}");
         }
-        other => assert!(false, "expected invalid payload, got {other:?}"),
+        other => panic!("expected invalid payload, got {other:?}"),
     }
 }
 
@@ -52,8 +52,7 @@ fn exact_payload_produces_digest_only_consumer_results() {
     let fact = match response_materialized_v2_fact(&envelope) {
         Ok(fact) => fact,
         Err(error) => {
-            assert!(false, "valid payload rejected: {error:?}");
-            return;
+            panic!("valid payload rejected: {error:?}");
         }
     };
     let event_id = Uuid::parse_str(EVENT_ID).unwrap_or_default();

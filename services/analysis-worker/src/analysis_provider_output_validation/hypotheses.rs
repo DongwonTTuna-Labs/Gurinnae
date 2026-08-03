@@ -105,7 +105,7 @@ fn replay_materialization(
 ) -> Result<Option<HypothesisMaterialization>, Failure> {
     let citation_ids = payload_citation_ids(&row.payload)?;
     let expected_ordinals = (0..row.citation_ids.len())
-        .map(|ordinal| i32::try_from(ordinal))
+        .map(i32::try_from)
         .collect::<Result<Vec<_>, _>>()
         .map_err(|_| Failure::Terminal("AGENT_OUTPUT_INVALID", "citation ordinal".to_owned()))?;
     if citation_ids != row.citation_ids

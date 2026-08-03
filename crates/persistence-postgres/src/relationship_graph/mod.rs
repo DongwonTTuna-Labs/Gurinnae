@@ -122,7 +122,7 @@ impl RelationshipGraphRepository {
             return Err(domain_decode(RelationshipGraphError::InvalidQuery));
         }
         let canonical = &command.request_canonical;
-        let expected_digest = Sha256Digest::new(hex_digest(&canonical)).map_err(domain_decode)?;
+        let expected_digest = Sha256Digest::new(hex_digest(canonical)).map_err(domain_decode)?;
         let rows = Self::query_neighbors(connection, command, generation, canonical).await?;
         let neighbors = rows
             .into_iter()

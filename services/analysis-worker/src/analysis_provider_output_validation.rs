@@ -72,6 +72,10 @@ pub(super) async fn insert_output_validation(
     persist_output_proposals(executor, turn, validation, proposals, output).await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "validation persistence binds output, citation, proposal, and validator digest evidence"
+)]
 async fn persist_validation(
     executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
@@ -454,6 +458,10 @@ fn validate_recipient_binding(payload: &Value) -> Result<(), Failure> {
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "proposal citation insertion binds provider turn, validation, payload, output, and hypothesis provenance"
+)]
 async fn insert_proposal_citations(
     executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,

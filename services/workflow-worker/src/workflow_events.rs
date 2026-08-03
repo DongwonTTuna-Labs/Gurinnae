@@ -71,6 +71,7 @@ async fn workflow_inbox_processed(
     .ok_or_else(|| Failure::Terminal("INBOX_MISSING", event_id.to_string()))
 }
 
+#[expect(clippy::too_many_arguments, reason = "이벤트 소비자 디스패치가 풀 런타임 컨텍스트를 그대로 전달한다")]
 async fn reconcile_event(
     pool: &PgPool,
     store: &Store,
@@ -145,6 +146,7 @@ async fn reconcile_event(
     Ok(metrics)
 }
 
+#[expect(clippy::too_many_arguments, reason = "이벤트 소비자 디스패치가 풀 런타임 컨텍스트를 그대로 전달한다")]
 async fn reconcile_workflow_worker_event(
     pool: &PgPool,
     store: &Store,

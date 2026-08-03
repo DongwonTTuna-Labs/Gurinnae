@@ -215,10 +215,6 @@ fn relay_connection_test_request(model: &str) -> Value {
     })
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "success transaction binds the tested model, policy, pricing, audit, and receipt"
-)]
 async fn persist_relay_upgrade_success(
     state: &State,
     job: &ClaimedJob,
@@ -408,10 +404,6 @@ async fn persist_relay_connection_test_success(
     Ok(())
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "cost evidence binds the tested model, job, actual units, and activated pricing"
-)]
 async fn persist_relay_upgrade_cost(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     job: &ClaimedJob,

@@ -115,7 +115,7 @@ async fn search(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
         Value::Object(filters),
         "공개 기록 검색",
         "/search".to_owned(),
-        PageNoticeAuthority::SearchCollection,
+        PageNoticeAuthority::Search,
     )
 }
 

@@ -507,7 +507,7 @@ fn canonical_json_bytes(value: &Value) -> Result<Vec<u8>, DatasetSnapshotError> 
         match value {
             Value::Null | Value::Bool(_) | Value::String(_) => Ok(()),
             Value::Number(value) if value.is_i64() || value.is_u64() => Ok(()),
-            Value::Number(_) => return Err(DatasetSnapshotError::InvalidCanonicalJson),
+            Value::Number(_) => Err(DatasetSnapshotError::InvalidCanonicalJson),
             Value::Array(values) => values.iter().try_for_each(validate),
             Value::Object(values) => {
                 if values.keys().any(|key| !key.is_ascii()) {

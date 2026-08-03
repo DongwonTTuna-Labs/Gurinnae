@@ -87,7 +87,7 @@ async fn persist_tool_call_source_uses(
 ) -> Result<(), Failure> {
     if let Some(source) = context.pending_source_fetch {
         super::persist_research_fetch(
-            &mut **tx,
+            tx,
             context.turn,
             context.tool_call_id,
             context.call_id,
@@ -97,7 +97,7 @@ async fn persist_tool_call_source_uses(
         .await?;
     }
     super::insert_tool_result_source_uses(
-        &mut **tx,
+        tx,
         context.turn,
         context.tool_call_id,
         context.tool_id,

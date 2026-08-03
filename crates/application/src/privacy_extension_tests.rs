@@ -12,8 +12,7 @@ fn valid_input() -> Option<PrivacyExtensionInput> {
 #[test]
 fn privacy_extension_preserves_the_complete_transport_payload() {
     let Some(extension) = valid_input() else {
-        assert!(false, "valid privacy extension fixture");
-        return;
+        panic!("valid privacy extension fixture");
     };
 
     assert_eq!(extension.extension_reason_code(), "MORE_TIME_REQUIRED");
@@ -29,8 +28,7 @@ fn privacy_extension_accepts_text_boundaries_and_defers_the_policy_maximum() {
     let Ok(extension) =
         PrivacyExtensionInput::try_new("C".repeat(100), "R".repeat(4_000), i32::MAX)
     else {
-        assert!(false, "valid boundary privacy extension fixture");
-        return;
+        panic!("valid boundary privacy extension fixture");
     };
 
     assert_eq!(extension.extension_reason_code().chars().count(), 100);

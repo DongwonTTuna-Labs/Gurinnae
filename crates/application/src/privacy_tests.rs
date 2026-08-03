@@ -21,8 +21,7 @@ fn timestamp() -> Option<OffsetDateTime> {
 #[test]
 fn endpoint_proof_provider_shape_is_closed() {
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let missing_provider = PrivacyIdentityProofClaim::VerifiedEndpoint {
         endpoint_challenge_id: Uuid::from_u128(1),
@@ -59,26 +58,22 @@ fn request_type_serialization_never_collapses_destructive_rights() {
 #[test]
 fn create_rejects_scope_ciphertext_bound_to_another_digest() {
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let Ok(encrypted_scope) =
         EncryptedPrivacyScope::try_new(vec![1], digest.clone(), digest.clone(), "field-key-v1")
     else {
-        assert!(false, "valid encrypted scope fixture");
-        return;
+        panic!("valid encrypted scope fixture");
     };
     let Ok(encrypted_statement) =
         EncryptedPrivacyStatement::try_new(vec![1], digest.clone(), digest.clone(), "field-key-v1")
     else {
-        assert!(false, "valid encrypted statement fixture");
-        return;
+        panic!("valid encrypted statement fixture");
     };
     let Ok(receipt_token_sha256) =
         PrivacyDigest::try_new("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
     else {
-        assert!(false, "valid token digest fixture");
-        return;
+        panic!("valid token digest fixture");
     };
     let request = CreatePrivacyRequest {
         privacy_request_id: Uuid::from_u128(1),
@@ -128,12 +123,10 @@ fn create_rejects_scope_ciphertext_bound_to_another_digest() {
 #[test]
 fn owner_session_result_is_closed_and_time_bound() {
     let Some(requested_at) = timestamp() else {
-        assert!(false, "valid timestamp fixture");
-        return;
+        panic!("valid timestamp fixture");
     };
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let invalid = PrivacyRequestSession {
         request_id: Uuid::from_u128(1),
@@ -155,12 +148,10 @@ fn owner_session_result_is_closed_and_time_bound() {
 #[test]
 fn replayed_session_keeps_the_database_owned_original_bounds() {
     let Some(consumed_at) = timestamp() else {
-        assert!(false, "valid timestamp fixture");
-        return;
+        panic!("valid timestamp fixture");
     };
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let session = PrivacyRequestSession {
         request_id: Uuid::from_u128(1),
@@ -180,12 +171,10 @@ fn replayed_session_keeps_the_database_owned_original_bounds() {
 #[test]
 fn create_owner_accepts_a_different_proposal_id_only_on_exact_replay() {
     let Some(created_at) = timestamp() else {
-        assert!(false, "valid timestamp fixture");
-        return;
+        panic!("valid timestamp fixture");
     };
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let persisted_id = Uuid::from_u128(1);
     let Ok(summary) = gurine_domain::privacy::PrivacyRequestSummary::try_new(
@@ -200,8 +189,7 @@ fn create_owner_accepts_a_different_proposal_id_only_on_exact_replay() {
         created_at,
         created_at,
     ) else {
-        assert!(false, "valid privacy request summary fixture");
-        return;
+        panic!("valid privacy request summary fixture");
     };
     let build = |replayed| CreatedPrivacyRequest {
         command: PrivacyCommandReceipt {
@@ -227,12 +215,10 @@ fn create_owner_accepts_a_different_proposal_id_only_on_exact_replay() {
 #[test]
 fn public_status_requires_the_closed_pending_action() {
     let Some(created_at) = timestamp() else {
-        assert!(false, "valid timestamp fixture");
-        return;
+        panic!("valid timestamp fixture");
     };
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let Ok(request) = gurine_domain::privacy::PrivacyRequestSummary::try_new(
         Uuid::from_u128(1),
@@ -246,8 +232,7 @@ fn public_status_requires_the_closed_pending_action() {
         created_at,
         created_at,
     ) else {
-        assert!(false, "valid privacy request summary fixture");
-        return;
+        panic!("valid privacy request summary fixture");
     };
     let status = PrivacyRequestPublicStatus {
         request,
@@ -271,12 +256,10 @@ fn public_status_requires_the_closed_pending_action() {
 #[test]
 fn rejected_public_status_requires_matching_decision_and_notice_receipts() {
     let Some(created_at) = timestamp() else {
-        assert!(false, "valid timestamp fixture");
-        return;
+        panic!("valid timestamp fixture");
     };
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let verified_at = created_at + time::Duration::hours(1);
     let Ok(request) = gurine_domain::privacy::PrivacyRequestSummary::try_new(
@@ -291,8 +274,7 @@ fn rejected_public_status_requires_matching_decision_and_notice_receipts() {
         created_at,
         verified_at,
     ) else {
-        assert!(false, "valid privacy request summary fixture");
-        return;
+        panic!("valid privacy request summary fixture");
     };
     let status = PrivacyRequestPublicStatus {
         request,
@@ -316,8 +298,7 @@ fn rejected_public_status_requires_matching_decision_and_notice_receipts() {
 #[test]
 fn privacy_query_carries_only_the_session_digest_to_the_owner() {
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     let query = GetPrivacyRequest {
         session_token_sha256: digest,
@@ -342,12 +323,10 @@ fn maximum_object_scope_fits_the_measured_encrypted_cap() {
         include_backups: false,
     };
     let Ok(scope_value) = serde_json::to_value(&scope) else {
-        assert!(false, "maximum scope must serialize");
-        return;
+        panic!("maximum scope must serialize");
     };
     let Ok(canonical) = canonical_json(&scope_value) else {
-        assert!(false, "maximum scope must canonicalize");
-        return;
+        panic!("maximum scope must canonicalize");
     };
     // 1,000 89-byte objects + 999 separators + two array delimiters = 90,001;
     // the sorted outer object contributes 119 bytes and JCS appends no newline.
@@ -368,8 +347,7 @@ fn maximum_object_scope_fits_the_measured_encrypted_cap() {
         &canonical,
         [3_u8; 12],
     ) else {
-        assert!(false, "maximum scope envelope must encrypt");
-        return;
+        panic!("maximum scope envelope must encrypt");
     };
     // 90,120 plaintext + 16-byte tag -> 120,182 base64url bytes, plus the
     // fixed 47-byte prefix/key-id/nonce/separator envelope = 120,229.
@@ -377,8 +355,7 @@ fn maximum_object_scope_fits_the_measured_encrypted_cap() {
     assert!(envelope.len() <= MAX_ENCRYPTED_PRIVACY_SCOPE_BYTES);
 
     let Some(digest) = digest() else {
-        assert!(false, "valid digest fixture");
-        return;
+        panic!("valid digest fixture");
     };
     assert!(
         EncryptedPrivacyScope::try_new(

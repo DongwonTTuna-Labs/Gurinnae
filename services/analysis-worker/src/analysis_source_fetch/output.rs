@@ -151,10 +151,6 @@ fn provider_error(kind: &str, index: usize) -> Failure {
     Failure::Terminal("SOURCE_PROVIDER_SCHEMA_DRIFT", format!("{kind}:{index}"))
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "discovery receipt is a fixed wire contract"
-)]
 fn discovery_receipt(
     pricing: Option<&Value>,
     request_sha256: &str,

@@ -1,9 +1,5 @@
 use super::*;
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "relay translation binds response proof, policy, pricing, evidence, and agent schema"
-)]
 pub(super) async fn provider_response_body(
     context: &ProviderResponseContext<'_>,
     response: ProviderDispatchResponse,

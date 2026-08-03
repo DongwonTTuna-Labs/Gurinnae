@@ -124,6 +124,10 @@ fn citation_source(citation: &Value) -> Result<&str, Failure> {
     Ok(source)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "citation persistence binds the complete provider turn, proposal, source-use, and payload provenance"
+)]
 pub(super) async fn persist_citation(
     executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,

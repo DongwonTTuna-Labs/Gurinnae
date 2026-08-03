@@ -96,10 +96,6 @@ fn review_stage_selection(
     })
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the owner request binds the complete two-stage review authority tuple"
-)]
 fn build_review_stage_owner_request(
     payload: &Map<String, Value>,
     snapshot_id: Uuid,

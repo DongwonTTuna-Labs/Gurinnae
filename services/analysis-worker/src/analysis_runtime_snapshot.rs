@@ -398,7 +398,7 @@ async fn load_source_artifacts(
         )
     })?;
     let rows = ResearchArtifactRepository::new()
-        .list_runtime_capsules(&mut **executor, turn.run_id, &snapshot_sha256)
+        .list_runtime_capsules(executor, turn.run_id, &snapshot_sha256)
         .await?;
     let mut artifacts = Vec::with_capacity(rows.len());
     for row in rows {

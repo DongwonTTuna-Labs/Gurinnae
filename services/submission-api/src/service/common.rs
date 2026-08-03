@@ -12,7 +12,7 @@ use zeroize::Zeroize;
 
 use super::{RequestContext, ServiceError};
 
-pub use super::privacy_crypto::{EncryptedFieldMaterial, encrypt_field_material};
+pub use super::privacy_crypto::encrypt_field_material;
 
 pub(super) const FIELD_PREFIX: &str = "gurine-fe-v1";
 pub const RESPONSE_OTP_DERIVATION_VERSION: &str = "response-access-otp-v2";

@@ -336,7 +336,7 @@ mod tests {
             json!({"resultType":"CASE","status":"PUBLISHED_ANOMALY","nonConclusion":anomaly,"interpretationNotice":null}),
         ];
         assert_eq!(
-            page_seo_description("검색", &items, PageNoticeAuthority::SearchCollection)
+            page_seo_description("검색", &items, PageNoticeAuthority::Search)
                 .expect("closed search result types and notices"),
             format!("검색 · {anomaly} · {retracted} · {operational}")
         );

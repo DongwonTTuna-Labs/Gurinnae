@@ -146,8 +146,7 @@ mod tests {
         let second = claim_language_check(&request).expect("stable language result");
         assert_eq!(first, second);
         let ToolResponse::ClaimLanguageCheck(response) = first else {
-            assert!(false, "closed response variant");
-            return;
+            panic!("closed response variant");
         };
         assert_eq!(response.decision, LanguageDecision::Block);
         assert_eq!(response.total_findings, 2);
