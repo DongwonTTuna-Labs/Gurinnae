@@ -185,21 +185,14 @@ zero-test failure, not evidence.
 
 ## Authority and migration proof
 
-Release freeze executes `scripts/verify_authority_base_lock.py --scope migrations`
-in the current Python environment with bytecode disabled and consumes its JSON.
-It requires exit zero, `result: PASS`, the exact pinned archive and Manifest,
-the same pinned archive SHA-256 before and after verification, all 1,230 archive
-members matched, byte-exact 24-file authority and pinned runtime migration
-bases, an empty pending additive ordinal set, and the verifier's exact expected
-runtime migration set/count. The freeze validator does not duplicate or weaken
-that verifier's migration policy.
+Release freeze resolves the pinned `authority-v13-frozen` Git tag through
+`scripts/git_authority.py` and reads each base migration from the pinned Git
+object. It requires the exact pinned tag commit and tree, byte-exact 24-file
+specification and runtime migration bases, and the exact 0025–0030 additive
+runtime migration set. `scripts/verify_migrations.py` independently preserves
+the 24-base plus 6-additive filename/count assertion in `make verify-specs`.
 
-`--scope full` is diagnostic only. It additionally compares authority-origin
-worktree paths to pristine archive bytes and therefore reports expected drift
-once the final Rust/SvelteKit implementation changes those files. Ordinary
-implementation changes are verified by the application hard gates, not
-misclassified as authority archive corruption.
-
-Therefore a corrupt archive, stale base migration, missing 0025–0030 runtime
-member, shallow verifier payload, or copied old proof cannot become green
-through a design status edit.
+Ordinary implementation changes are verified by the application hard gates;
+they are not compared with the frozen tag as though they were base migrations.
+Therefore a moved tag, stale base migration, missing 0025–0030 runtime member,
+or copied old proof cannot become green through a design status edit.

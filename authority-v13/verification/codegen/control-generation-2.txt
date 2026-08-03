@@ -1,5 +1,0 @@
-[90m@hey-api/openapi-ts v0.99.0[39m
-
-[90m[Job 1] [39m[90m~[39m [36mGenerating...[39m
-[90m[Job 1] [39m[36m  [1] [39m/mnt/data/gurine-v13-final-work/gurine/specs/api/control-api.openapi.json
-[90m[Job 1] [39m[32m✓[39m [96m./tmp/gurine-v13-codegen-final/control-2[39m [90m· 4 files · 1s[39m

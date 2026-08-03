@@ -25,12 +25,12 @@ if str(SCRIPTS_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_ROOT))
 
 from design_bundle_digest import build_manifest as build_design_manifest
+from create_source_archive import excluded as source_archive_excluded
 from generate_acceptance_design_registry import (
     OUTPUT as ACCEPTANCE_DESIGN_REGISTRY,
     render_registry as render_design_registry,
 )
 from generate_effective_execution_registry import (
-    AUTHORITY_ZIP_SHA256,
     BASE_MAPPING,
     OBSERVATION_LAYER_DOMAIN,
     ORACLE_LAYER_DOMAIN,
@@ -40,6 +40,7 @@ from generate_effective_execution_registry import (
     canonical_sha256,
     render_registry,
 )
+from git_authority import AUTHORITY_ZIP_SHA256
 from generate_supplemental_execution_mapping import render_mapping
 from source_provenance import source_tree_digest, worktree_inventory
 from validation.supplemental_acceptance_registry import _test_declarations
@@ -318,12 +319,9 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
         checks.need(False, "acceptance_make_graph", "Makefile", "parseable", str(error))
         return
     required_edges = {
-        "verify-acceptance-source": {"verify-additive-hard-gates"},
-        "run-acceptance-439": {"verify-acceptance-source"},
+        "run-acceptance-439": {"verify-specs"},
         "verify-execution-evidence": {"run-acceptance-439"},
         "verify-acceptance": {"verify-execution-evidence"},
-        "verify-prearchive": {"verify-acceptance-source"},
-        "verify-final": {"verify-acceptance"},
     }
     for target, required in required_edges.items():
         dependencies, recipes = targets.get(target, ([], []))
@@ -359,12 +357,19 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
         "scripts/run_acceptance.py",
         run_recipes,
     )
+    duplicate_validation = [
+        recipe
+        for recipe in evidence_recipes
+        if "effective_acceptance.py --mode evidence" in recipe
+        or "GURINNAE_ACCEPTANCE_RUN_INDEX" in recipe
+        or "ACCEPTANCE_EVIDENCE_ROOT" in recipe
+    ]
     checks.need(
-        any("effective_acceptance.py --mode evidence" in recipe for recipe in evidence_recipes),
-        "acceptance_make_evidence_validator",
+        not duplicate_validation,
+        "acceptance_make_duplicate_evidence_validation",
         "Makefile#verify-execution-evidence",
-        "effective_acceptance.py --mode evidence",
-        evidence_recipes,
+        "runner-owned validate_external_evidence only",
+        duplicate_validation,
     )
 def validate_static(root: Path) -> tuple[Checks, dict[str, Any]]:
     checks = Checks("structure")
@@ -1238,9 +1243,80 @@ def _plain_file_under(root: Path, relative: object) -> Path | None:
     return current
 
 
+def _symlink_free_path(path: Path) -> bool:
+    absolute = path if path.is_absolute() else Path.cwd() / path
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        current /= part
+        try:
+            metadata = current.lstat()
+        except OSError:
+            return False
+        if stat.S_ISLNK(metadata.st_mode):
+            return False
+    return True
+
+
+def _git_ignored_path(root: Path, path: Path) -> bool:
+    try:
+        relative = path.relative_to(root).as_posix()
+    except ValueError:
+        return False
+    if not relative or relative == ".":
+        return False
+    environment = dict(os.environ)
+    environment["GIT_OPTIONAL_LOCKS"] = "0"
+    result = subprocess.run(
+        ["git", "-C", str(root), "check-ignore", "--quiet", "--", relative],
+        check=False,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        env=environment,
+    )
+    return result.returncode == 0
+
+
+def _evidence_path_allowed(root: Path, path: Path) -> tuple[bool, Path | None]:
+    try:
+        root_resolved = root.resolve(strict=True)
+        resolved = path.resolve(strict=True)
+    except OSError:
+        return False, None
+    if not _symlink_free_path(path):
+        return False, resolved
+    allowed = not resolved.is_relative_to(root_resolved) or _git_ignored_path(
+        root_resolved, resolved
+    )
+    return allowed, resolved
+
+
+def _source_inventory_without_evidence(
+    root: Path, evidence_root: Path
+) -> dict[str, tuple[str, int]]:
+    inventory = worktree_inventory(root)
+    root_resolved = root.resolve()
+    evidence_resolved = evidence_root.resolve()
+    prefix = (
+        evidence_resolved.relative_to(root_resolved).as_posix()
+        if evidence_resolved.is_relative_to(root_resolved)
+        else None
+    )
+    return {
+        relative: value
+        for relative, value in inventory.items()
+        if not source_archive_excluded(Path(relative))
+        and (
+            prefix is None
+            or (relative != prefix and not relative.startswith(f"{prefix}/"))
+        )
+    }
+
+
 def _expected_common_bindings(
     root: Path,
     registry: dict[str, Any],
+    evidence_root: Path,
     checks: Checks,
 ) -> dict[str, object]:
     required_environment = {
@@ -1255,6 +1331,13 @@ def _expected_common_bindings(
     }
     try:
         manifest = build_design_manifest(root)
+        checks.need(
+            manifest.get("authority_zip_sha256") == AUTHORITY_ZIP_SHA256,
+            "design_authority_binding",
+            "design bundle",
+            AUTHORITY_ZIP_SHA256,
+            manifest.get("authority_zip_sha256"),
+        )
         result["design_bundle_sha256"] = manifest["bundle_sha256"]
         result["member_manifest_sha256"] = manifest["member_manifest_sha256"]
     except Exception as error:
@@ -1272,7 +1355,9 @@ def _expected_common_bindings(
         )
         result[field] = value
     try:
-        current_tree = source_tree_digest(worktree_inventory(root))
+        current_tree = source_tree_digest(
+            _source_inventory_without_evidence(root, evidence_root)
+        )
         checks.need(
             result.get("source_tree_sha256") == current_tree,
             "source_tree_binding",
@@ -1332,17 +1417,35 @@ def _validate_extraction_receipt(
 ) -> None:
     raw_path = os.environ.get("GURINNAE_EXTRACTION_RECEIPT")
     if not raw_path:
-        checks.need(False, "missing_extraction_receipt", "GURINNAE_EXTRACTION_RECEIPT", "external JSON path", raw_path)
+        checks.need(
+            False,
+            "missing_extraction_receipt",
+            "GURINNAE_EXTRACTION_RECEIPT",
+            "external or Git-ignored JSON path",
+            raw_path,
+        )
         return
     path = Path(raw_path)
     try:
         resolved = path.resolve(strict=True)
-        outside = not resolved.is_relative_to(root.resolve())
-        valid = outside and not path.is_symlink() and path.is_file()
+        allowed, _ = _evidence_path_allowed(root, path)
+        valid = allowed and path.is_file()
     except OSError as error:
-        checks.need(False, "missing_extraction_receipt", raw_path, "regular external file", str(error))
+        checks.need(
+            False,
+            "missing_extraction_receipt",
+            raw_path,
+            "regular external or Git-ignored file",
+            str(error),
+        )
         return
-    checks.need(valid, "repo_local_extraction_receipt", raw_path, "outside repository", str(resolved))
+    checks.need(
+        valid,
+        "extraction_receipt_path_policy",
+        raw_path,
+        "symlink-free and outside repository or Git-ignored",
+        str(resolved),
+    )
     if not valid:
         return
     checks.need(
@@ -2165,26 +2268,34 @@ def validate_external_evidence(
 ) -> Checks:
     checks = Checks("evidence")
     root = root.resolve()
-    source_before = worktree_inventory(root)
     try:
-        evidence_resolved = evidence_root.resolve(strict=True)
-        valid_root = (
-            evidence_root.is_dir()
-            and not evidence_root.is_symlink()
-            and not evidence_resolved.is_relative_to(root)
+        allowed, evidence_resolved = _evidence_path_allowed(root, evidence_root)
+        valid_root = bool(
+            allowed
+            and evidence_resolved is not None
+            and evidence_root.is_dir()
         )
     except OSError as error:
-        checks.need(False, "evidence_root", str(evidence_root), "external directory", str(error))
+        checks.need(
+            False,
+            "evidence_root",
+            str(evidence_root),
+            "external or Git-ignored directory",
+            str(error),
+        )
         return checks
     checks.need(
         valid_root,
         "evidence_root",
         str(evidence_root),
-        "regular directory outside source root",
+        "symlink-free directory outside source root or Git-ignored within it",
         str(evidence_resolved),
     )
+    if not valid_root or evidence_resolved is None:
+        return checks
+    source_before = _source_inventory_without_evidence(root, evidence_resolved)
     index_path = _plain_file_under(evidence_resolved, run_index_relative)
-    if not valid_root or index_path is None:
+    if index_path is None:
         checks.need(False, "run_index_path", run_index_relative, "plain external file", "invalid")
         return checks
     run_directory = index_path.parent
@@ -2222,7 +2333,7 @@ def validate_external_evidence(
         registry.get("scenario_sets"),
         index.get("scenario_sets"),
     )
-    common = _expected_common_bindings(root, registry, checks)
+    common = _expected_common_bindings(root, registry, evidence_resolved, checks)
     _git_clean_binding(root, common.get("source_commit"), checks)
     _validate_extraction_receipt(root, schemas, schema_registry, common, checks)
     checks.need(
@@ -2300,7 +2411,7 @@ def validate_external_evidence(
         _sha256(index_path),
     )
     try:
-        source_after = worktree_inventory(root)
+        source_after = _source_inventory_without_evidence(root, evidence_resolved)
         checks.need(
             source_after == source_before,
             "source_changed_during_validation",

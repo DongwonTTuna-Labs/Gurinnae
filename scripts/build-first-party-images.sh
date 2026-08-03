@@ -12,9 +12,9 @@ services=(
 )
 
 [[ "${#services[@]}" -eq 17 ]]
-docker compose --file compose.production.yaml build "${services[@]}"
+docker compose --file compose.yaml build "${services[@]}"
 
-config_json="$(docker compose --file compose.production.yaml config --format json)"
+config_json="$(docker compose --file compose.yaml config --format json)"
 project_name="$(jq -er '.name' <<<"$config_json")"
 for service in "${services[@]}"; do
   image="$(jq -er --arg service "$service" --arg project "$project_name" \

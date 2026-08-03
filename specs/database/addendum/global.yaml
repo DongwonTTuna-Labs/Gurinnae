@@ -2,7 +2,7 @@ schema_version: 1
 proposal_version: 2026-07-15.persistence-execution-closure.v3
 status: REVIEW_REQUIRED
 authority:
-  zip_path: /home/dongwonttuna/.codex/attachments/29aa0c62-686a-450b-84aa-944e5cb7d47a/gurine-codex-authority-pack-v13.0.0-20260712.zip
+  zip_path: git tag authority-v13-frozen
   zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
   repository_root: /home/dongwonttuna/Documents/Programming/Gurinnae
   immutable_base_migrations: 0001..0024
@@ -97,7 +97,7 @@ relation_inventory:
       specs/database/addendum/0025-evidence-snapshots-search.yaml: 7e24967c11b4a7bbdaf60b815fa3aad210d13434f4f07f80a64ef0acb2e9e002
       specs/database/addendum/0026-agent-action-approval.yaml: f9f0771582a654fa3e0cae294925187a26256998bf146830369eb77cc72f1cf8
       specs/database/addendum/0027-communication-consent-delivery.yaml: 9221b470145d330742390eb81feda221b1a220128d74a2a872ae1e2236b44344
-      specs/database/addendum/0028-governance-operations.yaml: e3e96b85b7eb2d13f3704479deed85b0b42067adca442d007d2f05f9fc867266
+      specs/database/addendum/0028-governance-operations.yaml: 67fb1bb51c419423cc62f7f0aefb6211bea9b13c3a77d1d839cb885c4d6119b7
       specs/database/addendum/0029-outcome-cost.yaml: 8c4e698bfe0b64427d4df53ad65e5f1ef0d7ab63e03f00b918f619af7fe066df
       specs/database/addendum/0029-commercial-core.yaml: 4784e60a4703c1b6a9c47bda244daf47fc25f9340b1ab405aae90019ed86a34d
       specs/database/addendum/0029-invoice-revenue-sku.yaml: 28acfa6d431ac91721099b36fb0f3b90461d11a5eb29a95dcf12f97feef200d3
@@ -827,7 +827,7 @@ runtime_oracles:
     - Every source-derived additive table and every manifest-listed base or changed application object is owned by gurine_migrator; every application schema is owned by gurine_schema_owner.
     - extensions and extension-owned objects remain owned by the cluster extension owner; no extension dependency was transferred or rewritten.
     - Compatibility views for ops.email_deliveries and ops.source_incidents have relkind v, their renamed physical targets have relkind r, and no compatibility view or public._sqlx_migrations row is counted as a product table.
-    - Migration 0030 exists after 0029, adds zero relation, and the final schema-ready receipt binds the thirty migration checksums, derived final-relation digest, privilege digest and authority ZIP digest.
+    - Migration 0030 exists after 0029, adds zero relation, and the final schema-ready receipt binds the thirty migration checksums, derived final-relation digest, privilege digest and authority-v13-frozen Git tag digest.
   constraints:
     - every primary, foreign, unique and check constraint named in table contracts resolves and is validated
     - every named index resolves to exact access method, key order, include list and predicate
@@ -879,5 +879,5 @@ cross_file_requirements:
   - Replace every schema-scoped default routine EXECUTE or type USAGE revoke with the global gurine_migrator default ACL statements, then retain per-schema table/sequence and fresh-role canaries; PostgreSQL 18.4 proves an IN SCHEMA revoke does not subtract the built-in PUBLIC routine/type default.
   - Expand every table retention contract to the normalized six-field model, with special attention to the 0026 period/start/hold/delete shorthand and 0028 schedule bindings, and add every missing source-leading FK index or exact nullable null-excluding index before migration generation.
   - Replace every test helper that applies post-base SQL with psql -U postgres by the adoption plus bounded executor rehearsal; retain a negative assertion that postgres execution of migrations 0025 through 0030 is rejected by their preamble.
-  - Regenerate SQLx offline metadata and one repository round-trip test for every source-derived additive relation from the same PostgreSQL 18.4 catalog, then regenerate MANIFEST.md and MANIFEST.sha256 only after the source, spec mirror and runtime migration bytes are equal.
+  - Regenerate SQLx offline metadata and one repository round-trip test for every source-derived additive relation from the same PostgreSQL 18.4 catalog, then run make verify-specs and make verify-codegen against the authority-v13-frozen Git tag only after the source, spec mirror and runtime migration bytes are equal.
   - Operation persistence rows must reference exact repositories, lock predicates and receipt tables; this ownership contract does not waive remaining product, command, event or repository closure gates.

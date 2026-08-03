@@ -230,7 +230,7 @@ RUN --mount=type=secret,id=database_url,required=true \
 FROM python:3.13.5-slim-bookworm@sha256:4c2cf9917bd1cbacc5e9b07320025bdb7cdf2df7b0ceaccb55e9dd7e30987419 AS authority-validator
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
-       libfontconfig1 libfreetype6 libjpeg62-turbo liblcms2-2 liblept5 \
+       git libfontconfig1 libfreetype6 libjpeg62-turbo liblcms2-2 liblept5 \
        libopenjp2-7 libpng16-16 libtiff6 tesseract-ocr-eng=1:4.1.0-2 \
        tesseract-ocr-kor=1:4.1.0-2 \
     && rm -rf /var/lib/apt/lists/*

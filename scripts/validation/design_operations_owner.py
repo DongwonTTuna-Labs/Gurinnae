@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import Counter
 import re
 
+from git_authority import AUTHORITY_ZIP_SHA256
+
 from .design_operations_facts import OwnerOperationFacts
 from .design_support import (
     DesignDocuments,
@@ -21,8 +23,7 @@ def validate_owner_operations(documents: DesignDocuments) -> OwnerOperationFacts
     base_error_catalog = documents.base_error_catalog
 
     result.require(
-        addendum["base_authority_zip_sha256"]
-        == "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5",
+        addendum["base_authority_zip_sha256"] == AUTHORITY_ZIP_SHA256,
         "owner addendum authority hash mismatch",
     )
     result.require(
@@ -196,4 +197,3 @@ def validate_owner_operations(documents: DesignDocuments) -> OwnerOperationFacts
         base_operation_ids=base_operation_ids,
         counts=counts,
     )
-

@@ -9,9 +9,9 @@ from typing import Any
 
 import yaml
 
+from git_authority import AUTHORITY_ZIP_SHA256
 
 ROOT = Path(__file__).resolve().parents[1]
-AUTHORITY_SHA256 = "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5"
 DECISION_SHA256 = "c0e35f285cba56b6b3e62c0b07eeb1280ba00abbd1f24f055cbbfbd719b063b8"
 OUTPUT = ROOT / "specs/product/addendum-journey-contracts.yaml"
 SOURCE_PINS = {
@@ -87,7 +87,10 @@ def load_decision(path: Path) -> dict[str, Any]:
 
 def validate_pins(decision: dict[str, Any]) -> list[dict[str, str]]:
     authority = decision.get("authority", {})
-    require(authority.get("zip_sha256") == AUTHORITY_SHA256, "authority ZIP pin drifted")
+    require(
+        authority.get("zip_sha256") == AUTHORITY_ZIP_SHA256,
+        "authority ZIP pin drifted",
+    )
     rows: list[dict[str, str]] = []
     for key, relative in SOURCE_PINS.items():
         path = ROOT / relative
@@ -148,7 +151,7 @@ def canonical_document(
         "specification_version": "13.0.0+owner-journey-authority.1",
         "status": "REVIEW_REQUIRED",
         "authority_mode": "ADDITIVE_OWNER_DECISION",
-        "authority_zip_sha256": AUTHORITY_SHA256,
+        "authority_zip_sha256": AUTHORITY_ZIP_SHA256,
         "adoption": {
             "decision_artifact_id": decision["artifact_id"],
             "decision_artifact_sha256": DECISION_SHA256,

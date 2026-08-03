@@ -25,7 +25,6 @@ SUPPLEMENTAL_MAPPING = "tests/acceptance/supplemental-executable-mapping.yaml"
 OVERLAYS = "tests/acceptance/conflict-resolution-overlays.yaml"
 REGISTRY = "implementation-evidence/supplemental-acceptance-registry.yaml"
 
-AUTHORITY_SHA256 = "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5"
 AUTHORITY_BASE_FEATURE_COUNT = 35
 AUTHORITY_BASE_SCENARIO_COUNT = 271
 
@@ -356,5 +355,4 @@ def row_map(
         if isinstance(value_id, str) and value_id in ids:
             result.setdefault(value_id, row)
     return result
-
 

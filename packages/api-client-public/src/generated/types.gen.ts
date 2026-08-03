@@ -122,6 +122,18 @@ export type BinaryDownload = {
     id: string;
     status: string;
     version: number;
+    binary?: Blob | File;
+    filename?: string;
+    mediaType?: string;
+    byteLength?: number;
+    contentSha256?: string;
+    receiptSha256?: string;
+    contentBase64?: string;
+    format?: string;
+    rowCount?: number;
+    from?: string;
+    to?: string;
+    groupBy?: string;
 };
 
 export type CalculationResult = {

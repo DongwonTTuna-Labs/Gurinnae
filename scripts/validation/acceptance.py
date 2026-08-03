@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from pathlib import Path
 from typing import Any
 
+from .acceptance_base_authority import (
+    validate_frozen_base_feature,
+    validate_frozen_base_lock,
+    validate_frozen_base_registry,
+)
 from .effective_acceptance import validate_sources, validate_static
 from .loaders import load_yaml
 from .models import Validation
@@ -44,7 +48,7 @@ def _non_negative_count(value: object, label: str, result: Validation) -> int | 
 
 
 def _base_inventory(
-    directory: Path, lock: dict[str, Any], result: Validation
+    root: Path, directory: Path, lock: dict[str, Any], result: Validation
 ) -> tuple[list[str], int | None]:
     declared_features = _non_negative_count(
         lock.get("feature_count"), f"{BASE_LOCK}: feature_count", result
@@ -82,11 +86,8 @@ def _base_inventory(
             continue
         expected_digest = row.get("sha256")
         expected_size = row.get("size")
-        actual_digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        actual_size = path.stat().st_size
-        result.require(
-            expected_digest == actual_digest and expected_size == actual_size,
-            f"{name}: locked base feature bytes differ",
+        validate_frozen_base_feature(
+            root, name, expected_digest, expected_size, result
         )
 
     result.require(len(names) == len(set(names)), f"{BASE_LOCK}: duplicate base feature paths")
@@ -110,10 +111,8 @@ def _base_inventory(
         )
         result.require(regular_file, f"{expected_name}: locked base registry is missing")
         if regular_file:
-            actual_digest = hashlib.sha256(path.read_bytes()).hexdigest()
-            result.require(
-                expected_digest == actual_digest,
-                f"{expected_name}: locked registry bytes differ",
+            validate_frozen_base_registry(
+                root, expected_name, expected_digest, result
             )
 
     return names, declared_scenarios
@@ -335,11 +334,13 @@ def _supplemental_structure(root: Path, result: Validation) -> dict[str, int]:
 
 def validate(root: Path, result: Validation) -> None:
     directory = root / "tests/acceptance"
-    lock = _load_mapping(directory / BASE_LOCK, BASE_LOCK, result)
+    lock_path = directory / BASE_LOCK
+    lock = _load_mapping(lock_path, BASE_LOCK, result)
+    validate_frozen_base_lock(root, lock_path, BASE_LOCK, result)
     catalog = _load_mapping(directory / BASE_CATALOG, BASE_CATALOG, result)
     mapping = _load_mapping(directory / BASE_MAPPING, BASE_MAPPING, result)
 
-    base_names, declared_scenarios = _base_inventory(directory, lock, result)
+    base_names, declared_scenarios = _base_inventory(root, directory, lock, result)
     catalog_names = _catalog_inventory(catalog, result)
     result.require(
         catalog_names == set(base_names),

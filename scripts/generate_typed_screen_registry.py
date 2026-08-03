@@ -1,69 +1,46 @@
 #!/usr/bin/env python3
-"""Generate the closed route/section UI registry from pinned v13 authority."""
+"""Generate the closed route/section UI registry from canonical specifications."""
 from pathlib import Path
 import json
-import hashlib
 import re
+import subprocess
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-AUTHORITY_ROOT = ROOT / "authority-v13"
-source_path = AUTHORITY_ROOT / "specs/ui/screen-catalog.yaml"
-manifest_path = AUTHORITY_ROOT / "specs/ui/screen-build-manifest.yaml"
-data_contracts_path = AUTHORITY_ROOT / "specs/ui/screen-data-contracts.yaml"
-CANONICAL_SCREEN_CATALOG_SHA256 = "e2dc57a4b6092105b088b84723456037bf2892f168afd542056c23284e6bff2b"
-CANONICAL_SCREEN_BUILD_MANIFEST_SHA256 = "4862de1453b12a09ac775edef0414d057476dfc56b5dced9c17824b980fa7624"
-CANONICAL_SCREEN_DATA_CONTRACTS_SHA256 = "665495729bd5a6ecfb8828583689a5ffc3ed18642b8d4aa7690da1834c1d987a"
+SPECS_ROOT = ROOT / "specs/ui"
+source_path = SPECS_ROOT / "screen-catalog.yaml"
+manifest_path = SPECS_ROOT / "screen-build-manifest.yaml"
+data_contracts_path = SPECS_ROOT / "screen-data-contracts.yaml"
+projection_overrides_path = SPECS_ROOT / "screen-projection-overrides.yaml"
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-if _sha256(source_path) != CANONICAL_SCREEN_CATALOG_SHA256:
-    raise SystemExit("screen catalog is not the pinned v13.0.0 authority")
-if _sha256(manifest_path) != CANONICAL_SCREEN_BUILD_MANIFEST_SHA256:
-    raise SystemExit("screen build manifest is not the pinned v13.0.0 authority")
-if _sha256(data_contracts_path) != CANONICAL_SCREEN_DATA_CONTRACTS_SHA256:
-    raise SystemExit("screen data contracts are not the pinned v13.0.0 authority")
 source = yaml.safe_load(source_path.read_text())
 manifest = yaml.safe_load(manifest_path.read_text())
 data_contracts = yaml.safe_load(data_contracts_path.read_text())
+projection_overrides = yaml.safe_load(projection_overrides_path.read_text())
 operations_by_id = {row["operation_id"]: row for row in data_contracts["operations"]}
 manifest_by = {row["id"]: row for row in manifest["screens"]}
 rows = source["screens"]
 if len(rows) != 94 or sum(len(row.get("sections", [])) for row in rows) != 496:
-    raise SystemExit("authority screen catalog must contain exactly 94 screens and 496 sections")
+    raise SystemExit("screen catalog must contain exactly 94 screens and 496 sections")
 
 def quote(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 SECTION_FIELD_HINTS = {
-    "progress": {"requestId", "version", "savedAt", "expiresAt", "status"},
-    "questions": {"answers", "questionId", "questionLabel", "text"},
-    "statement": {"answers", "attachments", "status"},
-    "consent": {"publicationConsent", "bodyConsent", "redactionAcknowledged"},
-    "receipt": {"receiptId", "receiptStatus", "submittedAt", "submissionDigest"},
-    "download": {"receiptId", "submissionDigest", "status"},
-    "authority": {"authority", "authorityStatus", "status"},
+    section_id: set(field_names)
+    for section_id, field_names in projection_overrides["section_field_hints"].items()
 }
-
-# A section id is a presentation role, not an operation response key.  The
-# pinned authority catalog gives PUB-004 its user questions and section
-# purposes, while getPublicCase gives the exact response field names.  Keep
-# this mapping explicit so the generated browser projection cannot invent
-# synthetic keys such as `known` or `response` and silently render UNKNOWN.
 SCREEN_SECTION_FIELD_OVERRIDES = {
-    "PUB-004": {
-        "status": {"slug", "title", "publicState", "revision", "publishedAt", "updatedAt", "freshness"},
-        "known": {"summary", "confirmedFacts"},
-        "unknown": {"criticalUnknowns", "limitations"},
-        "response": {"partyResponses"},
-        "comparison": {"comparison", "signals"},
-        "counter": {"counterEvidence"},
-        "evidence": {"claims", "evidence"},
-        "timeline": {"timeline"},
-        "revision": {"revision", "corrections"},
-    },
+    screen_id: {
+        section_id: set(field_names)
+        for section_id, field_names in section_overrides.items()
+    }
+    for screen_id, section_overrides in projection_overrides[
+        "screen_section_field_overrides"
+    ].items()
 }
+SURFACE_PERSONAS = projection_overrides["surface_personas"]
+DEFAULT_PERSONA = projection_overrides["default_persona"]
 
 def semantic_response_fields(section_id: str, response_fields: list[str]) -> list[str]:
     hints = SECTION_FIELD_HINTS.get(section_id, set())
@@ -89,7 +66,7 @@ def generated_field_names(screen_id: str, section_id: str, response_fields: list
     return list(dict.fromkeys([section_id, "status", *section_fields(screen_id, section_id, response_fields)]))
 
 lines = [
-    "// Generated from authority-v13/specs/ui/screen-catalog.yaml and screen-build-manifest.yaml; do not hand-edit.",
+    "// Generated from specs/ui/screen-catalog.yaml and screen-build-manifest.yaml; do not hand-edit.",
     "export const ROUTE_SCREEN_CONTRACTS = {",
 ]
 for row in rows:
@@ -123,7 +100,7 @@ for row in rows:
             f"  {quote(row['id'])}: {{",
             f"    route: {quote(row['route'])},",
             f"    objectLabel: {quote(row.get('title', row['id']))},",
-            f"    persona: {quote({'public': '공개 독자·연구자', 'response': '소명 대상자', 'internal': '조사 담당자', 'auth': '내부 사용자'}.get(row.get('surface', 'internal'), '조사 담당자'))},",
+            f"    persona: {quote(SURFACE_PERSONAS.get(row.get('surface', 'internal'), DEFAULT_PERSONA))},",
             f"    primaryActionId: {quote(row.get('primary_action_id')) if row.get('primary_action_id') else 'null'},",
             f"    primaryActionLabel: {quote(next((a['label'] for a in row.get('actions', []) if a.get('id') == row.get('primary_action_id')), '')) if row.get('primary_action_id') else 'null'},",
             f"    sections: [{', '.join(sections)}],",
@@ -138,7 +115,7 @@ target.write_text("\n".join(lines) + "\n")
 # field is bound to the exact closed operation field declared by the authority
 # overlay; runtime code is not allowed to guess camel/snake case keys.
 projection_lines = [
-    "// Generated from authority-v13/specs/ui/screen-catalog.yaml and screen-build-manifest.yaml; do not hand-edit.",
+    "// Generated from specs/ui/screen-catalog.yaml and screen-build-manifest.yaml; do not hand-edit.",
     "export type ScreenProjectionBinding = { operationId: string; path: string; sectionId: string; fieldName: string };",
     "export const SCREEN_PROJECTION_BINDINGS = {",
 ]
@@ -162,4 +139,13 @@ for row in rows:
 projection_lines.append("} as const;")
 projection_target = ROOT / "packages/ui/src/generated-screen-projections.ts"
 projection_target.write_text("\n".join(projection_lines) + "\n")
-print(f"wrote {target} ({len(rows)} screens, {sum(len(row.get('sections', row.get('section_mapping', []))) for row in rows)} sections, source_sha256={hashlib.sha256(source_path.read_bytes()).hexdigest()})")
+subprocess.run(
+    ["bunx", "biome", "format", "--write", str(target), str(projection_target)],
+    cwd=ROOT,
+    check=True,
+)
+print(
+    f"wrote {target} "
+    f"({len(rows)} screens, "
+    f"{sum(len(row.get('sections', row.get('section_mapping', []))) for row in rows)} sections)"
+)

@@ -1565,7 +1565,7 @@ scenarios:
   - scenario-specific assertion log
 - scenario_id: AC-PRODUCTION_READINESS-006
   feature_file: tests/acceptance/production-readiness.feature
-  scenario_title: PostgreSQL runtime verification leaves the authority tree byte-identical
+  scenario_title: PostgreSQL runtime verification leaves the source tree byte-identical
   skip_policy: FORBIDDEN
   implementation_test_path: tests/integration/acceptance/production_readiness.rs
   command: cargo nextest run -p gurine-acceptance-tests --test production_readiness -- AC-PRODUCTION_READINESS-006

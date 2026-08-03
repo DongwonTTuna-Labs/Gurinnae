@@ -1,3 +1,4 @@
+# 환경별 차이가 필요하면 후속 라운드에서 override 파일로 설계한다.
 name: gurine
 x-runtime-hardening: &runtime-hardening
   init: true

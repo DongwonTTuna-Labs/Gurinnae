@@ -10,20 +10,24 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import secrets
 import stat
 import subprocess
 import sys
 import time
 from typing import Any
 
+from jsonschema import Draft202012Validator
+
 from design_bundle_digest import build_manifest as build_design_manifest
+from create_source_archive import excluded as source_archive_excluded
 from generate_effective_execution_registry import (
-    AUTHORITY_ZIP_SHA256,
     BASE_MAPPING,
     OUTPUT as EFFECTIVE_REGISTRY,
     SUPPLEMENTAL_MAPPING,
     canonical_sha256,
 )
+from git_authority import AUTHORITY_ZIP_SHA256
 from source_provenance import source_tree_digest, worktree_inventory
 from validation.acceptance_machine import (
     MachineReportError,
@@ -50,6 +54,14 @@ RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 SEAL_DOMAIN = b"GURINNAE-ACCEPTANCE-SEAL-MEMBERS-V1\0"
+DEFAULT_EVIDENCE_RELATIVE = Path("artifacts/acceptance")
+SOURCE_BUNDLES_DIRECTORY = "source-bundles"
+AUTO_ARCHIVE_NAME = "source.tar.gz"
+AUTO_EXTRACTION_RECEIPT_NAME = "extraction-receipt.json"
+AUTO_VERIFICATION_LOG_NAME = "verify-final.log"
+EXTRACTION_RECEIPT_SCHEMA = Path(
+    "specs/acceptance/extraction-receipt-v1.schema.json"
+)
 
 
 class AcceptanceRunError(RuntimeError):
@@ -83,6 +95,52 @@ def safe_relative(value: str) -> bool:
     )
 
 
+def symlink_free_path(path: Path) -> bool:
+    if not path.is_absolute():
+        return False
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current /= part
+        try:
+            metadata = current.lstat()
+        except OSError:
+            return False
+        if stat.S_ISLNK(metadata.st_mode):
+            return False
+    return True
+
+
+def git_ignored_path(path: Path, source_root: Path) -> bool:
+    try:
+        relative = path.relative_to(source_root).as_posix()
+    except ValueError:
+        return False
+    if not relative or relative == ".":
+        return False
+    environment = dict(os.environ)
+    environment["GIT_OPTIONAL_LOCKS"] = "0"
+    result = subprocess.run(
+        ["git", "-C", str(source_root), "check-ignore", "--quiet", "--", relative],
+        check=False,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        env=environment,
+    )
+    return result.returncode == 0
+
+
+def evidence_path_allowed(path: Path, source_root: Path) -> bool:
+    try:
+        resolved = path.resolve(strict=True)
+        source = source_root.resolve(strict=True)
+    except OSError:
+        return False
+    if not symlink_free_path(path):
+        return False
+    return not resolved.is_relative_to(source) or git_ignored_path(resolved, source)
+
+
 def ensure_external_directory(path: Path, source_root: Path) -> Path:
     if not path.is_absolute():
         raise AcceptanceRunError("evidence root must be absolute")
@@ -91,15 +149,512 @@ def ensure_external_directory(path: Path, source_root: Path) -> Path:
         source = source_root.resolve(strict=True)
     except OSError as error:
         raise AcceptanceRunError(f"evidence/source root is unavailable: {error}") from error
-    if not path.is_dir() or path.is_symlink() or resolved.is_relative_to(source):
-        raise AcceptanceRunError("evidence root must be a plain directory outside source")
-    current = Path(resolved.anchor)
-    for part in resolved.parts[1:]:
-        current /= part
-        metadata = current.lstat()
-        if stat.S_ISLNK(metadata.st_mode):
-            raise AcceptanceRunError(f"symlink ancestor in evidence root: {current}")
+    if not path.is_dir() or not evidence_path_allowed(path, source):
+        raise AcceptanceRunError(
+            "evidence root must be symlink-free and either outside source or Git-ignored"
+        )
     return resolved
+
+
+def prepare_evidence_directory(path: Path, source_root: Path, create: bool) -> Path:
+    if not path.is_absolute():
+        raise AcceptanceRunError("evidence root must be absolute")
+    absolute = path
+    if create and not absolute.exists():
+        current = Path(absolute.anchor)
+        for part in absolute.parts[1:]:
+            current /= part
+            if current.exists():
+                try:
+                    if stat.S_ISLNK(current.lstat().st_mode):
+                        raise AcceptanceRunError(
+                            f"symlink ancestor in evidence root: {current}"
+                        )
+                except OSError as error:
+                    raise AcceptanceRunError(
+                        f"evidence root ancestor is unavailable: {current}: {error}"
+                    ) from error
+        try:
+            absolute.mkdir(parents=True, mode=0o700)
+        except OSError as error:
+            raise AcceptanceRunError(f"cannot create default evidence root: {error}") from error
+    return ensure_external_directory(absolute, source_root)
+
+
+def ensure_evidence_file(path: Path, source_root: Path, label: str) -> Path:
+    lexical = path if path.is_absolute() else Path.cwd() / path
+    try:
+        resolved = lexical.resolve(strict=True)
+    except OSError as error:
+        raise AcceptanceRunError(f"{label} is unavailable: {path}: {error}") from error
+    if not resolved.is_file() or not evidence_path_allowed(lexical, source_root):
+        raise AcceptanceRunError(
+            f"{label} must be a symlink-free file outside source or in a Git-ignored path"
+        )
+    return resolved
+
+
+def source_inventory_without_evidence(
+    source_root: Path, evidence_root: Path
+) -> dict[str, tuple[str, int]]:
+    inventory = worktree_inventory(source_root)
+    source = source_root.resolve()
+    evidence = evidence_root.resolve()
+    prefix = (
+        evidence.relative_to(source).as_posix()
+        if evidence.is_relative_to(source)
+        else None
+    )
+    return {
+        relative: value
+        for relative, value in inventory.items()
+        if not source_archive_excluded(Path(relative))
+        and (
+            prefix is None
+            or (relative != prefix and not relative.startswith(f"{prefix}/"))
+        )
+    }
+
+
+def git_head(root: Path) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+        check=False,
+        text=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    value = result.stdout.strip()
+    if result.returncode != 0 or COMMIT_RE.fullmatch(value) is None:
+        raise AcceptanceRunError(
+            f"cannot derive source commit from git HEAD: {result.stderr.strip()}"
+        )
+    return value
+
+
+def automatic_run_id(evidence_root: Path) -> str:
+    for _ in range(32):
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        candidate = f"acceptance-{timestamp}-{secrets.token_hex(4)}"
+        run_path = evidence_root / candidate
+        bundle_path = evidence_root / SOURCE_BUNDLES_DIRECTORY / candidate
+        if not run_path.exists() and not bundle_path.exists():
+            return candidate
+    raise AcceptanceRunError("could not allocate a unique automatic run ID")
+
+
+def archive_override_is_complete(
+    archive: Path | None,
+    extraction_receipt: Path | None,
+    extraction_receipt_sha256: str | None,
+) -> bool:
+    supplied = (
+        archive is not None,
+        extraction_receipt is not None,
+        extraction_receipt_sha256 is not None,
+    )
+    if any(supplied) and not all(supplied):
+        raise AcceptanceRunError(
+            "--archive, --extraction-receipt, and "
+            "--extraction-receipt-sha256 must be supplied together"
+        )
+    return all(supplied)
+
+
+def exclusive_source_bundle_directory(evidence_root: Path, run_id: str) -> Path:
+    parent = evidence_root / SOURCE_BUNDLES_DIRECTORY
+    try:
+        os.mkdir(parent, 0o700)
+    except FileExistsError:
+        try:
+            metadata = parent.lstat()
+        except OSError as error:
+            raise AcceptanceRunError(
+                f"source bundle directory is unavailable: {parent}: {error}"
+            ) from error
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+            raise AcceptanceRunError(
+                f"source bundle parent must be a plain directory: {parent}"
+            )
+    bundle = parent / run_id
+    try:
+        os.mkdir(bundle, 0o700)
+    except FileExistsError as error:
+        raise AcceptanceRunError(
+            f"source bundle already exists for run ID: {run_id}"
+        ) from error
+    if not symlink_free_path(bundle):
+        raise AcceptanceRunError(f"source bundle path is not symlink-free: {bundle}")
+    return bundle
+
+
+def run_logged_command(
+    argv: list[str],
+    root: Path,
+    environment: dict[str, str],
+    log_path: Path,
+) -> None:
+    descriptor = os.open(
+        log_path,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+        0o600,
+    )
+    try:
+        with os.fdopen(descriptor, "wb", closefd=False) as stream:
+            completed = subprocess.run(
+                argv,
+                cwd=root,
+                env=environment,
+                check=False,
+                stdin=subprocess.DEVNULL,
+                stdout=stream,
+                stderr=subprocess.STDOUT,
+            )
+            stream.flush()
+            os.fsync(stream.fileno())
+    finally:
+        os.close(descriptor)
+    if completed.returncode != 0:
+        raise AcceptanceRunError(
+            f"source archive command failed ({completed.returncode}); see {log_path}"
+        )
+
+
+def result_from_log(log_path: Path, prefix: bytes) -> dict[str, object]:
+    matches: list[bytes] = []
+    with log_path.open("rb") as stream:
+        for line in stream:
+            if line.startswith(prefix):
+                matches.append(line[len(prefix) :].strip())
+    if len(matches) != 1:
+        raise AcceptanceRunError(
+            f"source archive log must contain one {prefix.decode('ascii')} result"
+        )
+    value = load_closed_json_bytes(matches[0], str(log_path))
+    if not isinstance(value, dict):
+        raise AcceptanceRunError(f"source archive result is not an object: {log_path}")
+    return value
+
+
+def evidence_artifact(evidence_root: Path, path: Path) -> dict[str, object]:
+    try:
+        metadata = path.lstat()
+    except OSError as error:
+        raise AcceptanceRunError(f"source bundle artifact is unavailable: {path}") from error
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+        raise AcceptanceRunError(f"source bundle artifact is not plain: {path}")
+    if metadata.st_size < 1:
+        raise AcceptanceRunError(f"empty source bundle artifact is forbidden: {path}")
+    digest = sha256_file(path)
+    after = path.stat()
+    if (
+        after.st_size != metadata.st_size
+        or after.st_mtime_ns != metadata.st_mtime_ns
+    ):
+        raise AcceptanceRunError(f"source bundle artifact changed while hashing: {path}")
+    return {
+        "path": path.relative_to(evidence_root).as_posix(),
+        "sha256": digest,
+        "size": metadata.st_size,
+        "media_type": artifact_media_type(path),
+    }
+
+
+def validate_extraction_receipt_shape(
+    root: Path, receipt: dict[str, object]
+) -> None:
+    schema = load_closed_json_bytes(
+        read_plain_file(root / EXTRACTION_RECEIPT_SCHEMA),
+        str(EXTRACTION_RECEIPT_SCHEMA),
+    )
+    if not isinstance(schema, dict):
+        raise AcceptanceRunError("extraction receipt schema is not an object")
+    schema_errors = sorted(
+        Draft202012Validator(schema).iter_errors(receipt),
+        key=lambda error: [str(part) for part in error.absolute_path],
+    )
+    if schema_errors:
+        raise AcceptanceRunError(
+            f"extraction receipt violates its schema: {schema_errors[0].message}"
+        )
+
+
+def validate_extraction_receipt_artifacts(
+    receipt: dict[str, object],
+    receipt_parent: Path,
+    evidence_root: Path,
+    source_root: Path,
+) -> None:
+    rows = receipt.get("artifacts")
+    if not isinstance(rows, list):
+        raise AcceptanceRunError("extraction receipt artifacts are invalid")
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise AcceptanceRunError("extraction receipt artifact is not an object")
+        relative = row.get("path")
+        if not isinstance(relative, str) or not safe_relative(relative):
+            raise AcceptanceRunError("extraction receipt artifact path is unsafe")
+        if relative in seen:
+            raise AcceptanceRunError(
+                f"duplicate extraction receipt artifact path: {relative}"
+            )
+        seen.add(relative)
+        matched = False
+        candidates = (evidence_root / relative, receipt_parent / relative)
+        for candidate in dict.fromkeys(candidates):
+            try:
+                resolved = ensure_evidence_file(
+                    candidate, source_root, "extraction receipt artifact"
+                )
+            except AcceptanceRunError:
+                continue
+            before = resolved.stat()
+            digest = sha256_file(resolved)
+            after = resolved.stat()
+            if (
+                before.st_size != after.st_size
+                or before.st_mtime_ns != after.st_mtime_ns
+                or before.st_ino != after.st_ino
+                or before.st_mode != after.st_mode
+            ):
+                continue
+            if before.st_size == row.get("size") and digest == row.get("sha256"):
+                matched = True
+                break
+        if not matched:
+            raise AcceptanceRunError(
+                f"extraction receipt artifact is missing or differs: {relative}"
+            )
+
+
+def validate_verified_extraction_receipt(
+    receipt: dict[str, object],
+    verification: dict[str, object],
+    archive_sha256: str,
+    source_tree_sha256: str,
+    design: dict[str, object],
+) -> None:
+    expected = {
+        "archive_sha256": archive_sha256,
+        "source_tree_sha256": source_tree_sha256,
+        "design_bundle_sha256": design.get("bundle_sha256"),
+        "member_manifest_sha256": design.get("member_manifest_sha256"),
+        "manifest_sha256": verification.get("manifest_sha256"),
+        "archive_member_count": verification.get("archive_member_count"),
+        "extracted_member_count": verification.get("extracted_member_count"),
+        "residue_paths": verification.get("residue_paths"),
+        "verification_argv": verification.get("verification_argv"),
+    }
+    mismatches = {
+        field: {"expected": wanted, "actual": receipt.get(field)}
+        for field, wanted in expected.items()
+        if receipt.get(field) != wanted
+    }
+    if mismatches:
+        raise AcceptanceRunError(
+            f"extraction receipt differs from actual clean verification: {mismatches}"
+        )
+
+
+def write_exclusive(path: Path, content: bytes) -> None:
+    descriptor = os.open(
+        path,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+        0o600,
+    )
+    try:
+        with os.fdopen(descriptor, "wb", closefd=False) as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+    finally:
+        os.close(descriptor)
+
+
+def actual_archive_verification(
+    root: Path,
+    archive: Path,
+    source_tree_sha256: str,
+    log_path: Path,
+) -> dict[str, object]:
+    environment = dict(os.environ)
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    environment["SOURCE_ARCHIVE"] = str(archive)
+    environment["EXPECTED_SOURCE_TREE_SHA256"] = source_tree_sha256
+    verify_argv = [sys.executable, "-B", "scripts/verify_source_archive.py"]
+    run_logged_command(verify_argv, root, environment, log_path)
+    verification = result_from_log(log_path, b"SOURCE_ARCHIVE_VERIFICATION=")
+    required = {
+        "archive_sha256",
+        "source_tree_sha256",
+        "manifest_sha256",
+        "archive_member_count",
+        "extracted_member_count",
+        "residue_paths",
+        "verification_argv",
+        "manifested_files",
+        "manifested_bytes",
+    }
+    if not required <= set(verification):
+        raise AcceptanceRunError(
+            "source archive verification result lacks schema receipt fields"
+        )
+    archive_sha256 = sha256_file(archive)
+    if verification.get("archive_sha256") != archive_sha256:
+        raise AcceptanceRunError("source archive verification digest differs")
+    if verification.get("source_tree_sha256") != source_tree_sha256:
+        raise AcceptanceRunError("clean extraction source tree digest differs")
+    if verification.get("residue_paths") != []:
+        raise AcceptanceRunError("clean extraction left residue paths")
+    for field in (
+        "archive_member_count",
+        "extracted_member_count",
+        "manifested_files",
+        "manifested_bytes",
+    ):
+        value = verification.get(field)
+        minimum = 1 if field != "manifested_bytes" else 0
+        if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            raise AcceptanceRunError(f"invalid source archive {field}: {value!r}")
+    if verification.get("verification_argv") != ["make", "verify-final"]:
+        raise AcceptanceRunError(
+            "clean extraction did not run make verify-final: "
+            f"{verification.get('verification_argv')!r}"
+        )
+    manifest_sha256 = verification.get("manifest_sha256")
+    if (
+        not isinstance(manifest_sha256, str)
+        or SHA256_RE.fullmatch(manifest_sha256) is None
+    ):
+        raise AcceptanceRunError("clean extraction manifest digest is invalid")
+    return verification
+
+
+def automatic_release_artifacts(
+    root: Path,
+    evidence_root: Path,
+    run_id: str,
+    source_tree_sha256: str,
+    design: dict[str, object],
+) -> tuple[Path, Path, str]:
+    bundle = exclusive_source_bundle_directory(evidence_root, run_id)
+    archive = bundle / AUTO_ARCHIVE_NAME
+    creation_log = bundle / "create-source-archive.log"
+    verification_log = bundle / AUTO_VERIFICATION_LOG_NAME
+    environment = dict(os.environ)
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    environment["SOURCE_ARCHIVE"] = str(archive)
+    create_argv = [sys.executable, "-B", "scripts/create_source_archive.py"]
+    run_logged_command(create_argv, root, environment, creation_log)
+    creation = result_from_log(creation_log, b"SOURCE_ARCHIVE_CREATION=")
+    archive_sha256 = sha256_file(archive)
+    expected_sidecar = Path(f"{archive}.sha256")
+    if (
+        creation.get("archive_path") != str(archive)
+        or creation.get("sidecar_path") != str(expected_sidecar)
+        or creation.get("archive_sha256") != archive_sha256
+        or creation.get("source_tree_sha256") != source_tree_sha256
+    ):
+        raise AcceptanceRunError("source archive creation result does not bind its outputs")
+    creation_manifest_sha256 = creation.get("manifest_sha256")
+    if (
+        not isinstance(creation_manifest_sha256, str)
+        or SHA256_RE.fullmatch(creation_manifest_sha256) is None
+    ):
+        raise AcceptanceRunError("source archive creation manifest digest is invalid")
+
+    verification = actual_archive_verification(
+        root,
+        archive,
+        source_tree_sha256,
+        verification_log,
+    )
+    if verification.get("manifest_sha256") != creation_manifest_sha256:
+        raise AcceptanceRunError("clean extraction manifest digest differs")
+    for field in ("manifested_files", "manifested_bytes"):
+        if verification.get(field) != creation.get(field):
+            raise AcceptanceRunError(
+                f"clean extraction {field} differs from archive creation"
+            )
+    verification_argv = verification.get("verification_argv")
+    manifest_sha256 = verification.get("manifest_sha256")
+    design_bundle_sha256 = design.get("bundle_sha256")
+    member_manifest_sha256 = design.get("member_manifest_sha256")
+    if not isinstance(design_bundle_sha256, str) or not isinstance(
+        member_manifest_sha256, str
+    ):
+        raise AcceptanceRunError("design manifest lacks release bindings")
+    receipt = {
+        "schema_version": 1,
+        "receipt_kind": "CLEAN_SOURCE_ARCHIVE_EXTRACTION",
+        "status": "PASSED",
+        "verified_at": utc_now(),
+        "archive_sha256": archive_sha256,
+        "source_tree_sha256": source_tree_sha256,
+        "design_bundle_sha256": design_bundle_sha256,
+        "member_manifest_sha256": member_manifest_sha256,
+        "manifest_sha256": manifest_sha256,
+        "archive_member_count": verification["archive_member_count"],
+        "extracted_member_count": verification["extracted_member_count"],
+        "residue_paths": verification["residue_paths"],
+        "verification_argv": verification_argv,
+        "artifacts": [
+            evidence_artifact(evidence_root, archive),
+            evidence_artifact(evidence_root, expected_sidecar),
+            evidence_artifact(evidence_root, creation_log),
+            evidence_artifact(evidence_root, verification_log),
+        ],
+    }
+    receipt_content = (
+        json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    ).encode("utf-8")
+    validate_extraction_receipt_shape(root, receipt)
+    validate_verified_extraction_receipt(
+        receipt, verification, archive_sha256, source_tree_sha256, design
+    )
+    validate_extraction_receipt_artifacts(receipt, bundle, evidence_root, root)
+    receipt_path = bundle / AUTO_EXTRACTION_RECEIPT_NAME
+    write_exclusive(receipt_path, receipt_content)
+    return archive, receipt_path, sha256_bytes(receipt_content)
+
+
+def verify_explicit_release_artifacts(
+    root: Path,
+    evidence_root: Path,
+    run_id: str,
+    archive: Path,
+    receipt_path: Path,
+    receipt_sha256: str,
+    source_tree_sha256: str,
+    design: dict[str, object],
+) -> Path:
+    content = read_plain_file(receipt_path)
+    if sha256_bytes(content) != receipt_sha256:
+        raise AcceptanceRunError("extraction receipt digest differs")
+    receipt = load_closed_json_bytes(content, "extraction receipt")
+    if not isinstance(receipt, dict):
+        raise AcceptanceRunError("extraction receipt is not an object")
+    validate_extraction_receipt_shape(root, receipt)
+    validate_extraction_receipt_artifacts(
+        receipt, receipt_path.parent, evidence_root, root
+    )
+
+    bundle = exclusive_source_bundle_directory(evidence_root, run_id)
+    verification_log = bundle / "verify-explicit-release.log"
+    archive_sha256 = sha256_file(archive)
+    verification = actual_archive_verification(
+        root, archive, source_tree_sha256, verification_log
+    )
+    validate_verified_extraction_receipt(
+        receipt,
+        verification,
+        archive_sha256,
+        source_tree_sha256,
+        design,
+    )
+    return verification_log
 
 
 def read_plain_file(path: Path) -> bytes:
@@ -872,27 +1427,54 @@ def seal_payload(run: ExclusiveRunDirectory, run_index_path: Path) -> dict[str, 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Run and seal all 439 acceptance scenarios."
+    )
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--evidence-root", type=Path, required=True)
-    parser.add_argument("--run-id", required=True)
-    parser.add_argument("--source-commit", required=True)
-    parser.add_argument("--source-tree-sha256", required=True)
-    parser.add_argument("--archive", type=Path, required=True)
-    parser.add_argument("--extraction-receipt", type=Path, required=True)
-    parser.add_argument("--extraction-receipt-sha256", required=True)
+    parser.add_argument(
+        "--evidence-root",
+        type=Path,
+        help="evidence directory (default: <root>/artifacts/acceptance)",
+    )
+    parser.add_argument("--run-id", help="run identity (default: generated UTC identity)")
+    parser.add_argument(
+        "--source-commit", help="40-hex source commit (default: current git HEAD)"
+    )
+    parser.add_argument(
+        "--source-tree-sha256",
+        help="source inventory digest (default: derived from the clean source tree)",
+    )
+    parser.add_argument(
+        "--archive",
+        type=Path,
+        help="release archive override; requires both extraction receipt options",
+    )
+    parser.add_argument(
+        "--extraction-receipt",
+        type=Path,
+        help="release extraction receipt override; requires both archive options",
+    )
+    parser.add_argument(
+        "--extraction-receipt-sha256",
+        help="release extraction receipt digest override; requires both archive options",
+    )
     parser.add_argument("--timeout-seconds", type=int, default=900)
     args = parser.parse_args()
     root = args.root.resolve()
-    if RUN_ID_RE.fullmatch(args.run_id) is None:
+    archive_override = archive_override_is_complete(
+        args.archive,
+        args.extraction_receipt,
+        args.extraction_receipt_sha256,
+    )
+    if args.run_id is not None and RUN_ID_RE.fullmatch(args.run_id) is None:
         raise AcceptanceRunError("run ID is invalid")
-    if COMMIT_RE.fullmatch(args.source_commit) is None:
+    if args.source_commit is not None and COMMIT_RE.fullmatch(args.source_commit) is None:
         raise AcceptanceRunError("source commit must be 40 lowercase hex")
     for name, value in {
         "source tree": args.source_tree_sha256,
         "extraction receipt": args.extraction_receipt_sha256,
     }.items():
-        if SHA256_RE.fullmatch(value) is None:
+        if value is not None and SHA256_RE.fullmatch(value) is None:
             raise AcceptanceRunError(f"{name} digest must be lowercase SHA-256")
     if args.timeout_seconds < 1:
         raise AcceptanceRunError("timeout must be positive")
@@ -903,16 +1485,85 @@ def main() -> int:
     source_checks = validate_sources(root, registry)
     if source_checks.problems:
         raise AcceptanceRunError(f"acceptance source is invalid: {source_checks.problems[:3]}")
-    source_before = worktree_inventory(root)
+    default_evidence = args.evidence_root is None
+    requested_evidence = (
+        root / DEFAULT_EVIDENCE_RELATIVE
+        if default_evidence
+        else args.evidence_root
+    )
+    if requested_evidence is None:
+        raise AcceptanceRunError("evidence root resolution failed")
+    evidence_root = prepare_evidence_directory(
+        requested_evidence, root, create=default_evidence
+    )
+    args.run_id = args.run_id or automatic_run_id(evidence_root)
+    if RUN_ID_RE.fullmatch(args.run_id) is None:
+        raise AcceptanceRunError("run ID is invalid")
+    if (evidence_root / args.run_id).exists():
+        raise AcceptanceRunError(f"run ID already exists: {args.run_id}")
+    if (evidence_root / SOURCE_BUNDLES_DIRECTORY / args.run_id).exists():
+        raise AcceptanceRunError(
+            f"source bundle already exists for run ID: {args.run_id}"
+        )
+
+    source_before = source_inventory_without_evidence(root, evidence_root)
     actual_tree = source_tree_digest(source_before)
+    args.source_tree_sha256 = args.source_tree_sha256 or actual_tree
     if actual_tree != args.source_tree_sha256:
         raise AcceptanceRunError(
             f"source tree digest differs: {actual_tree} != {args.source_tree_sha256}"
         )
+    args.source_commit = args.source_commit or git_head(root)
+    if COMMIT_RE.fullmatch(args.source_commit) is None:
+        raise AcceptanceRunError("source commit must be 40 lowercase hex")
     git_binding(root, args.source_commit)
-    archive_content = read_plain_file(args.archive.resolve())
-    archive_sha256 = sha256_bytes(archive_content)
     design = build_design_manifest(root)
+    if design.get("authority_zip_sha256") != AUTHORITY_ZIP_SHA256:
+        raise AcceptanceRunError("design bundle authority archive binding differs")
+    explicit_verification_log: Path | None = None
+    if archive_override:
+        if args.archive is None or args.extraction_receipt is None:
+            raise AcceptanceRunError("release archive override resolution failed")
+        args.archive = ensure_evidence_file(args.archive, root, "source archive")
+        ensure_evidence_file(
+            Path(f"{args.archive}.sha256"), root, "source archive sidecar"
+        )
+        args.extraction_receipt = ensure_evidence_file(
+            args.extraction_receipt, root, "extraction receipt"
+        )
+        if args.extraction_receipt_sha256 is None:
+            raise AcceptanceRunError("release extraction receipt digest is missing")
+        explicit_verification_log = verify_explicit_release_artifacts(
+            root,
+            evidence_root,
+            args.run_id,
+            args.archive,
+            args.extraction_receipt,
+            args.extraction_receipt_sha256,
+            args.source_tree_sha256,
+            design,
+        )
+    else:
+        (
+            args.archive,
+            args.extraction_receipt,
+            args.extraction_receipt_sha256,
+        ) = automatic_release_artifacts(
+            root,
+            evidence_root,
+            args.run_id,
+            args.source_tree_sha256,
+            design,
+        )
+    if args.archive is None or args.extraction_receipt is None:
+        raise AcceptanceRunError("release archive inputs are incomplete")
+    if (
+        args.extraction_receipt_sha256 is None
+        or SHA256_RE.fullmatch(args.extraction_receipt_sha256) is None
+    ):
+        raise AcceptanceRunError("extraction receipt digest must be lowercase SHA-256")
+    archive_content = read_plain_file(args.archive)
+    archive_sha256 = sha256_bytes(archive_content)
     common: dict[str, object] = {
         "authority_zip_sha256": AUTHORITY_ZIP_SHA256,
         "design_bundle_sha256": design["bundle_sha256"],
@@ -923,13 +1574,17 @@ def main() -> int:
         "archive_sha256": archive_sha256,
         "extraction_receipt_sha256": args.extraction_receipt_sha256,
     }
-    evidence_root = ensure_external_directory(args.evidence_root, root)
     run = ExclusiveRunDirectory(evidence_root, args.run_id)
     extraction_path, _ = copy_extraction_receipt(
         run,
-        args.extraction_receipt.resolve(),
+        args.extraction_receipt,
         args.extraction_receipt_sha256,
     )
+    if explicit_verification_log is not None:
+        run.write(
+            "common/archive-reverification.log",
+            read_plain_file(explicit_verification_log),
+        )
     environment_value = environment_receipt(root, common)
     environment_path = run.write_json("common/environment.json", environment_value)
     base_environment = dict(os.environ)
@@ -971,7 +1626,7 @@ def main() -> int:
         )
         print(f"ACCEPTANCE_SCENARIO: {position}/439 PASS {row['scenario_id']}", flush=True)
 
-    source_after = worktree_inventory(root)
+    source_after = source_inventory_without_evidence(root, evidence_root)
     if source_after != source_before:
         raise AcceptanceRunError("source tree changed during acceptance execution")
     aggregate_rows = [

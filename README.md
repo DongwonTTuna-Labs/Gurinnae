@@ -1,8 +1,10 @@
-# 구린네 — Codex Final Authority Pack v13.0.0
+# 구린네 — 전체 제품 monorepo v13
 
 구린네는 대한민국 공공기관·지자체·공공기관의 공개 계약·예산·조달 자료에서 **조사할 가치가 있는 이상 징후**를 찾고, 확인 사실·중요한 미확인·당사자 소명·반대 근거·원본 provenance·정정 이력과 함께 공개하는 증거 우선 플랫폼이다.
 
-이 저장소는 애플리케이션 구현본이 아니라, Codex가 제품·화면·API·DB·권한·Agent·Connector·운영 정책을 다시 발명하지 않고 **하나의 완전한 source tree**를 구현하기 위한 최종 권위 사양이다.
+이 저장소는 제품 소스, 테스트, 운영 스크립트와 활성 명세를 함께 보존하는 하나의
+완전한 monorepo다. 현재 권위 명세는 루트 `specs/`에만 있으며, 별도 복제본을
+활성 명세로 취급하지 않는다.
 
 ## 고정 기술
 
@@ -14,23 +16,14 @@
 - Rust-generated OpenAPI → generated Fetch clients
 - Cargo+Bun monorepo, Docker Compose
 
-## 최종 권위 범위
+## 권위와 완성 범위
 
-| 항목 | 수량 |
-|---|---:|
-| 화면 | **94** |
-| Public / Submission / Control / Browser Identity operation | **41 / 34 / 131 / 6** |
-| 외부 operation 합계 | **212** |
-| Private Identity operation | **9** |
-| Query / Command / HTTP non-GET write | **107 / 105 / 102** |
-| PostgreSQL migration / active table / active function | **24 / 107 / 72** |
-| Optimistic-concurrency contract | **64** |
-| Cargo workspace member / Bun workspace | **32 / 9** |
-| Compose service | **20** |
-| Agent / read-only tool / evaluation | **5 / 9 / 50** |
-| Connector / upstream operation | **6 / 44** |
-| Detection rule / evaluation | **10 / 300** |
-| Acceptance feature / scenario | **35 / 271** |
+- 활성 명세: 루트 `specs/` 단일 트리
+- 불변 v13 원본: Git tag `authority-v13-frozen`
+- 완성 범위와 수치의 단일 기준: `FINAL_BUILD_CONTRACT.md`
+
+Git tag는 base provenance와 불변 원본 비교용이다. 별도 체크아웃을
+두 번째 활성 명세로 사용하지 않으며, 루트 Manifest도 권위 모델이 아니다.
 
 ## 내부 인증 경계
 
@@ -66,20 +59,31 @@ Browser
 
 ## 시작
 
-1. `CODEX_HANDOFF.md`
-2. `CODEX_START_HERE.md`
-3. `AGENTS.md`
-4. `FINAL_BUILD_CONTRACT.md`
-5. `VERIFY.md`
+1. `CODEX_START_HERE.md`
+2. `AGENTS.md`
+3. `FINAL_BUILD_CONTRACT.md`
+4. `VERIFY.md`
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r requirements-spec.txt
-PYTHONDONTWRITEBYTECODE=1 make final-check
-make verify-postgres-runtime
-PYTHONDONTWRITEBYTECODE=1 make final-check
-sha256sum --check MANIFEST.sha256
+git rev-parse 'authority-v13-frozen^{commit}'
+make verify-specs
+make verify-codegen
+make build-ui
+make verify-final
 ```
 
-Codex는 내부적으로 반복 구현·빌드·수정을 수행할 수 있다. 그러나 최종 제출은 MVP, scaffold, fixture-only, 일부 화면 또는 계획이 아니라 전체 hard gate를 통과한 완전한 source archive 하나여야 한다.
+`verify-specs`는 현재 `specs/` 트리와 frozen tag 핀, migration, acceptance 소스
+계약을 검증한다. `verify-codegen`은 OpenAPI/client, acceptance registry, UI 생성물의
+결정성을 검증하고 `build-ui`는 UI build의 공통 경계다. `verify-final`은
+이 검증과 source, runtime, container, recovery, UI hard gate를 묶는다.
+
+Sealed acceptance는 별도 `make verify-acceptance`로 실행한다. override가 없으면
+Git이 무시하는 `artifacts/acceptance/`에 run-scoped evidence와 검증용 source bundle을
+만든다. 배포용 archive는 `make source-archive`가 `artifacts/`에 만들며,
+Manifest는 압축 내부에만 생성된다.
+
+최종 제출은 MVP, scaffold, fixture-only, 일부 화면 또는 계획이 아니라
+`FINAL_BUILD_CONTRACT.md`의 전체 범위와 모든 필수 gate를 통과한 source tree여야 한다.

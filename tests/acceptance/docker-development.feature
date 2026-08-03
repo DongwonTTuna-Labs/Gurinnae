@@ -58,7 +58,7 @@ Feature: Docker 개발환경과 runtime image
 
   # scenario-id: AC-DOCKER_DEVELOPMENT-011
   Scenario: test Compose는 전체 서비스 토폴로지를 격리한다
-    Given standalone compose.test.yaml이 있다
+    Given compose.yaml의 test profile이 있다
     Then postgres migrator APIs worker scheduler web apps가 test profile에 있어야 한다
     And API host port는 공개되지 않아야 한다
 
@@ -76,7 +76,7 @@ Scenario: PostgreSQL 18은 새 volume root를 사용한다
 
   # scenario-id: AC-DOCKER_DEVELOPMENT-014
   Scenario: PostgreSQL 18 test tmpfs도 새 root를 사용한다
-    Given standalone compose.test.yaml이 있다
+    Given compose.yaml의 test profile이 있다
     Then postgres tmpfs는 /var/lib/postgresql이어야 한다
     And explicit PGDATA는 production-like path여야 한다
 
