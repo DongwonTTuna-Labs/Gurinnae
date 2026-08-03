@@ -22,9 +22,9 @@ fn parse_provider_control_claim(value: &Value) -> Result<ProviderControlClaim, F
     ] {
         required_claim_sha256(object, key)?;
     }
-    if operation_id != ProviderControlOperationId::TestProviderConnection {
-        required_claim_sha256(object, "reasonDigest")?;
-    } else if object.contains_key("reasonDigest") {
+    if operation_id != ProviderControlOperationId::TestProviderConnection
+        || object.contains_key("reasonDigest")
+    {
         required_claim_sha256(object, "reasonDigest")?;
     }
     required_claim_text(object, "providerReference")?;

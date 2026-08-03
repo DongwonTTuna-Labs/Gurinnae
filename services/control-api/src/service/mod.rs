@@ -182,6 +182,10 @@ use routing::*;
 use schema::*;
 use util::*;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "service execution preserves the established transport, actor, keyring, and event-journal boundary"
+)]
 pub async fn execute(
     operation: &OperationSpec,
     request: &HttpRequest,

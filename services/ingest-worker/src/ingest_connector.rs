@@ -200,6 +200,10 @@ struct KonepsContractFields<'a> {
     signed_at: Option<String>,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "contract normalization binds the complete parsed-record provenance and supplier identity material"
+)]
 async fn normalize_koneps_contract(
     tx: &mut Transaction<'_, Postgres>,
     source_id: &str,
@@ -368,7 +372,7 @@ async fn normalize_dart_supplier(
     let Some((_, name)) = first_text_entry(record, &["corp_name"]) else {
         return Ok(());
     };
-    let _ = supplier_identity::resolve_supplier(
+    supplier_identity::resolve_supplier(
         tx,
         supplier_identifier_hmac_key,
         supplier_identity::IncomingSupplier {

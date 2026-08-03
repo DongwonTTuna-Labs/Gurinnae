@@ -27,6 +27,6 @@ mod tests {
 
     #[test]
     fn research_artifact_never_becomes_direct_model_input() {
-        assert!(!DIRECT_RESEARCH_ARTIFACT_MODEL_INPUT);
+        const { assert!(!DIRECT_RESEARCH_ARTIFACT_MODEL_INPUT) };
     }
 }

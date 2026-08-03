@@ -37,16 +37,26 @@ fn valid_envelope() -> Value {
     })
 }
 
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "unexpected results are test assertion failures"
+)]
 fn assert_invalid(envelope: &Value, field: &str) {
     match response_materialized_v2_fact(envelope) {
         Err(Failure::Terminal("INVALID_EVENT_PAYLOAD", detail)) => {
             assert!(detail.contains(field), "unexpected detail: {detail}");
         }
-        other => assert!(false, "expected invalid payload, got {other:?}"),
+        other => {
+            assert!(false, "expected invalid payload, got {other:?}");
+        }
     }
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "unexpected results are test assertion failures"
+)]
 fn exact_payload_produces_digest_only_consumer_results() {
     let envelope = valid_envelope();
     let fact = match response_materialized_v2_fact(&envelope) {

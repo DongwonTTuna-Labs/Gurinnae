@@ -80,7 +80,7 @@ impl ResearchFetchWrite<'_> {
         {
             return Err(ResearchArtifactRepositoryError::InvalidWrite("identifier"));
         }
-        if !valid_call_id(&self.call_id)
+        if !valid_call_id(self.call_id)
             || self.source_id.trim().is_empty()
             || self.source_id.len() > 255
             || self.external_locator.trim().is_empty()
@@ -263,9 +263,7 @@ impl ResearchArtifactRepository {
         let mut tiers = self.load_review_tiers(connection, &[artifact_id]).await?;
         Ok(Some(decode_artifact(
             row,
-            tiers
-                .remove(&artifact_id)
-                .map_or_else(Vec::new, |rows| rows),
+            tiers.remove(&artifact_id).unwrap_or_else(Vec::new),
         )?))
     }
 
@@ -303,7 +301,7 @@ impl ResearchArtifactRepository {
         let mut tiers = self.load_review_tiers(connection, &ids).await?;
         rows.into_iter()
             .map(|row| {
-                let tier_rows = tiers.remove(&row.id).map_or_else(Vec::new, |rows| rows);
+                let tier_rows = tiers.remove(&row.id).unwrap_or_else(Vec::new);
                 decode_artifact(row, tier_rows)
             })
             .collect()
@@ -349,7 +347,7 @@ impl ResearchArtifactRepository {
                 let chain = decode_review_chain(
                     tiers
                         .remove(&row.research_artifact_id)
-                        .map_or_else(Vec::new, |values| values),
+                        .unwrap_or_else(Vec::new),
                 )?;
                 validate_runtime_tier(request_kind, chain.as_ref())?;
                 Ok(RuntimeResearchArtifactCapsule {

@@ -275,6 +275,10 @@ pub(super) async fn canonical_guard(
     .await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "canonical guard probing binds the full relation, identity, owner, status, actor, and transaction contract"
+)]
 async fn canonical_guard_miss(
     contract: &ConcurrencyContract,
     identity: &str,
@@ -291,7 +295,7 @@ async fn canonical_guard_miss(
             relation = contract.guard_relation,
         );
         let mut query =
-            sqlx::query_scalar::<_, String>(AssertSqlSafe(probe.as_str())).bind(&identity);
+            sqlx::query_scalar::<_, String>(AssertSqlSafe(probe.as_str())).bind(identity);
         if owner_guard {
             query = query.bind(actor);
         }
@@ -305,7 +309,7 @@ async fn canonical_guard_miss(
         "SELECT EXISTS(SELECT 1 FROM {relation} WHERE {identity_column}::text=$1{owner_predicate})",
         relation = contract.guard_relation,
     );
-    let mut query = sqlx::query_scalar::<_, bool>(AssertSqlSafe(probe.as_str())).bind(&identity);
+    let mut query = sqlx::query_scalar::<_, bool>(AssertSqlSafe(probe.as_str())).bind(identity);
     if owner_guard {
         query = query.bind(actor);
     }

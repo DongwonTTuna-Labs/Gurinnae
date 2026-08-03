@@ -52,7 +52,7 @@ async fn build_general_snapshot(
         BuildGeneralDatasetSnapshot::new(claim.job_id, claim.lease_token, claim.fencing_token)
             .map_err(|_| authority_invalid("job fence"))?;
     let result = {
-        let mut repository = PostgresDatasetSnapshotRepository::new(&mut **tx);
+        let mut repository = PostgresDatasetSnapshotRepository::new(tx);
         DatasetSnapshotUseCase::new(&mut repository)
             .build_general(&request)
             .await
@@ -76,7 +76,7 @@ async fn build_conflict_snapshot(
         BuildConflictDatasetSnapshot::new(claim.job_id, claim.lease_token, claim.fencing_token)
             .map_err(|_| authority_invalid("job fence"))?;
     let result = {
-        let mut repository = PostgresDatasetSnapshotRepository::new(&mut **tx);
+        let mut repository = PostgresDatasetSnapshotRepository::new(tx);
         DatasetSnapshotUseCase::new(&mut repository)
             .build(&request)
             .await

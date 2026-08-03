@@ -1,6 +1,6 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use base64::engine::general_purpose::STANDARD as BASE64;
 
 fn unexpected_null() -> ServiceError {
     db(sqlx::Error::Decode(Box::new(

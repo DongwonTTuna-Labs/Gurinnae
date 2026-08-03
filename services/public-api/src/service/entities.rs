@@ -42,7 +42,7 @@ async fn list_agencies(pool: &PgPool, query: &Query) -> Result<Value, ServiceErr
         json!({"q":q,"agencyType":types,"jurisdiction":jurisdiction}),
         "기관 대장",
         "/agencies".to_owned(),
-        PageNoticeAuthority::OperationalCollection,
+        PageNoticeAuthority::Operational,
     )
 }
 
@@ -117,7 +117,7 @@ async fn list_suppliers(pool: &PgPool, query: &Query) -> Result<Value, ServiceEr
         json!({"q":q,"businessStatus":statuses,"identityStatus":identity_statuses}),
         "업체 대장",
         "/suppliers".to_owned(),
-        PageNoticeAuthority::OperationalCollection,
+        PageNoticeAuthority::Operational,
     )
 }
 
@@ -205,7 +205,7 @@ async fn list_related_cases(
         json!({}),
         title,
         canonical_url,
-        PageNoticeAuthority::PublicationCollection,
+        PageNoticeAuthority::Publication,
     )
 }
 
@@ -284,7 +284,7 @@ async fn list_contracts(
         applied_filters,
         title,
         canonical_url,
-        PageNoticeAuthority::OperationalCollection,
+        PageNoticeAuthority::Operational,
     )
 }
 

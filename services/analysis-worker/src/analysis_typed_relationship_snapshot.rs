@@ -28,7 +28,7 @@ pub(super) async fn load(
         request,
     )?;
     let expected_query_digest = sha256(&query.request_canonical);
-    let result = RelationshipGraphRepository::list_neighbors(&mut **executor, &query)
+    let result = RelationshipGraphRepository::list_neighbors(executor, &query)
         .await
         .map_err(database)?;
     if result.query_digest.as_str() != expected_query_digest

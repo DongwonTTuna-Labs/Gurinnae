@@ -10,6 +10,10 @@ struct AddendumCommandRow {
     outbox_event_id: Option<Uuid>,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "addendum dispatch binds the complete transport, actor, keyring, request, and payload context"
+)]
 async fn addendum_command(
     operation: &OperationSpec,
     request: &HttpRequest,

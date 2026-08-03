@@ -551,7 +551,8 @@ mod tests {
                 }
             );
         }
-        for body in [br#"{"decision":"approve","criteria":{}}"#.as_slice()] {
+        {
+            let body = br#"{"decision":"approve","criteria":{}}"#.as_slice();
             assert_eq!(
                 effective_authorization(operation, body),
                 EffectiveAuthorization {

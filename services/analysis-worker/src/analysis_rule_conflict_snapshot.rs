@@ -38,7 +38,7 @@ pub(super) async fn load(
     .map_err(|_| conflict_input_invalid("rule version"))?;
     let request = LoadConflictDatasetSnapshot::new(header, authority);
     let snapshot = {
-        let mut repository = PostgresDatasetSnapshotRepository::new(&mut **tx);
+        let mut repository = PostgresDatasetSnapshotRepository::new(tx);
         DatasetSnapshotUseCase::new(&mut repository)
             .load(&request)
             .await

@@ -80,15 +80,13 @@ mod tests {
         let bytes = match to_bytes(response.into_body()).await {
             Ok(value) => value,
             Err(_) => {
-                assert!(false, "problem response body must be readable");
-                return;
+                panic!("problem response body must be readable");
             }
         };
         let body = match serde_json::from_slice::<serde_json::Value>(&bytes) {
             Ok(value) => value,
             Err(_) => {
-                assert!(false, "problem response body must be JSON");
-                return;
+                panic!("problem response body must be JSON");
             }
         };
         assert_eq!(

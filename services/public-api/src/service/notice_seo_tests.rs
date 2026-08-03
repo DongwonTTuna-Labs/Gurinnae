@@ -22,8 +22,8 @@ mod notice_seo_tests {
     #[test]
     fn empty_publication_and_search_pages_bind_the_canonical_empty_notice_to_seo_and_og() {
         for authority in [
-            PageNoticeAuthority::PublicationCollection,
-            PageNoticeAuthority::SearchCollection,
+            PageNoticeAuthority::Publication,
+            PageNoticeAuthority::Search,
         ] {
             let page = empty_page(authority);
             let expected = format!("공개 대장 · {EMPTY_PUBLICATION_NOTICE}");
@@ -35,7 +35,7 @@ mod notice_seo_tests {
 
     #[test]
     fn empty_operational_page_binds_the_interpretation_notice_to_seo_and_og() {
-        let page = empty_page(PageNoticeAuthority::OperationalCollection);
+        let page = empty_page(PageNoticeAuthority::Operational);
         let expected = format!("공개 대장 · {OPERATIONAL_INTERPRETATION_NOTICE}");
 
         assert_eq!(page["seo"]["description"], expected);
@@ -44,7 +44,7 @@ mod notice_seo_tests {
 
     #[test]
     fn empty_dataset_page_binds_the_redistribution_notice_to_seo_and_og() {
-        let page = empty_page(PageNoticeAuthority::RedistributionCollection);
+        let page = empty_page(PageNoticeAuthority::Redistribution);
         let expected = format!("공개 대장 · {}", super::PUBLIC_REDISTRIBUTION_NOTICE);
 
         assert_eq!(page["seo"]["description"], expected);
@@ -60,7 +60,7 @@ mod notice_seo_tests {
         })];
 
         assert_eq!(
-            page_seo_description("검색", &items, PageNoticeAuthority::SearchCollection)
+            page_seo_description("검색", &items, PageNoticeAuthority::Search)
                 .expect("known operational-only search result"),
             format!("검색 · {OPERATIONAL_INTERPRETATION_NOTICE}")
         );
@@ -78,7 +78,7 @@ mod notice_seo_tests {
                 page_seo_description(
                     "검색",
                     &[item],
-                    PageNoticeAuthority::SearchCollection
+                    PageNoticeAuthority::Search
                 )
                 .expect("explicit non-notice search result type"),
                 "검색"
@@ -107,7 +107,7 @@ mod notice_seo_tests {
             page_seo_description(
                 "검색",
                 &[unknown],
-                PageNoticeAuthority::SearchCollection
+                PageNoticeAuthority::Search
             ),
             Err(ServiceError::Persistence)
         ));
@@ -119,7 +119,7 @@ mod notice_seo_tests {
             page_seo_description(
                 "기관 대장",
                 &[json!({"agencyType":"CENTRAL"})],
-                PageNoticeAuthority::OperationalCollection
+                PageNoticeAuthority::Operational
             ),
             Err(ServiceError::Persistence)
         ));
@@ -130,7 +130,7 @@ mod notice_seo_tests {
                     "agencyType":"CENTRAL",
                     "interpretationNotice":"상태 값은 단순 참고입니다."
                 })],
-                PageNoticeAuthority::OperationalCollection
+                PageNoticeAuthority::Operational
             ),
             Err(ServiceError::Persistence)
         ));
@@ -138,7 +138,7 @@ mod notice_seo_tests {
             page_seo_description(
                 "공개 사건",
                 &[json!({"publicState":"PUBLISHED_ANOMALY"})],
-                PageNoticeAuthority::PublicationCollection
+                PageNoticeAuthority::Publication
             ),
             Err(ServiceError::Persistence)
         ));
@@ -164,7 +164,7 @@ mod notice_seo_tests {
             json!({}),
             "공개 사건",
             "/cases".to_owned(),
-            PageNoticeAuthority::PublicationCollection,
+            PageNoticeAuthority::Publication,
         )
         .expect("bounded public page");
 

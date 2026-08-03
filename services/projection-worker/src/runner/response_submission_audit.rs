@@ -231,7 +231,7 @@ mod tests {
             Err(Failure::Terminal("INVALID_EVENT_PAYLOAD", detail)) => {
                 assert!(detail.contains(field), "unexpected detail: {detail}");
             }
-            other => assert!(false, "expected invalid payload, got {other:?}"),
+            other => panic!("expected invalid payload, got {other:?}"),
         }
     }
 
@@ -241,15 +241,13 @@ mod tests {
         let fact = match response_submitted_v2_fact(&envelope) {
             Ok(fact) => fact,
             Err(error) => {
-                assert!(false, "valid payload rejected: {error:?}");
-                return;
+                panic!("valid payload rejected: {error:?}");
             }
         };
         let event_id = match Uuid::parse_str(EVENT_ID) {
             Ok(event_id) => event_id,
             Err(error) => {
-                assert!(false, "test event ID invalid: {error}");
-                return;
+                panic!("test event ID invalid: {error}");
             }
         };
         let projection = audit_projection(event_id, &fact);

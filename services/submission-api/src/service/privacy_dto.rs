@@ -123,8 +123,8 @@ impl IdentityProof {
                 receipt_id,
                 possession_token,
             } => {
-                let possession_token_hmac = validate_secret(&possession_token, 32, 4096)
-                    .and_then(|()| hmac_digest(token_hmac_key, &possession_token));
+                let possession_token_hmac = validate_secret(possession_token, 32, 4096)
+                    .and_then(|()| hmac_digest(token_hmac_key, possession_token));
                 possession_token.zeroize();
                 Ok(PrivacyIdentityProofClaim::ResponseReceipt {
                     receipt_id: *receipt_id,
@@ -297,7 +297,7 @@ impl EndpointEnrollment {
         context: &RequestContext<'_>,
         endpoint_id: Uuid,
     ) -> Result<EncryptedPrivacyContact, ServiceError> {
-        let mut material = self.into_material()?;
+        let mut material = self.take_material()?;
         let encrypted = common::encrypt_field_material(
             context,
             "intake.communication_endpoints",
@@ -320,11 +320,11 @@ impl EndpointEnrollment {
         })
     }
 
-    fn into_material(&mut self) -> Result<EndpointMaterial, ServiceError> {
+    fn take_material(&mut self) -> Result<EndpointMaterial, ServiceError> {
         let (channel, raw, locale) = match self {
             Self::Email { address, locale } => {
                 let normalized =
-                    common::normalized_email(&address).map_err(|_| ServiceError::InvalidParameter);
+                    common::normalized_email(address).map_err(|_| ServiceError::InvalidParameter);
                 address.zeroize();
                 (
                     PrivacyContactChannel::Email,
@@ -372,7 +372,12 @@ impl EndpointEnrollment {
                     std::mem::take(locale),
                 )
             }
-            Self::Voice { e164, .. } => {
+            Self::Voice {
+                e164,
+                locale,
+                explicit_voice_consent_receipt_id,
+            } => {
+                let _ = (&*locale, *explicit_voice_consent_receipt_id);
                 e164.zeroize();
                 return Err(ServiceError::PrivacyVoiceConsentAuthorityMissing);
             }

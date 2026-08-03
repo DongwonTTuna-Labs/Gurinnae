@@ -1,5 +1,9 @@
 use super::*;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "command dispatch preserves the established transport, actor, keyring, and event-journal boundary"
+)]
 pub(super) async fn command(
     handler: registry::CommandHandler,
     operation: &OperationSpec,

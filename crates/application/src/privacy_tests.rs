@@ -19,6 +19,10 @@ fn timestamp() -> Option<OffsetDateTime> {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn endpoint_proof_provider_shape_is_closed() {
     let Some(digest) = digest() else {
         assert!(false, "valid digest fixture");
@@ -57,6 +61,10 @@ fn request_type_serialization_never_collapses_destructive_rights() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn create_rejects_scope_ciphertext_bound_to_another_digest() {
     let Some(digest) = digest() else {
         assert!(false, "valid digest fixture");
@@ -126,6 +134,10 @@ fn create_rejects_scope_ciphertext_bound_to_another_digest() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn owner_session_result_is_closed_and_time_bound() {
     let Some(requested_at) = timestamp() else {
         assert!(false, "valid timestamp fixture");
@@ -153,6 +165,10 @@ fn owner_session_result_is_closed_and_time_bound() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn replayed_session_keeps_the_database_owned_original_bounds() {
     let Some(consumed_at) = timestamp() else {
         assert!(false, "valid timestamp fixture");
@@ -178,6 +194,10 @@ fn replayed_session_keeps_the_database_owned_original_bounds() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn create_owner_accepts_a_different_proposal_id_only_on_exact_replay() {
     let Some(created_at) = timestamp() else {
         assert!(false, "valid timestamp fixture");
@@ -225,6 +245,10 @@ fn create_owner_accepts_a_different_proposal_id_only_on_exact_replay() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn public_status_requires_the_closed_pending_action() {
     let Some(created_at) = timestamp() else {
         assert!(false, "valid timestamp fixture");
@@ -269,6 +293,10 @@ fn public_status_requires_the_closed_pending_action() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn rejected_public_status_requires_matching_decision_and_notice_receipts() {
     let Some(created_at) = timestamp() else {
         assert!(false, "valid timestamp fixture");
@@ -314,6 +342,10 @@ fn rejected_public_status_requires_matching_decision_and_notice_receipts() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn privacy_query_carries_only_the_session_digest_to_the_owner() {
     let Some(digest) = digest() else {
         assert!(false, "valid digest fixture");
@@ -327,6 +359,10 @@ fn privacy_query_carries_only_the_session_digest_to_the_owner() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn maximum_object_scope_fits_the_measured_encrypted_cap() {
     let scope = PrivacyRequestScope {
         scope_kind: PrivacyScopeKind::ObjectSet,

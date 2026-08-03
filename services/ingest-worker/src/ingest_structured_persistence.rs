@@ -14,6 +14,10 @@ struct PersistedConnectorRecord {
     payload_sha256: String,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "structured persistence binds source provenance, job fencing, and supplier identity material"
+)]
 async fn persist_structured_json(
     tx: &mut Transaction<'_, Postgres>,
     source_id: &str,
@@ -261,7 +265,7 @@ async fn record_dart_executive_endpoint(
         content_sha256: source.content_sha256.trim().to_owned(),
     };
     let command = dart_executive_endpoint_command(context, persisted, observation, &source)?;
-    RelationshipGraphRepository::record_endpoint(&mut **tx, &command)
+    RelationshipGraphRepository::record_endpoint(tx, &command)
         .await
         .map_err(|error| relationship_graph_error(context.operation.id, error))?;
     Ok(())

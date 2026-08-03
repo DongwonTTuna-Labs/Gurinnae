@@ -185,7 +185,7 @@ async fn list_cases(
         case_applied_filters(query, relation, &filters.states)?,
         title,
         canonical_url,
-        PageNoticeAuthority::PublicationCollection,
+        PageNoticeAuthority::Publication,
     )
 }
 
@@ -259,7 +259,7 @@ async fn list_revisions(pool: &PgPool, query: &Query, slug: &str) -> Result<Valu
         json!({}),
         "사건 개정 이력",
         format!("/cases/{slug}/revisions"),
-        PageNoticeAuthority::PublicationCollection,
+        PageNoticeAuthority::Publication,
     )
 }
 
@@ -407,7 +407,7 @@ async fn list_corrections(pool: &PgPool, query: &Query) -> Result<Value, Service
         Value::Object(filters),
         "정정 기록",
         "/corrections".to_owned(),
-        PageNoticeAuthority::PublicationCollection,
+        PageNoticeAuthority::Publication,
     )
 }
 
@@ -496,7 +496,7 @@ async fn list_datasets(pool: &PgPool, query: &Query) -> Result<Value, ServiceErr
         json!({"format":formats}),
         "공개 데이터",
         "/data".to_owned(),
-        PageNoticeAuthority::RedistributionCollection,
+        PageNoticeAuthority::Redistribution,
     )
 }
 
@@ -582,6 +582,6 @@ async fn list_sources(pool: &PgPool, query: &Query) -> Result<Value, ServiceErro
         json!({"status":statuses}),
         "데이터 출처 대장",
         "/sources".to_owned(),
-        PageNoticeAuthority::OperationalCollection,
+        PageNoticeAuthority::Operational,
     )
 }
