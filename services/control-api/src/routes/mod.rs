@@ -81,22 +81,6 @@ fn spec(id: &str) -> Option<OperationSpec> {
         .copied()
 }
 
-#[expect(
-    dead_code,
-    reason = "kept as the generated operation registration fallback"
-)]
-fn register(config: &mut web::ServiceConfig, operation: OperationSpec) {
-    let resource = web::resource(operation.path).name(operation.id);
-    let resource = match operation.method {
-        "GET" => resource.route(web::get().to(move |r, b, s| handle(operation, r, b, s))),
-        "POST" => resource.route(web::post().to(move |r, b, s| handle(operation, r, b, s))),
-        "PATCH" => resource.route(web::patch().to(move |r, b, s| handle(operation, r, b, s))),
-        "DELETE" => resource.route(web::delete().to(move |r, b, s| handle(operation, r, b, s))),
-        _ => resource,
-    };
-    config.service(resource);
-}
-
 async fn handle(
     operation: OperationSpec,
     request: HttpRequest,

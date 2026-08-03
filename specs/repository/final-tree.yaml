@@ -43,7 +43,6 @@ cargo_workspace:
     - ports/mod.rs
     - commands/mod.rs
     - queries/mod.rs
-    - services/mod.rs
     - authorization.rs
     - transactions.rs
     - idempotency.rs

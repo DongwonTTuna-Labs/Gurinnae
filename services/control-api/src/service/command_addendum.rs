@@ -28,51 +28,8 @@ async fn addendum_command(
         transaction.commit().await.map_err(db)?;
         return Ok(response);
     }
-    let payload_object = payload.as_object().ok_or(ServiceError::InvalidRequest)?;
-    let mut payload = Value::Object(command_parameters(request, payload_object));
-    payload = normalize_owner_payload(operation.id, payload);
-    payload = seal_action_request(operation.id, payload, field_keys)?;
-    if operation.id == "createResponseRequest"
-        && let Some(email) = payload.get("recipientEmail").and_then(Value::as_str)
-        && !valid_recipient_email(email)
-    {
-        return Err(ServiceError::InvalidRequest);
-    }
-    // Bind the owner assertion-attempt record to the actor assertion already
-    // verified by the HTTP boundary; callers cannot supply these fields.
-    if operation.id == "decideJourneyHandoff"
-        && let Some(object) = payload.as_object_mut()
-    {
-        object.insert("assertionJti".to_owned(), json!(claims.jti));
-        object.insert("issuer".to_owned(), json!(claims.iss));
-        object.insert("audience".to_owned(), json!(claims.aud));
-        object.insert("expiresAtUnix".to_owned(), json!(claims.exp));
-    }
-    // The HTTP boundary has already verified these Actor Assertion claims
-    // against the exact method/path/query/body/content type/operation,
-    // capability and Idempotency-Key.  Keep them outside the public request
-    // schema and pass them to the database owner so a STEP_UP decision cannot
-    // substitute caller-authored body fields for the signed assertion.
-    if operation.id == "submitActionDecision"
-        && let Some(object) = payload.as_object_mut()
-    {
-        object.insert("_actorAssertionJti".to_owned(), json!(claims.jti));
-        object.insert(
-            "_actorAssuranceLevel".to_owned(),
-            json!(claims.assurance_level),
-        );
-        object.insert("_actorActionDigest".to_owned(), json!(claims.action_digest));
-        object.insert(
-            "_actorStepUpAuthorizationId".to_owned(),
-            json!(claims.step_up_authorization_id),
-        );
-        object.insert(
-            "_actorIdempotencyKeySha256".to_owned(),
-            json!(claims.idempotency_key_sha256),
-        );
-        object.insert("_actorStepUpAtUnix".to_owned(), json!(claims.step_up_at));
-        object.insert("_actorRequestKeySha256".to_owned(), json!(key.key_hash));
-    }
+    let mut payload = prepare_addendum_payload(operation, request, field_keys, payload)?;
+    bind_actor_assertion_fields(operation, claims, &key, &mut payload);
     let row = sqlx::query_as::<_, AddendumCommandRow>(
         "SELECT aggregate_id,aggregate_version,status,accepted_at,response_body,receipt_digest,audit_event_id,outbox_event_id \
          FROM ops.apply_control_addendum_command($1,$2,$3,$4,$5,$6,$7)",
@@ -115,10 +72,76 @@ async fn addendum_command(
     transaction.commit().await.map_err(db)?;
     Ok(Output {
         status: operation.success_status,
-        media_type: if operation.success_status == 204 { "" } else { "application/json" },
+        media_type: if operation.success_status == 204 {
+            ""
+        } else {
+            "application/json"
+        },
         body: response,
         replay: false,
     })
+}
+
+fn prepare_addendum_payload(
+    operation: &OperationSpec,
+    request: &HttpRequest,
+    field_keys: &EnvelopeKeyRing,
+    payload: Value,
+) -> Result<Value, ServiceError> {
+    let payload_object = payload.as_object().ok_or(ServiceError::InvalidRequest)?;
+    let mut payload = Value::Object(command_parameters(request, payload_object));
+    payload = normalize_owner_payload(operation.id, payload);
+    payload = seal_action_request(operation.id, payload, field_keys)?;
+    if operation.id == "createResponseRequest"
+        && let Some(email) = payload.get("recipientEmail").and_then(Value::as_str)
+        && !valid_recipient_email(email)
+    {
+        return Err(ServiceError::InvalidRequest);
+    }
+    Ok(payload)
+}
+
+fn bind_actor_assertion_fields(
+    operation: &OperationSpec,
+    claims: &ActorClaims,
+    key: &CommandKey,
+    payload: &mut Value,
+) {
+    // Bind the owner assertion-attempt record to the actor assertion already
+    // verified by the HTTP boundary; callers cannot supply these fields.
+    if operation.id == "decideJourneyHandoff"
+        && let Some(object) = payload.as_object_mut()
+    {
+        object.insert("assertionJti".to_owned(), json!(claims.jti));
+        object.insert("issuer".to_owned(), json!(claims.iss));
+        object.insert("audience".to_owned(), json!(claims.aud));
+        object.insert("expiresAtUnix".to_owned(), json!(claims.exp));
+    }
+    // The HTTP boundary has already verified these Actor Assertion claims
+    // against the exact method/path/query/body/content type/operation,
+    // capability and Idempotency-Key.  Keep them outside the public request
+    // schema and pass them to the database owner so a STEP_UP decision cannot
+    // substitute caller-authored body fields for the signed assertion.
+    if operation.id == "submitActionDecision"
+        && let Some(object) = payload.as_object_mut()
+    {
+        object.insert("_actorAssertionJti".to_owned(), json!(claims.jti));
+        object.insert(
+            "_actorAssuranceLevel".to_owned(),
+            json!(claims.assurance_level),
+        );
+        object.insert("_actorActionDigest".to_owned(), json!(claims.action_digest));
+        object.insert(
+            "_actorStepUpAuthorizationId".to_owned(),
+            json!(claims.step_up_authorization_id),
+        );
+        object.insert(
+            "_actorIdempotencyKeySha256".to_owned(),
+            json!(claims.idempotency_key_sha256),
+        );
+        object.insert("_actorStepUpAtUnix".to_owned(), json!(claims.step_up_at));
+        object.insert("_actorRequestKeySha256".to_owned(), json!(key.key_hash));
+    }
 }
 
 fn normalize_owner_payload(operation: &str, mut payload: Value) -> Value {
@@ -141,9 +164,7 @@ fn normalize_owner_payload(operation: &str, mut payload: Value) -> Value {
 
         // The public contract calls this field `actorId`; the SECURITY DEFINER
         // owner function consumes the canonical `origin.id` binding.
-        if let Some(origin) = payload
-            .get_mut("origin")
-            .and_then(Value::as_object_mut)
+        if let Some(origin) = payload.get_mut("origin").and_then(Value::as_object_mut)
             && let Some(value) = origin.remove("actorId")
         {
             origin.entry("id").or_insert(value);

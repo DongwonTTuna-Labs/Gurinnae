@@ -387,7 +387,7 @@ impl Default for ContractMarker {{
 
 def application_crate() -> None:
     path = "crates/application"
-    modules = ["ports/mod.rs", "commands/mod.rs", "queries/mod.rs", "services/mod.rs", "authorization.rs", "transactions.rs", "idempotency.rs"]
+    modules = ["ports/mod.rs", "commands/mod.rs", "queries/mod.rs", "authorization.rs", "transactions.rs", "idempotency.rs"]
     ordinary_crate(path, ["lib.rs", *modules])
     write(
         f"{path}/Cargo.toml",
@@ -397,7 +397,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-gurine-api-contracts = { path = "../api-contracts" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -406,92 +405,6 @@ uuid.workspace = true
 
 [lints]
 workspace = true
-''',
-    )
-    write(
-        f"{path}/src/services/mod.rs",
-        '''use gurine_api_contracts::OperationSpec;
-use serde_json::Value;
-use thiserror::Error;
-
-#[derive(Debug)]
-pub struct OperationInput<'a> {
-    pub request_id: &'a str,
-    pub method: &'a str,
-    pub path_and_query: &'a str,
-    pub content_type: Option<&'a str>,
-    pub idempotency_key: Option<&'a str>,
-    pub body: &'a [u8],
-}
-
-#[derive(Debug)]
-pub struct OperationOutput {
-    pub status: u16,
-    pub media_type: &'static str,
-    pub body: Value,
-}
-
-#[derive(Debug, Error)]
-pub enum OperationError {
-    #[error("request method does not match the operation contract")]
-    MethodMismatch,
-    #[error("idempotency key is required")]
-    IdempotencyRequired,
-    #[error("request body is not valid JSON")]
-    InvalidJson,
-    #[error("generated response contract is invalid")]
-    InvalidResponseContract,
-}
-
-pub fn execute(
-    operation: &OperationSpec,
-    input: &OperationInput<'_>,
-) -> Result<OperationOutput, OperationError> {
-    if input.method != operation.method {
-        return Err(OperationError::MethodMismatch);
-    }
-    if operation.idempotency_required && input.idempotency_key.is_none() {
-        return Err(OperationError::IdempotencyRequired);
-    }
-    if !input.body.is_empty() && serde_json::from_slice::<Value>(input.body).is_err() {
-        return Err(OperationError::InvalidJson);
-    }
-    let mut response: Value = serde_json::from_str(operation.response_json)
-        .map_err(|_| OperationError::InvalidResponseContract)?;
-    if let Some(object) = response.as_object_mut() {
-        if object.contains_key("requestId") {
-            object.insert("requestId".to_owned(), Value::String(input.request_id.to_owned()));
-        }
-        if object.contains_key("operationId") {
-            object.insert("operationId".to_owned(), Value::String(operation.id.to_owned()));
-        }
-    }
-    Ok(OperationOutput {
-        status: operation.success_status,
-        media_type: operation.media_type,
-        body: response,
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn idempotency_is_enforced_before_execution() {
-        let operation = OperationSpec {
-            id: "write", api: "test", method: "POST", path: "/write", auth: "none",
-            capability: "", idempotency_required: true, operation_kind: "COMMAND",
-            assurance_level: "ANONYMOUS_PROOF", step_up_required: false,
-            success_status: 202, media_type: "application/json", response_json: "{}",
-        };
-        let input = OperationInput {
-            request_id: "request", method: "POST", path_and_query: "/write",
-            content_type: Some("application/json"), idempotency_key: None, body: b"{}",
-        };
-        assert!(matches!(execute(&operation, &input), Err(OperationError::IdempotencyRequired)));
-    }
-}
 ''',
     )
 
@@ -527,7 +440,6 @@ workspace = true
 pub mod app;
 pub mod config;
 pub mod health;
-pub mod middleware;
 pub mod routes;
 pub mod state;
 ''',
@@ -577,11 +489,7 @@ pub async fn ready() -> impl Responder {
 }
 ''',
     )
-    write(f"{path}/src/middleware/mod.rs", "pub const SECURITY_HEADERS_ENABLED: bool = true;")
-    if api == "control-api":
-        write(f"{path}/src/middleware/actor_assertion.rs", "pub const EXACT_REQUEST_BINDING_REQUIRED: bool = true;")
     default_bind = {"public-api": "0.0.0.0:8080", "control-api": "0.0.0.0:8081", "submission-api": "0.0.0.0:8082", "identity-provider": "0.0.0.0:8083"}[api]
-    op_module = rust_ident(api)
     write(
         f"{path}/src/app.rs",
         f'''use std::io;
@@ -601,62 +509,6 @@ pub async fn run() -> io::Result<()> {{
     .bind(config.bind)?
     .run()
     .await
-}}
-''',
-    )
-    write(
-        f"{path}/src/routes/mod.rs",
-        f'''use actix_web::{{http::StatusCode, web, HttpRequest, HttpResponse}};
-use gurine_api_contracts::{{{op_module}::OPERATIONS, OperationSpec}};
-use gurine_application::services::{{execute, OperationInput}};
-use uuid::Uuid;
-
-pub fn configure(config: &mut web::ServiceConfig) {{
-    for operation in OPERATIONS {{
-        let resource = web::resource(operation.path).name(operation.id);
-        let operation_copy = *operation;
-        let resource = match operation.method {{
-            "GET" => resource.route(web::get().to(move |request, body| handle(operation_copy, request, body))),
-            "POST" => resource.route(web::post().to(move |request, body| handle(operation_copy, request, body))),
-            "PUT" => resource.route(web::put().to(move |request, body| handle(operation_copy, request, body))),
-            "PATCH" => resource.route(web::patch().to(move |request, body| handle(operation_copy, request, body))),
-            "DELETE" => resource.route(web::delete().to(move |request, body| handle(operation_copy, request, body))),
-            _ => resource,
-        }};
-        config.service(resource);
-    }}
-}}
-
-async fn handle(operation: OperationSpec, request: HttpRequest, body: web::Bytes) -> HttpResponse {{
-    let request_id = request
-        .headers()
-        .get("x-request-id")
-        .and_then(|value| value.to_str().ok())
-        .map(ToOwned::to_owned)
-        .unwrap_or_else(|| Uuid::new_v4().to_string());
-    let input = OperationInput {{
-        request_id: &request_id,
-        method: request.method().as_str(),
-        path_and_query: request.uri().path_and_query().map_or(request.path(), |value| value.as_str()),
-        content_type: request.headers().get("content-type").and_then(|value| value.to_str().ok()),
-        idempotency_key: request.headers().get("idempotency-key").and_then(|value| value.to_str().ok()),
-        body: &body,
-    }};
-    match execute(&operation, &input) {{
-        Ok(output) => {{
-            let status = StatusCode::from_u16(output.status).unwrap_or(StatusCode::OK);
-            HttpResponse::build(status)
-                .insert_header(("content-type", output.media_type))
-                .insert_header(("x-request-id", request_id))
-                .json(output.body)
-        }}
-        Err(error) => HttpResponse::BadRequest().json(serde_json::json!({{
-            "code": "INVALID_REQUEST",
-            "title": error.to_string(),
-            "status": 400,
-            "requestId": request_id,
-        }})),
-    }}
 }}
 ''',
     )

@@ -8,86 +8,11 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
         return Ok(false);
     };
     if job.job_type == "COMMUNICATION_PROVIDER_PREFLIGHT" {
-        if let Err(error) = process_provider_preflight_job(state, &job).await {
-            let (error_code, error_detail, retryable) = match error {
-                WorkerError::Delivery => (
-                    "COMMUNICATION_PROVIDER_PREFLIGHT_FAILED",
-                    "provider preflight egress failed",
-                    true,
-                ),
-                WorkerError::Database => (
-                    "COMMUNICATION_PROVIDER_PREFLIGHT_PERSISTENCE_FAILED",
-                    "provider preflight state could not be loaded",
-                    true,
-                ),
-                WorkerError::Contract => (
-                    "COMMUNICATION_PROVIDER_PREFLIGHT_CONTRACT_INVALID",
-                    "provider preflight job or receipt contract is invalid",
-                    false,
-                ),
-                WorkerError::Cryptography | WorkerError::Initialization => (
-                    "COMMUNICATION_PROVIDER_PREFLIGHT_INTERNAL_INVALID",
-                    "provider preflight worker state is invalid",
-                    false,
-                ),
-                WorkerError::Job(error) => return Err(WorkerError::Job(error)),
-            };
-            state
-                .worker
-                .fail(
-                    &state.pool,
-                    &job,
-                    error_code,
-                    error_detail,
-                    retryable,
-                    serde_json::json!({
-                        "providerConnectionTestId": job.payload.get("providerConnectionTestId"),
-                        "providerConfigId": job.payload.get("providerConfigId"),
-                    }),
-                )
-                .await
-                .map_err(WorkerError::Job)?;
-        }
+        process_provider_preflight_claim(state, &job).await?;
         return Ok(true);
     }
     if job.job_type == "COMMUNICATION_PROVIDER_POLL" {
-        if let Err(error) = process_provider_poll_job(state, &job).await {
-            let (error_code, error_detail, retryable) = match error {
-                WorkerError::Delivery => (
-                    "COMMUNICATION_PROVIDER_POLL_FAILED",
-                    "authenticated provider poll failed",
-                    true,
-                ),
-                WorkerError::Database => (
-                    "COMMUNICATION_PROVIDER_POLL_PERSISTENCE_FAILED",
-                    "provider poll receipt persistence failed",
-                    true,
-                ),
-                WorkerError::Contract => (
-                    "COMMUNICATION_PROVIDER_POLL_CONTRACT_INVALID",
-                    "provider poll job or receipt contract is invalid",
-                    false,
-                ),
-                WorkerError::Cryptography | WorkerError::Initialization => (
-                    "COMMUNICATION_PROVIDER_POLL_INTERNAL_INVALID",
-                    "provider poll worker state is invalid",
-                    false,
-                ),
-                WorkerError::Job(error) => return Err(WorkerError::Job(error)),
-            };
-            state
-                .worker
-                .fail(
-                    &state.pool,
-                    &job,
-                    error_code,
-                    error_detail,
-                    retryable,
-                    serde_json::json!({"deliveryId":job.payload.get("deliveryId")}),
-                )
-                .await
-                .map_err(WorkerError::Job)?;
-        }
+        process_provider_poll_claim(state, &job).await?;
         return Ok(true);
     }
     let event = match event_from_job(&job) {
@@ -148,6 +73,97 @@ async fn process_one(state: &State) -> Result<bool, WorkerError> {
     };
     deliver_prepared(state, &job, &event, delivery_id, message).await?;
     Ok(true)
+}
+
+async fn process_provider_preflight_claim(
+    state: &State,
+    job: &ClaimedJob,
+) -> Result<(), WorkerError> {
+    if let Err(error) = process_provider_preflight_job(state, job).await {
+        let (error_code, error_detail, retryable) = match error {
+            WorkerError::Delivery => (
+                "COMMUNICATION_PROVIDER_PREFLIGHT_FAILED",
+                "provider preflight egress failed",
+                true,
+            ),
+            WorkerError::Database => (
+                "COMMUNICATION_PROVIDER_PREFLIGHT_PERSISTENCE_FAILED",
+                "provider preflight state could not be loaded",
+                true,
+            ),
+            WorkerError::Contract => (
+                "COMMUNICATION_PROVIDER_PREFLIGHT_CONTRACT_INVALID",
+                "provider preflight job or receipt contract is invalid",
+                false,
+            ),
+            WorkerError::Cryptography | WorkerError::Initialization => (
+                "COMMUNICATION_PROVIDER_PREFLIGHT_INTERNAL_INVALID",
+                "provider preflight worker state is invalid",
+                false,
+            ),
+            WorkerError::Job(error) => return Err(WorkerError::Job(error)),
+        };
+        state
+            .worker
+            .fail(
+                &state.pool,
+                job,
+                error_code,
+                error_detail,
+                retryable,
+                serde_json::json!({
+                    "providerConnectionTestId": job.payload.get("providerConnectionTestId"),
+                    "providerConfigId": job.payload.get("providerConfigId"),
+                }),
+            )
+            .await
+            .map_err(WorkerError::Job)?;
+    }
+    Ok(())
+}
+
+async fn process_provider_poll_claim(
+    state: &State,
+    job: &ClaimedJob,
+) -> Result<(), WorkerError> {
+    if let Err(error) = process_provider_poll_job(state, job).await {
+        let (error_code, error_detail, retryable) = match error {
+            WorkerError::Delivery => (
+                "COMMUNICATION_PROVIDER_POLL_FAILED",
+                "authenticated provider poll failed",
+                true,
+            ),
+            WorkerError::Database => (
+                "COMMUNICATION_PROVIDER_POLL_PERSISTENCE_FAILED",
+                "provider poll receipt persistence failed",
+                true,
+            ),
+            WorkerError::Contract => (
+                "COMMUNICATION_PROVIDER_POLL_CONTRACT_INVALID",
+                "provider poll job or receipt contract is invalid",
+                false,
+            ),
+            WorkerError::Cryptography | WorkerError::Initialization => (
+                "COMMUNICATION_PROVIDER_POLL_INTERNAL_INVALID",
+                "provider poll worker state is invalid",
+                false,
+            ),
+            WorkerError::Job(error) => return Err(WorkerError::Job(error)),
+        };
+        state
+            .worker
+            .fail(
+                &state.pool,
+                job,
+                error_code,
+                error_detail,
+                retryable,
+                serde_json::json!({"deliveryId":job.payload.get("deliveryId")}),
+            )
+            .await
+            .map_err(WorkerError::Job)?;
+    }
+    Ok(())
 }
 
 async fn process_provider_preflight_job(
