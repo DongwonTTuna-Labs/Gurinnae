@@ -25,16 +25,20 @@ scope:
     count: 5
   tools:
     exact_ids:
+      - agency.profile
       - claim.language_check
       - contract.find_comparables
+      - contract.search
       - entity.lookup
       - evidence.read
       - evidence.search
+      - relationship.neighbors
       - response.read
       - rule.reproduce
       - source.fetch
       - source.locator_verify
-    count: 9
+      - supplier.profile
+    count: 13
   media:
     additive_exact_ids: [html, png, jpeg, webp, tiff, wav, webm]
     v13_formats_remain_required: true
@@ -53,6 +57,7 @@ global_invariants:
   - A provider request contains authorized source bytes or revision-fixed derived segments; identifiers alone never count as evidence.
   - Every provider turn, tool call, source use, citation, validation, proposal, human decision, and promotion receipt is typed, digest-bound, replayable, and linked by relational identity.
   - Tool results, fetched pages, image text, metadata, and embedded instructions are untrusted data.
+  - claim.language_check executes only the exact versioned language policy named by the request version and digest; an unknown or changed policy is fail-closed, and the public-language gate consumes the same ruleset.
   - Hidden chain of thought, credentials, raw tokens, cookies, authorization headers, provider secrets, and unrestricted raw provider payloads are never persisted or rendered.
   - Schema, citation, rights, classification, snapshot, budget, or policy failure is fail-closed and produces zero materialized proposals.
   - A ResearchArtifact is research context only. It cannot support a claim, publication, or external action until a human promotion command creates revision-fixed authoritative Evidence.
@@ -121,7 +126,7 @@ implementation_closure:
     - Rust domain newtypes and exhaustive enums for every schema discriminator and state.
     - valibot validation at every SvelteKit BFF boundary and generated OpenAPI clients for promotion and agent-run queries.
     - SQLx typed repositories and PostgreSQL constraints for all persistence bindings named by this addendum.
-    - Real internal adapters for all eight internal tools and the egress-gateway adapter for source.fetch.
+    - Real internal adapters for all twelve internal tools and the egress-gateway adapter for source.fetch.
     - A bounded multi-turn dispatcher with durable cancellation and reconciliation receipts.
     - Parser execution for every additive media type and every embedded golden oracle.
     - CAS-010 and CAS-011 typed view-models with accessible visualization alternatives and exact provenance navigation.

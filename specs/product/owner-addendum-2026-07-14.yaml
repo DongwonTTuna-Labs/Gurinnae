@@ -378,11 +378,11 @@ decision_variants:
 
 database_delta:
   base_migrations: 24
-  additive_migrations: 8
-  final_migrations: 32
+  additive_migrations: 10
+  final_migrations: 34
   base_active_tables: 107
-  additive_table_count: 133
-  final_active_tables: 240
+  additive_table_count: 136
+  final_active_tables: 243
   migrations:
     - 0025_evidence_snapshots_and_search.sql
     - 0026_agent_action_approval.sql
@@ -392,6 +392,8 @@ database_delta:
     - 0030_v13_submission_session_hardening.sql
     - 0032_relay_model_catalog.sql
     - 0033_provider_control_execution.sql
+    - 0035_r6b_agent_runtime_activation.sql
+    - 0036_r6b_pipeline_activation.sql
   additive_tables:
     - raw.evidence_segments
     - raw.research_artifacts
@@ -526,6 +528,9 @@ database_delta:
     - ops.relay_model_catalog_sync_runs
     - ops.provider_model_upgrade_attempts
     - ops.provider_model_upgrade_receipts
+    - ops.signal_investigation_policies
+    - ops.signal_investigation_initiation_receipts
+    - core.dataset_snapshot_strong_identifier_facts
   renamed_tables:
     - from: ops.email_deliveries
       to: ops.outbound_deliveries
@@ -607,6 +612,7 @@ event_delta:
     - action.decision_withdrawn.v1
     - action.review_vacancy_filled.v1
     - research.artifact_promoted.v1
+    - normalization.run_completed.v1
     - agent.run_control_changed.v2
     - commercial.control_execution_recorded.v1
     - commercial.control_external_effect_acknowledged.v1

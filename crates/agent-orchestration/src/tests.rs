@@ -139,8 +139,29 @@ impl ToolAdapter for WrongAdapter {
 }
 
 #[test]
-fn all_nine_tools_are_closed_and_cross_response_is_rejected() {
-    assert_eq!(ToolId::ALL.len(), 9);
+fn all_thirteen_tools_are_closed_and_cross_response_is_rejected() {
+    assert_eq!(ToolId::ALL.len(), 13);
+    assert_eq!(
+        ToolId::ALL
+            .iter()
+            .map(|tool| tool.wire_name())
+            .collect::<std::collections::BTreeSet<_>>(),
+        std::collections::BTreeSet::from([
+            "agency.profile",
+            "claim.language_check",
+            "contract.find_comparables",
+            "contract.search",
+            "entity.lookup",
+            "evidence.read",
+            "evidence.search",
+            "relationship.neighbors",
+            "response.read",
+            "rule.reproduce",
+            "source.fetch",
+            "source.locator_verify",
+            "supplier.profile",
+        ])
+    );
     let mut dispatcher = TypedDispatcher::new();
     dispatcher.register(WrongAdapter);
     let request = ToolRequest::EvidenceRead(EvidenceReadRequest {
@@ -157,6 +178,21 @@ fn all_nine_tools_are_closed_and_cross_response_is_rejected() {
             &ToolRequest::ResponseRead(ResponseReadRequest {
                 binding: binding(),
                 response_id: Uuid::new_v4()
+            })
+        ),
+        Err(DispatchError::ToolDenied)
+    );
+    assert_eq!(
+        dispatcher.dispatch(
+            "skeptic",
+            &ToolRequest::ContractSearch(ContractSearchRequest {
+                binding: binding(),
+                entity_kind: ContractEntityKind::Any,
+                entity_id: None,
+                from_date: None,
+                to_date: None,
+                procurement_methods: Vec::new(),
+                limit: 10,
             })
         ),
         Err(DispatchError::ToolDenied)
@@ -351,6 +387,10 @@ fn bounded_runtime_passes_typed_tool_result_to_follow_up_turn() {
             comparables: Vec::new(),
             entities: Vec::new(),
             rules: Vec::new(),
+            contracts: Vec::new(),
+            supplier_profiles: Vec::new(),
+            agency_profiles: Vec::new(),
+            relationships: Vec::new(),
             source_artifacts: Vec::new(),
         }),
     };
@@ -394,7 +434,7 @@ fn worst_case_reservation_blocks_before_provider_dispatch() {
 }
 
 #[test]
-fn snapshot_dispatcher_registers_all_nine_typed_adapters() {
+fn snapshot_dispatcher_registers_all_thirteen_typed_adapters() {
     let binding = binding();
     let evidence_id = Uuid::new_v4();
     let dispatcher = TypedDispatcher::from_snapshot(ToolSnapshot {
@@ -410,6 +450,10 @@ fn snapshot_dispatcher_registers_all_nine_typed_adapters() {
         comparables: Vec::new(),
         entities: Vec::new(),
         rules: Vec::new(),
+        contracts: Vec::new(),
+        supplier_profiles: Vec::new(),
+        agency_profiles: Vec::new(),
+        relationships: Vec::new(),
         source_artifacts: Vec::new(),
     });
     let request = ToolRequest::EvidenceRead(EvidenceReadRequest {

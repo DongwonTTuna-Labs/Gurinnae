@@ -3,6 +3,8 @@ use std::collections::BTreeSet;
 use serde_json::{Value, json};
 use thiserror::Error;
 
+use crate::prompt_isolation::contains_untrusted_text;
+
 const ABSTAIN_SUMMARY: &str = "정책 또는 검증 조건을 충족하지 못해 결론을 생성하지 않았습니다.";
 
 #[derive(Debug, Error)]
@@ -115,18 +117,9 @@ fn inspect_tools(
             denied = true;
             continue;
         }
-        let request_text = serde_json::to_string(&call["request"])
-            .map_err(|_| PolicyError::InvalidInput)?
-            .to_lowercase();
-        if [
-            "ignore previous",
-            "system prompt",
-            "reveal secret",
-            "override policy",
-        ]
-        .iter()
-        .any(|token| request_text.contains(token))
-        {
+        let request_text =
+            serde_json::to_string(&call["request"]).map_err(|_| PolicyError::InvalidInput)?;
+        if contains_untrusted_text(&request_text) {
             return Ok(ToolInspection {
                 cost,
                 citation_pairs: pairs,
@@ -186,15 +179,23 @@ fn blocked(status: &str, reason: &str) -> Value {
 fn allowed_tools(agent_id: &str) -> Option<&'static [&'static str]> {
     match agent_id {
         "market-researcher" => Some(&[
+            "agency.profile",
+            "contract.search",
             "evidence.search",
+            "relationship.neighbors",
             "source.fetch",
+            "supplier.profile",
             "contract.find_comparables",
         ]),
         "investigator" => Some(&[
+            "agency.profile",
+            "contract.search",
             "evidence.search",
             "evidence.read",
             "contract.find_comparables",
             "entity.lookup",
+            "relationship.neighbors",
+            "supplier.profile",
         ]),
         "skeptic" => Some(&["evidence.search", "evidence.read", "rule.reproduce"]),
         "claim-drafter" => Some(&["evidence.read", "response.read", "claim.language_check"]),

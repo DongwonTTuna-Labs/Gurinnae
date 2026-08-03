@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.id FROM core.parser_runs r JOIN raw.source_documents d ON d.id=r.source_document_id WHERE r.source_document_id=$1 AND r.parser_name='connector-structured-json' AND r.parser_version='connector-structured-json-v1' AND r.status='SUCCEEDED' AND r.input_content_sha256=d.content_sha256 AND r.extraction_schema_version='v1' AND r.output_record_count=$2 AND r.output_digest=$3 AND r.extraction_receipt_sha256=$4 ORDER BY r.created_at,r.id LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.parser_runs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2755d3a80e2ee958734a7a6e028e27bcb3f2bfe314ae190a120db25dcc8c20d8"
+}

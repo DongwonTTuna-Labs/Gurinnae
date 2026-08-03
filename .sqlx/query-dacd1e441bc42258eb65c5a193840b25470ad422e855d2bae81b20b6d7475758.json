@@ -1,0 +1,78 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT i.supplier_id,i.scheme,btrim(i.value_hash) AS \"value_hmac!\", i.verification_status,i.proof_state, btrim(i.identifier_fact_digest) AS \"identifier_fact_digest!\" FROM core.supplier_identifiers i WHERE i.value_hash=$1 AND i.verification_status='VERIFIED' AND i.proof_state='PROVEN_V1' AND i.identifier_fact_digest IS NOT NULL AND i.scheme IN ('KOREAN_BUSINESS_NUMBER','OPEN_DART_CORP_CODE','KONEPS_PARTY_KEY') ORDER BY i.supplier_id,i.scheme,i.identifier_fact_digest",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "supplier_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.supplier_identifiers",
+            "name": "supplier_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "scheme",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.supplier_identifiers",
+            "name": "scheme"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "value_hmac!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "verification_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.supplier_identifiers",
+            "name": "verification_status"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "proof_state",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.supplier_identifiers",
+            "name": "proof_state"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "identifier_fact_digest!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "dacd1e441bc42258eb65c5a193840b25470ad422e855d2bae81b20b6d7475758"
+}

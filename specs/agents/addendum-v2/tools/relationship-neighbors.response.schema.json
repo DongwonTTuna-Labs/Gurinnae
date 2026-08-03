@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/relationship-neighbors-response.json",
+  "title": "RelationshipNeighborsResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "supplierId", "neighbors"],
+  "properties": {
+    "schemaVersion": { "const": "relationship.neighbors.response.v2" },
+    "supplierId": { "type": "string", "format": "uuid" },
+    "neighbors": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "neighborSupplierId",
+          "relationshipKind",
+          "assertionId",
+          "assertionRevision",
+          "assertionDigest",
+          "validFrom",
+          "validTo",
+          "evidenceSetDigest",
+          "subjectSourceUseId",
+          "objectSourceUseId"
+        ],
+        "properties": {
+          "neighborSupplierId": { "type": "string", "format": "uuid" },
+          "relationshipKind": {
+            "enum": [
+              "OWNERSHIP",
+              "BENEFICIAL_OWNERSHIP",
+              "CONTROL",
+              "MANAGEMENT_ROLE",
+              "LEGAL_REPRESENTATIVE",
+              "CONTRACTUAL_RELATIONSHIP"
+            ]
+          },
+          "assertionId": { "type": "string", "format": "uuid" },
+          "assertionRevision": { "type": "integer", "minimum": 1 },
+          "assertionDigest": { "$ref": "#/$defs/sha256" },
+          "validFrom": {
+            "oneOf": [
+              { "type": "string", "format": "date" },
+              { "type": "null" }
+            ]
+          },
+          "validTo": {
+            "oneOf": [
+              { "type": "string", "format": "date" },
+              { "type": "null" }
+            ]
+          },
+          "evidenceSetDigest": { "$ref": "#/$defs/sha256" },
+          "subjectSourceUseId": { "type": "string", "format": "uuid" },
+          "objectSourceUseId": { "type": "string", "format": "uuid" }
+        }
+      }
+    }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-invariants": [
+    "Rows are sorted by relationshipKind, neighborSupplierId, assertionId, and assertionRevision.",
+    "A row is returned only when verificationStatus is VERIFIED and publicUseStatus is APPROVED.",
+    "Both source-use identifiers bind exact snapshot members and no natural-person field is present."
+  ]
+}

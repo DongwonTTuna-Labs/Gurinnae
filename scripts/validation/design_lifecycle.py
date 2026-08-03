@@ -121,17 +121,24 @@ def validate_lifecycle(
     for event_type, contract in event_contracts["events"].items():
         payload_schema = contract["payload_schema"]
         payload_required = contract["payload_required"]
+        payload_optional = contract.get("payload_optional", [])
         payload_properties = payload_schema.get("properties", {})
         consumer_bindings = contract.get("consumer_bindings", [])
         result.require(
             contract["category"] in {"DOMAIN", "INTEGRATION"}
             and len(payload_required) == len(set(payload_required))
             and nonempty(payload_required)
+            and isinstance(payload_optional, list)
+            and all(isinstance(field, str) and nonempty(field) for field in payload_optional)
+            and len(payload_optional) == len(set(payload_optional))
+            and set(payload_required).isdisjoint(payload_optional)
             and payload_schema.get("type") == "object"
             and payload_schema.get("additionalProperties") is False
             and payload_schema.get("required") == payload_required
-            and set(payload_properties) == set(payload_required)
+            and set(payload_properties)
+            == set(payload_required) | set(payload_optional)
             and "eventId" not in payload_required
+            and "eventId" not in payload_optional
             and "eventId" not in payload_properties,
             f"{event_type}: event category or payload field set is invalid",
         )

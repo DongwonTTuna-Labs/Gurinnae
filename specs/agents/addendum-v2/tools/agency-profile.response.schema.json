@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/agency-profile-response.json",
+  "title": "AgencyProfileResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profile"],
+  "properties": {
+    "schemaVersion": { "const": "agency.profile.response.v2" },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agencyId",
+        "canonicalName",
+        "agencyType",
+        "jurisdiction",
+        "active",
+        "contractCount",
+        "snapshotMemberId",
+        "snapshotMemberDigest",
+        "sourceUseId"
+      ],
+      "properties": {
+        "agencyId": { "type": "string", "format": "uuid" },
+        "canonicalName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "agencyType": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "jurisdiction": { "type": ["string", "null"], "maxLength": 300 },
+        "active": { "type": "boolean" },
+        "contractCount": { "type": "integer", "minimum": 0 },
+        "snapshotMemberId": { "type": "string", "format": "uuid" },
+        "snapshotMemberDigest": { "$ref": "#/$defs/sha256" },
+        "sourceUseId": { "type": "string", "format": "uuid" }
+      }
+    }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-invariants": [
+    "The profile is read from the exact immutable AGENCY snapshot member."
+  ]
+}

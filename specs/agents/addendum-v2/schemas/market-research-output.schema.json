@@ -196,8 +196,12 @@
       "properties": {
         "toolId": {
           "enum": [
+            "agency.profile",
+            "contract.search",
             "evidence.search",
+            "relationship.neighbors",
             "source.fetch",
+            "supplier.profile",
             "contract.find_comparables"
           ]
         },

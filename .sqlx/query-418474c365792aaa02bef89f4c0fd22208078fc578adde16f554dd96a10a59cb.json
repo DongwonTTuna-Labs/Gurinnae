@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM ops.agent_source_uses source_use\n               WHERE source_use.agent_run_id=$1\n                 AND source_use.dataset_snapshot_id IS NOT NULL\n                 AND source_use.dataset_snapshot_id<>$2)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "418474c365792aaa02bef89f4c0fd22208078fc578adde16f554dd96a10a59cb"
+}

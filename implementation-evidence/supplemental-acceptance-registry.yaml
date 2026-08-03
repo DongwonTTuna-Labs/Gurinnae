@@ -62,8 +62,8 @@
     },
     {
       "path": "Makefile",
-      "sha256": "86ff8eaf8a89c89d2a432394b1af9d29c503968f8338f5c60a228b6e52c17214",
-      "size": 8396
+      "sha256": "0d93614c7726ec944ace1c997a03f200615ce2e575470c0a4cd3f9e05a485c33",
+      "size": 8475
     },
     {
       "path": "crates/test-support/Cargo.toml",
@@ -196,7 +196,7 @@
     },
     {
       "path": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
-      "sha256": "cf03068c47bbc0bde493958bdf80d2fff54730caefeefe89b1b7d69d53ea97ff",
+      "sha256": "3c7187ef17a44831b94a362a0b9361607ffe361e17b93548f9aa4799e6a98d13",
       "size": 11218
     }
   ],

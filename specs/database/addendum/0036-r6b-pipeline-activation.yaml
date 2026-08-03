@@ -1,0 +1,445 @@
+schema_version: 1
+proposal_version: 2026-07-31.0036-r6b-pipeline-activation.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0036_r6b_pipeline_activation.sql
+  exact_relations:
+    - core.dataset_snapshot_strong_identifier_facts
+  exact_new_relation_count: 1
+  relation_delta: 1
+  altered_relations:
+    - core.dataset_snapshot_members
+    - core.dataset_snapshots
+    - core.supplier_identifiers
+    - core.supplier_identity_candidates
+    - ops.agent_run_control_receipts
+    - ops.signal_investigation_policies
+    - ops.signal_investigation_initiation_receipts
+    - ops.event_types
+  purpose: activate the R6b detection-dataset, proven supplier-identity proposal, AgentRunV2 worker, normalization completion, finite retention, and effective event-schema seams without changing historical migrations
+  relation_count_rule: the ALTERs, event registry writes, triggers, grants, revokes, and owner routines add no relkind-r relation beyond scope.exact_relations
+
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0035 remain byte-preserved; every correction is forward-only in 0036
+  legacy_read_rule: legacy rows remain readable but do not acquire synthetic v2 proof, supplier verification, normalized lineage, or retention authority
+  exact_new_write_rule: new writes are accepted only through the fixed SECURITY DEFINER boundaries and complete digest, lease, fence, canonical-shape, and source-lineage checks below
+  fail_closed_rule: missing, ambiguous, stale, null-shaped, additional-key, mismatched-digest, or unauthorized input produces no state transition
+
+existing_relation_changes:
+  - relation: core.dataset_snapshot_members
+    changes:
+      - replace dataset_snapshot_members_source_shape_ck so a DETECTION_DATASET CONTRACT and its scoped AGENT_CASE copy may use exactly one DIRECT_SOURCE SOURCE_DOCUMENT without normalization lineage
+      - every other normalized object retains the 0025 normalization-run requirement; the AGENT_CASE exception is limited to a copied CONTRACT with the preserved direct-source lineage
+      - add dataset_snapshot_members_strong_fact_binding_uq over id, dataset_snapshot_id, member_digest, object_type, object_id, object_version, and object_content_sha256
+  - relation: core.dataset_snapshots
+    changes:
+      - add nullable strong_identifier_fact_count and strong_identifier_fact_set_sha256 as an all-or-none pair
+      - when present, count is nonnegative and set digest is lowercase SHA-256
+      - the builder binds both values into detectionDatasetAuthority before final snapshot hashing
+  - relation: core.supplier_identifiers
+    changes:
+      - add supplier_identifiers_proven_fact_binding_uq over the complete immutable PROVEN_V1 supplier, scheme, HMAC, candidate, locator, evidence, and fact tuple
+      - LEGACY_UNPROVEN rows remain ineligible for the frozen strong-fact foreign key
+  - relation: core.supplier_identity_candidates
+    add_columns:
+      proposal_state: {type: text, nullable: true}
+      proposed_supplier_id: {type: uuid, nullable: true}
+      matched_identifier_id: {type: uuid, nullable: true}
+      matched_identifier_fact_digest: {type: 'char(64)', nullable: true}
+      match_score_basis_points: {type: integer, nullable: true}
+      suggested_at: {type: timestamptz, nullable: true}
+      proposal_request_sha256: {type: 'char(64)', nullable: true}
+    changes:
+      - legacy candidate rows have all seven proposal fields null
+      - a new proposal is exactly PENDING_HUMAN, revision one, CANDIDATE, unresolved, complete in all six dependent fields, score 10000, and digest bound
+      - proposed supplier and matched identifier use RESTRICT foreign keys and proposal_request_sha256 is unique
+  - relation: ops.agent_run_control_receipts
+    add_columns:
+      actor_type: {type: text, nullable: true}
+      actor_id_text: {type: text, nullable: true}
+      worker_job_id: {type: uuid, nullable: true}
+      worker_lease_token: {type: uuid, nullable: true}
+      worker_fencing_token: {type: bigint, nullable: true}
+    changes:
+      - preserve legacy UUID actor rows while admitting only SERVICE, ANALYSIS_WORKER, analysis-worker for the automated v2 path
+      - bind automated receipts to one worker job, lease token, and positive fencing token
+      - add exact run and audit foreign keys and replace actor and safe-retry checks without weakening cancellation closure
+  - relation: ops.signal_investigation_policies
+    add_columns:
+      retention_schedule_id: {type: uuid, nullable: false, staged_install: nullable then exact backfill then not null}
+      retention_record_class: {type: text, nullable: false, value: AGENT_RUNTIME_POLICY}
+      retention_schedule_digest: {type: 'char(64)', nullable: false}
+    changes:
+      - bind every existing and new row to exactly one effective, nonexpired, finite approved record-class schedule
+      - reject caller-supplied retention bindings and bind new rows in a BEFORE INSERT trigger
+  - relation: ops.signal_investigation_initiation_receipts
+    add_columns:
+      retention_schedule_id: {type: uuid, nullable: false, staged_install: nullable then exact backfill then not null}
+      retention_record_class: {type: text, nullable: false, value: AGENT_RUNTIME_INITIATION_RECEIPT}
+      retention_schedule_digest: {type: 'char(64)', nullable: false}
+    changes:
+      - bind every existing and new row to exactly one effective, nonexpired, finite approved record-class schedule
+      - reject caller-supplied retention bindings and bind new rows in a BEFORE INSERT trigger
+  - relation: ops.event_types
+    changes:
+      - forward-override active attachment.scan_completed.v1 so attachment_kind is required and closed to CORRECTION or RESPONSE
+      - forward-override active agent.run_control_changed.v2 so the SERVICE analysis-worker actor branch is schema-valid while legacy UUID actor rows remain distinguishable
+      - insert exactly one active normalization.run_completed.v1 registry row with its closed nullable success-or-failure payload shape
+      - both forward overrides execute before any new routine can emit their events; normalization registration executes before its completion routine
+
+tables:
+  core.dataset_snapshot_strong_identifier_facts:
+    owner_role: gurine_migrator
+    owning_component: services/analysis-worker::analysis_detection_snapshot_build
+    domain: DetectionDatasetStrongIdentifierFact
+    repository: services/analysis-worker::analysis_rule_evaluation_v2
+    mutation_class: IMMUTABLE_SNAPSHOT_CHILD
+    columns:
+      id: {type: uuid, nullable: false, default: gen_random_uuid()}
+      dataset_snapshot_id: {type: uuid, nullable: false}
+      snapshot_member_id: {type: uuid, nullable: false}
+      snapshot_member_digest: {type: 'char(64)', nullable: false}
+      snapshot_member_object_type: {type: text, nullable: false}
+      snapshot_member_object_version: {type: bigint, nullable: false}
+      snapshot_member_object_content_sha256: {type: 'char(64)', nullable: false}
+      contract_id: {type: uuid, nullable: false}
+      fact_ordinal: {type: bigint, nullable: false}
+      supplier_id: {type: uuid, nullable: false}
+      identifier_id: {type: uuid, nullable: false}
+      scheme: {type: text, nullable: false}
+      value_hash: {type: 'char(64)', nullable: false}
+      verification_status: {type: text, nullable: false}
+      proof_state: {type: text, nullable: false}
+      candidate_id: {type: uuid, nullable: false}
+      candidate_revision: {type: bigint, nullable: false}
+      candidate_digest: {type: 'char(64)', nullable: false}
+      source_locator_digest: {type: 'char(64)', nullable: false}
+      verification_evidence_digest: {type: 'char(64)', nullable: false}
+      identifier_fact_digest: {type: 'char(64)', nullable: false}
+      fact_canonical: {type: bytea, nullable: false}
+      fact_digest: {type: 'char(64)', nullable: false}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key:
+      name: dataset_snapshot_strong_identifier_facts_pk
+      columns: [id]
+    uniques:
+      - name: dataset_snapshot_strong_identifier_facts_ordinal_uq
+        columns: [dataset_snapshot_id, fact_ordinal]
+      - name: dataset_snapshot_strong_identifier_facts_digest_uq
+        columns: [dataset_snapshot_id, fact_digest]
+      - name: dataset_snapshot_strong_identifier_facts_identifier_uq
+        columns: [dataset_snapshot_id, identifier_id]
+    foreign_keys:
+      - name: dataset_snapshot_strong_identifier_facts_member_fk
+        columns: [snapshot_member_id, dataset_snapshot_id, snapshot_member_digest, snapshot_member_object_type, contract_id, snapshot_member_object_version, snapshot_member_object_content_sha256]
+        references: core.dataset_snapshot_members(id,dataset_snapshot_id,member_digest,object_type,object_id,object_version,object_content_sha256)
+        on_delete: RESTRICT
+      - name: dataset_snapshot_strong_identifier_facts_identifier_fk
+        columns: [identifier_id, supplier_id, scheme, value_hash, identifier_fact_digest, candidate_id, candidate_revision, candidate_digest, source_locator_digest, verification_evidence_digest]
+        references: core.supplier_identifiers(id,supplier_id,scheme,value_hash,identifier_fact_digest,candidate_id,candidate_revision,candidate_digest,source_locator_digest,verification_evidence_digest)
+        on_delete: RESTRICT
+    checks:
+      - name: dataset_snapshot_strong_identifier_facts_scheme_ck
+        expression: >-
+          snapshot_member_object_type = 'CONTRACT'
+          AND scheme IN ('KOREAN_BUSINESS_NUMBER','OPEN_DART_CORP_CODE','KONEPS_PARTY_KEY')
+      - name: dataset_snapshot_strong_identifier_facts_proof_ck
+        expression: verification_status = 'VERIFIED' AND proof_state = 'PROVEN_V1'
+      - name: dataset_snapshot_strong_identifier_facts_scalar_ck
+        expression: >-
+          fact_ordinal >= 0
+          AND snapshot_member_object_version > 0
+          AND candidate_revision > 0
+          AND value_hash ~ '^[0-9a-f]{64}$'
+          AND snapshot_member_digest ~ '^[0-9a-f]{64}$'
+          AND snapshot_member_object_content_sha256 ~ '^[0-9a-f]{64}$'
+          AND candidate_digest ~ '^[0-9a-f]{64}$'
+          AND source_locator_digest ~ '^[0-9a-f]{64}$'
+          AND verification_evidence_digest ~ '^[0-9a-f]{64}$'
+          AND identifier_fact_digest ~ '^[0-9a-f]{64}$'
+          AND fact_digest ~ '^[0-9a-f]{64}$'
+      - name: dataset_snapshot_strong_identifier_facts_canonical_ck
+        expression: >-
+          convert_from(fact_canonical,'UTF8')::jsonb IS NOT NULL
+          AND fact_digest = encode(extensions.digest(fact_canonical,'sha256'),'hex')
+    triggers:
+      - name: dataset_snapshot_strong_identifier_facts_immutable_guard
+        timing: BEFORE
+        events: [UPDATE, DELETE]
+        function: ops.reject_mutation()
+    grants:
+      gurine_analysis_worker: [SELECT]
+      gurine_control_api: [SELECT]
+      gurine_auditor: [SELECT]
+      write_rule: builder owner routine only; runtime roles have no INSERT, UPDATE, or DELETE
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal snapshot child exposed only to fixed internal roles
+    retention:
+      parent: core.dataset_snapshots
+      rule: retain and remove only with the complete immutable snapshot graph and its legal holds
+      data_classification: no raw identifier is stored; the HMAC and supplier, contract, candidate, and evidence graph identifiers remain linkable protected data
+      legal_hold_key: dataset_snapshot_id
+      backup_behavior: restore after supplier proof and snapshot-member parents and before v2 rule evaluation
+    repository_roundtrip:
+      write: core.build_detection_dataset_snapshot_v1 freezes each eligible identifier once at its deterministic fact ordinal
+      read: analysis-worker loads facts only by the exact READY snapshot id and validates the stored count and set digest
+      assertions:
+        - only CONTRACT members and the three canonical strong schemes are admitted
+        - only VERIFIED PROVEN_V1 identifiers with complete immutable proof lineage are admitted
+        - canonical bytes hash to fact_digest
+        - ordinals, digests, and identifier membership are unique per snapshot
+        - update, delete, and direct runtime insert are denied
+
+canonical_preimages:
+  D1_detection_dataset:
+    job_payload:
+      schema_version: detection-snapshot-build-job.v1
+      exact_key_count: 5
+      exact_keys: [schemaVersion, ruleVersionId, ruleId, contractIdentitySetSha256, contractCount]
+      dedupe_key: detection-snapshot-build:<ruleVersionId>:<contractIdentitySetSha256>
+    contract_identity:
+      item_exact_keys: [id, version, updatedAt]
+      ordering: contract id text ascending, version ascending, updated_at ascending
+      eligibility: core.contracts inner-joined to its actual raw.source_documents row
+      canonicalization: ops.canonical_jsonb_v1 over the ordered JSON array
+      digest: lowercase SHA-256 of the canonical bytes
+    producer:
+      schema_version: r6b-detection-snapshot-producer.v1
+      exact_keys: [schemaVersion, ruleId, ruleVersionId, ruleCodeSha256, ruleConfigurationSha256]
+      configuration_digest: lowercase SHA-256 of ops.canonical_jsonb_v1(rule_versions.configuration)
+    selection:
+      exact_key_count: 7
+      exact_keys: [snapshotKind, ruleId, ruleVersionId, ruleCodeSha256, ruleConfigurationSha256, cohortSpec, selectionPolicyVersion]
+      cohort_item_keys: [objectType, objectId, objectVersion]
+      ordering: contract id text ascending, version ascending, updated_at ascending
+      policy_version: detection-contract-identity-v1
+    contract_content:
+      schema_version: contract-snapshot.v1
+      exact_keys: [schemaVersion, objectType, objectId, objectVersion, objectSchemaVersion, externalContractId, title, agencyId, supplierId, status, currency, procurementMethod, signedAt, startAt, endAt, originalAmount, currentAmount, vatBasis, bundleStatus, normalizationVersion, sourceDocumentId, sourceRecordLocator, updatedAt, amendmentCount, scopeChangeExplained]
+      object_content_digest: lowercase SHA-256 of the canonical contract content before objectContentSha256 is appended
+      payload_digest: lowercase SHA-256 after appending objectContentSha256 and canonicalizing
+    source:
+      schema_version: dataset-snapshot-member-source.v1
+      exact_keys: [schemaVersion, snapshotId, snapshotMemberId, memberOrdinal, sourceOrdinal, lineageKind, sourceKind, sourceDocumentId, sourceAssetId, sourceAssetRevision, sourceContentSha256]
+      exact_shape: one DIRECT_SOURCE SOURCE_DOCUMENT at source ordinal zero using contracts.source_document_id and the locked source document asset revision and content digest
+      source_set_digest: lowercase SHA-256 of the canonical one-element ordered source-digest array
+    member:
+      schema_version: dataset-snapshot-member-binding.v1
+      exact_keys: [schemaVersion, snapshotId, snapshotMemberId, snapshotKind, producerGeneration, snapshotContractVersion, memberOrdinal, objectType, objectId, objectVersion, objectSchemaVersion, objectContentSha256, payloadSha256, normalizationRunId, normalizationVersion, normalizationSha256, evidenceSegmentId, responseId, sourceCount, sourceSetSha256]
+      ordering: contract id text ascending, version ascending, updated_at ascending
+      member_set_digest: lowercase SHA-256 of the canonical ordered member-digest array
+    strong_identifier_fact:
+      schema_version: dataset-snapshot-strong-identifier-fact.v1
+      exact_keys: [schemaVersion, snapshotId, snapshotMemberId, snapshotMemberDigest, snapshotMemberObjectType, snapshotMemberObjectVersion, snapshotMemberObjectContentSha256, contractId, factOrdinal, supplierId, identifierId, scheme, valueHash, verificationStatus, proofState, candidateId, candidateRevision, candidateDigest, sourceLocatorDigest, verificationEvidenceDigest, identifierFactDigest]
+      eligibility: three canonical schemes, VERIFIED, PROVEN_V1, complete nonnull proof lineage, and a frozen CONTRACT member whose supplierId equals the identifier supplier
+      duplicate_contract_rule: for one identifier linked to multiple contracts, retain the first contract by contract UUID text, object version, then member ordinal
+      ordering: supplier UUID text, scheme, value HMAC, identifier UUID text
+      fact_set_digest: lowercase SHA-256 of the canonical ordered fact-digest array; the empty set is the digest of canonical []
+    normalization_authority:
+      schema_version: dataset-normalization-versions.v1
+      entries: []
+      authority_schema_version: r6b-detection-dataset-authority.v1
+      authority_exact_keys: [schemaVersion, contractIdentitySetSha256, contractCount, strongIdentifierFactCount, strongIdentifierFactSetSha256]
+      binding: the final normalizationSetSha256 commits both the contract identity set and frozen strong-fact set before finalization
+    manifest:
+      schema_version: dataset-snapshot-manifest.v1
+      exact_key_count: 10
+      exact_keys: [schemaVersion, snapshotId, snapshotKind, producerDigest, producerGeneration, selectionSha256, sourceWatermarkSha256, normalizationSetSha256, memberCount, memberSetSha256]
+      snapshot_digest: lowercase SHA-256 of the canonical manifest bytes
+    replay:
+      key: producer_job_id
+      cardinality: zero or one; more than one fails closed
+      ordering: an existing READY snapshot is validated and returned before live contract identity is re-read
+      exact_checks: [snapshot kind, producer key and digest, seven-key selection, normalization authority, strong-fact count and set digest, member count, CONTRACT member direct-source shape, manifest digest]
+      immutable_result: a later contract title or version change does not rewrite or invalidate the exact completed job replay
+  D2_agent_run_v2:
+    service_actor: {actor_type: SERVICE, actor_kind: ANALYSIS_WORKER, actor_id_text: analysis-worker}
+    worker_fence: [worker_job_id, worker_lease_token, positive worker_fencing_token, unexpired RUNNING analysis-worker AGENT_RUN job]
+    claim_proof_exact_keys: [schemaVersion, runId, jobId, leaseTokenSha256, fencingToken, inputSnapshotSha256, occurredAt]
+    ambiguity_proof:
+      schema_version: agent-run-outcome-ambiguity-proof.v1
+      exact_key_count: 5
+      exact_keys: [schemaVersion, runId, reasonCode, detailSha256, redacted]
+      scalar_rule: every scalar has its exact JSON type, detailSha256 is lowercase SHA-256, and redacted is true
+    failure_proof:
+      schema_version: agent-run-definitive-failure-proof.v1
+      exact_key_count: 5
+      exact_keys: [schemaVersion, runId, failureCode, detailSha256, redacted]
+      scalar_rule: every scalar has its exact JSON type, failureCode equals the typed argument, detailSha256 is lowercase SHA-256, and redacted is true
+    terminal_shape:
+      FAILED: provider, model, output payload, and output digest are null; actual cost is zero; typed failure code plus canonical proof and digest are mandatory
+      SUCCEEDED_OR_BLOCKED: provider and model are nonempty, output payload and exact digest are mandatory, and failure fields are null
+    receipt_chain: every claim, ambiguity, safe retry, or terminal receipt binds the prior receipt, status and control state, proof, reason, budget disposition, worker fence, audit, and agent.run_control_changed.v2 outbox event
+    replay: exact stored receipt, run payload, provider, model, failure, cost, job, lease, and fence equality returns the stored identity; every mismatch is SQLSTATE 40001
+  D3_supplier_identity_proposal:
+    request_schema_version: supplier-identity-candidate-proposal.request.v1
+    request_exact_key_count: 10
+    request_exact_keys: [schemaVersion, sourceDocumentId, parsedRecordId, recordIndex, normalizedName, observedScheme, observedValueHmac, targetSupplierId, identifierFactDigest, scoreBasisPoints]
+    request_digest: lowercase SHA-256 of the complete canonical request
+    proposal_schema_version: supplier-identity-candidate-proposal.v1
+    proposal_exact_keys: [schemaVersion, candidateId, candidateRevision, sourceDocumentId, parsedRecordId, sourceRecordDigest, recordIndex, mappingVersion, normalizedName, nameSourceLocatorDigest, proposedSupplierId, identifierId, identifierScheme, identifierValueHmac, identifierFactDigest, scoreBasisPoints, suggestedAt, proposalState]
+    exact_evidence: source document plus exact parsed record and record index, parser version, normalized-name locator digest, and one matching VERIFIED PROVEN_V1 strong identifier
+    disposition: PENDING_HUMAN
+    score_basis_points: 10000
+    forbidden_effects: [automatic supplier creation, supplier identifier creation, canonical supplier binding, merge decision creation, identity resolution]
+    replay: the exact source and parser identity plus proposal request digest returns the same candidate; a mismatch is SQLSTATE 40001
+  D5_normalization_completion:
+    terminal_receipt_schema_version: normalization-run-terminal-receipt.v1
+    success_shape: output type, id, positive version, payload digest, positive provenance count, and provenance-set digest are present; error fields are null
+    failure_shape: output and provenance-set fields are null, provenance count is zero, error code matches ^[A-Z][A-Z0-9_]{0,127}$, and only the error detail digest is stored
+    raw_error_detail_storage: forbidden
+    worker_fence: exact ingest-worker RUNNING job, lease token, fencing token, run job binding, and unexpired lease
+    terminal_binding: database completion timestamp, canonical receipt digest, SERVICE ingest-worker audit including exact outcome and failure reason, and normalization.run_completed.v1 outbox payload
+    replay: run terminal fields, receipt, audit actor/action/object/capability/outcome/reason/request/details, and outbox payload/time must all be byte-equal
+
+retention_contract:
+  finite_schedule_predicate:
+    - record_class equals the relation-specific class
+    - effective_at is at or before row created_at
+    - review_expires_at is after row created_at
+    - active_duration_seconds and backup_duration_seconds are both nonnull
+    - terminal_action is one of DELETE, ANONYMIZE, or CRYPTO_ERASE
+  cardinality: exactly one; missing and ambiguous schedule sets fail closed before backfill or insert
+  relation_classes:
+    ops.signal_investigation_policies: AGENT_RUNTIME_POLICY
+    ops.signal_investigation_initiation_receipts: AGENT_RUNTIME_INITIATION_RECEIPT
+  override_rule: callers must supply none of the three retention binding columns
+  backfill_rule: immutable guards are disabled only around the two migration-owned updates, restored before NOT NULL, and never disabled by runtime
+  privacy_and_linkability:
+    direct_pii: neither relation stores a direct natural-person identifier in its canonical runtime payload
+    graph_linkable: policy created_by and initiation signal, case, target, run, job, audit, and policy references remain linkable operational-audit data
+  forbidden_terminal_actions: [PRESERVE_PUBLIC_REVISION, arbitrary PRESERVE tokens, indefinite null durations]
+
+event_registry_contract:
+  generated_forward_override:
+    generator_sha256: 93824345f26e8bf5af2836169e2f1752a5c533cf01a17eb31c66c6d0cd059434
+    exact_update_cardinality: 2
+    events_in_order: [attachment.scan_completed.v1, agent.run_control_changed.v2]
+    ordering_rule: generated forward overrides are the first executable migration phase and no later manual overwrite is permitted
+  new_event:
+    event_type: normalization.run_completed.v1
+    category: DOMAIN
+    schema_version: 1
+    active: true
+    exact_insert_cardinality: 1
+    required_payload_keys: [normalizationRunId, state, aggregateVersion, outputObjectType, outputObjectId, outputObjectVersion, outputPayloadSha256, fieldProvenanceCount, fieldProvenanceSetSha256, errorCode, errorSha256, terminalReceiptSha256, auditEventId, occurredAt]
+
+owner_routines:
+  ops.bind_r6b_runtime_retention_schedule_v1:
+    signature: ops.bind_r6b_runtime_retention_schedule_v1() RETURNS trigger
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, pg_temp], public_execute: false, runtime_execute: []}
+    effect: reject caller retention overrides and bind one new policy or initiation receipt to the unique current finite schedule for its exact class
+  core.record_supplier_identity_candidate_v1:
+    signature: core.record_supplier_identity_candidate_v1(jsonb) RETURNS TABLE(candidate_id uuid,merge_decision_id uuid,disposition text,recorded boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, raw, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_ingest_worker]}
+    effect: validate the exact ten-key request and proven identifier lineage, then insert or exactly replay one PENDING_HUMAN candidate without automatic merge or canonical binding
+  ops.append_analysis_run_control_receipt_v2:
+    signature: ops.append_analysis_run_control_receipt_v2(uuid,bigint,text,text,text,text,text,char(64),text,char(64),text,char(64),uuid,char(64),uuid,uuid,bigint,timestamptz) RETURNS TABLE(receipt_id uuid,receipt_sha256 char(64),audit_event_id uuid,outbox_event_id uuid)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, extensions, pg_temp], public_execute: false, runtime_execute: []}
+    effect: internal fixed-path helper that appends one canonical SERVICE analysis-worker run-control receipt, audit, and v2 outbox event under an exact prior chain and worker fence
+  ops.claim_agent_run_worker_v2:
+    signature: ops.claim_agent_run_worker_v2(uuid,uuid,uuid,bigint) RETURNS TABLE(case_id uuid,agent_type text,objective text,evidence_scope_ids jsonb,input_snapshot_hash char(64),max_cost numeric,version bigint,run_contract_version smallint,dataset_snapshot_id uuid,claim_receipt_id uuid,claim_receipt_sha256 char(64))
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: claim or exactly replay one queued AgentRunV2 only under its AGENT_CASE snapshot and current analysis-worker job lease and fence
+  ops.mark_agent_run_reconciliation_required_worker_v2:
+    signature: ops.mark_agent_run_reconciliation_required_worker_v2(uuid,bigint,uuid,char(64),uuid,uuid,bigint,jsonb,char(64)) RETURNS TABLE(version bigint,reconciliation_receipt_id uuid,reconciliation_receipt_sha256 char(64),replayed boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: transition one ACTIVE run to RECONCILIATION_REQUIRED only under exact prior receipt, worker fence, and typed canonical ambiguity proof; exact replay is read-only
+  ops.complete_agent_run_worker_v2:
+    signature: ops.complete_agent_run_worker_v2(uuid,bigint,uuid,char(64),uuid,uuid,bigint,text,text,text,jsonb,char(64),text,jsonb,char(64),numeric) RETURNS TABLE(version bigint,terminal_receipt_id uuid,terminal_receipt_sha256 char(64),replayed boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: terminalize one ACTIVE run through a closed success, blocked, or definitive typed failure branch under exact receipt, cost, lease, and fencing proof; exact replay is read-only
+  core.complete_normalization_run:
+    signature: core.complete_normalization_run(uuid,bigint,uuid,uuid,bigint,text,text,uuid,bigint,char(64),bigint,char(64),text,char(64)) RETURNS TABLE(normalization_run_id uuid,state text,version bigint,terminal_receipt_sha256 char(64),audit_event_id uuid,outbox_event_id uuid,replayed boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_ingest_worker]}
+    effect: complete one RUNNING normalization under its exact ingest-worker job lease and fence, storing a canonical success or typed redacted failure receipt, audit, and event; exact replay verifies all three artifacts
+  core.current_detection_contract_identity_v1:
+    signature: core.current_detection_contract_identity_v1() RETURNS TABLE(contract_count bigint,contract_identity_list jsonb,contract_identity_canonical bytea,contract_identity_set_sha256 char(64))
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, raw, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: []}
+    effect: lock current contracts and source documents, then return the deterministic ordered contract identity list, canonical bytes, count, and digest
+  ops.enqueue_due_detection_snapshot_builds_v1:
+    signature: ops.enqueue_due_detection_snapshot_builds_v1(bigint) RETURNS bigint
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_scheduler]}
+    effect: for a limit from 1 through 10000, paginate active rules after excluding every already-deduped identity job and enqueue at most the requested number of exact five-key DETECTION_SNAPSHOT_BUILD jobs
+  core.build_detection_dataset_snapshot_v1:
+    signature: core.build_detection_dataset_snapshot_v1(uuid,uuid,bigint) RETURNS TABLE(snapshot_id uuid,snapshot_sha256 char(64),member_count bigint,strong_identifier_fact_count bigint,strong_identifier_fact_set_sha256 char(64),replayed boolean)
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, raw, core, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: under the exact DETECTION_SNAPSHOT_BUILD job lease and fence, exactly replay a completed immutable snapshot or build and finalize one CONTRACT-only direct-source snapshot with frozen proven identifier facts
+
+acl_changes:
+  public:
+    relations: no privilege on core.dataset_snapshot_strong_identifier_facts
+    routines: EXECUTE revoked on all ten routines
+  gurine_analysis_worker:
+    relation_grants:
+      core.dataset_snapshot_strong_identifier_facts: [SELECT]
+    routine_execute: [ops.claim_agent_run_worker_v2, ops.mark_agent_run_reconciliation_required_worker_v2, ops.complete_agent_run_worker_v2, core.build_detection_dataset_snapshot_v1]
+    final_revokes:
+      relation_dml: [core.dataset_snapshots, core.dataset_snapshot_members, core.dataset_snapshot_member_sources]
+      routine_execute: [core.begin_dataset_snapshot, core.finalize_dataset_snapshot]
+    closure: the worker cannot write snapshot headers or children directly and cannot invoke legacy begin or finalize; the single builder owns the complete path
+  gurine_ingest_worker:
+    routine_execute: [core.record_supplier_identity_candidate_v1, core.complete_normalization_run]
+  gurine_scheduler:
+    routine_execute: [ops.enqueue_due_detection_snapshot_builds_v1]
+  gurine_control_api:
+    relation_grants:
+      core.dataset_snapshot_strong_identifier_facts: [SELECT]
+  gurine_auditor:
+    relation_grants:
+      core.dataset_snapshot_strong_identifier_facts: [SELECT]
+  gurine_migrator_internal_support:
+    select: [core.contracts, core.contract_changes, core.rule_versions, raw.source_documents, core.suppliers]
+    update_id_only: [core.contracts, core.rule_versions, raw.source_documents, core.supplier_identifiers]
+    reason: NOLOGIN owner-function execution needs only the exact trigger-checked columns used by fixed paths
+
+decision_dispositions:
+  D1: ACTIVE_REAL_DETECTION_DATASET_SCHEDULER_AND_BUILDER
+  D2: ACTIVE_AGENT_RUN_V2_RECEIPT_FENCE_AND_RECONCILIATION
+  D3: ACTIVE_PENDING_HUMAN_STRONG_IDENTITY_PROPOSAL_ONLY
+  D4: ACTIVE_IMMUTABLE_SNAPSHOT_BOUND_STRONG_FACTS
+  D5: ACTIVE_TYPED_NORMALIZATION_TERMINAL_RECEIPT
+  D6: ACTIVE_STRICT_FINITE_RELATION_CLASS_RETENTION_BINDING
+  D7: LEGACY_UNPROVEN_EXCLUDED_FROM_STRONG_INPUTS
+  D8: ACTIVE_FORWARD_ONLY_EFFECTIVE_EVENT_SCHEMAS
+
+activation_phases:
+  - order: 1
+    name: active-event-forward-overrides
+    closure: update exactly two active event schemas before dependent routines exist
+  - order: 2
+    name: dataset-and-strong-fact-physical-closure
+    closure: add the sole new relation plus member, snapshot, and proven-identifier binding constraints
+  - order: 3
+    name: supplier-candidate-and-agent-receipt-alterations
+    closure: add only the PENDING_HUMAN proposal and SERVICE analysis-worker fence shapes
+  - order: 4
+    name: retention-columns-and-normalization-event-registration
+    closure: stage both retention triples and insert exactly one normalization event registry row
+  - order: 5
+    name: retention-authority-backfill-and-insert-guards
+    closure: prove exact finite schedule cardinality, backfill, enforce NOT NULL, and install both BEFORE INSERT guards
+  - order: 6
+    name: pipeline-owner-routines-and-exact-runtime-acls
+    closure: install D2, D3, and D5 fixed-path routines with owner, search_path, PUBLIC revokes, and role-specific EXECUTE
+  - order: 7
+    name: detection-dataset-builder-and-scheduler-activation
+    closure: install the current identity preimage, starvation-free scheduler, and single D1 builder
+  - order: 8
+    name: analysis-worker-direct-write-and-legacy-entrypoint-revocation
+    closure: remove direct snapshot child DML and legacy begin/finalize EXECUTE after the builder grant exists
+
+verification_obligations:
+  - PostgreSQL 18.4 applies migrations 0001 through 0036 in order on an empty database
+  - generated event forward overrides match exact source bytes and cardinality
+  - D1 proves zero and nonzero strong-fact sets, direct-source membership, immutable replay after live contract change, ACL closure, and scheduler pagination progress
+  - D2 proves success, definitive failure, ambiguity, exact replay, stale fence, JSON null rejection, SQLx online typing, and redaction
+  - D3 proves exact ten-key proposal, exact replay, JSON null rejection, no merge, and no supplier or identifier write
+  - D5 proves success, typed failure, exact replay, arbitrary error message rejection, JSON null rejection, and raw detail absence
+  - D6 proves missing, ambiguous, current finite, caller-override, and nonfinite schedule rejection for both relations
+  - D7 proves LEGACY_UNPROVEN never enters rule materialization or frozen strong facts
+  - all runtime roles lack unlisted relation DML and routine EXECUTE
+
+OPEN_QUESTIONS: []

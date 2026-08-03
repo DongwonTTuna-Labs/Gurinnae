@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/contract-search-request.json",
+  "title": "ContractSearchRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputSnapshotId",
+    "inputSnapshotSha256",
+    "entityKind",
+    "entityId",
+    "fromDate",
+    "toDate",
+    "procurementMethods",
+    "limit"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "contract.search.request.v2" },
+    "runId": { "type": "string", "format": "uuid" },
+    "inputSnapshotId": { "type": "string", "format": "uuid" },
+    "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "entityKind": { "enum": ["ANY", "AGENCY", "SUPPLIER"] },
+    "entityId": {
+      "oneOf": [{ "type": "string", "format": "uuid" }, { "type": "null" }]
+    },
+    "fromDate": {
+      "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+    },
+    "toDate": {
+      "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+    },
+    "procurementMethods": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 20,
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+    },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 50 }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "entityKind": { "const": "ANY" } },
+        "required": ["entityKind"]
+      },
+      "then": { "properties": { "entityId": { "type": "null" } } },
+      "else": {
+        "properties": { "entityId": { "type": "string", "format": "uuid" } }
+      }
+    }
+  ],
+  "x-gurinnae-invariants": [
+    "The adapter reads only CONTRACT members of the exact READY input snapshot.",
+    "Results are ordered by signedAt descending nulls last and contractId ascending.",
+    "The tool is read-only and may not widen the snapshot or query mutable corpus rows."
+  ]
+}

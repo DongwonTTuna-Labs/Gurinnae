@@ -11,7 +11,7 @@ def validate(root: Path, result: Validation) -> None:
     connectors = load_yaml(root / 'specs/connectors/connector-catalog.yaml')
     detection = load_yaml(root / 'specs/detection/rule-evaluation-catalog.yaml')
     result.require(len(agents['agents']) == 5, f'expected 5 agents, found {len(agents["agents"])}')
-    result.require(len(tools['tools']) == 9, f'expected 9 agent tools, found {len(tools["tools"])}')
+    result.require(len(tools['tools']) == 13, f'expected 13 agent tools, found {len(tools["tools"])}')
     for agent in agents['agents']:
         directory = root / 'specs/agents' / agent['id']
         for name in ['prompt.md', 'input.schema.json', 'output.schema.json', 'evals.yaml']:

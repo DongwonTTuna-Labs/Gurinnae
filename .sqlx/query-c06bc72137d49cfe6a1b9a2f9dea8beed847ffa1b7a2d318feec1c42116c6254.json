@@ -1,0 +1,341 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.provider_turn_id,t.agent_run_id,t.prior_transcript_sha256,t.input_snapshot_sha256,t.provider_config_id,\n                t.provider_mode,t.provider_candidate_id,t.model_id,t.model_configuration_sha256,\n                t.routing_policy_version,t.routing_decision_sha256,t.prompt_id,t.prompt_version,t.prompt_sha256,\n                t.output_schema_id,t.output_schema_version,t.output_schema_sha256,t.classification,\n                t.model_use_rights_sha256,t.budget_reservation_key_sha256,t.dispatch_key_sha256,t.request_sha256,\n                t.request_redacted,t.turn_sequence,t.attempt_sequence,t.dispatched_at,r.dataset_snapshot_id\n           FROM ops.agent_provider_turns t\n           JOIN ops.agent_runs r ON r.id=t.agent_run_id\n          WHERE t.provider_turn_id=$1 AND t.dispatch_key_sha256=CAST($2 AS char(64))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "provider_turn_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "provider_turn_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "agent_run_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "agent_run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "prior_transcript_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "prior_transcript_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "input_snapshot_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "input_snapshot_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "provider_config_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "provider_config_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "provider_mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "provider_mode"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "provider_candidate_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "provider_candidate_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "model_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "model_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "model_configuration_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "model_configuration_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "routing_policy_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "routing_policy_version"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "routing_decision_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "routing_decision_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "prompt_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "prompt_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "prompt_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "prompt_version"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "prompt_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "prompt_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "output_schema_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "output_schema_id"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "output_schema_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "output_schema_version"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "output_schema_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "output_schema_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "classification",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "classification"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "model_use_rights_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "model_use_rights_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "budget_reservation_key_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "budget_reservation_key_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "dispatch_key_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "dispatch_key_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "request_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "request_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "request_redacted",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "request_redacted"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "turn_sequence",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "turn_sequence"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "attempt_sequence",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "attempt_sequence"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "dispatched_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "dispatched_at"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "dataset_snapshot_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_runs",
+            "name": "dataset_snapshot_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "c06bc72137d49cfe6a1b9a2f9dea8beed847ffa1b7a2d318feec1c42116c6254"
+}

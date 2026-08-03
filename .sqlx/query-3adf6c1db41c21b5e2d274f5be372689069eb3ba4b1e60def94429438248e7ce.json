@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT source_use.object_id,source_use.source_use_id\n           FROM ops.agent_source_uses source_use\n           LEFT JOIN core.dataset_snapshot_members member\n             ON member.id=source_use.snapshot_member_id AND member.dataset_snapshot_id=source_use.dataset_snapshot_id\n            AND member.member_digest=source_use.snapshot_member_digest\n           LEFT JOIN core.dataset_snapshot_member_sources member_source\n             ON member_source.id=source_use.snapshot_member_source_id AND member_source.dataset_snapshot_id=member.dataset_snapshot_id\n            AND member_source.snapshot_member_id=member.id\n            AND member_source.snapshot_member_digest=member.member_digest\n          WHERE source_use.agent_run_id=$1 AND source_use.object_type='CONTRACT'\n            AND source_use.object_id IS NOT NULL\n            AND (NOT $3 OR (\n              source_use.dataset_snapshot_id=$2 AND source_use.source_kind='DATASET_MEMBER'\n              AND member.object_type='CONTRACT' AND member.object_id=source_use.object_id\n              AND member.object_version=source_use.object_version\n              AND member.object_content_sha256=source_use.object_content_sha256\n              AND member_source.source_digest=source_use.snapshot_member_source_digest\n            ))\n          ORDER BY source_use.object_id,source_use.source_use_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "object_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "source_use_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "source_use_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "3adf6c1db41c21b5e2d274f5be372689069eb3ba4b1e60def94429438248e7ce"
+}

@@ -416,12 +416,14 @@ async fn update_multimodal_source(
     result: &crate::multimodal::MultimodalExtractionResult,
     source_status: &str,
 ) -> Result<(), Failure> {
+    let flags = multimodal_prompt_injection_flags(result);
     let changed = sqlx::query!(
-        "UPDATE raw.source_documents SET status=$2::core.source_document_status,parser_name=$3,parser_version=$4,schema_version='multimodal-extraction-result.v2',prompt_injection_flags='[]'::jsonb,quarantine_reason=$5 WHERE id=$1 AND status='FETCHED'",
+        "UPDATE raw.source_documents SET status=$2::core.source_document_status,parser_name=$3,parser_version=$4,schema_version='multimodal-extraction-result.v2',prompt_injection_flags=$5,quarantine_reason=$6 WHERE id=$1 AND status='FETCHED'",
         document.id,
         source_status as _,
         &result.parser_id,
         &result.parser_version,
+        &flags,
         result.rejection_code.as_deref(),
     )
     .execute(tx)

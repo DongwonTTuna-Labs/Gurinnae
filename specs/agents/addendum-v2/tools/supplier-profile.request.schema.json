@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/supplier-profile-request.json",
+  "title": "SupplierProfileRequestV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "inputSnapshotId",
+    "inputSnapshotSha256",
+    "supplierId"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "supplier.profile.request.v2" },
+    "runId": { "type": "string", "format": "uuid" },
+    "inputSnapshotId": { "type": "string", "format": "uuid" },
+    "inputSnapshotSha256": { "$ref": "#/$defs/sha256" },
+    "supplierId": { "type": "string", "format": "uuid" }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-invariants": [
+    "The supplier must be a member of the exact READY input snapshot."
+  ]
+}

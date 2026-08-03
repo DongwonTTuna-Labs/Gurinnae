@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/contract-search-response.json",
+  "title": "ContractSearchResponseV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "queryDigest", "contracts"],
+  "properties": {
+    "schemaVersion": { "const": "contract.search.response.v2" },
+    "queryDigest": { "$ref": "#/$defs/sha256" },
+    "contracts": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractId",
+          "title",
+          "agencyId",
+          "supplierId",
+          "status",
+          "procurementMethod",
+          "signedAt",
+          "currency",
+          "amount",
+          "snapshotMemberId",
+          "snapshotMemberDigest",
+          "sourceUseId"
+        ],
+        "properties": {
+          "contractId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "agencyId": { "type": "string", "format": "uuid" },
+          "supplierId": {
+            "oneOf": [
+              { "type": "string", "format": "uuid" },
+              { "type": "null" }
+            ]
+          },
+          "status": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "procurementMethod": { "type": ["string", "null"], "maxLength": 300 },
+          "signedAt": {
+            "oneOf": [
+              { "type": "string", "format": "date" },
+              { "type": "null" }
+            ]
+          },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "amount": {
+            "type": ["string", "null"],
+            "pattern": "^[0-9]+(?:\\.[0-9]{1,4})?$"
+          },
+          "snapshotMemberId": { "type": "string", "format": "uuid" },
+          "snapshotMemberDigest": { "$ref": "#/$defs/sha256" },
+          "sourceUseId": { "type": "string", "format": "uuid" }
+        }
+      }
+    }
+  },
+  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+  "x-gurinnae-invariants": [
+    "Every contract and sourceUseId belongs to the exact READY request snapshot and agent run.",
+    "No result is synthesized from mutable corpus state."
+  ]
+}

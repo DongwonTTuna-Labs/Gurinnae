@@ -21,6 +21,8 @@ PHYSICAL_TABLE_PATHS = (
     "specs/database/addendum/0029-funding-disclosure.yaml",
     "specs/database/addendum/0032-relay-model-catalog.yaml",
     "specs/database/addendum/0033-provider-control-execution.yaml",
+    "specs/database/addendum/0035-r6b-agent-runtime-activation.yaml",
+    "specs/database/addendum/0036-r6b-pipeline-activation.yaml",
 )
 
 APPROVAL_BINDING_V1_FIELDS = (

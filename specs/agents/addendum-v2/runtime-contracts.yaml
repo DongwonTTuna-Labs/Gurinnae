@@ -16,15 +16,15 @@ effective_agent_dispatch_registry:
   authority_rule: The effective registry is the set-equal overlay of these five rows on specs/agents/agent-catalog.yaml; a base v1 schema pointer, missing row, additional row, changed allowlist, or unpinned prompt/output schema is a startup and release failure.
   rows:
     - agent_id: market-researcher
-      prompt: {path: specs/agents/market-researcher/prompt.md, sha256: d6cd7cff54efab4febf4673694b585cc74e74498b3820df7844887cca05f2c11, version: 13.0.0+agent-multimodal.1}
+      prompt: {path: specs/agents/market-researcher/prompt.md, sha256: 2faa26aa8a2cb8301ba0397d4e8863a2fa03e0c24c77aeb67ec1fefcc7047357, version: 13.0.0+agent-multimodal.1}
       output: {type: MarketResearchOutputV2, path: specs/agents/addendum-v2/schemas/market-research-output.schema.json, schema_version: market-research-output.v2}
-      allowed_tools: [evidence.search, source.fetch, contract.find_comparables]
+      allowed_tools: [agency.profile, contract.search, evidence.search, relationship.neighbors, source.fetch, supplier.profile, contract.find_comparables]
       allowed_proposal_kinds: [COMPARABLE]
       bounds: {max_provider_turns: 12, max_tool_calls: 11, max_micros_krw: 3000000000}
     - agent_id: investigator
-      prompt: {path: specs/agents/investigator/prompt.md, sha256: e7654bb7abf2cad997118ac649544ea20ef23ba1e7b5598df7ec45d54a9322f6, version: 13.0.0+agent-multimodal.1}
+      prompt: {path: specs/agents/investigator/prompt.md, sha256: 7d75cea8d138e1176f33b16ce602b5e9c5de0e73b279a6a7f08f891f54940869, version: 13.0.0+agent-multimodal.1}
       output: {type: InvestigatorOutputV2, path: specs/agents/addendum-v2/schemas/investigator-output.schema.json, schema_version: investigator-output.v2}
-      allowed_tools: [evidence.search, evidence.read, contract.find_comparables, entity.lookup]
+      allowed_tools: [agency.profile, contract.search, evidence.search, evidence.read, contract.find_comparables, entity.lookup, relationship.neighbors, supplier.profile]
       allowed_proposal_kinds: [HYPOTHESIS, TASK]
       bounds: {max_provider_turns: 16, max_tool_calls: 15, max_micros_krw: 5000000000}
     - agent_id: skeptic
@@ -52,19 +52,31 @@ effective_agent_dispatch_registry:
     - The ordered allowed_proposal_kinds rows are exact; their union is HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION. nextActions never become proposals implicitly.
 
 effective_tool_adapter_registry:
-  set_rule: Exactly nine rows are generated from schema-index.yaml and overlaid on specs/agents/tool-catalog.yaml; adapter ID, component, network mode, schema paths/digests, timeout, max results, and receipt kind are immutable dispatch inputs.
+  set_rule: Exactly thirteen rows are generated from schema-index.yaml and overlaid on specs/agents/tool-catalog.yaml; adapter ID, component, network mode, schema paths/digests, timeout, max results, and receipt kind are immutable dispatch inputs.
   rows:
+    - {tool_id: agency.profile, adapter_id: AgencyProfilePostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: claim.language_check, adapter_id: ClaimLanguageCheckPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: contract.find_comparables, adapter_id: ContractFindComparablesPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: contract.search, adapter_id: ContractSearchPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: entity.lookup, adapter_id: EntityLookupPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: evidence.read, adapter_id: EvidenceReadPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: evidence.search, adapter_id: EvidenceSearchPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: relationship.neighbors, adapter_id: RelationshipNeighborsPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: response.read, adapter_id: ResponseReadPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: rule.reproduce, adapter_id: RuleReproducePostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
     - {tool_id: source.fetch, adapter_id: SourceFetchEgressGatewayAdapterV2, component: analysis-worker, network: EGRESS_GATEWAY_ONLY, transaction: CLAIM_THEN_EXTERNAL_THEN_PERSIST, receipt_kind: EGRESS_GATEWAY}
     - {tool_id: source.locator_verify, adapter_id: SourceLocatorVerifyPostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
+    - {tool_id: supplier.profile, adapter_id: SupplierProfilePostgresAdapterV2, component: analysis-worker, network: INTERNAL_ONLY, transaction: REPEATABLE_READ_READ_ONLY, receipt_kind: POSTGRES_SNAPSHOT}
   internal_receipt_rule: POSTGRES_SNAPSHOT receipts bind transaction snapshot identity hash, exact request/result/schema hashes, row/source-use set hash, claim generation, latency, policy-zero cost, and terminal time; transaction IDs, SQL, inaccessible counts, and raw text are not exposed.
   egress_receipt_rule: source.fetch alone binds the gateway request/decision/fetch receipt, redirect/DNS/policy chain, immutable object write, scan result, ResearchArtifact identity, source-use rows, metered cost, and replay key; an HTTP status or search-provider payload is never a receipt.
+  language_policy_contract:
+    version: ko-public-claims-v1
+    sha256: 6766a275b7d9a3ef0157bbd42d57245f8309f3ec15f2ee6cd515d6397ee4bc4e
+    required_pattern_families: [UNSUPPORTED_CERTAINTY, CRIME_OR_CORRUPTION_ASSERTION, NO_RESPONSE_AS_ADMISSION, CORRUPTION_RANKING]
+    request_binding: claim.language_check requires the exact active language policy version and SHA-256 together with the exact draft UTF-8 SHA-256; an unknown version, digest drift, or text digest mismatch is REQUEST_INVALID before evaluation.
+    provider_schema_injection: Before dispatch, the relay function schema exposes the exact active languagePolicyVersion and languagePolicySha256 as const values; the decoder requires byte-equal values, while the persisted requestSchemaSha256 remains the digest of the authority schema file rather than a provider-selected schema.
+    shared_ruleset: claim.language_check and the public-language publication gate execute the same versioned ruleset; neither may maintain an independent substring list.
+    finding_binding: Findings return deterministic UTF-16 code-unit spans over the exact draft, and the decision digest binds the policy version/digest, complete finding count, truncation, and allowed-citation set.
 
 dispatcher_transaction_protocol:
   claim:
@@ -273,7 +285,7 @@ persistence_requirements:
 
 runtime_acceptance:
   - All five agents complete a valid multi-turn run through their actual allowlisted adapters and exact prompt/output schemas.
-  - Every one of nine tools rejects another tool's request and response shape.
+  - Every one of thirteen tools rejects another tool's request and response shape.
   - Budget at boundary-1 permits a call; boundary denies before dispatch; unknown usage enters reconciliation and never double-reserves.
   - Cancellation before claim is terminal; cancellation after possible dispatch remains requested until authenticated proof.
   - Crash after provider acceptance and before local completion replays the same idempotency key and persists one turn/result/cost.

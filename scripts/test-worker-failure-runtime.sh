@@ -6,6 +6,7 @@ container="gurine-worker-failure-$BASHPID"
 database="gurine_worker_failure"
 work="$(mktemp -d -t gurine-worker-failure-XXXXXX)"
 smtp_pid=""
+supplier_identifier_hmac_key="ZGV2ZWxvcG1lbnQtb25seS1zdXBwbGllci1pZC1rZXk="
 
 cleanup() {
   status=$?
@@ -24,6 +25,7 @@ free_port() {
 run_ingest() {
   GURINE_ENV=test \
   INGEST_DATABASE_URL="postgresql://gurine_ingest_worker:ingest_test@127.0.0.1:${postgres_port}/${database}" \
+  SUPPLIER_IDENTIFIER_HMAC_KEY="$supplier_identifier_hmac_key" \
   OBJECT_STORE_ADAPTER=filesystem OBJECT_STORE_FILESYSTEM_ROOT="$work/ingest-objects" \
   EGRESS_SOURCE_CHANNEL_URL="http://127.0.0.1:${dead_source_port}/source" \
   INGEST_ONCE=true HOSTNAME="ingest-failure-test" target/debug/gurine-ingest-worker

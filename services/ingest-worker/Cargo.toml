@@ -4,10 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+base64.workspace = true
+gurine-identity-resolution = { path = "../../crates/identity-resolution" }
 gurine-jobs = { path = "../../crates/jobs" }
 gurine-object-store = { path = "../../crates/object-store" }
 gurine-persistence-postgres = { path = "../../crates/persistence-postgres" }
 gurine-source-connectors = { path = "../../crates/source-connectors" }
+hmac.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

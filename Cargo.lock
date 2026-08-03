@@ -1668,6 +1668,7 @@ dependencies = [
 name = "gurine-agent-orchestration"
 version = "0.1.0"
 dependencies = [
+ "gurine-publication-policy",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1689,6 +1690,7 @@ dependencies = [
  "gurine-object-store",
  "gurine-observability",
  "gurine-persistence-postgres",
+ "gurine-publication-policy",
  "reqwest 0.12.23",
  "rust_decimal",
  "serde",
@@ -1793,6 +1795,7 @@ dependencies = [
  "gurine-jobs",
  "gurine-object-store",
  "gurine-persistence-postgres",
+ "gurine-publication-policy",
  "html5ever",
  "image",
  "quick-xml 0.41.0",
@@ -1902,10 +1905,13 @@ dependencies = [
 name = "gurine-ingest-worker"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
+ "gurine-identity-resolution",
  "gurine-jobs",
  "gurine-object-store",
  "gurine-persistence-postgres",
  "gurine-source-connectors",
+ "hmac 0.12.1",
  "reqwest 0.12.23",
  "serde_json",
  "sha2 0.10.9",

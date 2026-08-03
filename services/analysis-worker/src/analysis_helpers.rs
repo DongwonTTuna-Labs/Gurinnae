@@ -163,6 +163,59 @@ fn ordered_source_use_bindings(evidence: &Value) -> Result<(Vec<Uuid>, usize), F
     Ok((ids, segments))
 }
 
+/// Collapse the exact model-input source classifications to the only two
+/// classes an external provider may receive.  A forbidden or unknown class
+/// is rejected before a provider turn, budget reservation, or network send is
+/// persisted; it is never relabelled as INTERNAL.
+fn external_provider_classification(evidence: &Value) -> Result<&'static str, Failure> {
+    let rows = evidence
+        .as_array()
+        .ok_or_else(|| Failure::Terminal("AGENT_EVIDENCE_SCOPE_INVALID", "array".into()))?;
+    let mut classification = "PUBLIC";
+    let mut source_count = 0_usize;
+    for row in rows {
+        let uses = row
+            .get("sourceUses")
+            .and_then(Value::as_array)
+            .ok_or_else(|| Failure::Terminal("AGENT_SOURCE_USE_MISSING", "sourceUses".into()))?;
+        for source_use in uses {
+            let source_classification = source_use
+                .get("classification")
+                .and_then(Value::as_str)
+                .ok_or_else(|| {
+                    Failure::Terminal(
+                        "AGENT_SOURCE_CLASSIFICATION_INVALID",
+                        "classification".into(),
+                    )
+                })?;
+            match source_classification {
+                "PUBLIC" => {}
+                "INTERNAL" => classification = "INTERNAL",
+                "RESTRICTED" | "PERSONAL_DATA" | "LEGAL_HOLD" => {
+                    return Err(Failure::Terminal(
+                        "AGENT_SOURCE_CLASSIFICATION_BLOCKED",
+                        source_classification.to_owned(),
+                    ));
+                }
+                _ => {
+                    return Err(Failure::Terminal(
+                        "AGENT_SOURCE_CLASSIFICATION_INVALID",
+                        source_classification.to_owned(),
+                    ));
+                }
+            }
+            source_count += 1;
+        }
+    }
+    if source_count == 0 {
+        return Err(Failure::Terminal(
+            "AGENT_SOURCE_USE_MISSING",
+            "no classified model-input source uses".into(),
+        ));
+    }
+    Ok(classification)
+}
+
 fn validate_source_use_binding(
     source_use: &Value,
 ) -> Result<(Uuid, String, Option<String>), Failure> {
@@ -239,6 +292,7 @@ mod source_use_tests {
                 "parentSourceUseId": "00000000-0000-0000-0000-000000000004",
                 "parentSourceUseSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
                 "selectedContentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "classification": "INTERNAL",
                 "rightsDecision": {
                     "modelEgressRight": rights,
                     "modelUseRight": "ALLOW",
@@ -258,6 +312,41 @@ mod source_use_tests {
         };
         assert_eq!(count, 1);
         assert_eq!(ids, vec![Uuid::from_u128(2)]);
+    }
+
+    #[test]
+    fn external_classification_is_closed_and_conservative() {
+        let mut public = evidence_with_rights("ALLOW");
+        public[0]["sourceUses"][0]["classification"] = json!("PUBLIC");
+        assert!(matches!(
+            external_provider_classification(&public),
+            Ok("PUBLIC")
+        ));
+
+        let mut mixed = public.clone();
+        let mut internal = mixed[0]["sourceUses"][0].clone();
+        internal["sourceUseId"] = json!("00000000-0000-0000-0000-000000000005");
+        internal["classification"] = json!("INTERNAL");
+        if let Some(uses) = mixed[0]["sourceUses"].as_array_mut() {
+            uses.push(internal);
+        }
+        assert!(matches!(
+            external_provider_classification(&mixed),
+            Ok("INTERNAL")
+        ));
+    }
+
+    #[test]
+    fn forbidden_external_classifications_fail_closed() {
+        for classification in ["RESTRICTED", "PERSONAL_DATA", "LEGAL_HOLD"] {
+            let mut evidence = evidence_with_rights("ALLOW");
+            evidence[0]["sourceUses"][0]["classification"] = json!(classification);
+            assert!(matches!(
+                external_provider_classification(&evidence),
+                Err(Failure::Terminal("AGENT_SOURCE_CLASSIFICATION_BLOCKED", detail))
+                    if detail == classification
+            ));
+        }
     }
 
     #[test]

@@ -115,7 +115,10 @@ fn provider_control_delivery_requires_the_logical_consumer_identity() -> Result<
 
     let legacy_job = provider_control_event_job("analysis-worker");
     assert!(provider_control_event_binding(&legacy_job).is_err());
-    assert_eq!(event_delivery_inbox_consumer(&legacy_job), "analysis-worker");
+    assert_eq!(
+        event_delivery_inbox_consumer(&legacy_job),
+        "analysis-worker"
+    );
     Ok(())
 }
 
@@ -257,10 +260,7 @@ fn provider_success_requires_every_actual_proof_digest() -> Result<(), Failure> 
             evidence_sha256: hash('d'),
         },
     };
-    provider_control_success_result(
-        ProviderControlOperationId::TestProviderConnection,
-        proof,
-    )?;
+    provider_control_success_result(ProviderControlOperationId::TestProviderConnection, proof)?;
 
     let missing = RelayConnectionProof {
         gateway_receipt_sha256: String::new(),
@@ -274,11 +274,10 @@ fn provider_success_requires_every_actual_proof_digest() -> Result<(), Failure> 
             evidence_sha256: hash('d'),
         },
     };
-    assert!(provider_control_success_result(
-        ProviderControlOperationId::UpgradeProviderModel,
-        missing,
-    )
-    .is_err());
+    assert!(
+        provider_control_success_result(ProviderControlOperationId::UpgradeProviderModel, missing,)
+            .is_err()
+    );
 
     let inconsistent_usage = RelayConnectionProof {
         gateway_receipt_sha256: hash('a'),
@@ -292,11 +291,13 @@ fn provider_success_requires_every_actual_proof_digest() -> Result<(), Failure> 
             evidence_sha256: hash('d'),
         },
     };
-    assert!(provider_control_success_result(
-        ProviderControlOperationId::TestProviderConnection,
-        inconsistent_usage,
-    )
-    .is_err());
+    assert!(
+        provider_control_success_result(
+            ProviderControlOperationId::TestProviderConnection,
+            inconsistent_usage,
+        )
+        .is_err()
+    );
     Ok(())
 }
 
@@ -315,10 +316,7 @@ fn retryable_execution_becomes_terminal_when_the_job_budget_is_exhausted() {
 
 #[test]
 fn recorded_failure_terminalizes_the_delivery_without_losing_detail() {
-    let retryable = Failure::Retryable(
-        "PROVIDER_UNAVAILABLE",
-        "relay timeout".to_owned(),
-    );
+    let retryable = Failure::Retryable("PROVIDER_UNAVAILABLE", "relay timeout".to_owned());
     assert_eq!(
         provider_control_failure_disposition(&retryable, 1, 8),
         ("PROVIDER_UNAVAILABLE", true),

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM core.rule_evaluations WHERE rule_version_id=$1 AND dataset_snapshot_id=$2 AND evaluation_profile='FULL'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.rule_evaluations",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8666c9bf8abea91a7104ae3aaecd4a923a30b3e94939d1823e0c68d6b98ec3b0"
+}

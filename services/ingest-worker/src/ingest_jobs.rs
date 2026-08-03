@@ -3,10 +3,19 @@ async fn process_claimed(
     store: &Store,
     source_client: &Client,
     source_egress_url: Option<&Url>,
+    supplier_identifier_hmac_key: &[u8],
     job: &ClaimedJob,
 ) -> Result<Value, Failure> {
     if job.job_type == "SOURCE_RUN" {
-        return process_source_run(pool, store, source_client, source_egress_url, job).await;
+        return process_source_run(
+            pool,
+            store,
+            source_client,
+            source_egress_url,
+            supplier_identifier_hmac_key,
+            job,
+        )
+        .await;
     }
     if job.job_type != "EVENT_DELIVERY"
         || job.payload.get("eventType").and_then(Value::as_str) != Some("source.document_parsed.v1")
@@ -210,6 +219,7 @@ async fn process_source_run(
     store: &Store,
     source_client: &Client,
     source_egress_url: Option<&Url>,
+    supplier_identifier_hmac_key: &[u8],
     job: &ClaimedJob,
 ) -> Result<Value, Failure> {
     let run_id = uuid(&job.payload, "sourceRunId")
@@ -256,6 +266,9 @@ async fn process_source_run(
         base_url.clone(),
         configuration.clone(),
         catalog,
+        job.id,
+        job.fence.fencing_token,
+        supplier_identifier_hmac_key,
     )
     .await?;
     finish_source_run(
@@ -288,6 +301,9 @@ async fn collect_source_run(
     base_url: Option<String>,
     configuration: Value,
     catalog: Vec<&'static ConnectorOperation>,
+    job_id: Uuid,
+    job_fencing_token: i64,
+    supplier_identifier_hmac_key: &[u8],
 ) -> Result<(i64, i64, Vec<Value>), Failure> {
     let mut seen = 0_i64;
     let mut changed = 0_i64;
@@ -319,6 +335,9 @@ async fn collect_source_run(
                 requested_to,
                 operation,
                 &target,
+                job_id,
+                job_fencing_token,
+                supplier_identifier_hmac_key,
             )
             .await?;
             seen += 1;
@@ -354,6 +373,9 @@ async fn process_source_target(
     requested_to: Option<time::Date>,
     operation: &'static ConnectorOperation,
     target: &ManifestDocument,
+    job_id: Uuid,
+    job_fencing_token: i64,
+    supplier_identifier_hmac_key: &[u8],
 ) -> Result<SourceTargetResult, Failure> {
     let target_url = with_operation_parameters(
         &target.target,
@@ -386,6 +408,9 @@ async fn process_source_target(
         &response,
         &digest,
         &object_key,
+        job_id,
+        job_fencing_token,
+        supplier_identifier_hmac_key,
     )
     .await?;
     Ok(SourceTargetResult {
@@ -422,92 +447,7 @@ fn validate_source_payload(
     Ok(None)
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "target persistence binds source, response, parser, and object-store provenance"
-)]
-async fn persist_source_target(
-    pool: &PgPool,
-    run_id: Uuid,
-    source_id: &str,
-    mode: &str,
-    operation: &'static ConnectorOperation,
-    target: &ManifestDocument,
-    target_url: &str,
-    response: &SourceResponse,
-    digest: &str,
-    object_key: &str,
-) -> Result<bool, Failure> {
-    let mut tx = pool.begin().await.map_err(database)?;
-    let fetch_id = persist_source_fetch(
-        &mut tx, run_id, source_id, target_url, operation, response, digest, object_key,
-    )
-    .await?;
-    let inserted = if mode == "DRY_RUN" {
-        None
-    } else {
-        let document_id: Uuid = sqlx::query_scalar!(
-            "SELECT (raw.insert_source_document_revision($1,$2,$3,$4,$5,clock_timestamp(),$6::timestamptz,$7,$8,$9,$10,$11::core.source_document_status,$12,$13,$14,$15,$16,$17)).id",
-            source_id,
-            format!("{}:{}", operation.id, target.external_id),
-            &target.revision,
-            target_url,
-            fetch_id,
-            target.published_at.as_deref() as _,
-            if response.content_type.is_empty() {
-                target.content_type.as_str()
-            } else {
-                response.content_type.as_str()
-            },
-            digest,
-            i64::try_from(response.bytes.len()).unwrap_or(i64::MAX),
-            object_key,
-            "FETCHED" as _,
-            Option::<&str>::None,
-            Option::<&str>::None,
-            Option::<&str>::None,
-            json!([]),
-            Option::<&str>::None,
-            json!({"connectorOperationId":operation.id,"sourceRunId":run_id}),
-        )
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(database)?
-        .ok_or_else(|| {
-            Failure::Retryable(
-                "DATABASE_UNAVAILABLE",
-                "insert_source_document_revision unexpectedly returned null".to_owned(),
-            )
-        })?;
-        Some(document_id)
-    };
-    if let Some(document_id) = inserted {
-        if response.content_type == "application/json" {
-            persist_structured_json(&mut tx, source_id, operation, document_id, &response.bytes)
-                .await?;
-        }
-        sqlx::query!(
-            "SELECT ops.enqueue_outbox('source_document',$1,1,'source.document_stored.v1',$2,clock_timestamp())",
-            document_id.to_string(),
-            json!({"content_sha256":digest,"source_document_id":document_id,"source_id":source_id}),
-        )
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(database)?;
-    }
-    sqlx::query!(
-        "INSERT INTO ops.source_checkpoints(source_id,partition_key,cursor_payload,remote_high_watermark,last_success_at)          VALUES($1,$2,$3,$4,clock_timestamp())          ON CONFLICT(source_id,partition_key) DO UPDATE SET cursor_payload=EXCLUDED.cursor_payload,            remote_high_watermark=EXCLUDED.remote_high_watermark,last_success_at=EXCLUDED.last_success_at,            version=ops.source_checkpoints.version+1,updated_at=clock_timestamp()",
-        source_id,
-        operation.id,
-        json!({"operationId":operation.id,"digest":digest,"sourceRunId":run_id}),
-        digest,
-    )
-    .execute(&mut *tx)
-    .await
-    .map_err(database)?;
-    tx.commit().await.map_err(database)?;
-    Ok(inserted.is_some())
-}
+include!("ingest_source_target_persistence.rs");
 
 #[expect(
     clippy::too_many_arguments,

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ds.id FROM ops.agent_runs r\n              JOIN core.dataset_snapshots ds\n                ON ds.id=r.dataset_snapshot_id\n               AND ds.snapshot_sha256=r.input_snapshot_hash\n             WHERE r.id=$1 AND r.run_contract_version=2\n               AND ds.id=$2 AND ds.snapshot_sha256=CAST($3 AS char(64))\n               AND ds.snapshot_kind='AGENT_CASE' AND ds.state='READY'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "39877dc24e4f84ef71c192f4110940498a8cb3b8d891f7bc86252c222e36224b"
+}

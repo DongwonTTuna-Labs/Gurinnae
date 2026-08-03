@@ -7,6 +7,8 @@ from pathlib import Path
 
 from pglast import parse_sql
 
+from verify_migrations import EXPECTED_ADDITIVE_MIGRATIONS
+
 from .loaders import load_json, load_yaml
 from .models import Validation
 
@@ -165,9 +167,8 @@ def validate(root: Path, result: Validation) -> None:
     result.require(privilege['status'] == 'FINAL', 'privilege matrix must be FINAL')
     result.require(matrix['operation_count'] == 217 and len(matrix['operations']) == 217, 'operation-table matrix must cover 217 operations')
     runtime_additive_migrations = [
-        path
-        for path in sorted((root / 'db/migrations').glob('*.sql'))
-        if path.name[:4].isdigit() and 25 <= int(path.name[:4]) <= 32
+        root / 'db/migrations' / migration_name
+        for migration_name in EXPECTED_ADDITIVE_MIGRATIONS
     ]
     for migration in runtime_additive_migrations:
         try:

@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT EXISTS(\n          SELECT 1\n            FROM ops.agent_runs run\n            JOIN core.dataset_snapshots snapshot\n              ON snapshot.id = run.dataset_snapshot_id\n             AND snapshot.snapshot_sha256 = run.input_snapshot_hash\n           WHERE run.id = $1\n             AND run.case_id = $2\n             AND run.run_contract_version = 2\n             AND run.evidence_scope_ids = '[]'::jsonb\n             AND run.dataset_snapshot_id = $3\n             AND run.input_snapshot_hash = CAST($4 AS char(64))\n             AND snapshot.snapshot_kind = 'AGENT_CASE'\n             AND snapshot.state = 'READY'\n             AND snapshot.selection_spec->>'caseId' = $2::text\n        )\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "297b1dc565ce3d466486f0028beacd49c3dc94a47b52adfc2612ca1a48302e43"
+}

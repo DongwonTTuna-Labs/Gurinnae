@@ -109,13 +109,13 @@ closed_type_contracts:
     set_rule: path and sha256 are an exact set; migration preflight fails on a missing, additional, or changed schema and no generic JSON envelope is a substitute
     runtime:
       AgentRunV2: {path: specs/agents/addendum-v2/schemas/agent-run.schema.json, sha256: bee266ad090fb102e933bfe02cd91e573b02beca867b6296fcaaf303942e59d6}
-      ProviderTurnV2: {path: specs/agents/addendum-v2/schemas/provider-turn.schema.json, sha256: 23be52d47a1df9a935c87e79b059d022b96054ddc96c8f74e0cd5c5e7390a49a}
-      ToolCallV2: {path: specs/agents/addendum-v2/schemas/tool-call.schema.json, sha256: fe9963dbd1c74dcfb0c880e1076c2065b19793a165e55d3e3ee06b8a63f2d3bd}
+      ProviderTurnV2: {path: specs/agents/addendum-v2/schemas/provider-turn.schema.json, sha256: 2b68c8f597ac3e8abe385b2f69ed82d42758c41e4c21e3dd6d0602a50316526e}
+      ToolCallV2: {path: specs/agents/addendum-v2/schemas/tool-call.schema.json, sha256: 36028052d9d0ef9df99a5894e7b741632f909a2047cb4c4876f62e6add5ab212}
       AgentRunControlReceiptV2: {path: specs/agents/addendum-v2/schemas/agent-run-control-receipt.schema.json, sha256: c39b59c917ac3692e8a4935af02124838896a6828836488d5edbb1565005811f}
       AgentReconciliationEvidenceV1: {path: specs/agents/addendum-v2/schemas/agent-reconciliation-evidence.schema.json, sha256: 70dc6f2d21072752f6ef0844c88c8483693321e6d34b58b4fa9c2eb78f29cc21}
       OutputValidationV2: {path: specs/agents/addendum-v2/schemas/output-validation.schema.json, sha256: 99e5843e4fd30fced49d2c83e22074d723fcaa6daba07c406b6b63438d8c0ad6}
-      MarketResearchOutputV2: {path: specs/agents/addendum-v2/schemas/market-research-output.schema.json, sha256: 884487b7892325ceec7f1c808d19b5f5007b155a63f677fa0362e0f544bee718}
-      InvestigatorOutputV2: {path: specs/agents/addendum-v2/schemas/investigator-output.schema.json, sha256: 4d8587151068a23a9741e2cea53c67621217cb93554a571202caa451e53c89fc}
+      MarketResearchOutputV2: {path: specs/agents/addendum-v2/schemas/market-research-output.schema.json, sha256: 737431cfb03f7dc3b7fa59d3561d7c3c56049375b42899725f493b794cdd323b}
+      InvestigatorOutputV2: {path: specs/agents/addendum-v2/schemas/investigator-output.schema.json, sha256: 3eeb282779310e3b4dce0f4d613050736596d62a2a3f986fdbe882b7121796a6}
       SkepticOutputV2: {path: specs/agents/addendum-v2/schemas/skeptic-output.schema.json, sha256: 125edbaa752492ea31291ddf3c9950233d9a48262574820490d782e6db40f0eb}
       ClaimDraftOutputV2: {path: specs/agents/addendum-v2/schemas/claim-draft-output.schema.json, sha256: 8fcde3825a0c2ce3fc6587e7899997f67fe8d13b499c3869d310548f4a8d64a8}
       CitationVerificationOutputV2: {path: specs/agents/addendum-v2/schemas/citation-verification-output.schema.json, sha256: 79a697c684205333918e575989021daa021ab7b6fa6c2963f0efb5131df12294}
@@ -128,16 +128,24 @@ closed_type_contracts:
       PromoteResearchArtifactRequestV1: {path: specs/agents/addendum-v2/schemas/promote-research-artifact.request.schema.json, sha256: 6d9dac5918e33527bfde5b3c158f9a1de883b4e4fc5b568703cfafa3827108f1}
       PromoteResearchArtifactReceiptV1: {path: specs/agents/addendum-v2/schemas/promote-research-artifact.receipt.schema.json, sha256: 403227f68f982beaf51a7560d5ba98c0087bb7e5b3beebb9a6841e8d7307ea28}
     tools:
-      claim.language_check: {request_path: specs/agents/addendum-v2/tools/claim-language-check.request.schema.json, request_sha256: 038869b81617183e8c1a52fa323faa3ce95b4b07528f9a6ce6a991ac98def69a, response_path: specs/agents/addendum-v2/tools/claim-language-check.response.schema.json, response_sha256: 949321557a879a4f05e25ac8315abc27509816c25d17fb3c7a48867314a098c7}
+      agency.profile: {request_path: specs/agents/addendum-v2/tools/agency-profile.request.schema.json, request_sha256: 32fcac51ce943f4ca5aeaeda5996958a601f2cd89ffb76498c06260d93e67230, response_path: specs/agents/addendum-v2/tools/agency-profile.response.schema.json, response_sha256: 400480d8fc62033edb35c75a9b3d3eb0d87822b5d0bcccf24de61d8844c9ca55}
+      claim.language_check: {request_path: specs/agents/addendum-v2/tools/claim-language-check.request.schema.json, request_sha256: 5f997b0ad29c80151e0ddd649f6763f14451b41dd8e653ffbf43eccf2ec0112e, response_path: specs/agents/addendum-v2/tools/claim-language-check.response.schema.json, response_sha256: 949321557a879a4f05e25ac8315abc27509816c25d17fb3c7a48867314a098c7}
       contract.find_comparables: {request_path: specs/agents/addendum-v2/tools/contract-find-comparables.request.schema.json, request_sha256: f6cc5c330f6e3fba10784625a7b1ace0b18a6c6684b0934f9a1ee4e342153bb3, response_path: specs/agents/addendum-v2/tools/contract-find-comparables.response.schema.json, response_sha256: d8912d7453096e0cb2d23a2445ca7691c8d7e1e99c9a72fa7b4d632879f4d158}
+      contract.search: {request_path: specs/agents/addendum-v2/tools/contract-search.request.schema.json, request_sha256: 53023a69e4f010bb1a50868e9da42601b3c71e8c8a2b6c4976574b8512019721, response_path: specs/agents/addendum-v2/tools/contract-search.response.schema.json, response_sha256: 334a5b481f5e8bbe5d52b0c4ea50be5d6d4fadcc08576318513312a7a80076e6}
       entity.lookup: {request_path: specs/agents/addendum-v2/tools/entity-lookup.request.schema.json, request_sha256: 487ec03b653e0f15a34f936eaea9edb365628ebf5286268682a6fbc444f2b3f8, response_path: specs/agents/addendum-v2/tools/entity-lookup.response.schema.json, response_sha256: ed2bc474a805b5854446b4398593143fcc0f14c4294f1758c606bc3afcdd9f31}
       evidence.read: {request_path: specs/agents/addendum-v2/tools/evidence-read.request.schema.json, request_sha256: e659cb038ed233c29a1eee2f6923937e21660f9e7c8b8366bb5b82f87202e073, response_path: specs/agents/addendum-v2/tools/evidence-read.response.schema.json, response_sha256: a95f7d0dabbff40b388bb94f92c458c55168d0bc105b2775d551b61c11f125c1}
       evidence.search: {request_path: specs/agents/addendum-v2/tools/evidence-search.request.schema.json, request_sha256: 8773231779b56f840c6fd22250c5d0ecc5e8af476c276a531a35d8e6ab3753e8, response_path: specs/agents/addendum-v2/tools/evidence-search.response.schema.json, response_sha256: 3c842109198f09d56b1b8128a50ac725c450233a9634b80311b03f3a191dc387}
+      relationship.neighbors: {request_path: specs/agents/addendum-v2/tools/relationship-neighbors.request.schema.json, request_sha256: 9f0443d480d37d32dd1de1b861730a3d0fa7a3cab5a1bb9a9add1cfef0b2b4e3, response_path: specs/agents/addendum-v2/tools/relationship-neighbors.response.schema.json, response_sha256: 3486871d493be124039b6ae170aa1a33854645ec63abc735d26dc12c49f245b9}
       response.read: {request_path: specs/agents/addendum-v2/tools/response-read.request.schema.json, request_sha256: 4c484e6db2e5d25bbfc764e8f6c7c147b3ea8e1f3381be2cf83d5084471b878e, response_path: specs/agents/addendum-v2/tools/response-read.response.schema.json, response_sha256: e47edd531612ed746c0b24a73f2f94122cc2e6e669eeddcb38048b2e0f15469a}
       rule.reproduce: {request_path: specs/agents/addendum-v2/tools/rule-reproduce.request.schema.json, request_sha256: 67725f6210e485ef0f3c64b3611adb5b670822a0ab25ab4d495fb6e1c1cf6676, response_path: specs/agents/addendum-v2/tools/rule-reproduce.response.schema.json, response_sha256: 2e50ec1af02566ab6472d6ceb8b746cbcc246f2fd972b4ba5b758974c970fa0e}
       source.fetch: {request_path: specs/agents/addendum-v2/tools/source-fetch.request.schema.json, request_sha256: e197b3f470dcd2180ad6127c1615684507c10c86cb26c9ee57967f73bff9e57c, response_path: specs/agents/addendum-v2/tools/source-fetch.response.schema.json, response_sha256: a84739f158ffe547bacd126fbd0076dfc96b4fc8a18b7e08d95dba5f0f9d16ac}
       source.locator_verify: {request_path: specs/agents/addendum-v2/tools/source-locator-verify.request.schema.json, request_sha256: 9f21ec92e2bc7716c43f8130e33fc48c65b7cedff152b7ad86b9c1af8eca4ff9, response_path: specs/agents/addendum-v2/tools/source-locator-verify.response.schema.json, response_sha256: efe7d2d4fab81911f88c6a78f6b6beb1ad0cfdc941ef552508aa0961aa875ef2}
-    tool_runtime_rule: ops.agent_tool_schema_contract_is_valid must be a generated immutable CASE over exactly these nine tuples; request and result JSON schemaVersion must select the same tuple as tool_id
+      supplier.profile: {request_path: specs/agents/addendum-v2/tools/supplier-profile.request.schema.json, request_sha256: 0ecb53a68a6a0eff29ec4b1e56b0061859e8f9b8750a3e2f50be5a96686e870c, response_path: specs/agents/addendum-v2/tools/supplier-profile.response.schema.json, response_sha256: e502989a7d06ee5dd7ae73d69b1822fd5dd4bc89c65b6b17553b37193b7149a3}
+    tool_runtime_rule: ops.agent_tool_schema_contract_is_valid must be a generated immutable CASE over exactly these thirteen tuples; request and result JSON schemaVersion must select the same tuple as tool_id
+  claim_language_policy:
+    version: ko-public-claims-v1
+    sha256: 6766a275b7d9a3ef0157bbd42d57245f8309f3ec15f2ee6cd515d6397ee4bc4e
+    binding_rule: claim.language_check request validation requires both constants exactly; the request schema pin and runtime adapter must fail closed on any policy drift
   transcript_digest_contract:
     algorithm: SHA-256 over RFC8785_JCS_UTF8 closed objects; database stores canonical bytea and generated digest and compares it with the Rust encoder
     initial: {schemaVersion: agent-transcript.initial.v1, ordered_fields: [schemaVersion,runId,inputSnapshotSha256,promptSha256,outputSchemaSha256,providerPolicySha256]}
@@ -772,7 +780,7 @@ supporting_objects:
       owner: gurine_migrator
       security: SECURITY_DEFINER
       executable_by: [gurine_analysis_worker]
-      rule: compare-and-return stored result by runId/callId; validates the exact nine-tool request/response schema tuple and canonical digests; lease reclaim increments generation/version and stale completion is rejected
+      rule: compare-and-return stored result by runId/callId; validates the exact thirteen-tool request/response schema tuple and canonical digests; lease reclaim increments generation/version and stale completion is rejected
     - name: ops.transition_agent_run_v2
       owner: gurine_migrator
       security: SECURITY_DEFINER
@@ -1516,7 +1524,7 @@ tables:
         - {name: agent_tool_calls_source_use_binding_uk, columns: [agent_run_id, tool_call_id, source_use_count, source_use_set_sha256]}
       checks:
         - {name: agent_tool_calls_id_ck, expression: "call_id ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'"}
-        - {name: agent_tool_calls_tool_ck, expression: "tool_id IN ('claim.language_check','contract.find_comparables','entity.lookup','evidence.read','evidence.search','response.read','rule.reproduce','source.fetch','source.locator_verify')"}
+        - {name: agent_tool_calls_tool_ck, expression: "tool_id IN ('agency.profile','claim.language_check','contract.find_comparables','contract.search','entity.lookup','evidence.read','evidence.search','relationship.neighbors','response.read','rule.reproduce','source.fetch','source.locator_verify','supplier.profile')"}
         - {name: agent_tool_calls_bounds_ck, expression: timeout_ms BETWEEN 1 AND 120000 AND max_results BETWEEN 1 AND 50 AND claim_generation > 0 AND version > 0 AND source_use_count >= 0}
         - {name: agent_tool_calls_classification_ck, expression: "classification IN ('PUBLIC','INTERNAL','RESTRICTED','PERSONAL_DATA','LEGAL_HOLD')"}
         - {name: agent_tool_calls_status_ck, expression: "status IN ('CLAIMED','SUCCEEDED','DENIED','TIMED_OUT','FAILED','OUTCOME_UNKNOWN')"}
@@ -1554,7 +1562,7 @@ tables:
     repository_roundtrip:
       row_type: AgentToolCallRow
       methods: [claim_or_replay, complete_success, complete_failure, get_exact, list_for_run]
-      assertions: [all nine request/response schema pairs, every cross-tool request and result rejected, changed digest conflict, lease generation race, all terminal result variants, source-use count/set/transcript parity, snapshot and provider-turn mismatch, safe JSON decode, stale completion denial, terminal immutability]
+      assertions: [all thirteen request/response schema pairs, every cross-tool request and result rejected, changed digest conflict, lease generation race, all terminal result variants, source-use count/set/transcript parity, snapshot and provider-turn mismatch, safe JSON decode, stale completion denial, terminal immutability]
 
   - relation: raw.research_artifacts
     owner_role: gurine_migrator
@@ -3722,6 +3730,8 @@ cross_migration_0028_retention_and_hold_bindings:
     raw.asset_rights_decisions: ASSET_RIGHTS_DECISION_AUDIT
     ops.agent_reconciliation_evidence: AGENT_RECONCILIATION_EVIDENCE
     ops.agent_run_control_receipts: AGENT_RUN_CONTROL_RECEIPT
+    ops.signal_investigation_policies: AGENT_RUNTIME_POLICY
+    ops.signal_investigation_initiation_receipts: AGENT_RUNTIME_INITIATION_RECEIPT
     ops.agent_source_uses: AGENT_SOURCE_USE
     raw.research_artifact_promotions: RESEARCH_ARTIFACT_PROMOTION
     public.search_documents: PUBLIC_SEARCH_PROJECTION
@@ -3745,6 +3755,13 @@ cross_migration_0028_retention_and_hold_bindings:
     core.procurement_query_snapshot_members: PROCUREMENT_QUERY_SNAPSHOT
     editorial.response_request_claim_scopes: RESPONSE_REQUEST_SCOPE_HISTORY
     editorial.response_request_evidence_scopes: RESPONSE_REQUEST_SCOPE_HISTORY
+  operational_audit_schedule_semantics:
+    reference_record_class: AGENT_RUN_CONTROL_RECEIPT
+    covered_relations: [ops.signal_investigation_policies, ops.signal_investigation_initiation_receipts]
+    schedule_rule: each relation retains its distinct record class and exact current nonexpired schedule binding while following the same finite operational-audit retention semantics as AGENT_RUN_CONTROL_RECEIPT; PRESERVE_PUBLIC_REVISION and custom PRESERVE terminal tokens are forbidden
+    linkability:
+      ops.signal_investigation_policies: no direct natural-person identifier is stored; created_by is a linkable internal user reference, so each row is operational-audit evidence
+      ops.signal_investigation_initiation_receipts: no direct natural-person identifier is emitted in the canonical receipt payload; signal, case, and target graph references remain potentially linkable, so each row is operational-audit evidence
   class_set_rule: the set of values above must be a subset of the activated schedule catalog and the migration/acceptance fixture must create one current nonexpired schedule for every value before enabling any runtime writer
   hold_resolution:
     direct_anchor_kinds: [SOURCE_ASSET,RESEARCH_ARTIFACT]
@@ -3763,6 +3780,8 @@ cross_migration_0028_retention_and_hold_bindings:
       ASSET_RIGHTS_DECISION_AUDIT: bound source or research asset anchor
       AGENT_RECONCILIATION_EVIDENCE: evidence -> run -> exact provider/tool/source and cost proof graph
       AGENT_RUN_CONTROL_RECEIPT: receipt -> run/snapshot/source-use graph
+      AGENT_RUNTIME_POLICY: policy -> created_by internal user reference and referencing initiation receipt -> signal/case/run/job/audit graph
+      AGENT_RUNTIME_INITIATION_RECEIPT: receipt -> policy/signal/case/snapshot/run/job/audit graph
       AGENT_SOURCE_USE: concrete source identity and parent-use closure
       RESEARCH_ARTIFACT_PROMOTION: both research and created source asset anchors plus evidence/case
       PUBLIC_SEARCH_PROJECTION: projected object/publication/evidence/response holds; purge never deletes underlying authority
@@ -3817,7 +3836,7 @@ creation_order_rule: ordinal and relation are an exact set equal to scope.exact_
 
 migration_order:
   - preflight exact v13 base catalog, role ownership, extension namespaces, and immutable migration digests
-  - preflight every pinned AI/tool/connector schema path and sha256 and derive the exact nine-tool and 44-operation CASE bodies
+  - preflight every pinned AI/tool/connector schema path and sha256 and derive the exact thirteen-tool and 44-operation CASE bodies
   - install lowercase digest/array/schema/terminal-predicate helper checks, search watermark functions, and default-privilege revokes
   - ALTER raw.source_documents, raw.source_fetches, raw.parsed_records, core.parser_runs, ops.source_runs, ops.source_checkpoints, ops.source_registry, ops.outbox, ops.audit_events, editorial.cases, editorial.hypotheses, editorial.claims, ops.tasks, editorial.responses and public origin projections with staged columns/candidate keys
   - create core.normalization_runs, then add core.field_provenance normalization bridge and candidate key
@@ -3826,7 +3845,7 @@ migration_order:
   - ALTER ops.agent_runs with the complete AgentRunV2 snapshot/transcript/control/budget/iteration bridge after snapshot parent exists; defer the output-validation FK
   - create core.dataset_snapshot_members
   - create core.dataset_snapshot_member_sources after all possible source parents exist
-  - create ops.agent_provider_turns with embedded canonical ProviderReceiptV2, then ops.agent_tool_calls with exact nine-schema validation
+  - create ops.agent_provider_turns with embedded canonical ProviderReceiptV2, then ops.agent_tool_calls with exact thirteen-schema validation
   - create raw.research_artifacts with exact tool/source-fetch binding
   - create raw.asset_rights_decisions
   - create ops.agent_reconciliation_evidence with exact provider/tool/no-dispatch proof bindings
@@ -3867,7 +3886,7 @@ cross_table_repository_oracles:
   - test_id: AC-OA-TABLE-0025-CONCURRENCY
     assertion: 64-client races yield one lifecycle/version winner for source revision, normalization, snapshot, provider turn, tool call, run control, proposal decision, rights revision, promotion and source traversal; immutable replay has no duplicate event/effect
   - test_id: AC-OA-TABLE-0025-AI-SCHEMA-SET
-    assertion: runtime and tool schema paths/digests are exact; every one of nine request/response pairs round-trips only under its own tool ID; one-byte/cross-tool/additional-property changes fail before dispatch and persistence
+    assertion: runtime and tool schema paths/digests are exact; every one of thirteen request/response pairs round-trips only under its own tool ID; one-byte/cross-tool/additional-property changes fail before dispatch and persistence
   - test_id: AC-OA-TABLE-0025-AI-PROVENANCE
     assertion: provider receipt and transcript digests, all source-use kinds/source identities/rights, response snapshot lineage, citation ancestry, proposal validation and ResearchArtifact promotion graph are relationally complete; deleting or swapping any join causes zero proposals/promotions
   - test_id: AC-OA-TABLE-0025-EVENT-PAYLOADS
@@ -3899,7 +3918,7 @@ blockers:
     severity: P0
     status: DESIGN_RESOLVED_OPEN_IMPLEMENTATION
     issue: Agent provider/tool/redacted/validation v2 JSON schemas and transcript digest canonicalization are not normative.
-    closure: normative_json_schema_registry pins every runtime and nine-tool pair; provider/tool tables store canonical bytes; generated schema CASE functions and transcript_digest_contract fix all digest shapes and fallback/chain semantics.
+    closure: normative_json_schema_registry pins every runtime and thirteen-tool pair; provider/tool tables store canonical bytes; generated schema CASE functions and transcript_digest_contract fix all digest shapes and fallback/chain semantics.
   - id: P25-BLOCK-005
     severity: P0
     status: DESIGN_RESOLVED_OPEN_IMPLEMENTATION
@@ -3978,7 +3997,7 @@ remaining_cross_file_exact:
   - path: specs/agents/addendum-v2/schemas/source-use.schema.json
     required_change: make rightsDecision a discriminated ASSET_RIGHTS or RESPONSE_CONSENT binding matching the physical deterministic mapping, unless independent review proves the current generic object byte-equivalent for both variants
   - path: specs/agents/agent-catalog.yaml and specs/agents/tool-catalog.yaml
-    required_change: register exact v2 schema paths/digests, nine per-tool pairs, runtime bounds and source-use requirements
+    required_change: register exact v2 schema paths/digests, thirteen per-tool pairs, runtime bounds and source-use requirements
   - path: specs/parsers/parser-catalog.yaml and parser runtime contracts
     required_change: persist exact extraction input/implementation/output/receipt fields and support trusted synchronous promotion extraction for every declared media type; fixtures are oracle-only
   - path: specs/database/addendum/0028-governance-operations.yaml

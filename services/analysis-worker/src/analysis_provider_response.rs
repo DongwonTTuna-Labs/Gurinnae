@@ -16,9 +16,11 @@ pub(super) async fn provider_response_body(
     if context.provider != RELAY_PROVIDER {
         return match response.response.json().await {
             Ok(body) => Ok(body),
-            Err(error) => context
-                .reject_unresolved("provider response is not JSON", error.to_string())
-                .await,
+            Err(error) => {
+                context
+                    .reject_unresolved("provider response is not JSON", error.to_string())
+                    .await
+            }
         };
     }
     let Some(data_policy) = relay_data_policy else {
@@ -27,19 +29,15 @@ pub(super) async fn provider_response_body(
             context.provider.to_owned(),
         ));
     };
-    let observation = match observe_relay_gateway_response(
-        response.response,
-        &response.request_sha256,
-    )
-    .await
-    {
-        Ok(value) => value,
-        Err(error) => {
-            return context
-                .reject_unresolved("relay response proof invalid", failure_detail(&error))
-                .await;
-        }
-    };
+    let observation =
+        match observe_relay_gateway_response(response.response, &response.request_sha256).await {
+            Ok(value) => value,
+            Err(error) => {
+                return context
+                    .reject_unresolved("relay response proof invalid", failure_detail(&error))
+                    .await;
+            }
+        };
     match relay_internal_response(
         observation,
         context.model,
@@ -54,8 +52,10 @@ pub(super) async fn provider_response_body(
         maximum_cost_krw,
     ) {
         Ok(body) => Ok(body),
-        Err(error) => context
-            .reject_unresolved("relay response shape invalid", failure_detail(&error))
-            .await,
+        Err(error) => {
+            context
+                .reject_unresolved("relay response shape invalid", failure_detail(&error))
+                .await
+        }
     }
 }

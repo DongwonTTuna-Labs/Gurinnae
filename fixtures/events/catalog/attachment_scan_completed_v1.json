@@ -12,6 +12,7 @@
   "actor": null,
   "payload": {
     "attachment_id": "synthetic",
+    "attachment_kind": "CORRECTION",
     "scan_status": "synthetic",
     "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   },

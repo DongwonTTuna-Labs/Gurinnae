@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.parser_runs( source_document_id,parser_name,parser_version,status,output_record_count,output_digest, started_at,completed_at,input_content_sha256,extraction_schema_version, implementation_sha256,extraction_receipt_sha256) SELECT d.id,'connector-structured-json','connector-structured-json-v1','SUCCEEDED',$2,$3, clock_timestamp(),clock_timestamp(),d.content_sha256,'v1',p.implementation_digest,$4 FROM raw.source_documents d JOIN core.parser_versions p ON p.parser_name='connector-structured-json' AND p.version='connector-structured-json-v1' AND p.status='ACTIVE' WHERE d.id=$1 RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.parser_runs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c9844ea1fd8fca3ca89c015180290fa88b454f3e682d05833ae263ac89f1d108"
+}

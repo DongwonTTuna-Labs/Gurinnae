@@ -242,6 +242,16 @@ def runtime_reference_errors(
                 errors.append(f"{agent_id}: output type/title/schemaVersion differ")
         if row.get("allowed_tools") != base.get("tools"):
             errors.append(f"{agent_id}: runtime allowed tools differ from base catalog")
+        if agent_id in {"market-researcher", "investigator"} and isinstance(schema, dict):
+            output_tool_ids = (
+                schema.get("$defs", {})
+                .get("investigation", {})
+                .get("properties", {})
+                .get("toolId", {})
+                .get("enum")
+            )
+            if output_tool_ids != row.get("allowed_tools"):
+                errors.append(f"{agent_id}: output tool allowlist differs from dispatch registry")
         if row.get("allowed_proposal_kinds") != expected_proposal_kinds.get(agent_id):
             errors.append(f"{agent_id}: allowed proposal kinds differ from the closed agent policy")
         if (
@@ -258,6 +268,103 @@ def runtime_reference_errors(
     }
     if proposal_union != {"HYPOTHESIS", "CLAIM", "TASK", "COMPARABLE", "COMMUNICATION"}:
         errors.append("agent allowed proposal-kind union is not exact")
+
+    expected_tool_ids = authority.get("scope", {}).get("tools", {}).get("exact_ids", [])
+    expected_tool_count = authority.get("scope", {}).get("tools", {}).get("count")
+    indexed_tool_ids = [row.get("id") for row in index.get("tool_schemas", [])]
+    base_tool_catalog = load_yaml(REPO / "specs/agents/tool-catalog.yaml")
+    catalog_rows = base_tool_catalog.get("tools", [])
+    catalog_tool_ids = [row.get("id") for row in catalog_rows if isinstance(row, dict)]
+    adapter_rows = runtime.get("effective_tool_adapter_registry", {}).get("rows", [])
+    adapter_tool_ids = [row.get("tool_id") for row in adapter_rows if isinstance(row, dict)]
+    tool_call_schema = schemas.get((ROOT / "schemas/tool-call.schema.json").resolve(), {})
+    tool_call_ids = tool_call_schema.get("properties", {}).get("toolId", {}).get("enum", [])
+    tool_branch_ids = [
+        branch.get("if", {}).get("properties", {}).get("toolId", {}).get("const")
+        for branch in tool_call_schema.get("allOf", [])
+        if isinstance(branch, dict)
+        and isinstance(
+            branch.get("if", {}).get("properties", {}).get("toolId", {}).get("const"),
+            str,
+        )
+        and "request" in branch.get("then", {}).get("properties", {})
+    ]
+    provider_schema = schemas.get((ROOT / "schemas/provider-turn.schema.json").resolve(), {})
+    provider_tool_call = next(
+        (
+            branch
+            for branch in provider_schema.get("properties", {})
+            .get("envelope", {})
+            .get("oneOf", [])
+            if isinstance(branch, dict)
+            and branch.get("properties", {}).get("kind", {}).get("const") == "TOOL_CALL"
+        ),
+        {},
+    )
+    provider_tool_ids = (
+        provider_tool_call.get("properties", {}).get("toolId", {}).get("enum", [])
+    )
+    language_contract = runtime.get("effective_tool_adapter_registry", {}).get(
+        "language_policy_contract", {}
+    )
+    expected_language_version = "ko-public-claims-v1"
+    expected_language_sha256 = (
+        "6766a275b7d9a3ef0157bbd42d57245f8309f3ec15f2ee6cd515d6397ee4bc4e"
+    )
+    expected_language_families = [
+        "UNSUPPORTED_CERTAINTY",
+        "CRIME_OR_CORRUPTION_ASSERTION",
+        "NO_RESPONSE_AS_ADMISSION",
+        "CORRUPTION_RANKING",
+    ]
+    claim_request_schema = schemas.get(
+        (ROOT / "tools/claim-language-check.request.schema.json").resolve(), {}
+    )
+    claim_request_properties = claim_request_schema.get("properties", {})
+    if (
+        language_contract.get("version") != expected_language_version
+        or language_contract.get("sha256") != expected_language_sha256
+        or language_contract.get("required_pattern_families")
+        != expected_language_families
+        or claim_request_properties.get("languagePolicyVersion", {}).get("const")
+        != expected_language_version
+        or claim_request_properties.get("languagePolicySha256", {}).get("const")
+        != expected_language_sha256
+    ):
+        errors.append("claim.language_check versioned policy binding is not exact")
+    registries = {
+        "schema index": indexed_tool_ids,
+        "base catalog": catalog_tool_ids,
+        "runtime adapter": adapter_tool_ids,
+        "ToolCallV2 enum": tool_call_ids,
+        "ToolCallV2 schema branches": tool_branch_ids,
+        "ProviderTurnV2 enum": provider_tool_ids,
+    }
+    if (
+        not isinstance(expected_tool_ids, list)
+        or expected_tool_count != 13
+        or len(expected_tool_ids) != 13
+        or len(set(expected_tool_ids)) != 13
+    ):
+        errors.append("authority tool registry is not exactly 13 unique tools")
+    else:
+        expected_tool_set = set(expected_tool_ids)
+        for label, tool_ids in registries.items():
+            if (
+                len(tool_ids) != 13
+                or len(set(tool_ids)) != 13
+                or set(tool_ids) != expected_tool_set
+            ):
+                errors.append(f"{label} is not set-equal to the 13-tool authority")
+        for row in catalog_rows if isinstance(catalog_rows, list) else []:
+            if not isinstance(row, dict):
+                continue
+            for field in ("request_schema", "response_schema"):
+                relative = row.get(field)
+                if not isinstance(relative, str) or not (
+                    REPO / "specs/agents" / relative
+                ).is_file():
+                    errors.append(f"{row.get('id')}: {field} does not resolve to a schema")
     expected_target_mapping = dict.fromkeys(
         ("HYPOTHESIS", "CLAIM", "TASK", "COMPARABLE", "COMMUNICATION"),
         "ACTION_PROPOSAL_DRAFT",
@@ -647,6 +754,8 @@ def string_for(schema: dict[str, Any]) -> str:
         return UUID
     if schema.get("format") == "date-time":
         return NOW
+    if schema.get("format") == "date":
+        return NOW[:10]
     if schema.get("format") == "uri":
         return "https://example.invalid/x"
     pattern = schema.get("pattern", "")
@@ -861,8 +970,8 @@ def claim_exchange_examples() -> list[tuple[str, dict[str, Any], dict[str, Any],
         "claimType": "FACT",
         "locale": "ko-KR",
         "allowedCitationIds": [UUID_2],
-        "languagePolicyVersion": "1",
-        "languagePolicySha256": "1" * 64,
+        "languagePolicyVersion": "ko-public-claims-v1",
+        "languagePolicySha256": "6766a275b7d9a3ef0157bbd42d57245f8309f3ec15f2ee6cd515d6397ee4bc4e",
         "maxFindings": 2,
     }
     finding = {
@@ -895,6 +1004,8 @@ def claim_exchange_examples() -> list[tuple[str, dict[str, Any], dict[str, Any],
         ("claim-exchange-span-bound", request, {**response, "findings": [{**finding, "endUtf16": 5, "lengthUtf16": 4}]}, False),
         ("claim-exchange-citation-subset", request, {**response, "findings": [{**finding, "citationIds": [UUID]}]}, False),
         ("claim-exchange-limit-binding", request, {**response, "findingLimit": 1}, False),
+        ("claim-exchange-policy-version", {**request, "languagePolicyVersion": "unknown"}, response, False),
+        ("claim-exchange-policy-digest", {**request, "languagePolicySha256": "3" * 64}, response, False),
     ]
 
 
@@ -1337,8 +1448,8 @@ def main() -> int:
                 negative_count += 1
 
     tool_pairs = index["tool_schemas"]
-    if len(tool_pairs) != 9 or len({item["id"] for item in tool_pairs}) != 9:
-        errors.append("tool schema index is not exactly 9 unique tools")
+    if len(tool_pairs) != 13 or len({item["id"] for item in tool_pairs}) != 13:
+        errors.append("tool schema index is not exactly 13 unique tools")
     request_fingerprints: set[str] = set()
     response_fingerprints: set[str] = set()
     tool_examples: dict[str, list[tuple[str, Path, Any]]] = {"request": [], "response": []}
@@ -1369,7 +1480,7 @@ def main() -> int:
                         errors.append(f"{path}: additional property negative was accepted")
                     else:
                         negative_count += 1
-    if len(request_fingerprints) != 9 or len(response_fingerprints) != 9:
+    if len(request_fingerprints) != 13 or len(response_fingerprints) != 13:
         errors.append("tool schemas are not structurally distinct in both directions")
     if not errors:
         for direction, examples in tool_examples.items():

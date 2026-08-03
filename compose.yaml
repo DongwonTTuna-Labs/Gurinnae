@@ -264,6 +264,7 @@ services:
       SOURCE_LOCAL_FINANCE_ENABLED: ${SOURCE_LOCAL_FINANCE_ENABLED:-false}
       SOURCE_OPEN_DART_ENABLED: ${SOURCE_OPEN_DART_ENABLED:-false}
       SOURCE_SYNTHETIC_ENABLED: ${SOURCE_SYNTHETIC_ENABLED:-true}
+      SUPPLIER_IDENTIFIER_HMAC_KEY: ${SUPPLIER_IDENTIFIER_HMAC_KEY}
     depends_on:
       migrator:
         condition: service_completed_successfully

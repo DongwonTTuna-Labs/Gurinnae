@@ -36,9 +36,16 @@ impl ProviderControlOperationId {
 #[derive(Debug, Eq, PartialEq)]
 enum ProviderControlBranch {
     Disable,
-    Test { model: String },
-    Upgrade { model: String },
-    AutoUpgrade { enabled: bool, track: Option<String> },
+    Test {
+        model: String,
+    },
+    Upgrade {
+        model: String,
+    },
+    AutoUpgrade {
+        enabled: bool,
+        track: Option<String>,
+    },
 }
 
 impl ProviderControlBranch {
@@ -76,6 +83,9 @@ struct ProviderControlEventBinding {
 async fn analysis_event(state: &State, job: &ClaimedJob) -> Result<Value, Failure> {
     match job.payload.get("eventType").and_then(Value::as_str) {
         Some("workflow.rule_activation_applied.v1") => activation_event(&state.pool, job).await,
+        Some("dataset.snapshot_created.v1") => {
+            analysis_detection_sweep::ready_detection_snapshot_event(&state.pool, job).await
+        }
         Some("action.execution_authorized.v1")
             if job
                 .payload
@@ -123,10 +133,11 @@ async fn provider_control_event(state: &State, job: &ClaimedJob) -> Result<Value
     }
 }
 
-fn provider_control_event_binding(job: &ClaimedJob) -> Result<ProviderControlEventBinding, Failure> {
+fn provider_control_event_binding(
+    job: &ClaimedJob,
+) -> Result<ProviderControlEventBinding, Failure> {
     if job.job_type != "EVENT_DELIVERY"
-        || job.payload.get("consumerId").and_then(Value::as_str)
-            != Some(PROVIDER_CONTROL_CONSUMER)
+        || job.payload.get("consumerId").and_then(Value::as_str) != Some(PROVIDER_CONTROL_CONSUMER)
         || job.payload.get("eventType").and_then(Value::as_str)
             != Some("action.execution_authorized.v1")
     {
@@ -155,8 +166,7 @@ fn provider_control_event_binding(job: &ClaimedJob) -> Result<ProviderControlEve
     }
     let generation = required_positive_i64_at(&job.payload, "/payload/generation")?;
     let execution_digest = required_sha256_at(&job.payload, "/payload/executionDigest")?;
-    let target_request_sha256 =
-        required_sha256_at(&job.payload, "/payload/targetRequestSha256")?;
+    let target_request_sha256 = required_sha256_at(&job.payload, "/payload/targetRequestSha256")?;
     Ok(ProviderControlEventBinding {
         event_id,
         execution_id,
@@ -279,9 +289,15 @@ fn provider_control_success_result(
 
 fn validate_provider_control_proof(proof: &RelayConnectionProof) -> Result<(), Failure> {
     for (field, value) in [
-        ("gatewayReceiptSha256", proof.gateway_receipt_sha256.as_str()),
+        (
+            "gatewayReceiptSha256",
+            proof.gateway_receipt_sha256.as_str(),
+        ),
         ("providerPayloadSha256", proof.payload_sha256.as_str()),
-        ("providerRequestIdHash", proof.provider_request_id_hash.as_str()),
+        (
+            "providerRequestIdHash",
+            proof.provider_request_id_hash.as_str(),
+        ),
         ("usageCanonicalSha256", proof.usage.evidence_sha256.as_str()),
     ] {
         if !is_lower_sha256(value) {
@@ -290,8 +306,14 @@ fn validate_provider_control_proof(proof: &RelayConnectionProof) -> Result<(), F
     }
     if proof.usage.input_units < 0
         || proof.usage.output_units < 0
-        || proof.usage.cached_input_units.is_some_and(|value| value < 0)
-        || proof.usage.input_units.checked_add(proof.usage.output_units)
+        || proof
+            .usage
+            .cached_input_units
+            .is_some_and(|value| value < 0)
+        || proof
+            .usage
+            .input_units
+            .checked_add(proof.usage.output_units)
             != Some(proof.usage.billable_units)
     {
         return Err(provider_control_invalid("usage"));
@@ -345,11 +367,8 @@ async fn fail_provider_control_execution(
     claim: &ProviderControlClaim,
     failure: &Failure,
 ) -> Result<(), Failure> {
-    let (code, retryable) = provider_control_failure_disposition(
-        failure,
-        job.attempt,
-        job.max_attempts,
-    );
+    let (code, retryable) =
+        provider_control_failure_disposition(failure, job.attempt, job.max_attempts);
     let detail_sha256 = sha256(failure_detail(failure).as_bytes());
     sqlx::query_scalar!(
         "SELECT ops.fail_provider_control_execution_v1( \

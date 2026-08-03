@@ -6,6 +6,7 @@ container="gurine-ingest-runtime-$BASHPID"
 database="gurine_ingest_runtime"
 work="$(mktemp -d -t gurine-ingest-runtime-XXXXXX)"
 source_pid=""
+supplier_identifier_hmac_key="ZGV2ZWxvcG1lbnQtb25seS1zdXBwbGllci1pZC1rZXk="
 
 cleanup() {
   status=$?
@@ -78,6 +79,7 @@ sleep 0.2
 postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"
 GURINE_ENV=test \
 INGEST_DATABASE_URL="postgresql://gurine_ingest_worker:ingest_test@127.0.0.1:${postgres_port}/${database}" \
+SUPPLIER_IDENTIFIER_HMAC_KEY="$supplier_identifier_hmac_key" \
 OBJECT_STORE_ADAPTER=filesystem OBJECT_STORE_FILESYSTEM_ROOT="$work/objects" \
 EGRESS_SOURCE_CHANNEL_URL="http://127.0.0.1:${source_port}/source" \
 INGEST_ONCE=true HOSTNAME="ingest-runtime-test" target/debug/gurine-ingest-worker

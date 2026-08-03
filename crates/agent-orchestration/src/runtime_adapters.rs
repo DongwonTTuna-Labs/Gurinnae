@@ -9,8 +9,16 @@ use uuid::Uuid;
 
 use super::*;
 
+#[path = "runtime_corpus_adapters.rs"]
+mod corpus_adapter;
+#[path = "runtime_language_adapter.rs"]
+mod language_adapter;
 #[path = "runtime_source_adapter.rs"]
 mod source_adapter;
+
+pub use corpus_adapter::{
+    AgencyProfileRecord, ContractCorpusRecord, RelationshipNeighborRecord, SupplierProfileRecord,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EvidenceRecord {
@@ -76,6 +84,10 @@ pub struct ToolSnapshot {
     pub comparables: Vec<ComparableRecord>,
     pub entities: Vec<EntityRecord>,
     pub rules: Vec<RuleRecord>,
+    pub contracts: Vec<ContractCorpusRecord>,
+    pub supplier_profiles: Vec<SupplierProfileRecord>,
+    pub agency_profiles: Vec<AgencyProfileRecord>,
+    pub relationships: Vec<RelationshipNeighborRecord>,
     pub source_artifacts: Vec<SourceArtifactRecord>,
 }
 
@@ -109,32 +121,26 @@ impl ToolAdapter for SnapshotAdapter {
             return Err(DispatchError::RequestInvalid);
         }
         match request {
-            ToolRequest::ClaimLanguageCheck(value) => self.claim_language_check(value),
+            ToolRequest::AgencyProfile(value) => corpus_adapter::agency_profile(self, value),
+            ToolRequest::ClaimLanguageCheck(value) => language_adapter::claim_language_check(value),
+            ToolRequest::ContractSearch(value) => corpus_adapter::contract_search(self, value),
             ToolRequest::ContractFindComparables(value) => self.find_comparables(value),
             ToolRequest::EntityLookup(value) => self.lookup_entity(value),
             ToolRequest::EvidenceRead(value) => self.read_evidence(value),
             ToolRequest::EvidenceSearch(value) => self.search_evidence(value),
+            ToolRequest::RelationshipNeighbors(value) => {
+                corpus_adapter::relationship_neighbors(self, value)
+            }
             ToolRequest::ResponseRead(value) => self.read_response(value),
             ToolRequest::RuleReproduce(value) => self.reproduce_rule(value),
             ToolRequest::SourceFetch(value) => self.fetch_source(value),
             ToolRequest::SourceLocatorVerify(value) => self.verify_locator(value),
+            ToolRequest::SupplierProfile(value) => corpus_adapter::supplier_profile(self, value),
         }
     }
 }
 
 impl SnapshotAdapter {
-    fn claim_language_check(
-        &self,
-        value: &ClaimLanguageCheckRequest,
-    ) -> Result<ToolResponse, DispatchError> {
-        if value.draft_text.trim().is_empty() {
-            return Err(DispatchError::RequestInvalid);
-        }
-        Ok(ToolResponse::ClaimLanguageCheck(LanguageCheckResponse {
-            decision: "REVIEW_REQUIRED".to_owned(),
-            findings: Vec::new(),
-        }))
-    }
     fn find_comparables(
         &self,
         value: &ContractFindComparablesRequest,
@@ -317,6 +323,10 @@ mod tests {
                 comparables: Vec::new(),
                 entities: Vec::new(),
                 rules: Vec::new(),
+                contracts: Vec::new(),
+                supplier_profiles: Vec::new(),
+                agency_profiles: Vec::new(),
+                relationships: Vec::new(),
                 source_artifacts: vec![artifact(b"actual source bytes")],
             },
         }

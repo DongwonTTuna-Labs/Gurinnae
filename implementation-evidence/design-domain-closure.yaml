@@ -79,12 +79,23 @@ bindings:
     owner: crates/detection
     application: crates/application::detection
     repository: crates/persistence-postgres::dataset_snapshots
-    relations: [core.dataset_snapshots, core.dataset_snapshot_members, core.dataset_snapshot_member_sources, core.normalization_runs]
+    relations: [core.dataset_snapshots, core.dataset_snapshot_members, core.dataset_snapshot_member_sources, core.dataset_snapshot_strong_identifier_facts]
     identity: dataset_snapshot_id+snapshot_sha256
     concurrency: immutable-repeatable-read-snapshot
     operations: [startAgentRun, runRuleEvaluation, startRuleShadow]
     events: [dataset.snapshot_created.v1]
     errors: [DATASET_SNAPSHOT_NOT_READY, DATASET_SNAPSHOT_STALE, DATASET_MEMBER_DIGEST_MISMATCH]
+  - noun: NormalizationRun
+    rust_type: gurine_ingestion::normalization::NormalizationRun
+    owner: crates/ingestion
+    application: services/ingest-worker::normalization
+    repository: crates/persistence-postgres::normalization_runs
+    relations: [core.normalization_runs]
+    identity: normalization_run_id+version
+    concurrency: expected-version+job-fencing-token+immutable-terminal-receipt
+    operations: []
+    events: [normalization.run_completed.v1]
+    errors: [NORMALIZATION_CONFLICT, VERSION_CONFLICT, VALIDATION_FAILED]
   - noun: AgentToolCall
     rust_type: gurine_agent_orchestration::tool::AgentToolCall
     owner: crates/agent-orchestration
@@ -107,6 +118,17 @@ bindings:
     operations: [startAgentRun, getAgentRun, cancelAgentRun, reconcileAgentRun]
     events: [agent.run_control_changed.v2]
     errors: [AGENT_RUN_STATE_INVALID, VERSION_CONFLICT, VALIDATION_FAILED]
+  - noun: SignalInvestigationInitiationReceipt
+    rust_type: gurine_workflow_worker::runner::SignalInvestigationOutcome
+    owner: services/workflow-worker
+    application: services/workflow-worker::workflow_signal
+    repository: services/workflow-worker::workflow_signal
+    relations: [ops.signal_investigation_policies, ops.signal_investigation_initiation_receipts]
+    identity: signal_id+receipt_digest
+    concurrency: append-only-policy-version+one-immutable-receipt-per-signal
+    operations: []
+    events: []
+    errors: [BUDGET_BLOCKED, DEPENDENCY_UNAVAILABLE, VALIDATION_FAILED]
   - noun: AgentReconciliationEvidence
     rust_type: gurine_agent_orchestration::runtime::AgentReconciliationEvidence
     owner: crates/agent-orchestration

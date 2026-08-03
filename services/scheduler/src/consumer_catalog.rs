@@ -8,6 +8,30 @@ const ACTION_EXECUTION_CONSUMERS: &[(&str, &str)] = &[
     ("action-execution-worker", "workflow-worker"),
     ("audit-indexer", "projection-worker"),
 ];
+const ANALYSIS_WORKER_CONSUMERS: &[(&str, &str)] = &[("analysis-worker", "analysis-worker")];
+
+fn dataset_snapshot_consumers(
+    payload: &Value,
+) -> Result<&'static [(&'static str, &'static str)], &'static str> {
+    let state = payload.get("state").and_then(Value::as_str);
+    let snapshot_kind = payload.get("snapshotKind").and_then(Value::as_str);
+    match (state, snapshot_kind) {
+        (Some("READY"), Some("DETECTION_DATASET")) => Ok(ANALYSIS_WORKER_CONSUMERS),
+        (
+            Some("READY" | "FAILED"),
+            Some(
+                "AGENT_CASE"
+                | "DETECTION_DATASET"
+                | "PUBLIC_SEARCH_PROJECTION"
+                | "INTERNAL_SEARCH_PROJECTION",
+            ),
+        ) => Ok(&[]),
+        (Some("READY" | "FAILED"), _) => {
+            Err("dataset.snapshot_created.v1 payload requires a supported snapshotKind")
+        }
+        _ => Err("dataset.snapshot_created.v1 payload requires READY or FAILED state"),
+    }
+}
 
 pub(crate) fn consumers_for(
     event_type: &str,
@@ -20,6 +44,7 @@ pub(crate) fn consumers_for(
         ],
         "source.document_stored.v1" => &[("document-extractor", "document-extractor")],
         "source.document_parsed.v1" => &[("ingest-worker", "ingest-worker")],
+        "dataset.snapshot_created.v1" => return dataset_snapshot_consumers(payload),
         "projection.publication_access_changed.v1"
         | "projection.publication_revision_created.v1" => {
             &[("projection-worker", "projection-worker")]
@@ -104,6 +129,49 @@ mod tests {
                 ("analysis-worker", "analysis-worker"),
                 ("scheduler", "scheduler")
             ][..])
+        );
+        assert_eq!(
+            consumers_for(
+                "dataset.snapshot_created.v1",
+                &serde_json::json!({
+                    "state":"READY",
+                    "snapshotKind":"DETECTION_DATASET",
+                }),
+            ),
+            Ok(&[("analysis-worker", "analysis-worker")][..])
+        );
+        assert_eq!(
+            consumers_for(
+                "dataset.snapshot_created.v1",
+                &serde_json::json!({
+                    "state":"FAILED",
+                    "snapshotKind":"DETECTION_DATASET",
+                }),
+            ),
+            Ok(&[][..])
+        );
+        for snapshot_kind in [
+            "AGENT_CASE",
+            "PUBLIC_SEARCH_PROJECTION",
+            "INTERNAL_SEARCH_PROJECTION",
+        ] {
+            assert_eq!(
+                consumers_for(
+                    "dataset.snapshot_created.v1",
+                    &serde_json::json!({
+                        "state":"READY",
+                        "snapshotKind":snapshot_kind,
+                    }),
+                ),
+                Ok(&[][..])
+            );
+        }
+        assert_eq!(
+            consumers_for(
+                "dataset.snapshot_created.v1",
+                &serde_json::json!({"state":"READY","snapshotKind":"UNKNOWN"}),
+            ),
+            Err("dataset.snapshot_created.v1 payload requires a supported snapshotKind")
         );
         assert_eq!(
             consumers_for("case.assigned.v1", &empty_payload),

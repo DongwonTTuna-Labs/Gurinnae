@@ -1,4 +1,4 @@
-async fn ensure_agent_source_use_roots(
+async fn ensure_legacy_agent_source_use_roots(
     pool: &PgPool,
     run_id: Uuid,
     evidence_ids: &[Uuid],
@@ -226,8 +226,221 @@ async fn ensure_agent_source_use_roots(
     .map_err(database)?
     .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     if !exists {
-        return Err(Failure::Terminal("AGENT_SOURCE_USE_MISSING", run_id.to_string()));
+        return Err(Failure::Terminal(
+            "AGENT_SOURCE_USE_MISSING",
+            run_id.to_string(),
+        ));
     }
     Ok(())
+}
+
+#[derive(Debug)]
+struct V2SourceUseSetState {
+    snapshot_valid: bool,
+    expected_count: i64,
+    rights_valid_count: i64,
+    existing_count: i64,
+    fabricated_root_count: i64,
+}
+
+macro_rules! query_v2_source_use_set_state {
+    ($run_id:expr, $case_id:expr, $snapshot_id:expr, $snapshot_sha256:expr) => {
+        sqlx::query!(
+            r#"
+            WITH bound_snapshot AS (
+              SELECT snapshot.id,snapshot.snapshot_kind,snapshot.producer_generation,
+                     snapshot.contract_version
+                FROM ops.agent_runs run
+                JOIN core.dataset_snapshots snapshot
+                  ON snapshot.id=run.dataset_snapshot_id
+                 AND snapshot.snapshot_sha256=run.input_snapshot_hash
+               WHERE run.id=$1 AND run.case_id=$2 AND run.run_contract_version=2
+                 AND run.evidence_scope_ids='[]'::jsonb AND run.dataset_snapshot_id=$3
+                 AND run.input_snapshot_hash=CAST($4 AS char(64))
+                 AND snapshot.snapshot_kind='AGENT_CASE' AND snapshot.state='READY'
+                 AND snapshot.selection_spec->>'caseId'=$2::text
+            ), expected AS (
+              SELECT source.id,source.source_document_id,source.source_asset_id,
+                     source.source_asset_revision,source.source_content_sha256
+                FROM bound_snapshot snapshot
+                JOIN core.dataset_snapshot_members member
+                  ON member.dataset_snapshot_id=snapshot.id
+                 AND member.snapshot_kind=snapshot.snapshot_kind
+                 AND member.producer_generation=snapshot.producer_generation
+                 AND member.snapshot_contract_version=snapshot.contract_version
+                 AND member.object_type IN (
+                   'AGENCY','SUPPLIER','CONTRACT','CONTRACT_LINE_ITEM',
+                   'CONTRACT_CHANGE','PRICE_OBSERVATION'
+                 )
+                JOIN core.dataset_snapshot_member_sources source
+                  ON source.dataset_snapshot_id=member.dataset_snapshot_id
+                 AND source.snapshot_member_id=member.id
+                 AND source.snapshot_member_digest=member.member_digest
+                 AND source.source_kind='SOURCE_DOCUMENT'
+            ), rights_valid AS (
+              SELECT expected.id
+                FROM expected
+                JOIN LATERAL (
+                  SELECT decision.decision_kind,decision.expires_at,
+                         decision.access_right,decision.private_storage_right,
+                         decision.model_egress_right,decision.model_use_right,
+                         decision.derivative_creation_right,decision.excerpt_right,
+                         decision.redistribution_right,decision.commercial_use_right,
+                         decision.public_display_right
+                    FROM raw.asset_rights_decisions decision
+                   WHERE decision.asset_kind='SOURCE_DOCUMENT'
+                     AND decision.source_document_id=expected.source_document_id
+                     AND decision.asset_id=expected.source_asset_id
+                     AND decision.asset_revision=expected.source_asset_revision
+                     AND decision.asset_sha256=expected.source_content_sha256
+                     AND decision.effective_at<=transaction_timestamp()
+                   ORDER BY decision.decision_version DESC,decision.id DESC
+                   LIMIT 1
+                ) decision ON true
+               WHERE decision.decision_kind='GRANT'
+                 AND (decision.expires_at IS NULL OR decision.expires_at>transaction_timestamp())
+                 AND decision.access_right='ALLOW'
+                 AND decision.private_storage_right='ALLOW'
+                 AND decision.model_egress_right='ALLOW'
+                 AND decision.model_use_right='ALLOW'
+                 AND decision.derivative_creation_right='ALLOW'
+                 AND decision.excerpt_right='ALLOW'
+                 AND decision.redistribution_right='ALLOW'
+                 AND decision.commercial_use_right='ALLOW'
+                 AND decision.public_display_right='ALLOW'
+            )
+            SELECT EXISTS(SELECT 1 FROM bound_snapshot) AS snapshot_valid,
+                   (SELECT count(*) FROM expected) AS expected_count,
+                   (SELECT count(*) FROM rights_valid) AS rights_valid_count,
+                   (SELECT count(*) FROM ops.agent_source_uses source_use
+                     WHERE source_use.agent_run_id=$1 AND source_use.use_kind='TOOL_QUERY'
+                       AND source_use.source_kind='DATASET_MEMBER'
+                       AND source_use.provider_turn_id IS NULL
+                       AND source_use.tool_call_id IS NULL) AS existing_count,
+                   (SELECT count(*) FROM ops.agent_source_uses source_use
+                     WHERE source_use.agent_run_id=$1 AND source_use.use_kind='TOOL_QUERY'
+                       AND source_use.provider_turn_id IS NULL
+                       AND source_use.tool_call_id IS NULL
+                       AND source_use.source_kind<>'DATASET_MEMBER') AS fabricated_root_count
+            "#,
+            $run_id,
+            $case_id,
+            $snapshot_id,
+            $snapshot_sha256,
+        )
+    };
+}
+
+async fn validate_v2_agent_source_use_root_preconditions(
+    pool: &PgPool,
+    run_id: Uuid,
+    case_id: Uuid,
+    dataset_snapshot_id: Uuid,
+    input_snapshot_sha256: &str,
+) -> Result<(), Failure> {
+    let mut transaction = pool.begin().await.map_err(database)?;
+    sqlx::query!("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *transaction)
+        .await
+        .map_err(database)?;
+
+    let state = v2_source_use_set_state(
+        &mut transaction,
+        run_id,
+        case_id,
+        dataset_snapshot_id,
+        input_snapshot_sha256,
+    )
+    .await?;
+    reject_unclassified_v2_source_use_set(&state, run_id)
+}
+
+fn reject_unclassified_v2_source_use_set(
+    state: &V2SourceUseSetState,
+    run_id: Uuid,
+) -> Result<(), Failure> {
+    validate_v2_source_use_preconditions(state, run_id)?;
+    if state.existing_count != 0 || state.fabricated_root_count != 0 {
+        return Err(Failure::Terminal(
+            "AGENT_SOURCE_USE_SET_INVALID",
+            run_id.to_string(),
+        ));
+    }
+    Err(Failure::Terminal(
+        "AGENT_SOURCE_CLASSIFICATION_MISSING",
+        run_id.to_string(),
+    ))
+}
+
+async fn v2_source_use_set_state(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    run_id: Uuid,
+    case_id: Uuid,
+    dataset_snapshot_id: Uuid,
+    input_snapshot_sha256: &str,
+) -> Result<V2SourceUseSetState, Failure> {
+    let row =
+        query_v2_source_use_set_state!(run_id, case_id, dataset_snapshot_id, input_snapshot_sha256)
+            .fetch_one(&mut **transaction)
+            .await
+            .map_err(database)?;
+    Ok(V2SourceUseSetState {
+        snapshot_valid: required(row.snapshot_valid).map_err(database)?,
+        expected_count: required(row.expected_count).map_err(database)?,
+        rights_valid_count: required(row.rights_valid_count).map_err(database)?,
+        existing_count: required(row.existing_count).map_err(database)?,
+        fabricated_root_count: required(row.fabricated_root_count).map_err(database)?,
+    })
+}
+
+fn validate_v2_source_use_preconditions(
+    state: &V2SourceUseSetState,
+    run_id: Uuid,
+) -> Result<(), Failure> {
+    if !state.snapshot_valid
+        || state.expected_count <= 0
+        || state.rights_valid_count != state.expected_count
+    {
+        return Err(Failure::Terminal(
+            "AGENT_EVIDENCE_SCOPE_INVALID",
+            run_id.to_string(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod v2_source_use_root_contract_tests {
+    use super::*;
+
+    #[test]
+    fn missing_source_classification_is_the_terminal_no_dml_result() {
+        let state = V2SourceUseSetState {
+            snapshot_valid: true,
+            expected_count: 2,
+            rights_valid_count: 2,
+            existing_count: 0,
+            fabricated_root_count: 0,
+        };
+        assert!(matches!(
+            reject_unclassified_v2_source_use_set(&state, Uuid::from_u128(1)),
+            Err(Failure::Terminal("AGENT_SOURCE_CLASSIFICATION_MISSING", _))
+        ));
+    }
+
+    #[test]
+    fn invalid_rights_fail_before_missing_classification() {
+        let state = V2SourceUseSetState {
+            snapshot_valid: true,
+            expected_count: 2,
+            rights_valid_count: 1,
+            existing_count: 0,
+            fabricated_root_count: 0,
+        };
+        assert!(matches!(
+            reject_unclassified_v2_source_use_set(&state, Uuid::from_u128(1)),
+            Err(Failure::Terminal("AGENT_EVIDENCE_SCOPE_INVALID", _))
+        ));
+    }
 }
 type AgentInputBundle = (Vec<String>, serde_json::Map<String, Value>, Value, Value);

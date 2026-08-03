@@ -13,6 +13,7 @@ struct AgentContext {
     locator_map: serde_json::Map<String, Value>,
     input: Value,
     transcript: Value,
+    transition: AgentRunTransition,
 }
 async fn agent_run(state: &State, job: &ClaimedJob) -> Result<Value, Failure> {
     let context = load_agent_context(state, job).await?;
@@ -126,7 +127,11 @@ async fn select_agent_output(
         return Ok((
             "none".to_owned(),
             "none".to_owned(),
-            blocked_output_for(&context.agent_type, "POLICY_BLOCKED", "EVIDENCE_SNAPSHOT_STALE"),
+            blocked_output_for(
+                &context.agent_type,
+                "POLICY_BLOCKED",
+                "EVIDENCE_SNAPSHOT_STALE",
+            ),
             0,
             false,
         ));
@@ -190,10 +195,7 @@ async fn select_agent_output(
     .await
 }
 
-async fn active_ai_kill_switch(
-    state: &State,
-    agent_type: &str,
-) -> Result<Option<String>, Failure> {
+async fn active_ai_kill_switch(state: &State, agent_type: &str) -> Result<Option<String>, Failure> {
     sqlx::query_scalar!(
         "SELECT code FROM ops.kill_switches k
          WHERE k.state='ACTIVE'
@@ -232,8 +234,17 @@ fn apply_agent_policy(
             .or_else(|| provider_output.get("outcome"))
             .and_then(Value::as_str),
         Some("POLICY_BLOCKED" | "BUDGET_BLOCKED")
-    ) || matches!(blocked_code, Some("POLICY_BLOCKED" | "BUDGET_BLOCKED" | "BUDGET_EXHAUSTED" | "AI_DISABLED" | "PROVIDER_UNAVAILABLE" | "EVIDENCE_SNAPSHOT_STALE"))
-        || context.expected_snapshot != context.current_snapshot
+    ) || matches!(
+        blocked_code,
+        Some(
+            "POLICY_BLOCKED"
+                | "BUDGET_BLOCKED"
+                | "BUDGET_EXHAUSTED"
+                | "AI_DISABLED"
+                | "PROVIDER_UNAVAILABLE"
+                | "EVIDENCE_SNAPSHOT_STALE"
+        )
+    ) || context.expected_snapshot != context.current_snapshot
     {
         return Ok(provider_output.clone());
     }
@@ -291,23 +302,33 @@ fn policy_view_for_output(evidence: &Value, output: &Value) -> Result<Value, Fai
         let source_sha = citation
             .get("sourceUseSha256")
             .and_then(Value::as_str)
-            .ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "sourceUseSha256".into()))?;
+            .ok_or_else(|| {
+                Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "sourceUseSha256".into())
+            })?;
         let Some((evidence_id, locator)) = evidence
             .as_array()
             .into_iter()
             .flatten()
             .filter_map(|item| {
                 let uses = item.get("sourceUses")?.as_array()?;
-                let matches = uses.iter().any(|use_row| use_row.get("sourceUseSha256").and_then(Value::as_str) == Some(source_sha));
+                let matches = uses.iter().any(|use_row| {
+                    use_row.get("sourceUseSha256").and_then(Value::as_str) == Some(source_sha)
+                });
                 if matches {
-                    Some((item.get("id")?.clone(), citation.pointer("/locator/value")?.clone()))
+                    Some((
+                        item.get("id")?.clone(),
+                        citation.pointer("/locator/value")?.clone(),
+                    ))
                 } else {
                     None
                 }
             })
             .next()
         else {
-            return Err(Failure::Terminal("AGENT_OUTPUT_SCHEMA_INVALID", "citation source".into()));
+            return Err(Failure::Terminal(
+                "AGENT_OUTPUT_SCHEMA_INVALID",
+                "citation source".into(),
+            ));
         };
         citations.push(json!({"evidence_id":evidence_id,"locator":locator,"supports":citation.get("supports")}));
     }
@@ -326,7 +347,10 @@ fn agent_status(output: &Value) -> Result<&'static str, Failure> {
     if matches!(reason_code, Some("BUDGET_BLOCKED" | "BUDGET_EXHAUSTED")) {
         return Ok("BUDGET_BLOCKED");
     }
-    if matches!(reason_code, Some("POLICY_BLOCKED" | "AI_DISABLED" | "EVIDENCE_SNAPSHOT_STALE" | "PROVIDER_UNAVAILABLE")) {
+    if matches!(
+        reason_code,
+        Some("POLICY_BLOCKED" | "AI_DISABLED" | "EVIDENCE_SNAPSHOT_STALE" | "PROVIDER_UNAVAILABLE")
+    ) {
         return Ok("POLICY_BLOCKED");
     }
     match output
@@ -341,7 +365,16 @@ fn agent_status(output: &Value) -> Result<&'static str, Failure> {
     }
 }
 
-fn abstention_reason_code(output: &Value) -> Option<&str> { output.get("abstentionReasons").and_then(Value::as_array).and_then(|items| items.first()).and_then(|item| item.as_str().or_else(|| item.get("code").and_then(Value::as_str))) }
+fn abstention_reason_code(output: &Value) -> Option<&str> {
+    output
+        .get("abstentionReasons")
+        .and_then(Value::as_array)
+        .and_then(|items| items.first())
+        .and_then(|item| {
+            item.as_str()
+                .or_else(|| item.get("code").and_then(Value::as_str))
+        })
+}
 
 #[expect(
     clippy::too_many_arguments,
@@ -357,22 +390,37 @@ async fn persist_agent_run(
     actual_cost: i64,
     digest: &str,
 ) -> Result<(), Failure> {
+    if let AgentRunTransition::V2(fence) = &context.transition {
+        return persist_agent_run_v2(
+            state,
+            context,
+            fence,
+            V2CompletionArguments::validated_output(
+                status,
+                provider,
+                model,
+                output,
+                digest,
+                actual_cost,
+            )?,
+        )
+        .await;
+    }
     let mut tx = state.pool.begin().await.map_err(database)?;
-    let changed: bool = sqlx::query_scalar!(
+    let changed: bool = sqlx::query_scalar(
         "SELECT ops.transition_agent_run_worker_v1($1,$2,$3,$4,$5,$6,$7,$8,true)",
-        context.run_id,
-        context.run_version,
-        status,
-        provider,
-        model,
-        output,
-        "v1",
-        Decimal::from(actual_cost),
     )
+    .bind(context.run_id)
+    .bind(context.run_version)
+    .bind(status)
+    .bind(provider)
+    .bind(model)
+    .bind(output)
+    .bind("v1")
+    .bind(Decimal::from(actual_cost))
     .fetch_one(&mut *tx)
     .await
-    .map_err(database)?
-    .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
+    .map_err(database)?;
     if !changed {
         return Err(Failure::Terminal(
             "AGENT_RUN_FENCE_FAILED",
@@ -380,18 +428,71 @@ async fn persist_agent_run(
         ));
     }
     persist_agent_suggestion(&mut tx, context, output).await?;
-    sqlx::query!(
+    sqlx::query(
         "SELECT ops.enqueue_outbox('agent_run',$1,1,'agent.run_completed.v1',$2,clock_timestamp())",
-        context.run_id.to_string(),
-        json!({
-            "agent_run_id":context.run_id,
-            "case_id":context.case_id,
-            "output_digest":digest,
-            "status":status
-        }),
     )
+    .bind(context.run_id.to_string())
+    .bind(json!({
+        "agent_run_id":context.run_id,
+        "case_id":context.case_id,
+        "output_digest":digest,
+        "status":status
+    }))
     .fetch_one(&mut *tx)
     .await
     .map_err(database)?;
     tx.commit().await.map_err(database)
+}
+
+async fn persist_agent_run_v2(
+    state: &State,
+    context: &AgentContext,
+    fence: &V2AgentRunFence,
+    arguments: V2CompletionArguments<'_>,
+) -> Result<(), Failure> {
+    let row = sqlx::query!(
+        "SELECT version,terminal_receipt_id,terminal_receipt_sha256,replayed \
+           FROM ops.complete_agent_run_worker_v2(\
+             $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16\
+           )",
+        context.run_id,
+        fence.expected_version,
+        fence.prior_receipt_id,
+        &fence.prior_receipt_sha256,
+        fence.job_id,
+        fence.lease_token,
+        fence.job_fencing_token,
+        arguments.next_status,
+        arguments.provider,
+        arguments.model,
+        arguments.output_payload,
+        arguments.output_sha256,
+        arguments.failure_code,
+        arguments.failure_proof,
+        arguments.failure_proof_sha256,
+        arguments.actual_cost,
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(database)?
+    .ok_or_else(|| Failure::Terminal("AGENT_RUN_FENCE_FAILED", context.run_id.to_string()))?;
+    let result = v2_owner_result(
+        context.run_id,
+        fence.expected_version,
+        V2OwnerResultRow {
+            version: row.version,
+            receipt_id: row.terminal_receipt_id,
+            receipt_sha256: row.terminal_receipt_sha256,
+            replayed: row.replayed,
+        },
+    )?;
+    tracing::debug!(
+        agent_run_id = %context.run_id,
+        version = result.version,
+        receipt_id = %result.receipt_id,
+        receipt_sha256 = %result.receipt_sha256,
+        replayed = result.replayed,
+        "agent run v2 terminal owner completed"
+    );
+    Ok(())
 }
